@@ -90,6 +90,13 @@ KISS-Ops owns four things:
    MUST understand, at which all decomposition chains bottom out, with each floor op
    justified as not further decomposable in-standard.
 
+KISS-Ops also owns two attributes that live alongside the op semantics: the **compute-
+fidelity (MathPrecision) attribute** (`{bit-stable, reduced-mantissa-permitted}`, §6.17),
+orthogonal to the determinism class and the home of compute precision now that storage
+dtypes are pure byte layout; and the **complex-arithmetic op family** for `c32`/`c64`
+(§6.18), every member non-primitive over the real floor (no new axiom), pinned to ISO
+C99/C11 Annex G.
+
 **KISS-Ops is NOT:** a data vocabulary (the dtype *set membership*, operand
 descriptors, `structure_key`, layout tags, and the `target_capability` descriptor are
 owned by the sibling data-vocabulary sub-standard; KISS-Ops references those data
@@ -299,9 +306,20 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `gelu` | activation | | |
 | `gelu_tanh` | activation | | |
 
+**Complex-arithmetic ops (over `c32`/`c64`; all non-primitive, resolving to the REAL floor
+via §6.18):** `cadd`, `csub`, `cneg`, `cconj`, `cmul`, `cdiv`, `cabs`, `carg`, `cexp`,
+`clog`, `csqrt`, `cpow` are the **advertised high-level** complex ops; `cmake`
+(complex-construct from re,im), `cre` (real extract), and `cim` (imag extract) are the
+component-bridge plumbing (not advertised high-level). Every complex op decomposes into the
+real primitive-floor atoms (`add`/`sub`/`mul`/`div`/`neg`/`sqrt`/`exp`/`log`/`sin`/`cos`/
+`atan2`/`copysign`) plus `element_map`, the real non-primitive `hypot`, and lower-level
+complex ops of the family, so the complex family introduces **no** new primitive (the §6.3
+floor is unchanged). Complex semantics are pinned
+to ISO C99/C11 Annex G (§6.18).
+
 ### 2.8 Terms are joined, not restated
 
-KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f32s f64 s8 u8 i32 i64 u32
+KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 u8 i32 i64 u32
 bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
@@ -349,10 +367,13 @@ reader holding only KISS-Ops plus the umbrella.
   including ops embedded in a structural atom's scalar body)`. Levels are strictly
   decreasing along a decomposition edge.
 - **Scalar-source leaf** — a non-op source of a scalar value inside an op body:
-  `input(i)`, `const(bits)`, `param(i)`, `coord(axis)`, `reduced(stage)`, and
-  `extent(axis)`.
+  `input(i)`, `const(bits)`, `param(i)`, `coord(axis)`, `reduced(stage)`, `extent(axis)`,
+  and `reduced_count` (the product of extents over all reduced axes; the multi-axis mean
+  divisor, §6.12-0001).
 - **Compute dtype** — the dtype in which an op's arithmetic is performed, one of the
-  pinned dtype set excluding the index/address-only `u32`.
+  pinned storage dtype set (§6.16). `u32` is an ordinary dtype and is **not** excluded;
+  index-only-ness is an operand role (§6.11-0012), not a dtype class. A complex op's
+  compute dtype is the `f32`/`f64` component of its `c32`/`c64` operand (§6.18-0015).
 - **Raw-bit move** — a value transfer that copies bits without any arithmetic, so
   signed zero and NaN payloads (quiet and signaling) are preserved.
 - **NaN-propagating** — an op that returns a NaN when any operand contributing to the
@@ -374,6 +395,22 @@ reader holding only KISS-Ops plus the umbrella.
   canonical enum is **owned by KISS-Ops** (the computation-vocabulary root) and imported
   downstream by KISS-Conform and KISS-Synth; it is defined once here (§6.0) and never
   re-forked.
+- **Compute-fidelity (MathPrecision) attribute** — a two-member enum
+  `{bit-stable, reduced-mantissa-permitted}` owned by KISS-Ops (§6.17), orthogonal to the
+  determinism class, recording whether an op's floating-point arithmetic is computed at
+  full storage precision with each atom rounding independently (**bit-stable**) or MAY use
+  a reduced-mantissa fast path (**reduced-mantissa-permitted**). It is the home of the
+  compute-precision meaning formerly modeled as a strict-precision float dtype; storage
+  dtypes carry no compute-precision meaning. Surfaced in a kernel's KISS-Contract
+  guarantees.
+- **Index operand role** — the operand-level role (carried by the `index_operand` and
+  `index_dtype` fields, §6.11-0012) marking which operand of `gather` / `scatter` /
+  `index_select` / `embedding` / `scatter_add` supplies the runtime index, and that
+  operand's dtype. Index-only-ness is this role, not a dtype class; `u32` is an ordinary
+  dtype that MAY serve it.
+- **Complex op** — a non-primitive op of the §6.18 complex-arithmetic family over
+  `c32` / `c64`, decomposing entirely into the real primitive-floor atoms plus the
+  `element_map` component bridge; it introduces no new primitive.
 - **dtype**, **operand descriptor**, **structure_key**, **target_capability**,
   **MAX_RANK**, **MAX_OPERANDS** — data-vocabulary terms owned by the sibling data-
   vocabulary sub-standard; used here by name only (§2.8), never re-defined. The bit
@@ -390,7 +427,7 @@ reader holding only KISS-Ops plus the umbrella.
 - **IEEE 754-2019** — floating-point arithmetic, comparison predicates, `maxNum` /
   `minNum`, rounding-direction attributes, signed zero, quiet/signaling NaN, and
   subnormals. The per-op float semantics of §6 are pinned against this reference for the
-  IEEE-754 dtypes (`f16`, `f32`, `f32s`, `f64`) only; `bf16` and the FP8 formats
+  IEEE-754 dtypes (`f16`, `f32`, `f64`) only; `bf16` and the FP8 formats
   `e4m3` / `e5m2` are **not** IEEE-754 formats and are pinned explicitly in §6.16.
 - **Open Compute Project (OCP) 8-bit Floating Point Specification (OFP8), FP8 formats
   E4M3 and E5M2** — the normative reference for the `e4m3` and `e5m2` encodings,
@@ -417,7 +454,9 @@ reader holding only KISS-Ops plus the umbrella.
   consumer: re-bases each advertisable `OpTag` onto a KISS-Ops op name.
 - **KISS-Contract** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
   consumer: the contract semantics field carries the KISS-Ops op DAG, and the per-target
-  declared ULP of each transcendental atom (bounded by the §6.8 ceiling).
+  declared ULP of each transcendental atom (bounded by the §6.8 ceiling); the contract's
+  guarantees section surfaces the KISS-Ops-owned compute-fidelity (MathPrecision) attribute
+  (§6.17), imported from KISS-Ops, not re-forked.
 - **KISS-Synth/Provision** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
   consumer: the fully-resolved decomposition is the oracle for verification under the
   op's determinism class. The single canonical determinism/fidelity enum is **owned by
@@ -475,7 +514,8 @@ verbatim, everywhere).
   and (c) does not depend on a floating-point atomic combine; the exact-byte class
   therefore covers the arithmetic atoms `add`/`sub`/`mul`/`div`/`neg`/`abs`, the
   comparisons, the rounding atoms, the bitwise atoms, `select`, `copysign`,
-  `nextafter`, `element_map`, `gather`, `scatter` with a deterministic combine, and the
+  `nextafter`, the algebraic complex ops (`cadd`, `csub`, `cneg`, `cconj`, `cmul`, `cdiv`,
+  `cmake`, `cre`, `cim`), `element_map`, `gather`, `scatter` with a deterministic combine, and the
   `max` / `min` `reduce` and `prefix_scan` monoids (which are order-invariant in value).
   KISS-Conform MUST evaluate an exact-byte op with a byte-exact comparator. *Test:*
   `test_ops_exact_byte_ops`.
@@ -515,9 +555,10 @@ verbatim, everywhere).
 ### 6.1 The op-set registry
 
 - **KISS-OPS-6.1-0001** — The KISS-Ops op set for this version MUST be exactly the set
-  enumerated in §2.7 / §6.4–§6.13 (the primitive-floor ops of §6.3 plus the non-
-  primitive ops of §6.13); an implementation MUST NOT treat a token outside this set as
-  a KISS-Ops op of this version. *Test:* `test_ops_op_set_closed`.
+  enumerated in §2.7 / §6.4–§6.13 / §6.18 (the primitive-floor ops of §6.3, the
+  non-primitive ops of §6.13, and the complex-arithmetic ops of §6.18); an implementation
+  MUST NOT treat a token outside this set as a KISS-Ops op of this version. *Test:*
+  `test_ops_op_set_closed`.
 - **KISS-OPS-6.1-0002** — Each op MUST be spelled as the exact token given in this
   document (case-sensitive, underscore-delimited); an implementation MUST NOT accept a
   synonym, alias, or alternative spelling as the same op. *Test:*
@@ -526,14 +567,15 @@ verbatim, everywhere).
   §2.7; an implementation MUST NOT re-classify an op into a different family. *Test:*
   `test_ops_op_family_tags`.
 - **KISS-OPS-6.1-0004** — Each op MUST carry exactly the primitive-floor membership flag
-  assigned to it (primitive = in §6.3; non-primitive = in §6.13); an implementation MUST
-  NOT treat a non-primitive op as primitive or a primitive op as non-primitive. *Test:*
+  assigned to it (primitive = in §6.3; non-primitive = in §6.13 or §6.18); an
+  implementation MUST NOT treat a non-primitive op as primitive or a primitive op as
+  non-primitive. *Test:*
   `test_ops_primitive_flags`.
 
 ### 6.2 Shared numeric conventions
 
 - **KISS-OPS-6.2-0001** — For every op whose compute dtype is an IEEE-754 float dtype
-  (`f16` binary16, `f32`, `f32s` binary32, `f64` binary64), the arithmetic MUST follow
+  (`f16` binary16, `f32` binary32, `f64` binary64), the arithmetic MUST follow
   IEEE 754-2019 for that operation and dtype, except where a specific op clause below
   pins a departure (e.g. the NaN-suppressing min/max family, the declared-ULP
   transcendental atoms). For the non-IEEE-754 float dtypes `bf16`, `e4m3`, and `e5m2`,
@@ -541,7 +583,7 @@ verbatim, everywhere).
   conventions pinned in §6.16 (these formats are **not** governed by IEEE 754-2019).
   *Test:* `test_ops_float_ieee754`.
 - **KISS-OPS-6.2-0002** — For every op whose compute dtype is an integer dtype (`s8`,
-  `u8`, `i32`, `i64`, `s4`, `u4`), integer `add`/`sub`/`mul` MUST be **wrapping** two's-
+  `u8`, `u32`, `i32`, `i64`, `s4`, `u4`), integer `add`/`sub`/`mul` MUST be **wrapping** two's-
   complement modulo `2^bitwidth`, and MUST NOT be undefined-behavior on overflow and
   MUST NOT saturate. *Test:* `test_ops_int_wrapping`.
 - **KISS-OPS-6.2-0003** — For every **primitive-floor** op not explicitly pinned as
@@ -559,11 +601,12 @@ verbatim, everywhere).
   treat a byte value of `0` as false and any non-zero byte as true, and any op that
   produces a `bool` result MUST normalize it to strictly `0` or `1`. *Test:*
   `test_ops_bool_normalization`.
-- **KISS-OPS-6.2-0007** — The `u32` dtype MUST be accepted only in the index-operand role
-  of `gather`, `scatter`, `index_select`, `embedding`, and `scatter_add` (per the legal
-  index-dtype set of §6.11-0009); every arithmetic, comparison, rounding, bitwise,
-  reduction, and scan path MUST reject a `u32` compute operand with a typed decline.
-  *Test:* `test_ops_u32_index_only`.
+- **KISS-OPS-6.2-0007** — The `u32` dtype MUST be treated as an **ordinary** unsigned
+  32-bit integer storage/compute dtype (wrapping two's-complement per §6.2-0002), accepted
+  on the integer arithmetic, comparison, bitwise, reduction, and scan paths like any other
+  unsigned integer dtype; KISS-Ops MUST NOT define an index-only dtype class, and
+  index-only-ness MUST be modeled as an operand role on the index operand (§6.11-0012),
+  never as a property of the `u32` dtype. *Test:* `test_ops_u32_ordinary_dtype`.
 - **KISS-OPS-6.2-0008** — A `const(bits)` leaf and every non-finite value (±∞, quiet NaN,
   signaling NaN, ±0, subnormal) MUST be pinned by its bit pattern in the operand's dtype
   and MUST round-trip exactly; a clause MUST NOT pin a constant by a source language's
@@ -596,8 +639,8 @@ verbatim, everywhere).
   decomposition. *Test:* `test_ops_floor_ops_have_no_decomposition`.
 - **KISS-OPS-6.3-0004** — Every decomposition chain of every non-primitive op (§6.13)
   MUST terminate at the primitive floor; a non-primitive op MUST NOT decompose to a token
-  outside the union of the primitive floor, the non-primitive op set, and the scalar-
-  source leaves. *Test:* `test_ops_decomposition_terminates_at_floor`.
+  outside the union of the primitive floor, the non-primitive op set (§6.13, §6.18), and
+  the scalar-source leaves. *Test:* `test_ops_decomposition_terminates_at_floor`.
 - **KISS-OPS-6.3-0005** — Each primitive-floor op MUST be justified as a true atom —
   either an IEEE-754 / two's-complement scalar operation, a raw-bit move, a directed-
   rounding operation, a special function with no elementary closed form, an integer bit
@@ -699,8 +742,9 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 The transcendental atoms are `exp` (`e^x`), `log` (`ln x`), `sin`, `cos`, `sqrt` (√x),
 `erf` (Gauss error function), `atan` (arctangent), and `lgamma` (`ln|Γ(x)|`). Each
 carries a normative **maximum ULP ceiling** below; a kernel's contract declares a
-per-target ULP that MUST NOT exceed the ceiling, and KISS-Conform evaluates the atom
-under that declared ULP:
+per-target ULP no looser than the ceiling, and KISS-Conform evaluates the atom
+under that declared ULP (the normative requirement is carried by KISS-OPS-6.8-0001;
+this section-intro paragraph is an informative pointer to it):
 
 | Atom | Maximum ULP ceiling (compute dtype ≥ 16-bit float) |
 |---|---|
@@ -737,9 +781,10 @@ under that declared ULP:
   the sign bit of `b` as a raw-bit operation, so that the signed zero of `b` and the sign
   of a NaN `b` are carried into the result. *Test:* `test_ops_copysign_raw_bit`.
 - **KISS-OPS-6.9-0003** — `nextafter` MUST produce the next representable value after `a`
-  toward `b` in the **dtype's own** representation lattice; `nextafter` MUST reject `f16`
-  and `bf16` operands (because stepping in promoted `f32` yields the wrong neighbor) with
-  a typed decline. *Test:* `test_ops_nextafter_own_lattice`.
+  toward `b` in the **dtype's own** representation lattice; `nextafter` MUST reject `f16`,
+  `bf16`, `e4m3`, and `e5m2` operands (each carries the identical promotion hazard —
+  stepping in a promoted `f32` yields the wrong neighbor in the narrow lattice) with a
+  typed decline. *Test:* `test_ops_nextafter_own_lattice`.
 
 ### 6.10 Bitwise atoms
 
@@ -796,28 +841,68 @@ under that declared ULP:
   source (row-major iteration) index** MUST win (a pinned last-writer-in-iteration-order
   tie-break), so `assign` never depends on hardware race order. *Test:*
   `test_ops_scatter_fp_atomic_add_nondeterministic`.
-- **KISS-OPS-6.11-0007** — `sort_network` MUST perform a **stable** per-row permutation
-  under a total order on `(key, original-index)` pairs in which NaN orders as the greatest
-  value (ascending → NaN last, descending → NaN first), and MUST expose **two** outputs:
-  (a) the values written back as a raw-bit permutation, and (b) the **original-index
-  vector** — for each output rank, the source position it came from. It MUST be treated as
-  a structural atom with no monoid. *Test:* `test_ops_sort_network_total_order`.
+- **KISS-OPS-6.11-0007** — `sort_network` MUST carry a `direction` attribute in
+  `{ascending, descending}` (default `ascending`) and MUST perform a **stable** per-row
+  permutation under a total order on `(key, original-index)` pairs in which NaN orders as
+  the greatest value (ascending → NaN last, descending → NaN first) and ties break by the
+  lower original index (the stability rule). It MUST expose **two** outputs: (a) the values
+  written back as a raw-bit permutation, and (b) the **original-index vector** — for each
+  output rank, the source position it came from. It MUST be treated as a structural atom
+  with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`,
+  §6.13 table.) *Test:* `test_ops_sort_network_total_order`.
 - **KISS-OPS-6.11-0008** — `reduce` MUST retain each reduced axis as an extent-`1` axis
   with stride `0` (a keepdim result) so the reduced value broadcasts back over the
-  original axis, making shifted-shape decompositions such as `sub(x, reduce(max, x))`
-  well-formed; `prefix_scan` MUST retain all axes (length-preserving). *Test:*
+  original axis via extent-1 / stride-0, so a shifted-shape decomposition such as
+  `sub(x, reduce(max, x))` reads the reduced value at every position of the original axis;
+  `prefix_scan` MUST retain all axes (length-preserving). *Test:*
   `test_ops_reduce_keepdim_broadcast`.
-- **KISS-OPS-6.11-0009** — The legal index-operand dtype set for `gather`, `scatter`,
-  `index_select`, `embedding`, and `scatter_add` MUST be exactly `{u32, i32, i64}`; an
-  implementation MUST reject any other index dtype with a typed decline. The negative-
-  index-is-out-of-bounds rule (§6.11-0004) applies to the signed index dtypes `i32` and
-  `i64`; `u32` carries no negative value and the rule is vacuous for it. *Test:*
+- **KISS-OPS-6.11-0009** — The legal `index_dtype` set for the index operand of `gather`,
+  `scatter`, `index_select`, `embedding`, and `scatter_add` MUST be exactly `{u32, i32,
+  i64}`; an implementation MUST reject any other `index_dtype` with a typed decline. This
+  is a restriction on the **index-operand role** (§6.11-0012), not on the dtypes elsewhere:
+  `u32`, `i32`, and `i64` remain ordinary compute dtypes in every other operand position.
+  The negative-index-is-out-of-bounds rule (§6.11-0004) applies to the signed index dtypes
+  `i32` and `i64`; `u32` carries no negative value and the rule is vacuous for it. *Test:*
   `test_ops_index_dtype_set`.
 - **KISS-OPS-6.11-0010** — The `scatter` floating-point `atomic-max` and `atomic-min`
   combines MUST be **NaN-propagating**, consistent with the `max` / `min` `reduce`
   monoids (§6.11-0002): if a NaN is scattered to a destination, or a destination already
   holds a NaN, the combined result MUST be NaN. *Test:*
   `test_ops_scatter_atomic_minmax_nan`.
+- **KISS-OPS-6.11-0011** — `reduce` and `prefix_scan` MUST carry a `reduce_axes` descriptor
+  that distinguishes **exactly four** non-overloaded categories of value — **all-axes**,
+  **trailing-axis**, **none / not-a-reduction**, and an **explicit per-axis subset mask** —
+  such that no single encoding is overloaded to mean more than one category. The
+  **reduce-field encoding** is owned normatively by the data-vocabulary `structure_key`
+  **token codec** (Classify §6.7-0005): the string tokens `-` (none / not-a-reduction),
+  `rall` (all-axes), `rlast` (trailing-axis), and `x<hh>` (an 8-bit keepdim subset mask
+  written as exactly two lowercase hex digits `00..ff`), which bumps
+  `STRUCTURE_KEY_VERSION` for this split; **no binary/byte wire form is defined at this
+  schema version** (Classify §6.7-0011). Those tokens are **restated here informatively** as
+  the shared anchor, not a second normative pinning. The Ops-normative content of this clause
+  is the **reduce/scan semantics** of each category and the emission constraints: (a)
+  **all-axes** (`rall`) → fold over every axis; (b) **trailing-axis** (`rlast`) → fold over
+  the single last (trailing) axis; (c) **none / not-a-reduction** (`-`) → not a reduction,
+  and a `reduce` op MUST NOT be emitted in the none category; (d) **subset mask** (`x<hh>`)
+  → fold over exactly the axes it selects (bit `k` selects axis `k`). For the subset-mask
+  category to be expressible the encoding requires `MAX_RANK <= 8` (a u8 subset field, one
+  bit per axis); KISS-Ops MUST NOT emit a `reduce` / `prefix_scan` whose selected-axis set is
+  not representable in that field, and the `rall` / `rlast` / `-` tokens MUST remain disjoint
+  from every legal `x<hh>` subset mask so no subset value can collide with a category token.
+  For illustration only, an Ops-local **in-memory** rendering MAY model the field as a 16-bit
+  value with `0xFFFF` = all-axes, `0xFFFE` = trailing-axis, `0x0000` = none, and
+  `0x0001..0x00FF` = the u8 per-axis subset mask (the intervening `0x0100..0xFFFD` reserved
+  and never emitted); this hex is an Ops-local in-memory illustration, **not** the
+  data-vocabulary shared anchor and **not** a wire form — the normative shared anchor is the
+  Classify §6.7-0005 token codec above. *Test:*
+  `test_ops_reduce_axes_three_values`.
+- **KISS-OPS-6.11-0012** — `gather`, `scatter`, `index_select`, `embedding`, and
+  `scatter_add` MUST carry the index-operand role explicitly on the operand: an
+  `index_operand` field identifying which operand supplies the runtime index, and an
+  `index_dtype` field giving that operand's dtype (in the legal set of §6.11-0009). The
+  index role MUST be a property of that operand, not of any dtype; KISS-Ops MUST NOT infer
+  index-ness from a dtype (in particular `u32` is not an index-only dtype, §6.2-0007).
+  *Test:* `test_ops_index_operand_role`.
 
 ### 6.12 Scalar-source leaves
 
@@ -825,11 +910,14 @@ under that declared ULP:
   `input(i)` (the `i`-th input operand's element), `const(bits)` (a dtype-typed constant
   pinned by its bit pattern), `param(i)` (the `i`-th scalar parameter), `coord(axis)` (the
   current iteration coordinate along `axis`), `reduced(stage)` (the accumulated result of
-  a named reduction/scan stage), and `extent(axis)` (the runtime logical extent — length —
-  of iteration `axis`, a non-negative integer-valued scalar source used where a
-  decomposition needs a shape-derived quantity such as a mean divisor). These leaves are
-  part of the op-semantics currency and are not themselves ops. *Test:*
-  `test_ops_scalar_source_leaves`.
+  a named reduction/scan stage), `extent(axis)` (the runtime logical extent — length — of a
+  single iteration `axis`, a non-negative integer-valued scalar source), and
+  `reduced_count` (the product of the logical extents of **all** axes selected by the op's
+  `reduce_axes` descriptor, §6.11-0011 — the number of elements folded into one reduced
+  result, and the correct divisor for a mean over one **or more** reduced axes; it equals
+  `extent(axis)` when a single axis is reduced and the product `∏ extent(axis_i)` over the
+  selected set when several are). These leaves are part of the op-semantics currency and are
+  not themselves ops. *Test:* `test_ops_scalar_source_leaves`.
 - **KISS-OPS-6.12-0002** — A `const(bits)` leaf MUST carry its value as the exact dtype bit
   pattern (round-tripping ±∞, quiet/signaling NaN, ±0, and subnormals per §6.2-0008); the
   spelling of a constant in any source or target language is emitter-supplied and MUST NOT
@@ -885,9 +973,9 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `log10` | transcendental | — | `div(log(x), const(ln10))` |
 | `log1p` | transcendental | ✓ | `log(add(const(1), x))` |
 | `tan` | transcendental | — | `div(sin(x), cos(x))` |
-| `tanh` | transcendental | — | `div(sub(exp(x), exp(neg(x))), add(exp(x), exp(neg(x))))` |
-| `sinh` | transcendental | — | `div(sub(exp(x), exp(neg(x))), const(2))` |
-| `cosh` | transcendental | — | `div(add(exp(x), exp(neg(x))), const(2))` |
+| `tanh` | transcendental | ✓ | `div(sub(exp(x), exp(neg(x))), add(exp(x), exp(neg(x))))` (refinement-permitted: an overflow-safe form, e.g. via `copysign`/`expm1`, MUST be used so `tanh` of a large argument yields ±1, not the reference `∞/∞ = NaN`) |
+| `sinh` | transcendental | ✓ | `div(sub(exp(x), exp(neg(x))), const(2))` (refinement-permitted: near-zero-accurate / overflow-safe form) |
+| `cosh` | transcendental | ✓ | `div(add(exp(x), exp(neg(x))), const(2))` (refinement-permitted: overflow-safe form) |
 | `asinh` | transcendental | — | `log(add(x, sqrt(add(sqr(x), const(1)))))` |
 | `acosh` | transcendental | — | `log(add(x, sqrt(sub(sqr(x), const(1)))))` |
 | `atanh` | transcendental | — | `mul(const(0.5), log(div(add(const(1),x), sub(const(1),x))))` |
@@ -897,9 +985,9 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `erfc` | transcendental | — | `sub(const(1), erf(x))` |
 | `sigmoid` | activation | — | `recip(add(const(1), exp(neg(x))))` |
 | `relu` | activation | — | `select(cmp_lt(x, const(0)), const(0), x)` |
-| `silu` | activation | — | `mul(x, sigmoid(x))` |
-| `softplus` | activation | — | `log(add(const(1), exp(x)))` |
-| `mish` | activation | — | `mul(x, tanh(softplus(x)))` |
+| `silu` | activation | ✓ | `mul(x, sigmoid(x))` (refinement-permitted: overflow-safe evaluation of the `exp` in `sigmoid`) |
+| `softplus` | activation | ✓ | `log(add(const(1), exp(x)))` (refinement-permitted: an overflow-safe form, e.g. `max(x,0)+log1p(exp(-|x|))`, MUST be used so `softplus` of a large argument yields ≈`x`, not the reference `log(∞) = ∞`) |
+| `mish` | activation | ✓ | `mul(x, tanh(softplus(x)))` (refinement-permitted: inherits the overflow-safe `tanh`/`softplus`) |
 | `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), erf(div(x, const(sqrt2)))))` |
 | `gelu_tanh` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh(mul(const(sqrt(2/pi)), add(x, mul(const(0.044715), mul(x, sqr(x))))))))` |
 | `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for `a>0`; full-domain behavior pinned by §6.13-0005 |
@@ -910,7 +998,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `logical_and` | logical | — | `mul(cmp_ne(a, const(0)), cmp_ne(b, const(0)))` |
 | `logical_or` | logical | — | `min_prop(const(1), add(cmp_ne(a,const(0)), cmp_ne(b,const(0))))` |
 | `logical_not` | logical | — | `cmp_eq(x, const(0))` |
-| `reduce_mean` | reduction | — | `div(reduce(sum, x), extent(reduced_axis))` |
+| `reduce_mean` | reduction | — | `div(reduce(sum, x), reduced_count)` (divisor is the product of extents over **all** reduced axes, §6.12-0001) |
 | `reduce_norm2` | reduction | — | `sqrt(reduce(sum, sqr(x)))` |
 | `reduce_var` | reduction | — | `sub(reduce_mean(sqr(x)), sqr(reduce_mean(x)))` |
 | `reduce_std` | reduction | — | `sqrt(reduce_var(x))` |
@@ -931,32 +1019,40 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `index_select` | gather_scatter | — | `gather(oob=skip)` with a 1-D index operand |
 | `embedding` | gather_scatter | — | `gather(oob=zero-fill)` with a 1-D index operand |
 | `scatter_add` | gather_scatter | — | `scatter(combine=atomic-add, oob=skip)` |
-| `im2col` | shape | — | closed-form structured `gather` (source coord from loop coords), expanding access |
+| `im2col` | shape | — | closed-form structured `gather` mapping each output element `(patch, tap)` to the source element at `coord`-derived index `base(patch)·stride + tap_offset·dilation − padding` over `window_size` taps per axis (window/stride/dilation/padding and the output-column flatten order pinned as attributes per §6.13-0004; OOB taps zero-filled) |
 
 - **KISS-OPS-6.13-0001** — Each non-primitive op MUST carry the reference decomposition
-  in the table above, and that decomposition MUST define the op's pinned semantics; a
-  consumer resolving an unrecognized op MUST use this decomposition. *Test:*
+  in the table above (and, for the complex-arithmetic family, in the §6.18 tables), and
+  that decomposition MUST define the op's pinned semantics; a consumer resolving an
+  unrecognized op MUST use this decomposition. *Test:*
   `test_ops_reference_decompositions`.
 - **KISS-OPS-6.13-0002** — Each reference decomposition MUST reference only ops of
   strictly lower level (§6.14) together with the scalar-source leaves of §6.12; a
   decomposition MUST NOT reference a higher-level op or an equal-level op. *Test:*
   `test_ops_decomposition_strictly_lower_level`.
 - **KISS-OPS-6.13-0003** — For every op marked **✓** in the *Refine* column of the §6.13
-  table (`expm1`, `log1p`, `pow`, `hypot`, `ldexp`), a conforming kernel MAY compute a
-  more accurate result than the literal reference decomposition (e.g. an overflow-safe
-  or near-zero-accurate form, or an exact integer-exponent `ldexp`), but MUST agree with
-  the reference decomposition's pinned mathematical meaning (the function it denotes)
-  within the op's declared ULP; an op **not** marked MUST reproduce the reference under
-  its determinism class. *Test:* `test_ops_decomposition_accuracy_refinement`.
+  table (`expm1`, `log1p`, `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`, `pow`,
+  `hypot`, `ldexp`), a conforming kernel MAY — and, where the literal reference
+  decomposition would overflow or catastrophically cancel while the true function is finite
+  (the exp-of-large-argument forms `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`),
+  MUST — compute a more accurate result than the literal reference decomposition (e.g. an
+  overflow-safe or near-zero-accurate form, or an exact integer-exponent `ldexp`), but MUST
+  agree with the reference decomposition's pinned mathematical meaning (the function it
+  denotes) within the op's declared ULP; an op **not** marked MUST reproduce the reference
+  under its determinism class. *Test:* `test_ops_decomposition_accuracy_refinement`.
 - **KISS-OPS-6.13-0004** — A parameterized non-primitive op MUST carry its semantics-
   affecting attributes explicitly: `reduce_var` and `reduce_std` default to the
   population form and MUST declare a Bessel correction as an attribute rather than
   changing the decomposition silently; `softmax` / `log_softmax` MUST declare the
-  normalization axis; `avg_pool` and `max_pool` MUST declare the per-axis `window_size`,
-  `stride`, `dilation`, and `padding`, and `avg_pool` MUST declare `count_include_pad`
-  (which selects the divisor between the full window count and the valid-tap count via
-  `extent`); `rms_norm` / `layer_norm` / `matmul` MUST use the operand-ordering
-  convention stated above the table. The pooled **window view** is a structured `gather`
+  normalization axis; `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
+  `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
+  `count_include_pad` (which selects the divisor between the full window count —
+  `reduced_count` — and the valid-tap count from the pooled view); `im2col` MUST
+  additionally declare its
+  **output-column ordering** (the flatten order of the window-tap and channel axes into the
+  column dimension) so its index mapping is fully determined; `rms_norm` / `layer_norm` /
+  `matmul` MUST use the operand-ordering convention stated above the table. The pooled
+  **window view** is a structured `gather`
   that adds one window axis whose taps lie at `dilation`-spaced offsets over
   `window_size` positions with the given `stride` and `padding`, OOB taps skipped.
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
@@ -964,9 +1060,13 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 - **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain: for `a>0`,
   `pow(a,b)` equals the reference `exp(mul(b, log(a)))` (refinement permitted,
   §6.13-0003); `pow(0,0)` MUST yield `1`; `pow(+0.0, b)` for `b>0` MUST yield `+0.0` and
-  for `b<0` MUST yield `+∞`; for `a<0`, `pow(a,b)` MUST yield NaN unless `b` is an exact
-  integer, in which case `pow(a,b)` MUST yield `|a|^b` when `b` is even and `-(|a|^b)`
-  when `b` is odd. *Test:* `test_ops_pow_full_domain`.
+  for `b<0` MUST yield `+∞`; for the negative-zero base, `pow(-0.0, b)` MUST yield `-0.0`
+  when `b` is a positive odd integer, `+0.0` when `b` is a positive even integer or a
+  positive non-integer, `-∞` when `b` is a negative odd integer, and `+∞` when `b` is a
+  negative even integer or a negative non-integer (the sign follows IEEE 754 `pow` on the
+  signed zero); for `a<0`, `pow(a,b)` MUST yield NaN unless `b` is an exact integer, in
+  which case `pow(a,b)` MUST yield `|a|^b` when `b` is even and `-(|a|^b)` when `b` is odd.
+  *Test:* `test_ops_pow_full_domain`.
 - **KISS-OPS-6.13-0006** — A reference-decomposition body MUST conform to this grammar: a
   body is either (a) a single expression tree over KISS-Ops ops and the §6.12 scalar-
   source leaves, or (b) a sequence of single-assignment let-bindings `name = expr;`
@@ -975,6 +1075,12 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   exactly once (static single assignment), MUST NOT reference itself or a
   not-yet-bound name, and is scoped to the body; a mechanical resolver MUST parse the
   body as this tree/binding form and no other. *Test:* `test_ops_decomposition_body_grammar`.
+- **KISS-OPS-6.13-0007** — `hypot(a, b)` MUST yield `+∞` whenever either operand is
+  infinite, **even if the other operand is NaN** (the IEEE 754 `hypot` infinity rule),
+  overriding the naive `sqrt(add(sqr(a), sqr(b)))` — which would yield NaN for `(±∞, NaN)` —
+  on any infinite input; for finite inputs a NaN operand MUST propagate a NaN. This pins the
+  inf/NaN edge that `cabs` (§6.18-0007) relies on, so standalone `hypot` and `cabs` agree.
+  *Test:* `test_ops_hypot_inf_nan`.
 
 ### 6.14 Termination guarantee (recursive resolution)
 
@@ -1018,10 +1124,12 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   **divisor**) and `rem_trunc` (truncated remainder / `fmod`, taking the sign of the
   **dividend**) MUST be distinct ops; an implementation MUST NOT merge or substitute one
   for the other. *Test:* `test_ops_rem_floor_vs_trunc`.
-- **KISS-OPS-6.15-0004** — `gelu` (exact erf-based) and `gelu_tanh` (the tanh
-  approximation, differing by up to ~1e-4) MUST be distinct ops; an implementation MUST
-  NOT treat one as the other or fold them into a single op. *Test:*
-  `test_ops_gelu_exact_vs_tanh`.
+- **KISS-OPS-6.15-0004** — `gelu` (exact erf-based, decomposing through `erf`) and
+  `gelu_tanh` (the tanh approximation, decomposing through `tanh`) MUST be distinct ops
+  with their distinct §6.13 decompositions; an implementation MUST NOT treat one as the
+  other or fold them into a single op. (The two functions differ numerically — see the
+  informative §2.3 — but the load-bearing requirement pinned here is op distinctness.)
+  *Test:* `test_ops_gelu_exact_vs_tanh`.
 
 ### 6.16 Self-contained dtype bit layouts
 
@@ -1035,32 +1143,31 @@ shared naming convention spelled identically in both foundational vocabularies.
 |---|---|---|---|
 | `f16` | 16 | float | IEEE-754 binary16 (1 sign, 5 exp, 10 mantissa), bias 15 |
 | `bf16` | 16 | float | bfloat16 (1 sign, 8 exp, 7 mantissa), bias 127; the binary32 exponent range with a truncated mantissa; **not** an IEEE-754 format |
-| `f32` | 32 | float | IEEE-754 binary32 storage; reduced-mantissa compute PERMITTED per target |
-| `f32s` | 32 | float | IEEE-754 binary32 storage, byte-identical to `f32`; full-precision bit-stable multiply-add REQUIRED |
+| `f32` | 32 | float | IEEE-754 binary32 storage; **pure storage** — compute fidelity is the MathPrecision attribute (§6.17), not a dtype property |
 | `f64` | 64 | float | IEEE-754 binary64 (1 sign, 11 exp, 52 mantissa), bias 1023 |
 | `s8` | 8 | int | signed 8-bit two's-complement |
 | `u8` | 8 | uint | unsigned 8-bit; also the physical storage of `bool` |
 | `i32` | 32 | int | signed 32-bit two's-complement |
 | `i64` | 64 | int | signed 64-bit two's-complement |
-| `u32` | 32 | uint | index/address dtype only (§6.2-0007); container width matches `i32` |
+| `u32` | 32 | uint | unsigned 32-bit two's-complement; **ordinary** storage/compute dtype (§6.2-0007); MAY serve the index-operand role (§6.11-0012) |
 | `bool` | 8 | bool | 1 byte; `0`=false, any non-zero byte=true; ops normalize to strictly `0`/`1` |
 | `e4m3` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
 | `e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
 | `s4` | 4 | int | signed 4-bit, range [−8,+7]; packed pair per byte, low nibble = even logical index, sign-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `u4` | 4 | uint | unsigned 4-bit, range [0,15]; packed pair per byte, low nibble = even index, zero-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `b1` | 1 | uint | 1-bit binary-GEMM operand; storage packing (8 bits/byte, LSB = lowest logical index) **owned normatively by the data-vocabulary sub-standard §6.1-0008/0009** and restated here informatively; the **xor+popcount accumulation to raw `s32` output** is the Ops-owned computation semantics |
-| `c32` | 64 | complex | interleaved (re,im) pair of `f32` (storage only) |
-| `c64` | 128 | complex | interleaved (re,im) pair of `f64` (storage only) |
+| `c32` | 64 | complex | interleaved (re,im) pair of `f32`; storage container, complex arithmetic via the §6.18 op family |
+| `c64` | 128 | complex | interleaved (re,im) pair of `f64`; storage container, complex arithmetic via the §6.18 op family |
 
 - **KISS-OPS-6.16-0001** — The dtype set to which KISS-Ops assigns numeric or structural
   meaning MUST be exactly the tokens in the table above, each with the bit width and
   layout pinned there; these layouts are inlined normatively and create no dependency
   edge on the data-vocabulary sub-standard. *Test:* `test_ops_dtype_bit_layouts`.
-- **KISS-OPS-6.16-0002** — `f16`, `f32`, `f32s`, and `f64` MUST use their IEEE 754-2019
-  encodings (binary16 / binary32 / binary64), including the standard inf/NaN encodings,
-  signed zero, and subnormals; `f32` and `f32s` MUST be byte-identical binary32 storage
-  differing only in the required compute precision (§Appendix D.1). *Test:*
-  `test_ops_ieee754_dtype_encodings`.
+- **KISS-OPS-6.16-0002** — `f16`, `f32`, and `f64` MUST use their IEEE 754-2019 encodings
+  (binary16 / binary32 / binary64), including the standard inf/NaN encodings, signed zero,
+  and subnormals; the storage dtype set carries **no** compute-precision distinction (there
+  is no strict-precision float dtype) — compute fidelity is the MathPrecision attribute
+  (§6.17). *Test:* `test_ops_ieee754_dtype_encodings`.
 - **KISS-OPS-6.16-0003** — `bf16` MUST be encoded as a 1-sign / 8-exp / 7-mantissa format
   (bias 127) with the binary32 exponent range and a truncated mantissa; it is **not** an
   IEEE 754-2019 format, and any op producing a `bf16` result MUST round to nearest, ties
@@ -1074,8 +1181,9 @@ shared naming convention spelled identically in both foundational vocabularies.
   NaN encodings; conversion into `e5m2` MUST saturate to the maximum finite magnitude
   under round-half-to-even. *Test:* `test_ops_e5m2_layout`.
 - **KISS-OPS-6.16-0006** — The integer dtypes MUST use the pinned layouts:
-  `s8`/`i32`/`i64` two's-complement; `u8`/`u32` unsigned (with `u32` index-only,
-  §6.2-0007); `bool` one byte normalized to `0`/`1`. The sub-byte **storage packing**
+  `s8`/`i32`/`i64` two's-complement; `u8`/`u32` unsigned (`u32` an ordinary unsigned dtype,
+  §6.2-0007; index-only-ness is an operand role, §6.11-0012); `bool` one byte normalized to
+  `0`/`1`. The sub-byte **storage packing**
   conventions — `s4`/`u4` packed two-per-byte with the low nibble at the even logical
   index (sign-extended for `s4`, zero-extended for `u4`), and `b1` packed 8-bits-per-byte
   LSB-first — are **restated here informatively and owned normatively by the sibling
@@ -1085,11 +1193,271 @@ shared naming convention spelled identically in both foundational vocabularies.
   normative fact in this clause is the `b1` **xor+popcount accumulation to a raw `s32`**
   binary-GEMM computation semantics (a computation fact, not storage packing). *Test:*
   `test_ops_integer_dtype_layouts`.
-- **KISS-OPS-6.16-0007** — `c32` and `c64` MUST be carried as interleaved (re,im) storage
-  pairs of `f32` and `f64` respectively (64 and 128 bits); this version of KISS-Ops
-  declares **no** complex-arithmetic op, so `c32`/`c64` are storage-only dtypes and an op
-  MUST NOT be defined to perform complex arithmetic on them. *Test:*
-  `test_ops_complex_storage_only`.
+- **KISS-OPS-6.16-0007** — The interleaved (re,im) **storage layout** of `c32`/`c64` —
+  pairs of `f32` and `f64` respectively (64 and 128 bits, real lane at offset 0 / the
+  lower-addressed half, imaginary lane at offset 1) — is **restated here informatively and
+  owned normatively by the sibling data-vocabulary sub-standard (Classify §6.1-0012)**, which
+  is the single normative home for complex storage; KISS-Ops restates it only so this
+  document is self-contained and MUST NOT be read as a second normative pinning of the
+  storage facts (mirroring the §6.16-0006 sub-byte-packing pattern). The Ops-owned normative
+  content of this clause is that complex arithmetic on `c32`/`c64` MUST be performed by the
+  complex-arithmetic op family of §6.18, every member of which is non-primitive and
+  decomposes into the real primitive floor (no new primitive is introduced, §6.18-0002).
+  *Test:* `test_ops_complex_storage_layout`.
+
+### 6.17 Compute-fidelity (math-precision) attribute
+
+KISS-Ops owns a second per-kernel attribute, **orthogonal** to the §6.0 determinism class:
+the **compute-fidelity (MathPrecision) attribute**, a two-member enum
+`{bit-stable, reduced-mantissa-permitted}`. It records whether a target computes an op's
+floating-point arithmetic at full storage precision with each atom rounding independently
+(**bit-stable**) or MAY use a reduced-mantissa fast path (**reduced-mantissa-permitted**,
+e.g. a TF32-style multiply). This attribute is the home of the compute-precision meaning
+formerly (mis)modeled as a strict-precision float dtype: storage dtypes (§6.16) are pure
+byte layout and carry no compute-precision meaning; compute precision is this attribute.
+A determinism class selects a comparator; the MathPrecision attribute constrains per-atom
+mantissa width. The attribute is defined once here and imported by KISS-Contract, which
+surfaces it in a kernel's guarantees section.
+
+- **KISS-OPS-6.17-0001** — KISS-Ops MUST own a single compute-fidelity (MathPrecision)
+  attribute drawn from the two-member enum `{bit-stable, reduced-mantissa-permitted}`,
+  defined once here and imported (not re-forked) by KISS-Contract as a kernel guarantee;
+  this attribute MUST be distinct from and orthogonal to the §6.0 determinism/fidelity
+  class. *Test:* `test_ops_math_precision_enum`.
+- **KISS-OPS-6.17-0002** — Under the **bit-stable** value, every floating-point arithmetic
+  atom in an op's evaluation MUST round independently at the storage dtype's full
+  IEEE 754-2019 precision, and an implementation MUST NOT use a reduced-mantissa multiply,
+  a fused-multiply-add, or any other contraction that removes an intermediate rounding
+  (the same per-atom-rounding requirement as §6.0-0006). Bit-stable is the guarantee
+  formerly modeled as the strict-precision `f32s` dtype and MUST NOT be re-encoded as a
+  dtype. *Test:* `test_ops_math_precision_bit_stable`.
+- **KISS-OPS-6.17-0003** — Under the **reduced-mantissa-permitted** value, a target MAY
+  compute a floating-point multiply with its inputs rounded to a **reduced mantissa**
+  (a mantissa narrower than the storage dtype), provided the reduced mantissa retains **no
+  fewer than 10 explicit mantissa bits** (the pinned floor, so "reduced-mantissa" is a
+  quantified bound and not an open-ended adjective — a target MUST NOT round inputs below
+  this floor) and the result stays within the op's declared determinism class (§6.0); a
+  kernel's contract MUST advertise the MathPrecision value so a consumer knows whether
+  bit-stable reproduction is guaranteed. *Test:* `test_ops_math_precision_reduced`.
+- **KISS-OPS-6.17-0004** — The MathPrecision attribute MUST be carried as a kernel-level
+  (contract-guarantee) attribute and MAY be **refined per op** where a kernel guarantees a
+  finer value for some ops than kernel-wide (recovering the per-operand granularity
+  formerly modeled by a strict-precision dtype); it MUST NOT be encoded into the storage
+  dtype set of §6.16, and a storage dtype MUST NOT carry a compute-precision distinction
+  (there is no strict-precision float dtype in this version). *Test:*
+  `test_ops_math_precision_not_dtype`.
+- **KISS-OPS-6.17-0005** — MathPrecision MUST be verified as follows, so it is testable for
+  every determinism class: for an **exact-byte** or **ULP/tolerance** op, **bit-stable** is
+  verified directly under the op's own comparator (each atom at full storage-precision
+  rounding), and **reduced-mantissa-permitted** is verified by detecting a per-atom multiply
+  whose input mantissa is narrower than the §6.17-0003 floor. For an
+  **order-invariant/nondeterministic** op (a float reduction, scan, or contraction),
+  bit-stable MUST NOT be read as pinning the contraction order (which §6.0-0004 leaves
+  unpinned); it constrains **each individual multiply and add atom** to full
+  storage-precision rounding, verified under a **pinned bit-stable reference profile**
+  (ascending-index reduction order with the accumulator at the storage dtype's precision),
+  and reduced-mantissa-permitted is verified by the same per-atom mantissa-width probe. The
+  attribute therefore constrains per-atom mantissa width independently of reduction order.
+  *Test:* `test_ops_math_precision_order_invariant_scope`.
+
+### 6.18 Complex-arithmetic op family (c32 / c64)
+
+This version defines a **complex-arithmetic op family** over the interleaved-storage
+complex dtypes `c32` (a (re,im) pair of `f32`) and `c64` (a (re,im) pair of `f64`). Every
+op in the family is **non-primitive**: it carries a reference decomposition into the
+existing **real** primitive-floor atoms — `add`, `sub`, `mul`, `div`, `neg`, `sqrt`,
+`exp`, `log`, `sin`, `cos`, `atan2`, `copysign` — plus the structural atom `element_map`
+(via the `cmake` / `cre` / `cim` component bridge), the lower-level real non-primitive
+`hypot`, and lower-level complex ops of this same family (`clog` / `csqrt` use `cabs` /
+`carg`; `cpow` uses `cexp` / `cmul` / `clog`). The family introduces **no** new
+primitive-floor op: the §6.3 primitive floor is unchanged (the closure is pinned normatively
+in §6.18-0002). Complex semantics are pinned to **ISO/IEC 9899 (C99/C11) Annex G**
+(IEC 60559-compatible complex arithmetic): principal branch cuts for `clog` / `csqrt` /
+`cpow`, signed zero of the real and imaginary components, and the Annex-G infinity/NaN
+propagation and recovery rules for `cmul` / `cdiv` / `cabs` / `cexp`.
+
+For a complex operand `z`, `cre(z)` and `cim(z)` denote its real and imaginary `f32`/`f64`
+lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imaginary lane
+`y`. A complex op on `c32` evaluates its real-atom decomposition in `f32`; on `c64`, in
+`f64` (§6.18-0015).
+
+**Component bridge (plumbing; not advertised high-level):**
+
+| Op | Result | Reference decomposition |
+|---|---|---|
+| `cmake` | complex from (re,im) | `element_map` writing lane 0 = `input(0)`, lane 1 = `input(1)` into the interleaved (re,im) storage of §6.16-0007 |
+| `cre` | real lane → real | `element_map` reading lane 0 (stride-2 view) of the interleaved storage |
+| `cim` | imag lane → real | `element_map` reading lane 1 (stride-2 view) of the interleaved storage |
+
+**Complex arithmetic (advertised high-level):** with `a=cre(z)`, `b=cim(z)`, `c=cre(w)`,
+`d=cim(w)`:
+
+| Op | Family | Determinism | Reference decomposition (principal / finite case) |
+|---|---|---|---|
+| `cadd` | complex | exact-byte | `cmake(add(a,c), add(b,d))` |
+| `csub` | complex | exact-byte | `cmake(sub(a,c), sub(b,d))` |
+| `cneg` | complex | exact-byte | `cmake(neg(a), neg(b))` |
+| `cconj` | complex | exact-byte | `cmake(a, neg(b))` |
+| `cmul` | complex | exact-byte | `cmake(sub(mul(a,c), mul(b,d)), add(mul(a,d), mul(b,c)))` + Annex-G recovery (§6.18-0005) |
+| `cdiv` | complex | exact-byte | `t=add(mul(c,c),mul(d,d)); cmake(div(add(mul(a,c),mul(b,d)),t), div(sub(mul(b,c),mul(a,d)),t))` + Annex-G recovery (§6.18-0006) |
+| `cabs` | complex | ULP/tolerance | `hypot(a, b)` → real |
+| `carg` | complex | ULP/tolerance | `atan2(b, a)` → real |
+| `cexp` | complex | ULP/tolerance | `ea=exp(a); cmake(mul(ea,cos(b)), mul(ea,sin(b)))` |
+| `clog` | complex | ULP/tolerance | `cmake(log(cabs(z)), carg(z))` (principal; imag ∈ [−π, +π], both endpoints reachable via signed zero) |
+| `csqrt` | complex | ULP/tolerance | `m=cabs(z); cmake(sqrt(div(add(m,a),const(2))), mul(copysign(const(1),b), sqrt(div(sub(m,a),const(2)))))` (principal) |
+| `cpow` | complex | ULP/tolerance | `cexp(cmul(w, clog(z)))` (principal) |
+
+- **KISS-OPS-6.18-0001** — The complex-arithmetic op family for this version MUST be
+  exactly `{cmake, cre, cim, cadd, csub, cneg, cconj, cmul, cdiv, cabs, carg, cexp, clog,
+  csqrt, cpow}`, each with the signature pinned in the §6.18 tables (`cre`/`cim` yield the
+  real component dtype; `cmake` consumes two real lanes; `cabs`/`carg` yield a real value;
+  the remainder are complex→complex); an implementation MUST NOT treat a token outside this
+  set as a complex op of this version. *Test:* `test_ops_complex_op_set`.
+- **KISS-OPS-6.18-0002** — Every complex op MUST be **non-primitive**, carrying the
+  reference decomposition in the §6.18 tables, and MUST reference only ops of strictly lower
+  level (§6.14) drawn from the closure of: the existing real primitive-floor atoms —
+  including `neg` — (`add`, `sub`, `mul`, `div`, `neg`, `sqrt`, `exp`, `log`, `sin`, `cos`,
+  `atan2`, `copysign`), the structural atom `element_map`, the real non-primitive `hypot`,
+  the component-bridge ops `cmake` / `cre` / `cim`, lower-level complex-arithmetic ops of
+  this same family (e.g. `clog` and `csqrt` reference `cabs` / `carg`; `cpow` references
+  `cexp` / `cmul` / `clog`), and the §6.12 scalar-source leaves (`const`, …). The complex
+  family MUST introduce **no** new primitive-floor op, and the §6.3 primitive floor MUST
+  remain exactly as pinned there (unchanged by this family). *Test:*
+  `test_ops_complex_no_new_primitive`.
+- **KISS-OPS-6.18-0003** — `cmake`, `cre`, and `cim` MUST bridge between a complex operand
+  and its two real lanes exactly per the §6.16-0007 interleaved (re,im) storage:
+  `cmake(x,y)` places `x` in the real lane and `y` in the imaginary lane; `cre(z)` reads
+  the real lane (offset 0); `cim(z)` reads the imaginary lane (offset 1); each as an
+  `element_map` over the interleaved storage. These bridge ops MUST preserve the signed
+  zero and NaN payload of each lane (raw-lane move, no arithmetic). *Test:*
+  `test_ops_complex_component_bridge`.
+- **KISS-OPS-6.18-0004** — `cadd`, `csub`, `cneg`, and `cconj` MUST equal the componentwise
+  decompositions of the §6.18 table (`cadd`/`csub` real `add`/`sub` per lane; `cneg`
+  negating both lanes; `cconj` negating only the imaginary lane) and MUST therefore
+  preserve IEEE signed zero per lane, with `cconj` flipping the sign bit of the imaginary
+  lane (`+0.0 → −0.0`). *Test:* `test_ops_complex_add_sub_neg_conj`.
+- **KISS-OPS-6.18-0005** — `cmul` MUST equal `(ac − bd) + (ad + bc)i` computed by the real
+  decomposition of the §6.18 table for finite operands (each real atom rounding
+  independently, exact-byte, §6.0-0006), and MUST additionally apply the ISO C99/C11
+  **Annex G** infinity-recovery rule with the **Annex-G trigger, verbatim**: recovery
+  applies if and only if **both** result components are NaN **and** at least one operand
+  has an infinite lane (a lane is ±∞); in that case, and only that case, the result MUST be
+  a complex infinity with the Annex-G-determined component signs (an infinity times a
+  nonzero finite or infinite operand is an infinity, not a NaN). When only one result
+  component is NaN, recovery MUST NOT be applied (Annex G leaves that result as computed).
+  *Test:* `test_ops_cmul_annexg`.
+- **KISS-OPS-6.18-0006** — `cdiv` MUST equal `((ac + bd) + (bc − ad)i) / (c² + d²)`
+  computed by the real decomposition of the §6.18 table for finite operands with nonzero
+  denominator, and MUST additionally apply the ISO C99/C11 **Annex G** rules: a
+  complex-infinity numerator over a finite nonzero denominator MUST yield a complex
+  infinity; a complex-infinity denominator MUST yield a complex zero (finite numerator);
+  and division of a nonzero finite numerator by a complex **zero** denominator MUST yield a
+  complex infinity per Annex G, never a trap. Because `cdiv` is class **exact-byte**
+  (§6.18-0014) yet real `div` by zero is target-defined (target-UB, §6.4-0002), `cdiv` MUST
+  NOT evaluate the zero-denominator or infinite-operand cases through the real `div` atom;
+  these cases MUST instead be produced by the Annex-G recovery with the component signs
+  pinned by Annex G (a nonzero finite `(a,b)` over `(±0, ±0)` yields the complex infinity
+  `copysign(∞, a) + i·copysign(∞, b)` per Annex G G.5.1), so the exact-byte guarantee is
+  achievable independently of the target's `div`/0 behavior. *Test:* `test_ops_cdiv_annexg`.
+- **KISS-OPS-6.18-0007** — `cabs(z)` MUST equal `hypot(cre(z), cim(z))` (a real,
+  non-negative value in the component dtype), which by the pinned real `hypot` inf/NaN rule
+  (§6.13-0007) is `+∞` whenever either lane is infinite **even if the other lane is NaN**
+  (an infinite component dominates a NaN component), matching Annex G; standalone `hypot`
+  and `cabs` therefore agree on this edge. *Test:* `test_ops_cabs_annexg`.
+- **KISS-OPS-6.18-0008** — `carg(z)` MUST equal `atan2(cim(z), cre(z))`, yielding the
+  **principal** argument in `[−π, +π]` under the IEEE ±0 quadrant conventions of `atan2`
+  (§6.9-0001), so the signed zero of each lane selects the correct quadrant. *Test:*
+  `test_ops_carg_principal`.
+- **KISS-OPS-6.18-0009** — `cexp(z)` MUST equal `exp(cre(z)) · (cos(cim(z)) +
+  i·sin(cim(z)))` computed by the §6.18 decomposition **for finite arguments only**. For
+  any argument with an infinite or NaN lane, the ISO C99/C11 **Annex G** `cexp`
+  special-value rules **GOVERN over the naive decomposition** (which would otherwise yield
+  a spurious `∞·0 = NaN`), and are the pinned semantics. The complete governing rows are:
+  `cexp(±0 + i·0) = 1 + i·0`; `cexp(x + i·∞) = NaN + i·NaN` (finite `x`, invalid);
+  `cexp(x + i·NaN) = NaN + i·NaN` (finite `x`); `cexp(+∞ + i·0) = +∞ + i·0`;
+  `cexp(−∞ + i·y) = +0 · (cos y + i·sin y)` (finite `y`, signed zeros from `cos y`/`sin y`);
+  `cexp(+∞ + i·y) = +∞ · (cos y + i·sin y)` (finite nonzero `y`);
+  `cexp(−∞ + i·∞) = ±0 ± i·0` (signs unspecified); `cexp(+∞ + i·∞) = ±∞ + i·NaN` (invalid);
+  `cexp(−∞ + i·NaN) = ±0 ± i·0`; `cexp(+∞ + i·NaN) = ±∞ + i·NaN`;
+  `cexp(NaN + i·0) = NaN + i·0`; `cexp(NaN + i·y) = NaN + i·NaN` (nonzero `y`);
+  `cexp(NaN + i·NaN) = NaN + i·NaN`. *Test:* `test_ops_cexp_annexg`.
+- **KISS-OPS-6.18-0010** — `clog(z)` MUST equal `cmake(log(cabs(z)), carg(z))`, the
+  **principal** complex logarithm whose branch cut lies along the negative real axis and is
+  continuous from above (with the second quadrant); the imaginary part MUST lie in the
+  **closed** interval `[−π, +π]` (both endpoints reachable, consistent with `carg`'s closed
+  range §6.18-0008 and C99 Annex G) and MUST honor the signed zero of the imaginary lane so
+  that `clog(−1 + i·0)` yields `0 + iπ` and `clog(−1 − i·0)` yields `0 − iπ` (the sign of the
+  zero imaginary part selects the ±π branch endpoint, both of which are attainable). For any
+  argument with an infinite or NaN lane the ISO C99/C11 **Annex G** `clog` special-value
+  rules **GOVERN over the naive decomposition** and are the pinned semantics; the complete
+  governing rows are: `clog(−0 + i·0) = −∞ + i·π`; `clog(+0 + i·0) = −∞ + i·0`;
+  `clog(x + i·∞) = +∞ + i·π/2` (finite `x`); `clog(x + i·NaN) = NaN + i·NaN` (finite `x`);
+  `clog(−∞ + i·y) = +∞ + i·π` (finite `y`); `clog(+∞ + i·y) = +∞ + i·0` (finite `y`);
+  `clog(−∞ + i·∞) = +∞ + i·3π/4`; `clog(+∞ + i·∞) = +∞ + i·π/4`;
+  `clog(±∞ + i·NaN) = +∞ + i·NaN`; `clog(NaN + i·∞) = +∞ + i·NaN`;
+  `clog(NaN + i·y) = NaN + i·NaN` (finite `y`); `clog(NaN + i·NaN) = NaN + i·NaN`. *Test:*
+  `test_ops_clog_principal_branch`.
+- **KISS-OPS-6.18-0011** — `csqrt(z)` MUST equal the **principal** square root of the
+  §6.18 decomposition (non-negative real part; branch cut on the negative real axis) **for
+  finite arguments**, with the imaginary part's sign taken from the imaginary lane via
+  `copysign` so the signed zero of the imaginary lane is honored: `csqrt(−4 + i·0)` MUST
+  yield `0 + 2i` and `csqrt(−4 − i·0)` MUST yield `0 − 2i`. For any argument with an
+  infinite or NaN lane the ISO C99/C11 **Annex G** `csqrt` special-value rules **GOVERN over
+  the naive decomposition** (which would otherwise yield a spurious NaN) and are the pinned
+  semantics; the complete governing rows are: `csqrt(±0 + i·0) = +0 + i·0`;
+  `csqrt(x + i·∞) = +∞ + i·∞` (any `x`, including ±∞/NaN); `csqrt(x + i·NaN) = NaN + i·NaN`
+  (finite `x`); `csqrt(−∞ + i·y) = +0 + i·∞` (finite positive `y`);
+  `csqrt(+∞ + i·y) = +∞ + i·0` (finite positive `y`); `csqrt(−∞ + i·NaN) = NaN ± i·∞`;
+  `csqrt(+∞ + i·NaN) = +∞ + i·NaN`; `csqrt(NaN + i·y) = NaN + i·NaN` (finite `y`);
+  `csqrt(NaN + i·NaN) = NaN + i·NaN`. *Test:* `test_ops_csqrt_principal_branch`.
+- **KISS-OPS-6.18-0012** — `cpow(z, w)` MUST equal the **principal** value
+  `cexp(cmul(w, clog(z)))` of the §6.18 decomposition (using the principal `clog`).
+  `cpow(z, 0)` MUST yield `1 + 0i` for every `z`. Because Annex G specifies `cpow` through
+  this same `cexp`/`clog`/`cmul` composition, `cpow` on non-finite or zero inputs MUST be
+  evaluated by applying the **governed** Annex-G special values of `clog` (§6.18-0010),
+  `cmul` (§6.18-0005), and `cexp` (§6.18-0009) in that composition — so its result is fully
+  determined, not left to the naive chain. In particular `cpow(0 + i·0, w)` MUST yield
+  `0 + i·0` when `Re(w) > 0`, a complex infinity when `Re(w) < 0`, and NaN components when
+  `Re(w) = 0` with `w ≠ 0`. *Test:* `test_ops_cpow_principal`.
+- **KISS-OPS-6.18-0013** — For every complex op, on any input with an infinite or NaN lane
+  the **ISO C99/C11 Annex G special-value / recovery rules GOVERN over the naive real
+  decomposition**, and the governed value is the single pinned semantics (there is no case
+  in which the decomposition and Annex G disagree without a tie-break): for `cmul` / `cdiv`
+  the recovery of §6.18-0005 / §6.18-0006 governs; for `cexp` / `clog` / `csqrt` / `cpow`
+  the enumerated Annex-G special-value rows of §6.18-0009 / §6.18-0010 / §6.18-0011 /
+  §6.18-0012 govern; for `cabs` / `carg` the §6.13-0007 / §6.9-0001 inf/NaN rules govern.
+  A complex op MUST NOT return a value that the naive decomposition would produce where the
+  governing Annex-G rule pins a different value. *Test:* `test_ops_complex_nan_inf_annexg`.
+- **KISS-OPS-6.18-0014** — The determinism/fidelity class (§6.0) of each complex op MUST
+  follow from its decomposition: the purely-algebraic complex ops (`cmake`, `cre`, `cim`,
+  `cadd`, `csub`, `cneg`, `cconj`, `cmul`, `cdiv`) MUST be class **exact-byte** (no
+  transcendental atom, no float reduction), and the complex ops containing a transcendental
+  real atom (`cabs`, `carg`, `cexp`, `clog`, `csqrt`, `cpow` — via `sqrt` / `hypot`,
+  `atan2`, `exp`, `log`, `sin`, `cos`) MUST be class **ULP/tolerance**. *Test:*
+  `test_ops_complex_determinism_class`.
+- **KISS-OPS-6.18-0015** — A complex op on `c32` MUST evaluate its real-atom decomposition
+  with `f32` component lanes, and on `c64` with `f64` component lanes; the component dtype
+  MUST be the `f32`/`f64` element of the interleaved (re,im) storage (§6.16-0007) and MUST
+  NOT be promoted or demoted across the family's atoms. *Test:*
+  `test_ops_complex_component_dtype`.
+- **KISS-OPS-6.18-0016** — The complex ops advertised as **high-level** (native-matchable)
+  MUST be `{cadd, csub, cneg, cconj, cmul, cdiv, cabs, carg, cexp, clog, csqrt, cpow}`; the
+  component bridge ops `{cmake, cre, cim}` MUST NOT be advertised high-level (they are
+  decomposition plumbing). A consumer that natively implements an advertised complex op MAY
+  match it directly; a consumer that does not MUST resolve it via its reference
+  decomposition to the real floor. *Test:* `test_ops_complex_advertised_high_level`.
+- **KISS-OPS-6.18-0017** — Several exact-signed-zero and branch-endpoint requirements
+  (`carg` §6.18-0008, `clog` §6.18-0010, `csqrt` §6.18-0011, and `cexp` §6.18-0009) are
+  pinned on ops whose determinism class is **ULP/tolerance** (§6.18-0014), under which a
+  tolerance comparator cannot distinguish `+0.0` from `−0.0` nor detect a wrong ±π branch
+  endpoint where the two values coincide in magnitude. So these requirements are testable,
+  KISS-Conform MUST evaluate `carg` / `clog` / `csqrt` / `cexp` under a **split comparator**:
+  an **exact-bit** comparator on (a) the sign bit of every zero-valued result component and
+  (b) the ±π branch-endpoint selection (the sign of an imaginary part equal to π in
+  magnitude), **combined with** the ULP/tolerance comparator on the component magnitudes. An
+  implementation that returns the wrong sign of a zero component or the wrong ±π endpoint
+  MUST be judged non-conforming even when the magnitude is within tolerance. *Test:*
+  `test_ops_complex_branch_sign_exact`.
 
 ---
 
@@ -1184,9 +1552,12 @@ crate **semver**. They move independently.
 An implementation conforms to KISS-Ops at a given op-vocabulary schema version if it (a)
 evaluates the pinned semantics of every primitive-floor op (§6.3) exactly as pinned in
 §6.4–§6.12 and §6.16, (b) either natively implements or correctly resolves via reference
-decomposition every claimed non-primitive op (§6.13–§6.14), (c) declines cleanly (never
-panics) on unrecognized ops and on `u32` compute operands, and (d) passes the KISS-Conform
-suite for KISS-Ops at that version.
+decomposition every claimed non-primitive op (§6.13–§6.14, including the §6.18 complex
+family), (c) declines cleanly (never panics) on unrecognized ops (`u32` is an ordinary
+dtype and is not declined), and (d) passes the KISS-Conform suite for KISS-Ops at that
+version. The compute-fidelity (MathPrecision) attribute (§6.17) is advertised per kernel
+and surfaced as a KISS-Contract guarantee; the complex ops carry the determinism classes
+of §6.18-0014.
 
 KISS-Ops is a **foundational root**: it has no incoming DAG edge, so its DAG prerequisite
 closure is empty and claiming KISS-Ops forces no upstream co-claim. The dtype tokens and
@@ -1221,7 +1592,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.2-0004 | `test_ops_signed_zero_preserved` |
 | KISS-OPS-6.2-0005 | `test_ops_compare_result_zero_one` |
 | KISS-OPS-6.2-0006 | `test_ops_bool_normalization` |
-| KISS-OPS-6.2-0007 | `test_ops_u32_index_only` |
+| KISS-OPS-6.2-0007 | `test_ops_u32_ordinary_dtype` |
 | KISS-OPS-6.2-0008 | `test_ops_const_bits_roundtrip` |
 | KISS-OPS-6.2-0009 | `test_ops_nonprimitive_semantics_from_decomposition` |
 | KISS-OPS-6.3-0001 | `test_ops_primitive_floor_set` |
@@ -1266,6 +1637,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0008 | `test_ops_reduce_keepdim_broadcast` |
 | KISS-OPS-6.11-0009 | `test_ops_index_dtype_set` |
 | KISS-OPS-6.11-0010 | `test_ops_scatter_atomic_minmax_nan` |
+| KISS-OPS-6.11-0011 | `test_ops_reduce_axes_three_values` |
+| KISS-OPS-6.11-0012 | `test_ops_index_operand_role` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -1275,6 +1648,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0004 | `test_ops_parameterized_attributes_explicit` |
 | KISS-OPS-6.13-0005 | `test_ops_pow_full_domain` |
 | KISS-OPS-6.13-0006 | `test_ops_decomposition_body_grammar` |
+| KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |
@@ -1291,7 +1665,29 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0004 | `test_ops_e4m3_layout` |
 | KISS-OPS-6.16-0005 | `test_ops_e5m2_layout` |
 | KISS-OPS-6.16-0006 | `test_ops_integer_dtype_layouts` |
-| KISS-OPS-6.16-0007 | `test_ops_complex_storage_only` |
+| KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
+| KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
+| KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
+| KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
+| KISS-OPS-6.17-0004 | `test_ops_math_precision_not_dtype` |
+| KISS-OPS-6.17-0005 | `test_ops_math_precision_order_invariant_scope` |
+| KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
+| KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
+| KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |
+| KISS-OPS-6.18-0004 | `test_ops_complex_add_sub_neg_conj` |
+| KISS-OPS-6.18-0005 | `test_ops_cmul_annexg` |
+| KISS-OPS-6.18-0006 | `test_ops_cdiv_annexg` |
+| KISS-OPS-6.18-0007 | `test_ops_cabs_annexg` |
+| KISS-OPS-6.18-0008 | `test_ops_carg_principal` |
+| KISS-OPS-6.18-0009 | `test_ops_cexp_annexg` |
+| KISS-OPS-6.18-0010 | `test_ops_clog_principal_branch` |
+| KISS-OPS-6.18-0011 | `test_ops_csqrt_principal_branch` |
+| KISS-OPS-6.18-0012 | `test_ops_cpow_principal` |
+| KISS-OPS-6.18-0013 | `test_ops_complex_nan_inf_annexg` |
+| KISS-OPS-6.18-0014 | `test_ops_complex_determinism_class` |
+| KISS-OPS-6.18-0015 | `test_ops_complex_component_dtype` |
+| KISS-OPS-6.18-0016 | `test_ops_complex_advertised_high_level` |
+| KISS-OPS-6.18-0017 | `test_ops_complex_branch_sign_exact` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |
@@ -1404,7 +1800,16 @@ first), and the values output is not consumed — only the index vector is.
 - **Reference decomposition** — the canonical lower-level expression that defines a non-
   primitive op's meaning (§6.13).
 - **Scalar-source leaf** — `input(i)`, `const(bits)`, `param(i)`, `coord(axis)`,
-  `reduced(stage)`, `extent(axis)` (§6.12).
+  `reduced(stage)`, `extent(axis)`, `reduced_count` (§6.12).
+- **Compute-fidelity (MathPrecision) attribute** — the `{bit-stable,
+  reduced-mantissa-permitted}` enum owned by KISS-Ops (§6.17), orthogonal to the determinism
+  class; the home of compute precision now that storage dtypes are pure byte layout.
+- **Complex op family** — the §6.18 ops over `c32`/`c64` (`cadd`, `csub`, `cneg`, `cconj`,
+  `cmul`, `cdiv`, `cabs`, `carg`, `cexp`, `clog`, `csqrt`, `cpow`, plus the bridge ops
+  `cmake`/`cre`/`cim`), all non-primitive over the real floor, pinned to ISO C99/C11
+  Annex G.
+- **Index operand role** — the `index_operand` + `index_dtype` operand-level role
+  (§6.11-0012); index-only-ness is this role, not a dtype class.
 
 ## Appendix C — Provenance / acknowledgments (informative)
 
@@ -1422,16 +1827,23 @@ roles provider, consumer, implementation, kernel, contract, target, and steward.
 
 These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind conformance:
 
-1. **`f32` versus `f32s`.** Byte-identical binary32 storage distinguished only by required
-   compute precision (reduced-mantissa-permitted versus full-precision bit-stable multiply-
-   add). Whether compute precision belongs in the dtype set at all, or moves to the
-   contract's guarantees as a math-precision attribute leaving dtypes purely storage. If it
-   stays a dtype, both foundational vocabularies must pin that `f32`/`f32s` share byte
-   layout and differ only in the numeric-fidelity contract.
-2. **`u32` index-only.** Whether the dtype set formally tags index-only dtypes as a distinct
-   class, or whether index-only is an operand-role property carried on the gather/scatter
-   index operand (this document pins it as a role restriction, §6.2-0007, with the legal
-   index-dtype set `{u32, i32, i64}` in §6.11-0009).
+1. **`f32` versus `f32s` (resolved 2026-07-12).** Ratified: strict-precision float is
+   **not** a dtype. `f32s` is removed from the dtype set; the Classify dtype set is pure
+   storage (byte layout only). Compute precision moves to KISS-Ops as the compute-fidelity
+   (MathPrecision) attribute `{bit-stable, reduced-mantissa-permitted}` (§6.17), surfaced in
+   a kernel's KISS-Contract guarantees. `f32` is now pure binary32 storage with no
+   compute-precision meaning (§6.16-0002). The **reduced-mantissa floor** of 10 explicit
+   mantissa bits (§6.17-0003) and the per-op-vs-per-kernel granularity and
+   order-invariant-op testability rules (§6.17-0005) are the quantified replacement for the
+   per-operand precision the retired `f32s` dtype carried; the exact floor value (or an
+   enumerated permitted-format set) is a reference value pending confirmation against real
+   reduced-precision hardware, but the clause pins a concrete number so the attribute is not
+   an unquantified adjective.
+2. **`u32` index-only (resolved 2026-07-12).** Ratified: index-only-ness is an **operand
+   role**, not a dtype class. `u32` is an ordinary unsigned-integer storage/compute dtype
+   (§6.2-0007); the index role is carried on the gather/scatter operand via `index_operand`
+   and `index_dtype` (§6.11-0012), with the legal `index_dtype` set `{u32, i32, i64}`
+   (§6.11-0009). No index-only dtype class is defined.
 3. **Sub-byte packing (`s4`, `u4`, `b1`).** KISS-Ops restates the packing layout in §6.16
    informatively because it is adjacent to the `popcount`/binary-GEMM semantics, but
    §6.16-0006 now defers **normative** ownership of the sub-byte storage packing to the
@@ -1440,8 +1852,13 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
    earlier dual-pinning so exactly one standard carries the normative packing clause;
    whether the two spellings should be kept byte-identical (shared anchor) remains an RFC
    item, but the ownership boundary is no longer ambiguous.
-4. **Complex dtypes (`c32`, `c64`).** This version declares **no** complex-arithmetic ops
-   (§6.16-0007); `c32`/`c64` are carried as spectrum-domain storage dtypes only.
+4. **Complex dtypes (`c32`, `c64`) (resolved 2026-07-12).** Ratified: `c32`/`c64` **do**
+   get a complex-arithmetic op family (§6.18) — `cadd`/`csub`/`cmul`/`cdiv`/`cneg`/`cconj`/
+   `cabs`/`carg`, complex-construct/`re`/`im` extract (`cmake`/`cre`/`cim`), and the
+   transcendentals `cexp`/`clog`/`csqrt`/`cpow` — pinned to ISO C99/C11 Annex G (principal
+   branch cuts, signed zero, NaN/inf recovery). Every complex op is non-primitive with a
+   reference decomposition into the REAL floor atoms, so the primitive floor is unchanged
+   (no new axiom, §6.18-0002); `c32`/`c64` remain interleaved (re,im) storage containers.
 5. **Transcendental atoms as declared-ULP with a normative ceiling.** The §6.8 ceilings
    (4 ULP for the elementary transcendentals, 8 ULP for `lgamma`, correctly-rounded-or-2-ULP
    for `sqrt`) are reference values pending confirmation against real per-target math
@@ -1452,24 +1869,47 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
    pinning a canonical reduction order and accumulator width. Whether a future profile
    should offer an opt-in byte-exact reduction (pinned low-to-high order + accumulator
    dtype) is open.
-7. **`extent(axis)` leaf.** Added to the scalar-source leaf set (§6.12-0001) to source
-   shape-derived divisors (`reduce_mean`); whether the shared anchor's leaf list should
-   adopt `extent(axis)` identically is an RFC item for the data-vocabulary sibling.
-8. **`reduce` keepdim broadcast.** §6.11-0008 pins reduced axes as extent-1 / stride-0
-   keepdim views; the `reduce_axes` empty-mask sentinel (last/trailing axis versus
-   undetermined/non-reduction) remains a data-vocabulary encoding KISS-Ops references but
-   does not own.
+7. **`extent(axis)` and `reduced_count` leaves.** `extent(axis)` (single-axis length) and
+   `reduced_count` (the product of extents over **all** reduced axes) are in the
+   scalar-source leaf set (§6.12-0001); `reduced_count` is the correct divisor for a mean
+   over one **or more** reduced axes, so `reduce_mean` / `reduce_var` / `reduce_std` are
+   arithmetically correct under the multi-axis `reduce_axes` masks enabled by §6.11-0011.
+   Whether the shared anchor's leaf list should adopt these identically is an RFC item for
+   the data-vocabulary sibling.
+8. **`reduce` keepdim broadcast + `reduce_axes` token (resolved 2026-07-12).**
+   §6.11-0008 pins reduced axes as extent-1 / stride-0 keepdim views. The prior single
+   overloaded empty-mask sentinel is **split** into three explicit, distinctly-encoded
+   category tokens — **all-axes** (`rall`), **trailing-axis** (`rlast`), and **none /
+   not-a-reduction** (`-`) — with an explicit per-axis subset mask `x<hh>` (a u8 keepdim
+   mask, two lowercase hex digits) (§6.11-0011). The `reduce_axes` **reduce-field encoding**
+   is owned normatively by the data-vocabulary `structure_key` **token codec** (Classify
+   §6.7-0005, which bumps `STRUCTURE_KEY_VERSION` for this split, still unfrozen); **no
+   binary/byte wire form is defined at this schema version** (Classify §6.7-0011). KISS-Ops
+   restates those tokens **informatively** (as the shared anchor, not a second normative
+   pinning — mirroring the D.3 sub-byte-packing resolution) and pins only the reduce/scan
+   **semantics** of each value plus the emission constraints. The u8 per-axis subset field
+   requires `MAX_RANK <= 8`, the category tokens stay disjoint from every legal subset mask,
+   and any hex sentinel rendering (`0xFFFF`/`0xFFFE`/`0x0000`, reserved `0x0100..0xFFFD`) is
+   an Ops-local in-memory illustration only, not the shared anchor and not a wire form;
+   whether the two spellings should be kept identical remains an RFC item, but the ownership
+   boundary is unambiguous.
 9. **Determinism-class enum ownership.** This version makes KISS-Ops the owner of the
    single canonical enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`
    (§6.0-0001), imported downstream by KISS-Synth and KISS-Conform, resolving the prior
    upstream-import cycle.
-10. **Umbrella cross-reference (reconciled 2026-07-12).** Two corrections to the umbrella,
+10. **Umbrella cross-reference (reconciled 2026-07-12).** Three corrections to the umbrella,
     now applied: (a) the umbrella §2.1 description of KISS-Ops reads "IEEE-fmax versus
-    NaN-propagating-max" (matching §2.3/§6.15 here), not "saturating-max"; and (b) the
+    NaN-propagating-max" (matching §2.3/§6.15 here), not "saturating-max"; (b) the
     umbrella §2.1 now names **KISS-Ops** as owner of the canonical determinism/fidelity enum
     `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}` (§6.0-0001, Appendix D.9),
     with KISS-Synth, KISS-Emit, and KISS-Conform importing it — placing ownership in a
-    foundational vocabulary so no lower tier imports upward from a protocol-tier sub-standard.
+    foundational vocabulary so no lower tier imports upward from a protocol-tier sub-standard;
+    and (c) the enum is now spelled **byte-identically** in both documents — the earlier
+    umbrella renderings `ULP-tolerance` (§2.1) and the truncated `order-invariant` (§2.1/§3
+    "determinism class declared" bullet) were corrected to the canonical
+    `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`, so the §6.0-0001
+    "verbatim everywhere" invariant and byte-exact token matching (§7.3-0003, §7.4-0001) now
+    hold across the suite.
 
 ---
 

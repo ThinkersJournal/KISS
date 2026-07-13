@@ -109,16 +109,22 @@ its **stable lowercase token** (the spelling that appears in a `structure_key`
 token and in an operand descriptor), and, for sub-byte and complex types, its
 **exact packing convention**. Two subtleties the table nails:
 
-- **`f32` versus `f32s`.** Both are IEEE-754 binary32 and are **byte-identical in
-  storage**. They differ only in the *compute contract*: `f32` permits a target to
-  use reduced-mantissa reductions (e.g. TF32-style tensor math), while `f32s`
-  (reference name `F32Strict`) requires full-precision, bit-stable multiply-add.
-  The distinction is a numeric-fidelity fact, not a byte-layout fact. (Whether
-  compute precision belongs in the dtype set at all, or migrates to the contract's
-  guarantees, is an open question — see §8.4.)
-- **`u32` is index-only.** `u32` is an **index/address dtype**, legal only in the
-  index-operand role of gather/scatter/embedding. Every arithmetic, reduction, and
-  vectorization path rejects it. Its container width matches `i32` (4 bytes).
+- **Dtypes are pure storage.** A dtype pins **byte layout only** — width, kind,
+  spelling, and (for sub-byte and complex types) packing. **Compute precision is
+  not a dtype.** For example, whether a `f32` multiply-add must be bit-stable
+  full-precision or may use a reduced-mantissa reduction (e.g. TF32-style tensor
+  math) is a *numeric-fidelity* fact, not a byte-layout fact; it is owned by
+  KISS-Ops as a `MathPrecision`-style fidelity attribute (alongside the Ops-owned
+  determinism/fidelity enum) and surfaced in a kernel's KISS-Contract guarantees.
+  Classify therefore carries **one** binary32 storage dtype, `f32`, and defines no
+  strict-precision variant; a kernel that needs bit-stable compute states that
+  through the KISS-Ops fidelity attribute, not through a distinct dtype token.
+- **`u32` is an ordinary storage dtype.** `u32` is a plain unsigned-32-bit storage
+  type with the same container width as `i32` (4 bytes); it is legal on any operand
+  path. Index-only-ness is **not** a dtype class: whether an operand is used as a
+  gather/scatter/embedding index or address is an **operand role**, carried by
+  KISS-Ops on the gather/scatter operand (the `index_operand` designation plus its
+  `index_dtype`), never encoded as a Classify dtype.
 
 ### 2.3 Signed strides are the whole point of the descriptor
 
@@ -175,24 +181,23 @@ The complete pinned scalar dtype set (normative table in §6.1):
 |---|---|---|---|
 | `f16` | float | 16 | IEEE-754 binary16 (1s+5e+10m), half-precision storage |
 | `bf16` | float | 16 | bfloat16 (1s+8e+7m); f32 exponent range, reduced mantissa |
-| `f32` | float | 32 | IEEE-754 binary32 storage; reduced-mantissa compute permitted per target |
-| `f32s` | float | 32 | binary32 storage byte-identical to `f32`, but requires full-precision bit-stable multiply-add (reference name `F32Strict`) |
+| `f32` | float | 32 | IEEE-754 binary32 storage (compute precision is a KISS-Ops fidelity attribute, not a dtype) |
 | `f64` | float | 64 | IEEE-754 binary64 |
 | `s8` | int | 8 | signed 8-bit two's-complement |
 | `u8` | uint | 8 | unsigned 8-bit; also the physical storage of `bool` |
 | `i32` | int | 32 | signed 32-bit two's-complement |
 | `i64` | int | 64 | signed 64-bit two's-complement |
-| `u32` | uint | 32 | **index/address dtype only** (gather/scatter/embedding index role); rejected on every compute path; container width matches `i32` |
+| `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width matches `i32`; the index/address *role* is carried by KISS-Ops on the gather/scatter operand, not a dtype class |
 | `bool` | bool | 8 | 1-byte truth value; `0` = false, any non-zero byte = true; ops normalize to 0/1; storage width equals `u8` |
 | `e4m3` | float | 8 | FP8 E4M3 (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN |
 | `e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `s4`; zero-extended on read |
-| `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw s32 output (reference name `Bin`) |
-| `c32` | complex | 64 | single-precision complex: interleaved (re,im) pair of `f32`, 64 bits total; complex arithmetic out of current kernel scope (storage/spectrum-domain only) |
+| `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
+| `c32` | complex | 64 | single-precision complex: interleaved (re,im) pair of `f32`, 64 bits total; complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
 | `c64` | complex | 128 | double-precision complex: interleaved (re,im) pair of `f64`, 128 bits total |
 
-Eighteen dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
+Seventeen dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
 no "etc.".
 
 ### 2.7 Readable catalog — the operand descriptor
@@ -216,11 +221,11 @@ Three operands in canonical order (`in`, `in`, `out`), each `extents=[128,256]`,
 `strides=[256,1]`, `alignment=256`. Each operand is contiguous (`co`), no broadcast
 (`00`), vectorizes to V4 (inner extent 256, 256-byte aligned, f32 caps at float4 =
 16 bytes), inner extent divisible by 16 (`d16`), not flipped (`f`). Max touched
-offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `i32`; iteration-frame element count
+offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; iteration-frame element count
 `128·256 = 32768 > 1024` ⇒ `grid`; iteration rank 2. The token:
 
 ```
-sk1|bin|f32|cuda:sm89|i32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
+sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
 ```
 
 **(b) A broadcast operand.** If operand 1 is `strides=[0,1]` (axis 0 broadcasts
@@ -229,14 +234,25 @@ over iteration extent 128), its sub-key becomes `br/01/v1/…` — layout tag
 operand derives `v1`, §6.5-0009). A different cell, a different token, an honest miss
 against the all-contiguous build.
 
-**(c) A reduction, keepdim form.** Input `[4,8]` reducing the last (innermost) axis
-to keepdim output `[4,1]` (op category `reduction`, caller-supplied) sets reduce-axis
-bit 1 ⇒ token field `x02`; reducing axis 0 to `[1,8]` sets bit 0 ⇒ `x01`. Two
-different cells. A *collapsed* (rank-reduced) output `[4]` is **not keyable** — axis
-0 and axis 1 both collapse to `[4]`, so the cell would be indistinguishable;
-§6.6-0009 requires reductions to be presented in keepdim form and a collapsed
-reduction yields a typed decline rather than the empty mask. The reduced operand's
-innermost axis is a reduced axis, so it derives scalar vector width (`v1`, §6.5-0009).
+**(c) A reduction, keepdim form.** The reduce field has three reserved,
+distinctly-encoded values plus a general bitmask (§6.6-0009, §6.7-0005): `-` =
+none / not-a-reduction; `rall` = all-axes reduction; `rlast` = trailing-axis
+(innermost) reduction; `x<hh>` = an explicit keepdim bitmask for any other axis
+set. Input `[4,8]` reducing the last (innermost) axis to keepdim output `[4,1]` (op
+category `reduction`, caller-supplied) is a *trailing-axis* reduction ⇒ token field
+`rlast` (the reduce-**field encoding** `rlast` is rank-independent — the same field
+value is used for any rank whose innermost axis alone is reduced — though the overall
+key still varies with the `rank` field, so a rank-2 `rlast` token and a rank-3
+`rlast` token differ by bytes and do not match). Reducing **every** axis of `[4,8]`
+to `[1,1]` ⇒ `rall`. Reducing only
+axis 0 of `[4,8]` to keepdim `[1,8]` is neither all-axes nor trailing, so it uses
+the explicit bitmask with bit 0 set ⇒ `x01`. These are distinct cells and distinct
+tokens. A *collapsed* (rank-reduced) output `[4]` is **not keyable** — axis 0 and
+axis 1 both collapse to `[4]`, so the cell would be indistinguishable; §6.6-0009
+requires reductions to be presented in keepdim form and a collapsed reduction
+yields a typed decline. The reduced operand's innermost axis is a reduced axis
+(under `rall`, `rlast`, or an `x<hh>` mask whose innermost bit is set), so it
+derives scalar vector width (`v1`, §6.5-0009).
 
 **(d) A dense GEMM cell.** `lhs [8,4096] · rhs [4096,4096] → out [8,4096]`,
 row-major, op category `contraction`; the caller supplies M/N/K axis roles (lhs
@@ -293,7 +309,9 @@ Classify defines no op meaning.
   operand rank, with lower-rank operands right-aligned into it (§6.6-0013).
 - **role hint** — a caller-supplied fact an op category needs that is not derivable
   from bare operand extents: the M/N/K axis roles of a contraction cell (§6.6-0016)
-  and the index-operand slot of a gather/scatter/embedding cell (§6.1-0006).
+  and the index-operand slot of a gather/scatter/embedding cell (mirroring the
+  KISS-Ops index/address operand role, §6.1-0006; the index is not identified by
+  dtype).
 - **target_capability** — the namespaced, all-hardware compilation-target
   descriptor `<namespace>:<capability-set>` (§6.8), matched byte-exact.
 - **namespace** — the registered left component of a `target_capability` token
@@ -411,14 +429,13 @@ where it fixes storage bytes.
 |---|---|---|---|
 | `f16` | float | 16 | IEEE-754 binary16 (sign 1, exp 5, mantissa 10) |
 | `bf16` | float | 16 | bfloat16 (sign 1, exp 8, mantissa 7) |
-| `f32` | float | 32 | IEEE-754 binary32; reduced-mantissa **compute** permitted per target (storage unaffected) |
-| `f32s` | float | 32 | IEEE-754 binary32, byte-identical to `f32`; requires full-precision bit-stable multiply-add |
+| `f32` | float | 32 | IEEE-754 binary32 storage; compute precision is **not** pinned here — it is a KISS-Ops fidelity attribute (see §6.1-0005) |
 | `f64` | float | 64 | IEEE-754 binary64 |
 | `s8` | int | 8 | signed 8-bit two's-complement |
 | `u8` | uint | 8 | unsigned 8-bit; physical storage of `bool` |
 | `i32` | int | 32 | signed 32-bit two's-complement |
 | `i64` | int | 64 | signed 64-bit two's-complement |
-| `u32` | uint | 32 | index/address dtype only; container width 4 bytes (matches `i32`) |
+| `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width 4 bytes (matches `i32`); index/address is an operand role owned by KISS-Ops, not a dtype class |
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
 | `e4m3` | float | 8 | FP8 E4M3 (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding |
 | `e5m2` | float | 8 | FP8 E5M2 (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN |
@@ -429,36 +446,46 @@ where it fixes storage bytes.
 | `c64` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits total |
 
 - **KISS-CLASSIFY-6.1-0001** — The scalar dtype set MUST be **exactly** the
-  eighteen tokens in the table above (`f16`, `bf16`, `f32`, `f32s`, `f64`, `s8`,
-  `u8`, `i32`, `i64`, `u32`, `bool`, `e4m3`, `e5m2`, `s4`, `u4`, `b1`, `c32`,
-  `c64`); an implementation MUST NOT recognize a nineteenth dtype token at this
-  schema version and MUST NOT omit any of the eighteen. *Test:*
+  seventeen tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `s8`, `u8`,
+  `i32`, `i64`, `u32`, `bool`, `e4m3`, `e5m2`, `s4`, `u4`, `b1`, `c32`, `c64`); an
+  implementation MUST NOT recognize an eighteenth dtype token at this schema version
+  and MUST NOT omit any of the seventeen. In particular, no strict-precision float
+  variant is a dtype: the dtype set is **pure storage** (§6.1-0005). *Test:*
   `test_classify_dtype_set_is_closed`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
-  the table above (`f16`/`bf16` = 16; `f32`/`f32s` = 32; `f64` = 64; `s8` = 8;
+  the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `s8` = 8;
   `u8` = 8; `i32` = 32; `i64` = 64; `u32` = 32; `bool` = 8; `e4m3`/`e5m2` = 8;
   `s4`/`u4` = 4; `b1` = 1; `c32` = 64; `c64` = 128). *Test:*
   `test_classify_dtype_bit_widths`.
 - **KISS-CLASSIFY-6.1-0003** — Each dtype MUST have the exact numeric kind in the
-  table above (`float`: `f16`, `bf16`, `f32`, `f32s`, `f64`, `e4m3`, `e5m2`; `int`:
+  table above (`float`: `f16`, `bf16`, `f32`, `f64`, `e4m3`, `e5m2`; `int`:
   `s8`, `i32`, `i64`, `s4`; `uint`: `u8`, `u32`, `u4`, `b1`; `bool`: `bool`;
   `complex`: `c32`, `c64`). *Test:* `test_classify_dtype_numeric_kinds`.
 - **KISS-CLASSIFY-6.1-0004** — Each dtype MUST be spelled by exactly its stable
   lowercase token in the table above wherever it appears in a `structure_key` token
   or an operand descriptor; an implementation MUST NOT substitute a synonym or an
   alternate casing. *Test:* `test_classify_dtype_token_spelling`.
-- **KISS-CLASSIFY-6.1-0005** — `f32` and `f32s` MUST have byte-identical storage
-  (both IEEE-754 binary32) and MUST differ only in the guaranteed compute precision:
-  `f32` permits reduced-mantissa reduction per target, `f32s` requires
-  full-precision bit-stable multiply-add. A serializer MUST NOT conflate the two
-  tokens. *Test:* `test_classify_f32_vs_f32s_storage_identical`.
-- **KISS-CLASSIFY-6.1-0006** — `u32` MUST be treated as an index/address dtype. It
-  MUST be legal only as the index operand of an op category in the set `{idx, emb,
-  seg}` (§6.5-0006), where the index-operand slot is the caller-supplied role hint
-  (§6.6-0012); an implementation MUST reject `u32` in any other operand slot of
-  those categories, and in every operand of any other op category — that is, on
-  every arithmetic, reduction, and vectorization path — with a typed decline. Its
-  container width MUST be 4 bytes. *Test:* `test_classify_u32_is_index_only`.
+- **KISS-CLASSIFY-6.1-0005** — The dtype set MUST be **pure storage**: a dtype pins
+  byte layout only (width, numeric kind, spelling, packing) and MUST NOT encode any
+  compute-precision or numeric-fidelity guarantee. In particular, `f32` MUST be a
+  single IEEE-754 binary32 **storage** dtype, and a strict-precision (bit-stable,
+  full-precision multiply-add) float variant MUST NOT exist as a distinct dtype
+  token; equivalently, the closed seventeen-token set (§6.1-0001) contains no such
+  token and the dtype record carries no precision field. Compute precision — whether
+  a computation must be bit-stable full-precision or may use a reduced-mantissa
+  reduction — is a **KISS-Ops fidelity attribute** (a `MathPrecision`-style attribute
+  alongside the KISS-Ops-owned determinism/fidelity enum), surfaced in a kernel's
+  KISS-Contract guarantees, and MUST NOT be inferred from or attached to a Classify
+  dtype token. *Test:* `test_classify_dtypes_are_pure_storage`.
+- **KISS-CLASSIFY-6.1-0006** — `u32` MUST be an **ordinary storage dtype**: an
+  unsigned 32-bit integer whose container width MUST be 4 bytes, legal in any
+  operand slot on the same terms as any other storage dtype. An implementation MUST
+  NOT define an index-only dtype class and MUST NOT reject `u32` on any arithmetic,
+  reduction, or vectorization path on the ground that it is an index type. The
+  index/address **operand role** — which operand of a gather/scatter/embedding cell
+  is the index and what its `index_dtype` is — is a KISS-Ops operand-role fact
+  carried on the gather/scatter operand, **not** a Classify dtype class. *Test:*
+  `test_classify_u32_is_ordinary_storage`.
 - **KISS-CLASSIFY-6.1-0007** — `bool` MUST be stored in exactly one byte with the
   pinned truth encoding `0x00` = false and any non-zero byte read as true; its
   canonical (normalized) true value is the byte `0x01`, and its storage width MUST
@@ -494,10 +521,10 @@ where it fixes storage bytes.
   uint, bool, complex}`; every dtype MUST map to exactly one kind per §6.1-0003, and
   an implementation MUST NOT introduce a sixth kind at this schema version. *Test:*
   `test_classify_numeric_kind_set_closed`.
-- **KISS-CLASSIFY-6.2-0002** — For each float dtype (`f16`, `bf16`, `f32`, `f32s`,
+- **KISS-CLASSIFY-6.2-0002** — For each float dtype (`f16`, `bf16`, `f32`,
   `f64`, `e4m3`, `e5m2`) the special values the format defines MUST be identified by
   their pinned bit patterns: `±0` and subnormals for every float dtype; positive and
-  negative infinity for `f16`/`bf16`/`f32`/`f32s`/`f64`/`e5m2` (but **not** `e4m3`,
+  negative infinity for `f16`/`bf16`/`f32`/`f64`/`e5m2` (but **not** `e4m3`,
   which defines none); quiet and signaling NaN for every float dtype that defines
   both (all except `e4m3`); and the single NaN encoding for `e4m3` (§6.1-0010). An
   implementation MUST distinguish `-0` from `+0` by bit pattern and MUST NOT conflate
@@ -517,12 +544,12 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `rank` | u8 | `0 ..= MAX_RANK` (§6.4) |
 | `extents` | `i64[MAX_RANK]` | any i64; only `extents[0..rank]` meaningful; symbolic-axis entry is the capacity |
 | `strides` | `i64[MAX_RANK]` | any signed i64 (`0` = broadcast, `< 0` = reversed); element units; only `strides[0..rank]` meaningful |
-| `dtype` | dtype token | one of the eighteen (§6.1) |
+| `dtype` | dtype token | one of the seventeen (§6.1) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
 | `quant` | optional record | `{family, sub_byte_bits: u8, block_elems: u16, scale_placement}` |
-| `symbolic_extent` | optional record | `{axis: u8 (< rank), kind ∈ {scalar, range, affine}}` |
+| `symbolic_extent` | optional record | `{axis: u8 (< rank), kind ∈ {scalar, range, affine}}`; `kind` is an uninterpreted tag at this schema version (no bounds payload) |
 
 - **KISS-CLASSIFY-6.3-0001** — An operand descriptor's `rank` MUST be in the
   inclusive range `0 ..= MAX_RANK`; a producer MUST NOT emit and a reader MUST
@@ -544,7 +571,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   are permitted, and §6.5-0009 pins how they gate vector width (floor to the largest
   power of two not exceeding the value, with `0` treated as `1`). *Test:*
   `test_classify_alignment_is_bytes`.
-- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the eighteen tokens
+- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the seventeen tokens
   of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
 - **KISS-CLASSIFY-6.3-0007** — `layout_tag` MUST be derived as a projection of
   `extents` and `strides` (§6.5-0002) and MUST NOT be an independently stored raw
@@ -562,12 +589,16 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   `structure_key` admissibility key at this schema version. *Test:*
   `test_classify_quant_carried_not_keyed`.
 - **KISS-CLASSIFY-6.3-0010** — When present, the `symbolic_extent` record MUST
-  carry `{axis (u8, `< rank`), kind ∈ {scalar, range, affine}}`, where `scalar`
-  denotes a single dynamic length bound, `range` a `[min, max]` length interval, and
-  `affine` a length given by an affine form over symbolic parameters. It MUST flag
-  that the named axis's *live* length is dynamic while its *capacity*
-  (`extents[axis]`) keys the strides, and the symbolic fact MUST NOT change how
-  strides or index width are keyed. *Test:*
+  carry `{axis (u8, `< rank`), kind ∈ {scalar, range, affine}}`. At this schema
+  version `kind` is an **uninterpreted tag** carrying no bounds payload: the record
+  stores neither a scalar bound, nor a `[min, max]` interval, nor affine
+  coefficients/parameter references. The informative distinction — `scalar` denoting
+  a single dynamic length bound, `range` a `[min, max]` length interval, and `affine`
+  a length given by an affine form over symbolic parameters — describes intended
+  future semantics only and MUST NOT be relied upon to carry bounds at this version.
+  The record MUST flag that the named axis's *live* length is dynamic while its
+  *capacity* (`extents[axis]`) keys the strides, and the symbolic fact MUST NOT
+  change how strides or index width are keyed. *Test:*
   `test_classify_symbolic_extent_flags_live_length`.
 - **KISS-CLASSIFY-6.3-0011** — Axes MUST be ordered **outermost first**: axis index
   `0` is the outermost axis and axis index `rank−1` is the innermost axis. Every
@@ -584,10 +615,14 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   MUST carry no more than `MAX_OPERANDS` per-operand sub-keys; a producer MUST NOT
   emit and a reader MUST reject a key declaring more than `MAX_OPERANDS`. *Test:*
   `test_classify_max_operands_is_8`.
-- **KISS-CLASSIFY-6.4-0003** — The `structure_key` schema version MUST be the
-  integer `1` at this maturity, encoded as the token prefix `sk1` (§6.7-0002); a
-  bump of this integer is required only when a predicate axis is added or altered in
-  a non-additive way. *Test:* `test_classify_structure_key_version_is_1`.
+- **KISS-CLASSIFY-6.4-0003** — The `structure_key` schema version
+  (`STRUCTURE_KEY_VERSION`) MUST be the integer `2` at this maturity, encoded as the
+  token prefix `sk2` (§6.7-0002); a bump of this integer is required only when a
+  predicate axis is added or altered in a non-additive way. (Version `2` supersedes
+  version `1`: the reduce field's non-additive split into the distinctly-encoded
+  none / all-axes / trailing-axis values and the general bitmask, §6.6-0009, forced
+  this bump while the sub-standard is UNFROZEN.) *Test:*
+  `test_classify_structure_key_version_is_2`.
 - **KISS-CLASSIFY-6.4-0004** — The `structure_key` token maximum length MUST be
   `4096` bytes (`MAX_STRUCTURE_KEY_LEN = 4096`); a producer MUST NOT emit a token
   longer than 4096 bytes and a reader MUST reject a token whose length is `0` or
@@ -605,7 +640,9 @@ token codes `co` / `ic` / `st` / `br`.
 `v8`.
 **Inner-extent divisibility bucket.** `{div16, div8, div4, div2, any}`, token codes
 `d16` / `d8` / `d4` / `d2` / `da`.
-**Index width.** `{idx32, idx64}`, token codes `i32` / `i64`; the boundary is `2³¹`
+**Index width.** `{idx32, idx64}`, token codes `ix32` / `ix64` (deliberately
+distinct from the `i32` / `i64` **dtype** tokens of §6.1 so no token field shares a
+spelling across the orthogonal dtype and index-width axes); the boundary is `2³¹`
 elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `idx64`.
 **Work class.** `{one-warp, one-block, grid-stride}`, token codes `warp` / `block`
 / `grid`; `one-warp` iff total element count `≤ 32`, `one-block` iff `≤ 1024`,
@@ -636,12 +673,20 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   `st`, `br`. *Test:* `test_classify_layout_tag_enum`.
 - **KISS-CLASSIFY-6.5-0002** — `layout_tag` MUST be derived from `extents` and
   `strides` using `|stride|` (absolute value — so a fully reversed view is
-  `contiguous` with the reversal captured only by the flipped flag, §6.6-0007):
-  `broadcast` if any axis of extent > 1 has stride 0; else `contiguous` if, over the
-  non-unit axes from innermost (§6.3-0011) outward, `|stride|` equals the running
-  product of inner extents; else `inner-contiguous` if the innermost non-unit axis
-  has `|stride| == 1`; else `strided`. An operand with no axis of extent > 1 (every
-  active axis of extent `0` or `1`) MUST be classified `contiguous`. *Test:*
+  `contiguous` with the reversal captured only by the flipped flag, §6.6-0007) by the
+  following pinned algorithm. Consider only the **active non-unit axes** (active axes
+  §6.3-0002 whose extent is neither `0` nor `1`), visited **innermost (§6.3-0011)
+  first**. **(1)** The operand is `broadcast` if any axis of extent > 1 has stride
+  `0`. **(2)** Else it is `contiguous` if, maintaining a running product `P`
+  initialized to `1` and visiting the active non-unit axes innermost→outermost,
+  `|stride|` for each such axis equals `P` immediately before `P` is multiplied by
+  that axis's extent (unit axes and zero-stride are excluded from the iteration, so
+  the product ranges over the active non-unit axes only). **(3)** Else it is
+  `inner-contiguous` if the innermost active non-unit axis has `|stride| == 1`.
+  **(4)** Else it is `strided`. An operand with no active axis of extent > 1 (every
+  active axis of extent `0` or `1`) MUST be classified `contiguous` (the product is
+  empty). An active axis of extent `0` is not a non-unit axis and MUST be excluded
+  from the product exactly as a unit axis is. *Test:*
   `test_classify_layout_tag_derivation`.
 - **KISS-CLASSIFY-6.5-0003** — The vector-access-width domain MUST be exactly
   `{scalar, v2, v4, v8}` with token codes `v1`, `v2`, `v4`, `v8`. *Test:*
@@ -653,9 +698,14 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   but not 4, and `da` the remaining (odd, unit, or zero) extents; the derivation is
   §6.5-0012. *Test:* `test_classify_div_bucket_enum`.
 - **KISS-CLASSIFY-6.5-0005** — The index-width domain MUST be exactly `{idx32,
-  idx64}` with token codes `i32`, `i64`, and the classification boundary MUST be
+  idx64}` with token codes `ix32`, `ix64`, and the classification boundary MUST be
   `2³¹` elements of maximum touched element offset (offsets `< 2³¹` ⇒ `idx32`); the
-  offset is computed per §6.5-0011. *Test:* `test_classify_index_width_boundary`.
+  offset is computed per §6.5-0011. The index-width token codes `ix32` / `ix64` are
+  deliberately distinct from the integer **dtype** tokens `i32` / `i64` (§6.1): the
+  index-width field (token field 4, §6.7-0003) and the dtype field (token field 2)
+  are orthogonal axes, and the §6.1-0004 dtype-spelling rule applies **only** to the
+  dtype field and the per-operand dtype positions, never to the index-width field.
+  *Test:* `test_classify_index_width_boundary`.
 - **KISS-CLASSIFY-6.5-0006** — The op-family-tag domain MUST be exactly the
   twenty-four categories of the table above, each spelled by its 3-letter token
   code; an implementation MUST NOT invent a twenty-fifth code at this schema
@@ -673,8 +723,9 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
 - **KISS-CLASSIFY-6.5-0009** — The vector-access width of an operand MUST be
   derived as: **(a)** `v1` if the operand's `layout_tag` is `broadcast`; **(b)**
   `v1` if the operand's innermost active axis (§6.3-0011) is a reduced axis of a
-  reduction cell (its bit is set in `reduce_axes`, §6.6-0009) or the cell's op
-  category is scan (`scn`); **(c)** otherwise the token `vL` for the largest
+  reduction cell — i.e. the cell's reduce field (§6.6-0009) is `rall`, or is
+  `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set — or the cell's
+  op category is scan (`scn`); **(c)** otherwise the token `vL` for the largest
   `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the vector-access
   byte cap), `L` divides the innermost active axis extent, and
   `L · (dtype storage bytes) ≤ A`, where `A` is the largest power of two not
@@ -707,7 +758,7 @@ form (§6.7-0011).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `version` | u16 (`= 1`) | schema version; extra fields append so old tokens stay byte-identical |
+| `version` | u16 (`= 2`) | schema version; extra fields append so old tokens stay byte-identical |
 | `op_family` | op category (§6.5-0006) | the coarse op category — **NOT** the semantic op name |
 | `dtype` | dtype token | operand-0 / primary element dtype |
 | `target` | target_capability (§6.8) | the namespaced compilation-target descriptor |
@@ -716,7 +767,7 @@ form (§6.7-0011).
 | `rank` | u8 | iteration rank = the widest operand rank |
 | `n_operands` | u8 (`≤ MAX_OPERANDS`) | count of populated per-operand sub-keys |
 | `operands[]` | sub-key array | per-operand: `{layout_tag, broadcast-axis mask, vector-access width, inner-extent divisibility bucket, flipped flag}` |
-| `reduce_axes` | axis bitmask (u8) | reduced-axis set for reduction cells; empty = non-reduction (§6.6-0009) |
+| `reduce_axes` | tagged reduce spec | one of three distinct values — none/not-a-reduction, all-axes, trailing-axis — or an explicit keepdim axis bitmask (u8) for any other set (§6.6-0009) |
 | `contraction` | optional | `{M size class, N size class, K size class, K divisibility bucket}`; absent for non-contraction cells |
 
 - **KISS-CLASSIFY-6.6-0001** — A `structure_key` MUST be an **admissibility
@@ -737,7 +788,7 @@ form (§6.7-0011).
   `test_classify_structure_key_extent_free`.
 - **KISS-CLASSIFY-6.6-0004** — The `structure_key` fields MUST appear in exactly
   the order and with exactly the types of the table above; `version` MUST be the
-  first field and MUST equal `1`. *Test:* `test_classify_structure_key_field_layout`.
+  first field and MUST equal `2`. *Test:* `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
   ordering of §6.6-0014. *Test:* `test_classify_structure_key_primary_dtype`.
@@ -756,19 +807,41 @@ form (§6.7-0011).
   iteration-frame axis `i` has extent > 1 and that operand's stride along it is `0`
   (the operand broadcasts along that axis). *Test:*
   `test_classify_broadcast_axis_mask`.
-- **KISS-CLASSIFY-6.6-0009** — `reduce_axes` MUST be a bitmask over iteration-frame
-  axes (§6.6-0013). The **empty** mask MUST denote a non-reduction cell **only**
-  (it MUST NOT be overloaded as a "last-axis" or "undetermined" sentinel). A
-  reduction cell MUST be presented in **keepdim** form: for each reduced axis `d`
-  the input axis `d` is folded to the corresponding size-1 output axis, and bit `d`
-  MUST be set. A collapsed (rank-reduced) reduction output MUST be rejected with a
-  typed decline (§7.1-0002) rather than keyed, so that reductions over different
-  axis sets never collide on the empty mask. *Test:*
-  `test_classify_reduce_axes_mask`.
-- **KISS-CLASSIFY-6.6-0010** — The `contraction` field MUST be present only for a
-  dense-contraction cell and MUST then carry `{M, N, K size classes, K divisibility
-  bucket}`; for every non-contraction cell it MUST be absent so the token is
-  byte-identical to the base (non-contraction) codec. *Test:*
+- **KISS-CLASSIFY-6.6-0009** — The reduce spec MUST be exactly one of four
+  **distinctly-encoded** values, and an implementation MUST NOT overload a single
+  sentinel across two of them: **(1) none / not-a-reduction** (token field `-`,
+  §6.7-0005), meaning the cell is not a reduction; **(2) all-axes reduction** (token
+  field `rall`), meaning every iteration-frame axis (§6.6-0013) is reduced; **(3)
+  trailing-axis reduction** (token field `rlast`), meaning exactly the single
+  innermost active axis (§6.3-0011) is reduced; **(4) an explicit keepdim axis
+  bitmask** over iteration-frame axes (token field `x<hh>`, §6.7-0005) for any
+  reduced-axis set that is neither all-axes nor the lone trailing axis, with bit `d`
+  set iff iteration-frame axis `d` is reduced. The `rall` and `rlast` **field
+  encodings** are rank-independent (the same field value is used for any rank whose
+  reduced set matches), but the overall key still varies with the `rank` field, so a
+  reduction key at one rank never byte-matches one at another rank. A reduction cell
+  MUST be presented in **keepdim** form: each reduced axis `d` is folded to the
+  corresponding size-1 output axis. To keep the derivation canonical (§6.6-0011),
+  when the reduced set is exactly all iteration-frame axes the reduce spec MUST be
+  encoded as `rall` (never the equivalent bitmask), and when it is exactly the
+  innermost axis alone it MUST be encoded as `rlast` (never the equivalent bitmask);
+  the `x<hh>` form MUST NOT be used for those two cases. **When both antecedents hold
+  — the reduced set is simultaneously all iteration-frame axes and the lone innermost
+  axis, which occurs for every rank-1 reduction (reducing the single axis of a 1-D
+  iteration frame) — the reduce spec MUST be encoded as `rall`; `rall` takes
+  precedence over `rlast` whenever the reduced set is both, so two conforming
+  implementations never disagree on the rank-1 encoding.** A collapsed (rank-reduced)
+  reduction output MUST be rejected with a typed decline (§7.1-0002) rather than
+  keyed, so that reductions over different axis sets never collide. *Test:*
+  `test_classify_reduce_axes_encoding`.
+- **KISS-CLASSIFY-6.6-0010** — A **dense-contraction cell** is defined as a cell
+  whose `op_family` is `gem` (§6.5-0006). The `contraction` field MUST be present
+  **if and only if** the cell is a dense-contraction cell (`op_family == gem`), and
+  MUST then carry `{M, N, K size classes, K divisibility bucket}`; for every cell
+  whose `op_family` is not `gem` the `contraction` field MUST be absent, so the token
+  is byte-identical to the base (non-contraction) codec. A reader MUST reject, with a
+  typed decline (§7.1-0002), a token that carries the contraction field on a non-`gem`
+  cell or omits it on a `gem` cell. *Test:*
   `test_classify_contraction_field_optional`.
 - **KISS-CLASSIFY-6.6-0011** — The derivation MUST be **canonical and
   deterministic**: two invocations whose derivation inputs (§6.6-0012) are equal
@@ -780,8 +853,10 @@ form (§6.7-0011).
   cell-level `op_family_tag` (op category, §6.3-0008); the `target`; and the
   caller-supplied **role hints** required by that op category — for a
   dense-contraction cell the M/N/K axis-role assignment (§6.6-0016), and for a
-  gather/scatter/embedding cell the index-operand slot (§6.1-0006). An
-  implementation MUST NOT infer the op category or these role hints from bare
+  gather/scatter/embedding cell which operand slot carries the index/address role
+  (the KISS-Ops operand-role fact of §6.1-0006, supplied to the derivation as a
+  caller role hint; the index is **not** identified by dtype). An implementation
+  MUST NOT infer the op category or these role hints from bare
   operand extents; they MUST be supplied by the caller. *Test:*
   `test_classify_derivation_input_tuple`.
 - **KISS-CLASSIFY-6.6-0013** — When operands differ in rank, each operand's axes
@@ -794,16 +869,21 @@ form (§6.7-0011).
 - **KISS-CLASSIFY-6.6-0014** — Operands MUST be presented in canonical order: all
   **input** operands in call order, followed by all **output** operands in call
   order. Operand-0 (the primary operand) MUST be the first operand in this canonical
-  order, and the `;`-joined sub-key order (§6.7-0004) MUST follow it. *Test:*
+  order, and the `;`-joined sub-key order (§6.7-0004) MUST follow it. An operand that
+  is **both read and written** (an in-place / read-modify-write operand, e.g. an
+  accumulator) MUST appear **exactly once** in the canonical order — classified as an
+  **input** and placed at its position in the input call order — and MUST NOT also be
+  listed among the outputs; it therefore contributes exactly one per-operand sub-key
+  and is counted exactly once in `n_operands`. *Test:*
   `test_classify_operand_canonical_order`.
 - **KISS-CLASSIFY-6.6-0015** — At this schema version a `structure_key` keys only
   the primary (operand-0) dtype (§6.6-0005); per-operand sub-keys (§6.6-0007) carry
   **no** dtype. Two cells that differ only in a non-primary operand's dtype
   therefore derive byte-identical keys. This collision is **deliberate** at schema
-  version 1: an implementation MUST NOT vary the derived key with any non-primary
+  version 2: an implementation MUST NOT vary the derived key with any non-primary
   operand's dtype and MUST NOT add a per-operand dtype to the sub-key at this
   version. (Agreeing secondary-operand dtypes is the caller's responsibility outside
-  the admissibility key; see §8.2.) *Test:*
+  the admissibility key; see §8.2 and the registration obligation §6.6-0018.) *Test:*
   `test_classify_secondary_dtype_unkeyed`.
 - **KISS-CLASSIFY-6.6-0016** — The M, N, and K axis roles of a dense-contraction
   cell MUST be supplied by the caller as role hints (§6.6-0012); an implementation
@@ -811,6 +891,27 @@ form (§6.7-0011).
   size classes (§6.5-0008) MUST be computed from the caller-assigned M/N/K axis
   extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). *Test:*
   `test_classify_contraction_axis_roles`.
+- **KISS-CLASSIFY-6.6-0017** — The reduce field (§6.6-0009) MUST carry a non-`-`
+  value **only** for a **reduction cell**, defined as a cell whose `op_family` is
+  `red` (§6.5-0006); for every cell whose `op_family` is not `red` the reduce field
+  MUST be `-`. This pins the "reduction cell" referent used in §6.5-0009(b): the
+  vector-width `v1` rule of §6.5-0009(b) applies to a reduced innermost axis of a
+  `red` cell (scan cells derive `v1` via their own `scn` clause in §6.5-0009(b)). At
+  this schema version an op family that reduces along an axis without being `red` —
+  softmax (`sft`), normalization (`nrm`), attention (`att`), or loss (`los`) — MUST
+  carry the reduce field `-` and does not key its reduction axis (a disclosed
+  limitation, analogous to §6.6-0015). A reader MUST reject, with a typed decline
+  (§7.1-0002), a token whose `op_family` is not `red` yet whose reduce field is not
+  `-`. *Test:* `test_classify_reduce_field_op_family_gated`.
+- **KISS-CLASSIFY-6.6-0018** — Because a `structure_key` keys only the primary dtype
+  (§6.6-0015) and omits several binding-only facts, a provider MUST NOT register two
+  distinct specialization cells whose derived `structure_key` tokens are
+  byte-identical (for example, two cells differing only in a non-primary operand's
+  dtype); such cells MUST be disambiguated out-of-band (outside the admissibility
+  key) so that a consumer's byte-exact lookup (§6.6-0001) resolves to exactly one
+  cell and neither implementation silently overwrites the other. (This is the
+  provider-side enforcement of the §8.2 caller-responsibility rule.) *Test:*
+  `test_classify_no_colliding_cell_registration`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -825,9 +926,12 @@ sk<version> | <op_family> | <dtype> | <target> | <index_width> | <work_class>
 where each `<operandI>` is `<contig>/<bcasthex>/<vec>/<div>/<flip>` and:
 `<contig>` ∈ `{co, ic, st, br}`; `<bcasthex>` is the 2-lowercase-hex-digit broadcast
 mask (§6.7-0010); `<vec>` ∈ `{v1, v2, v4, v8}`; `<div>` ∈ `{d16, d8, d4, d2, da}`;
-`<flip>` ∈ `{f, r}` (`r` = flipped). `<reduce>` is `-` (empty) or `x<hex>` (2
-lowercase hex digits). The optional final field `c<m><n><k>/<kdiv>` uses size codes
-`{t, s, m, l}` and a divisibility code.
+`<flip>` ∈ `{f, r}` (`r` = flipped). `<reduce>` is exactly one of `-`
+(none / not-a-reduction), `rall` (all-axes reduction), `rlast` (trailing-axis
+reduction), or `x<hex>` (an explicit keepdim bitmask, 2 lowercase hex digits, for
+any other reduced-axis set) — the four distinctly-encoded values of §6.6-0009. The
+optional final field `c<m><n><k>/<kdiv>` uses size codes `{t, s, m, l}` and a
+divisibility code.
 
 - **KISS-CLASSIFY-6.7-0001** — A `structure_key` token MUST consist of exactly nine
   `|`-separated fields for a non-contraction cell, or exactly ten fields (the tenth
@@ -835,22 +939,27 @@ lowercase hex digits). The optional final field `c<m><n><k>/<kdiv>` uses size co
   token with any other field count with a typed decline. *Test:*
   `test_classify_token_field_count`.
 - **KISS-CLASSIFY-6.7-0002** — Field 0 MUST be `sk` immediately followed by the
-  decimal schema version (`sk1` at this maturity); a reader MUST reject a token
+  decimal schema version (`sk2` at this maturity); a reader MUST reject a token
   whose field 0 is not `sk` followed by a supported version. *Test:*
   `test_classify_token_version_prefix`.
 - **KISS-CLASSIFY-6.7-0003** — Fields 1–6 MUST be, in order, the op-family code
   (§6.5-0006), the dtype token (§6.1), the target_capability string (§6.8), the
-  index-width code (`i32`/`i64`), the work-class code (`warp`/`block`/`grid`), and
-  `r` immediately followed by the decimal iteration rank. *Test:*
-  `test_classify_token_scalar_fields`.
+  index-width code (`ix32`/`ix64`, §6.5-0005 — distinct from the `i32`/`i64` dtype
+  tokens), the work-class code (`warp`/`block`/`grid`), and `r` immediately followed
+  by the decimal iteration rank. *Test:* `test_classify_token_scalar_fields`.
 - **KISS-CLASSIFY-6.7-0004** — Field 7 MUST be the per-operand sub-keys joined by
   `;`, each formatted `<contig>/<bcasthex>/<vec>/<div>/<flip>` with the codes of
   §6.5 and §6.6-0007, in the canonical operand order of §6.6-0014; the number of
   `;`-separated entries MUST equal `n_operands` and MUST NOT exceed `MAX_OPERANDS`.
   *Test:* `test_classify_token_operand_field`.
-- **KISS-CLASSIFY-6.7-0005** — Field 8 MUST be `-` when `reduce_axes` is empty, or
-  `x` followed by the 2-lowercase-hex-digit reduced-axis mask (§6.7-0010) otherwise.
-  *Test:* `test_classify_token_reduce_field`.
+- **KISS-CLASSIFY-6.7-0005** — Field 8 MUST be exactly one of the four
+  distinctly-encoded reduce values of §6.6-0009: `-` (none / not-a-reduction),
+  `rall` (all-axes reduction), `rlast` (trailing-axis reduction), or `x` followed by
+  the 2-lowercase-hex-digit reduced-axis keepdim mask (§6.7-0010) for any other
+  reduced-axis set. A reader MUST reject any other field-8 spelling with a typed
+  decline; a producer MUST emit `rall` / `rlast` (never the equivalent `x<hh>`
+  bitmask) for the all-axes and trailing-axis cases. *Test:*
+  `test_classify_token_reduce_field`.
 - **KISS-CLASSIFY-6.7-0006** — When present, field 9 MUST be `c` followed by the
   three size-class codes for M, N, K (each ∈ `{t, s, m, l}`), a `/`, and the
   K-divisibility code (∈ `{d16, d8, d4, d2, da}`); this field MUST be emitted only
@@ -860,17 +969,19 @@ lowercase hex digits). The optional final field `c<m><n><k>/<kdiv>` uses size co
   the bytes of any pre-existing token and MUST NOT bump the schema version. *Test:*
   `test_classify_token_codec_additive`.
 - **KISS-CLASSIFY-6.7-0008** — `to_token` and `from_token` MUST round-trip: for
-  every `structure_key` well-formed per §6.6, parsing its serialized token MUST
-  reproduce a byte-identical key, and re-serializing MUST reproduce a byte-identical
-  token. *Test:* `test_classify_token_roundtrip`.
+  every `structure_key` whose fields each satisfy the domains and derivations of
+  §6.5–§6.6, parsing its serialized token MUST reproduce a byte-identical key, and
+  re-serializing MUST reproduce a byte-identical token. *Test:*
+  `test_classify_token_roundtrip`.
 - **KISS-CLASSIFY-6.7-0009** — A reader MUST reject, with a typed decline and
   without a panic, abort, crash, hang, or out-of-bounds read, any token with a
   malformed field, an unknown op-family or dtype code, an out-of-range mask, or a
   length outside `[1, MAX_STRUCTURE_KEY_LEN]`. *Test:*
   `test_classify_token_reject_malformed`.
 - **KISS-CLASSIFY-6.7-0010** — Every hexadecimal mask in a token — the per-operand
-  broadcast mask `<bcasthex>` (§6.7-0004) and the reduce field's `x<hex>`
-  (§6.7-0005) — MUST be **lowercase** hexadecimal, zero-padded to exactly two digits
+  broadcast mask `<bcasthex>` (§6.7-0004) and the reduce field's `x<hex>` keepdim
+  bitmask form (§6.7-0005; the `-`, `rall`, and `rlast` reduce values are not hex
+  masks) — MUST be **lowercase** hexadecimal, zero-padded to exactly two digits
   (`00`..`ff`); an implementation MUST NOT emit uppercase or variable-width hex, and
   a reader MUST reject such a token with a typed decline. *Test:*
   `test_classify_mask_hex_lowercase`.
@@ -951,7 +1062,7 @@ separating a registered namespace from that namespace's capability-set token.
 
 - **KISS-CLASSIFY-7.1-0001** — The KISS-Classify **mandatory core** — which every
   conforming implementation MUST satisfy regardless of claimed options — MUST be:
-  the full eighteen-dtype set (§6.1), the operand-descriptor field set (§6.3), the
+  the full seventeen-dtype set (§6.1), the operand-descriptor field set (§6.3), the
   pinned constants (§6.4), the enumerations and derivations (§6.5), the
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
@@ -981,8 +1092,8 @@ separating a registered namespace from that namespace's capability-set token.
 ## 8. Versioning & Lifecycle
 
 KISS-Classify tracks the umbrella's **two version axes**: the wire/ABI *structure-key
-schema version* (currently `1`) and the published reference-crate *semver*. They
-move independently.
+schema version* (`STRUCTURE_KEY_VERSION`, currently `2`) and the published
+reference-crate *semver*. They move independently.
 
 - **KISS-CLASSIFY-8-0001** — The `structure_key` schema version and the
   reference-crate semver MUST be tracked as independent axes; a crate semver change
@@ -998,10 +1109,14 @@ move independently.
   spelling-keyed; §6.7-0007). *Test:* `test_classify_additive_no_version_bump`.
 - **KISS-CLASSIFY-8-0004** — KISS-Classify MUST NOT be promoted from Draft to
   Frozen until at least two structurally dissimilar implementations — **including at
-  least one whose `target_capability` namespace is not `cuda`** — have interoperated
-  on the golden `structure_key` token vectors of Appendix A (the per-namespace
-  capability-set vocabulary freeze waits on real non-CUDA usage). *Test:*
+  least one whose `target_capability` namespace differs from the reference
+  implementation's namespace** — have interoperated on the golden `structure_key`
+  token vectors of Appendix A. *Test:*
   `test_classify_freeze_gate_two_dissimilar_impls` (checklist gate; AUDIT-signed).
+
+  > *Informative.* The reference implementation's namespace is `cuda`; the
+  > per-namespace capability-set vocabulary freeze accordingly waits on real
+  > non-CUDA usage (see §8.4 resolved-decision note).
 - **KISS-CLASSIFY-8-0005** — KISS-Classify MUST NOT be promoted from Draft to
   Frozen until a foreign reader written outside the reference language has parsed and
   reproduced the golden `structure_key` tokens and dtype table byte-for-byte
@@ -1012,27 +1127,28 @@ move independently.
   complete bidirectional clause-to-test traceability. *Test:*
   `test_classify_freeze_gate_conform_suite_passes` (checklist gate; AUDIT-signed).
 
-> **Open questions (informative; tracked as RFCs, do not gate conformance at Draft).**
-> **(8.1)** Whether compute precision (`f32` vs `f32s`) should live in the dtype set
-> at all, or migrate to the contract's guarantees as a `MathPrecision` attribute,
-> leaving dtypes purely storage. If it stays a dtype, both this sub-standard and
-> KISS-Ops must pin that `f32`/`f32s` share byte layout and differ only in the
-> numeric-fidelity contract (§6.1-0005 does so). **(8.2)** Whether index-only-ness
-> (`u32`) should be a distinct dtype *class* or an operand-*role* property carried on
-> the gather/scatter index operand, and — relatedly — whether non-primary operand
-> dtypes should ever enter the admissibility key (§6.6-0015 keys only the primary
-> dtype at v1). **(8.3)** Whether the sub-byte/packed packing conventions (`s4`/`u4`
-> nibble order, `b1` LSB-first) are owned here or by KISS-Ops/KISS-Contract (they are
-> inseparable from popcount/MMA semantics); this draft pins storage here
-> (§6.1-0008/0009). **(8.4)** Whether the `target_capability` namespace axis is keyed
-> on ecosystem/compilation-target (recommended) or on manufacturer. **(8.5)** The
-> empty `reduce_axes` mask now denotes strictly *non-reduction*: §6.6-0009 requires
-> reductions to be presented in keepdim form and rejects collapsed (rank-reduced)
-> reductions, so distinct reductions no longer collide on an overloaded sentinel. A
-> remaining refinement question is whether to add an explicit all-axes encoding
-> distinct from a full keepdim bitmask; this draft keeps the keepdim bitmask.
-> KISS-Classify stays **explicitly UNFROZEN** until these are resolved and the
-> §8-0004/0005/0006 gates pass.
+> **Resolved decisions (informative; ratified 2026-07-12, tracked as RFCs).**
+> **(8.1 — RESOLVED)** Compute precision is **not** a dtype. The dtype set is pure
+> storage; there is no strict-precision float variant. Whether a computation must be
+> bit-stable full-precision or may use a reduced-mantissa reduction is a **KISS-Ops
+> fidelity attribute** (a `MathPrecision`-style attribute alongside the KISS-Ops
+> determinism/fidelity enum), surfaced in a kernel's KISS-Contract guarantees
+> (§6.1-0005). **(8.2 — RESOLVED)** Index-only-ness is an **operand role**, not a
+> dtype class. `u32` is an ordinary storage dtype (§6.1-0006); the index/address
+> role (`index_operand` + `index_dtype`) is carried by KISS-Ops on the
+> gather/scatter operand. Non-primary operand dtypes still do **not** enter the
+> admissibility key at this schema version (§6.6-0015 keys only the primary dtype).
+> **(8.3 — CONFIRMED)** The sub-byte/packed packing conventions (`s4`/`u4` nibble
+> order, `b1` LSB-first) are owned **here** in Classify as byte layout
+> (§6.1-0008/0009); KISS-Ops references them for popcount/MMA semantics. **(8.4)**
+> Whether the `target_capability` namespace axis is keyed on ecosystem/compilation
+> target (recommended) or on manufacturer — still open. **(8.5 — RESOLVED)** The
+> reduce spec is now **three distinctly-encoded values plus a general bitmask**:
+> `-` (none / not-a-reduction), `rall` (all-axes), `rlast` (trailing-axis), and
+> `x<hh>` (explicit keepdim bitmask for any other set); no single sentinel is
+> overloaded (§6.6-0009). This non-additive split bumped `STRUCTURE_KEY_VERSION` to
+> `2` (§6.4-0003). KISS-Classify stays **explicitly UNFROZEN** until the remaining
+> open item (8.4) is resolved and the §8-0004/0005/0006 gates pass.
 
 ---
 
@@ -1063,8 +1179,8 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.1-0002 | `test_classify_dtype_bit_widths` |
 | KISS-CLASSIFY-6.1-0003 | `test_classify_dtype_numeric_kinds` |
 | KISS-CLASSIFY-6.1-0004 | `test_classify_dtype_token_spelling` |
-| KISS-CLASSIFY-6.1-0005 | `test_classify_f32_vs_f32s_storage_identical` |
-| KISS-CLASSIFY-6.1-0006 | `test_classify_u32_is_index_only` |
+| KISS-CLASSIFY-6.1-0005 | `test_classify_dtypes_are_pure_storage` |
+| KISS-CLASSIFY-6.1-0006 | `test_classify_u32_is_ordinary_storage` |
 | KISS-CLASSIFY-6.1-0007 | `test_classify_bool_encoding` |
 | KISS-CLASSIFY-6.1-0008 | `test_classify_sub_byte_nibble_packing` |
 | KISS-CLASSIFY-6.1-0009 | `test_classify_b1_bit_packing` |
@@ -1086,7 +1202,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0011 | `test_classify_axis_ordering_convention` |
 | KISS-CLASSIFY-6.4-0001 | `test_classify_max_rank_is_8` |
 | KISS-CLASSIFY-6.4-0002 | `test_classify_max_operands_is_8` |
-| KISS-CLASSIFY-6.4-0003 | `test_classify_structure_key_version_is_1` |
+| KISS-CLASSIFY-6.4-0003 | `test_classify_structure_key_version_is_2` |
 | KISS-CLASSIFY-6.4-0004 | `test_classify_structure_key_token_length_bound` |
 | KISS-CLASSIFY-6.5-0001 | `test_classify_layout_tag_enum` |
 | KISS-CLASSIFY-6.5-0002 | `test_classify_layout_tag_derivation` |
@@ -1108,7 +1224,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0006 | `test_classify_structure_key_rank_and_operand_count` |
 | KISS-CLASSIFY-6.6-0007 | `test_classify_operand_sub_key_fields` |
 | KISS-CLASSIFY-6.6-0008 | `test_classify_broadcast_axis_mask` |
-| KISS-CLASSIFY-6.6-0009 | `test_classify_reduce_axes_mask` |
+| KISS-CLASSIFY-6.6-0009 | `test_classify_reduce_axes_encoding` |
 | KISS-CLASSIFY-6.6-0010 | `test_classify_contraction_field_optional` |
 | KISS-CLASSIFY-6.6-0011 | `test_classify_structure_key_derivation_canonical` |
 | KISS-CLASSIFY-6.6-0012 | `test_classify_derivation_input_tuple` |
@@ -1116,6 +1232,8 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0014 | `test_classify_operand_canonical_order` |
 | KISS-CLASSIFY-6.6-0015 | `test_classify_secondary_dtype_unkeyed` |
 | KISS-CLASSIFY-6.6-0016 | `test_classify_contraction_axis_roles` |
+| KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_op_family_gated` |
+| KISS-CLASSIFY-6.6-0018 | `test_classify_no_colliding_cell_registration` |
 | KISS-CLASSIFY-6.7-0001 | `test_classify_token_field_count` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `test_classify_token_scalar_fields` |
@@ -1193,41 +1311,98 @@ cannot drift.
 golden vectors for `test_classify_token_roundtrip`,
 `test_classify_token_scalar_fields`, `test_classify_token_operand_field`, and the
 byte-exact-match / additivity tests. Each is shown as the exact bytes on the wire,
-left to right.
+left to right. Each vector **pins its complete derivation input** so a foreign
+implementer can reproduce the token deterministically per §6.6-0011: every operand is
+given as `(extents; strides; dtype; alignment)` in canonical order (§6.6-0014), plus
+the cell's `op_family` and any role hints. (Recall: index-width token codes are
+`ix32` / `ix64`, distinct from the `i32` / `i64` dtype tokens, §6.5-0005.)
 
-- Binary elementwise add, `[128,256]` row-major `f32`, target `cuda:sm89` (three
-  contiguous V4 operands):
-  `sk1|bin|f32|cuda:sm89|i32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
-- The same cell with operand 1 broadcasting axis 0 (`strides=[0,1]`):
-  `sk1|bin|f32|cuda:sm89|i32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
-- Unary elementwise on `[64,128]` row-major `f16`, target `cuda:sm89`
-  (V8 = 16 bytes for f16):
-  `sk1|une|f16|cuda:sm89|i32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
-- Reduction, keepdim, `[4,8] → [4,1]` (last-axis reduce, target `cuda:sm89`):
-  `sk1|red|f32|cuda:sm89|i32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02`
-- Reduction, keepdim, rank-4 reducing axes 1 and 3 (reduce mask `0x0a` exercises a
-  two-digit lowercase hex ≥ `0x0a`; two operands, target `cuda:sm89`):
-  `sk1|red|f32|cuda:sm89|i32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
-- Dense GEMM skinny-decode cell `[8,4096]·[4096,4096]→[8,4096]`, target `cuda:sm89`
-  (M tiny, N/K large, K div-16 → trailing contraction field):
-  `sk1|gem|f32|cuda:sm89|i32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16`
-- The same GEMM cell built for a Vulkan target — a **different** cell that does not
-  match the CUDA one (byte-exact target rule, §6.8-0002):
-  `sk1|gem|f32|vulkan:spirv1.6|i32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16`
+- **Binary elementwise add** — `op_family = bin`; three operands (`in`, `in`, `out`),
+  each `([128,256]; [256,1]; f32; 256)`; no role hints. Each operand is contiguous
+  (`co`), no broadcast (`00`), vectorizes to `v4` (inner 256, `4·4 = 16 ≤ 16` byte
+  cap, `16 ≤ A = 256`), inner extent 256 divisible by 16 (`d16`), unflipped (`f`).
+  Max touched offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; frame element count
+  `128·256 = 32768 > 1024` ⇒ `grid`; rank 2; reduce field `-` (not a reduction):
+  `sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
+  This vector is the **canonical derivation golden vector** for
+  `test_classify_structure_key_derivation_canonical` — the full input tuple above maps
+  to exactly these bytes.
+- **The same cell with operand 1 broadcasting axis 0** — operand 1 is
+  `([128,256]; [0,1]; f32; 256)` (stride 0 on axis 0), all else unchanged. Operand 1
+  becomes layout `broadcast` (`br`), broadcast mask bit 0 set (`01`), scalar width
+  (`v1`, §6.5-0009(a)); its inner extent 256 still buckets `d16`:
+  `sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
+- **Unary elementwise** — `op_family = une`; two operands (`in`, `out`), each
+  `([64,128]; [128,1]; f16; 256)`; no role hints. `v8` (`8·2 = 16 ≤ 16` byte cap,
+  `16 ≤ A = 256`, 8 divides inner 128); inner 128 buckets `d16`. Max offset
+  `128·63 + 1·127 = 8191 < 2³¹` ⇒ `ix32`; `64·128 = 8192 > 1024` ⇒ `grid`; rank 2:
+  `sk2|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
+- **Reduction, keepdim, `[4,8] → [4,1]`** (trailing-axis reduce ⇒ reserved `rlast`,
+  not a bitmask) — `op_family = red`, caller op category `reduction`; two operands,
+  `in = ([4,8]; [8,1]; f32; 256)` and `out = ([4,1]; [1,1]; f32; 256)`. The input's
+  innermost axis (extent 8) is reduced ⇒ `v1` (§6.5-0009(b)) while its own inner
+  extent 8 still buckets `d8`; the output's size-1 inner axis buckets `da`. Max offset
+  `31 < 2³¹` ⇒ `ix32`; frame `4·8 = 32 ≤ 32` ⇒ `warp`; rank 2:
+  `sk2|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
+- **Reduction, keepdim, `[4,8] → [1,1]`** (all-axes reduce ⇒ reserved `rall`) — same
+  inputs as above but `out = ([1,1]; [1,1]; f32; 256)` and **every** axis reduced.
+  Operand-0 (the input) keeps its own inner extent 8 ⇒ bucket `d8` (reduction changes
+  only vector width, §6.5-0009, never the divisibility bucket); the `[1,1]` output
+  buckets `da`:
+  `sk2|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
+- **Rank-1 reduction, keepdim, `[8] → [1]`** (the single axis is simultaneously
+  all-axes and the trailing axis; by the §6.6-0009 tiebreak `rall` takes precedence) —
+  `op_family = red`; `in = ([8]; [1]; f32; 256)`, `out = ([1]; [1]; f32; 256)`. Inner
+  extent 8 ⇒ `d8`; reduced innermost ⇒ `v1`; frame `8 ≤ 32` ⇒ `warp`; rank 1;
+  reduce field `rall` (never `rlast`):
+  `sk2|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
+- **Reduction, keepdim, rank-4 reducing axes 1 and 3** (neither all-axes nor
+  trailing ⇒ explicit keepdim bitmask `0x0a`, exercising a two-digit lowercase hex ≥
+  `0x0a`) — `op_family = red`; `in = ([2,4,3,5]; [60,15,5,1]; f32; 256)`,
+  `out = ([2,1,3,1]; [3,3,1,1]; f32; 256)`. Innermost axis (extent 5, odd) buckets
+  `da` and is reduced ⇒ `v1`. Max offset `60·1 + 15·3 + 5·2 + 1·4 = 119 < 2³¹` ⇒
+  `ix32`; frame `2·4·3·5 = 120` (`32 < 120 ≤ 1024`) ⇒ `block`; rank 4; reduce mask
+  `x0a` (bits 1 and 3):
+  `sk2|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
+- **In-place binary accumulate** (`op_family = bin`) — an operand that is both read
+  and written appears **exactly once**, classified as an input (§6.6-0014). The
+  accumulator `acc = ([128,256]; [256,1]; f32; 256)` (in-place) and addend
+  `b = ([128,256]; [256,1]; f32; 256)` yield two operands (`acc` is **not** repeated
+  as an output), `n_operands = 2`, operand-0 = `acc`:
+  `sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
+- **Dense GEMM skinny-decode cell** `[8,4096]·[4096,4096]→[8,4096]` — `op_family =
+  gem`; three operands `lhs = ([8,4096]; [4096,1]; f32; 256)`,
+  `rhs = ([4096,4096]; [4096,1]; f32; 256)`, `out = ([8,4096]; [4096,1]; f32; 256)`;
+  role hints `lhs = [M,K]`, `rhs = [K,N]`, `out = [M,N]` (§6.6-0016). M = 8 (tiny
+  `t`), N = K = 4096 (large `l`), K divisible by 16 (`d16`) ⇒ contraction field
+  `ctll/d16`. Max offset (rhs) `4096·4095 + 1·4095 = 16781315 < 2³¹` ⇒ `ix32`; output
+  frame `8·4096 = 32768 > 1024` ⇒ `grid`; rank 2:
+  `sk2|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16`
+- **The same GEMM cell built for a Vulkan target** — a **different** cell that does
+  not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
+  `target = vulkan:spirv1.6`:
+  `sk2|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16`
 
 **A.2 Adversarial / negative vectors.** The negative battery for the §6.7 / §6.8
 reject tests and the foreign-reader freeze gate includes: a token with 8 fields
-(too few) and one with 11 (too many); a token whose field 0 is `sk2` (unsupported
-version); an unknown dtype code (`sk1|bin|f99|cuda:sm89|…`); an unknown op-family
-code (`sk1|zzz|f32|…`); an over-`MAX_OPERANDS` operand field (9 sub-keys); a token
-exceeding `MAX_STRUCTURE_KEY_LEN` (4096 bytes); an uppercase-hex mask
-(`…|x0A`, forbidden by §6.7-0010); a collapsed (rank-reduced) reduction cell
+(too few) and one with 11 (too many); a token whose field 0 is `sk3` (unsupported
+version — `sk2` is the current supported version); an unknown dtype code
+(`sk2|bin|f99|cuda:sm89|…`); an unknown op-family code (`sk2|zzz|f32|…`); an
+over-`MAX_OPERANDS` operand field (9 sub-keys); a token exceeding
+`MAX_STRUCTURE_KEY_LEN` (4096 bytes); an uppercase-hex mask (`…|x0A`, forbidden by
+§6.7-0010); an unrecognized reduce-field spelling (`…|rmid`, `…|x` with no digits,
+or an all-axes set spelled as a bitmask instead of the required `rall`, forbidden by
+§6.6-0009 / §6.7-0005); a rank-1 reduction spelled `rlast` instead of the required
+`rall` (the tiebreak of §6.6-0009); a non-`red` cell carrying a non-`-` reduce field
+(forbidden by §6.6-0017); a non-`gem` cell carrying the contraction field, or a `gem`
+cell omitting it (forbidden by §6.6-0010); a collapsed (rank-reduced) reduction cell
 (forbidden by §6.6-0009); and a `target_capability` with no colon (`cudasm89`), with
-two colons (`cuda:sm:89`), with an empty namespace (`:sm89`), and with an embedded
-field separator (`cuda:sm|89`). Each yields a typed decline, never a panic
-(§6.7-0009, §6.8-0001, §7.1-0002).
+two colons
+(`cuda:sm:89`), with an empty namespace (`:sm89`), and with an embedded field
+separator (`cuda:sm|89`). Each yields a typed decline, never a panic (§6.7-0009,
+§6.8-0001, §7.1-0002).
 
-**A.3 Golden dtype table vector.** The eighteen-row dtype table of §6.1 (token,
+**A.3 Golden dtype table vector.** The seventeen-row dtype table of §6.1 (token,
 kind, bit width, packing) is itself a golden vector: per the §8-0005 freeze gate a
 foreign reader reproduces every token spelling, bit width, and numeric kind
 byte-for-byte, and reproduces the `s4`/`u4` nibble order, the `b1` LSB-first bit
@@ -1256,7 +1431,8 @@ provenance and examples only; no normative clause names any project.
   by the namespace maintainer (e.g. `sm89`, `spirv1.6`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
-- **dtype** — a scalar element type from the eighteen-token set of §6.1.
+- **dtype** — a scalar element type from the seventeen-token set of §6.1; pure
+  storage (byte layout only), never a compute-precision guarantee.
 - **extent** — an axis's logical length (capacity for a symbolic axis).
 - **inner-contiguous** — a layout tag: the innermost non-unit axis has `|stride| ==
   1` but outer axes are strided.
