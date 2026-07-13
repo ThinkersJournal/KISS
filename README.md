@@ -81,8 +81,10 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/umbrella.md`](spec/umbrella.md) | The suite umbrella: purpose/scope, the nine sub-standards + DAG, conventions, the dual-document template, versioning/lifecycle + freeze gate, the capability/profile/extension model, governance, the conformance model, and legal. Informative throughout — every binding requirement lives in a sub-standard clause. |
 | [`spec/announce.md`](spec/announce.md) | **KISS-Announce**: the handshake, availability, and contract-query protocol, with numbered normative clauses each mapped to a conformance test. |
 | [`spec/classify.md`](spec/classify.md) | **KISS-Classify**, the foundational *data* vocabulary: the dtype set, operand descriptors, the `structure_key` specialization-cell identity, and the all-hardware `<namespace>:<capability-set>` target descriptor. |
-| [`spec/ops.md`](spec/ops.md) | **KISS-Ops**, the foundational *computation* vocabulary: the op set, pinned per-op numeric semantics, reference decompositions, the mandatory primitive floor, and the canonical determinism/fidelity enum. |
-| | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
+| [`spec/ops.md`](spec/ops.md) | **KISS-Ops**, the foundational *computation* vocabulary: the op set, pinned per-op numeric semantics, reference decompositions, the mandatory primitive floor, the canonical determinism/fidelity enum, and the OpAttrs channel + canonical default-resolved wire encoding. |
+| [`spec/grammar.md`](spec/grammar.md) | **KISS-Grammar**, the advertisable-op surface + region grammar: op-tag → KISS-Ops name + attrs + operand-role tuple, the pinned region wire form, and the frozen-grammar/growing-op-set rule. |
+| [`spec/contract.md`](spec/contract.md) | **KISS-Contract**, the universal 7-section kernel contract (identity, semantics, interface/ABI, dispatch, capabilities, guarantees, provenance) — what a kernel computes and exactly how to call it; self-delimiting fail-loud transport. |
+| `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 
 ## How to read a KISS sub-standard

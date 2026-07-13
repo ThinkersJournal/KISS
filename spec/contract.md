@@ -768,10 +768,13 @@ without renumbering existing ones.
   *Test:* `test_contract_op_dag_over_ops_and_grammar`.
 - **KISS-CONTRACT-6.4-0003** — Each op node MUST carry the KISS-Ops **OpAttrs** channel
   applicable to its op — the axis (for `reduce` / `gather` / `scan`), the out-of-bounds policy
-  (the KISS-Ops-owned OOB-policy set, KISS-OPS §6.11-0004), any permutation/`perm` a KISS-Ops
-  layout op defines, and the reduce-axis mask/keepdim (the KISS-Ops-owned `reduce_axes`
-  encoding, KISS-OPS §6.11-0008/§6.11-0011) — spelled exactly as the node's KISS-Ops op pins
-  it. The OpAttrs sub-vocabularies are **owned by KISS-Ops** as op semantics (§6.10-0004);
+  (the KISS-Ops-owned OOB-policy set, KISS-OPS §6.11-0004, canonically encoded per KISS-OPS
+  §6.19-0015), any permutation/`perm` a KISS-Ops layout op defines (KISS-OPS §6.19-0024), and
+  the reduce-axis mask/keepdim (the KISS-Ops-owned `reduce_axes` encoding, KISS-OPS
+  §6.11-0008/§6.11-0011, canonically encoded per KISS-OPS §6.19-0020) — spelled exactly as the
+  node's KISS-Ops op pins it. The OpAttrs sub-vocabularies are **owned by KISS-Ops** as op
+  semantics — KISS-Ops is their single normative owner via the KISS-Ops OpAttrs channel
+  (KISS-OPS §6.19-0001, §6.10-0004);
   KISS-Contract carries them by reference and MUST NOT define, restate, or re-pin an
   alternative OpAttrs sub-vocabulary, and MUST NOT drop any OpAttrs value the node's KISS-Ops
   op defines as applicable. *Test:* `test_contract_node_carries_opattrs`.
@@ -1147,14 +1150,23 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   and attribute channels, KISS-Ops supplies the meaning and the primitive floor, and an
   implementation MUST NOT require a consumer to reconcile two independent op vocabularies to
   read a contract. *Test:* `test_contract_single_op_vocabulary`.
-- **KISS-CONTRACT-6.10-0004** — The OpAttrs sub-vocabularies — the out-of-bounds policy set,
-  the permutation/`perm` encoding, and the reduce-axis mask/keepdim encoding — are **owned by
-  KISS-Ops** as op semantics; KISS-Contract's Semantics OpAttrs channel (§6.4-0003) MUST cite
-  KISS-Ops as their single owner and MUST NOT define, restate, or re-pin a KISS-Contract-local
-  OpAttrs sub-vocabulary, and where KISS-Grammar surfaces these values through its
-  pattern-attribute channel it likewise cites KISS-Ops (the KISS-Grammar `pattern_attrs`
-  matching hints are a **distinct** channel from the KISS-Ops-owned OpAttrs semantics). An
-  implementation MUST carry an OpAttrs value only as the node's KISS-Ops op pins it. *Test:*
+- **KISS-CONTRACT-6.10-0004** — The OpAttrs sub-vocabularies — the out-of-bounds policy set
+  (KISS-OPS §6.19-0015), the permutation/`perm` encoding (KISS-OPS §6.19-0024), and the
+  reduce-axis mask/keepdim encoding (KISS-OPS §6.19-0020) — are **owned by KISS-Ops** as op
+  semantics, whose **single normative owner** is the KISS-Ops OpAttrs channel (KISS-OPS
+  §6.19-0001); KISS-Contract's Semantics OpAttrs channel (§6.4-0003) MUST cite KISS-OPS
+  §6.19-0001 as their single owner and MUST NOT define, restate, or re-pin a
+  KISS-Contract-local OpAttrs sub-vocabulary, and where KISS-Grammar surfaces these values
+  through its pattern-attribute channel it likewise cites KISS-Ops (the KISS-Grammar
+  `pattern_attrs` matching hints are a **distinct** channel from the KISS-Ops-owned OpAttrs
+  semantics). An implementation MUST carry an OpAttrs value only as the node's KISS-Ops op pins
+  it. The KISS-Ops canonical little-endian OpAttrs **wire encoding** (KISS-OPS §6.19-0010) and
+  the requirement to embed that encoded blob **opaquely** and byte-compare it without parsing
+  inside (KISS-OPS §6.19-0012) bind **KISS-Grammar**, whose binary region carries the blob;
+  KISS-Contract is a structured/text document (§6.1-0001) and does **not** embed that binary
+  blob — it carries the **same** OpAttrs values by their KISS-Ops-pinned **spelling** in its
+  text document (§6.4-0003, §6.11-0007), so that Grammar embeds the encoded blob opaquely while
+  Contract carries the values by KISS-Ops spelling. *Test:*
   `test_contract_opattrs_cited_from_ops`.
 
 ### 6.11 Document framing — pinned structured/text serialization
@@ -1270,7 +1282,16 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   tuple therefore renders as the bare `<op_name>` (for example `add`). Two dissimilar
   implementations MUST render the identical `op_identity` bytes for the same root op, and a
   reader MUST reject, with a typed decline, an `op_identity` value not matching this spelling.
-  *Test:* `test_contract_text_op_identity`.
+  **Default-resolution (§6.19-0005 alignment).** Op-identity *equality* is authoritatively
+  defined by the KISS-Grammar binary tag canonical serialization (KISS-GRAMMAR §6.8-0012),
+  under which every identity-bearing attribute is resolved to its explicit default so that a
+  defaulted attribute and an explicitly-equal one produce identical bytes (KISS-OPS §6.19-0005);
+  this text `op_identity` line is a **non-authoritative render** of that canonical form. A
+  reader comparing two op identities MUST compare via the KISS-Grammar canonical binary tag
+  serialization (§6.8-0012), and MUST NOT decide op-identity equality by byte-comparing this
+  text line, so that a defaulted-vs-explicit attribute difference surfacing in the text render
+  (this clause's default-eliding `{<op_attrs>}` presence rule) can never split, or falsely
+  merge, a single op identity. *Test:* `test_contract_text_op_identity`.
 
 ---
 

@@ -95,7 +95,12 @@ fidelity (MathPrecision) attribute** (`{bit-stable, reduced-mantissa-permitted}`
 orthogonal to the determinism class and the home of compute precision now that storage
 dtypes are pure byte layout; and the **complex-arithmetic op family** for `c32`/`c64`
 (§6.18), every member non-primitive over the real floor (no new axiom), pinned to ISO
-C99/C11 Annex G.
+C99/C11 Annex G. It further owns the **OpAttrs channel** (§6.19) — the per-op,
+compile-time attribute record that is part of an op's semantics (a reduce's monoid and
+axis set, a gather's out-of-bounds policy, a pool's window geometry, and the rest) — and
+its canonical, default-resolved little-endian wire encoding, embedded by KISS-Grammar and
+KISS-Contract as opaque, byte-comparable bytes and distinct from KISS-Grammar
+`pattern_attrs` (matching hints).
 
 **KISS-Ops is NOT:** a data vocabulary (the dtype *set membership*, operand
 descriptors, `structure_key`, layout tags, and the `target_capability` descriptor are
@@ -317,6 +322,16 @@ complex ops of the family, so the complex family introduces **no** new primitive
 floor is unchanged). Complex semantics are pinned
 to ISO C99/C11 Annex G (§6.18).
 
+**Carrier ops and their OpAttrs (informative).** Several ops carry an **OpAttrs** record —
+the per-op, compile-time attributes that select which member of the op's parameterized
+family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_policy`, a
+pool's window geometry, and so on). The carrier ops for this version are `reduce`,
+`prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
+`log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
+`embedding`, and `scatter_add`. Their schemas, sub-vocabularies, and canonical
+default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
+golden vectors are in Appendix E.
+
 ### 2.8 Terms are joined, not restated
 
 KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 u8 i32 i64 u32
@@ -408,6 +423,23 @@ reader holding only KISS-Ops plus the umbrella.
   `index_select` / `embedding` / `scatter_add` supplies the runtime index, and that
   operand's dtype. Index-only-ness is this role, not a dtype class; `u32` is an ordinary
   dtype that MAY serve it.
+- **OpAttrs** — the per-op, compile-time attribute record that is part of an op's
+  semantics (the fixed-at-build-time choices that select which member of an op's
+  parameterized family a node denotes, e.g. a reduce's `monoid` and `reduce_axes`, a
+  gather's `oob_policy`, a pool's window geometry). KISS-Ops is its single normative owner
+  (§6.19). It is **distinct** from KISS-Grammar `pattern_attrs`, which are recognition/
+  matching hints on the advertisable surface and do not change what an op computes.
+- **Carrier op** — an op that carries a non-empty OpAttrs schema (§6.19); every other op
+  has an empty OpAttrs blob.
+- **OpAttrs sub-vocabulary** — a frozen enum or encoding (e.g. `oob_policy`, `monoid`,
+  `reduce_axes`, the window-parameter vector, the reserved permutation encoding) that an
+  OpAttrs field draws from, owned by KISS-Ops and pinned in §6.19; enums are additive-only
+  little-endian unsigned ordinals with `0` reserved.
+- **Canonical OpAttrs blob** — the default-resolved, per-op fixed-field-order, little-
+  endian byte string encoding a carrier op's OpAttrs (§6.19); every field is emitted
+  explicitly at its effective value, so a defaulted attribute and an explicitly-equal one
+  produce identical bytes, and KISS-Grammar / KISS-Contract embed it as opaque bytes and
+  byte-compare it.
 - **Complex op** — a non-primitive op of the §6.18 complex-arithmetic family over
   `c32` / `c64`, decomposing entirely into the real primitive-floor atoms plus the
   `element_map` component bridge; it introduces no new primitive.
@@ -895,7 +927,7 @@ this section-intro paragraph is an informative pointer to it):
   and never emitted); this hex is an Ops-local in-memory illustration, **not** the
   data-vocabulary shared anchor and **not** a wire form — the normative shared anchor is the
   Classify §6.7-0005 token codec above. *Test:*
-  `test_ops_reduce_axes_three_values`.
+  `test_ops_reduce_axes_four_categories`.
 - **KISS-OPS-6.11-0012** — `gather`, `scatter`, `index_select`, `embedding`, and
   `scatter_add` MUST carry the index-operand role explicitly on the operand: an
   `index_operand` field identifying which operand supplies the runtime index, and an
@@ -903,6 +935,24 @@ this section-intro paragraph is an informative pointer to it):
   index role MUST be a property of that operand, not of any dtype; KISS-Ops MUST NOT infer
   index-ness from a dtype (in particular `u32` is not an index-only dtype, §6.2-0007).
   *Test:* `test_ops_index_operand_role`.
+- **KISS-OPS-6.11-0013** — `gather`, `scatter`, `index_select`, `embedding`, and
+  `scatter_add` MUST each carry an explicit **indexed-axis** attribute `axis` naming the
+  single operand-or-output axis whose coordinate the runtime index substitutes (the axis
+  addressed by §6.11-0004 for a data-dependent read and by §6.11-0005 for a data-dependent
+  write). The `axis` attribute MUST be a non-negative integer in the range
+  `0 <= axis < MAX_RANK` (the pinned `MAX_RANK` value of §6.19-0037), and MUST be carried
+  as the `u8` OpAttrs `axis` field of §6.19-0027 / §6.19-0028 / §6.19-0034; an
+  implementation MUST reject an `axis` outside that range with a typed decline, and MUST
+  NOT let an unstated indexed axis change the op's pinned result. *Test:*
+  `test_ops_index_axis_attribute`.
+- **KISS-OPS-6.11-0014** — `sort_network` MUST carry an explicit `axis` attribute naming
+  the single axis along which each row is permuted (§6.11-0007 pins a per-row permutation;
+  this clause pins which axis a row lies along, its width, and its legal range). The `axis`
+  attribute MUST be a non-negative integer in the range `0 <= axis < MAX_RANK` (§6.19-0037)
+  and for this op-set version MUST resolve to the **trailing (innermost) axis** `r-1` of a
+  sorted operand of rank `r`; it MUST be carried as the `u8` OpAttrs `axis` field of
+  §6.19-0029. An implementation MUST reject an `axis` outside the range with a typed
+  decline. *Test:* `test_ops_sort_network_axis_attribute`.
 
 ### 6.12 Scalar-source leaves
 
@@ -1081,6 +1131,16 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   on any infinite input; for finite inputs a NaN operand MUST propagate a NaN. This pins the
   inf/NaN edge that `cabs` (§6.18-0007) relies on, so standalone `hypot` and `cabs` agree.
   *Test:* `test_ops_hypot_inf_nan`.
+- **KISS-OPS-6.13-0008** — `rms_norm` and `layer_norm` MUST each carry an explicit
+  **normalization-axis** attribute `norm_axis` — the axis over which the mean-square
+  (`rms_norm`) or the mean and variance (`layer_norm`) is taken — of the same role, width,
+  and legal range as the `softmax` / `log_softmax` normalization axis required by
+  §6.13-0004: a non-negative integer in the range `0 <= norm_axis < MAX_RANK` (§6.19-0037),
+  carried as the `u8` OpAttrs `norm_axis` field of §6.19-0031. The §6.13-0004 requirement
+  that a parameterized op declare its normalization axis explicitly therefore covers all
+  four of `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`; an implementation MUST
+  reject a `norm_axis` outside the range with a typed decline and MUST NOT let an unstated
+  normalization axis change the op's pinned result. *Test:* `test_ops_norm_axis_all_four`.
 
 ### 6.14 Termination guarantee (recursive resolution)
 
@@ -1459,6 +1519,388 @@ lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imagin
   MUST be judged non-conforming even when the magnitude is within tolerance. *Test:*
   `test_ops_complex_branch_sign_exact`.
 
+### 6.19 The OpAttrs channel and its canonical wire encoding
+
+**OpAttrs** is the per-op, compile-time attribute record that is part of an op's
+**semantics**: the small set of fixed-at-build-time choices (a reduce's monoid and
+axis set, a gather's out-of-bounds policy, a pool's window geometry, and the rest)
+that select *which* member of an op's parameterized family a node denotes. It is
+distinct from KISS-Grammar's `pattern_attrs` (which are **matching hints** on the
+advertisable-op surface): OpAttrs changes what an op *computes*, `pattern_attrs`
+only guides recognition. KISS-Ops is the **single normative owner** of the OpAttrs
+channel — its schema (which op carries which fields), its sub-vocabularies (the
+frozen enums/encodings each field draws from), and its **canonical, default-resolved
+wire encoding**. KISS-Grammar and KISS-Contract embed the encoded OpAttrs blob as
+**opaque** bytes and byte-compare it; they never parse inside it and re-define none
+of its sub-vocabularies. This section discharges the seam obligations that
+KISS-Grammar §6.2-0006 (refuses to invent a sub-vocabulary KISS-Ops has not pinned)
+and §8-0008 (gates OpAttrs golden vectors on this upstream freeze) defer upward, and
+the KISS-Contract §6.4-0003 / §6.2-0003 Semantics-node OpAttrs-channel citation.
+
+The design follows the ratified canonical-encoding decisions (explicit
+default-resolution, per-op fixed field order as ABI, frozen little-endian enum
+ordinals, fixed-width little-endian two's-complement integers, explicit optional
+slots, definite length-prefixes, and version binding); the load-bearing property is
+that a **defaulted** attribute and an **explicitly-stated equal** attribute produce
+**identical bytes**, so byte-identity is decoupled from the (versioned) default
+table — the failure mode of the prior-art elide-and-read-back-from-schema systems.
+
+#### 6.19.1 OpAttrs channel definition
+
+This subsection pins the OpAttrs channel itself: its single normative owner, its
+distinctness from KISS-Grammar `pattern_attrs`, the closed carrier-op set, and the
+general encoding invariants (per-op field-order ABI, explicit default-resolution,
+reserve-`0` little-endian enum ordinals, fixed-width little-endian two's-complement
+integers, definite lengths, opaque byte-compared embedding, and version binding). The
+per-field frozen sub-vocabularies follow in §6.19.2, the per-op schemas in §6.19.3, the
+`structure_key` reconciliation in §6.19.4, and the pinned foundational constants and
+cross-op axis rules in §6.19.5.
+
+- **KISS-OPS-6.19-0001** — KISS-Ops MUST be the single normative owner of the OpAttrs
+  channel — the per-op compile-time attribute record that is part of an op's semantics
+  — pinning its per-op schema, its sub-vocabularies, and its canonical wire encoding in
+  this section; no downstream sub-standard MUST re-pin or fork an OpAttrs sub-vocabulary.
+  *Test:* `test_ops_opattrs_channel_concept`.
+- **KISS-OPS-6.19-0002** — The OpAttrs channel MUST be treated as distinct from
+  KISS-Grammar `pattern_attrs`: OpAttrs is part of an op's computed semantics (it
+  changes the result), whereas `pattern_attrs` are recognition/matching hints on the
+  advertisable surface; an implementation MUST NOT collapse the two or derive one from
+  the other. *Test:* `test_ops_opattrs_distinct_from_pattern_attrs`.
+- **KISS-OPS-6.19-0003** — The set of **carrier** ops (ops with a non-empty OpAttrs
+  schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
+  scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
+  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add}`; every
+  other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
+  affecting axis of a non-carrier non-primitive op MUST be determined by its reference
+  decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
+  `test_ops_opattrs_carrier_set_closed`.
+- **KISS-OPS-6.19-0004** — Each carrier op's OpAttrs blob MUST be exactly its schema
+  fields (§6.19.3) concatenated in the canonical, frozen field order shown, and that
+  per-op field order MUST be the ABI; attribute names MUST NOT appear on the wire, there
+  MUST be no name-sorted dictionary and no self-describing tag stream, and a reader MUST
+  replay the schema positionally after the `op_name` selects it. *Test:*
+  `test_ops_opattrs_field_order_abi`.
+- **KISS-OPS-6.19-0005** — Every OpAttrs schema field MUST be emitted **explicitly** and
+  already **resolved** to its effective value (schema default applied at encode time);
+  an encoder MUST NOT omit a field because it equals its default, so a defaulted
+  attribute and an explicitly-stated equal attribute MUST produce identical bytes.
+  *Test:* `test_ops_opattrs_explicit_default_resolution`.
+- **KISS-OPS-6.19-0006** — Every enumerated OpAttrs sub-vocabulary MUST be encoded as a
+  frozen little-endian unsigned-integer ordinal with ordinal `0` reserved as an
+  invalid/unspecified sentinel that a conforming encoder never emits and a reader
+  rejects; ordinal assignments MUST be additive-only and MUST NOT be reused after
+  retirement, and no enum spelling MUST appear in the canonical wire form. *Test:*
+  `test_ops_opattrs_enum_ordinal_reserve_zero`.
+- **KISS-OPS-6.19-0007** — Every integer OpAttrs field MUST be encoded at the
+  fixed width pinned in its schema (not chosen by magnitude), little-endian, two's-
+  complement: axis-index and operand-index and vector length-prefixes and `u8` enum
+  ordinals as one byte, `reduce_axes` as `u16` LE, and window/stride/dilation/padding
+  elements as `u32` LE. *Test:* `test_ops_opattrs_int_fixed_width_le`.
+- **KISS-OPS-6.19-0008** — The OpAttrs canonical wire form MUST be little-endian
+  throughout, consistent with the KISS-Announce POD and KISS-Grammar region wire forms;
+  KISS-Ops MUST NOT emit any OpAttrs field big-endian. *Test:*
+  `test_ops_opattrs_little_endian`.
+- **KISS-OPS-6.19-0009** — A genuinely optional OpAttrs attribute MUST occupy an explicit
+  slot and MUST NOT be represented by omission. Every schema field in this op-set version
+  is either **mandatory** (caller-supplied, e.g. `monoid`, a mandatory `reduce_axes`,
+  `axis`, `index_operand`, `index_dtype`, `norm_axis`) or **mandatory-with-resolved-
+  default** (e.g. `oob_policy`, `direction`, `exclusivity`, `count_include_pad`,
+  `output_column_ordering`, and the fixed-by-decomposition or fixed-constant flags), and
+  in all cases is **always present and explicitly emitted** at its effective value; a
+  fixed-by-decomposition or fixed-constant value MUST still be emitted explicitly as its
+  pinned constant, and no field's presence is ever signalled by a length the encoder may
+  choose. The `reduce_axes` sub-vocabulary reserves `0x0000` for the none/not-a-reduction
+  category, but that value is **unreachable** in any carrier OpAttrs blob of this version
+  (§6.19-0038). *Test:* `test_ops_opattrs_optional_explicit_slot`.
+- **KISS-OPS-6.19-0010** — OpAttrs MUST use definite lengths only: each ordered vector
+  (window-parameter, permutation) MUST carry its `u8` element-count prefix immediately
+  before its elements, and the whole OpAttrs blob MUST have a definite length equal to
+  the sum of its fixed fields plus vector payloads. KISS-Ops owns this internal definite
+  length; the embedding layer frames the blob length-prefixed (KISS-Grammar §6.8-0007
+  wraps it as a `u16` LE byte-length followed by the verbatim blob; an empty blob frames
+  as `0x0000`) and MUST NOT parse inside it. *Test:*
+  `test_ops_opattrs_definite_length_prefix`.
+- **KISS-OPS-6.19-0011** — The OpAttrs layout (the carrier-op set, per-op field order,
+  field widths, and sub-vocabulary ordinals) MUST be bound to the KISS-Ops op-set /
+  frozen-shape schema version; the shared `reduce_axes` anchor MUST additionally be
+  co-versioned with the Classify `structure_key` schema version (`STRUCTURE_KEY_VERSION`)
+  whose §6.7-0005 token codec it mirrors, and the pinned `MAX_RANK` / `MAX_OPERANDS`
+  constants (§6.19-0037) MUST be co-versioned with their Classify shared-anchor values.
+  Any non-additive change (reordering a field, re-widening, reusing an ordinal, changing
+  the `reduce_axes` multiplexing, or changing a pinned constant) MUST be a new canonical
+  byte form under a bumped version, never a silent in-place change. *Test:*
+  `test_ops_opattrs_version_binding`.
+- **KISS-OPS-6.19-0012** — KISS-Grammar and KISS-Contract MUST embed the encoded OpAttrs
+  blob as **opaque** KISS-Ops-owned bytes and MUST byte-compare it without parsing inside
+  it; because every field is explicit and default-resolved (§6.19-0005), an embedding
+  layer MUST NOT perform any default-normalization of its own, and two producers that
+  resolve an op's attributes to the same values MUST produce byte-identical blobs. *Test:*
+  `test_ops_opattrs_opaque_embedding_byte_compare`.
+- **KISS-OPS-6.19-0013** — Conformance of the OpAttrs encoding MUST be demonstrated by
+  golden vectors (attributes → exact little-endian hex bytes) covering every
+  sub-vocabulary and every carrier-op schema, reproduced by at least two structurally
+  dissimilar implementations (the umbrella §5.3 freeze gate) before the encoding is
+  declared frozen; Appendix E carries the informative worked vectors and each cites its
+  pinning clause. *Test:* `test_ops_opattrs_golden_vector_conformance`.
+
+#### 6.19.2 OpAttrs sub-vocabularies (frozen encodings)
+
+Each sub-vocabulary below is frozen: enum assignments are additive-only, code points
+are never reused after retirement, and no enum spelling ever appears on the wire.
+Ordinal `0` is a reserved invalid/unspecified sentinel that a conforming encoder
+never emits and a reader rejects (the boolean-flag encoding is exempt — both `0` and
+`1` are meaningful there). The pinned integer values of `MAX_RANK` and `MAX_OPERANDS`
+that bound the axis, operand-index, subset-mask, and vector-length fields below are
+inlined normatively in §6.19-0037.
+
+| Sub-vocabulary | Kind / width | Code points |
+|---|---|---|
+| `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min |
+| `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp, `3`=zero-fill |
+| `scatter_combine` | enum, `u8` | `0`=RESERVED, `1`=assign, `2`=atomic-add, `3`=atomic-max, `4`=atomic-min |
+| `index_dtype` | enum, `u8` | `0`=RESERVED, `1`=u32, `2`=i32, `3`=i64 |
+| `sort_direction` | enum, `u8` | `0`=RESERVED, `1`=ascending, `2`=descending |
+| `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
+| `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
+| `boolean-flag` | bool, `u8` | `0`=false, `1`=true (both meaningful; `0` NOT reserved) |
+| `reduce_axes` | multiplexed category+bitmask, `u16` LE | `0x0000`=none/not-a-reduction; `0x0001..0x00FF`=per-axis subset keepdim mask (bit `k`⇔axis `k`, ≥1 bit set); `0x0100..0xFFFD`=RESERVED (never emitted); `0xFFFE`=trailing-axis (innermost) only; `0xFFFF`=all-axes. Category selected by the rank-aware total precedence of §6.19-0020 (all-axes beats trailing beats subset; `0xFFFF` covers the rank-1 sole-axis case and every all-axes case) |
+| `window-param-vector` | ordered length-prefixed vector | `u8` element-count prefix (`0..MAX_RANK`), then count × `u32` LE elements, in ascending operand spatial-axis order (element `i` ⇔ spatial axis `i`, outermost spatial axis first; never sorted) |
+| `permutation` | ordered length-prefixed vector (RESERVED) | `u8` element-count prefix (`0..MAX_RANK`), then count × `u8` axis-index elements forming a valid permutation of `0..rank-1`, in order (never sorted) |
+
+- **KISS-OPS-6.19-0014** — The `monoid` OpAttrs field MUST be encoded as the frozen
+  `u8` ordinal `{1=sum, 2=prod, 3=max, 4=min}` with `0` reserved (never emitted); it
+  denotes the §6.11-0002 fold operator, is a member of an op's semantics (not part of
+  the op token), and MUST distinguish e.g. `reduce(sum)` from `reduce(max)` by ordinal
+  alone. *Test:* `test_ops_opattrs_monoid_enum`.
+- **KISS-OPS-6.19-0015** — The `oob_policy` OpAttrs field MUST be encoded as the frozen
+  `u8` ordinal `{1=skip, 2=clamp, 3=zero-fill}` with `0` reserved; a `gather` (read)
+  MAY carry any of the three, a `scatter` (write) MUST carry only ordinal `1` (skip)
+  per §6.11-0005, and this single enum is also the frozen home of the pool/`im2col`
+  boundary-fill policy (no separate pad-policy enum is minted; pad-fill IS `oob_policy`,
+  matching KISS-Grammar §6.2-0004 verbatim). *Test:* `test_ops_opattrs_oob_policy_enum`.
+- **KISS-OPS-6.19-0016** — The `scatter_combine` OpAttrs field MUST be encoded as the
+  frozen `u8` ordinal `{1=assign, 2=atomic-add, 3=atomic-max, 4=atomic-min}` with `0`
+  reserved, denoting the §6.11-0005 write-combine algebra. *Test:*
+  `test_ops_opattrs_scatter_combine_enum`.
+- **KISS-OPS-6.19-0017** — The `index_dtype` OpAttrs field MUST be encoded as the frozen
+  `u8` ordinal `{1=u32, 2=i32, 3=i64}` with `0` reserved, naming the §6.11-0009 legal
+  index-operand dtype; this enum is a distinct three-value axis and MUST NOT be conflated
+  with the data-vocabulary storage-dtype token set. *Test:*
+  `test_ops_opattrs_index_dtype_enum`.
+- **KISS-OPS-6.19-0018** — The `sort_direction` OpAttrs field MUST be encoded as the
+  frozen `u8` ordinal `{1=ascending, 2=descending}` with `0` reserved (§6.11-0007
+  default ascending). *Test:* `test_ops_opattrs_sort_direction_enum`.
+- **KISS-OPS-6.19-0019** — The `scan_exclusivity` OpAttrs field MUST be encoded as the
+  frozen `u8` ordinal `{1=inclusive, 2=exclusive}` with `0` reserved (§6.11-0003 default
+  inclusive); the `prefix_scan` schema field `exclusivity` (§6.19-0026) draws from this
+  sub-vocabulary and MUST emit the ordinal, never a boolean truth value. *Test:*
+  `test_ops_opattrs_scan_exclusivity_enum`.
+- **KISS-OPS-6.19-0020** — The `reduce_axes` OpAttrs field MUST be encoded as a single
+  canonical `u16` little-endian value multiplexing the four §6.11-0011 categories:
+  `0x0000`=none/not-a-reduction, `0x0001..0x00FF`=an explicit per-axis subset keepdim
+  mask (bit `k` selects axis `k`, at least one bit set), `0x0100..0xFFFD`=RESERVED
+  (never emitted), `0xFFFE`=trailing-axis only, `0xFFFF`=all-axes. The low byte doubling
+  as a `u8` per-axis mask requires `MAX_RANK <= 8` (§6.19-0037). Because the operand rank
+  is NOT carried in the blob, the category MUST be selected by the following rank-aware
+  **total precedence**, stated here in full (not by cross-reference) so the Ops binary
+  encoding is self-contained.
+
+  **Reductions (`reduce`, `reduce_var`, `reduce_std`).** Let `S ⊆ {0,1,…,r-1}` be the set
+  of reduced axes over an operand of rank `r` (`1 <= r <= MAX_RANK <= 8`). Apply these
+  three tests in this exact order; they are mutually exclusive by construction: (1) emit
+  `0xFFFF` **if and only if** `S == {0,1,…,r-1}` (every axis of the operand is selected);
+  (2) otherwise emit `0xFFFE` **if and only if** `S == {r-1}` **and** `r > 1` (exactly the
+  single trailing axis); (3) otherwise emit the `u8` subset mask `Σ over k∈S of (1 << k)`
+  in the low byte with high byte `0x00`. Consequences, each load-bearing for byte-identity
+  (§6.19-0012): a **rank-1** reduction over its sole axis MUST encode `0xFFFF` (it is
+  all-axes), never the single-bit subset mask `0x0001`; a reduction whose `S` covers all
+  `r` axes MUST encode `0xFFFF`, **never a subset mask, even one whose set bits cover all
+  `r` axes** (e.g. a rank-3 reduction over `{0,1,2}` MUST encode `0xFFFF`, never `0x0007`);
+  `0xFFFE` is emitted only for `r > 1` with `S` exactly the trailing axis; and a `reduce`
+  / `reduce_var` / `reduce_std` MUST NOT emit `0x0000` (§6.19-0038).
+
+  **Scan (`prefix_scan`).** A `prefix_scan` folds over exactly one axis `a`. Apply in
+  order: (1) if `r > 1` **and** `a == r-1` (the trailing axis), emit `0xFFFE`; (2)
+  otherwise — a non-trailing single axis, **or** the sole axis of a rank-1 operand — emit
+  the single-bit subset mask `1 << a`. A `prefix_scan` MUST NOT emit `0xFFFF` and MUST NOT
+  emit `0x0000`. *Test:* `test_ops_opattrs_reduce_axes_multiplex`.
+- **KISS-OPS-6.19-0021** — The `output_column_ordering` OpAttrs field MUST be encoded as
+  the frozen `u8` ordinal `{1=channel-major (tap-minor), 2=tap-major (channel-minor)}`
+  with `0` reserved, drawing its ordinals from the `column_ordering` sub-vocabulary of
+  the §6.19.2 table (the schema field is named `output_column_ordering` and draws from the
+  `column_ordering` sub-vocabulary, exactly as the `exclusivity` field draws from the
+  `scan_exclusivity` sub-vocabulary); it declares the `im2col` window-tap/channel flatten
+  order into the column dimension (§6.13-0004) so its index mapping is fully determined.
+  *Test:* `test_ops_opattrs_column_ordering_enum`.
+- **KISS-OPS-6.19-0022** — Every boolean OpAttrs field (`keepdim`, `stability`,
+  `bessel_correction`, `count_include_pad`) MUST be encoded as a `u8` with `0`=false and
+  `1`=true; a boolean field is NOT subject to the reserve-`0` enum rule (both values are
+  meaningful), and MUST be emitted explicitly at its resolved value even where this
+  op-set version pins it to a constant (`keepdim`=1 per §6.11-0008, `stability`=1 per
+  §6.11-0007). *Test:* `test_ops_opattrs_boolean_flags`.
+- **KISS-OPS-6.19-0023** — Every window-parameter OpAttrs vector (`window_size`,
+  `stride`, `dilation`, `padding`) MUST be encoded as a `u8` element-count prefix
+  (`0..MAX_RANK`, §6.19-0037) immediately followed by that many `u32` little-endian
+  elements, where **element `i` corresponds to spatial axis `i` in ascending operand
+  spatial-axis index order (the outermost spatial axis first, the innermost spatial axis
+  last)**; the elements MUST be preserved in that order and MUST NOT be sorted (an ordered
+  vector). *Test:* `test_ops_opattrs_window_param_vector`.
+- **KISS-OPS-6.19-0024** — The `permutation` sub-vocabulary MUST be encoded as a `u8`
+  element-count prefix (`0..MAX_RANK`) followed by that many `u8` axis-index elements
+  forming a valid permutation of `0..rank-1`, preserved in the given order (never
+  sorted); it is **frozen and reserved** in this op-set version because KISS-Grammar
+  §6.2-0006 names KISS-Ops as its owner, but NO op in this version carries a free
+  `permutation` field (`sort_network` emits its permutation as a runtime index-vector
+  output per §6.11-0007, not a compile-time attribute), so a conforming encoder MUST NOT
+  emit a `permutation` field on any op of this version. *Test:*
+  `test_ops_opattrs_permutation_reserved`.
+
+#### 6.19.3 Per-op OpAttrs schema (canonical field order = ABI)
+
+For each carrier op the OpAttrs blob is exactly the fields below, in the canonical
+order shown, each at its pinned width, each emitted **explicitly** at its
+**resolved** value. Attribute names never appear on the wire; the `op_name` (carried
+by the embedding layer) selects the schema and the reader replays it positionally.
+
+| Op | Canonical field order (name : encoding : resolved default) |
+|---|---|
+| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) |
+| `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) |
+| `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
+| `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
+| `sort_network` | `axis`:`u8`:trailing axis `r-1` (§6.11-0014) — `direction`:enum `u8`:`1` (ascending) — `stability`:bool `u8`:`1` (fixed, §6.11-0007) |
+| `reduce_var` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` — `bessel_correction`:bool `u8`:`0` (population) |
+| `reduce_std` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` — `bessel_correction`:bool `u8`:`0` (population) |
+| `softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
+| `log_softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
+| `rms_norm` | `norm_axis`:`u8`:mandatory (§6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
+| `layer_norm` | `norm_axis`:`u8`:mandatory (§6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)`, `beta`=`input(2)` are operands/params, NOT OpAttrs) |
+| `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
+| `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec |
+| `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
+| `index_select` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED skip by decomposition, carries no free `oob` field) |
+| `embedding` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED zero-fill by decomposition) |
+| `scatter_add` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (combine FIXED atomic-add, oob FIXED skip by decomposition) |
+
+- **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
+  mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
+  `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, fixed `1`), in
+  that order. *Test:* `test_ops_opattrs_reduce_schema`.
+- **KISS-OPS-6.19-0026** — The `prefix_scan` OpAttrs blob MUST be exactly `monoid`
+  (`u8`, mandatory) then `reduce_axes` (`u16` LE, selecting exactly one axis per the
+  scan precedence of §6.19-0020: `0xFFFE` when that axis is the trailing axis of a
+  rank-`>1` operand, otherwise the single-bit subset mask; `0xFFFF` and `0x0000` MUST NOT
+  be emitted) then `exclusivity` (`scan_exclusivity` enum `u8`, default `1` inclusive;
+  the field draws from the `scan_exclusivity` sub-vocabulary and MUST emit the enum
+  ordinal — `1`=inclusive, `2`=exclusive — not a boolean truth value), in that order.
+  *Test:* `test_ops_opattrs_prefix_scan_schema`.
+- **KISS-OPS-6.19-0027** — The `gather` OpAttrs blob MUST be exactly `axis` (`u8`, the
+  indexed axis of §6.11-0013, range `0..MAX_RANK-1`) then `oob_policy` (enum `u8`, default
+  `1` skip) then `index_operand` (`u8`, range `0..MAX_OPERANDS-1`) then `index_dtype`
+  (enum `u8`, mandatory), in that order. *Test:* `test_ops_opattrs_gather_schema`.
+- **KISS-OPS-6.19-0028** — The `scatter` OpAttrs blob MUST be exactly `axis` (`u8`, the
+  indexed axis of §6.11-0013) then `combine` (`scatter_combine` enum `u8`, default `1`
+  assign) then `oob_policy` (enum `u8`, fixed `1` skip) then `index_operand` (`u8`) then
+  `index_dtype` (enum `u8`, mandatory), in that order. *Test:*
+  `test_ops_opattrs_scatter_schema`.
+- **KISS-OPS-6.19-0029** — The `sort_network` OpAttrs blob MUST be exactly `axis` (`u8`,
+  the permuted axis of §6.11-0014, resolving to the trailing axis `r-1`) then `direction`
+  (`sort_direction` enum `u8`, default `1` ascending) then `stability` (bool `u8`, fixed
+  `1` stable), in that order. *Test:* `test_ops_opattrs_sort_network_schema`.
+- **KISS-OPS-6.19-0030** — The `reduce_var` and `reduce_std` OpAttrs blobs MUST each be
+  exactly `reduce_axes` (`u16` LE, mandatory; `0x0000` forbidden per §6.19-0038) then
+  `keepdim` (bool `u8`, fixed `1`) then `bessel_correction` (bool `u8`, default `0`
+  population, §6.13-0004), in that order. *Test:*
+  `test_ops_opattrs_reduce_var_std_schema`.
+- **KISS-OPS-6.19-0031** — The `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`
+  OpAttrs blobs MUST each be exactly a single `norm_axis` (`u8`, mandatory, range
+  `0..MAX_RANK-1`) field — the normalization axis pinned by §6.13-0004 for
+  `softmax`/`log_softmax` and by §6.13-0008 for `rms_norm`/`layer_norm`; the
+  `eps`/`gamma`/`beta` quantities of `rms_norm`/`layer_norm` are operands/params
+  (§6.13 operand-ordering convention), NOT OpAttrs fields. *Test:*
+  `test_ops_opattrs_norm_axis_schema`.
+- **KISS-OPS-6.19-0032** — The `avg_pool` OpAttrs blob MUST be exactly `window_size`,
+  `stride`, `dilation`, `padding` (each a window-parameter vector, §6.19-0023) then
+  `count_include_pad` (bool `u8`, default `1`), in that order; the `max_pool` OpAttrs
+  blob MUST be exactly `window_size`, `stride`, `dilation`, `padding` in that order with
+  no trailing flag. *Test:* `test_ops_opattrs_pool_schema`.
+- **KISS-OPS-6.19-0033** — The `im2col` OpAttrs blob MUST be exactly `window_size`,
+  `stride`, `dilation`, `padding` (each a window-parameter vector) then
+  `output_column_ordering` (`column_ordering` enum `u8`, default `1` channel-major), in
+  that order. *Test:* `test_ops_opattrs_im2col_schema`.
+- **KISS-OPS-6.19-0034** — The `index_select`, `embedding`, and `scatter_add` OpAttrs
+  blobs MUST each be exactly `axis` (`u8`, the indexed axis of §6.11-0013) then
+  `index_operand` (`u8`) then `index_dtype` (enum `u8`), in that order; these
+  gather/scatter wrappers MUST NOT carry a free `oob_policy` or `combine` field, because
+  those values are fixed by their §6.13 decompositions (`index_select`→skip,
+  `embedding`→zero-fill, `scatter_add`→atomic-add + skip). *Test:*
+  `test_ops_opattrs_gather_scatter_wrapper_schema`.
+
+#### 6.19.4 Reconciliation with KISS-Classify `structure_key`
+
+The `reduce_axes` OpAttrs field and the KISS-Classify `structure_key` reduce-field
+share **one** four-category vocabulary (§6.11-0011): none / all-axes / trailing-axis /
+subset mask. They are carried on **two distinct channels** — Classify's is the coarse
+cell discriminator serialized by the `structure_key` **string token codec** (Classify
+§6.7-0005: `-` / `rall` / `rlast` / `x<hh>`, the sole normative pinning of that field);
+KISS-Ops's is the per-op **binary** OpAttrs field (`u16` LE, §6.19-0020). The two
+agree on categories 1:1 (`-`↔`0x0000`, `rall`↔`0xFFFF`, `rlast`↔`0xFFFE`, `x<hh>`↔the
+`u8` subset mask `0x00hh` in `0x0001..0x00FF`) and are co-versioned (§6.19-0011), but
+the OpAttrs binary form is a KISS-Ops-owned encoding for the OpAttrs channel and does
+NOT re-pin or contradict the Classify token codec, which remains the normative form for
+`structure_key`; the earlier Ops-local in-memory hex illustration of §6.11-0011 is
+promoted to this normative OpAttrs encoding for that channel only.
+
+- **KISS-OPS-6.19-0035** — The `reduce_axes` OpAttrs `u16` encoding MUST reconcile with
+  the KISS-Classify `structure_key` reduce-field 1:1 on the four categories
+  (`-`↔`0x0000`, `rall`↔`0xFFFF`, `rlast`↔`0xFFFE`, `x<hh>`↔the `u8` subset mask), MUST
+  be co-versioned with `STRUCTURE_KEY_VERSION`, and MUST NOT be read as re-pinning or
+  overriding the Classify §6.7-0005 token codec (the normative `structure_key` form);
+  the OpAttrs binary form is owned by KISS-Ops for the OpAttrs channel and the string
+  token codec is owned by KISS-Classify for `structure_key`, the two being distinct
+  channels that agree by construction. *Test:*
+  `test_ops_opattrs_reduce_axes_classify_reconciliation`.
+
+#### 6.19.5 Foundational constants and cross-op axis resolution
+
+- **KISS-OPS-6.19-0036** — Several advertised, axis-parameterized non-primitive ops are
+  **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field):
+  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `any`, `all`, `cumsum`, `cumprod`,
+  and `cummax`. A consumer that natively matches one of these ops — and therefore does not
+  expand its §6.13 reference decomposition (§6.14-0004) — MUST obtain the reduce/scan axis
+  by resolving the axis of the **inner carrier node** of that op's reference decomposition
+  (the `reduce`, `prefix_scan`, or `sort_network` the op is defined over), even though it
+  does not fully expand the decomposition; the axis is therefore always determined
+  (§6.19-0003) and is never unspecified for a native matcher. `reduce_var` and
+  `reduce_std` are carriers of a free `reduce_axes` field **not** because their axis would
+  otherwise be unspecified but solely because they additionally carry the
+  `bessel_correction` attribute (§6.19-0030), which has no inner-carrier source and must be
+  declared alongside the axis; `reduce_mean`, `reduce_norm2`, and `logsumexp` carry no such
+  extra attribute and so remain non-carriers whose axis is resolved from their inner
+  `reduce` node. *Test:* `test_ops_opattrs_noncarrier_axis_resolution`.
+- **KISS-OPS-6.19-0037** — For the OpAttrs channel of this op-set version the pinned
+  constants that bound the `axis`, `index_operand`, subset-mask, and vector-length fields
+  MUST take the concrete values `MAX_RANK = 8` and `MAX_OPERANDS = 8`. These are the same
+  shared-anchor constants referenced by name from the data vocabulary (§2.8); their values
+  are inlined here (exactly as §6.16 inlines the dtype bit layouts) so this document is
+  self-contained and every range MUST of §6.19 is verifiable from KISS-Ops plus the
+  umbrella alone, and they are **co-versioned with Classify** (a change to either value in
+  the shared anchor co-bumps the OpAttrs version, §6.19-0011). `MAX_RANK = 8` satisfies the
+  KISS-Ops-local invariant `MAX_RANK <= 8` that the `reduce_axes` low-byte `u8` per-axis
+  subset mask (§6.19-0020) requires. A conforming encoder MUST NOT emit an `axis` field
+  `>= MAX_RANK`, an `index_operand` field `>= MAX_OPERANDS`, a subset mask with a bit set
+  at a position `>= MAX_RANK`, or a window/permutation vector whose element count exceeds
+  `MAX_RANK`; a reader MUST reject any such out-of-range field with a typed decline.
+  *Test:* `test_ops_opattrs_max_rank_operands_pinned`.
+- **KISS-OPS-6.19-0038** — `reduce_var` and `reduce_std` MUST NOT emit `reduce_axes=0x0000`,
+  exactly as `reduce` and `prefix_scan` MUST NOT (§6.19-0020). Because every carrier op
+  that owns a `reduce_axes` field (`reduce`, `prefix_scan`, `reduce_var`, `reduce_std`) is
+  a reduction or a scan, the none/not-a-reduction sentinel `0x0000` is **unreachable** in
+  any OpAttrs blob of this op-set version — its sole role is the Classify `structure_key`
+  `-` token reconciliation (§6.19-0035), not the OpAttrs channel. A reader MUST reject
+  `reduce_axes=0x0000` on any carrier OpAttrs blob as malformed. *Test:*
+  `test_ops_opattrs_reduce_axes_zero_unreachable`.
+
 ---
 
 ## 7. Capability, Profile & Extension model
@@ -1637,8 +2079,10 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0008 | `test_ops_reduce_keepdim_broadcast` |
 | KISS-OPS-6.11-0009 | `test_ops_index_dtype_set` |
 | KISS-OPS-6.11-0010 | `test_ops_scatter_atomic_minmax_nan` |
-| KISS-OPS-6.11-0011 | `test_ops_reduce_axes_three_values` |
+| KISS-OPS-6.11-0011 | `test_ops_reduce_axes_four_categories` |
 | KISS-OPS-6.11-0012 | `test_ops_index_operand_role` |
+| KISS-OPS-6.11-0013 | `test_ops_index_axis_attribute` |
+| KISS-OPS-6.11-0014 | `test_ops_sort_network_axis_attribute` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -1649,6 +2093,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0005 | `test_ops_pow_full_domain` |
 | KISS-OPS-6.13-0006 | `test_ops_decomposition_body_grammar` |
 | KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
+| KISS-OPS-6.13-0008 | `test_ops_norm_axis_all_four` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |
@@ -1688,6 +2133,44 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.18-0015 | `test_ops_complex_component_dtype` |
 | KISS-OPS-6.18-0016 | `test_ops_complex_advertised_high_level` |
 | KISS-OPS-6.18-0017 | `test_ops_complex_branch_sign_exact` |
+| KISS-OPS-6.19-0001 | `test_ops_opattrs_channel_concept` |
+| KISS-OPS-6.19-0002 | `test_ops_opattrs_distinct_from_pattern_attrs` |
+| KISS-OPS-6.19-0003 | `test_ops_opattrs_carrier_set_closed` |
+| KISS-OPS-6.19-0004 | `test_ops_opattrs_field_order_abi` |
+| KISS-OPS-6.19-0005 | `test_ops_opattrs_explicit_default_resolution` |
+| KISS-OPS-6.19-0006 | `test_ops_opattrs_enum_ordinal_reserve_zero` |
+| KISS-OPS-6.19-0007 | `test_ops_opattrs_int_fixed_width_le` |
+| KISS-OPS-6.19-0008 | `test_ops_opattrs_little_endian` |
+| KISS-OPS-6.19-0009 | `test_ops_opattrs_optional_explicit_slot` |
+| KISS-OPS-6.19-0010 | `test_ops_opattrs_definite_length_prefix` |
+| KISS-OPS-6.19-0011 | `test_ops_opattrs_version_binding` |
+| KISS-OPS-6.19-0012 | `test_ops_opattrs_opaque_embedding_byte_compare` |
+| KISS-OPS-6.19-0013 | `test_ops_opattrs_golden_vector_conformance` |
+| KISS-OPS-6.19-0014 | `test_ops_opattrs_monoid_enum` |
+| KISS-OPS-6.19-0015 | `test_ops_opattrs_oob_policy_enum` |
+| KISS-OPS-6.19-0016 | `test_ops_opattrs_scatter_combine_enum` |
+| KISS-OPS-6.19-0017 | `test_ops_opattrs_index_dtype_enum` |
+| KISS-OPS-6.19-0018 | `test_ops_opattrs_sort_direction_enum` |
+| KISS-OPS-6.19-0019 | `test_ops_opattrs_scan_exclusivity_enum` |
+| KISS-OPS-6.19-0020 | `test_ops_opattrs_reduce_axes_multiplex` |
+| KISS-OPS-6.19-0021 | `test_ops_opattrs_column_ordering_enum` |
+| KISS-OPS-6.19-0022 | `test_ops_opattrs_boolean_flags` |
+| KISS-OPS-6.19-0023 | `test_ops_opattrs_window_param_vector` |
+| KISS-OPS-6.19-0024 | `test_ops_opattrs_permutation_reserved` |
+| KISS-OPS-6.19-0025 | `test_ops_opattrs_reduce_schema` |
+| KISS-OPS-6.19-0026 | `test_ops_opattrs_prefix_scan_schema` |
+| KISS-OPS-6.19-0027 | `test_ops_opattrs_gather_schema` |
+| KISS-OPS-6.19-0028 | `test_ops_opattrs_scatter_schema` |
+| KISS-OPS-6.19-0029 | `test_ops_opattrs_sort_network_schema` |
+| KISS-OPS-6.19-0030 | `test_ops_opattrs_reduce_var_std_schema` |
+| KISS-OPS-6.19-0031 | `test_ops_opattrs_norm_axis_schema` |
+| KISS-OPS-6.19-0032 | `test_ops_opattrs_pool_schema` |
+| KISS-OPS-6.19-0033 | `test_ops_opattrs_im2col_schema` |
+| KISS-OPS-6.19-0034 | `test_ops_opattrs_gather_scatter_wrapper_schema` |
+| KISS-OPS-6.19-0035 | `test_ops_opattrs_reduce_axes_classify_reconciliation` |
+| KISS-OPS-6.19-0036 | `test_ops_opattrs_noncarrier_axis_resolution` |
+| KISS-OPS-6.19-0037 | `test_ops_opattrs_max_rank_operands_pinned` |
+| KISS-OPS-6.19-0038 | `test_ops_opattrs_reduce_axes_zero_unreachable` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |
@@ -1910,6 +2393,131 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`, so the §6.0-0001
     "verbatim everywhere" invariant and byte-exact token matching (§7.3-0003, §7.4-0001) now
     hold across the suite.
+11. **OpAttrs channel + canonical wire encoding (added 2026-07-13).** §6.19 adds the
+    per-op, compile-time **OpAttrs** record and its canonical, default-resolved little-
+    endian wire encoding (explicit default-resolution — no elision; per-op fixed field
+    order as ABI; frozen reserve-`0` little-endian enum ordinals; fixed-width LE two's-
+    complement integers; explicit optional slots; definite length-prefixes; version
+    binding), discharging the KISS-Grammar §6.2-0006 / §8-0008 and KISS-Contract Semantics
+    seam obligations. Several sub-questions remain open (recorded for the RFC, not binding):
+    (a) **`sort_network` axis (covered 2026-07-13).** §6.11-0014 now normatively pins an
+    explicit `axis` attribute (role, `u8` width, range `0..MAX_RANK-1`) resolving to the
+    trailing (innermost) axis `r-1`, cited by the §6.19-0029 schema; no longer resolved only
+    in this open-question list. (b) **`permutation` encoding** — frozen and reserved (Grammar §6.2-0006
+    requires KISS-Ops to own it) but attached to NO op this version, since `sort_network`
+    emits its permutation as a runtime index-vector output; confirm it is reserved for
+    future shape/transpose/permute ops. (c) **`im2col` `output_column_ordering`** — the
+    provisional `{1=channel-major, 2=tap-major}` member set is pending normative pinning.
+    (d) **padding shape** — the per-axis `padding` is modeled as a single symmetric `u32`
+    per axis; confirm no op needs asymmetric low/high pairs. (e) **`matmul`** — modeled as
+    carrying NO free OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
+    Classify role hints); confirm it needs no free contract-axis field. (f) **`monoid` as
+    OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
+    confirm KISS-Ops does not instead fold it into distinct op tokens. (g)
+    **`norm_axis` for `rms_norm`/`layer_norm` (covered 2026-07-13).** §6.13-0008 now
+    normatively requires an explicit `norm_axis` (same role, width, and range as the
+    §6.13-0004 `softmax`/`log_softmax` normalization axis) for `rms_norm` and `layer_norm`,
+    cited by the §6.19-0031 schema; no longer resolved only in this open-question list. The
+    indexed `axis` of `gather`/`scatter`/`index_select`/`embedding`/`scatter_add` is
+    likewise now pinned by §6.11-0013. (h)
+    **fixed-constant flags** — `keepdim` (§6.11-0008) and `stability` (§6.11-0007) are
+    pinned to `1` and emitted as explicit slots (R1 favors retaining for additive-friendly
+    growth); confirm the design intent to keep them rather than drop for a smaller blob.
+    (i) **single-axis `norm_axis`** — modeled as one `u8`; confirm `softmax`/`log_softmax`
+    never normalize over multiple axes this version (which would need a `reduce_axes`-style
+    `u16`).
+
+---
+
+## Appendix E — OpAttrs golden vectors (informative)
+
+These worked vectors render OpAttrs values to exact little-endian hex bytes ("bytes on
+the wire, left to right"). They are informative; the normative encoding is §6.19. Each
+cites its pinning clause. A hex pair is one byte; `··` groups a multi-byte field for
+readability only.
+
+**E.1 Sub-vocabulary single-field vectors.**
+
+| Sub-vocabulary (clause) | Value | Bytes (LE hex) |
+|---|---|---|
+| `monoid` (§6.19-0014) | sum / prod / max / min | `01` / `02` / `03` / `04` |
+| `oob_policy` (§6.19-0015) | skip / clamp / zero-fill | `01` / `02` / `03` |
+| `scatter_combine` (§6.19-0016) | assign / atomic-add / atomic-max / atomic-min | `01` / `02` / `03` / `04` |
+| `index_dtype` (§6.19-0017) | u32 / i32 / i64 | `01` / `02` / `03` |
+| `sort_direction` (§6.19-0018) | ascending / descending | `01` / `02` |
+| `scan_exclusivity` (§6.19-0019) | inclusive / exclusive | `01` / `02` |
+| `column_ordering` (§6.19-0021) | channel-major / tap-major | `01` / `02` |
+| `boolean-flag` (§6.19-0022) | false / true | `00` / `01` |
+| `reduce_axes` (§6.19-0020) | none¹ / all-axes / trailing (rank>1) / subset{axis0} (rank>1, non-trailing) / subset{axis0,axis2} | `00 00`¹ / `FF FF` / `FE FF` / `01 00` / `05 00` |
+| `window-param-vector` (§6.19-0023) | `[3, 3]` (element 0 = axis 0, element 1 = axis 1) | `02·03 00 00 00·03 00 00 00` |
+| `permutation` RESERVED (§6.19-0024) | `[2, 0, 1]` (illustrative; emitted on no op this version) | `03·02·00·01` |
+
+**Rank-sensitivity of `reduce_axes`** (§6.19-0020): the `subset{axis0}` → `01 00` and
+`trailing` → `FE FF` rows above assume rank > 1. Over a **rank-1** operand the sole axis
+is all-axes, so a `reduce` MUST encode `FF FF`, never the single-bit mask `01 00`; over a
+**rank-3** operand a reduction covering `{0,1,2}` MUST encode `FF FF`, never the subset
+mask `07 00` (§6.19-0020 total precedence). ¹ `0x0000` (none) is a sub-vocabulary code
+point shown for completeness but is **unreachable** in any carrier OpAttrs blob
+(§6.19-0038).
+
+**E.2 Full per-op OpAttrs blobs.**
+
+- **`reduce(sum, all-axes, keepdim)`** (§6.19-0025): `monoid`=sum `01`, `reduce_axes`=rall
+  `FF FF`, `keepdim`=true `01` → **`01 FF FF 01`** (4 bytes). Framed by KISS-Grammar
+  §6.8-0007 as `u16` LE length + blob → **`04 00 01 FF FF 01`**.
+- **`gather(axis=0, oob=clamp, index_operand=1, index_dtype=i32)`** (§6.19-0027; the
+  KISS-Grammar §2.4 clamp worked example, clamp a non-default value): `axis` `00`,
+  `oob_policy`=clamp `02`, `index_operand` `01`, `index_dtype`=i32 `02` →
+  **`00 02 01 02`** (4 bytes).
+- **`prefix_scan(sum, trailing-axis, inclusive)` over a rank>1 operand** (§6.19-0026):
+  `monoid`=sum `01`, `reduce_axes`=rlast `FE FF` (trailing axis of a rank>1 operand;
+  §6.19-0020 scan precedence), `exclusivity`=inclusive `01` (the `scan_exclusivity` enum
+  ordinal, NOT a boolean) → **`01 FE FF 01`** (4 bytes).
+- **`scatter(axis=0, combine=atomic-add, oob=skip, index_operand=1, index_dtype=i64)`**
+  (§6.19-0028): `axis` `00`, `combine`=atomic-add `02`, `oob_policy`=skip `01`,
+  `index_operand` `01`, `index_dtype`=i64 `03` → **`00 02 01 01 03`** (5 bytes).
+- **`reduce_var(all-axes, keepdim, population)`** (§6.19-0030): `reduce_axes`=rall
+  `FF FF`, `keepdim`=true `01`, `bessel_correction`=false `00` → **`FF FF 01 00`**
+  (4 bytes).
+- **`reduce(sum)` over a rank-1 operand's sole axis** (§6.19-0020/-0025): the sole axis is
+  all-axes, so `reduce_axes`=`FF FF` (NOT the single-bit subset mask `01 00`), `monoid`=sum
+  `01`, `keepdim`=true `01` → **`01 FF FF 01`** (4 bytes).
+- **`reduce(max)` over a rank-3 operand's axes {0,1,2}** (§6.19-0020/-0025): the selected
+  set covers all three axes, so `reduce_axes`=`FF FF` (NOT the subset mask `07 00`),
+  `monoid`=max `03`, `keepdim`=true `01` → **`03 FF FF 01`** (4 bytes).
+- **`sort_network(ascending, stable)` over a rank-2 operand** (§6.19-0029): `axis`=trailing
+  `01`, `direction`=ascending `01`, `stability`=stable `01` → **`01 01 01`** (3 bytes).
+- **`softmax(norm_axis=1)`** (§6.19-0031): `norm_axis` `01` → **`01`** (1 byte).
+- **`index_select(axis=0, index_operand=1, index_dtype=u32)`** (§6.19-0034): `axis` `00`,
+  `index_operand` `01`, `index_dtype`=u32 `01` → **`00 01 01`** (3 bytes).
+- **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding=`[0,0]`,
+  count_include_pad=true** (§6.19-0032): `window_size` `02·02 00 00 00·02 00 00 00`;
+  `stride` `02·02 00 00 00·02 00 00 00`; `dilation` `02·01 00 00 00·01 00 00 00`;
+  `padding` `02·00 00 00 00·00 00 00 00`; `count_include_pad` `01` →
+  **`02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (37 bytes).
+- **`avg_pool` window=`[3,5]`, stride=`[1,2]`, dilation=`[1,1]`, padding=`[0,0]`,
+  count_include_pad=true** (§6.19-0032; **non-square**, exercising the §6.19-0023
+  ascending-spatial-axis order — element 0 = axis 0 = `3`/`1`, element 1 = axis 1 = `5`/`2`
+  — so a reversed encoder that emitted `[5,3]`/`[2,1]` would diverge here): `window_size`
+  `02·03 00 00 00·05 00 00 00`; `stride` `02·01 00 00 00·02 00 00 00`; `dilation`
+  `02·01 00 00 00·01 00 00 00`; `padding` `02·00 00 00 00·00 00 00 00`;
+  `count_include_pad` `01` →
+  **`02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (37 bytes).
+- **`im2col` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding=`[1,1]`,
+  output_column_ordering=channel-major** (§6.19-0033): `window_size`
+  `02·03 00 00 00·03 00 00 00`; `stride` `02·01 00 00 00·01 00 00 00`; `dilation`
+  `02·01 00 00 00·01 00 00 00`; `padding` `02·01 00 00 00·01 00 00 00`;
+  `output_column_ordering`=channel-major `01` →
+  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
+  (37 bytes).
+
+**E.3 Default-resolution equality.** A `gather` written with the default `oob_policy`
+(skip) and one written explicitly `oob_policy=skip`, all other fields equal (`axis=0`,
+`index_operand=1`, `index_dtype=u32`), both emit **`00 01 01 01`** — identical bytes
+(§6.19-0005), which is what lets KISS-Grammar byte-compare the blob without interpreting
+it (§6.19-0012).
 
 ---
 

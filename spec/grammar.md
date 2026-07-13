@@ -729,11 +729,15 @@ the full statement.
   — the **out-of-bounds policy** set (`{skip, clamp, zero-fill}` for reads, `skip` for
   writes), the **permutation** encoding, and the **reduce-axis mask / keepdim** encoding —
   are **owned by KISS-Ops** as op semantics; KISS-Grammar MUST cite KISS-Ops as the single
-  owner of each and MUST NOT re-define, restate, or fork any of them, and MUST carry each
-  uninterpreted at the framing level (embedded as the KISS-Ops OpAttrs wire bytes,
-  §6.8-0007), inventing no encoding of its own for any of them. The embedded KISS-Ops
-  OpAttrs wire bytes are **default-resolved and canonical at the KISS-Ops layer** (KISS-Ops
-  emits every defaulted attribute explicitly; §8-0008); KISS-Grammar therefore attains
+  owner of each — KISS-OPS **§6.19-0001** pins KISS-Ops as the **single normative owner** of
+  the OpAttrs channel, with the individual sub-vocabularies frozen at KISS-OPS **§6.19-0015**
+  (oob_policy), **§6.19-0020** (reduce_axes mask/keepdim multiplex), and **§6.19-0024**
+  (permutation, RESERVED this version) — and MUST NOT re-define, restate, or fork any of
+  them, and MUST carry each uninterpreted at the framing level (embedded as the KISS-Ops
+  OpAttrs wire bytes, §6.8-0007), inventing no encoding of its own for any of them. The
+  embedded KISS-Ops OpAttrs wire bytes are **default-resolved and canonical at the KISS-Ops
+  layer** (KISS-Ops emits every defaulted attribute explicitly; KISS-OPS §6.19-0005, §8-0008);
+  KISS-Grammar therefore attains
   tag/region byte-equality over these bytes **without** interpreting the sub-vocabulary,
   and MUST NOT perform default normalization of its own on the OpAttrs blob. KISS-Grammar's
   own `pattern_attrs` **matching hints** — the node-identity binds (§6.4-0003), the
@@ -1186,9 +1190,14 @@ KISS-Ops-owned per-op properties.
   (§6.8-0007) MUST NOT be admitted as a **golden region vector** (§8-0004, §8-0005) unless
   the pinned KISS-Ops version's **OpAttrs wire encoding is byte-frozen and default-resolved**
   (defaults emitted explicitly) — the upstream guarantee KISS-Grammar's opaque-blob
-  byte-equality (§6.1-0007(b), §6.2-0006) depends on. Golden vector G2 (and any other
-  OpAttrs-bearing vector) is **gated** on that upstream KISS-Ops freeze and MUST cite the
-  KISS-Ops clause that pins OpAttrs byte-determinism. *Test:*
+  byte-equality (§6.1-0007(b), §6.2-0006) depends on. That upstream guarantee is pinned by
+  KISS-OPS **§6.19-0005** (every defaulted OpAttrs attribute emitted explicitly, so a
+  defaulted attribute and an explicitly-equal one produce identical bytes) under the
+  golden-vector conformance-and-freeze mechanism of KISS-OPS **§6.19-0013**. Golden vector G2
+  (and any other OpAttrs-bearing vector) is **gated** on that upstream KISS-Ops freeze and
+  MUST cite the KISS-Ops clause that pins OpAttrs byte-determinism — namely KISS-OPS
+  §6.19-0005 (explicit default-resolution) and §6.19-0013 (golden-vector conformance +
+  freeze); this citation discharges the forward-reference and makes the gate liftable. *Test:*
   `test_grammar_opattrs_freeze_precondition` (checklist gate; AUDIT-signed).
 
 ---
@@ -1387,7 +1396,9 @@ the **identical** byte sequence, demonstrating the reproducible-emission guarant
 *Vector G2 — the load-bearing `gather` of §2.4.* Authored against `ops_version = "1"`,
 `classify_version = "1"`, and **gated** on the pinned KISS-Ops version's OpAttrs wire
 encoding being byte-frozen and default-resolved (§8-0008); its OpAttrs bytes are reproduced
-verbatim from, and cite, that KISS-Ops OpAttrs byte-determinism clause. A one-node region
+verbatim from, and cite, that KISS-Ops OpAttrs byte-determinism clause — concretely KISS-OPS
+**§6.19-0005** (explicit default-resolution) and **§6.19-0013** (golden-vector conformance +
+freeze), with the oob_policy sub-vocabulary frozen at KISS-OPS **§6.19-0015**. A one-node region
 (`n_inputs = 2`: a data input and an index input); its single node is `Op "gather"` with
 `consumers = ROOT`, a non-empty OpAttrs blob carrying `axis = k` and OOB policy `clamp`
 (whose bytes are the **KISS-Ops OpAttrs wire encoding**, embedded length-prefixed per
@@ -1410,7 +1421,7 @@ that upstream encoding is frozen, §8-0008).
 of `0` — MUST canonicalize (§6.1-0007: defaults made explicit) to the **same** tag bytes and
 MUST compare equal; a third authoring with `axis = 1` MUST differ. Default resolution is
 owned upstream: the KISS-Ops OpAttrs wire encoding emits the defaulted `axis = 0` explicitly
-(§6.2-0006, §8-0008), so both authorings produce **identical** OpAttrs bytes and KISS-Grammar
+(§6.2-0006, §8-0008; KISS-OPS §6.19-0005), so both authorings produce **identical** OpAttrs bytes and KISS-Grammar
 compares the opaque blob byte-exactly without interpreting the sub-vocabulary. The tags are
 compared in the dedicated **tag canonical serialization** of §6.8-0012 (op_name + OpAttrs
 blob + canonical operand-role tuple, carrying no region framing). Drives
