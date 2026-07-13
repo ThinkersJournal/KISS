@@ -51,3 +51,67 @@ pub fn relu(x: f32) -> f32 {
 pub fn naive_max_x_zero(x: f32) -> f32 {
     x.max(0.0)
 }
+
+// ---- scalar arithmetic atoms (IEEE-754) -------------------------------------
+
+pub fn add(a: f32, b: f32) -> f32 { a + b }
+pub fn sub(a: f32, b: f32) -> f32 { a - b }
+pub fn mul(a: f32, b: f32) -> f32 { a * b }
+pub fn div(a: f32, b: f32) -> f32 { a / b }
+
+// ---- sign-bit atoms: raw-bit manipulation (the "select moves raw bits" rule) -
+
+/// `neg` — flip the sign bit (so `neg(NaN)` keeps the payload, flips the sign;
+/// `neg(+0.0) = -0.0`).
+pub fn neg(x: f32) -> f32 {
+    f32::from_bits(x.to_bits() ^ 0x8000_0000)
+}
+
+/// `abs` — clear the sign bit (`abs(-0.0) = +0.0`; `abs(NaN)` keeps the payload).
+pub fn abs(x: f32) -> f32 {
+    f32::from_bits(x.to_bits() & 0x7FFF_FFFF)
+}
+
+/// `copysign(x, y)` — magnitude of `x` with the sign bit of `y`.
+pub fn copysign(x: f32, y: f32) -> f32 {
+    f32::from_bits((x.to_bits() & 0x7FFF_FFFF) | (y.to_bits() & 0x8000_0000))
+}
+
+// ---- sign / step (§6.15 decompositions) -------------------------------------
+
+/// `sign` — §6.15 `select(cmp_gt(x,0),1,select(cmp_lt(x,0),-1,0))`; `sign(NaN)=0`,
+/// `sign(±0)=0`.
+pub fn sign(x: f32) -> f32 {
+    if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 }
+}
+
+/// `step` — §6.15 `select(cmp_gt(x,0),1,0)`; `step(NaN)=0`, `step(0)=0`.
+pub fn step(x: f32) -> f32 {
+    if x > 0.0 { 1.0 } else { 0.0 }
+}
+
+// ---- rounding atoms ----------------------------------------------------------
+
+pub fn floor(x: f32) -> f32 { x.floor() }
+pub fn ceil(x: f32) -> f32 { x.ceil() }
+pub fn trunc(x: f32) -> f32 { x.trunc() }
+
+/// `round_even` — round-half-to-even (banker's rounding): `0.5 -> 0`, `1.5 -> 2`,
+/// `2.5 -> 2` — distinct from round-half-away-from-zero.
+pub fn round_even(x: f32) -> f32 {
+    x.round_ties_even()
+}
+
+// ---- ordered comparisons (IEEE; a NaN operand => all false except `cmp_ne`) ---
+
+pub fn cmp_eq(a: f32, b: f32) -> bool { a == b }
+pub fn cmp_ne(a: f32, b: f32) -> bool { a != b }
+pub fn cmp_lt(a: f32, b: f32) -> bool { a < b }
+pub fn cmp_le(a: f32, b: f32) -> bool { a <= b }
+pub fn cmp_gt(a: f32, b: f32) -> bool { a > b }
+pub fn cmp_ge(a: f32, b: f32) -> bool { a >= b }
+
+/// `isnan(x)` is exactly `cmp_ne(x, x)` (the Ops primitive-floor identity).
+pub fn isnan(x: f32) -> bool {
+    cmp_ne(x, x)
+}

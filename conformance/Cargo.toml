@@ -2,7 +2,7 @@
 name = "kiss-conformance"
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.77"  # f32::round_ties_even (round_even oracle)
 license = "MIT OR Apache-2.0"
 description = "Reference conformance harness for KISS (Kernel Interface Standards Suite). Non-normative: a conformant implementation with no privilege and no exemption (KISS-Conform §0)."
 repository = "https://github.com/ThinkersJournal/KISS"

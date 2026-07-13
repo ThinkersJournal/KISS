@@ -31,15 +31,25 @@ ULP-tolerance). Every golden vector is transcribed from the spec's own appendix.
   56-byte handshake bytes, plus the §6.2 hard-reject discipline (bad magic,
   unknown version, non-zero reserved regions, profile-array violations).
 - **KISS-Ops numeric semantics** ([`semantics`], Ops §2.3/§6.15): a from-scratch
-  differential oracle for the pinned float primitives, making the load-bearing
-  distinctions executable — NaN-**propagating** `max_prop`/`min_prop` vs
-  NaN-**suppressing** `fmax_ieee`/`fmin_ieee`, and `relu` ≠ `max(x,0)` (NaN-keeping,
-  −0.0-preserving) — plus the §6.8 "declared-ULP, not bit-identity" model for a
-  transcendental (an f64 oracle vs the f32-native `exp` agree within a declared ULP).
+  oracle for the pinned float primitives — arithmetic atoms, sign-bit atoms
+  (`neg`/`abs`/`copysign`, signed-zero exact), `sign`/`step`, rounding
+  (`floor`/`ceil`/`trunc`/`round_even` banker's rounding), IEEE-ordered
+  comparisons (`isnan == cmp_ne(x,x)`), and the min/max family. The load-bearing
+  distinctions are executable: NaN-**propagating** `max_prop`/`min_prop` vs
+  NaN-**suppressing** `fmax_ieee`/`fmin_ieee`, and `relu` ≠ `max(x,0)`. Plus the
+  §6.8 "declared-ULP, not bit-identity" model (an f64 oracle vs f32-native `exp`
+  within a declared ULP).
+- **Randomized differential loop** ([`differential`], Conform §6.5): a candidate
+  is differenced against the oracle over a **reproducible** corpus (edge cases +
+  seeded-random bit patterns — same seed → same inputs). It demonstrably *catches*
+  a wrong implementation: an IEEE `fmax` mistakenly built with NaN-propagating
+  `max_prop` is flagged by the corpus's NaN inputs, with every divergence pinned
+  to a NaN operand. A harness that only passed correct code would prove nothing.
 
 These are the points at which KISS's claims are **proven on a machine** rather than
 asserted on paper: the identity primitive, the handshake, the newest wire encoding,
-and now the numeric *semantics* — the bytes are right, and the computation is right.
+and the numeric *semantics* — the bytes are right, the computation is right, and a
+randomized loop catches the mistakes.
 
 ## Run
 
@@ -56,11 +66,13 @@ dependency-free.
 
 - **Phase 1–2 (done)** — golden + decline vectors for the three POD encodings
   (OpAttrs, `structure_key`, Announce envelope).
-- **Phase 3 (started)** — the independent CPU-oracle differential harness
-  (Conform §6.5): the scalar float primitives are covered here; broadening to the
-  full primitive floor and driving random inputs is the remaining work.
+- **Phase 3 (done, CPU)** — the independent CPU-oracle differential harness
+  (Conform §6.5): the scalar float primitive floor, plus a reproducible randomized
+  differential loop that catches a wrong implementation. Remaining: integer-atom
+  semantics (wrapping/bitwise), and structural (multi-element) op oracles.
 - **Phase 4** — the IR-DAG fuzzer emitting to every backend (Conform §6.6;
-  device-touching), and differencing a real generated kernel against the oracle.
+  device-touching), and differencing a real *generated* kernel against the oracle
+  on-device.
 
 ## Keeping the vectors in sync
 

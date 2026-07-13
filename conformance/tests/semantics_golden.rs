@@ -94,6 +94,58 @@ fn ulp_comparator_measures_distance() {
     assert!(compare_f32(DeterminismClass::UlpTolerance, next, x, 0).is_err());
 }
 
+// ---- broadened primitive floor: sign-bit, sign/step, rounding, comparisons --
+
+#[test]
+fn sign_bit_atoms_signed_zero() {
+    assert!(bits_eq(neg(0.0), -0.0));
+    assert!(bits_eq(neg(-0.0), 0.0));
+    assert!(bits_eq(abs(-0.0), 0.0));
+    assert!(bits_eq(abs(-3.5), 3.5));
+    assert!(neg(f32::NAN).is_nan()); // flips sign, keeps NaN
+    assert!(bits_eq(copysign(3.0, -1.0), -3.0));
+    assert!(bits_eq(copysign(-3.0, 0.0), 3.0));
+    assert!(bits_eq(copysign(3.0, -0.0), -3.0)); // sign of a signed zero carries
+}
+
+#[test]
+fn sign_and_step_at_nan_and_zero() {
+    assert_eq!(sign(2.0), 1.0);
+    assert_eq!(sign(-3.0), -1.0);
+    assert_eq!(sign(0.0), 0.0);
+    assert_eq!(sign(-0.0), 0.0);
+    assert_eq!(sign(f32::NAN), 0.0); // NaN -> 0 (both cmp_gt and cmp_lt are false)
+    assert_eq!(step(2.0), 1.0);
+    assert_eq!(step(0.0), 0.0);
+    assert_eq!(step(-1.0), 0.0);
+    assert_eq!(step(f32::NAN), 0.0);
+}
+
+#[test]
+fn round_even_is_bankers_rounding() {
+    // round-half-to-even, NOT round-half-away-from-zero
+    assert_eq!(round_even(0.5), 0.0);
+    assert_eq!(round_even(1.5), 2.0);
+    assert_eq!(round_even(2.5), 2.0);
+    assert_eq!(round_even(3.5), 4.0);
+    assert_eq!(round_even(-2.5), -2.0);
+    assert_eq!(floor(1.7), 1.0);
+    assert_eq!(ceil(1.2), 2.0);
+    assert_eq!(trunc(-1.7), -1.0);
+}
+
+#[test]
+fn comparisons_are_ieee_ordered() {
+    assert!(cmp_eq(2.0, 2.0) && !cmp_eq(2.0, 3.0));
+    assert!(cmp_lt(1.0, 2.0) && cmp_ge(2.0, 2.0) && cmp_le(2.0, 2.0));
+    // a NaN operand makes every ordered comparison false ...
+    assert!(!cmp_eq(f32::NAN, f32::NAN));
+    assert!(!cmp_lt(f32::NAN, 1.0) && !cmp_gt(f32::NAN, 1.0) && !cmp_ge(f32::NAN, f32::NAN));
+    // ... except cmp_ne, which is true — and isnan(x) == cmp_ne(x, x)
+    assert!(cmp_ne(f32::NAN, f32::NAN));
+    assert!(isnan(f32::NAN) && !isnan(0.0));
+}
+
 #[test]
 fn transcendental_agrees_within_declared_ulp() {
     // §6.8: a transcendental's semantics is "the named function to within a
