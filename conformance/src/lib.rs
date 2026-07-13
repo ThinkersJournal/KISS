@@ -5,18 +5,22 @@
 //! normative source is the specification text under `spec/`; where this code and
 //! a spec clause disagree, the clause governs.
 //!
-//! This first slice implements two of the four KISS-Conform test modalities for
-//! the KISS-Ops OpAttrs canonical wire encoding (Ops §6.19):
+//! It implements two of the four KISS-Conform test modalities over the POD-tier
+//! encodings — every field of which is determinism-class exact-byte, so the
+//! **exact-byte** comparator (Conform §6.8) applies throughout:
 //!
-//!   * **Golden byte-vectors** (Conform §6.4): a reference encoder produces the
-//!     exact little-endian bytes pinned in Ops Appendix E, compared byte-for-byte.
-//!   * **Negative / decline vectors** (Conform §6.7): a reader rejects a
-//!     malformed blob with a typed decline, never a panic.
+//!   * **Golden byte-vectors** (Conform §6.4): a reference codec reproduces the
+//!     exact bytes/tokens pinned in the spec appendices, compared byte-for-byte.
+//!   * **Negative / decline vectors** (Conform §6.7): a reader rejects malformed
+//!     input with a typed decline, never a panic.
 //!
-//! selected by the **exact-byte** determinism-class comparator (Conform §6.8),
-//! because every field of a POD-tier encoding is determinism-class exact-byte.
+//! Covered so far: the KISS-Ops OpAttrs encoding ([`opattrs`], Ops §6.19), the
+//! KISS-Classify `structure_key` token codec ([`structure_key`], Classify §6.7),
+//! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
+pub mod announce;
 pub mod opattrs;
+pub mod structure_key;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
 /// (KISS-Conform §6.8). Only `ExactByte` is exercised in this slice; the POD
