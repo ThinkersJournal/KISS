@@ -20,6 +20,7 @@
 
 pub mod announce;
 pub mod opattrs;
+pub mod semantics;
 pub mod structure_key;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
@@ -47,6 +48,54 @@ pub fn compare(class: DeterminismClass, actual: &[u8], expected: &[u8]) -> Resul
             }
         }
         other => Err(format!("comparator for {other:?} is not part of this slice")),
+    }
+}
+
+/// Map an f32 to a sign-magnitude-monotone key so that adjacent representable
+/// values differ by 1 — the basis for a ULP-distance comparator. NaN is out of
+/// domain (it is excluded from ULP-tolerance tests).
+fn total_order_f32(x: f32) -> u32 {
+    let b = x.to_bits();
+    if b & 0x8000_0000 == 0 {
+        b | 0x8000_0000 // positives (incl +0) sort above the negatives
+    } else {
+        !b // negatives: flip so more-negative sorts lower
+    }
+}
+
+/// The ULP distance between two finite f32 values (Conform §6.8, ULP-tolerance).
+pub fn ulp_distance_f32(a: f32, b: f32) -> u64 {
+    (total_order_f32(a) as u64).abs_diff(total_order_f32(b) as u64)
+}
+
+/// Compare two f32 results under a determinism class (Conform §6.8). Exact-byte
+/// compares raw bit patterns, so ±0 and NaN payloads are distinguished;
+/// ULP-tolerance accepts a distance within `ulp_bound` (the clause's declared
+/// ULP, e.g. a §6.8 transcendental ceiling).
+pub fn compare_f32(class: DeterminismClass, actual: f32, expected: f32, ulp_bound: u64) -> Result<(), String> {
+    match class {
+        DeterminismClass::ExactByte => {
+            if actual.to_bits() == expected.to_bits() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "exact-byte f32 mismatch: actual {:#010X}, expected {:#010X}",
+                    actual.to_bits(),
+                    expected.to_bits()
+                ))
+            }
+        }
+        DeterminismClass::UlpTolerance => {
+            let d = ulp_distance_f32(actual, expected);
+            if d <= ulp_bound {
+                Ok(())
+            } else {
+                Err(format!("ULP distance {d} exceeds declared bound {ulp_bound} (actual {actual}, expected {expected})"))
+            }
+        }
+        DeterminismClass::OrderInvariant => {
+            Err("order-invariant comparator applies to reductions, not scalar results".into())
+        }
     }
 }
 

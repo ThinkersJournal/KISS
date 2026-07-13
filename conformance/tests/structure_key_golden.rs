@@ -162,6 +162,33 @@ fn reject_bad_rank() {
 }
 
 #[test]
+fn reject_unknown_op_family() {
+    // A.2 decline vector: `sk2|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
+    let t = A_GOLDEN.replacen("|bin|", "|zzz|", 1);
+    assert_eq!(from_token(&t), Err(KeyDecline::UnknownOpFamily));
+}
+
+#[test]
+fn reject_unknown_dtype() {
+    // A.2 decline vector: `sk2|bin|f99|…` — dtype outside the closed §6.1 set.
+    let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
+    assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
+}
+
+#[test]
+fn accepts_every_closed_op_family_and_dtype() {
+    // every one of the 24 op-family codes and 17 dtype tokens is recognized
+    for fam in OP_FAMILIES {
+        let t = A_GOLDEN.replacen("|bin|", &format!("|{fam}|"), 1);
+        assert_ne!(from_token(&t), Err(KeyDecline::UnknownOpFamily), "op-family {fam} rejected");
+    }
+    for dt in DTYPES {
+        let t = A_GOLDEN.replacen("|f32|", &format!("|{dt}|"), 1);
+        assert_ne!(from_token(&t), Err(KeyDecline::UnknownDtype), "dtype {dt} rejected");
+    }
+}
+
+#[test]
 fn producer_emits_rall_not_equivalent_mask() {
     // §6.7-0005: the all-axes and trailing cases MUST serialize as rall / rlast,
     // never the equivalent x<hh> bitmask.

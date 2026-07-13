@@ -14,6 +14,20 @@
 
 pub const SCHEMA_VERSION: u32 = 2;
 
+/// The closed op-family-tag set at this schema version — exactly the 24 codes of
+/// Classify §6.5-0006. A token whose op-family field is outside this set is
+/// rejected (a reader must not silently encode an "unknown" code).
+pub const OP_FAMILIES: [&str; 24] = [
+    "gem", "idx", "une", "emb", "bin", "shp", "ter", "srt", "gat", "qnt", "red", "rnd",
+    "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
+];
+
+/// The closed dtype-token set — exactly the 17 tokens of Classify §6.1.
+pub const DTYPES: [&str; 17] = [
+    "f16", "bf16", "f32", "f64", "s8", "u8", "i32", "i64", "u32", "bool", "e4m3", "e5m2",
+    "s4", "u4", "b1", "c32", "c64",
+];
+
 // ---- small enum codecs -------------------------------------------------------
 
 macro_rules! code_enum {
@@ -85,6 +99,10 @@ pub enum KeyDecline {
     BadReduceField,
     BadContractionField,
     UppercaseOrWidthHex,
+    /// Op-family code outside the closed §6.5-0006 set.
+    UnknownOpFamily,
+    /// Dtype token outside the closed §6.1 set.
+    UnknownDtype,
 }
 
 // ---- serialize (to_token) ---------------------------------------------------
@@ -216,6 +234,13 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     let ver = f[0].strip_prefix("sk").ok_or(KeyDecline::BadVersionPrefix)?;
     if ver.parse::<u32>() != Ok(SCHEMA_VERSION) {
         return Err(KeyDecline::BadVersionPrefix);
+    }
+    // field 1/2: op-family and dtype must be in their closed sets (§6.5-0006, §6.1)
+    if !OP_FAMILIES.contains(&f[1]) {
+        return Err(KeyDecline::UnknownOpFamily);
+    }
+    if !DTYPES.contains(&f[2]) {
+        return Err(KeyDecline::UnknownDtype);
     }
     let work_class = WorkClass::parse(f[5]).ok_or(KeyDecline::BadWorkClass)?;
     let rank = f[6]
