@@ -1,0 +1,19 @@
+name: conformance
+
+# Runs the reference conformance harness (KISS-Conform §6.4/§6.7): the KISS-Ops
+# OpAttrs reference encoder must reproduce every Ops Appendix E golden vector
+# byte-for-byte, and must decline malformed blobs. ubuntu-latest ships Rust.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  cargo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reference conformance harness
+        working-directory: conformance
+        run: cargo test

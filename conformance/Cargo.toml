@@ -1,0 +1,16 @@
+[package]
+name = "kiss-conformance"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.70"
+license = "MIT OR Apache-2.0"
+description = "Reference conformance harness for KISS (Kernel Interface Standards Suite). Non-normative: a conformant implementation with no privilege and no exemption (KISS-Conform §0)."
+repository = "https://github.com/ThinkersJournal/KISS"
+publish = false
+
+# The specification text (spec/) is CC0. This reference crate is MIT OR Apache-2.0,
+# per the umbrella §9.2 legal model (spec text vs reference implementations).
+
+[dependencies]
+# stdlib only — a conformance harness must share no lowering code with any
+# implementation under test (KISS-Conform §6.5), and starts dependency-free.
