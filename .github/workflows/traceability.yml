@@ -1,0 +1,20 @@
+name: traceability
+
+# KISS-Conform §6.2 as a CI gate: the build fails on any untested normative MUST.
+# Runs the clause<->test traceability checker over spec/ on every push and PR.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  kiss-trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Clause↔test traceability
+        run: python tools/kiss_trace.py

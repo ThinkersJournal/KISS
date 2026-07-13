@@ -263,7 +263,7 @@ are banned from normative text. See the Charter for the full statement.
   (sizes, offsets, magic, tags, decline codes, hashes, bounds, bitset positions) is
   determinism-class **exact byte compare**; KISS-Conform MUST evaluate each such
   clause with a byte-exact comparator and MUST NOT apply tolerance or order-invariant
-  comparison. *Test:* `announce_determinism_class_exact_byte`.
+  comparison. *Test:* `test_announce_determinism_class_exact_byte`.
 
 ### 6.1 Handshake envelope byte layout
 
@@ -283,135 +283,135 @@ envelope; all multi-byte integers little-endian):
 | — | **56** | (total) | — | fixed 56 contiguous bytes |
 
 - **KISS-ANNOUNCE-6.1-0001** — The handshake envelope MUST be exactly 56 bytes.
-  *Test:* `announce_envelope_size_is_56`.
+  *Test:* `test_announce_envelope_size_is_56`.
 - **KISS-ANNOUNCE-6.1-0002** — A producer MUST serialize the envelope as exactly 56
   contiguous bytes with each field at the offset in the table above (the wire form
   carries no in-memory alignment requirement; native 8-byte alignment of the
   `capabilities` mirror is an informative implementation note, not a wire clause).
-  *Test:* `announce_envelope_wire_is_56_contiguous`.
+  *Test:* `test_announce_envelope_wire_is_56_contiguous`.
 - **KISS-ANNOUNCE-6.1-0003** — Every field MUST occupy the exact offset in the table
-  above. *Test:* `announce_field_offsets_match_table`.
+  above. *Test:* `test_announce_field_offsets_match_table`.
 - **KISS-ANNOUNCE-6.1-0013** — Every field MUST occupy the exact size in the table
-  above. *Test:* `announce_field_sizes_match_table`.
+  above. *Test:* `test_announce_field_sizes_match_table`.
 - **KISS-ANNOUNCE-6.1-0004** — The `magic` field MUST equal `0x4D414553` when read as
   a little-endian u32 (on-wire bytes `53 45 41 4D`, ASCII `SEAM`). *Test:*
-  `announce_magic_constant`.
+  `test_announce_magic_constant`.
 - **KISS-ANNOUNCE-6.1-0014** — The `magic` field (offset 0, size 4) and the
   `envelope_version` field (offset 4, size 1) MUST occupy those fixed offsets and
   sizes in **every** envelope version, so a reader can dispatch on version before
   applying any version-specific length or field check. *Test:*
-  `announce_fixed_prefix_stable_across_versions`.
+  `test_announce_fixed_prefix_stable_across_versions`.
 - **KISS-ANNOUNCE-6.1-0005** — A producer conforming to this envelope version MUST
-  write `1` to `envelope_version`. *Test:* `announce_version_field_is_1`.
+  write `1` to `envelope_version`. *Test:* `test_announce_version_field_is_1`.
 - **KISS-ANNOUNCE-6.1-0006** — A producer MUST write all-zero bytes to `reserved0`
-  (offset 5, length 3). *Test:* `announce_reserved0_is_zero`.
+  (offset 5, length 3). *Test:* `test_announce_reserved0_is_zero`.
 - **KISS-ANNOUNCE-6.1-0007** — A producer MUST write a `profiles_len` value that is
-  `<= 16`. *Test:* `announce_profiles_len_within_cap`.
+  `<= 16`. *Test:* `test_announce_profiles_len_within_cap`.
 - **KISS-ANNOUNCE-6.1-0008** — A producer MUST write zero to every `profiles` entry
-  at index `>= profiles_len`. *Test:* `announce_trailing_profiles_zero`.
+  at index `>= profiles_len`. *Test:* `test_announce_trailing_profiles_zero`.
 - **KISS-ANNOUNCE-6.1-0015** — A producer MUST write a value `>= 1` to every
   `profiles` entry at index `< profiles_len` (the value `0` is reserved for
   absence/padding and MUST NOT be a live profile). *Test:*
-  `announce_live_profiles_nonzero`.
+  `test_announce_live_profiles_nonzero`.
 - **KISS-ANNOUNCE-6.1-0009** — A producer MUST write `profiles[0..profiles_len]` in
   strictly ascending order with no duplicate values. *Test:*
-  `announce_profiles_strictly_ascending`.
+  `test_announce_profiles_strictly_ascending`.
 - **KISS-ANNOUNCE-6.1-0010** — A producer MUST write all-zero bytes to `reserved1`
-  (offset 42, length 6, the alignment padding). *Test:* `announce_reserved1_pad_zero`.
+  (offset 42, length 6, the alignment padding). *Test:* `test_announce_reserved1_pad_zero`.
 - **KISS-ANNOUNCE-6.1-0011** — The `capabilities` field MUST occupy offset 48 as an
-  8-byte little-endian unsigned integer. *Test:* `announce_capabilities_field`.
+  8-byte little-endian unsigned integer. *Test:* `test_announce_capabilities_field`.
 - **KISS-ANNOUNCE-6.1-0012** — Every multi-byte integer field MUST be encoded
-  little-endian. *Test:* `announce_all_fields_little_endian`.
+  little-endian. *Test:* `test_announce_all_fields_little_endian`.
 
 ### 6.2 POD reader discipline (hard-reject)
 
 - **KISS-ANNOUNCE-6.2-0010** — A reader MUST read `magic` (offset 0) and
   `envelope_version` (offset 4) from the fixed prefix (§6.1-0014) before applying any
   version-specific length or field validation. *Test:*
-  `announce_reads_prefix_before_length`.
+  `test_announce_reads_prefix_before_length`.
 - **KISS-ANNOUNCE-6.2-0001** — A reader MUST reject, with a typed decline, any input
   whose length is not exactly the length mandated by its `envelope_version` (56 bytes
-  for version 1). *Test:* `announce_reject_wrong_length_for_version`.
+  for version 1). *Test:* `test_announce_reject_wrong_length_for_version`.
 - **KISS-ANNOUNCE-6.2-0002** — A reader MUST reject, with a typed decline, any
-  envelope whose `magic` is not `0x4D414553`. *Test:* `announce_reject_bad_magic`.
+  envelope whose `magic` is not `0x4D414553`. *Test:* `test_announce_reject_bad_magic`.
 - **KISS-ANNOUNCE-6.2-0003** — A reader MUST reject, with a typed decline, any
   envelope whose `envelope_version` it does not support. *Test:*
-  `announce_reject_unknown_version`.
+  `test_announce_reject_unknown_version`.
 - **KISS-ANNOUNCE-6.2-0004** — A reader MUST reject, with a typed decline, any
   envelope in which `reserved0` contains a nonzero byte. *Test:*
-  `announce_reject_nonzero_reserved0`.
+  `test_announce_reject_nonzero_reserved0`.
 - **KISS-ANNOUNCE-6.2-0011** — A reader MUST reject, with a typed decline, any
   envelope in which `reserved1` contains a nonzero byte. *Test:*
-  `announce_reject_nonzero_reserved1`.
+  `test_announce_reject_nonzero_reserved1`.
 - **KISS-ANNOUNCE-6.2-0005** — A reader MUST reject, with a typed decline, any
   envelope whose `profiles_len` is greater than 16. *Test:*
-  `announce_reject_profiles_len_overflow`.
+  `test_announce_reject_profiles_len_overflow`.
 - **KISS-ANNOUNCE-6.2-0006** — A reader MUST reject, with a typed decline, any
   envelope whose `profiles[0..profiles_len]` are not in strictly ascending order.
-  *Test:* `announce_reject_non_ascending_profiles`.
+  *Test:* `test_announce_reject_non_ascending_profiles`.
 - **KISS-ANNOUNCE-6.2-0012** — A reader MUST reject, with a typed decline, any
   envelope in which a `profiles` entry at index `>= profiles_len` is nonzero. *Test:*
-  `announce_reject_nonzero_trailing_profiles`.
+  `test_announce_reject_nonzero_trailing_profiles`.
 - **KISS-ANNOUNCE-6.2-0013** — A reader MUST reject, with a typed decline, any
   envelope in which a `profiles` entry at index `< profiles_len` equals `0`. *Test:*
-  `announce_reject_zero_live_profile`.
+  `test_announce_reject_zero_live_profile`.
 - **KISS-ANNOUNCE-6.2-0007** — On any rejection, a reader MUST return a typed decline
   and MUST NOT panic, abort, crash, hang, or read outside the input buffer. *Test:*
-  `announce_rejection_is_typed_decline`.
+  `test_announce_rejection_is_typed_decline`.
 - **KISS-ANNOUNCE-6.2-0008** — A reader MUST NOT tolerate, silently ignore, or
   attempt to repair a malformed envelope (this hard-reject discipline is distinct
   from the soft-skip / ignore-unknown discipline of text and telemetry channels and
   from the ignore-unknown rule for the `capabilities` bitset in §7.2-0007). *Test:*
-  `announce_reader_never_repairs`.
+  `test_announce_reader_never_repairs`.
 
 ### 6.3 Kernel availability (identity only)
 
 - **KISS-ANNOUNCE-6.3-0001** — A provider MUST announce each available kernel as an
   **availability record** consisting solely of the pair `(structure_key,
-  revision_hash)`. *Test:* `announce_availability_is_identity_pair`.
+  revision_hash)`. *Test:* `test_announce_availability_is_identity_pair`.
 - **KISS-ANNOUNCE-6.3-0002** — An availability record MUST NOT carry any per-kernel
   capability, usage/ABI, dispatch, guarantee, or semantics field; such facts are
   carried only by the queried contract. *Test:*
-  `announce_availability_carries_no_capability`.
+  `test_announce_availability_carries_no_capability`.
 - **KISS-ANNOUNCE-6.3-0003** — `revision_hash` MUST be exactly 32 bytes. *Test:*
-  `announce_revision_hash_is_32_bytes`.
+  `test_announce_revision_hash_is_32_bytes`.
 - **KISS-ANNOUNCE-6.3-0007** — A consumer MUST compare `revision_hash` for equality
-  byte-for-byte over all 32 bytes. *Test:* `announce_revision_hash_compared_bytewise`.
+  byte-for-byte over all 32 bytes. *Test:* `test_announce_revision_hash_compared_bytewise`.
 - **KISS-ANNOUNCE-6.3-0008** — `revision_hash` MUST be treated as an opaque
   provider-assigned identifier compared only for equality; an implementation MUST NOT
   assume any particular hash algorithm or recomputable input domain from the announce
   (artifact verification, if any, is defined by KISS-Synth/KISS-Contract, not here).
-  *Test:* `announce_revision_hash_opaque_identity`.
+  *Test:* `test_announce_revision_hash_opaque_identity`.
 - **KISS-ANNOUNCE-6.3-0004** — A provider MUST carry `structure_key` as the opaque,
   length-delimited KISS-Classify token and MUST NOT reinterpret, truncate, or
-  re-encode its bytes. *Test:* `announce_structure_key_is_opaque`.
+  re-encode its bytes. *Test:* `test_announce_structure_key_is_opaque`.
 - **KISS-ANNOUNCE-6.3-0011** — An availability list MUST begin with the 4-byte tag
   `SAVL` (wire bytes `53 41 56 4C`, u32 LE `0x4C564153`) at offset 0. *Test:*
-  `announce_availability_list_tag`.
+  `test_announce_availability_list_tag`.
 - **KISS-ANNOUNCE-6.3-0012** — Immediately after the tag, an availability list MUST
   carry a 1-byte `list_version` (producer writes `1`) followed by 3 MBZ bytes; a
   reader MUST reject a nonzero MBZ byte or an unsupported `list_version` with a typed
-  decline. *Test:* `announce_availability_list_version`.
+  decline. *Test:* `test_announce_availability_list_version`.
 - **KISS-ANNOUNCE-6.3-0005** — After the `list_version` block, an availability list
   MUST be framed as a little-endian u32 `record_count` followed by that many
   availability records, each record being a little-endian u32 `structure_key`
   byte-length, the `structure_key` bytes, then the 32-byte `revision_hash`. *Test:*
-  `announce_availability_framing`.
+  `test_announce_availability_framing`.
 - **KISS-ANNOUNCE-6.3-0009** — A producer MUST write a per-record `structure_key`
   byte-length in the inclusive range `[1, 4096]` (`MAX_STRUCTURE_KEY_LEN = 4096`;
   empty keys are not permitted), and a reader MUST reject any record whose declared
   length is `0` or `> 4096`, or whose declared length exceeds the remaining input,
   with a typed decline and without allocating on the unchecked length. *Test:*
-  `announce_structure_key_length_bounds`.
+  `test_announce_structure_key_length_bounds`.
 - **KISS-ANNOUNCE-6.3-0010** — A producer MUST write a `record_count`
   `<= 1048576` (`MAX_AVAILABILITY_RECORDS = 2^20`), and a reader MUST reject a
   `record_count` exceeding that maximum, or exceeding what the remaining input can
   contain, with a typed decline and without pre-allocating on the unchecked count.
-  *Test:* `announce_record_count_bounds`.
+  *Test:* `test_announce_record_count_bounds`.
 - **KISS-ANNOUNCE-6.3-0006** — A consumer MUST treat an availability record as a
   cache **hit** only when both `structure_key` and `revision_hash` match its cached
   entry byte-for-byte, and MUST treat any other case as a **miss**. *Test:*
-  `announce_hit_miss_by_full_identity`.
+  `test_announce_hit_miss_by_full_identity`.
 
 ### 6.4 Contract-query protocol
 
@@ -421,38 +421,38 @@ envelope; all multi-byte integers little-endian):
   bytes; then a 1-byte `revision_present` flag (`0` or `1`); and, only when
   `revision_present == 1`, a 32-byte `revision_hash`. A reader MUST reject a
   `revision_present` value other than `0` or `1`, or a `structure_key` length outside
-  `[1, 4096]`, with a typed decline. *Test:* `announce_query_request_shape`.
+  `[1, 4096]`, with a typed decline. *Test:* `test_announce_query_request_shape`.
 - **KISS-ANNOUNCE-6.4-0002** — A provider MUST answer a contract-query request with
   either (a) a contract **response** carrying the KISS-Contract document, or (b) a
-  typed decline response. *Test:* `announce_query_response_is_contract_or_decline`.
+  typed decline response. *Test:* `test_announce_query_response_is_contract_or_decline`.
 - **KISS-ANNOUNCE-6.4-0006** — A provider handling a contract-query request MUST NOT
   panic, abort, crash, hang, or read outside the request buffer. *Test:*
-  `announce_query_never_panics`.
+  `test_announce_query_never_panics`.
 - **KISS-ANNOUNCE-6.4-0003** — When `revision_present == 1`, a provider that returns a
   contract MUST return the contract whose `(structure_key, revision_hash)` identity
   matches the request exactly; if it holds no such revision and cannot provision one,
   it MUST return a typed decline (`UNKNOWN_REVISION` or `CANNOT_PROVISION`) rather
-  than a mismatched contract. *Test:* `announce_query_revision_match_or_decline`.
+  than a mismatched contract. *Test:* `test_announce_query_revision_match_or_decline`.
 - **KISS-ANNOUNCE-6.4-0012** — When `revision_present == 0`, a provider that returns a
   contract MUST return the contract for the highest-ordered `revision_hash` it holds
   for that `structure_key` (ordering = byte-for-byte lexicographic descending over the
   32-byte value), or, if it holds none and cannot provision one, a typed decline
   (`UNKNOWN_STRUCTURE_KEY` or `CANNOT_PROVISION`). *Test:*
-  `announce_query_default_revision_is_highest`.
+  `test_announce_query_default_revision_is_highest`.
 - **KISS-ANNOUNCE-6.4-0011** — A contract or decline **response** MUST echo the
   `(structure_key, revision_hash)` identity it is answering for: the response carries
   a little-endian u32 `structure_key` length, the `structure_key` bytes, a 1-byte
   `revision_present` flag, and — when `revision_present == 1` — the 32-byte
-  `revision_hash` the provider selected. *Test:* `announce_response_echoes_identity`.
+  `revision_hash` the provider selected. *Test:* `test_announce_response_echoes_identity`.
 - **KISS-ANNOUNCE-6.4-0004** — A **contract response** MUST be framed as: the 4-byte
   response tag `CRSP` (wire bytes `43 52 53 50`, u32 LE `0x50535243`); the echoed
   identity block (§6.4-0011); a little-endian u32 payload byte-length; then that many
   bytes of the self-delimiting KISS-Contract document. *Test:*
-  `announce_contract_response_framing`.
+  `test_announce_contract_response_framing`.
 - **KISS-ANNOUNCE-6.4-0007** — A **decline response** MUST be framed as: the 4-byte
   decline tag `CDEC` (wire bytes `43 44 45 43`, u32 LE `0x43454443`); the echoed
   identity block (§6.4-0011); then a little-endian u32 `decline_code` drawn from
-  §6.4-0009. *Test:* `announce_decline_response_framing`.
+  §6.4-0009. *Test:* `test_announce_decline_response_framing`.
 - **KISS-ANNOUNCE-6.4-0009** — A `decline_code` MUST take one of the following pinned
   little-endian u32 values, or a value in the experimental/vendor ranges below; a
   producer MUST NOT emit a core code with a meaning other than the one pinned here:
@@ -469,28 +469,28 @@ envelope; all multi-byte integers little-endian):
 
   Values in `[0x40000000, 0x80000000)` are the experimental range; values in
   `[0x80000000, 0x100000000)` are the vendor range (namespaced, registry-registered).
-  *Test:* `announce_decline_code_enum`.
+  *Test:* `test_announce_decline_code_enum`.
 - **KISS-ANNOUNCE-6.4-0010** — A consumer that receives a `decline_code` it does not
   recognize MUST treat it as a generic decline and MUST NOT panic, abort, crash, or
-  hang. *Test:* `announce_unknown_decline_code_is_generic`.
+  hang. *Test:* `test_announce_unknown_decline_code_is_generic`.
 - **KISS-ANNOUNCE-6.4-0005** — A provider that advertises the contract-query
   capability bit (§7.2, FEAT bit 33) MUST implement a conforming contract-query
-  endpoint answering per §6.4-0002. *Test:* `announce_query_bit_implies_endpoint`.
+  endpoint answering per §6.4-0002. *Test:* `test_announce_query_bit_implies_endpoint`.
 - **KISS-ANNOUNCE-6.4-0008** — A provider that does not advertise the contract-query
   capability bit MUST answer any contract-query request with a `QUERY_NOT_SUPPORTED`
-  typed decline. *Test:* `announce_no_query_bit_declines`.
+  typed decline. *Test:* `test_announce_no_query_bit_declines`.
 
 ### 6.5 Zero-dependency budget
 
 - **KISS-ANNOUNCE-6.5-0001** — Producing or parsing the handshake envelope, an
   availability list, or a contract-query request/response frame MUST NOT require
   loading a compute driver, kernel runtime, GPU library, or any backend dynamic
-  library. *Test:* `announce_zero_dependency_no_driver_load`.
+  library. *Test:* `test_announce_zero_dependency_no_driver_load`.
 - **KISS-ANNOUNCE-6.5-0002** — An implementation MUST be able to produce and parse
   every wire artifact of §6 using only its language's standard library, with no
   third-party runtime dependency. This obligation binds every implementation
   uniformly; the reference implementation holds no exemption. *Test:*
-  `announce_impl_std_only`.
+  `test_announce_impl_std_only`.
 
 ---
 
@@ -505,17 +505,17 @@ sequencing.
 - **KISS-ANNOUNCE-7.1-0001** — Given the local live-profile set `L` and the received
   live-profile set `R` (each the nonzero `profiles[0..profiles_len]` of the respective
   envelope), the negotiated profile MUST be `max(L ∩ R)` — the highest integer present
-  in both sets. *Test:* `announce_negotiate_selects_highest_mutual`.
+  in both sets. *Test:* `test_announce_negotiate_selects_highest_mutual`.
 - **KISS-ANNOUNCE-7.1-0002** — If `L ∩ R` is empty, negotiation MUST return a typed
   decline and MUST NOT panic, abort, crash, or select any profile. *Test:*
-  `announce_negotiate_empty_intersection_declines`.
+  `test_announce_negotiate_empty_intersection_declines`.
 - **KISS-ANNOUNCE-7.1-0003** — A producer MUST NOT emit an envelope whose
   `profiles_len` exceeds the 16-profile cap pinned by §6.1-0007. *Test:*
-  `announce_producer_never_exceeds_profile_cap`.
+  `test_announce_producer_never_exceeds_profile_cap`.
 - **KISS-ANNOUNCE-7.1-0004** — An implementation MUST NOT advertise a profile whose
   integer is below its declared **retirement floor**; profiles at or above the floor
   and at or below the current maximum define the live negotiation window
-  (retire-by-floor deprecation). *Test:* `announce_retire_by_floor_window`.
+  (retire-by-floor deprecation). *Test:* `test_announce_retire_by_floor_window`.
 
 ### 7.2 Capability bitset structure
 
@@ -559,35 +559,35 @@ Assigned bits (first draft):
 
 - **KISS-ANNOUNCE-7.2-0001** — An implementation MUST interpret `capabilities` under
   the three-axis partition EXT `[0,24)` / FEAT `[24,48)` / SUB `[48,64)`. *Test:*
-  `announce_capabilities_axis_partition`.
+  `test_announce_capabilities_axis_partition`.
 - **KISS-ANNOUNCE-7.2-0002** — An implementation MUST interpret EXT bits per their
   registered external-token assignments and MUST NOT repurpose an assigned EXT bit.
-  *Test:* `announce_ext_bit_assignments`.
+  *Test:* `test_announce_ext_bit_assignments`.
 - **KISS-ANNOUNCE-7.2-0003** — An implementation MUST interpret bit 32 as
   `PROVISION_ON_REQUEST` and bit 33 as `CONTRACT_QUERY`. *Test:*
-  `announce_feat_bit_assignments`.
+  `test_announce_feat_bit_assignments`.
 - **KISS-ANNOUNCE-7.2-0004** — An implementation MUST interpret SUB bits 48–56 as the
   per-sub-standard presence-only "speaks" flags listed above. *Test:*
-  `announce_sub_bit_assignments`.
+  `test_announce_sub_bit_assignments`.
 - **KISS-ANNOUNCE-7.2-0010** — An implementation MUST NOT read any per-sub-standard
   version from the SUB axis (SUB bits are presence-only); version negotiation MUST use
-  the profile mechanism of §7.1. *Test:* `announce_sub_axis_is_presence_only`.
+  the profile mechanism of §7.1. *Test:* `test_announce_sub_axis_is_presence_only`.
 - **KISS-ANNOUNCE-7.2-0005** — An implementation MUST confine each core/experimental/
   vendor meaning to the pinned bit sub-range for that tier and axis in the tier table
   above, and MUST NOT assign meaning to a bit outside its tier's pinned sub-range.
-  *Test:* `announce_reserved_range_tiers`.
+  *Test:* `test_announce_reserved_range_tiers`.
 - **KISS-ANNOUNCE-7.2-0006** — A producer MUST write zero to every currently
-  unassigned (reserved) capability bit. *Test:* `announce_unassigned_bits_zero`.
+  unassigned (reserved) capability bit. *Test:* `test_announce_unassigned_bits_zero`.
 - **KISS-ANNOUNCE-7.2-0007** — A reader MUST ignore (treat as absent, NOT reject) any
   set capability bit whose meaning it does not recognize; the `capabilities` bitset
   contains no hard-gate bits, so an unrecognized bit MUST NOT cause rejection. This
   forward-compatibility rule applies to the `capabilities` bitset only and MUST NOT be
   applied to the envelope's reserved regions (§6.2), which are hard-rejected. *Test:*
-  `announce_reader_ignores_unknown_capability_bits`.
+  `test_announce_reader_ignores_unknown_capability_bits`.
 - **KISS-ANNOUNCE-7.2-0008** — A KISS-owned (EXT-mirror / FEAT / SUB) capability-bit
   assignment MUST originate from a merged change to the PR-gated KISS capability
   registry under ThinkersJournal; an implementation MUST NOT rely on an unregistered
-  bit assignment. *Test:* `announce_capability_registry_pr_gated`.
+  bit assignment. *Test:* `test_announce_capability_registry_pr_gated`.
 
 > **Reconciliation note (informative).** The umbrella §6.2 forward-compat rule
 > contemplates "required" capability bits that a receiver hard-fails on if unknown.
@@ -600,11 +600,11 @@ Assigned bits (first draft):
 - **KISS-ANNOUNCE-7.3-0001** — Both the provider and the consumer MUST emit the same
   56-byte handshake envelope defined in §6.1; negotiation (§7.1) is computed
   identically from the two envelopes by either side and is independent of transmission
-  order. *Test:* `announce_both_roles_emit_envelope`.
+  order. *Test:* `test_announce_both_roles_emit_envelope`.
 - **KISS-ANNOUNCE-7.3-0002** — A role that cannot provide a provider-only FEAT feature
   (`PROVISION_ON_REQUEST`, `CONTRACT_QUERY`) MUST write those bits as zero; a consumer
   MUST NOT set a provider-only FEAT bit it does not itself offer. *Test:*
-  `announce_consumer_zeroes_provider_only_feat`.
+  `test_announce_consumer_zeroes_provider_only_feat`.
 
 ---
 
@@ -616,25 +616,25 @@ schema version* (`envelope_version`, currently 1) and the published reference-cr
 
 - **KISS-ANNOUNCE-8-0001** — The envelope schema version and the reference-crate
   semver MUST be tracked as independent axes; a crate semver change MUST NOT be taken
-  to imply an envelope wire change. *Test:* `announce_two_version_axes_independent`.
+  to imply an envelope wire change. *Test:* `test_announce_two_version_axes_independent`.
 - **KISS-ANNOUNCE-8-0002** — Any change to the envelope *shape* (field offset, size,
   count, alignment, or total length — e.g. raising the profile cap) MUST bump
-  `envelope_version`. *Test:* `announce_shape_change_bumps_version`.
+  `envelope_version`. *Test:* `test_announce_shape_change_bumps_version`.
 - **KISS-ANNOUNCE-8-0003** — Assigning a previously-reserved capability bit, EXT
   token, or SUB flag MUST NOT bump `envelope_version` (additive, forward-compatible
-  under §7.2-0007). *Test:* `announce_additive_capability_no_version_bump`.
+  under §7.2-0007). *Test:* `test_announce_additive_capability_no_version_bump`.
 - **KISS-ANNOUNCE-8-0004** — KISS-Announce MUST NOT be promoted from Draft to Frozen
   until ≥2 structurally dissimilar implementations have interoperated on the golden
-  hex vectors of Appendix A. *Test:* `announce_freeze_gate_two_impls` (checklist gate;
+  hex vectors of Appendix A. *Test:* `test_announce_freeze_gate_two_impls` (checklist gate;
   signed by the AUDIT role, not DESIGN).
 - **KISS-ANNOUNCE-8-0005** — KISS-Announce MUST NOT be promoted from Draft to Frozen
   until a foreign reader written outside the reference language has consumed the wire,
   with endianness, pointer-width, and the 6-byte `reserved1` structure padding
   explicitly checked (umbrella §5.3 freeze gate). *Test:*
-  `announce_freeze_gate_foreign_reader` (checklist gate; AUDIT-signed).
+  `test_announce_freeze_gate_foreign_reader` (checklist gate; AUDIT-signed).
 - **KISS-ANNOUNCE-8-0006** — KISS-Announce MUST NOT be promoted from Draft to Frozen
   until this sub-standard's KISS-Conform suite exists and passes. *Test:*
-  `announce_freeze_gate_conform_suite_passes` (checklist gate; AUDIT-signed).
+  `test_announce_freeze_gate_conform_suite_passes` (checklist gate; AUDIT-signed).
 
 **Convergence task (informative):** the two byte-identical seeds converge to one
 canonical registry-published crate via a no-wire-change re-export shim; convergence is
@@ -660,81 +660,81 @@ a free-standing Announce clause.
 
 | Clause ID | Named conformance test |
 |---|---|
-| KISS-ANNOUNCE-6.0-0001 | `announce_determinism_class_exact_byte` |
-| KISS-ANNOUNCE-6.1-0001 | `announce_envelope_size_is_56` |
-| KISS-ANNOUNCE-6.1-0002 | `announce_envelope_wire_is_56_contiguous` |
-| KISS-ANNOUNCE-6.1-0003 | `announce_field_offsets_match_table` |
-| KISS-ANNOUNCE-6.1-0013 | `announce_field_sizes_match_table` |
-| KISS-ANNOUNCE-6.1-0004 | `announce_magic_constant` |
-| KISS-ANNOUNCE-6.1-0014 | `announce_fixed_prefix_stable_across_versions` |
-| KISS-ANNOUNCE-6.1-0005 | `announce_version_field_is_1` |
-| KISS-ANNOUNCE-6.1-0006 | `announce_reserved0_is_zero` |
-| KISS-ANNOUNCE-6.1-0007 | `announce_profiles_len_within_cap` |
-| KISS-ANNOUNCE-6.1-0008 | `announce_trailing_profiles_zero` |
-| KISS-ANNOUNCE-6.1-0015 | `announce_live_profiles_nonzero` |
-| KISS-ANNOUNCE-6.1-0009 | `announce_profiles_strictly_ascending` |
-| KISS-ANNOUNCE-6.1-0010 | `announce_reserved1_pad_zero` |
-| KISS-ANNOUNCE-6.1-0011 | `announce_capabilities_field` |
-| KISS-ANNOUNCE-6.1-0012 | `announce_all_fields_little_endian` |
-| KISS-ANNOUNCE-6.2-0010 | `announce_reads_prefix_before_length` |
-| KISS-ANNOUNCE-6.2-0001 | `announce_reject_wrong_length_for_version` |
-| KISS-ANNOUNCE-6.2-0002 | `announce_reject_bad_magic` |
-| KISS-ANNOUNCE-6.2-0003 | `announce_reject_unknown_version` |
-| KISS-ANNOUNCE-6.2-0004 | `announce_reject_nonzero_reserved0` |
-| KISS-ANNOUNCE-6.2-0011 | `announce_reject_nonzero_reserved1` |
-| KISS-ANNOUNCE-6.2-0005 | `announce_reject_profiles_len_overflow` |
-| KISS-ANNOUNCE-6.2-0006 | `announce_reject_non_ascending_profiles` |
-| KISS-ANNOUNCE-6.2-0012 | `announce_reject_nonzero_trailing_profiles` |
-| KISS-ANNOUNCE-6.2-0013 | `announce_reject_zero_live_profile` |
-| KISS-ANNOUNCE-6.2-0007 | `announce_rejection_is_typed_decline` |
-| KISS-ANNOUNCE-6.2-0008 | `announce_reader_never_repairs` |
-| KISS-ANNOUNCE-6.3-0001 | `announce_availability_is_identity_pair` |
-| KISS-ANNOUNCE-6.3-0002 | `announce_availability_carries_no_capability` |
-| KISS-ANNOUNCE-6.3-0003 | `announce_revision_hash_is_32_bytes` |
-| KISS-ANNOUNCE-6.3-0007 | `announce_revision_hash_compared_bytewise` |
-| KISS-ANNOUNCE-6.3-0008 | `announce_revision_hash_opaque_identity` |
-| KISS-ANNOUNCE-6.3-0004 | `announce_structure_key_is_opaque` |
-| KISS-ANNOUNCE-6.3-0011 | `announce_availability_list_tag` |
-| KISS-ANNOUNCE-6.3-0012 | `announce_availability_list_version` |
-| KISS-ANNOUNCE-6.3-0005 | `announce_availability_framing` |
-| KISS-ANNOUNCE-6.3-0009 | `announce_structure_key_length_bounds` |
-| KISS-ANNOUNCE-6.3-0010 | `announce_record_count_bounds` |
-| KISS-ANNOUNCE-6.3-0006 | `announce_hit_miss_by_full_identity` |
-| KISS-ANNOUNCE-6.4-0001 | `announce_query_request_shape` |
-| KISS-ANNOUNCE-6.4-0002 | `announce_query_response_is_contract_or_decline` |
-| KISS-ANNOUNCE-6.4-0006 | `announce_query_never_panics` |
-| KISS-ANNOUNCE-6.4-0003 | `announce_query_revision_match_or_decline` |
-| KISS-ANNOUNCE-6.4-0012 | `announce_query_default_revision_is_highest` |
-| KISS-ANNOUNCE-6.4-0011 | `announce_response_echoes_identity` |
-| KISS-ANNOUNCE-6.4-0004 | `announce_contract_response_framing` |
-| KISS-ANNOUNCE-6.4-0007 | `announce_decline_response_framing` |
-| KISS-ANNOUNCE-6.4-0009 | `announce_decline_code_enum` |
-| KISS-ANNOUNCE-6.4-0010 | `announce_unknown_decline_code_is_generic` |
-| KISS-ANNOUNCE-6.4-0005 | `announce_query_bit_implies_endpoint` |
-| KISS-ANNOUNCE-6.4-0008 | `announce_no_query_bit_declines` |
-| KISS-ANNOUNCE-6.5-0001 | `announce_zero_dependency_no_driver_load` |
-| KISS-ANNOUNCE-6.5-0002 | `announce_impl_std_only` |
-| KISS-ANNOUNCE-7.1-0001 | `announce_negotiate_selects_highest_mutual` |
-| KISS-ANNOUNCE-7.1-0002 | `announce_negotiate_empty_intersection_declines` |
-| KISS-ANNOUNCE-7.1-0003 | `announce_producer_never_exceeds_profile_cap` |
-| KISS-ANNOUNCE-7.1-0004 | `announce_retire_by_floor_window` |
-| KISS-ANNOUNCE-7.2-0001 | `announce_capabilities_axis_partition` |
-| KISS-ANNOUNCE-7.2-0002 | `announce_ext_bit_assignments` |
-| KISS-ANNOUNCE-7.2-0003 | `announce_feat_bit_assignments` |
-| KISS-ANNOUNCE-7.2-0004 | `announce_sub_bit_assignments` |
-| KISS-ANNOUNCE-7.2-0010 | `announce_sub_axis_is_presence_only` |
-| KISS-ANNOUNCE-7.2-0005 | `announce_reserved_range_tiers` |
-| KISS-ANNOUNCE-7.2-0006 | `announce_unassigned_bits_zero` |
-| KISS-ANNOUNCE-7.2-0007 | `announce_reader_ignores_unknown_capability_bits` |
-| KISS-ANNOUNCE-7.2-0008 | `announce_capability_registry_pr_gated` |
-| KISS-ANNOUNCE-7.3-0001 | `announce_both_roles_emit_envelope` |
-| KISS-ANNOUNCE-7.3-0002 | `announce_consumer_zeroes_provider_only_feat` |
-| KISS-ANNOUNCE-8-0001 | `announce_two_version_axes_independent` |
-| KISS-ANNOUNCE-8-0002 | `announce_shape_change_bumps_version` |
-| KISS-ANNOUNCE-8-0003 | `announce_additive_capability_no_version_bump` |
-| KISS-ANNOUNCE-8-0004 | `announce_freeze_gate_two_impls` |
-| KISS-ANNOUNCE-8-0005 | `announce_freeze_gate_foreign_reader` |
-| KISS-ANNOUNCE-8-0006 | `announce_freeze_gate_conform_suite_passes` |
+| KISS-ANNOUNCE-6.0-0001 | `test_announce_determinism_class_exact_byte` |
+| KISS-ANNOUNCE-6.1-0001 | `test_announce_envelope_size_is_56` |
+| KISS-ANNOUNCE-6.1-0002 | `test_announce_envelope_wire_is_56_contiguous` |
+| KISS-ANNOUNCE-6.1-0003 | `test_announce_field_offsets_match_table` |
+| KISS-ANNOUNCE-6.1-0013 | `test_announce_field_sizes_match_table` |
+| KISS-ANNOUNCE-6.1-0004 | `test_announce_magic_constant` |
+| KISS-ANNOUNCE-6.1-0014 | `test_announce_fixed_prefix_stable_across_versions` |
+| KISS-ANNOUNCE-6.1-0005 | `test_announce_version_field_is_1` |
+| KISS-ANNOUNCE-6.1-0006 | `test_announce_reserved0_is_zero` |
+| KISS-ANNOUNCE-6.1-0007 | `test_announce_profiles_len_within_cap` |
+| KISS-ANNOUNCE-6.1-0008 | `test_announce_trailing_profiles_zero` |
+| KISS-ANNOUNCE-6.1-0015 | `test_announce_live_profiles_nonzero` |
+| KISS-ANNOUNCE-6.1-0009 | `test_announce_profiles_strictly_ascending` |
+| KISS-ANNOUNCE-6.1-0010 | `test_announce_reserved1_pad_zero` |
+| KISS-ANNOUNCE-6.1-0011 | `test_announce_capabilities_field` |
+| KISS-ANNOUNCE-6.1-0012 | `test_announce_all_fields_little_endian` |
+| KISS-ANNOUNCE-6.2-0010 | `test_announce_reads_prefix_before_length` |
+| KISS-ANNOUNCE-6.2-0001 | `test_announce_reject_wrong_length_for_version` |
+| KISS-ANNOUNCE-6.2-0002 | `test_announce_reject_bad_magic` |
+| KISS-ANNOUNCE-6.2-0003 | `test_announce_reject_unknown_version` |
+| KISS-ANNOUNCE-6.2-0004 | `test_announce_reject_nonzero_reserved0` |
+| KISS-ANNOUNCE-6.2-0011 | `test_announce_reject_nonzero_reserved1` |
+| KISS-ANNOUNCE-6.2-0005 | `test_announce_reject_profiles_len_overflow` |
+| KISS-ANNOUNCE-6.2-0006 | `test_announce_reject_non_ascending_profiles` |
+| KISS-ANNOUNCE-6.2-0012 | `test_announce_reject_nonzero_trailing_profiles` |
+| KISS-ANNOUNCE-6.2-0013 | `test_announce_reject_zero_live_profile` |
+| KISS-ANNOUNCE-6.2-0007 | `test_announce_rejection_is_typed_decline` |
+| KISS-ANNOUNCE-6.2-0008 | `test_announce_reader_never_repairs` |
+| KISS-ANNOUNCE-6.3-0001 | `test_announce_availability_is_identity_pair` |
+| KISS-ANNOUNCE-6.3-0002 | `test_announce_availability_carries_no_capability` |
+| KISS-ANNOUNCE-6.3-0003 | `test_announce_revision_hash_is_32_bytes` |
+| KISS-ANNOUNCE-6.3-0007 | `test_announce_revision_hash_compared_bytewise` |
+| KISS-ANNOUNCE-6.3-0008 | `test_announce_revision_hash_opaque_identity` |
+| KISS-ANNOUNCE-6.3-0004 | `test_announce_structure_key_is_opaque` |
+| KISS-ANNOUNCE-6.3-0011 | `test_announce_availability_list_tag` |
+| KISS-ANNOUNCE-6.3-0012 | `test_announce_availability_list_version` |
+| KISS-ANNOUNCE-6.3-0005 | `test_announce_availability_framing` |
+| KISS-ANNOUNCE-6.3-0009 | `test_announce_structure_key_length_bounds` |
+| KISS-ANNOUNCE-6.3-0010 | `test_announce_record_count_bounds` |
+| KISS-ANNOUNCE-6.3-0006 | `test_announce_hit_miss_by_full_identity` |
+| KISS-ANNOUNCE-6.4-0001 | `test_announce_query_request_shape` |
+| KISS-ANNOUNCE-6.4-0002 | `test_announce_query_response_is_contract_or_decline` |
+| KISS-ANNOUNCE-6.4-0006 | `test_announce_query_never_panics` |
+| KISS-ANNOUNCE-6.4-0003 | `test_announce_query_revision_match_or_decline` |
+| KISS-ANNOUNCE-6.4-0012 | `test_announce_query_default_revision_is_highest` |
+| KISS-ANNOUNCE-6.4-0011 | `test_announce_response_echoes_identity` |
+| KISS-ANNOUNCE-6.4-0004 | `test_announce_contract_response_framing` |
+| KISS-ANNOUNCE-6.4-0007 | `test_announce_decline_response_framing` |
+| KISS-ANNOUNCE-6.4-0009 | `test_announce_decline_code_enum` |
+| KISS-ANNOUNCE-6.4-0010 | `test_announce_unknown_decline_code_is_generic` |
+| KISS-ANNOUNCE-6.4-0005 | `test_announce_query_bit_implies_endpoint` |
+| KISS-ANNOUNCE-6.4-0008 | `test_announce_no_query_bit_declines` |
+| KISS-ANNOUNCE-6.5-0001 | `test_announce_zero_dependency_no_driver_load` |
+| KISS-ANNOUNCE-6.5-0002 | `test_announce_impl_std_only` |
+| KISS-ANNOUNCE-7.1-0001 | `test_announce_negotiate_selects_highest_mutual` |
+| KISS-ANNOUNCE-7.1-0002 | `test_announce_negotiate_empty_intersection_declines` |
+| KISS-ANNOUNCE-7.1-0003 | `test_announce_producer_never_exceeds_profile_cap` |
+| KISS-ANNOUNCE-7.1-0004 | `test_announce_retire_by_floor_window` |
+| KISS-ANNOUNCE-7.2-0001 | `test_announce_capabilities_axis_partition` |
+| KISS-ANNOUNCE-7.2-0002 | `test_announce_ext_bit_assignments` |
+| KISS-ANNOUNCE-7.2-0003 | `test_announce_feat_bit_assignments` |
+| KISS-ANNOUNCE-7.2-0004 | `test_announce_sub_bit_assignments` |
+| KISS-ANNOUNCE-7.2-0010 | `test_announce_sub_axis_is_presence_only` |
+| KISS-ANNOUNCE-7.2-0005 | `test_announce_reserved_range_tiers` |
+| KISS-ANNOUNCE-7.2-0006 | `test_announce_unassigned_bits_zero` |
+| KISS-ANNOUNCE-7.2-0007 | `test_announce_reader_ignores_unknown_capability_bits` |
+| KISS-ANNOUNCE-7.2-0008 | `test_announce_capability_registry_pr_gated` |
+| KISS-ANNOUNCE-7.3-0001 | `test_announce_both_roles_emit_envelope` |
+| KISS-ANNOUNCE-7.3-0002 | `test_announce_consumer_zeroes_provider_only_feat` |
+| KISS-ANNOUNCE-8-0001 | `test_announce_two_version_axes_independent` |
+| KISS-ANNOUNCE-8-0002 | `test_announce_shape_change_bumps_version` |
+| KISS-ANNOUNCE-8-0003 | `test_announce_additive_capability_no_version_bump` |
+| KISS-ANNOUNCE-8-0004 | `test_announce_freeze_gate_two_impls` |
+| KISS-ANNOUNCE-8-0005 | `test_announce_freeze_gate_foreign_reader` |
+| KISS-ANNOUNCE-8-0006 | `test_announce_freeze_gate_conform_suite_passes` |
 
 Every normative clause above appears in this matrix exactly once; the KISS-Conform
 build MUST fail if any clause ID lacks a passing mapped test (bidirectional
@@ -774,8 +774,8 @@ traceability). Clause IDs are mirrored in the machine-readable sidecar
 ## Appendix A — Golden vectors & provenance (informative)
 
 **A.1 Golden hex vector.** The 56-byte serialization in §2.5 is the first golden
-vector for `announce_magic_constant`, `announce_field_offsets_match_table`,
-`announce_field_sizes_match_table`, and the reserved-region tests. Its `capabilities`
+vector for `test_announce_magic_constant`, `test_announce_field_offsets_match_table`,
+`test_announce_field_sizes_match_table`, and the reserved-region tests. Its `capabilities`
 value is `0x0000_0003_0000_003F` (EXT bits 0–5 | FEAT bit 32 | FEAT bit 33), wire
 bytes `3F 00 00 00 03 00 00 00`. Additional negative vectors (nonzero `reserved1`,
 50-byte packed layout, big-endian magic, `profiles_len = 17`, non-ascending profiles,
