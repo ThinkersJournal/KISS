@@ -82,7 +82,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/announce.md`](spec/announce.md) | **KISS-Announce**: the handshake, availability, and contract-query protocol, with numbered normative clauses each mapped to a conformance test. |
 | [`spec/classify.md`](spec/classify.md) | **KISS-Classify**, the foundational *data* vocabulary: the dtype set, operand descriptors, the `structure_key` specialization-cell identity, and the all-hardware `<namespace>:<capability-set>` target descriptor. |
 | [`spec/ops.md`](spec/ops.md) | **KISS-Ops**, the foundational *computation* vocabulary: the op set, pinned per-op numeric semantics, reference decompositions, the mandatory primitive floor, and the canonical determinism/fidelity enum. |
-| `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
+| | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 
 ## How to read a KISS sub-standard

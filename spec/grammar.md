@@ -9,9 +9,11 @@
 > Specification* (umbrella §4): an **informative Overview** (§0–§5) and a
 > **normative Conformance specification** (§6+). Only §6+ is normative. Normative
 > clauses use RFC-2119 / RFC-8174 uppercase keywords, carry an append-only clause
-> ID `KISS-GRAMMAR-<section>-<nnnn>`, and each MUST/SHALL maps 1:1 to at least one
-> named KISS-Conform test. The KISS-Conform suite build FAILS on any normative MUST
-> without a mapped test.
+> ID `KISS-GRAMMAR-<section>-<nnnn>`, and each normative requirement maps 1:1 to at
+> least one named KISS-Conform test. The KISS-Conform suite build fails on any
+> normative requirement without a mapped test. (Uppercase RFC-2119 keywords are used
+> only in §6+ normative clauses, or when a keyword is named as a term; informative
+> §0–§5 prose uses lowercase requirement language.)
 
 ---
 
@@ -26,9 +28,9 @@
 | Editor of record | **Proposed, pending ratification** — an advertisable-surface / provider-side project holds the pen and requests comment from interested cosignatories; the ratified governance record does not yet finalize an editor for KISS-Grammar. |
 | Steward | ThinkersJournal |
 | Reference seed crate(s) | a pattern-derivation reference crate (`baracuda-kernelgen`, project/crate name given in Appendix A as non-normative provenance); this crate is *a* conformant implementation with no privilege. |
-| DAG position | **Middle tier.** Depends (structurally) on KISS-Ops and KISS-Classify; consumed downstream (structurally) by KISS-Contract, and referenced by KISS-Consume and KISS-Emit as the advertisable-op surface. Not a root. |
+| DAG position | **Middle tier.** Depends (structurally) on KISS-Ops and KISS-Classify; consumed downstream (structurally) by KISS-Contract, and referenced by KISS-Consume and KISS-Emit (naming references) as the advertisable-op surface. Not a root. |
 | Upstream edges | KISS-Ops (**STRUCTURAL** — every advertisable op re-bases onto a KISS-Ops op name; the OpAttrs channel, reference decompositions, the per-op commutativity/positionality property, and the operand-role vocabulary are owned there); KISS-Classify (**STRUCTURAL** — dtype-role tokens of the operand-role tuple and the cell-level op-category tag are KISS-Classify vocabulary) |
-| Downstream edges | KISS-Contract (**STRUCTURAL** — the contract Identity `op_identity` field carries a KISS-Grammar advertisable-op tag, and the contract Semantics op DAG's nodes are advertisable-op tags and KISS-Ops op names); KISS-Consume (**STRUCTURAL** — lift targets are named as advertisable-op tags over KISS-Ops names); KISS-Emit (**STRUCTURAL** — the advertisable surface names the ops an emitter lowers); KISS-Conform (test dependency) |
+| Downstream edges | KISS-Contract (**STRUCTURAL** — the contract Identity `op_identity` field carries a KISS-Grammar advertisable-op tag **when the kernel advertises a named op** — a hand-written kernel may instead carry a bare KISS-Ops op DAG with no advertisable-op tag, §6.7-0005 — and the contract Semantics op DAG's nodes are advertisable-op tags and KISS-Ops op names); KISS-Consume (**naming reference**, informative — lift targets are named as advertisable-op tags over KISS-Ops names; **not** a prerequisite-closure edge in the umbrella §2.2 edge table); KISS-Emit (**naming reference**, informative — the advertisable surface names the ops an emitter lowers; **not** a prerequisite-closure edge in the umbrella §2.2 edge table); KISS-Conform (test dependency) |
 | Spec license | CC0 1.0 Universal (public-domain dedication) |
 | Reference-crate license | MIT-OR-Apache-2.0 |
 | Maturity | Draft proposal |
@@ -45,10 +47,11 @@
 > umbrella §2.2 edge table names **KISS-Grammar → KISS-Contract** as the direct
 > STRUCTURAL prerequisite-closure edge. KISS-Consume and KISS-Emit **reference** the
 > advertisable-op surface as a *naming* dependency — they lift into, and emit,
-> KISS-Ops op names decorated as advertisable ops — which this document labels
-> STRUCTURAL naming references consistent with those sub-standards reading the
-> KISS-Grammar surface; they are not new prerequisite-closure edges beyond the ones
-> the umbrella edge table pins.
+> KISS-Ops op names decorated as advertisable ops. These Consume/Emit references are
+> **informative naming references only**: they are **not** STRUCTURAL prerequisite-closure
+> edges and **do not appear** in the umbrella §2.2 edge table (in that table Consume and
+> Emit depend on Ops/Classify/Contract, not on Grammar). They impose no
+> prerequisite-closure obligation beyond the edges the umbrella edge table pins.
 
 ---
 
@@ -90,6 +93,13 @@ document that carries a kernel's meaning. It defines three things and nothing el
    properties a new op may introduce (its commutativity/positionality, its operand
    roles) are read from KISS-Ops by name, so the growing op set never forces an edit
    to any frozen literal.
+
+KISS-Grammar is the **advertisable/named-op** surface and is **not required for every
+kernel**. Every kernel carries a KISS-Contract, but a contract's semantic identity may be
+a bare KISS-Ops op DAG (primitive or mixed-level) with **no** KISS-Grammar advertisable-op
+entry — a hand-written kernel is not obliged to advertise a named op (§6.7-0005). The
+advertisable-op surface and the region grammar exist for the ops a provider *advertises*
+and *composes*; they sit off the mandatory contract path, not on it.
 
 KISS-Grammar **maps** the advertisable surface onto KISS-Ops; it does **not** define
 op *meaning*. Edge-case behavior (NaN propagation, signed zero, IEEE-`fmax` versus
@@ -137,8 +147,13 @@ two channels:
   operand-role tuple (a `u8` `cond`, a `u32` index), the **KISS-Ops-declared
   commutativity property** (for canonicalization), the consumer-count guard, and the
   node-identity binds. These are the attributes whose *values* are load-bearing for
-  correctness — a transpose's `perm`, a gather's axis — and they MUST be matched with
-  an explicit guard, not skipped through.
+  correctness — a transpose's `perm`, a gather's axis — and they must be matched with
+  an explicit guard, not skipped through. The OpAttrs sub-vocabularies themselves — the
+  out-of-bounds policy set, the permutation encoding, and the reduce-axis mask/keepdim
+  encoding — are **KISS-Ops-owned op semantics** (§6.2-0006); KISS-Grammar cites KISS-Ops
+  as their single owner and re-defines none of them. They are **distinct** from
+  KISS-Grammar's own matching hints (the node-identity binds, the consumer-count guard,
+  and the commutativity canonicalization key), which the grammar does own.
 
 - **Synthesis attributes** — the **generation/lowering** channel. Everything needed to
   *synthesize* the op, parameterizing how it is lowered rather than how it is matched:
@@ -184,6 +199,17 @@ Node = Op { op_name, pattern_attrs, operand_role_tuple, operands: [node_index �
      | Bind(input_index)
 ```
 
+**Scope of `pattern_attrs` here (narrow, per-node).** In the `Op { … }` record above,
+`pattern_attrs` is the **per-node wire field** that carries **only** the KISS-Ops **OpAttrs
+blob** (axis / OOB policy / permutation / reduce-axis mask/keepdim) — it is *not* the whole
+recognition channel. The remaining members of the conceptual *pattern attributes* channel of
+§6.2-0001 travel elsewhere: `operand_role_tuple` and `consumers` are the **sibling** node
+fields shown; the KISS-Ops-declared commutativity property is read from KISS-Ops by name; and
+the node-identity binds live on the `Bind` leaves. This narrow, single-scope reading is the
+one KISS-Contract's op-graph node projection (`op_attrs ← pattern_attrs`, Contract §6.4-0009)
+cites; the broader superset sense of "pattern attributes" is used only conceptually
+(§6.2-0001).
+
 The **root** is the single node that no other in-region node references (equivalently,
 the last entry in the canonical node table). A one-node region's root *is* the op; a
 fusion's root op is what the region advertises itself as. Internal sharing — a node
@@ -194,13 +220,14 @@ index appearing in more than one parent's `operands` list — makes the region a
    leaf to the region's input `i`. A **repeated** `Bind` of the same index is the
    **node-identity guard**: a shared operand is *literally the same input*, so the
    guard is free — two leaves that bind index `i` assert the two subtrees read one and
-   the same value. (Interior sharing of a *computed* node is expressed by two parents
-   naming the same node index, not by repeating a leaf.)
+   the same value, and canonicalize to one shared node-table entry (§6.4-0011).
+   (Interior sharing of a *computed* node is expressed by two parents naming the same
+   node index, not by repeating a leaf.)
 
 2. **Interior nodes carry a no-external-consumer fusion-safety guard.** `consumers` is
    an enum counting **edges that leave the region** (consumers of the node's result in
    the surrounding candidate graph that are *not themselves inside the region*). An
-   **interior** (non-root) node MUST carry `consumers = INTERIOR`, requiring its
+   **interior** (non-root) node must carry `consumers = INTERIOR`, requiring its
    external-consumer count to be **0**: fusing a node whose result escapes the region
    would be unsafe. The **root** carries `consumers = ROOT` (its result *is* the
    region's output; it may be consumed freely). In-region sharing — two interior
@@ -217,7 +244,7 @@ index appearing in more than one parent's `operands` list — makes the region a
    **reproducible emission**, *not* for match correctness (both the imported pattern
    and the candidate graph canonicalize before matching, so any single emitted order
    matches). A KISS-Ops-declared **positional** op — comparisons and `select`, whose
-   operand order is load-bearing (`select` is `(cond, a, b)` per KISS-Ops) — MUST NOT
+   operand order is load-bearing (`select` is `(cond, a, b)` per KISS-Ops) — must not
    be commutatively reordered.
 
 4. **Scalar params ride an extract channel.** Scalar runtime parameters ride an
@@ -271,7 +298,7 @@ over a data operand and a `u32` index operand. The advertisable op is:
   meaning "any dtype" (§6.6-0006), and `u32` is a KISS-Classify dtype token
 - **synthesis_attrs:** the reference-decomposition pointer, plus emit hints
 
-The axis and OOB policy are **load-bearing values**: a consumer MUST match them with
+The axis and OOB policy are **load-bearing values**: a consumer must match them with
 an explicit guard. A region that dropped the axis would match *any* gather regardless
 of axis — a wrong bind. The `u32` index operand is matched as part of the operand-role
 tuple, not by assuming operand-0's dtype; the polymorphic data operand carries the
@@ -316,8 +343,10 @@ from KISS-Ops — is exactly what lets a frozen grammar admit a still-growing op
 
 KISS-Grammar's output is consumed by KISS-Contract in two places, both STRUCTURAL:
 
-- **Identity.** The contract's `op_identity` field is a KISS-Grammar advertisable-op
-  tag re-based onto a KISS-Ops op name (the semantics DAG root's op). The tag has a
+- **Identity.** When the kernel advertises a named op, the contract's `op_identity` field
+  is a KISS-Grammar advertisable-op tag re-based onto a KISS-Ops op name (the semantics DAG
+  root's op); a hand-written kernel may instead carry a bare KISS-Ops op DAG as its
+  `op_identity` with no advertisable-op tag (§6.7-0005). The advertisable tag has a
   pinned **canonical normal form** (§6.1-0007): its identity-bearing attributes (the
   pattern-channel OpAttrs values and the operand-role tuple) are carried at their
   resolved values with defaults made explicit, so two impls agree byte-for-byte on
@@ -352,12 +381,16 @@ reference language** to consume the region-grammar wire form and reproduce the g
 region vectors (§8-0005). Abstract term syntax alone cannot satisfy either: two
 conforming implementations could represent the same region with different in-memory
 shapes and never agree on bytes. KISS-Grammar therefore pins a normative **region wire
-form** (§6.8): a flat, indexed node table with fixed integer widths, a fixed
-endianness, a fixed field order, a fixed token encoding, a canonical node-table order,
-and a canonical commutative-operand order. Every golden region vector in Appendix A
-carries its exact left-to-right bytes. Only the recognition-relevant, identity-bearing
-content is serialized; synthesis attributes (lowering hints) are not part of the wire
-form (§6.8-0009), consistent with their being non-identity-bearing.
+form** (§6.8): a flat, indexed node table prefixed by a fixed **magic** and an in-band
+**frozen-shape schema version** (§6.8-0013), with fixed integer widths, a fixed
+little-endian byte order, a fixed field order (both region-level, §6.8-0001, and
+per-node-record, §6.8-0010), a fixed token encoding, a canonical node-table order with
+maximal structural sharing (§6.4-0011, §6.8-0004), a canonical commutative-operand
+order (§6.4-0010), and a canonical extract-record order (§6.8-0011). Every golden region
+vector in Appendix A carries its exact left-to-right bytes. Only the
+recognition-relevant, identity-bearing content is serialized; synthesis attributes
+(lowering hints) are not part of the wire form (§6.8-0009), consistent with their being
+non-identity-bearing.
 
 ---
 
@@ -368,17 +401,31 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   anchor; an advertisable op is never a parallel token independent of KISS-Ops.
 - **Advertisable-op tag** — the identity of an advertisable op: its `op_name` together
   with its **identity-bearing** attribute values (the pattern-channel OpAttrs values and
-  the operand-role tuple), in the pinned canonical normal form (§6.1-0007). Carried by
-  KISS-Contract's `op_identity` field. The degenerate case is a bare KISS-Ops op name
-  (no distinguishing attributes). Synthesis attributes are **not** part of the tag.
+  the operand-role tuple), in the pinned canonical normal form (§6.1-0007) and serialized
+  in the dedicated tag canonical serialization (§6.8-0012). Carried by KISS-Contract's
+  `op_identity` field. **Several** advertisable tags may share one `op_name`,
+  distinguished by their identity-bearing attribute values (§6.1-0003); the tag is the
+  FULL identity (name + distinguishing attrs), never the bare name where attributes
+  distinguish it. The degenerate case is a bare KISS-Ops op name (no distinguishing
+  attributes). Synthesis attributes are **not** part of the tag.
 - **op_name** — the KISS-Ops op token an advertisable op re-bases onto; spelled exactly
   as the KISS-Ops op token (§6.6-0001), and valid only against the pinned KISS-Ops
   version (§6.6-0007). The SOLE identity anchor.
-- **Pattern attributes (`pattern_attrs`)** — the recognition/match channel: the KISS-Ops
-  OpAttrs channel (axis / OOB policy / permutation / reduce-axis mask/keepdim), the
+- **Pattern attributes** — the recognition/match **channel** (the conceptual sense): the
+  KISS-Ops OpAttrs channel (axis / OOB policy / permutation / reduce-axis mask/keepdim), the
   operand-role tuple, the KISS-Ops-declared commutativity property, the consumer-count
   guard, and the node-identity binds. The attributes whose *values* are load-bearing for
-  correctness.
+  correctness. This channel is a **superset** (§6.2-0001) and is distinct from the narrower
+  per-node wire field of the next entry.
+- **`pattern_attrs` (per-node wire field)** — the narrow, single-scope field of that name
+  carried on an `Op` node of the region node grammar (§2.2, §6.4-0001) and serialized as the
+  node-record OpAttrs sub-block (§6.8-0007, §6.8-0010): it carries **only** the KISS-Ops
+  **OpAttrs blob** (axis / OOB policy / permutation / reduce-axis mask/keepdim). The other
+  members of the conceptual *pattern attributes* channel are carried as **sibling** node
+  fields (`operand_role_tuple`, `consumers`) or are read from KISS-Ops by name (the
+  commutativity property) or from the bind leaves (the node-identity binds) — they are **not**
+  stored inside this `pattern_attrs` field. KISS-Contract's `op_attrs` projection
+  (`op_attrs ← pattern_attrs`, Contract §6.4-0009) cites **this** narrow per-node field.
 - **Synthesis attributes (`synthesis_attrs`)** — the generation/lowering channel: the
   KISS-Ops reference-decomposition pointer, the exact-vs-approx flavor selection (as
   distinct KISS-Ops names), the scalar-param extract routing, and emit hints
@@ -389,8 +436,9 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   `gather`/`index_select`), mirroring the KISS-Ops index/address operand role. Role
   tokens are drawn from the KISS-Ops-owned closed operand-role set (§6.6-0005); the
   dtype-role position is a KISS-Classify dtype token or the wildcard token `*`
-  (§6.6-0006). Lets a consumer match the mixed-dtype operand tuple, not just operand-0's
-  dtype.
+  (§6.6-0006). The **default** entry is `(data, *)`; its canonical form omits trailing
+  default entries (§6.1-0008). Lets a consumer match the mixed-dtype operand tuple, not
+  just operand-0's dtype.
 - **Dtype-role wildcard (`*`)** — the pinned token occupying the dtype-role position of an
   operand-role entry when the operand's dtype is polymorphic (any dtype); a Grammar-owned
   structural sentinel that is part of the frozen shape and is never a KISS-Classify dtype
@@ -399,9 +447,13 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   op, **owned by KISS-Ops** and inherited by an advertisable op; KISS-Grammar never
   re-asserts it.
 - **OpAttrs channel** — the per-node attribute vocabulary (axis, out-of-bounds policy,
-  permutation, reduce-axis mask/keepdim) **owned by KISS-Ops**; surfaced by KISS-Grammar
-  as pattern attributes and carried per node in a region. Its wire bytes are the KISS-Ops
-  OpAttrs encoding, embedded length-prefixed (§6.8-0007).
+  permutation, reduce-axis mask/keepdim) **owned by KISS-Ops** as op semantics; its
+  sub-vocabularies are cited, never re-defined, by KISS-Grammar (§6.2-0006), which surfaces
+  them as pattern attributes and carries them per node in a region uninterpreted at the
+  framing level. Its wire bytes are the KISS-Ops OpAttrs encoding — default-resolved and
+  canonical at the KISS-Ops layer (§8-0008) — embedded length-prefixed (§6.8-0007).
+  Distinct from KISS-Grammar's own matching hints (node-identity binds, consumer-count
+  guard, commutativity canonicalization key).
 - **Advertisable region (region)** — a single-rooted DAG of advertisable-op nodes over
   bind leaves, carried as the flat indexed node table of §6.8 whose operands are node
   indices (so interior sharing is a shared index). A one-node region is a single
@@ -413,9 +465,10 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
 - **Bind leaf** — a leaf `Bind(i)` binding the producer at that leaf to the region's
   positional input `i`. Carries no `consumers` field.
 - **Node-identity guard** — a repeated bind of the same input index, asserting that two
-  subtrees read literally the same input (a shared operand).
+  subtrees read literally the same input (a shared operand); canonicalizes to one shared
+  node-table entry (§6.4-0011).
 - **Fusion-safety guard (no-external-consumer guard)** — the `consumers` enum on an `Op`
-  node counting **only** edges leaving the region: an interior node MUST carry
+  node counting **only** edges leaving the region: an interior node must carry
   `consumers = INTERIOR` (external-consumer count 0); the root carries `consumers = ROOT`.
   In-region sharing is never counted.
 - **Commutativity property (KISS-Ops-owned)** — the per-op property, declared by KISS-Ops
@@ -424,24 +477,41 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   not for match correctness. There is **no** Grammar-owned literal commutative-op list.
 - **Canonical operand order** — the pinned total order (§6.4-0010) over the operands of a
   commutative node: ascending unsigned-byte-lexicographic comparison of each operand's
-  canonical subtree serialization, with deterministic tie-break. Makes commutative
-  reorderings emit byte-identically.
+  canonical subtree serialization, made total by mandatory structural dedup (§6.4-0011)
+  so equal-key operands are the same node index. Makes commutative reorderings emit
+  byte-identically.
+- **Structural dedup (common-subexpression sharing)** — the canonical-form requirement
+  (§6.4-0011) that any two nodes with byte-identical canonical subtree serialization are
+  one shared node-table entry; guarantees the node table and the operand-order tie-break
+  are byte-exact.
 - **Extract channel** — the scalar-runtime-param routing anchored on the region root: a
   list of `(path, param_slot)` where a **path** is a sequence of canonical operand
-  indices from the root over the **canonicalized** tree and `param_slot` is a 0-based
-  integer.
+  indices from the root over the **canonicalized** tree (the lexicographically-least such
+  sequence for a shared target, §6.4-0007) and `param_slot` is a 0-based integer; records
+  emitted in ascending `param_slot` order (§6.8-0011).
 - **Declared region arity (`n_inputs`)** — the region-level field giving the number of
   positional inputs the region binds; the expressibility check is against this declared
   value, never an inferred `max(index)+1`.
 - **Expressible region** — a region whose bound-input set equals exactly `[0, n_inputs)`
   and that has exactly one root.
-- **Region wire form** — the pinned byte serialization of a region (§6.8): fixed field
-  order, fixed integer widths and little-endian byte order, length-prefixed UTF-8 tokens,
-  canonical node-table order, and canonical commutative-operand order. The artifact
-  against which byte-exact determinism and the foreign-reader freeze gate are evaluated.
+- **Region wire form** — the pinned byte serialization of a region (§6.8): a fixed magic
+  and in-band frozen-shape schema version prefix (§6.8-0013), then fixed field order,
+  fixed integer widths and little-endian byte order, length-prefixed UTF-8 tokens, a fixed
+  per-node-record layout (§6.8-0010), canonical node-table order, canonical
+  commutative-operand order, and canonical extract-record order. The artifact against
+  which byte-exact determinism and the foreign-reader freeze gate are evaluated.
+- **Tag canonical serialization** — the dedicated identity-bearing-only byte form of an
+  advertisable-op tag (§6.8-0012): `op_name` + OpAttrs blob + canonical operand-role
+  tuple, carrying **none** of the region framing (no kind tag, consumers, operand_count,
+  operand indices, version tokens, or magic/version header). Tag equality is byte-exact
+  comparison of this form.
+- **Frozen-shape schema version** — the KISS-Grammar wire/shape version, stamped in-band
+  in the region wire form (§6.8-0013) and distinct from the upstream `ops_version` /
+  `classify_version` bindings; the axis KISS-Conform keys on for frozen-shape conformance.
 - **Upstream version binding** — the `ops_version` / `classify_version` fields pinned on a
-  region (§6.6-0007) that fix which KISS-Ops / KISS-Classify version its op names and
-  dtype tokens are read against.
+  region (§6.6-0007) carrying the **upstream wire/ABI schema-version** of KISS-Ops /
+  KISS-Classify (umbrella §5.1) that fix which version its op names and dtype tokens are
+  read against; compared byte-exact on the token string.
 - **Re-basing** — declaring an advertisable op by naming an existing or newly-added
   KISS-Ops op, adding attributes, and changing nothing in the frozen structural schema.
 - **Frozen shape** — the advertisable-op field schema, the region-composition rules, the
@@ -470,13 +540,14 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   umbrella §3 for conventions.
 - **KISS-Ops** (by version) — DAG edge labeled **STRUCTURAL**, **upstream** dependency:
   every advertisable op re-bases onto a KISS-Ops op **name**; the OpAttrs channel
-  (axis / OOB policy / permutation / reduce-axis), the reference decompositions (the
-  resolution oracle), the exact-vs-approx flavor spellings (`gelu` vs `gelu_tanh`,
-  `relu` vs `fmax_ieee`, `rem_floor` vs `rem_trunc`), the **per-op commutativity /
-  positionality property**, the **operand-role token vocabulary** (index/address/cond/data
-  …), and the op level / primitive-floor membership are all **owned by KISS-Ops** and used
-  here by name/tag against a pinned KISS-Ops version. KISS-Grammar re-defines none of them
-  and defines no op meaning.
+  (axis / OOB policy / permutation / reduce-axis) and its **default-resolved, canonical
+  wire encoding** (§8-0008), the reference decompositions (the resolution oracle), the
+  exact-vs-approx flavor spellings (`gelu` vs `gelu_tanh`, `relu` vs `fmax_ieee`,
+  `rem_floor` vs `rem_trunc`), the **per-op commutativity / positionality property**, the
+  **operand-role token vocabulary** (index/address/cond/data …), and the op level /
+  primitive-floor membership are all **owned by KISS-Ops** and used here by name/tag
+  against a pinned KISS-Ops version. KISS-Grammar re-defines none of them and defines no
+  op meaning.
 - **KISS-Classify** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
   dependency: the dtype **tokens** naming an operand-role tuple's expected dtype roles
   (`u8`, `u32`, …) and the cell-level **op-category** tag are KISS-Classify vocabulary,
@@ -487,14 +558,13 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
   contract Semantics op DAG's nodes are advertisable-op tags and KISS-Ops op names at mixed
   levels, each carrying the KISS-Ops OpAttrs channel. This is the direct STRUCTURAL
   prerequisite-closure edge the umbrella §2.2 edge table pins from KISS-Grammar.
-- **KISS-Consume** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
-  reference: recognition lift targets are named as advertisable-op tags over KISS-Ops
-  names. (A naming reference to the advertisable surface, not a new prerequisite-closure
-  edge beyond the umbrella edge table.)
-- **KISS-Emit** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
-  reference: the advertisable surface names the ops an emitter lowers. (A naming
-  reference to the advertisable surface, not a new prerequisite-closure edge beyond the
-  umbrella edge table.)
+- **KISS-Consume** (by version) — **naming reference** (informative), **downstream**:
+  recognition lift targets are named as advertisable-op tags over KISS-Ops names. This is a
+  naming reference to the advertisable surface, **not** a prerequisite-closure edge in the
+  umbrella §2.2 edge table.
+- **KISS-Emit** (by version) — **naming reference** (informative), **downstream**: the
+  advertisable surface names the ops an emitter lowers. This is a naming reference to the
+  advertisable surface, **not** a prerequisite-closure edge in the umbrella §2.2 edge table.
 - **KISS-Conform** (by version) — depends on and tests KISS-Grammar; owns the fuzzer and
   differential harness that exercise the region grammar, the wire form, and the growth
   rule.
@@ -506,15 +576,20 @@ form (§6.8-0009), consistent with their being non-identity-bearing.
 This sub-standard adopts the KISS umbrella's conventions (umbrella §3) verbatim and
 restates none of them. Per the umbrella: normative §6+ uses **only** the uppercase
 keywords `MUST` / `MUST NOT` / `SHALL`; `SHOULD` / `MAY` are reserved for governance and
-consumer-behavior guidance and never state a structural requirement. Every atomic
-requirement carries a stable, append-only ID `KISS-GRAMMAR-<section>-<nnnn>`, allocated by
-the editor of record, never reused after retirement, and mapped 1:1 to ≥1 named
-KISS-Conform test. Values are pinned as tokens/schema spelled exactly as the upstream
-foundational vocabularies pin them, never as one source language's surface spelling, and
-serialized in the pinned wire form (§6.8). Unquantified adjectives ("well-formed",
-"reasonable", "neutral", "valid") are banned from normative text. Every clause declares
-its determinism/fidelity class so KISS-Conform selects the correct comparator. See
-umbrella §3 for the full statement.
+consumer-behavior guidance and never state a structural requirement. Informative §0–§5
+prose uses lowercase requirement language; uppercase RFC-2119 keywords appear only in §6+
+or where a keyword is named as a term. Every atomic requirement carries a stable,
+append-only ID `KISS-GRAMMAR-<section>-<nnnn>`, allocated by the editor of record, never
+reused after retirement, and mapped 1:1 to ≥1 named KISS-Conform test. Values are pinned
+as tokens/schema spelled exactly as the upstream foundational vocabularies pin them, never
+as one source language's surface spelling, and serialized in the pinned wire form (§6.8).
+Unquantified adjectives ("well-formed", "reasonable", "neutral", "valid") are banned from
+normative text. Every clause declares its determinism/fidelity class so KISS-Conform
+selects the correct comparator. A small number of clauses are explicitly marked
+**aggregate** wire-encoding/normal-form obligations (§6.1-0007, §6.4-0004, §6.8-0002):
+they pin a set of jointly-attested field encodings under one ID and one mapped test, a
+deliberate exception to strict atomicity noted at each such clause. See umbrella §3 for
+the full statement.
 
 ---
 
@@ -551,12 +626,16 @@ umbrella §3 for the full statement.
   set — every advertised op MUST re-base onto a KISS-Ops op name, and no advertisable-op
   token that is not a KISS-Ops op name may exist. *Test:*
   `test_grammar_no_parallel_op_list`.
-- **KISS-GRAMMAR-6.1-0003** — An advertisable-op **tag** (the `op_identity` a
-  KISS-Contract carries) MUST be its `op_name` together with the **identity-bearing**
-  attribute values that distinguish it; more than one advertisable op MAY re-base onto the
-  **same** KISS-Ops op name when, and only when, distinguished by identity-bearing
-  attribute values, and in that case the tag MUST carry the distinguishing attributes and
-  MUST NOT be reduced to the bare name. *Test:* `test_grammar_tag_is_name_plus_attrs`.
+- **KISS-GRAMMAR-6.1-0003** — A single KISS-Ops op name MAY back **several** KISS-Grammar
+  advertisable tags: KISS-Grammar MUST permit **many** advertisable tags per KISS-Ops op
+  name, distinguished by their **identity-bearing** attribute values (the pattern-channel
+  OpAttrs values and the operand-role tuple, §6.1-0007). An advertisable-op **tag** — the
+  `op_identity` a KISS-Contract carries — MUST be the **full** tag: its `op_name`
+  **together with** the identity-bearing attribute values that distinguish it, and an
+  implementation MUST NOT reduce it to the bare `op_name` where those attributes
+  distinguish it from another advertisable tag over the same name. The many-to-one
+  relation is first-class, not an exception: KISS-Grammar MUST NOT constrain a KISS-Ops op
+  name to at most one advertisable tag. *Test:* `test_grammar_tag_is_name_plus_attrs`.
 - **KISS-GRAMMAR-6.1-0004** — An advertisable op's **level** — its primitive-floor
   membership and decomposition level — MUST be inherited from KISS-Ops and MUST NOT be
   re-declared or overridden by KISS-Grammar. *Test:* `test_grammar_level_inherited_not_redeclared`.
@@ -575,16 +654,35 @@ umbrella §3 for the full statement.
   resolved **from** KISS-Ops. KISS-Grammar maps the advertisable surface onto KISS-Ops
   names and attribute channels only. *Test:* `test_grammar_defines_no_op_semantics`.
 - **KISS-GRAMMAR-6.1-0007** — An advertisable-op **tag** MUST have a single **canonical
-  normal form** used for tag equality: (a) the **identity-bearing** attributes are exactly
-  the pattern-channel OpAttrs values (§6.2-0001) and the `operand_role_tuple`; `op_name`;
-  and nothing else — `synthesis_attrs` are **not** identity-bearing and MUST NOT appear in
-  the tag; (b) every identity-bearing attribute MUST be carried at its **resolved** value
-  with defaults made **explicit** (a defaulted attribute and an explicitly-stated equal
-  value canonicalize to the same tag; defaults MUST NOT be elided); (c) the tag MUST be
-  serialized in the wire form of §6.8, and two tags MUST be compared for identity by
-  **byte-exact** comparison of that serialization. An implementation MUST NOT treat two
-  tags that differ only by an elided-vs-explicit default as distinct, nor two tags with
-  different identity-bearing values as equal. *Test:* `test_grammar_canonical_tag_normal_form`.
+  normal form** used for tag equality (an intentional **aggregate** normal-form clause:
+  sub-requirements (a)–(c) are jointly attested by the single mapped test): (a) the
+  **identity-bearing** attributes are exactly the pattern-channel OpAttrs values
+  (§6.2-0001) and the `operand_role_tuple` (in its canonical form, §6.1-0008), together
+  with `op_name`, and nothing else — `synthesis_attrs` are **not** identity-bearing and
+  MUST NOT appear in the tag; (b) every identity-bearing attribute MUST be carried at its
+  **resolved** value with defaults made **explicit**, and this default resolution for the
+  OpAttrs channel is owned **upstream**: the embedded KISS-Ops OpAttrs wire encoding is
+  itself default-resolved and canonical (KISS-Ops emits every defaulted attribute
+  explicitly; §6.2-0006, §8-0008), so a defaulted attribute and an explicitly-stated equal
+  value produce the **same** OpAttrs bytes and KISS-Grammar canonicalizes **without**
+  interpreting the opaque OpAttrs sub-vocabulary (defaults MUST NOT be elided); (c) the tag
+  MUST be serialized in the dedicated **tag canonical serialization** of §6.8-0012 (which
+  carries only the identity-bearing fields of (a) and none of the region framing), and two
+  tags MUST be compared for identity by **byte-exact** comparison of that serialization. An
+  implementation MUST NOT treat two tags that differ only by an elided-vs-explicit default
+  as distinct, nor two tags with different identity-bearing values as equal. *Test:*
+  `test_grammar_canonical_tag_normal_form`.
+- **KISS-GRAMMAR-6.1-0008** — The `operand_role_tuple` MUST have a single **canonical
+  form** for tag identity and wire emission: the **default** operand-role entry is exactly
+  `(data, *)` (role token `data`, dtype-role wildcard `*`), and an operand carrying that
+  entry is **unconstrained**. The canonical tuple MUST encode exactly `k` entries, where
+  `k` is `0` if every operand is unconstrained, else `1 +` the greatest operand index whose
+  entry differs from `(data, *)`; every operand with index `≥ k` MUST be taken to be
+  `(data, *)`, and trailing default entries MUST NOT be emitted. Two operand-role tuples
+  MUST compare equal iff their default-filled forms (each padded to the node's
+  `operand_count` with `(data, *)`) are equal; an implementation MUST NOT treat a `0`-entry
+  tuple as distinct from an all-`(data, *)` tuple over the same operand count. *Test:*
+  `test_grammar_operand_role_tuple_canonical_form`.
 
 ### 6.2 Pattern attributes — the recognition / match channel
 
@@ -595,6 +693,19 @@ umbrella §3 for the full statement.
   plus the operand-role tuple (§6.1-0005), the KISS-Ops-declared commutativity property
   (§6.4-0005), the consumer-count guard (§6.4-0004), and the node-identity binds
   (§6.4-0003). *Test:* `test_grammar_pattern_attrs_carry_opattrs`.
+
+  > **Scope note (informative) — two senses of "pattern attributes."** This clause defines
+  > *pattern attributes* as the whole **recognition/match channel** — a **superset**: the
+  > OpAttrs channel **plus** the operand-role tuple, the commutativity property, the
+  > consumer-count guard, and the node-identity binds. That conceptual channel is **distinct
+  > from** the per-node **wire field** named `pattern_attrs` in the region node grammar
+  > (§2.2, §6.4-0001), which carries **only** the KISS-Ops **OpAttrs blob** and is serialized
+  > as the node-record OpAttrs sub-block (§6.8-0007, §6.8-0010). In the node record the other
+  > members of this channel are separate **sibling** fields (`operand_role_tuple`,
+  > `consumers`) or are not stored per node at all (the commutativity property is read from
+  > KISS-Ops by name; the node-identity binds live on the `Bind` leaves). KISS-Contract's
+  > op-graph node projection (`op_attrs ← pattern_attrs`, Contract §6.4-0009) cites the
+  > **narrow, single-scope** per-node field, not this superset.
 - **KISS-GRAMMAR-6.2-0002** — A pattern attribute whose **value** is load-bearing for
   correctness (a `transpose`/`permute` `perm`, a `gather`'s axis, an out-of-bounds policy,
   a reduce-axis mask) MUST be matched with an **explicit guard**; an implementation MUST
@@ -614,6 +725,23 @@ umbrella §3 for the full statement.
   which op a node matches; it is a canonicalization key, not an identity field, and MUST
   be read from KISS-Ops by name rather than from any Grammar-owned literal. *Test:*
   `test_grammar_commutativity_is_canonicalization_only`.
+- **KISS-GRAMMAR-6.2-0006** — The OpAttrs **sub-vocabularies** surfaced on `pattern_attrs`
+  — the **out-of-bounds policy** set (`{skip, clamp, zero-fill}` for reads, `skip` for
+  writes), the **permutation** encoding, and the **reduce-axis mask / keepdim** encoding —
+  are **owned by KISS-Ops** as op semantics; KISS-Grammar MUST cite KISS-Ops as the single
+  owner of each and MUST NOT re-define, restate, or fork any of them, and MUST carry each
+  uninterpreted at the framing level (embedded as the KISS-Ops OpAttrs wire bytes,
+  §6.8-0007), inventing no encoding of its own for any of them. The embedded KISS-Ops
+  OpAttrs wire bytes are **default-resolved and canonical at the KISS-Ops layer** (KISS-Ops
+  emits every defaulted attribute explicitly; §8-0008); KISS-Grammar therefore attains
+  tag/region byte-equality over these bytes **without** interpreting the sub-vocabulary,
+  and MUST NOT perform default normalization of its own on the OpAttrs blob. KISS-Grammar's
+  own `pattern_attrs` **matching hints** — the node-identity binds (§6.4-0003), the
+  consumer-count fusion-safety guard (§6.4-0004), and the commutativity canonicalization
+  key (§6.2-0005) — are **DISTINCT** from these KISS-Ops-owned sub-vocabularies and MUST
+  NOT be conflated with them. Where KISS-Ops does not yet normatively pin one of these
+  sub-vocabularies, KISS-Grammar MUST NOT supply a substitute definition; it carries only
+  what KISS-Ops defines. *Test:* `test_grammar_opattrs_subvocab_owned_by_ops`.
 
 ### 6.3 Synthesis attributes — the generation / lowering channel
 
@@ -649,6 +777,10 @@ umbrella §3 for the full statement.
   advertisable-op nodes over bind leaves, represented as a flat, ordered node table whose
   node grammar is
   `Op { op_name, pattern_attrs, operand_role_tuple, operands, consumers } | Bind(input_index)`,
+  where the per-node `pattern_attrs` field is the **narrow** field carrying only the KISS-Ops
+  OpAttrs blob (§6.8-0007, §6.8-0010) — the `operand_role_tuple` and `consumers` are the
+  sibling fields shown, not sub-parts of `pattern_attrs`; the broader superset sense of
+  "pattern attributes" (§6.2-0001) is conceptual only — and
   where each element of a node's `operands` is an **index** referencing a strictly-earlier
   entry in the table (so a node index appearing in more than one parent's `operands`
   denotes a single shared interior node — a genuine DAG, not only a tree), and the region
@@ -666,7 +798,10 @@ umbrella §3 for the full statement.
 - **KISS-GRAMMAR-6.4-0003** — A `Bind(i)` leaf MUST reference the region's positional
   input `i`, and a **repeated** `Bind` of the same index MUST be treated as the
   node-identity guard (the two leaves assert one and the same input); an implementation
-  MUST NOT treat two `Bind(i)` leaves of the same index as two distinct inputs. *Test:*
+  MUST NOT treat two `Bind(i)` leaves of the same index as two distinct inputs. All `Bind`
+  leaves of the same `input_index` MUST canonicalize to exactly **one** node-table entry,
+  referenced by index wherever that input is bound (structural dedup, §6.4-0011); an
+  implementation MUST NOT emit two separate table entries for the same input index. *Test:*
   `test_grammar_repeated_bind_is_node_identity`.
 - **KISS-GRAMMAR-6.4-0004** — The `consumers` field of an `Op` node MUST count **only edges
   that leave the region** (consumers of the node's result in the surrounding candidate
@@ -677,7 +812,9 @@ umbrella §3 for the full statement.
   `consumers = ROOT`. A `Bind` leaf MUST carry no `consumers` field. In-region sharing of
   an interior node by two or more in-region parents MUST NOT be treated as an external
   consumer and MUST NOT violate the guard. The `consumers` field is an enum with the wire
-  encoding pinned in §6.8-0005. *Test:* `test_grammar_interior_no_external_consumer_guard`.
+  encoding pinned in §6.8-0005. (This clause is an intentional **aggregate** fusion-safety
+  obligation; its sub-requirements are jointly attested by the single mapped test.) *Test:*
+  `test_grammar_interior_no_external_consumer_guard`.
 - **KISS-GRAMMAR-6.4-0005** — For an op that KISS-Ops declares **commutative** (the
   property read from KISS-Ops by name per §6.2-0005, **not** from any Grammar-owned literal
   list), that node's operands MUST be canonicalized to the total **canonical operand order**
@@ -698,10 +835,14 @@ umbrella §3 for the full statement.
   sequence of **canonical operand indices** from the root down to the target node evaluated
   over the **already-canonicalized** tree, and `param_slot` is a 0-based unsigned integer.
   Canonicalization (§6.4-0005) MUST occur **before** extract paths are formed, so an extract
-  path always addresses the node it names under the canonical order; an implementation MUST
-  anchor extract paths on the root and MUST NOT anchor them on an interior node, and MUST NOT
-  form an extract path over a pre-canonical operand order. The path/slot wire encoding is
-  pinned in §6.8-0006. *Test:* `test_grammar_extract_channel_on_root`.
+  path always addresses the node it names under the canonical order. When a target node is
+  shared (reachable from the root by more than one sequence of canonical operand indices —
+  a genuine DAG), the **canonical** extract path MUST be the **lexicographically-least** such
+  sequence under unsigned comparison of the step indices, and an implementation MUST NOT
+  emit a non-least path for a shared target. An implementation MUST anchor extract paths on
+  the root and MUST NOT anchor them on an interior node, and MUST NOT form an extract path
+  over a pre-canonical operand order. The path/slot wire encoding is pinned in §6.8-0006 and
+  the record order in §6.8-0011. *Test:* `test_grammar_extract_channel_on_root`.
 - **KISS-GRAMMAR-6.4-0008** — A region MUST carry an explicit **declared arity** field
   `n_inputs` (its wire encoding pinned in §6.8-0001/§6.8-0002); a region is **expressible**
   only when its bound-input set equals exactly `[0, n_inputs)`. A region that binds a strict
@@ -721,10 +862,22 @@ umbrella §3 for the full statement.
   `op_name`, its `consumers` byte, its length-prefixed OpAttrs blob, its operand-role tuple
   block, and the concatenated canonical subtree serializations of its operands **in this same
   canonical order** (recursively); a shared node contributes its subtree serialization once
-  per referencing position. Comparison MUST be over these bytes; ties are impossible for
-  distinct subtrees and, for identical subtrees, the order is immaterial. Every conforming
-  implementation MUST produce the identical operand permutation. *Test:*
-  `test_grammar_canonical_operand_order_key`.
+  per referencing position. Comparison MUST be over these bytes. Because the canonical region
+  form requires structural common-subexpression dedup (§6.4-0011), two **distinct**
+  node-table entries cannot share a byte-identical subtree serialization, so a tie under this
+  comparison arises only between references to the **same** node index, whose emitted operand
+  indices are equal; as a defensive total order, equal keys MUST break ties by ascending
+  referenced node-table index. Every conforming implementation MUST produce the identical
+  operand permutation. *Test:* `test_grammar_canonical_operand_order_key`.
+- **KISS-GRAMMAR-6.4-0011** — The canonical region form MUST apply **maximal structural
+  sharing (common-subexpression dedup)**: any two nodes whose canonical subtree
+  serialization (§6.4-0010) is byte-identical MUST be represented by a **single** node-table
+  entry, referenced by index at every occurrence; in particular all `Bind` leaves of the
+  same `input_index` (§6.4-0003) coalesce to exactly one entry, and two structurally-identical
+  `Op` subtrees coalesce to one entry. An implementation MUST NOT emit two distinct table
+  entries with byte-identical canonical subtree serializations. This makes the operand-order
+  tie-break of §6.4-0010 total and the node table byte-exact. *Test:*
+  `test_grammar_structural_dedup_and_repeated_bind`.
 
 ### 6.5 The growth rule — frozen shape, growing op-name set
 
@@ -800,19 +953,26 @@ umbrella §3 for the full statement.
   `ops_version` (the in-force KISS-Ops version) and `classify_version` (the in-force
   KISS-Classify version); every `op_name`, per-op property, and operand-role token MUST be
   resolved against the pinned `ops_version`, and every dtype token against the pinned
-  `classify_version`. An implementation MUST NOT resolve any upstream token against an
-  unpinned or ambient version, and every golden region vector MUST cite the `ops_version`
-  and `classify_version` it was authored against. Their wire encoding is pinned in
+  `classify_version`. These fields MUST carry the **upstream wire/ABI schema-version** axis
+  of KISS-Ops and KISS-Classify respectively (umbrella §5.1), **not** a crate semver; they
+  are distinct from the KISS-Grammar frozen-shape schema version stamped in-band per
+  §6.8-0013. Version identity and comparison MUST be **byte-exact on the token string** (an
+  implementation MUST NOT treat `"1"` and `"1.0"` as equal, nor apply numeric
+  normalization). An implementation MUST NOT resolve any upstream token against an unpinned
+  or ambient version, and every golden region vector MUST cite the `ops_version` and
+  `classify_version` it was authored against. Their wire encoding is pinned in
   §6.8-0001/§6.8-0003. *Test:* `test_grammar_upstream_version_binding`.
 
 ### 6.7 The seam onto KISS-Contract (downstream)
 
-- **KISS-GRAMMAR-6.7-0001** — The advertisable-op **tag** KISS-Grammar defines (in its
-  canonical normal form, §6.1-0007) MUST be the token a KISS-Contract Identity `op_identity`
-  field carries, re-based onto a KISS-Ops op name (the Semantics DAG root's op); KISS-Contract
-  MUST NOT carry a private op enum in `op_identity`, and KISS-Grammar MUST NOT supply
-  `op_identity` as anything other than an advertisable-op tag over a KISS-Ops name. *Test:*
-  `test_grammar_op_identity_is_advertisable_tag`.
+- **KISS-GRAMMAR-6.7-0001** — **When** a KISS-Contract Identity `op_identity` is a
+  KISS-Grammar advertisable-op tag, it MUST be that tag in its canonical normal form
+  (§6.1-0007), re-based onto a KISS-Ops op name (the Semantics DAG root's op); KISS-Contract
+  MUST NOT carry a private op enum in `op_identity`, and where KISS-Grammar supplies an
+  `op_identity` it MUST supply nothing other than an advertisable-op tag over a KISS-Ops
+  name. (A contract MAY instead carry a bare KISS-Ops op DAG as its `op_identity` with no
+  KISS-Grammar advertisable-op entry, per §6.7-0005; this clause governs only the
+  advertisable-tag case.) *Test:* `test_grammar_op_identity_is_advertisable_tag`.
 - **KISS-GRAMMAR-6.7-0002** — A KISS-Grammar advertisable **region** MUST map onto a
   KISS-Contract **Semantics op DAG**: a one-node region MUST map to a one-node DAG, a fusion
   MUST map to its DAG, and each node MUST carry the KISS-Ops OpAttrs channel; the mapping
@@ -831,22 +991,39 @@ umbrella §3 for the full statement.
   surface and attribute channels, KISS-Ops supplies the meaning and the primitive floor,
   and an implementation MUST NOT require a consumer to reconcile two independent op
   vocabularies. *Test:* `test_grammar_single_op_vocabulary_seam`.
+- **KISS-GRAMMAR-6.7-0005** — KISS-Grammar is the **advertisable/named-op** surface and is
+  **NOT required for every kernel**: an implementation MUST NOT emit, synthesize, or require
+  a KISS-Grammar advertisable-op tag as a **precondition** to producing any KISS-Grammar
+  output (a region or its wire form). Producing a region whose nodes are a bare KISS-Ops op
+  DAG (primitive or mixed-level) MUST NOT require an advertisable-op tag, and the absence of
+  an advertisable-op tag MUST NOT be a KISS-Grammar conformance failure. (Informative:
+  whether a KISS-Contract whose Semantics is a bare KISS-Ops op DAG and whose Identity
+  carries no advertisable-op tag is an accepted contract is governed by **KISS-Contract**,
+  not KISS-Grammar; that such a contract is a valid state is a KISS-Contract requirement,
+  referenced here informatively — a pure KISS-Grammar implementation need implement no
+  contract-acceptance machinery to satisfy this clause. Every kernel still carries a
+  KISS-Contract; only the KISS-Grammar advertisable-op tag is optional.) *Test:*
+  `test_grammar_bare_ops_dag_needs_no_tag`.
 
 ### 6.8 The region wire form — pinned serialization
 
 - **KISS-GRAMMAR-6.8-0001** — A region MUST serialize to the **region wire form**: a byte
-  sequence in exactly this field order — (1) `n_inputs`; (2) `ops_version` token;
-  (3) `classify_version` token; (4) `node_count`; (5) `node_count` node records in the
-  canonical node-table order of §6.8-0004; (6) `extract_count`; (7) `extract_count` extract
-  records (§6.8-0006). An implementation MUST emit and parse exactly this field order and
-  MUST NOT insert, omit, or reorder fields. *Test:* `test_grammar_region_wire_form_field_order`.
+  sequence in exactly this field order — (0) the fixed **magic** and in-band **frozen-shape
+  schema version** (§6.8-0013); (1) `n_inputs`; (2) `ops_version` token; (3)
+  `classify_version` token; (4) `node_count`; (5) `node_count` node records in the canonical
+  node-table order of §6.8-0004, each encoded per §6.8-0010; (6) `extract_count`; (7)
+  `extract_count` extract records (§6.8-0006) in the canonical order of §6.8-0011. An
+  implementation MUST emit and parse exactly this field order and MUST NOT insert, omit, or
+  reorder fields. *Test:* `test_grammar_region_wire_form_field_order`.
 - **KISS-GRAMMAR-6.8-0002** — Every integer field in the wire form MUST be encoded
   **little-endian** with a pinned fixed width: `n_inputs` `u32`; `node_count` `u32`; a node
   `kind` tag `u8`; a `Bind` `input_index` `u32`; an `Op` `operand_count` `u16`; each operand
   node-index `u32`; a `consumers` enum `u8` (§6.8-0005); an `operand_role` count `u16`;
   `extract_count` `u16`; an extract `path_len` `u16`; each extract path step `u16`; an
-  extract `param_slot` `u32`. An implementation MUST NOT vary width or endianness. *Test:*
-  `test_grammar_wire_integer_encoding`.
+  extract `param_slot` `u32`; the frozen-shape schema version `u16` (§6.8-0013). An
+  implementation MUST NOT vary width or endianness. (This clause is an intentional
+  **aggregate** wire-encoding obligation pinning all fixed-width integer fields; the mapped
+  test attests each width jointly.) *Test:* `test_grammar_wire_integer_encoding`.
 - **KISS-GRAMMAR-6.8-0003** — Every token/string in the wire form (`ops_version`,
   `classify_version`, `op_name`, operand role token, dtype token, the wildcard `*`) MUST be
   encoded as a `u16` little-endian **byte-length** followed by that many **UTF-8** bytes,
@@ -856,10 +1033,10 @@ umbrella §3 for the full statement.
 - **KISS-GRAMMAR-6.8-0004** — The node table MUST be emitted in **canonical node-table
   order**: a post-order traversal from the root visiting each node's operands in the
   canonical operand order of §6.4-0010, assigning each node its table index at first finish,
-  with a shared node assigned exactly once (at its first finish); the root therefore is the
-  **last** entry. Every operand index MUST reference a strictly-earlier entry. An
-  implementation MUST NOT emit a node table in any other order. *Test:*
-  `test_grammar_wire_node_table_canonical_order`.
+  with a shared node (including one made shared by the structural dedup of §6.4-0011)
+  assigned exactly once (at its first finish); the root therefore is the **last** entry.
+  Every operand index MUST reference a strictly-earlier entry. An implementation MUST NOT
+  emit a node table in any other order. *Test:* `test_grammar_wire_node_table_canonical_order`.
 - **KISS-GRAMMAR-6.8-0005** — The `consumers` field MUST be encoded as a `u8` enum with the
   pinned values `0x00 = INTERIOR` (external-consumer count required to be 0) and
   `0x01 = ROOT` (region output); no other value is defined at this schema version. A `Bind`
@@ -871,19 +1048,64 @@ umbrella §3 for the full statement.
 - **KISS-GRAMMAR-6.8-0007** — The per-node OpAttrs sub-block MUST be embedded as a `u16`
   little-endian byte-length followed by that many bytes of the **KISS-Ops OpAttrs wire
   encoding** (owned by KISS-Ops and used here uninterpreted at the framing level); an empty
-  OpAttrs block MUST be encoded as length `0x0000`. KISS-Grammar MUST NOT define an
-  alternative OpAttrs byte layout. *Test:* `test_grammar_wire_opattrs_blob_deferral`.
-- **KISS-GRAMMAR-6.8-0008** — The per-node operand-role tuple MUST be encoded as a `u16`
-  little-endian **entry count** followed by that many entries, each a role token (§6.8-0003)
-  immediately followed by a dtype token or the wildcard `*` (§6.8-0003), in operand order
-  (matching the node's operand order after canonicalization, §6.4-0005). An implementation
-  MUST NOT reorder operand-role entries relative to the node's operands. *Test:*
+  OpAttrs block MUST be encoded as length `0x0000`. The embedded KISS-Ops OpAttrs wire bytes
+  MUST be reproduced verbatim and are default-resolved and canonical at the KISS-Ops layer
+  (§6.2-0006, §8-0008); a region carrying a non-empty OpAttrs block is a valid golden vector
+  only against a KISS-Ops version whose OpAttrs wire encoding is byte-frozen (§8-0008).
+  KISS-Grammar MUST NOT define an alternative OpAttrs byte layout. *Test:*
+  `test_grammar_wire_opattrs_blob_deferral`.
+- **KISS-GRAMMAR-6.8-0008** — The per-node operand-role tuple MUST be encoded in its
+  canonical form (§6.1-0008) as a `u16` little-endian **entry count** `k` followed by `k`
+  entries, each a role token (§6.8-0003) immediately followed by a dtype token or the
+  wildcard `*` (§6.8-0003), in operand order (matching the node's operand order after
+  canonicalization, §6.4-0005). `k` MUST be the canonical entry count of §6.1-0008 (trailing
+  `(data, *)` defaults omitted; `k = 0` when every operand is unconstrained), and every
+  operand with index `≥ k` MUST be reconstructed as `(data, *)`. An implementation MUST NOT
+  reorder operand-role entries relative to the node's operands, MUST NOT emit trailing
+  default entries, and MUST NOT emit more than `operand_count` entries. *Test:*
   `test_grammar_wire_operand_role_tuple`.
 - **KISS-GRAMMAR-6.8-0009** — `synthesis_attrs` MUST NOT appear in the region wire form
   (they are not identity-bearing, §6.1-0007, and parameterize lowering, not matching); two
   regions that differ only in `synthesis_attrs` MUST serialize to identical bytes. An
   implementation MUST NOT include any synthesis-channel content in the byte-exact region
   serialization. *Test:* `test_grammar_wire_excludes_synthesis_attrs`.
+- **KISS-GRAMMAR-6.8-0010** — Each node record MUST be encoded with a leading `kind` tag
+  (`u8`, §6.8-0002) whose pinned enumerant values are `0x00 = Bind` and `0x01 = Op` (the
+  **same** encoding used by the §6.4-0010 canonical subtree serialization). A **Bind** node
+  record MUST be, in this exact order: `kind = 0x00`, then `input_index` (`u32`). An **Op**
+  node record MUST be, in this exact order: `kind = 0x01`; then `op_name` (length-prefixed
+  token, §6.8-0003); then `consumers` (`u8` enum, §6.8-0005); then the OpAttrs sub-block
+  (length-prefixed, §6.8-0007) — which is the wire realization of the node grammar's narrow
+  per-node `pattern_attrs` field (§2.2, §6.4-0001), carrying **only** the KISS-Ops OpAttrs
+  blob; then the operand-role tuple (§6.8-0008); then `operand_count`
+  (`u16`); then `operand_count` operand node-indices (each `u32`, §6.8-0002). An
+  implementation MUST emit and parse exactly this per-record field order for each kind and
+  MUST NOT insert, omit, or reorder fields within a node record. *Test:*
+  `test_grammar_wire_node_record_layout`.
+- **KISS-GRAMMAR-6.8-0011** — The `extract_count` extract records (§6.8-0006) MUST be
+  emitted in a canonical order: **ascending `param_slot`**; where two records share a
+  `param_slot` (which an implementation MUST NOT normally produce), ties MUST break by the
+  **lexicographically-least** path-step sequence under unsigned comparison. An
+  implementation MUST NOT emit extract records in any other order. *Test:*
+  `test_grammar_wire_extract_record_order`.
+- **KISS-GRAMMAR-6.8-0012** — An advertisable-op **tag** (§6.1-0007) MUST have a dedicated
+  **tag canonical serialization**, distinct from the region wire form and carrying **only**
+  the identity-bearing fields, in exactly this order: (1) `op_name` (length-prefixed token,
+  §6.8-0003); (2) the OpAttrs sub-block (length-prefixed, §6.8-0007, in its KISS-Ops-canonical
+  default-resolved bytes); (3) the operand-role tuple in canonical form (§6.8-0008 /
+  §6.1-0008). It MUST NOT include the `kind` tag, `consumers`, `operand_count`, operand
+  indices, `n_inputs`, the `ops_version` / `classify_version` tokens, the magic/schema-version
+  header, or any `extract` record. Two tags MUST be compared for identity (§6.1-0007(c)) by
+  byte-exact comparison of this serialization. *Test:* `test_grammar_tag_canonical_serialization`.
+- **KISS-GRAMMAR-6.8-0013** — The region wire form MUST begin with field (0): a fixed 4-byte
+  **magic** `0x4B 0x47 0x52 0x4D` (ASCII `KGRM`) followed by the KISS-Grammar **frozen-shape
+  schema version** as a `u16` little-endian. This stamps the frozen-shape schema version
+  **in-band** (distinct from the upstream `ops_version` / `classify_version` bindings of
+  §6.6-0007), so a foreign reader parsing raw region bytes detects both a non-KISS-Grammar
+  stream (magic mismatch) and a frozen-shape-version it cannot decode. An implementation MUST
+  reject (typed decline, never a panic) a region whose leading magic is not `KGRM` or whose
+  stamped frozen-shape schema version it does not implement. *Test:*
+  `test_grammar_wire_magic_and_schema_version`.
 
 ---
 
@@ -925,8 +1147,9 @@ umbrella §3 for the full statement.
 
 KISS-Grammar tracks the umbrella's **two version axes**: the **frozen-shape schema
 version** (the field schema + composition rules + attribute-channel structure + region wire
-form) and the published reference-crate **semver**. They move independently, and both move
-independently of the KISS-Ops op-name set and of the KISS-Ops-owned per-op properties.
+form; stamped in-band per §6.8-0013) and the published reference-crate **semver**. They move
+independently, and both move independently of the KISS-Ops op-name set and of the
+KISS-Ops-owned per-op properties.
 
 - **KISS-GRAMMAR-8-0001** — The frozen-shape schema version and the reference-crate semver
   MUST be tracked as independent axes; a crate semver change MUST NOT be taken to imply a
@@ -934,7 +1157,8 @@ independently of the KISS-Ops op-name set and of the KISS-Ops-owned per-op prope
 - **KISS-GRAMMAR-8-0002** — Any change to a **frozen-shape** member — the advertisable-op
   field schema (§6.1-0001), a region-composition rule (§6.4), the attribute-channel
   structure (§6.2–§6.3), or the region wire form (§6.8) — MUST bump the frozen-shape schema
-  version. *Test:* `test_grammar_shape_change_bumps_version`.
+  version (and therefore the in-band stamp of §6.8-0013). *Test:*
+  `test_grammar_shape_change_bumps_version`.
 - **KISS-GRAMMAR-8-0003** — Adding an advertisable op by re-basing onto a KISS-Ops op name
   (§6.5-0001) MUST NOT bump the frozen-shape schema version (it is additive under the growth
   rule); a KISS-Ops op-name-set version change, or a KISS-Ops-owned per-op property carried
@@ -955,8 +1179,17 @@ independently of the KISS-Ops op-name set and of the KISS-Ops-owned per-op prope
   clause-to-test traceability (umbrella §5.3). *Test:*
   `test_grammar_freeze_gate_conform_suite_passes` (checklist gate; AUDIT-signed).
 - **KISS-GRAMMAR-8-0007** — Retire-by-floor deprecation MUST apply to the frozen-shape
-  schema version only; an implementation MUST NOT advertise a frozen-shape schema version
-  below its declared retirement floor. *Test:* `test_grammar_retire_by_floor`.
+  schema version only (the axis stamped in-band per §6.8-0013); an implementation MUST NOT
+  advertise a frozen-shape schema version below its declared retirement floor. *Test:*
+  `test_grammar_retire_by_floor`.
+- **KISS-GRAMMAR-8-0008** — A KISS-Grammar region carrying a **non-empty** OpAttrs block
+  (§6.8-0007) MUST NOT be admitted as a **golden region vector** (§8-0004, §8-0005) unless
+  the pinned KISS-Ops version's **OpAttrs wire encoding is byte-frozen and default-resolved**
+  (defaults emitted explicitly) — the upstream guarantee KISS-Grammar's opaque-blob
+  byte-equality (§6.1-0007(b), §6.2-0006) depends on. Golden vector G2 (and any other
+  OpAttrs-bearing vector) is **gated** on that upstream KISS-Ops freeze and MUST cite the
+  KISS-Ops clause that pins OpAttrs byte-determinism. *Test:*
+  `test_grammar_opattrs_freeze_precondition` (checklist gate; AUDIT-signed).
 
 ---
 
@@ -968,11 +1201,12 @@ exactly per §6–§8 for that version, (b) passes the KISS-Conform suite for KI
 that version, and (c) satisfies the DAG prerequisite closure. Because the KISS-Ops →
 KISS-Grammar and KISS-Classify → KISS-Grammar edges are **STRUCTURAL** (§4), claiming
 KISS-Grammar requires claiming KISS-Ops and KISS-Classify (prerequisite closure, umbrella
-§6.3). Un-claimed, non-expressible, or unknown-op inputs yield typed declines, never panics,
-per §6.4-0008, §6.4-0009, §6.6-0004, and §7.1-0003 (verified by the negative-vector
-modality). The modified-suite prohibition of the mark policy is the umbrella's rule
-(umbrella §9.3), enforced via registry listing, and is not restated as a free-standing
-KISS-Grammar clause.
+§6.3). The KISS-Consume and KISS-Emit references are informative naming references and add
+no prerequisite-closure obligation (§4). Un-claimed, non-expressible, or unknown-op inputs
+yield typed declines, never panics, per §6.4-0008, §6.4-0009, §6.6-0004, §6.8-0013, and
+§7.1-0003 (verified by the negative-vector modality). The modified-suite prohibition of the
+mark policy is the umbrella's rule (umbrella §9.3), enforced via registry listing, and is not
+restated as a free-standing KISS-Grammar clause.
 
 ### 9.1 Clause → KISS-Conform test traceability matrix
 
@@ -986,11 +1220,13 @@ KISS-Grammar clause.
 | KISS-GRAMMAR-6.1-0005 | `test_grammar_operand_role_tuple` |
 | KISS-GRAMMAR-6.1-0006 | `test_grammar_defines_no_op_semantics` |
 | KISS-GRAMMAR-6.1-0007 | `test_grammar_canonical_tag_normal_form` |
+| KISS-GRAMMAR-6.1-0008 | `test_grammar_operand_role_tuple_canonical_form` |
 | KISS-GRAMMAR-6.2-0001 | `test_grammar_pattern_attrs_carry_opattrs` |
 | KISS-GRAMMAR-6.2-0002 | `test_grammar_load_bearing_attr_guarded` |
 | KISS-GRAMMAR-6.2-0003 | `test_grammar_recognition_is_structural` |
 | KISS-GRAMMAR-6.2-0004 | `test_grammar_oob_policy_from_ops` |
 | KISS-GRAMMAR-6.2-0005 | `test_grammar_commutativity_is_canonicalization_only` |
+| KISS-GRAMMAR-6.2-0006 | `test_grammar_opattrs_subvocab_owned_by_ops` |
 | KISS-GRAMMAR-6.3-0001 | `test_grammar_synthesis_carries_decomposition_pointer` |
 | KISS-GRAMMAR-6.3-0002 | `test_grammar_flavor_is_distinct_op_name` |
 | KISS-GRAMMAR-6.3-0003 | `test_grammar_synthesis_scalar_param_extract` |
@@ -1006,6 +1242,7 @@ KISS-Grammar clause.
 | KISS-GRAMMAR-6.4-0008 | `test_grammar_bind_set_covers_inputs` |
 | KISS-GRAMMAR-6.4-0009 | `test_grammar_single_output_region` |
 | KISS-GRAMMAR-6.4-0010 | `test_grammar_canonical_operand_order_key` |
+| KISS-GRAMMAR-6.4-0011 | `test_grammar_structural_dedup_and_repeated_bind` |
 | KISS-GRAMMAR-6.5-0001 | `test_grammar_add_op_by_rebasing` |
 | KISS-GRAMMAR-6.5-0002 | `test_grammar_rebasing_is_additive_no_bump` |
 | KISS-GRAMMAR-6.5-0003 | `test_grammar_independent_cadence` |
@@ -1022,6 +1259,7 @@ KISS-Grammar clause.
 | KISS-GRAMMAR-6.7-0002 | `test_grammar_region_maps_to_semantics_dag` |
 | KISS-GRAMMAR-6.7-0003 | `test_grammar_op_identity_distinct_from_structure_key` |
 | KISS-GRAMMAR-6.7-0004 | `test_grammar_single_op_vocabulary_seam` |
+| KISS-GRAMMAR-6.7-0005 | `test_grammar_bare_ops_dag_needs_no_tag` |
 | KISS-GRAMMAR-6.8-0001 | `test_grammar_region_wire_form_field_order` |
 | KISS-GRAMMAR-6.8-0002 | `test_grammar_wire_integer_encoding` |
 | KISS-GRAMMAR-6.8-0003 | `test_grammar_wire_token_encoding` |
@@ -1031,6 +1269,10 @@ KISS-Grammar clause.
 | KISS-GRAMMAR-6.8-0007 | `test_grammar_wire_opattrs_blob_deferral` |
 | KISS-GRAMMAR-6.8-0008 | `test_grammar_wire_operand_role_tuple` |
 | KISS-GRAMMAR-6.8-0009 | `test_grammar_wire_excludes_synthesis_attrs` |
+| KISS-GRAMMAR-6.8-0010 | `test_grammar_wire_node_record_layout` |
+| KISS-GRAMMAR-6.8-0011 | `test_grammar_wire_extract_record_order` |
+| KISS-GRAMMAR-6.8-0012 | `test_grammar_tag_canonical_serialization` |
+| KISS-GRAMMAR-6.8-0013 | `test_grammar_wire_magic_and_schema_version` |
 | KISS-GRAMMAR-7.1-0001 | `test_grammar_mandatory_core_is_frozen_shape` |
 | KISS-GRAMMAR-7.1-0002 | `test_grammar_op_name_set_is_open_via_ops` |
 | KISS-GRAMMAR-7.1-0003 | `test_grammar_typed_decline_never_panic` |
@@ -1042,6 +1284,7 @@ KISS-Grammar clause.
 | KISS-GRAMMAR-8-0005 | `test_grammar_freeze_gate_foreign_reader` |
 | KISS-GRAMMAR-8-0006 | `test_grammar_freeze_gate_conform_suite_passes` |
 | KISS-GRAMMAR-8-0007 | `test_grammar_retire_by_floor` |
+| KISS-GRAMMAR-8-0008 | `test_grammar_opattrs_freeze_precondition` |
 
 Every normative clause above appears in this matrix exactly once; the KISS-Conform build
 MUST fail if any clause ID lacks a passing mapped test (bidirectional traceability). Clause
@@ -1064,7 +1307,7 @@ kept in sync by the traceability lint.
   self-certified implementations on request as resources permit.
 - **Ratifier / maturity transitions:** the AUDIT role (not DESIGN) signs each maturity
   transition; the Draft→Frozen transition requires the freeze gate of §8-0004 / §8-0005 /
-  §8-0006 (umbrella §5.3).
+  §8-0006 / §8-0008 (umbrella §5.3).
 - **License:** this specification is dedicated to the public domain under CC0 1.0 Universal;
   reference crates are MIT-OR-Apache-2.0; the KISS-Conform suite is permissive-to-run. Per
   the umbrella mark policy (umbrella §9.3), a modified conformance suite does not back a
@@ -1081,7 +1324,11 @@ kept in sync by the traceability lint.
 
 **A.1 Golden region vectors.** Each golden vector below cites the upstream versions it was
 authored against and carries its exact left-to-right region-wire-form bytes (umbrella §4.3),
-so a foreign reader can emit or parse it independently (§8-0005).
+so a foreign reader can emit or parse it independently (§8-0005). The region-level field
+order is normative in §6.8-0001; the per-node-record layout is normative in §6.8-0010; the
+magic and in-band frozen-shape schema version prefix is normative in §6.8-0013 (these bytes
+are not merely illustrative). The illustrative frozen-shape schema version stamped below is
+`1`.
 
 *Vector G1 — the three-input elementwise fusion of §2.3 (`out = (a * b) + c`).* Authored
 against `ops_version = "1"`, `classify_version = "1"` (illustrative version tokens; a real
@@ -1089,12 +1336,13 @@ vector cites the concrete KISS-Ops / KISS-Classify version strings). This is the
 golden vector for `test_grammar_region_is_single_rooted_dag`,
 `test_grammar_root_carries_identity`, `test_grammar_interior_no_external_consumer_guard`,
 `test_grammar_commutative_canonicalization`, `test_grammar_canonical_operand_order_key`,
-`test_grammar_bind_set_covers_inputs`, and the wire-form tests of §6.8. Its root is `add`
-(`consumers = ROOT`); its interior `mul` carries `consumers = INTERIOR`; the bound-input set
-is `{0, 1, 2}` = `[0, 3)` with `n_inputs = 3`. Under the canonical operand order (§6.4-0010)
-a `Bind` subtree (`0x00…`) sorts before an `Op` subtree (`0x01…`), so `add`'s operands
-canonicalize to `[Bind(2), mul]` and `mul`'s to `[Bind(0), Bind(1)]`; the canonical
-node-table order (§6.8-0004, post-order) is therefore:
+`test_grammar_bind_set_covers_inputs`, `test_grammar_wire_node_record_layout`,
+`test_grammar_wire_magic_and_schema_version`, and the other wire-form tests of §6.8. Its
+root is `add` (`consumers = ROOT`); its interior `mul` carries `consumers = INTERIOR`; the
+bound-input set is `{0, 1, 2}` = `[0, 3)` with `n_inputs = 3`. Under the canonical operand
+order (§6.4-0010) a `Bind` subtree (`0x00…`) sorts before an `Op` subtree (`0x01…`), so
+`add`'s operands canonicalize to `[Bind(2), mul]` and `mul`'s to `[Bind(0), Bind(1)]`; the
+canonical node-table order (§6.8-0004, post-order) is therefore:
 
 | index | node | operands (indices) | consumers |
 |---|---|---|---|
@@ -1105,15 +1353,18 @@ node-table order (§6.8-0004, post-order) is therefore:
 | 4 | `Op "add"` (root) | `[0, 3]` | `ROOT` |
 
 Its exact wire bytes (hex, left to right; `u16`/`u32` little-endian; each `Op` here has an
-empty OpAttrs blob `00 00` and an empty operand-role tuple `00 00` because both operands are
-plain data with unconstrained dtype in this illustrative vector; `extract_count = 0`):
+empty OpAttrs blob `00 00` and an empty operand-role tuple `00 00` — the canonical
+omit-trailing-defaults form of §6.1-0008/§6.8-0008, because both operands of each node are
+unconstrained `(data, *)` in this illustrative vector; `extract_count = 0`):
 
 ```
+4B 47 52 4D                                  magic = "KGRM"
+01 00                                        frozen_shape_schema_version = 1
 03 00 00 00                                  n_inputs = 3
 01 00 31                                     ops_version = "1"
 01 00 31                                     classify_version = "1"
 05 00 00 00                                  node_count = 5
-00 02 00 00 00                               node0: Bind(2)
+00 02 00 00 00                               node0: Bind(2)  (kind 0x00, input_index 2)
 00 00 00 00 00                               node1: Bind(0)
 00 01 00 00 00                               node2: Bind(1)
 01 03 00 6D 75 6C 00 00 00 00 00 02 00 01 00 00 00 02 00 00 00
@@ -1127,37 +1378,86 @@ plain data with unconstrained dtype in this illustrative vector; `extract_count 
 00 00                                        extract_count = 0
 ```
 
-The alternative authoring `c + a*b` canonicalizes to the **identical** byte sequence,
-demonstrating the reproducible-emission guarantee of §6.4-0005 / §6.4-0010.
+Each `Op` record above follows the §6.8-0010 order (kind, op_name, consumers, opattrs,
+operand-role tuple, operand_count, operand indices); each `Bind` record follows the
+§6.8-0010 order (kind, input_index). The alternative authoring `c + a*b` canonicalizes to
+the **identical** byte sequence, demonstrating the reproducible-emission guarantee of
+§6.4-0005 / §6.4-0010 / §6.4-0011.
 
 *Vector G2 — the load-bearing `gather` of §2.4.* Authored against `ops_version = "1"`,
-`classify_version = "1"`. A one-node region (`n_inputs = 2`: a data input and an index
-input); its single node is `Op "gather"` with `consumers = ROOT`, a non-empty OpAttrs blob
-carrying `axis = k` and OOB policy `clamp` (whose bytes are the **KISS-Ops OpAttrs wire
-encoding**, embedded length-prefixed per §6.8-0007 — cited from KISS-Ops, not defined here),
-and the operand-role tuple `[(data, *), (index, u32)]` encoded per §6.8-0008 (role tokens
-`data`/`index` from the KISS-Ops operand-role set, dtype `*` = the wildcard byte `0x2A`,
-dtype `u32` a KISS-Classify token). Its operands are `Bind(0)` and `Bind(1)`. This vector
-drives `test_grammar_pattern_attrs_carry_opattrs`, `test_grammar_load_bearing_attr_guarded`,
+`classify_version = "1"`, and **gated** on the pinned KISS-Ops version's OpAttrs wire
+encoding being byte-frozen and default-resolved (§8-0008); its OpAttrs bytes are reproduced
+verbatim from, and cite, that KISS-Ops OpAttrs byte-determinism clause. A one-node region
+(`n_inputs = 2`: a data input and an index input); its single node is `Op "gather"` with
+`consumers = ROOT`, a non-empty OpAttrs blob carrying `axis = k` and OOB policy `clamp`
+(whose bytes are the **KISS-Ops OpAttrs wire encoding**, embedded length-prefixed per
+§6.8-0007 — cited from KISS-Ops, not defined here), and the operand-role tuple
+`[(data, *), (index, u32)]` encoded per §6.8-0008 (role tokens `data`/`index` from the
+KISS-Ops operand-role set, dtype `*` = the wildcard byte `0x2A`, dtype `u32` a KISS-Classify
+token). Because operand 1 (`(index, u32)`) differs from the default `(data, *)`, the
+canonical entry count is `k = 2` (§6.1-0008), so the tuple encodes both entries. Its operands
+are `Bind(0)` and `Bind(1)`. This vector drives
+`test_grammar_pattern_attrs_carry_opattrs`, `test_grammar_load_bearing_attr_guarded`,
 `test_grammar_oob_policy_from_ops`, `test_grammar_operand_role_tuple`,
-`test_grammar_dtype_role_wildcard_token`, and `test_grammar_wire_opattrs_blob_deferral`;
+`test_grammar_operand_role_tuple_canonical_form`, `test_grammar_dtype_role_wildcard_token`,
+`test_grammar_wire_opattrs_blob_deferral`, and `test_grammar_opattrs_freeze_precondition`;
 because its full bytes include the KISS-Ops-owned OpAttrs sub-block, its OpAttrs bytes are
-reproduced verbatim from the cited KISS-Ops version's OpAttrs vector.
+reproduced verbatim from the cited KISS-Ops version's OpAttrs vector (and are valid only once
+that upstream encoding is frozen, §8-0008).
 
 *Vector G3 — the tag-equality (default-attribute) vector.* Two authorings of a `gather` tag
 — one stating `axis = 0` explicitly, one omitting `axis` and relying on its KISS-Ops default
 of `0` — MUST canonicalize (§6.1-0007: defaults made explicit) to the **same** tag bytes and
-MUST compare equal; a third authoring with `axis = 1` MUST differ. Drives
-`test_grammar_canonical_tag_normal_form`.
+MUST compare equal; a third authoring with `axis = 1` MUST differ. Default resolution is
+owned upstream: the KISS-Ops OpAttrs wire encoding emits the defaulted `axis = 0` explicitly
+(§6.2-0006, §8-0008), so both authorings produce **identical** OpAttrs bytes and KISS-Grammar
+compares the opaque blob byte-exactly without interpreting the sub-vocabulary. The tags are
+compared in the dedicated **tag canonical serialization** of §6.8-0012 (op_name + OpAttrs
+blob + canonical operand-role tuple, carrying no region framing). Drives
+`test_grammar_canonical_tag_normal_form` and `test_grammar_tag_canonical_serialization`.
+
+*Vector G4 — the repeated-bind / structural-dedup vector (`out = a + a`, `n_inputs = 1`).*
+Authored against `ops_version = "1"`, `classify_version = "1"`. Its root `add`
+(`consumers = ROOT`) has both operands bound to input `0`; the two `Bind(0)` leaves
+canonicalize (§6.4-0003, §6.4-0011) to exactly **one** node-table entry, referenced twice, so
+the node table is index0 `Bind(0)`, index1 `Op "add"` (root) with operands `[0, 0]`. Its exact
+wire bytes:
+
+```
+4B 47 52 4D                                  magic = "KGRM"
+01 00                                        frozen_shape_schema_version = 1
+01 00 00 00                                  n_inputs = 1
+01 00 31                                     ops_version = "1"
+01 00 31                                     classify_version = "1"
+02 00 00 00                                  node_count = 2
+00 00 00 00 00                               node0: Bind(0)  (single shared entry)
+01 03 00 61 64 64 01 00 00 00 00 02 00 00 00 00 00 00 00 00 00
+                                             node1: Op "add" (root), consumers ROOT,
+                                             opattrs len0, roles count0,
+                                             operand_count 2, operands [0, 0]
+00 00                                        extract_count = 0
+```
+
+This vector drives `test_grammar_repeated_bind_is_node_identity` and
+`test_grammar_structural_dedup_and_repeated_bind` (that two authored `Bind(0)` leaves
+produce one table entry, `node_count = 2`, and a deterministic operand permutation).
+
+*Vector G5 — the DAG-shared-target extract vector.* A fusion in which a single scalar-bearing
+node is reachable from the root by more than one sequence of canonical operand indices; the
+extract record for that scalar param uses the **lexicographically-least** such path
+(§6.4-0007), and the region's extract records are emitted in ascending `param_slot` order
+(§6.8-0011). Drives `test_grammar_extract_channel_on_root`,
+`test_grammar_wire_extract_encoding`, and `test_grammar_wire_extract_record_order`.
 
 *Negative vectors.* A region binding a strict subset of `[0, n_inputs)` (`BindSetMismatch`,
 detectable only because `n_inputs` is declared, §6.4-0008), a region binding an index
 `≥ n_inputs`, a multi-output forest (§6.4-0009), an `op_name` naming no op in the pinned
 KISS-Ops version (§6.6-0004), an operand role token absent from the KISS-Ops operand-role set
-(§6.6-0005), a load-bearing attribute dropped (a `gather` with no axis guard), and a flavor
-expressed as a free-form flag rather than a distinct op name (§6.3-0002) — drive the §6.4 /
-§6.6 / §7.1 decline tests and form the adversarial-outsider battery for the foreign-reader
-freeze gate (§8-0005).
+(§6.6-0005), a load-bearing attribute dropped (a `gather` with no axis guard), a flavor
+expressed as a free-form flag rather than a distinct op name (§6.3-0002), and a byte stream
+whose leading magic is not `KGRM` or whose stamped frozen-shape schema version is unsupported
+(§6.8-0013) — drive the §6.4 / §6.6 / §6.8 / §7.1 decline tests and form the
+adversarial-outsider battery for the foreign-reader freeze gate (§8-0005).
 
 **A.2 Provenance / acknowledgments.** The region grammar (a single-rooted DAG of
 advertisable-op nodes over `Bind(input_index)` leaves, carried as the flat indexed node
@@ -1182,7 +1482,8 @@ KISS-Ops op-set addition reaches the advertisable surface by re-basing with no K
 frozen-shape schema bump (§6.5-0002, §8-0003) — even when the new op is commutative or
 introduces a new operand role. The frozen-shape schema version bumps only on a change to the
 field schema, a composition rule, the attribute-channel structure, or the region wire form
-(§8-0002). This is the mechanism by which a frozen grammar admits a still-growing op set.
+(§8-0002), and any such bump changes the in-band stamp of §6.8-0013. This is the mechanism by
+which a frozen grammar admits a still-growing op set.
 
 ---
 
