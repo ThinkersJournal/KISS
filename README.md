@@ -40,8 +40,8 @@ just-in-time generator, and neither is forced to adopt the parts it does not use
 
 | Sub-standard | Tier | Owns | Status |
 |---|---|---|---|
-| **KISS-Classify** | foundational | The vocabulary that describes *data*: dtypes, operand descriptors, layout/op-family tags, the specialization-cell identity (`structure_key`), and the all-hardware target-capability descriptor. | drafting next |
-| **KISS-Ops** | foundational | The vocabulary that describes *computation*: the op set, each op's pinned numeric semantics, each non-primitive op's reference decomposition, and the mandatory **primitive floor**. | drafting next |
+| **KISS-Classify** | foundational | The vocabulary that describes *data*: dtypes, operand descriptors, layout/op-family tags, the specialization-cell identity (`structure_key`), and the all-hardware target-capability descriptor. | **draft — [`spec/classify.md`](spec/classify.md)** |
+| **KISS-Ops** | foundational | The vocabulary that describes *computation*: the op set, each op's pinned numeric semantics, each non-primitive op's reference decomposition, and the mandatory **primitive floor**. | **draft — [`spec/ops.md`](spec/ops.md)** |
 | **KISS-Grammar** | middle | The advertisable-op surface: how an op tag maps to a KISS-Ops op name plus pattern/synthesis attributes, and how a frozen grammar admits a still-growing op set. | planned |
 | **KISS-Contract** | middle | The universal, vendor-neutral **kernel-contract** format — the seven-section document (identity, semantics, interface/ABI, dispatch, capabilities, guarantees, provenance) that tells a consumer what a kernel computes and exactly how to call it. Every provided kernel carries one. | planned |
 | **KISS-Announce** | protocol | The provider handshake and availability protocol: the fixed-layout, little-endian handshake envelope; version negotiation; the split capability bitset; the identity-only availability list; and the contract-query. | **draft — [`spec/announce.md`](spec/announce.md)** |
@@ -79,7 +79,9 @@ keeps the wire protocols stable while the vocabularies grow.
 | Path | Contents |
 |---|---|
 | [`spec/umbrella.md`](spec/umbrella.md) | The suite umbrella: purpose/scope, the nine sub-standards + DAG, conventions, the dual-document template, versioning/lifecycle + freeze gate, the capability/profile/extension model, governance, the conformance model, and legal. Informative throughout — every binding requirement lives in a sub-standard clause. |
-| [`spec/announce.md`](spec/announce.md) | **KISS-Announce**, the first sub-standard drafted: the handshake, availability, and contract-query protocol, with numbered normative clauses each mapped to a conformance test. |
+| [`spec/announce.md`](spec/announce.md) | **KISS-Announce**: the handshake, availability, and contract-query protocol, with numbered normative clauses each mapped to a conformance test. |
+| [`spec/classify.md`](spec/classify.md) | **KISS-Classify**, the foundational *data* vocabulary: the dtype set, operand descriptors, the `structure_key` specialization-cell identity, and the all-hardware `<namespace>:<capability-set>` target descriptor. |
+| [`spec/ops.md`](spec/ops.md) | **KISS-Ops**, the foundational *computation* vocabulary: the op set, pinned per-op numeric semantics, reference decompositions, the mandatory primitive floor, and the canonical determinism/fidelity enum. |
 | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 
