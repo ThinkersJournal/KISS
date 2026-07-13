@@ -48,7 +48,7 @@ just-in-time generator, and neither is forced to adopt the parts it does not use
 | **KISS-Synth / Provision** | protocol | The kernel-provision protocol: a consumer asks for a kernel by identity and receives `{artifact, contract}`, the provider building it on a cache miss. Just-in-time synthesis is the build-on-miss branch of the same request. | **draft — [`spec/synth.md`](spec/synth.md)** |
 | **KISS-Consume** | protocol | The recognition direction: lifting a kernel or source region into the op DAG as far as it goes, with a normative refusal taxonomy for the un-liftable remainder. | **draft — [`spec/consume.md`](spec/consume.md)** |
 | **KISS-Emit** | protocol | The generation direction: a complete partition of every lowering decision into "the neutral driver may spell it" versus "the emitter must supply it," plus the emit/consume round-trip tiers. | **draft — [`spec/emit.md`](spec/emit.md)** |
-| **KISS-Conform** | cross-cutting | Conformance: the bidirectional clause-to-test traceability matrix, the four test modalities, determinism-class-aware comparators, and the adversarial-outsider checklist that gates every freeze. | planned |
+| **KISS-Conform** | cross-cutting | Conformance: the bidirectional clause-to-test traceability matrix, the four test modalities, determinism-class-aware comparators, and the adversarial-outsider checklist that gates every freeze. | **draft — [`spec/conform.md`](spec/conform.md)** |
 
 The two **foundational vocabularies** (Classify = data, Ops = computation) sit at the
 bottom; everything else references them. See
@@ -87,6 +87,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/synth.md`](spec/synth.md) | **KISS-Synth / Provision**, the kernel-provision protocol: ask by identity → `{artifact, contract}` (built on a cache miss); the PRSP provision-success frame; the never-panic typed-decline taxonomy. |
 | [`spec/consume.md`](spec/consume.md) | **KISS-Consume**, the recognition direction: structure-based lifting into the KISS-Ops op DAG, the MECE refusal taxonomy, and the residue / lift-fraction. |
 | [`spec/emit.md`](spec/emit.md) | **KISS-Emit**, the generation direction: the complete driver-may-spell vs emitter-must-supply lowering partition, and the two-tier emit/consume round-trip. |
+| [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix (the build fails on any untested MUST), the four test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. |
 | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 

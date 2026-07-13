@@ -857,7 +857,7 @@ correspondence the sibling relies on).
   | §6.7-0004 | §6.6-0004 | Tier selected by determinism enum |
   | §6.7-0005 | §6.6-0005 | DAG siblings, no dependency edge |
 
-  *Test:* `test_conform_emit_consume_roundtrip_correspondence` (KISS-Conform
+  *Test:* `test_conform_emit_consume_correspondence_lint` (KISS-Conform
   cross-standard lint).
 
 - **KISS-EMIT-6.7-0009** — **Whole-kernel tier aggregation.** A whole-kernel tier-2
@@ -1037,7 +1037,7 @@ sync by the KISS-Conform lint.
 | KISS-EMIT-6.7-0005 | `test_emit_emit_consume_are_siblings_no_edge` |
 | KISS-EMIT-6.7-0006 | `test_emit_tier2_language_and_device_determinant` |
 | KISS-EMIT-6.7-0007 | `test_emit_op_dag_equality_defined` |
-| KISS-EMIT-6.7-0008 | `test_conform_emit_consume_roundtrip_correspondence` |
+| KISS-EMIT-6.7-0008 | `test_conform_emit_consume_correspondence_lint` |
 | KISS-EMIT-6.7-0009 | `test_emit_whole_kernel_tier2_requires_all_exact_byte` |
 | KISS-EMIT-6.8-0001 | `test_emit_decline_is_typed` |
 | KISS-EMIT-6.8-0002 | `test_emit_unsupported_dtype_declines` |
