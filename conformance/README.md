@@ -12,10 +12,12 @@ distinct from the specification text under `spec/`, which is CC0.
 
 ## What it verifies today
 
-Three of the four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
-**negative/decline vectors** (§6.7), and the **independent CPU-oracle differential**
-(§6.5) — under the determinism-class comparators of §6.8 (exact-byte and
-ULP-tolerance). Every golden vector is transcribed from the spec's own appendix.
+All four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
+**negative/decline vectors** (§6.7), the **independent CPU-oracle differential**
+(§6.5), and a **real on-device run** (§6.6) — under the determinism-class
+comparators of §6.8 (exact-byte, ULP-tolerance, and order-invariant). Every golden
+vector is transcribed from the spec's own appendix.
+**127 tests pass by default; 2 more on-device under `--features cuda`.**
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -45,34 +47,56 @@ ULP-tolerance). Every golden vector is transcribed from the spec's own appendix.
   a wrong implementation: an IEEE `fmax` mistakenly built with NaN-propagating
   `max_prop` is flagged by the corpus's NaN inputs, with every divergence pinned
   to a NaN operand. A harness that only passed correct code would prove nothing.
+- **Integer atoms** ([`integer`], Ops §6.10/§6.16): wrapping two's-complement
+  `add`/`sub`/`mul`/`neg`/`abs`, the bitwise atoms, and — the subtle ones —
+  **arithmetic** (signed) vs **logical** (unsigned) `shr`, out-of-range shift as
+  the single "target-defined" (`None`) case, and `popcount`/`clz`/`ctz` incl. at 0.
+- **Structural ops** ([`structural`], Ops §6.11): multi-element oracles for
+  `reduce` / `prefix_scan` / `gather` (skip/clamp/zero-fill OOB) / `scatter`
+  (assign/atomic-add/atomic-max/atomic-min), and the **order-invariant comparator**
+  (§6.8-0004) for the one nondeterministic op — FP scatter-atomic-add is invariant
+  to visit order only up to reassociation, so it's compared within a
+  contract-declared tolerance, not byte-for-byte. A differential *catches* a lossy
+  scatter, and the `max_prop`-reduction signed-zero-on-tie order-dependence is pinned.
+- **On-device real-kernel differential** ([`tests/device.rs`], §6.6; opt-in
+  `--features cuda`): a hand-written CUDA `fmax_ieee` kernel is compiled with `nvcc`
+  and run on the GPU over the corpus, differenced against the CPU oracle. On an
+  RTX 4070 it passes 16.9M pairs, and a negative control using CUDA's `fmaxf`
+  intrinsic is **caught** — it returns `+0.0` for `fmax_ieee(-0,+0)` where §6.15
+  pins `-0.0`. A real device kernel, proven to match the pinned semantics.
 
 These are the points at which KISS's claims are **proven on a machine** rather than
-asserted on paper: the identity primitive, the handshake, the newest wire encoding,
-and the numeric *semantics* — the bytes are right, the computation is right, and a
-randomized loop catches the mistakes.
+asserted on paper: the identity primitive, the handshake, the wire encodings, the
+numeric *semantics* across float and integer atoms and structural ops, and a real
+GPU kernel — the bytes are right, the computation is right on CPU and on device,
+and randomized loops catch the mistakes.
 
 ## Run
 
 ```sh
 cd conformance
-cargo test
+cargo test                     # 127 tests, CPU, no dependencies
+cargo test --features cuda     # + 2 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
-No dependencies (standard library only) — a conformance harness must share no
+No crate dependencies (standard library only) — a conformance harness must share no
 lowering code with any implementation under test (Conform §6.5), so it starts
-dependency-free.
+dependency-free. The `cuda` feature adds **no** crate dependency either: the
+on-device test shells out to `nvcc` and skips gracefully if it is absent, so the
+default build and CI stay GPU-free.
 
 ## Roadmap
 
 - **Phase 1–2 (done)** — golden + decline vectors for the three POD encodings
   (OpAttrs, `structure_key`, Announce envelope).
-- **Phase 3 (done, CPU)** — the independent CPU-oracle differential harness
-  (Conform §6.5): the scalar float primitive floor, plus a reproducible randomized
-  differential loop that catches a wrong implementation. Remaining: integer-atom
-  semantics (wrapping/bitwise), and structural (multi-element) op oracles.
-- **Phase 4** — the IR-DAG fuzzer emitting to every backend (Conform §6.6;
-  device-touching), and differencing a real *generated* kernel against the oracle
-  on-device.
+- **Phase 3 (done, CPU)** — the CPU-oracle differential (Conform §6.5): the float
+  primitive floor, the integer atoms, the structural ops (with the order-invariant
+  comparator), and reproducible randomized differential loops that catch bugs.
+- **Phase 4 (started, on-device)** — a real CUDA kernel differenced against the
+  oracle on the GPU (`fmax_ieee`, `--features cuda`). Remaining: more on-device ops
+  (fmin/relu/sign-bit), a shared corpus source (Rust emits, `.cu` consumes), and
+  differencing a real *generated* kernel from the reference generator, not a
+  hand-written one.
 
 ## Keeping the vectors in sync
 

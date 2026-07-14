@@ -1,2 +1,10 @@
 /target
 Cargo.lock
+
+# nvcc / device-run build artifacts (the on-device test compiles to a temp dir,
+# but a manual cuda/build_and_run.* invocation may leave binaries behind)
+*.exe
+*.obj
+*.pdb
+*.exp
+*.lib

@@ -14,3 +14,9 @@ publish = false
 [dependencies]
 # stdlib only — a conformance harness must share no lowering code with any
 # implementation under test (KISS-Conform §6.5), and starts dependency-free.
+
+[features]
+# Opt-in on-device real-kernel differential slice (KISS-Conform §6.6). Off by
+# default so `cargo test` needs no GPU/CUDA; enable with `--features cuda`. Adds
+# no crate dependency — the test shells out to `nvcc` and gates on it at runtime.
+cuda = []

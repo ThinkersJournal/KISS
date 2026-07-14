@@ -20,8 +20,10 @@
 
 pub mod announce;
 pub mod differential;
+pub mod integer;
 pub mod opattrs;
 pub mod semantics;
+pub mod structural;
 pub mod structure_key;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
