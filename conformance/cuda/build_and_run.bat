@@ -21,6 +21,8 @@ setlocal EnableDelayedExpansion
 
 if "%KISS_CUDA_ARCH%"=="" set KISS_CUDA_ARCH=sm_89
 if "%KISS_VCVARS_VER%"=="" set KISS_VCVARS_VER=14.29
+REM KISS_CUDA_SRC selects the .cu to build (default the hand-written fmax slice).
+if "%KISS_CUDA_SRC%"=="" set KISS_CUDA_SRC=fmax_ieee.cu
 
 set SCRIPT_DIR=%~dp0
 
@@ -41,8 +43,8 @@ if errorlevel 1 (
 )
 
 cd /d "%SCRIPT_DIR%"
-set OUT=%TEMP%\kiss_fmax_ieee_%RANDOM%.exe
-nvcc -O2 -arch=%KISS_CUDA_ARCH% %* fmax_ieee.cu -o "%OUT%"
+set OUT=%TEMP%\kiss_ondevice_%RANDOM%.exe
+nvcc -O2 -arch=%KISS_CUDA_ARCH% %* %KISS_CUDA_SRC% -o "%OUT%"
 if errorlevel 1 (
   echo ERROR: nvcc compile failed
   exit /b 2

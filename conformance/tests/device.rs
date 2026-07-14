@@ -67,9 +67,11 @@ fn nvcc_present() -> bool {
         .unwrap_or(false)
 }
 
-/// Build+run the on-device program via the platform driver script, forwarding any
-/// extra args straight to `nvcc`. Returns `(exit_code, combined stdout+stderr)`.
-fn run_ondevice(extra_nvcc_args: &[&str]) -> (i32, String) {
+/// Build+run one on-device program (`src`, a `.cu` under `cuda/`) via the platform
+/// driver script, forwarding any extra args straight to `nvcc`. Returns
+/// `(exit_code, combined stdout+stderr)`. The driver selects the source via the
+/// `KISS_CUDA_SRC` env var (default `fmax_ieee.cu`).
+fn run_ondevice(src: &str, extra_nvcc_args: &[&str]) -> (i32, String) {
     // Serialize the whole compile→run→cleanup window (see ONDEVICE_LOCK). Recover a
     // poisoned lock: a panic in the *other* test already fails that test, and this
     // one still wants its own clean sequential run.
@@ -89,6 +91,7 @@ fn run_ondevice(extra_nvcc_args: &[&str]) -> (i32, String) {
     for a in extra_nvcc_args {
         cmd.arg(a);
     }
+    cmd.env("KISS_CUDA_SRC", src);
     cmd.current_dir(&dir);
     let out = cmd.output().expect("failed to spawn on-device build+run driver");
     let mut s = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -104,7 +107,7 @@ fn fmax_ieee_matches_oracle_on_device() {
         eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
         return;
     }
-    let (code, log) = run_ondevice(&[]);
+    let (code, log) = run_ondevice("fmax_ieee.cu", &[]);
     assert_ne!(
         code, EXIT_ENV_ERROR,
         "on-device slice hit a CUDA/environment error (exit 2), not a semantics result:\n{log}"
@@ -125,7 +128,7 @@ fn fmaxf_intrinsic_is_caught_on_device() {
         eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
         return;
     }
-    let (code, log) = run_ondevice(&["-DUSE_FMAXF_INTRINSIC"]);
+    let (code, log) = run_ondevice("fmax_ieee.cu", &["-DUSE_FMAXF_INTRINSIC"]);
     assert_ne!(
         code, EXIT_ENV_ERROR,
         "negative control hit a CUDA/environment error (exit 2):\n{log}"
@@ -133,5 +136,36 @@ fn fmaxf_intrinsic_is_caught_on_device() {
     assert!(
         code == 1 && log.contains("FAIL"),
         "negative control (fmaxf) was NOT caught — the on-device slice lacks teeth (exit {code}):\n{log}"
+    );
+}
+
+/// The closed loop: a kernel EMITTED BY THE REFERENCE GENERATOR (baracuda-kernelgen)
+/// — not hand-written — is proven, on real hardware, to implement the KISS-pinned
+/// `relu` semantics (§2.3/§6.15: `x<0?0:x`, NaN-propagating and -0.0-preserving).
+/// The generated `relu_add` kernel (`cuda/generated/`, see PROVENANCE.md) must match
+/// the KISS `relu(a+b)` reference bit-for-bit over all 4112² ordered corpus pairs
+/// (`KISS_REF divergences=0`) AND diverge from the naive `max(a+b,0)` (which scrubs
+/// NaN / normalizes -0.0) so the check has teeth (`NAIVE_REF divergences>0`). A pass
+/// certifies the reference generator conformant for this op; this is where "the spec
+/// is testable" becomes "the reference generator is conformant."
+#[test]
+fn generated_relu_add_matches_kiss_on_device() {
+    if !nvcc_present() {
+        eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
+        return;
+    }
+    let (code, log) = run_ondevice("generated_relu_add_diff.cu", &[]);
+    assert_ne!(
+        code, EXIT_ENV_ERROR,
+        "generated-kernel differential hit a CUDA/environment error (exit 2):\n{log}"
+    );
+    // The .cu returns 0 iff KISS divergences == 0 AND naive divergences > 0.
+    assert!(
+        code == 0 && log.contains("PASS") && log.contains("KISS_REF  divergences=0 of"),
+        "the GENERATED relu_add kernel diverged from the KISS §6.15 relu oracle (exit {code}):\n{log}"
+    );
+    assert!(
+        !log.contains("NAIVE_REF divergences=0 of"),
+        "the generated kernel matched the naive max(x,0) — the differential lacks teeth:\n{log}"
     );
 }

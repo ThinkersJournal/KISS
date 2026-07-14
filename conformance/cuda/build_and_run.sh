@@ -11,9 +11,10 @@
 # Env knobs: KISS_CUDA_ARCH (default sm_89).
 set -euo pipefail
 ARCH="${KISS_CUDA_ARCH:-sm_89}"
+SRC="${KISS_CUDA_SRC:-fmax_ieee.cu}"   # which .cu to build (default the fmax slice)
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUT="$(mktemp -u)_kiss_fmax_ieee"
-if ! nvcc -O2 -arch="$ARCH" "$@" "$DIR/fmax_ieee.cu" -o "$OUT"; then
+OUT="$(mktemp -u)_kiss_ondevice"
+if ! nvcc -O2 -arch="$ARCH" "$@" "$DIR/$SRC" -o "$OUT"; then
   echo "ERROR: nvcc compile failed"
   exit 2
 fi

@@ -17,7 +17,7 @@ All four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
 (§6.5), and a **real on-device run** (§6.6) — under the determinism-class
 comparators of §6.8 (exact-byte, ULP-tolerance, and order-invariant). Every golden
 vector is transcribed from the spec's own appendix.
-**127 tests pass by default; 2 more on-device under `--features cuda`.**
+**127 tests pass by default; 3 more on-device under `--features cuda`.**
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -63,7 +63,7 @@ vector is transcribed from the spec's own appendix.
   and run on the GPU over the corpus, differenced against the CPU oracle. On an
   RTX 4070 it passes 16.9M pairs, and a negative control using CUDA's `fmaxf`
   intrinsic is **caught** — it returns `+0.0` for `fmax_ieee(-0,+0)` where §6.15
-  pins `-0.0`. A real device kernel, proven to match the pinned semantics.
+  pins `-0.0`. **And the loop closes**: a `relu_add` kernel *emitted by the reference generator* (`baracuda-kernelgen`, not hand-written — see `cuda/generated/PROVENANCE.md`) matches the KISS `relu(a+b)` bit-for-bit over all 16.9M pairs and diverges from the naive `max(x,0)` at 172,266 of them — certifying the reference generator conformant for this op, on real silicon.
 
 These are the points at which KISS's claims are **proven on a machine** rather than
 asserted on paper: the identity primitive, the handshake, the wire encodings, the
@@ -76,7 +76,7 @@ and randomized loops catch the mistakes.
 ```sh
 cd conformance
 cargo test                     # 127 tests, CPU, no dependencies
-cargo test --features cuda     # + 2 on-device tests (needs nvcc + an NVIDIA GPU)
+cargo test --features cuda     # + 3 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
 No crate dependencies (standard library only) — a conformance harness must share no
@@ -92,11 +92,11 @@ default build and CI stay GPU-free.
 - **Phase 3 (done, CPU)** — the CPU-oracle differential (Conform §6.5): the float
   primitive floor, the integer atoms, the structural ops (with the order-invariant
   comparator), and reproducible randomized differential loops that catch bugs.
-- **Phase 4 (started, on-device)** — a real CUDA kernel differenced against the
-  oracle on the GPU (`fmax_ieee`, `--features cuda`). Remaining: more on-device ops
-  (fmin/relu/sign-bit), a shared corpus source (Rust emits, `.cu` consumes), and
-  differencing a real *generated* kernel from the reference generator, not a
-  hand-written one.
+- **Phase 4 (on-device, loop closed)** — real CUDA kernels differenced against
+  the oracle on the GPU (`--features cuda`): a hand-written `fmax_ieee`, and — the
+  closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
+  conformant on-device. Remaining: more generated ops and cells, and a single-source
+  corpus (Rust emits → `.cu` consumes) so the two can never drift.
 
 ## Keeping the vectors in sync
 
