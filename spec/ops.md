@@ -459,12 +459,19 @@ reader holding only KISS-Ops plus the umbrella.
 - **IEEE 754-2019** — floating-point arithmetic, comparison predicates, `maxNum` /
   `minNum`, rounding-direction attributes, signed zero, quiet/signaling NaN, and
   subnormals. The per-op float semantics of §6 are pinned against this reference for the
-  IEEE-754 dtypes (`f16`, `f32`, `f64`) only; `bf16` and the FP8 formats
-  `e4m3` / `e5m2` are **not** IEEE-754 formats and are pinned explicitly in §6.16.
+  IEEE-754 dtypes (`f16`, `f32`, `f64`) only; `bf16`, the FP8 formats
+  `e4m3` / `e5m2`, and the FP4/FP6 formats `e2m1` / `e2m3` / `e3m2` are **not** IEEE-754
+  formats and are pinned explicitly in §6.16.
 - **Open Compute Project (OCP) 8-bit Floating Point Specification (OFP8), FP8 formats
   E4M3 and E5M2** — the normative reference for the `e4m3` and `e5m2` encodings,
   saturation, and NaN/infinity conventions restated in §6.16. `bf16` (bfloat16) is
   pinned directly in §6.16 as a truncated binary32 layout with round-to-nearest-even.
+- **Open Compute Project (OCP) Microscaling Formats (MX) Specification, v1.0, element
+  formats E2M1, E2M3 and E3M2** — the normative reference for the `e2m1` (FP4), `e2m3`
+  and `e3m2` (FP6) element encodings, subnormals, saturation, and the no-infinity /
+  no-NaN conventions restated in §6.16. Only the per-element numeric meaning is imported;
+  the MX **block/microscaling** wrapper and the sub-byte storage packing of a bare element
+  are out of scope here and deferred to the block-format RFC.
 - **Two's-complement integer representation** — the integer model for wrapping
   arithmetic, arithmetic/logical shift, and the bitwise atoms (§6.4, §6.10).
 - **KISS Umbrella Specification** — the suite conventions: the RFC-2119 keyword
@@ -610,9 +617,9 @@ verbatim, everywhere).
   (`f16` binary16, `f32` binary32, `f64` binary64), the arithmetic MUST follow
   IEEE 754-2019 for that operation and dtype, except where a specific op clause below
   pins a departure (e.g. the NaN-suppressing min/max family, the declared-ULP
-  transcendental atoms). For the non-IEEE-754 float dtypes `bf16`, `e4m3`, and `e5m2`,
-  the arithmetic MUST follow the encodings, rounding, saturation, and NaN/infinity
-  conventions pinned in §6.16 (these formats are **not** governed by IEEE 754-2019).
+  transcendental atoms). For the non-IEEE-754 float dtypes `bf16`, `e4m3`, `e5m2`, `e2m1`,
+  `e2m3`, and `e3m2`, the arithmetic MUST follow the encodings, rounding, saturation, and
+  NaN/infinity conventions pinned in §6.16 (these formats are **not** governed by IEEE 754-2019).
   *Test:* `test_ops_float_ieee754`.
 - **KISS-OPS-6.2-0002** — For every op whose compute dtype is an integer dtype (`s8`,
   `s16`, `u8`, `u16`, `u32`, `u64`, `i32`, `i64`, `s4`, `u4`), integer `add`/`sub`/`mul` MUST be **wrapping** two's-
@@ -814,9 +821,9 @@ this section-intro paragraph is an informative pointer to it):
   of a NaN `b` are carried into the result. *Test:* `test_ops_copysign_raw_bit`.
 - **KISS-OPS-6.9-0003** — `nextafter` MUST produce the next representable value after `a`
   toward `b` in the **dtype's own** representation lattice; `nextafter` MUST reject `f16`,
-  `bf16`, `e4m3`, and `e5m2` operands (each carries the identical promotion hazard —
-  stepping in a promoted `f32` yields the wrong neighbor in the narrow lattice) with a
-  typed decline. *Test:* `test_ops_nextafter_own_lattice`.
+  `bf16`, `e4m3`, `e5m2`, `e2m1`, `e2m3`, and `e3m2` operands (each carries the identical
+  promotion hazard — stepping in a promoted `f32` yields the wrong neighbor in the narrow
+  lattice) with a typed decline. *Test:* `test_ops_nextafter_own_lattice`.
 
 ### 6.10 Bitwise atoms
 
@@ -1216,6 +1223,9 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `bool` | 8 | bool | 1 byte; `0`=false, any non-zero byte=true; ops normalize to strictly `0`/`1` |
 | `e4m3` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
 | `e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e2m1` | 4 | float | FP4 E2M1 (1 sign, 2 exp, 1 mantissa), bias 1; max finite ±6; subnormals; **no infinities**; **no NaN**; conversion saturates to max-finite, round-half-to-even (OCP MX v1.0) |
+| `e2m3` | 6 | float | FP6 E2M3 (1 sign, 2 exp, 3 mantissa), bias 1; max finite ±7.5; subnormals; **no infinities**; **no NaN**; conversion saturates to max-finite, round-half-to-even (OCP MX v1.0) |
+| `e3m2` | 6 | float | FP6 E3M2 (1 sign, 3 exp, 2 mantissa), bias 3; max finite ±28; subnormals; **no infinities**; **no NaN**; conversion saturates to max-finite, round-half-to-even (OCP MX v1.0) |
 | `s4` | 4 | int | signed 4-bit, range [−8,+7]; packed pair per byte, low nibble = even logical index, sign-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `u4` | 4 | uint | unsigned 4-bit, range [0,15]; packed pair per byte, low nibble = even index, zero-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `b1` | 1 | uint | 1-bit binary-GEMM operand; storage packing (8 bits/byte, LSB = lowest logical index) **owned normatively by the data-vocabulary sub-standard §6.1-0008/0009** and restated here informatively; the **xor+popcount accumulation to raw `s32` output** is the Ops-owned computation semantics |
@@ -1267,6 +1277,24 @@ shared naming convention spelled identically in both foundational vocabularies.
   complex-arithmetic op family of §6.18, every member of which is non-primitive and
   decomposes into the real primitive floor (no new primitive is introduced, §6.18-0002).
   *Test:* `test_ops_complex_storage_layout`.
+- **KISS-OPS-6.16-0008** — `e2m1` MUST be encoded per OCP MX v1.0 as 1-sign / 2-exp /
+  1-mantissa (bias 1) with maximum finite magnitude ±6, subnormals, **no** infinity
+  encoding, and **no** NaN encoding; conversion into `e2m1` MUST saturate to the maximum
+  finite magnitude under round-half-to-even. The sub-byte **storage packing** of a bare,
+  un-blocked `e2m1` element is **not** pinned here and is deferred to the microscaling
+  block-format RFC. *Test:* `test_ops_e2m1_layout`.
+- **KISS-OPS-6.16-0009** — `e2m3` MUST be encoded per OCP MX v1.0 as 1-sign / 2-exp /
+  3-mantissa (bias 1) with maximum finite magnitude ±7.5, subnormals, **no** infinity
+  encoding, and **no** NaN encoding; conversion into `e2m3` MUST saturate to the maximum
+  finite magnitude under round-half-to-even. The sub-byte **storage packing** of a bare,
+  un-blocked `e2m3` element is **not** pinned here and is deferred to the microscaling
+  block-format RFC. *Test:* `test_ops_e2m3_layout`.
+- **KISS-OPS-6.16-0010** — `e3m2` MUST be encoded per OCP MX v1.0 as 1-sign / 3-exp /
+  2-mantissa (bias 3) with maximum finite magnitude ±28, subnormals, **no** infinity
+  encoding, and **no** NaN encoding; conversion into `e3m2` MUST saturate to the maximum
+  finite magnitude under round-half-to-even. The sub-byte **storage packing** of a bare,
+  un-blocked `e3m2` element is **not** pinned here and is deferred to the microscaling
+  block-format RFC. *Test:* `test_ops_e3m2_layout`.
 
 ### 6.17 Compute-fidelity (math-precision) attribute
 
@@ -2114,6 +2142,9 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0005 | `test_ops_e5m2_layout` |
 | KISS-OPS-6.16-0006 | `test_ops_integer_dtype_layouts` |
 | KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
+| KISS-OPS-6.16-0008 | `test_ops_e2m1_layout` |
+| KISS-OPS-6.16-0009 | `test_ops_e2m3_layout` |
+| KISS-OPS-6.16-0010 | `test_ops_e3m2_layout` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
 | KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
