@@ -90,6 +90,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix (the build fails on any untested MUST), the four test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. |
 | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
+| [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
 
 ## How to read a KISS sub-standard
 
