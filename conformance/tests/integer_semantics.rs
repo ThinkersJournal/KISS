@@ -18,9 +18,12 @@ fn test_ops_add_sub_mul_wrapping() {
     // signed MAX+1 wraps to MIN (§6.2-0002); unsigned MAX+1 wraps to 0.
     assert_eq!(add(i8::MAX, 1i8), i8::MIN);
     assert_eq!(add(u8::MAX, 1u8), 0u8);
+    assert_eq!(add(i16::MAX, 1i16), i16::MIN); // s16 wraps at 16 bits
+    assert_eq!(add(u16::MAX, 1u16), 0u16); // u16 wraps at 16 bits
     assert_eq!(add(i32::MAX, 1i32), i32::MIN);
     assert_eq!(add(u32::MAX, 1u32), 0u32);
     assert_eq!(add(i64::MAX, 1i64), i64::MIN);
+    assert_eq!(add(u64::MAX, 1u64), 0u64); // u64 wraps at 64 bits
 
     // unsigned 0-1 = unsigned MAX (all ones); signed MIN-1 = MAX.
     assert_eq!(sub(0u8, 1u8), u8::MAX);
@@ -60,9 +63,11 @@ fn test_ops_neg_integer() {
 #[test]
 fn test_ops_int_neg_abs_wrap() {
     assert_eq!(neg(i8::MIN), i8::MIN);
+    assert_eq!(neg(i16::MIN), i16::MIN); // s16 boundary wrap
     assert_eq!(neg(i32::MIN), i32::MIN);
     assert_eq!(neg(i64::MIN), i64::MIN);
     assert_eq!(abs(i8::MIN), i8::MIN);
+    assert_eq!(abs(i16::MIN), i16::MIN); // s16 boundary wrap
     assert_eq!(abs(i32::MIN), i32::MIN);
     assert_eq!(abs(i64::MIN), i64::MIN);
     // ordinary abs, and the unsigned identity.
@@ -216,21 +221,37 @@ fn test_ops_popcount_clz_ctz() {
     assert_eq!(ctz(0x8000_0000u32), 31);
 }
 
-// KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. u64 and
-// 16-bit tokens are intentionally NOT present (open question resolved: u64 out).
+// KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
+// now includes the 16-bit tokens `s16`/`u16` and 64-bit unsigned `u64` (the
+// former open question is resolved the other way: they are IN, made
+// compute-operable by the §6.16 bit layouts + §6.2-0002 wrapping arithmetic).
 #[test]
 fn test_ops_integer_dtype_tokens() {
     assert_eq!(<i8 as IntDtype>::dtype_token(), "s8");
+    assert_eq!(<i16 as IntDtype>::dtype_token(), "s16");
     assert_eq!(<u8 as IntDtype>::dtype_token(), "u8");
+    assert_eq!(<u16 as IntDtype>::dtype_token(), "u16");
     assert_eq!(<i32 as IntDtype>::dtype_token(), "i32");
     assert_eq!(<u32 as IntDtype>::dtype_token(), "u32");
+    assert_eq!(<u64 as IntDtype>::dtype_token(), "u64");
     assert_eq!(<i64 as IntDtype>::dtype_token(), "i64");
+    // §6.16 pinned bit widths for the three additions.
     assert_eq!(<i8 as IntDtype>::BITS, 8);
+    assert_eq!(<i16 as IntDtype>::BITS, 16);
+    assert_eq!(<u16 as IntDtype>::BITS, 16);
+    assert_eq!(<u64 as IntDtype>::BITS, 64);
     assert_eq!(<i64 as IntDtype>::BITS, 64);
+    // signedness selects the two's-complement (s16) vs plain-unsigned (u16/u64) path.
+    assert!(<i16 as IntDtype>::is_signed());
+    assert!(!<u16 as IntDtype>::is_signed());
+    assert!(!<u64 as IntDtype>::is_signed());
     assert!(<i32 as IntDtype>::is_signed());
     assert!(!<u32 as IntDtype>::is_signed());
     // to_bits_u64 reinterprets (does NOT sign-extend) the two's-complement pattern.
     assert_eq!((-1i8).to_bits_u64(), 0xFF);
+    assert_eq!((-1i16).to_bits_u64(), 0xFFFF);
     assert_eq!((-1i32).to_bits_u64(), 0xFFFF_FFFF);
     assert_eq!((-1i64).to_bits_u64(), u64::MAX);
+    assert_eq!(u16::MAX.to_bits_u64(), 0xFFFF);
+    assert_eq!(u64::MAX.to_bits_u64(), u64::MAX);
 }

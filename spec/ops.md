@@ -615,7 +615,7 @@ verbatim, everywhere).
   conventions pinned in §6.16 (these formats are **not** governed by IEEE 754-2019).
   *Test:* `test_ops_float_ieee754`.
 - **KISS-OPS-6.2-0002** — For every op whose compute dtype is an integer dtype (`s8`,
-  `u8`, `u32`, `i32`, `i64`, `s4`, `u4`), integer `add`/`sub`/`mul` MUST be **wrapping** two's-
+  `s16`, `u8`, `u16`, `u32`, `u64`, `i32`, `i64`, `s4`, `u4`), integer `add`/`sub`/`mul` MUST be **wrapping** two's-
   complement modulo `2^bitwidth`, and MUST NOT be undefined-behavior on overflow and
   MUST NOT saturate. *Test:* `test_ops_int_wrapping`.
 - **KISS-OPS-6.2-0003** — For every **primitive-floor** op not explicitly pinned as
@@ -1206,10 +1206,13 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `f32` | 32 | float | IEEE-754 binary32 storage; **pure storage** — compute fidelity is the MathPrecision attribute (§6.17), not a dtype property |
 | `f64` | 64 | float | IEEE-754 binary64 (1 sign, 11 exp, 52 mantissa), bias 1023 |
 | `s8` | 8 | int | signed 8-bit two's-complement |
+| `s16` | 16 | int | signed 16-bit two's-complement |
 | `u8` | 8 | uint | unsigned 8-bit; also the physical storage of `bool` |
+| `u16` | 16 | uint | unsigned 16-bit |
 | `i32` | 32 | int | signed 32-bit two's-complement |
 | `i64` | 64 | int | signed 64-bit two's-complement |
 | `u32` | 32 | uint | unsigned 32-bit two's-complement; **ordinary** storage/compute dtype (§6.2-0007); MAY serve the index-operand role (§6.11-0012) |
+| `u64` | 64 | uint | unsigned 64-bit |
 | `bool` | 8 | bool | 1 byte; `0`=false, any non-zero byte=true; ops normalize to strictly `0`/`1` |
 | `e4m3` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
 | `e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
@@ -1241,7 +1244,7 @@ shared naming convention spelled identically in both foundational vocabularies.
   NaN encodings; conversion into `e5m2` MUST saturate to the maximum finite magnitude
   under round-half-to-even. *Test:* `test_ops_e5m2_layout`.
 - **KISS-OPS-6.16-0006** — The integer dtypes MUST use the pinned layouts:
-  `s8`/`i32`/`i64` two's-complement; `u8`/`u32` unsigned (`u32` an ordinary unsigned dtype,
+  `s8`/`s16`/`i32`/`i64` two's-complement; `u8`/`u16`/`u32`/`u64` unsigned (`u32` an ordinary unsigned dtype,
   §6.2-0007; index-only-ness is an operand role, §6.11-0012); `bool` one byte normalized to
   `0`/`1`. The sub-byte **storage packing**
   conventions — `s4`/`u4` packed two-per-byte with the low nibble at the even logical

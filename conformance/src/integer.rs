@@ -12,8 +12,8 @@
 //! executable, so an implementation under test can be differenced against them.
 //!
 //! Dtype coverage is the §6.16-0006 / §6.2-0002 **ordinary** integer set:
-//! `s8`→[`i8`], `u8`→[`u8`], `i32`→[`i32`], `u32`→[`u32`], `i64`→[`i64`]. The
-//! pinned set has no `u64` and no 16-bit token; `i32` is the signed-32 token.
+//! `s8`→[`i8`], `s16`→[`i16`], `u8`→[`u8`], `u16`→[`u16`], `i32`→[`i32`],
+//! `u32`→[`u32`], `u64`→[`u64`], `i64`→[`i64`]; `i32` is the signed-32 token.
 //! Sub-byte `s4`/`u4` (packing owned by the data-vocabulary sub-standard,
 //! §6.16-0006) and `b1` binary-GEMM (a §6.16-0006 reduction, not an atom) are
 //! deliberately out of this slice.
@@ -33,7 +33,7 @@ use crate::differential::SplitMix64;
 
 /// The bit-pattern operations KISS-Ops §6.4 / §6.10 pin over an integer dtype,
 /// transcribed one-for-one onto a concrete Rust primitive. Implemented for the
-/// pinned ordinary integer set only (`i8`/`u8`/`i32`/`u32`/`i64`); there is no
+/// pinned ordinary integer set only (`i8`/`i16`/`u8`/`u16`/`i32`/`u32`/`u64`/`i64`); there is no
 /// public constructor beyond these impls, so the free functions below are total
 /// over exactly the pinned dtypes and reject everything else at compile time
 /// (§6.10-0001, enforced structurally).
@@ -49,7 +49,7 @@ pub trait IntDtype: Copy + Eq + core::fmt::Debug {
     const BITS: u32;
 
     /// The KISS-Ops §6.16-0006 dtype token for this Rust type (for stable
-    /// diagnostics): `"s8"`, `"u8"`, `"i32"`, `"u32"`, `"i64"`.
+    /// diagnostics): `"s8"`, `"s16"`, `"u8"`, `"u16"`, `"i32"`, `"u32"`, `"u64"`, `"i64"`.
     fn dtype_token() -> &'static str;
 
     /// Whether this dtype is signed (selects arithmetic vs logical `shr`, and the
@@ -147,9 +147,12 @@ macro_rules! impl_unsigned_int {
 
 impl_signed_int!(i8, u8, "s8");
 impl_unsigned_int!(u8, "u8");
+impl_signed_int!(i16, u16, "s16");
+impl_unsigned_int!(u16, "u16");
 impl_signed_int!(i32, u32, "i32");
 impl_unsigned_int!(u32, "u32");
 impl_signed_int!(i64, u64, "i64");
+impl_unsigned_int!(u64, "u64");
 
 // ---- §6.4 arithmetic atoms (integer path) -----------------------------------
 //
