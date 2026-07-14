@@ -22,10 +22,10 @@ pub const OP_FAMILIES: [&str; 24] = [
     "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
 ];
 
-/// The closed dtype-token set — exactly the 20 tokens of Classify §6.1.
-pub const DTYPES: [&str; 20] = [
+/// The closed dtype-token set — exactly the 23 tokens of Classify §6.1.
+pub const DTYPES: [&str; 23] = [
     "f16", "bf16", "f32", "f64", "s8", "s16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
-    "e4m3", "e5m2", "s4", "u4", "b1", "c32", "c64",
+    "e4m3", "e5m2", "e2m1", "e2m3", "e3m2", "s4", "u4", "b1", "c32", "c64",
 ];
 
 // ---- small enum codecs -------------------------------------------------------

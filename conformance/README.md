@@ -27,7 +27,7 @@ vector is transcribed from the spec's own appendix.
   Appendix A golden tokens, each checked in both directions (`to_token` and
   `from_token` round-trip byte-for-byte, §6.7-0008), plus declines — structural
   (field count, version, work-class, rank, operand sub-key, uppercase hex) **and
-  closed-set membership** (the 24 op-family codes of §6.5-0006 and the 20 dtype
+  closed-set membership** (the 24 op-family codes of §6.5-0006 and the 23 dtype
   tokens of §6.1; an unknown `zzz` / `f99` is refused).
 - **KISS-Announce envelope** ([`announce`], Announce §6.1): the §2.5 reference
   56-byte handshake bytes, plus the §6.2 hard-reject discipline (bad magic,

@@ -194,14 +194,17 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `bool` | bool | 8 | 1-byte truth value; `0` = false, any non-zero byte = true; ops normalize to 0/1; storage width equals `u8` |
 | `e4m3` | float | 8 | FP8 E4M3 (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN |
 | `e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN |
+| `e2m1` | float | 4 | FP4 E2M1 (1s+2e+1m, bias 1); max finite ±6, subnormals, no infinities, no NaN |
+| `e2m3` | float | 6 | FP6 E2M3 (1s+2e+3m, bias 1); max finite ±7.5, subnormals, no infinities, no NaN |
+| `e3m2` | float | 6 | FP6 E3M2 (1s+3e+2m, bias 3); max finite ±28, subnormals, no infinities, no NaN |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `s4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
 | `c32` | complex | 64 | single-precision complex: interleaved (re,im) pair of `f32`, 64 bits total; complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
 | `c64` | complex | 128 | double-precision complex: interleaved (re,im) pair of `f64`, 128 bits total |
 
-Twenty dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
-no "etc.".
+Twenty-three dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`,
+`complex`), no "etc.".
 
 ### 2.7 Readable catalog — the operand descriptor
 
@@ -445,6 +448,9 @@ where it fixes storage bytes.
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
 | `e4m3` | float | 8 | FP8 E4M3 (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding |
 | `e5m2` | float | 8 | FP8 E5M2 (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN |
+| `e2m1` | float | 4 | FP4 E2M1 (sign 1, exp 2, mantissa 1, bias 1); max finite ±6; subnormals; no infinities; no NaN encoding |
+| `e2m3` | float | 6 | FP6 E2M3 (sign 1, exp 2, mantissa 3, bias 1); max finite ±7.5; subnormals; no infinities; no NaN encoding |
+| `e3m2` | float | 6 | FP6 E3M2 (sign 1, exp 3, mantissa 2, bias 3); max finite ±28; subnormals; no infinities; no NaN encoding |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `s4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
@@ -452,21 +458,23 @@ where it fixes storage bytes.
 | `c64` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits total |
 
 - **KISS-CLASSIFY-6.1-0001** — The scalar dtype set MUST be **exactly** the
-  twenty tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `s8`, `s16`, `u8`,
-  `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `e4m3`, `e5m2`, `s4`, `u4`, `b1`,
-  `c32`, `c64`); an implementation MUST NOT recognize a twenty-first dtype token at
-  this schema version and MUST NOT omit any of the twenty. In particular, no
+  twenty-three tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `s8`,
+  `s16`, `u8`, `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `e4m3`, `e5m2`, `e2m1`,
+  `e2m3`, `e3m2`, `s4`, `u4`, `b1`, `c32`, `c64`); an implementation MUST NOT
+  recognize a twenty-fourth dtype token at this schema version and MUST NOT omit
+  any of the twenty-three. In particular, no
   strict-precision float
   variant is a dtype: the dtype set is **pure storage** (§6.1-0005). *Test:*
   `test_classify_dtype_set_is_closed`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
   the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `s8` = 8;
   `s16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;
-  `u64` = 64; `bool` = 8; `e4m3`/`e5m2` = 8;
+  `u64` = 64; `bool` = 8; `e4m3`/`e5m2` = 8; `e2m1` = 4; `e2m3`/`e3m2` = 6;
   `s4`/`u4` = 4; `b1` = 1; `c32` = 64; `c64` = 128). *Test:*
   `test_classify_dtype_bit_widths`.
 - **KISS-CLASSIFY-6.1-0003** — Each dtype MUST have the exact numeric kind in the
-  table above (`float`: `f16`, `bf16`, `f32`, `f64`, `e4m3`, `e5m2`; `int`:
+  table above (`float`: `f16`, `bf16`, `f32`, `f64`, `e4m3`, `e5m2`, `e2m1`,
+  `e2m3`, `e3m2`; `int`:
   `s8`, `s16`, `i32`, `i64`, `s4`; `uint`: `u8`, `u16`, `u32`, `u64`, `u4`, `b1`;
   `bool`: `bool`; `complex`: `c32`, `c64`). *Test:*
   `test_classify_dtype_numeric_kinds`.
@@ -479,7 +487,7 @@ where it fixes storage bytes.
   compute-precision or numeric-fidelity guarantee. In particular, `f32` MUST be a
   single IEEE-754 binary32 **storage** dtype, and a strict-precision (bit-stable,
   full-precision multiply-add) float variant MUST NOT exist as a distinct dtype
-  token; equivalently, the closed twenty-token set (§6.1-0001) contains no such
+  token; equivalently, the closed twenty-three-token set (§6.1-0001) contains no such
   token and the dtype record carries no precision field. Compute precision — whether
   a computation must be bit-stable full-precision or may use a reduced-mantissa
   reduction — is a **KISS-Ops fidelity attribute** (a `MathPrecision`-style attribute
@@ -553,7 +561,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `rank` | u8 | `0 ..= MAX_RANK` (§6.4) |
 | `extents` | `i64[MAX_RANK]` | any i64; only `extents[0..rank]` meaningful; symbolic-axis entry is the capacity |
 | `strides` | `i64[MAX_RANK]` | any signed i64 (`0` = broadcast, `< 0` = reversed); element units; only `strides[0..rank]` meaningful |
-| `dtype` | dtype token | one of the twenty (§6.1) |
+| `dtype` | dtype token | one of the twenty-three (§6.1) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
@@ -580,7 +588,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   are permitted, and §6.5-0009 pins how they gate vector width (floor to the largest
   power of two not exceeding the value, with `0` treated as `1`). *Test:*
   `test_classify_alignment_is_bytes`.
-- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty tokens
+- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-three tokens
   of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
 - **KISS-CLASSIFY-6.3-0007** — `layout_tag` MUST be derived as a projection of
   `extents` and `strides` (§6.5-0002) and MUST NOT be an independently stored raw
@@ -1071,7 +1079,7 @@ separating a registered namespace from that namespace's capability-set token.
 
 - **KISS-CLASSIFY-7.1-0001** — The KISS-Classify **mandatory core** — which every
   conforming implementation MUST satisfy regardless of claimed options — MUST be:
-  the full twenty-dtype set (§6.1), the operand-descriptor field set (§6.3), the
+  the full twenty-three-dtype set (§6.1), the operand-descriptor field set (§6.3), the
   pinned constants (§6.4), the enumerations and derivations (§6.5), the
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
@@ -1411,7 +1419,7 @@ two colons
 separator (`cuda:sm|89`). Each yields a typed decline, never a panic (§6.7-0009,
 §6.8-0001, §7.1-0002).
 
-**A.3 Golden dtype table vector.** The twenty-row dtype table of §6.1 (token,
+**A.3 Golden dtype table vector.** The twenty-three-row dtype table of §6.1 (token,
 kind, bit width, packing) is itself a golden vector: per the §8-0005 freeze gate a
 foreign reader reproduces every token spelling, bit width, and numeric kind
 byte-for-byte, and reproduces the `s4`/`u4` nibble order, the `b1` LSB-first bit
@@ -1440,7 +1448,7 @@ provenance and examples only; no normative clause names any project.
   by the namespace maintainer (e.g. `sm89`, `spirv1.6`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
-- **dtype** — a scalar element type from the twenty-token set of §6.1; pure
+- **dtype** — a scalar element type from the twenty-three-token set of §6.1; pure
   storage (byte layout only), never a compute-precision guarantee.
 - **extent** — an axis's logical length (capacity for a symbolic axis).
 - **inner-contiguous** — a layout tag: the innermost non-unit axis has `|stride| ==
