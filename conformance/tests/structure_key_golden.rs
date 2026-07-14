@@ -177,7 +177,7 @@ fn reject_unknown_dtype() {
 
 #[test]
 fn accepts_every_closed_op_family_and_dtype() {
-    // every one of the 24 op-family codes and 17 dtype tokens is recognized
+    // every one of the 24 op-family codes and 20 dtype tokens is recognized
     for fam in OP_FAMILIES {
         let t = A_GOLDEN.replacen("|bin|", &format!("|{fam}|"), 1);
         assert_ne!(from_token(&t), Err(KeyDecline::UnknownOpFamily), "op-family {fam} rejected");
