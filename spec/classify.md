@@ -734,11 +734,15 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   `v1` if the operand's innermost active axis (§6.3-0011) is a reduced axis of a
   reduction cell — i.e. the cell's reduce field (§6.6-0009) is `rall`, or is
   `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set — or the cell's
-  op category is scan (`scn`); **(c)** otherwise the token `vL` for the largest
-  `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the vector-access
-  byte cap), `L` divides the innermost active axis extent, and
-  `L · (dtype storage bytes) ≤ A`, where `A` is the largest power of two not
-  exceeding `alignment` (and `A = 1` when `alignment = 0`). A sub-byte dtype
+  op category is scan (`scn`); **(c)** otherwise — provided the innermost active
+  axis is **forward-unit-stride** per §6.5-0013, else `v1` — the token `vL` for the
+  largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the
+  vector-access byte cap), `L` divides the innermost active axis extent, and
+  `alignment mod (L · dtype storage bytes) = 0` — an **exact-modulo** alignment
+  gate: a divisor test, **not** a power-of-two floor (the two disagree on a
+  non-power-of-two `alignment`; e.g. `alignment = 48`, `f32` derives `v4`, not the
+  floor's `v8`). An operand with `alignment = 0` (unspecified base-pointer
+  alignment) cannot honor a packed load and MUST derive `v1`. A sub-byte dtype
   (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. *Test:*
   `test_classify_vec_width_derivation`.
 - **KISS-CLASSIFY-6.5-0010** — The work-class **total element count** MUST be the
@@ -757,6 +761,18 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   else `d4` iff `E ≥ 4` and `E mod 4 = 0`; else `d2` iff `E ≥ 2` and `E mod 2 = 0`;
   else `da` (covering odd `E`, `E = 1`, and `E = 0`). *Test:*
   `test_classify_div_bucket_derivation`.
+- **KISS-CLASSIFY-6.5-0013** — A vector-access width `vL` with `L > 1`
+  (§6.5-0009(c)) MUST additionally require that the operand's **innermost active
+  axis** (§6.3-0011) is **forward-unit-stride** — its signed stride (§6.3-0003) is
+  exactly `+1` — and that **no** axis of the operand broadcasts. An innermost axis
+  whose stride is `-1` (a **flipped** axis: `|stride| = 1` but the operand's flipped
+  flag §6.6-0007 is set), or whose `|stride| > 1` (a transposed / non-inner-
+  contiguous axis), MUST derive `v1`, because its elements are not a contiguous
+  forward run in memory and no conformant packed / vector load (`ld.128`, a SPIR-V
+  vector load, a CPU SIMD load) can honor `L > 1` for them. Only a forward-unit
+  stride qualifies; a reversed run derives `v1` even though `|stride| = 1`. This
+  precondition gates §6.5-0009(c) before its byte-cap, extent-divisibility, and
+  alignment tests are applied. *Test:* `test_classify_vec_width_unit_stride`.
 
 ### 6.6 The `structure_key` admissibility predicate
 
@@ -1225,6 +1241,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0010 | `test_classify_work_class_element_count` |
 | KISS-CLASSIFY-6.5-0011 | `test_classify_index_width_offset` |
 | KISS-CLASSIFY-6.5-0012 | `test_classify_div_bucket_derivation` |
+| KISS-CLASSIFY-6.5-0013 | `test_classify_vec_width_unit_stride` |
 | KISS-CLASSIFY-6.6-0001 | `test_classify_structure_key_is_admissibility_predicate` |
 | KISS-CLASSIFY-6.6-0002 | `test_classify_structure_key_is_not_op_identity` |
 | KISS-CLASSIFY-6.6-0003 | `test_classify_structure_key_extent_free` |

@@ -47,6 +47,58 @@ code_enum!(DivBucket { D16 = "d16", D8 = "d8", D4 = "d4", D2 = "d2", Da = "da" }
 code_enum!(WorkClass { Warp = "warp", Block = "block", Grid = "grid" });
 code_enum!(SizeClass { Tiny = "t", Small = "s", Medium = "m", Large = "l" });
 
+/// Derive an operand's vector-access width from its innermost-active-axis facts
+/// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
+/// precondition. This is the reference derivation for the non-reduction,
+/// non-broadcast branch: parts (a)/(b) of §6.5-0009 (broadcast `layout_tag`,
+/// reduced/scan innermost axis) are decided by the caller and reach this function
+/// only as `any_axis_broadcast` or by not being called.
+///
+/// Arguments are the innermost active axis's signed stride (§6.3-0003, elements)
+/// and extent (elements), the dtype's storage width in bytes (`None` for a
+/// sub-byte dtype, which derives `v1`), the operand's base-pointer `alignment` in
+/// bytes, and whether any axis of the operand broadcasts.
+///
+/// §6.5-0013: `vL` with `L > 1` requires a **forward-unit** innermost stride
+/// (`stride == +1`) and no broadcast axis; a flipped (`stride == -1`) or strided
+/// (`|stride| > 1`) innermost axis derives `v1`. §6.5-0009(c): the alignment gate
+/// is **exact-modulo** (`alignment mod (L · bytes) == 0`), not a power-of-two
+/// floor; an `alignment` of `0` (unspecified) cannot honor a packed load and
+/// derives `v1`.
+#[must_use]
+pub fn derive_vec_width(
+    inner_stride: i64,
+    inner_extent: i64,
+    dtype_storage_bytes: Option<u32>,
+    alignment: u32,
+    any_axis_broadcast: bool,
+) -> VecWidth {
+    // Sub-byte dtype: storage under one byte never vectorizes (§6.5-0009(c)).
+    let Some(dsz) = dtype_storage_bytes else {
+        return VecWidth::V1;
+    };
+    // §6.5-0013 precondition: forward-unit inner stride, no broadcast, else v1.
+    if inner_stride != 1 || any_axis_broadcast {
+        return VecWidth::V1;
+    }
+    // §6.5-0009(c): an unspecified (0) base-pointer alignment cannot honor a
+    // packed load.
+    if alignment == 0 {
+        return VecWidth::V1;
+    }
+    let ext = inner_extent.max(0) as u64;
+    let dsz = u64::from(dsz);
+    let align = u64::from(alignment);
+    for (l, w) in [(8u64, VecWidth::V8), (4, VecWidth::V4), (2, VecWidth::V2)] {
+        let vbytes = l * dsz;
+        // byte cap, exact-modulo alignment gate, extent divisibility.
+        if vbytes <= 16 && align % vbytes == 0 && ext % l == 0 {
+            return w;
+        }
+    }
+    VecWidth::V1
+}
+
 /// The `<flip>` code: `f` (natural) or `r` (flipped) — §6.7 grammar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperandSubKey {
