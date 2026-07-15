@@ -115,6 +115,44 @@ fn a1_dense_contraction_vulkan_target() {
     assert_token("KISS-CLASSIFY-6.8", &k, "sk2|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16");
 }
 
+// ---- §6.5-0013 vector-width derivation: forward-unit-stride precondition ------
+
+/// KISS-CLASSIFY-6.5-0013 (`test_classify_vec_width_unit_stride`): a `vL` with
+/// `L > 1` requires the innermost active axis to be forward-unit-stride; a
+/// flipped (`stride = -1`) or strided (`|stride| > 1`) innermost axis derives
+/// `v1` even when the byte-cap / extent / alignment tests of §6.5-0009(c) would
+/// otherwise pass, and a non-power-of-two alignment gates by exact modulo.
+#[test]
+fn test_classify_vec_width_unit_stride() {
+    // f32: 4 storage bytes; inner extent 256 (divisible by 8/4/2); alignment 256.
+    let f32 = Some(4u32);
+
+    // forward-unit-stride, no broadcast -> vectorizes (v4: 4*4=16 <= 16 byte cap,
+    // 256 % 16 == 0, 256 % 4 == 0). This is the positive control.
+    assert_eq!(derive_vec_width(1, 256, f32, 256, false), VecWidth::V4);
+
+    // flipped innermost axis (stride -1): |stride| == 1 but not a forward run ->
+    // v1. This is the transposed/reversed-operand trap §6.5-0013 closes.
+    assert_eq!(derive_vec_width(-1, 256, f32, 256, false), VecWidth::V1);
+
+    // strided innermost axis (|stride| == 2, e.g. a transpose): -> v1.
+    assert_eq!(derive_vec_width(2, 256, f32, 256, false), VecWidth::V1);
+
+    // forward-unit-stride but an axis broadcasts -> v1.
+    assert_eq!(derive_vec_width(1, 256, f32, 256, true), VecWidth::V1);
+
+    // §6.5-0009(c) exact-modulo alignment gate: alignment 48 (non-power-of-two)
+    // for f32 admits v4 (48 % 16 == 0) but NOT v8 (48 % 32 != 0); a power-of-two
+    // floor (A = 32) would have wrongly admitted v8.
+    assert_eq!(derive_vec_width(1, 256, f32, 48, false), VecWidth::V4);
+
+    // alignment 0 (unspecified) cannot honor a packed load -> v1.
+    assert_eq!(derive_vec_width(1, 256, f32, 0, false), VecWidth::V1);
+
+    // sub-byte dtype (storage < 1 byte) -> v1 regardless of stride/alignment.
+    assert_eq!(derive_vec_width(1, 256, None, 256, false), VecWidth::V1);
+}
+
 // ---- A.2 decline vectors: structural codec rejects (§6.7-0009) ---------------
 
 const A_GOLDEN: &str = "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
