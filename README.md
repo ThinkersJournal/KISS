@@ -91,6 +91,9 @@ keeps the wire protocols stable while the vocabularies grow.
 | `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 | [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
+| [`PRIOR-ART.md`](PRIOR-ART.md) | Prior art (informative): KISS measured against StableHLO/PJRT, ONNX, Triton/MLIR, PyTorch, DLPack, SPIR-V/IREE, the vendor kernel libraries, and the Khronos ULP/CTS precedent — what they already solve, what they do not, and the one claim that survives. **Read this before implementing.** |
+| [`WIRE-FIRST.md`](WIRE-FIRST.md) | A work order (informative): the 38 confirmed blockers between here and one real handshake+provision across a process boundary, what is already green, and what each implementation can do now. |
+| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 824 normative clauses with no executable test. The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
 
 ## How to read a KISS sub-standard
 
@@ -100,9 +103,16 @@ Every sub-standard follows one **dual-document template** (umbrella §4):
   front-to-back to understand the sub-standard.
 - **§6 onward is normative** — the tight, testable conformance spec. Each requirement
   carries a clause ID of the form `KISS-<SUB>-<section>-<nnnn>` and maps 1:1 to a named
-  conformance test. If a MUST has no test, the suite build fails.
+  conformance test.
 
 Read the informative half for understanding; implement against the normative half.
+
+> **Test coverage is currently 3.4%, and the drafts say otherwise in places.**
+> Of 853 normative clauses, 29 are backed by executable code; 824 name a
+> conformance test that **does not exist yet**. Every one of those is listed in
+> [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv). Treat a clause as
+> *proposed* unless it appears outside that ledger — a named test is not a test.
+> `python tools/kiss_trace.py --strict` prints the live number.
 
 ## Conformance
 

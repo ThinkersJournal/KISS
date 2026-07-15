@@ -12,12 +12,29 @@ distinct from the specification text under `spec/`, which is CC0.
 
 ## What it verifies today
 
-All four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
-**negative/decline vectors** (§6.7), the **independent CPU-oracle differential**
-(§6.5), and a **real on-device run** (§6.6) — under the determinism-class
-comparators of §6.8 (exact-byte, ULP-tolerance, and order-invariant). Every golden
-vector is transcribed from the spec's own appendix.
+**Three of the four** KISS-Conform test modalities — **golden byte-vectors**
+(§6.4), the **independent CPU-oracle differential** (§6.5), and
+**negative/decline vectors** (§6.7) — under the determinism-class comparators of
+§6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
+run** that is not one of the four modalities but exercises §6.5's differential on
+real silicon. Every golden vector is transcribed from the spec's own appendix.
 **127 tests pass by default; 3 more on-device under `--features cuda`.**
+
+**Not implemented: modality 3 — the §6.6 structure-directed fuzzer**, which must
+generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
+Nothing here does that; the `*_under_fuzz` tests are seeded scalar corpus loops
+over binary f32 functions (§6.5), not DAG generation. All 17 §6.6 clauses are in
+[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all four
+modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
+
+### How much of the spec is actually executable
+
+**29 of 853 normative clauses (3.4%).** The other 824 name a conformance test that
+does not exist — see [`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is
+enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 128 test fns, 95
+cite no clause at all, so the traceability matrix cannot see them: they are real
+tests doing real work that no clause claims credit for. Closing that is cheap and
+is the first task below.
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -58,7 +75,8 @@ vector is transcribed from the spec's own appendix.
   to visit order only up to reassociation, so it's compared within a
   contract-declared tolerance, not byte-for-byte. A differential *catches* a lossy
   scatter, and the `max_prop`-reduction signed-zero-on-tie order-dependence is pinned.
-- **On-device real-kernel differential** ([`tests/device.rs`], §6.6; opt-in
+- **On-device real-kernel differential** ([`tests/device.rs`], §6.5 on real
+  silicon; opt-in
   `--features cuda`): a hand-written CUDA `fmax_ieee` kernel is compiled with `nvcc`
   and run on the GPU over the corpus, differenced against the CPU oracle. On an
   RTX 4070 it passes 16.9M pairs, and a negative control using CUDA's `fmaxf`
@@ -97,6 +115,18 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
+- **Phase 5 (next, cheap) — cite the clause in every test.** 95 of 128 test fns
+  cite no clause, so ~15% of the suite's real coverage is invisible to the matrix.
+  Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
+  `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
+  or name it in the comment above the test. `kiss_trace.py` reads both and will
+  strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
+  it is the cheapest coverage in the repo.
+- **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
+  by seam, not by document: the clauses two real implementations must agree on to
+  exchange one kernel come first (see the wire-first list in the repo issues).
+  8 of 9 sub-standards are at 0.0% — Announce/Synth in particular have never had a
+  byte cross a process boundary.
 
 ## Keeping the vectors in sync
 
