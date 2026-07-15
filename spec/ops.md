@@ -839,6 +839,23 @@ this section-intro paragraph is an informative pointer to it):
   the leading-zero count, and the trailing-zero count respectively over the integer bit
   pattern, and MUST be treated as atoms with no decomposition. *Test:*
   `test_ops_popcount_clz_ctz`.
+- **KISS-OPS-6.10-0006** — For every §6.10 bitwise, shift, or bit-count atom whose
+  operand compute dtype is a **sub-32-bit** integer dtype (`s8`, `u8`, `s16`, `u16`,
+  `s4`, `u4` — any width narrower than 32 bits), the value each operand contributes and
+  the stored result MUST be the operand/result **truncated to that operand dtype's own
+  bit width** (mod `2^bitwidth`): the atom MUST behave as promote-to-width → apply →
+  **truncate-on-store**, and its observable result MUST be **independent of DAG
+  sharing/hoisting**. Because C-family lowering promotes a narrow operand to `int`
+  (32-bit) before the atom, a *composed* narrow operand can be observed as its
+  un-truncated promoted value when the producing sub-expression is inlined but as its
+  truncated narrow temporary when that sub-expression is hoisted; to remove this
+  ambiguity an implementation MUST either (a) truncate every narrow operand to its own
+  bit width before the atom consumes it (so the operand carries its on-store value
+  regardless of sharing), or (b) require every operand of a narrow §6.10 atom to be a
+  direct load (a leaf input) and never a composed sub-expression. This clause pins the
+  operand/result *value* only; it does not widen the pinned shift domain of §6.10-0004
+  (a shift amount outside `[0, bitwidth)` remains target-defined). *Test:*
+  `test_ops_narrow_int_promote_truncate_composition`.
 
 ### 6.11 Structural access atoms
 
@@ -2072,6 +2089,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.10-0003 | `test_ops_shift_arithmetic_vs_logical` |
 | KISS-OPS-6.10-0004 | `test_ops_shift_out_of_range_target_defined` |
 | KISS-OPS-6.10-0005 | `test_ops_popcount_clz_ctz` |
+| KISS-OPS-6.10-0006 | `test_ops_narrow_int_promote_truncate_composition` |
 | KISS-OPS-6.11-0001 | `test_ops_element_map_base_access` |
 | KISS-OPS-6.11-0002 | `test_ops_reduce_monoids` |
 | KISS-OPS-6.11-0003 | `test_ops_prefix_scan_length_preserving` |
