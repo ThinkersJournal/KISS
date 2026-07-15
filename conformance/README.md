@@ -18,7 +18,7 @@ distinct from the specification text under `spec/`, which is CC0.
 §6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
 run** that is not one of the four modalities but exercises §6.5's differential on
 real silicon. Every golden vector is transcribed from the spec's own appendix.
-**127 tests pass by default; 3 more on-device under `--features cuda`.**
+**130 tests pass by default; 3 more on-device under `--features cuda`.**
 
 **Not implemented: modality 3 — the §6.6 structure-directed fuzzer**, which must
 generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
@@ -29,12 +29,15 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**29 of 853 normative clauses (3.4%).** The other 824 name a conformance test that
+**31 of 855 normative clauses (3.6%).** The other 824 name a conformance test that
 does not exist — see [`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is
-enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 128 test fns, 95
+enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 131 test fns, 96
 cite no clause at all, so the traceability matrix cannot see them: they are real
 tests doing real work that no clause claims credit for. Closing that is cheap and
 is the first task below.
+
+`boundary_rounding.rs` (§6.5-0006/-0007) is the model to copy: it was added with the
+clause, under the name the clause names, so it counted the day it landed.
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -64,6 +67,14 @@ is the first task below.
   a wrong implementation: an IEEE `fmax` mistakenly built with NaN-propagating
   `max_prop` is flagged by the corpus's NaN inputs, with every divergence pinned
   to a NaN operand. A harness that only passed correct code would prove nothing.
+- **Oracle boundary rounding + tightness** ([`tests/boundary_rounding.rs`], Conform
+  §6.5-0006 / §6.5-0007): two oracle-hygiene disciplines from a Baracuda↔KISS review.
+  A discontinuous op (`cmp_*`, a `select` condition, `sign`, `step`) is decided on the
+  operand **rounded to the op's compute dtype first** — a pinned boundary golden vector
+  (`1.0 + 2^-30` distinct from `1.0` in f64 but equal after narrowing to f32) shows the
+  un-narrowed f64 decision flips spuriously. And the transcendental oracle is **strictly
+  tighter than the declared ULP tolerance** it enforces (wider f64 eval, rounded once,
+  ≤ 0.5 ULP) — a same-precision "oracle" is shown to give a vacuous 0-ULP false pass.
 - **Integer atoms** ([`integer`], Ops §6.10/§6.16): wrapping two's-complement
   `add`/`sub`/`mul`/`neg`/`abs`, the bitwise atoms, and — the subtle ones —
   **arithmetic** (signed) vs **logical** (unsigned) `shr`, out-of-range shift as
@@ -93,7 +104,7 @@ and randomized loops catch the mistakes.
 
 ```sh
 cd conformance
-cargo test                     # 127 tests, CPU, no dependencies
+cargo test                     # 130 tests, CPU, no dependencies
 cargo test --features cuda     # + 3 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
