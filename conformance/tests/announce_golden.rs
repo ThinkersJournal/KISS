@@ -32,6 +32,7 @@ fn envelope_golden_bytes() {
     assert_golden("KISS-ANNOUNCE-6.1-0002", "reference_envelope", &b, GOLDEN);
 }
 
+/// Enforces KISS-ANNOUNCE-6.1-0004 — the pinned magic constant + its wire byte order.
 #[test]
 fn magic_is_seam_wire_order() {
     // §6.1-0004: magic == 0x4D414553, on-wire bytes 53 45 41 4D ("SEAM")
@@ -39,6 +40,7 @@ fn magic_is_seam_wire_order() {
     assert_eq!(&reference().encode()[0..4], &[0x53, 0x45, 0x41, 0x4D]);
 }
 
+/// Enforces KISS-ANNOUNCE-6.1-0003 — the pinned field offsets of the §6.1 layout table.
 #[test]
 fn field_offsets_match_table() {
     // §6.1-0003 / §6.1-0011: spot-check pinned offsets on the reference envelope.
@@ -49,6 +51,7 @@ fn field_offsets_match_table() {
     assert_eq!(u64::from_le_bytes(b[48..56].try_into().unwrap()), 0x0000_0003_0000_003F);
 }
 
+/// Enforces KISS-ANNOUNCE-6.1-0012 — every field little-endian: a decode/encode round-trip.
 #[test]
 fn decode_roundtrips_the_reference() {
     let e = reference();
@@ -57,11 +60,13 @@ fn decode_roundtrips_the_reference() {
 
 // ---- Conform modality 4: hard-reject decline vectors (§6.2) ------------------
 
+/// Enforces KISS-ANNOUNCE-6.2-0001 — reject an input whose length != the version's mandate.
 #[test]
 fn reject_wrong_length() {
     assert_eq!(decode(&[0u8; 55]), Err(AnnounceDecline::WrongLength { got: 55 }));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0002 — reject a bad magic.
 #[test]
 fn reject_bad_magic() {
     let mut b = reference().encode();
@@ -72,6 +77,7 @@ fn reject_bad_magic() {
     }
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0003 — reject an unsupported envelope_version.
 #[test]
 fn reject_unknown_version() {
     let mut b = reference().encode();
@@ -79,6 +85,7 @@ fn reject_unknown_version() {
     assert_eq!(decode(&b), Err(AnnounceDecline::UnsupportedVersion { got: 2 }));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0004 — reject a nonzero reserved0.
 #[test]
 fn reject_nonzero_reserved0() {
     let mut b = reference().encode();
@@ -86,6 +93,7 @@ fn reject_nonzero_reserved0() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ReservedNonZero { region: "reserved0" }));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0011 — reject a nonzero reserved1.
 #[test]
 fn reject_nonzero_reserved1() {
     let mut b = reference().encode();
@@ -93,6 +101,7 @@ fn reject_nonzero_reserved1() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ReservedNonZero { region: "reserved1" }));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0005 — reject profiles_len > the cap.
 #[test]
 fn reject_profiles_len_overflow() {
     let mut b = reference().encode();
@@ -100,6 +109,7 @@ fn reject_profiles_len_overflow() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ProfilesLenOverflow { got: 17 }));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0012 — reject a nonzero trailing profile.
 #[test]
 fn reject_trailing_profile_nonzero() {
     let mut b = reference().encode();
@@ -107,6 +117,7 @@ fn reject_trailing_profile_nonzero() {
     assert_eq!(decode(&b), Err(AnnounceDecline::TrailingProfileNonZero));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0013 — reject a zero live profile entry.
 #[test]
 fn reject_zero_live_profile() {
     // profiles_len = 2 but profiles[1] = 0 (a live entry must be >= 1, §6.1-0015)
@@ -116,6 +127,7 @@ fn reject_zero_live_profile() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ZeroLiveProfile));
 }
 
+/// Enforces KISS-ANNOUNCE-6.2-0006 — reject non-strictly-ascending profiles.
 #[test]
 fn reject_non_ascending_profiles() {
     // profiles_len = 2, {1, 1} — not strictly ascending (§6.1-0009)

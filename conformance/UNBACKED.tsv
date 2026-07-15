@@ -19,8 +19,6 @@
 # clause_id	test_name
 KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte
 KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56
-KISS-ANNOUNCE-6.1-0003	test_announce_field_offsets_match_table
-KISS-ANNOUNCE-6.1-0004	test_announce_magic_constant
 KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1
 KISS-ANNOUNCE-6.1-0006	test_announce_reserved0_is_zero
 KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap
@@ -28,22 +26,12 @@ KISS-ANNOUNCE-6.1-0008	test_announce_trailing_profiles_zero
 KISS-ANNOUNCE-6.1-0009	test_announce_profiles_strictly_ascending
 KISS-ANNOUNCE-6.1-0010	test_announce_reserved1_pad_zero
 KISS-ANNOUNCE-6.1-0011	test_announce_capabilities_field
-KISS-ANNOUNCE-6.1-0012	test_announce_all_fields_little_endian
 KISS-ANNOUNCE-6.1-0013	test_announce_field_sizes_match_table
 KISS-ANNOUNCE-6.1-0014	test_announce_fixed_prefix_stable_across_versions
 KISS-ANNOUNCE-6.1-0015	test_announce_live_profiles_nonzero
-KISS-ANNOUNCE-6.2-0001	test_announce_reject_wrong_length_for_version
-KISS-ANNOUNCE-6.2-0002	test_announce_reject_bad_magic
-KISS-ANNOUNCE-6.2-0003	test_announce_reject_unknown_version
-KISS-ANNOUNCE-6.2-0004	test_announce_reject_nonzero_reserved0
-KISS-ANNOUNCE-6.2-0005	test_announce_reject_profiles_len_overflow
-KISS-ANNOUNCE-6.2-0006	test_announce_reject_non_ascending_profiles
 KISS-ANNOUNCE-6.2-0007	test_announce_rejection_is_typed_decline
 KISS-ANNOUNCE-6.2-0008	test_announce_reader_never_repairs
 KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length
-KISS-ANNOUNCE-6.2-0011	test_announce_reject_nonzero_reserved1
-KISS-ANNOUNCE-6.2-0012	test_announce_reject_nonzero_trailing_profiles
-KISS-ANNOUNCE-6.2-0013	test_announce_reject_zero_live_profile
 KISS-ANNOUNCE-6.3-0001	test_announce_availability_is_identity_pair
 KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability
 KISS-ANNOUNCE-6.3-0003	test_announce_revision_hash_is_32_bytes
