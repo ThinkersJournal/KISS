@@ -641,6 +641,29 @@ enum (§6.0). See umbrella §3 for the full statement.
   manifest for the §6.5-0002 set-intersection check, and each vector MUST carry the `oracle`
   derivation-provenance tag of §6.5-0003; a vector authored in violation MUST be treated as
   circular. *Test:* `test_conform_oracle_authoring_independence`.
+- **KISS-CONFORM-6.5-0006** — For a **discontinuous op** — a comparison (`cmp_eq` / `cmp_ne` /
+  `cmp_lt` / `cmp_le` / `cmp_gt` / `cmp_ge`), a `select` **condition**, `sign`, or `step` — the
+  CPU oracle MUST make the boundary decision on each operand **rounded to the op's declared
+  compute dtype BEFORE the comparison**, so the oracle resolves the boundary in the same domain
+  the kernel does. An oracle that decides on an un-narrowed higher-precision differential value
+  (e.g. an f64 operand never rounded to the op's compute dtype) MUST NOT be admitted, because it
+  flips spuriously at a boundary the kernel resolves in the compute dtype: two operands that are
+  distinct in the differential's wide precision but round to the **same** compute-dtype value are
+  equal at the op, and the oracle MUST decide them equal. The narrowing MUST be the same
+  round-to-nearest the kernel's own store/compute path applies (a single rounding to the compute
+  dtype), evidenced by the pinned boundary golden vector (Appendix A.2). *Test:*
+  `test_conform_boundary_decision_compute_dtype`.
+- **KISS-CONFORM-6.5-0007** — The CPU oracle's reference value for a **transcendental atom** MUST
+  be computed **strictly tighter than the declared per-target ULP tolerance** it is then compared
+  under (§6.8-0002 / §6.8-0003): the oracle MUST evaluate the atom at a precision **wider than the
+  op's compute dtype** and round once to that dtype, bounding the oracle's own error at ≤ 0.5 ULP
+  of the compute dtype while any admissible declared tolerance is ≥ 1 ULP. This is an
+  oracle-accuracy **floor** the oracle MUST meet, distinct from and complementary to the ULP
+  **ceiling** §6.8-0003 caps on the *declared* tolerance; an oracle whose own transcendental error
+  is not strictly tighter than the tolerance it enforces (e.g. a reference computed at the same
+  compute-dtype precision as the implementation under test) MUST NOT be admitted, because it
+  measures the oracle's error rather than the implementation's and yields false passes. *Test:*
+  `test_conform_oracle_tighter_than_declared_ulp`.
 
 ### 6.6 Modality 3 — the IR-DAG fuzzer emitting to every backend
 
@@ -1170,6 +1193,8 @@ the traceability lint.
 | KISS-CONFORM-6.5-0003 | `test_conform_reject_circular_vector` |
 | KISS-CONFORM-6.5-0004 | `test_conform_oracle_resolves_to_floor` |
 | KISS-CONFORM-6.5-0005 | `test_conform_oracle_authoring_independence` |
+| KISS-CONFORM-6.5-0006 | `test_conform_boundary_decision_compute_dtype` |
+| KISS-CONFORM-6.5-0007 | `test_conform_oracle_tighter_than_declared_ulp` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
 | KISS-CONFORM-6.6-0003 | `test_conform_fuzzer_cross_backend_agreement` |
@@ -1310,7 +1335,15 @@ and the complex-arith split comparator; KISS-Contract Semantics-DAG resolution t
 `audited_status` derivation; KISS-Consume lifted-Semantics-DAG resolution and mislabeled-kernel
 structural correctness; KISS-Emit emitted-kernel-Semantics-DAG-as-oracle and the tier-1 structural
 round-trip; and the KISS-Synth consumer-verify of a provided kernel against its contract's declared
-precision/determinism. Every vector carries the `oracle` derivation-provenance tag (§6.5-0003).
+precision/determinism. Two oracle-hygiene disciplines the harness itself observes are pinned as
+normative oracle clauses: the **boundary golden vector** for discontinuous ops (`cmp_*`, a
+`select` condition, `sign`, `step`) whose operands are narrowed to the op's compute dtype before
+the decision, so a differential value distinct in wide precision but equal after rounding does not
+flip the oracle spuriously (§6.5-0006); and the **transcendental oracle-accuracy floor** — the
+oracle evaluates each transcendental atom wider than the compute dtype and rounds once, keeping its
+own error strictly under the declared ULP tolerance it enforces so the differential measures the
+implementation and not the oracle (§6.5-0007). Every vector carries the `oracle`
+derivation-provenance tag (§6.5-0003).
 
 **A.3 Fuzzer families.** The IR-DAG fuzzer (§6.6) drives every suite-registered fuzz-target backend
 — including at least one non-C-family emitter (§6.6-0006) — and the lift direction, asserting

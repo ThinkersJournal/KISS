@@ -102,6 +102,20 @@ pub fn round_even(x: f32) -> f32 {
     x.round_ties_even()
 }
 
+// ---- oracle boundary rounding (Conform §6.5-0006) ---------------------------
+
+/// Narrow an f64 differential value to an f32 compute dtype and back
+/// (KISS-Conform §6.5-0006). A discontinuous op (`cmp_*`, a `select` condition,
+/// `sign`, `step`) resolves its boundary in the op's compute dtype, so the oracle
+/// MUST round each operand to that dtype BEFORE the comparison — a single
+/// round-to-nearest, mirroring the kernel's own store/compute rounding. This is
+/// the reference oracle's `round_to_compute` discipline (Baracuda
+/// `oracle.rs:507`): deciding on the un-narrowed f64 value flips spuriously when
+/// two operands are distinct in wide precision but equal after rounding to f32.
+pub fn round_to_compute_f32(x: f64) -> f64 {
+    x as f32 as f64
+}
+
 // ---- ordered comparisons (IEEE; a NaN operand => all false except `cmp_ne`) ---
 
 pub fn cmp_eq(a: f32, b: f32) -> bool { a == b }

@@ -17,7 +17,7 @@ All four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
 (§6.5), and a **real on-device run** (§6.6) — under the determinism-class
 comparators of §6.8 (exact-byte, ULP-tolerance, and order-invariant). Every golden
 vector is transcribed from the spec's own appendix.
-**127 tests pass by default; 3 more on-device under `--features cuda`.**
+**130 tests pass by default; 3 more on-device under `--features cuda`.**
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -47,6 +47,14 @@ vector is transcribed from the spec's own appendix.
   a wrong implementation: an IEEE `fmax` mistakenly built with NaN-propagating
   `max_prop` is flagged by the corpus's NaN inputs, with every divergence pinned
   to a NaN operand. A harness that only passed correct code would prove nothing.
+- **Oracle boundary rounding + tightness** ([`tests/boundary_rounding.rs`], Conform
+  §6.5-0006 / §6.5-0007): two oracle-hygiene disciplines from a Baracuda↔KISS review.
+  A discontinuous op (`cmp_*`, a `select` condition, `sign`, `step`) is decided on the
+  operand **rounded to the op's compute dtype first** — a pinned boundary golden vector
+  (`1.0 + 2^-30` distinct from `1.0` in f64 but equal after narrowing to f32) shows the
+  un-narrowed f64 decision flips spuriously. And the transcendental oracle is **strictly
+  tighter than the declared ULP tolerance** it enforces (wider f64 eval, rounded once,
+  ≤ 0.5 ULP) — a same-precision "oracle" is shown to give a vacuous 0-ULP false pass.
 - **Integer atoms** ([`integer`], Ops §6.10/§6.16): wrapping two's-complement
   `add`/`sub`/`mul`/`neg`/`abs`, the bitwise atoms, and — the subtle ones —
   **arithmetic** (signed) vs **logical** (unsigned) `shr`, out-of-range shift as
@@ -75,7 +83,7 @@ and randomized loops catch the mistakes.
 
 ```sh
 cd conformance
-cargo test                     # 127 tests, CPU, no dependencies
+cargo test                     # 130 tests, CPU, no dependencies
 cargo test --features cuda     # + 3 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
