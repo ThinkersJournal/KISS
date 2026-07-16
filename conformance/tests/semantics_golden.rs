@@ -5,7 +5,7 @@
 //! transcendental model. Determinism-class comparators from Conform §6.8.
 
 use kiss_conformance::semantics::*;
-use kiss_conformance::{compare_f32, ulp_distance_f32, DeterminismClass};
+use kiss_conformance::{compare_c32_transcendental, compare_f32, ulp_distance_f32, DeterminismClass};
 
 /// Raw-bit equality — the exact-byte determinism class for a scalar (§6.8).
 fn bits_eq(a: f32, b: f32) -> bool {
@@ -356,4 +356,30 @@ fn test_ops_decomposition_accuracy_refinement() {
             ulp_distance_f32(r, lit)
         );
     }
+}
+
+/// Enforces KISS-OPS-6.18-0017 — the split comparator for carg/clog/csqrt/cexp.
+/// A plain ULP comparator cannot see a wrong sign of zero (ulp_distance(-0,+0)==1),
+/// so it PASSES a +0.0 result where -0.0 is pinned; the split comparator CATCHES
+/// it exact-bit. Teeth: this is the divergence between the two comparators.
+#[test]
+fn test_ops_complex_branch_sign_exact() {
+    // A carg-style result with a signed-zero imaginary component: -0.0 is pinned,
+    // the candidate returns +0.0 (a real sign-of-zero error).
+    let expected = [1.0f32, -0.0];
+    let candidate = [1.0f32, 0.0];
+    // the plain ULP comparator (bound 2) is BLIND to it: ulp_distance(-0,+0)==1.
+    assert_eq!(ulp_distance_f32(-0.0, 0.0), 1);
+    assert!(compare_f32(DeterminismClass::UlpTolerance, 0.0, -0.0, 2).is_ok(),
+        "the plain ULP comparator wrongly accepts the sign-of-zero error");
+    // the §6.18-0017 split comparator CATCHES it exact-bit ...
+    assert!(compare_c32_transcendental(candidate, expected, 2).is_err(),
+        "split comparator must reject a wrong sign of zero");
+    // ... while accepting a correct result within ULP tolerance on the real lane.
+    let near = [1.0f32 + f32::from_bits(1.0f32.to_bits() + 1) - 1.0, -0.0];
+    assert!(compare_c32_transcendental(near, expected, 2).is_ok());
+    // A ±pi branch endpoint: +pi pinned, candidate returns -pi (wrong branch) -> caught.
+    let pi = std::f32::consts::PI;
+    assert!(compare_c32_transcendental([-pi, 0.0], [pi, 0.0], 2).is_err());
+    assert!(compare_c32_transcendental([pi, 0.0], [pi, 0.0], 2).is_ok());
 }

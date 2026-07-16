@@ -582,7 +582,6 @@ KISS-OPS-6.18-0013	test_ops_complex_nan_inf_annexg
 KISS-OPS-6.18-0014	test_ops_complex_determinism_class
 KISS-OPS-6.18-0015	test_ops_complex_component_dtype
 KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level
-KISS-OPS-6.18-0017	test_ops_complex_branch_sign_exact
 KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept
 KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs
 KISS-OPS-6.19-0003	test_ops_opattrs_carrier_set_closed
