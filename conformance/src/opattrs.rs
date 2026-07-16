@@ -195,7 +195,17 @@ pub enum Decline {
     ReservedReduceAxes { value: u16 },
     /// The blob was shorter than the op's schema requires.
     TruncatedBlob { need: usize, got: usize },
+    /// A bounded field exceeded its pinned maximum (§6.19-0027, §6.19-0037):
+    /// `axis` must be < MAX_RANK, `index_operand` < MAX_OPERANDS.
+    FieldOutOfRange { field: &'static str, value: u8, max: u8 },
 }
+
+/// The pinned shared-anchor bounds for the OpAttrs channel of this op-set
+/// version (§6.19-0037), co-versioned with KISS-Classify (§2.8). Inlined as
+/// concrete values so the range MUSTs of §6.19 are verifiable from KISS-Ops plus
+/// the umbrella alone.
+pub const MAX_RANK: u8 = 8;
+pub const MAX_OPERANDS: u8 = 8;
 
 /// Validate a decoded `gather` blob (`[axis, oob, index_operand, index_dtype]`),
 /// returning a typed decline for a malformed one. Demonstrates modality 4.
@@ -217,6 +227,16 @@ pub fn decode_gather(blob: &[u8]) -> Result<(u8, OobPolicy, u8, IndexDtype), Dec
         3 => IndexDtype::I64,
         _ => return Err(Decline::ReservedZeroOrdinal { field: "index_dtype" }),
     };
+    // §6.19-0027: axis is range 0..MAX_RANK-1, index_operand 0..MAX_OPERANDS-1.
+    // An out-of-range field would index a nonexistent axis/operand downstream, so
+    // a reader MUST reject it rather than pass it through (§6.19-0037 pins the
+    // bounds). The previous decoder returned both fields unchecked.
+    if blob[0] >= MAX_RANK {
+        return Err(Decline::FieldOutOfRange { field: "axis", value: blob[0], max: MAX_RANK });
+    }
+    if blob[2] >= MAX_OPERANDS {
+        return Err(Decline::FieldOutOfRange { field: "index_operand", value: blob[2], max: MAX_OPERANDS });
+    }
     Ok((blob[0], oob, blob[2], idt))
 }
 

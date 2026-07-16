@@ -649,7 +649,6 @@ KISS-OPS-6.19-0022	test_ops_opattrs_boolean_flags
 KISS-OPS-6.19-0024	test_ops_opattrs_permutation_reserved
 KISS-OPS-6.19-0035	test_ops_opattrs_reduce_axes_classify_reconciliation
 KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution
-KISS-OPS-6.19-0037	test_ops_opattrs_max_rank_operands_pinned
 KISS-OPS-6.2-0001	test_ops_float_ieee754
 KISS-OPS-6.2-0002	test_ops_int_wrapping
 KISS-OPS-6.2-0003	test_ops_default_nan_propagation

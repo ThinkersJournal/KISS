@@ -213,3 +213,27 @@ fn positive_decode_roundtrip() {
     let (axis, oob, idx_op, idt) = decode_gather(&[0x00, 0x02, 0x01, 0x02]).unwrap();
     assert_eq!((axis, oob, idx_op, idt), (0, OobPolicy::Clamp, 1, IndexDtype::I32));
 }
+
+/// KISS-OPS-6.19-0037 (`test_ops_opattrs_max_rank_operands_pinned`): the OpAttrs
+/// channel pins MAX_RANK = 8 and MAX_OPERANDS = 8, and §6.19-0027 bounds a
+/// gather's `axis` to `0..MAX_RANK-1` and `index_operand` to `0..MAX_OPERANDS-1`.
+/// Catches a decoder that returns these fields unchecked (the previous one did):
+/// axis=8 or index_operand=8 would index a nonexistent axis/operand in a
+/// downstream consumer, so a reader MUST reject the blob rather than pass it on.
+#[test]
+fn test_ops_opattrs_max_rank_operands_pinned() {
+    // the constants are the pinned concrete values (§6.19-0037).
+    assert_eq!(MAX_RANK, 8);
+    assert_eq!(MAX_OPERANDS, 8);
+    // the last in-range values are accepted ...
+    assert!(decode_gather(&[7, 0x01, 7, 0x01]).is_ok());
+    // ... and the first out-of-range value of each bounded field is rejected.
+    assert_eq!(
+        decode_gather(&[8, 0x01, 0, 0x01]),
+        Err(Decline::FieldOutOfRange { field: "axis", value: 8, max: 8 })
+    );
+    assert_eq!(
+        decode_gather(&[0, 0x01, 8, 0x01]),
+        Err(Decline::FieldOutOfRange { field: "index_operand", value: 8, max: 8 })
+    );
+}
