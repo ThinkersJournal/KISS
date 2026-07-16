@@ -335,4 +335,73 @@ Each contributor grants, on contribution to a KISS RFC, a **royalty-free license
 
 ---
 
+## 10. Security considerations
+
+This section is informative, like the rest of this umbrella: it states the suite's trust model and scope. The binding requirements it calls for live, as always, in sub-standard clauses — several of which **do not exist yet** and are enumerated in §10.5 as work to be ratified. Until they do, this section is the honest statement of a gap rather than a description of a defence.
+
+### 10.1 KISS is a code-distribution protocol
+
+This is the fact from which everything else in this section follows, and the suite did not state it before Umbrella v0.1.
+
+KISS-Synth/Provision moves a **kernel artifact** — native executable code (for example PTX, cubin, SPIR-V, or an object file) — from a provider to a consumer, which then **loads and launches it on its own hardware, inside its own address space**. The consumer runs code it did not write, did not compile, and cannot generally inspect, obtained from a party on the other side of a vendor boundary.
+
+Every other seam in the suite is data; this one is control. A protocol that hands over executable code inherits the whole trust model of a software supply chain, whether or not it says so. KISS previously said nothing, and silence is not a scope exclusion (§1.2: "scope creep by silence is a named trap" — the trap runs in both directions).
+
+### 10.2 What KISS does not provide
+
+KISS provides **none** of the following, and an implementor must not infer otherwise from any field name:
+
+- **No authentication.** Nothing in the handshake establishes who the peer is. A conforming provider is any process that emits a well-formed envelope.
+- **No integrity.** The contract's inner checksum (KISS-Contract §6.2) detects *accidental* corruption and truncation. **A checksum is not a signature.** It is computed by whoever wrote the bytes, so it is recomputed by anyone who alters them. It stops a truncated pipe, not an adversary.
+- **No content binding of identity.** `revision_hash` (KISS-Announce §6.3) is a 32-byte, provider-assigned, opaque label. Despite its name and its SHA-256-shaped width, no clause requires it to be a hash *of* anything, and §6.3 forbids a consumer from assuming it is. **Revision-pinning therefore does not detect artifact substitution:** a provider — or anything positioned as one — may return different bytes under an unchanged `revision_hash` and remain conformant. Pinning a revision expresses a cache-coherence intent, not a security guarantee.
+- **No confidentiality.** Operand descriptors, `structure_key`s, and contracts describe a consumer's model architecture in detail and cross the wire in the clear.
+- **No sandboxing or isolation.** KISS does not constrain what a received artifact may do once launched. It runs with the consumer's privileges.
+- **No provenance or supply-chain attestation.** The Contract's Provenance section (§6.10) is a self-asserted record by the party that produced the kernel. It is a claim, not evidence.
+- **No transport security.** See §10.3.
+
+### 10.3 The transport is out of scope — and so, therefore, is transport security
+
+KISS pins the **bytes** of each message, not what carries them. It says nothing about sockets, pipes, shared memory, or RPC. This is deliberate and consistent with §1.2's exclusion of in-ecosystem mechanism.
+
+The consequence must be stated rather than left implicit: **authentication, confidentiality, and integrity of the channel are the deployment's responsibility, not KISS's.** A deployment that carries KISS frames across a trust boundary is responsible for placing them inside a channel that provides those properties (a mutually-authenticated transport, a signed package format, a verified OCI layer, an OS IPC channel with peer credentials — the choice is the deployment's). KISS's frames are designed to be carried inside such a channel; they are not designed to survive without one.
+
+**This delegation is only honest if it is loud.** Two of the three deployment shapes the suite anticipates put the parties in different trust domains:
+
+| Deployment | Trust relationship | Who secures the channel |
+|---|---|---|
+| Provider linked in-process | same trust domain as the consumer | nobody needs to; there is no channel |
+| Provider as a local subprocess | same host, possibly different vendor | the OS (peer credentials, process isolation) |
+| Provider over a network | **different trust domain** | **the deployment — KISS provides nothing** |
+
+A consumer that speaks KISS to a remote provider over an unauthenticated channel is accepting arbitrary code execution from anyone who can reach the socket. That is a true statement about the protocol as specified, and it belongs in this document rather than in an incident report.
+
+### 10.4 What a consumer is actually trusting
+
+A consumer that launches a provided artifact is trusting, with no protocol-level recourse:
+
+1. that the peer is the provider it believes it is (unauthenticated — §10.2);
+2. that the artifact is the code the provider built, unmodified in transit (no integrity — §10.2);
+3. that the artifact computes what its contract says (unverified — the contract is the provider's own claim; KISS-Conform's differential is a *voluntary* check the consumer may run, and §10.5 item 5 proposes making that recourse explicit);
+4. that the artifact does nothing besides compute (unconstrained — no sandboxing);
+5. that the provider is not hostile.
+
+Item 5 is doing all the work. **KISS's security model today is "trust the provider."** That is a legitimate model for a provider linked into your own process. It is not one for a provider reached over a network, and the suite currently draws no distinction between the two.
+
+### 10.5 Required work — normative clauses that do not yet exist
+
+The following are gaps, not features. Each needs a clause in the named sub-standard, a mapped test, and removal from `conformance/UNBACKED.tsv` once real. They are ordered by how cheaply they remove a real hazard:
+
+1. **Bound every attacker-controlled length (KISS-Synth, KISS-Contract, KISS-Announce).** `artifact_len` is a u64 supplied by the *less-trusted* party and no clause caps it or forbids allocating on it before the bytes arrive. Every never-panic, no-out-of-bounds, and no-unbounded-allocation obligation in KISS-Synth (§1, §2.4, §9) is written against the **request** direction — the provider's inputs. The **response** direction, the one carrying executable code, binds nobody. A conforming consumer can be OOM-killed by a two-line frame. Fixing this is a per-field cap plus one clause per length; it is the cheapest hazard removal in the suite. Related: issue #24, which asks for a consumer-side never-panic obligation — necessary, but it addresses *crashing on a malformed artifact*, not *executing a hostile one*.
+2. **State the trust boundary normatively (KISS-Synth §1).** A one-line scope clause: a conforming consumer MUST treat a provided artifact as untrusted code unless the provider is in its own trust domain, and the deployment MUST provide channel authentication and integrity where it is not.
+3. **Say what `revision_hash` is not (KISS-Announce §6.3).** A clause stating that `revision_hash` is not an integrity mechanism and MUST NOT be relied on to detect substitution, so its name stops implying a guarantee it does not carry. Pairs with issue #26, which reopens the field's encoding — the two should land together.
+4. **Say what the contract checksum is not (KISS-Contract §6.2).** As above: detects corruption, not modification.
+5. **Define an optional signing/attestation extension (registry, umbrella §6.4).** The capability model's Axis 2 (optional features) is the natural home, and the extension registry exists precisely for this. This does not belong in the mandatory core — a linked in-process provider should not pay for it — but the *extension point* must exist, and adding one after a freeze is far more expensive than reserving it now. This is the item most worth doing before any sub-standard freezes.
+6. **Give the consumer's verification recourse a name (KISS-Conform).** A consumer that differentials a received kernel against the oracle before trusting it (Fuel's ledger-with-downgrade-to-UNAUDITED, per its comment on issue #16) is doing the only thing in this list that catches a *wrong* kernel rather than a *malformed* one. That pattern should be a named, optional profile rather than folklore.
+
+### 10.6 Non-goals
+
+KISS does not intend to become a code-signing standard, a package format, or a transport. Where an existing standard owns a problem — Sigstore/in-toto for provenance, TLS/Noise for channels, OCI for distribution, the platform loader for isolation — KISS's job is to leave a **clean extension point** and name the owner, not to re-solve it. §10.5 item 5 is that extension point; the rest of this section names the owners.
+
+---
+
 *End of KISS Umbrella Specification (Draft proposal, Umbrella v0.1). This umbrella is informative throughout; every binding requirement lives in a sub-standard's identified clause with a mapped KISS-Conform test. Project and product names appearing in any sub-standard are confined to non-normative examples, provenance and acknowledgments, reference-implementation pointers, and the governance/signatory record; normative clauses use only the generic roles provider, consumer, implementation, kernel, contract, and target.*

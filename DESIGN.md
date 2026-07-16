@@ -47,11 +47,22 @@ conformance claim checkable byte-for-byte.
 Each sub-standard follows one dual-document template: an informative overview
 (§0–§5) and a tight normative conformance spec (§6+). Every normative requirement
 carries an append-only clause identifier `KISS-<SUB>-<section>-<nnnn>` that maps
-**one-to-one to a named conformance test**, and the suite build fails on any
-normative MUST with no test. Unquantified adjectives ("fast", "small",
-"reasonable") are banned from normative text. The effect: the specification cannot
-drift from its tests, and "conformant" is a factual, checkable property rather than
-a marketing claim.
+**one-to-one to a named conformance test**. Unquantified adjectives ("fast",
+"small", "reasonable") are banned from normative text. The intended effect: the
+specification cannot drift from its tests, and "conformant" is a factual,
+checkable property rather than a marketing claim.
+
+**This is the goal, and the suite does not meet it yet.** As of the pre-1.0 draft,
+853 clauses each *name* a test, but only **29 (3.4%) are backed by executable
+code**; the other 824 name tests that do not exist. That gap is recorded, clause
+by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv), and
+`tools/kiss_trace.py --strict` fails on every line of it. The ledger is a ratchet:
+a new untested MUST fails the build, and a clause that gains a test must be struck
+from the ledger. Earlier drafts of this document claimed the build already failed
+on any untested MUST — it did not. The checker compared markdown to markdown and
+never read `conformance/`, so 846 of 852 named tests could not have been detected
+as missing. The number in the ledger is the honest measure of how far the suite is
+from the property this section describes, and closing it is the pre-1.0 priority.
 
 ### 1.5 Determinism and fidelity are first-class
 

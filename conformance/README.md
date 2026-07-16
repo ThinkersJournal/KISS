@@ -12,12 +12,52 @@ distinct from the specification text under `spec/`, which is CC0.
 
 ## What it verifies today
 
-All four KISS-Conform test modalities — **golden byte-vectors** (§6.4),
-**negative/decline vectors** (§6.7), the **independent CPU-oracle differential**
-(§6.5), and a **real on-device run** (§6.6) — under the determinism-class
-comparators of §6.8 (exact-byte, ULP-tolerance, and order-invariant). Every golden
-vector is transcribed from the spec's own appendix.
+**Three of the four** KISS-Conform test modalities — **golden byte-vectors**
+(§6.4), the **independent CPU-oracle differential** (§6.5), and
+**negative/decline vectors** (§6.7) — under the determinism-class comparators of
+§6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
+run** that is not one of the four modalities but exercises §6.5's differential on
+real silicon. Every golden vector is transcribed from the spec's own appendix.
 **130 tests pass by default; 3 more on-device under `--features cuda`.**
+
+**Not implemented: modality 3 — the §6.6 structure-directed fuzzer**, which must
+generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
+Nothing here does that; the `*_under_fuzz` tests are seeded scalar corpus loops
+over binary f32 functions (§6.5), not DAG generation. All 17 §6.6 clauses are in
+[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all four
+modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
+
+### How much of the spec is actually executable
+
+**31 of 855 normative clauses (3.6%).** The other 824 name a conformance test that
+does not exist — see [`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is
+enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 131 test fns, 96
+cite no clause at all, so the traceability matrix cannot see them: they are real
+tests doing real work that no clause claims credit for. Closing that is cheap and
+is the first task below.
+
+`boundary_rounding.rs` (§6.5-0006/-0007) is the model to copy: it was added with the
+clause, under the name the clause names, so it counted the day it landed.
+
+**Where an untested MUST is a hard error.** Not on every commit — a gate that can
+never go green, including for the commits that would fix it, gets bypassed by habit
+and decays back into a green check that means nothing. Instead an unbacked clause
+hard-fails the two transitions it actually invalidates:
+
+```sh
+python tools/kiss_trace.py --freeze-ready        # all nine
+python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
+```
+
+- **umbrella §5.3 condition 3** — a sub-standard advances Draft → Frozen only with
+  "complete bidirectional clause-to-test traceability". One unbacked clause blocks
+  the freeze. **Today: 0 of 9 sub-standards pass.**
+- **umbrella §8.1** — an implementation conforms "if and only if it passes the
+  unmodified KISS-Conform suite for that sub-standard". Where there is no test there
+  is no suite, so a conformance claim to KISS-Synth (0/130) is backed by nothing.
+
+Everywhere else the gap is a recorded, ratcheted debt: `UNBACKED.tsv` may only
+shrink, and `--strict` reports the live count on every PR.
 
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
@@ -66,7 +106,8 @@ vector is transcribed from the spec's own appendix.
   to visit order only up to reassociation, so it's compared within a
   contract-declared tolerance, not byte-for-byte. A differential *catches* a lossy
   scatter, and the `max_prop`-reduction signed-zero-on-tie order-dependence is pinned.
-- **On-device real-kernel differential** ([`tests/device.rs`], §6.6; opt-in
+- **On-device real-kernel differential** ([`tests/device.rs`], §6.5 on real
+  silicon; opt-in
   `--features cuda`): a hand-written CUDA `fmax_ieee` kernel is compiled with `nvcc`
   and run on the GPU over the corpus, differenced against the CPU oracle. On an
   RTX 4070 it passes 16.9M pairs, and a negative control using CUDA's `fmaxf`
@@ -105,6 +146,18 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
+- **Phase 5 (next, cheap) — cite the clause in every test.** 95 of 128 test fns
+  cite no clause, so ~15% of the suite's real coverage is invisible to the matrix.
+  Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
+  `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
+  or name it in the comment above the test. `kiss_trace.py` reads both and will
+  strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
+  it is the cheapest coverage in the repo.
+- **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
+  by seam, not by document: the clauses two real implementations must agree on to
+  exchange one kernel come first (see the wire-first list in the repo issues).
+  8 of 9 sub-standards are at 0.0% — Announce/Synth in particular have never had a
+  byte cross a process boundary.
 
 ## Keeping the vectors in sync
 
