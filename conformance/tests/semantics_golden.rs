@@ -14,6 +14,10 @@ fn bits_eq(a: f32, b: f32) -> bool {
 
 // ---- the load-bearing distinction: NaN-propagating vs NaN-suppressing --------
 
+/// Enforces KISS-OPS-6.15-0001 — max_prop/min_prop (NaN-propagating) and
+/// fmax_ieee/fmin_ieee (NaN-suppressing) are four distinct ops. Catches an
+/// `fmax_ieee` built from `max_prop`: it returns NaN for fmax_ieee(NaN, 5.0)
+/// where the clause pins 5.0.
 #[test]
 fn max_propagates_nan_but_fmax_suppresses_it() {
     let nan = f32::NAN;
@@ -65,6 +69,9 @@ fn relu_propagates_nan_and_preserves_negative_zero() {
     assert!(bits_eq(relu(0.0), 0.0));
 }
 
+/// Enforces KISS-OPS-6.15-0002 — `relu` is NaN-propagating and -0.0-preserving,
+/// and MUST NOT be implemented as `max(x, 0)`. Catches exactly that wrong
+/// lowering: `naive_max_x_zero` scrubs a NaN input to 0 where `relu` keeps it.
 #[test]
 fn relu_diverges_from_max_x_zero_at_nan() {
     // The deterministic divergence §2.3 warns about: relu keeps NaN, max(x,0)
@@ -121,6 +128,10 @@ fn sign_and_step_at_nan_and_zero() {
     assert_eq!(step(f32::NAN), 0.0);
 }
 
+/// Enforces KISS-OPS-6.7-0001 — floor→−∞, ceil→+∞, trunc→zero, and round_even
+/// to nearest ties-to-even. Catches `round_even` lowered to C `roundf` / Rust
+/// `f32::round` (ties away from zero): those give round_even(2.5)==3.0 where the
+/// clause pins 2.0.
 #[test]
 fn round_even_is_bankers_rounding() {
     // round-half-to-even, NOT round-half-away-from-zero
@@ -134,6 +145,10 @@ fn round_even_is_bankers_rounding() {
     assert_eq!(trunc(-1.7), -1.0);
 }
 
+/// Enforces KISS-OPS-6.6-0002 — cmp_eq/lt/le/gt/ge each yield 0 (false) when
+/// either operand is NaN. Catches `cmp_ge` lowered as `!(a < b)` (the standard
+/// trick on an lt-only ISA): that returns true for cmp_ge(NaN, NaN) where the
+/// clause pins false.
 #[test]
 fn comparisons_are_ieee_ordered() {
     assert!(cmp_eq(2.0, 2.0) && !cmp_eq(2.0, 3.0));

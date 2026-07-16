@@ -191,6 +191,23 @@ fn negative_reserved_reduce_axes_band_declines() {
     assert!(validate_reduce_axes(0x00FF).is_ok()); // subset mask is valid
 }
 
+/// KISS-OPS-6.19-0038 (`test_ops_opattrs_reduce_axes_zero_unreachable`): the
+/// none/not-a-reduction sentinel 0x0000 is unreachable on the OpAttrs channel —
+/// every carrier op that owns `reduce_axes` is a reduction or a scan — so a
+/// reader MUST reject it as malformed. Catches a reader that accepts 0x0000
+/// because it only guards the reserved band (0x0100..=0xFFFD) and lets the
+/// sentinel through: such a reader treats a scan-over-nothing blob as valid.
+#[test]
+fn test_ops_opattrs_reduce_axes_zero_unreachable() {
+    assert_eq!(
+        validate_reduce_axes(0x0000),
+        Err(Decline::ReservedReduceAxes { value: 0x0000 })
+    );
+    // the neighbouring live values remain valid, so the guard is not over-broad:
+    assert!(validate_reduce_axes(0x0001).is_ok()); // single-axis subset mask
+    assert!(validate_reduce_axes(0xFFFF).is_ok()); // all-axes sentinel
+}
+
 #[test]
 fn positive_decode_roundtrip() {
     let (axis, oob, idx_op, idt) = decode_gather(&[0x00, 0x02, 0x01, 0x02]).unwrap();

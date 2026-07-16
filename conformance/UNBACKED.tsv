@@ -596,8 +596,6 @@ KISS-OPS-6.14-0003	test_ops_resolution_terminates
 KISS-OPS-6.14-0004	test_ops_consumer_resolves_unknown_op
 KISS-OPS-6.14-0005	test_ops_op_not_in_own_decomposition
 KISS-OPS-6.14-0006	test_ops_embedded_body_level
-KISS-OPS-6.15-0001	test_ops_minmax_nan_split
-KISS-OPS-6.15-0002	test_ops_relu_not_max_zero
 KISS-OPS-6.15-0003	test_ops_rem_floor_vs_trunc
 KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts
@@ -652,7 +650,6 @@ KISS-OPS-6.19-0024	test_ops_opattrs_permutation_reserved
 KISS-OPS-6.19-0035	test_ops_opattrs_reduce_axes_classify_reconciliation
 KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution
 KISS-OPS-6.19-0037	test_ops_opattrs_max_rank_operands_pinned
-KISS-OPS-6.19-0038	test_ops_opattrs_reduce_axes_zero_unreachable
 KISS-OPS-6.2-0001	test_ops_float_ieee754
 KISS-OPS-6.2-0002	test_ops_int_wrapping
 KISS-OPS-6.2-0003	test_ops_default_nan_propagation
@@ -673,10 +670,8 @@ KISS-OPS-6.5-0002	test_ops_select_raw_bit
 KISS-OPS-6.5-0003	test_ops_select_cond_zero_nan
 KISS-OPS-6.5-0004	test_ops_select_no_mask_multiply
 KISS-OPS-6.6-0001	test_ops_compare_predicates
-KISS-OPS-6.6-0002	test_ops_compare_nan_false
 KISS-OPS-6.6-0003	test_ops_cmp_ne_nan_true
 KISS-OPS-6.6-0004	test_ops_compare_signed_zero
-KISS-OPS-6.7-0001	test_ops_rounding_directions
 KISS-OPS-6.7-0002	test_ops_rounding_nan_signed_zero
 KISS-OPS-6.8-0001	test_ops_transcendental_declared_ulp
 KISS-OPS-6.8-0002	test_ops_transcendental_no_cross_lang_identity

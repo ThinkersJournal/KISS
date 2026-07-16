@@ -220,9 +220,16 @@ pub fn decode_gather(blob: &[u8]) -> Result<(u8, OobPolicy, u8, IndexDtype), Dec
     Ok((blob[0], oob, blob[2], idt))
 }
 
-/// Validate a `reduce_axes` u16 is not in the reserved band (§6.19-0020).
+/// Validate a `reduce_axes` u16 on a carrier OpAttrs blob (§6.19-0020, §6.19-0038).
+///
+/// The reserved band `0x0100..=0xFFFD` is malformed (§6.19-0020). So is `0x0000`:
+/// it is the none/not-a-reduction sentinel whose sole role is the Classify
+/// `structure_key` `-` token reconciliation (§6.19-0035), and every carrier op
+/// that owns this field is a reduction or a scan, so `0x0000` is unreachable on
+/// the OpAttrs channel and a reader MUST reject it as malformed (§6.19-0038).
 pub fn validate_reduce_axes(value: u16) -> Result<(), Decline> {
     match value {
+        0x0000 => Err(Decline::ReservedReduceAxes { value }),
         0x0100..=0xFFFD => Err(Decline::ReservedReduceAxes { value }),
         _ => Ok(()),
     }
