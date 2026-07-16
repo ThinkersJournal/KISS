@@ -195,24 +195,31 @@ compiler may choose it.
 declared ULP exceeding the ceiling." Against what a **conformant** OpenCL fp32 device is
 *permitted*:
 
-| Atom | OpenCL permits | KISS ceiling | Effect |
-|---|---|---|---|
-| `atan` | ≤ 5 ULP | **4 ULP** | conformant device rejected |
-| `atan2` | ≤ 6 ULP | **4 ULP** | conformant device rejected |
-| `erf` | ≤ 16 ULP | **4 ULP** | conformant device rejected |
-| `sqrt` (non-CR) | ≤ 3 ULP | **2 ULP** | conformant device rejected |
-| `lgamma` | unbounded | **8 ULP** | bounds an unbounded function |
-| `exp`, `log` | ≤ 3 ULP | 4 ULP | fine |
-| `sin`, `cos` | ≤ 4 ULP | 4 ULP | fine (fp32 OpenCL only — see below) |
+| Atom | KISS ceiling | OpenCL permits | Vulkan permits | Effect |
+|---|---|---|---|---|
+| `atan` | **4 ULP** | ≤ 5 ULP | **4096 ULP** | conformant device rejected |
+| `atan2` | **4 ULP** | ≤ 6 ULP | **4096 ULP** | conformant device rejected |
+| `erf` | **4 ULP** | ≤ 16 ULP | — | conformant device rejected |
+| `sqrt` (non-CR) | **2 ULP** | ≤ 3 ULP | via `1.0/inversesqrt()`, itself 2 ULP | conformant device rejected |
+| `lgamma` | **8 ULP** | **no bound** | — | bounds an unbounded function |
+| `sin`, `cos` | **4 ULP** | ≤ 4 ULP | **abs. error ≤ 2⁻¹¹ in [−π,π]; no ULP bound** | unsatisfiable on Vulkan |
+| `exp` | **4 ULP** | ≤ 3 ULP | **3 + 2×\|x\| ULP** | exceeds 4 for \|x\| > 0.5 |
+| `log` | 4 ULP | ≤ 3 ULP | 3 ULP outside [0.5, 2.0] | fine |
 
-**Five of eight rows are tighter than the incumbent floor.** As written, KISS-Conform *rejects a
-truthful Khronos-conformant vendor and admits only one that misreports its numbers* — the exact
-inversion of the clause's purpose. On Vulkan it is worse: `Atan` is 4096 ULP, and `Sin`/`Cos`
-carry no ULP bound at all (they are specified as absolute error within [−π, π] and are undefined
-outside it), so KISS's 4-ULP `sin` ceiling is not tight — it is **unsatisfiable in principle**.
+**Only `log` survives against both.** As written, KISS-Conform *rejects a truthful
+Khronos-conformant vendor and admits only one that misreports its numbers* — the exact inversion
+of the clause's purpose.
+
+And the deeper defect is the **model**, not the constants: Vulkan specifies `sin`/`cos` as an
+**absolute error over a bounded range** with no ULP bound and no defined behaviour outside
+[−π, π], and `exp` as **`3 + 2×|x|` ULP — a function of the argument**. No scalar ULP ceiling,
+however loose, can express either. Accuracy is not always a per-atom constant in ULP; the
+incumbents' tables carry four distinct kinds (constant ULP, argument-dependent ULP,
+absolute-error-over-a-range, and "not specified") because they learned that. StableHLO's
+`ResultAccuracyAttr` (`atol`/`rtol`/`ulps` + modes) is the shipped vocabulary for this.
 
 This is findable by diffing one table against a document that has been public since 2008. It is a
-90-second objection that ends the meeting before anything else is read.
+90-second objection that ends the meeting before anything else is read. Tracked as issue #39.
 
 ## 6. Could KISS ride on an incumbent instead?
 
