@@ -39,6 +39,26 @@ is the first task below.
 `boundary_rounding.rs` (§6.5-0006/-0007) is the model to copy: it was added with the
 clause, under the name the clause names, so it counted the day it landed.
 
+**Where an untested MUST is a hard error.** Not on every commit — a gate that can
+never go green, including for the commits that would fix it, gets bypassed by habit
+and decays back into a green check that means nothing. Instead an unbacked clause
+hard-fails the two transitions it actually invalidates:
+
+```sh
+python tools/kiss_trace.py --freeze-ready        # all nine
+python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
+```
+
+- **umbrella §5.3 condition 3** — a sub-standard advances Draft → Frozen only with
+  "complete bidirectional clause-to-test traceability". One unbacked clause blocks
+  the freeze. **Today: 0 of 9 sub-standards pass.**
+- **umbrella §8.1** — an implementation conforms "if and only if it passes the
+  unmodified KISS-Conform suite for that sub-standard". Where there is no test there
+  is no suite, so a conformance claim to KISS-Synth (0/130) is backed by nothing.
+
+Everywhere else the gap is a recorded, ratcheted debt: `UNBACKED.tsv` may only
+shrink, and `--strict` reports the live count on every PR.
+
 - **KISS-Ops OpAttrs** ([`opattrs`], Ops §6.19): all 13 Appendix E golden vectors
   — the per-op schemas, the rank-aware `reduce_axes` precedence, and the
   **default-resolution byte-equality** that lets Grammar byte-compare an opaque

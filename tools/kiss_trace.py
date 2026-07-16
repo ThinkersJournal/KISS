@@ -41,14 +41,38 @@ unbacked clause fails the build, and a clause that becomes backed must be
 removed from the ledger. `--strict` ignores the ledger and fails on ANY unbacked
 clause — that is §6.2 as literally written, and it is the target state.
 
+WHERE AN UNTESTED MUST IS A *HARD* ERROR
+----------------------------------------
+An unbacked clause is deliberately NOT a blocking error on every commit. A gate
+that can never go green — including for the very commits that would fix it —
+gets bypassed by habit, and a gate bypassed by habit is worse than none: it
+decays back into a green check that means nothing, which is the exact failure
+this tool exists to remove.
+
+Instead, an unbacked clause hard-fails the two transitions it actually
+invalidates, via `--freeze-ready`:
+
+  * umbrella §5.3 condition 3 — a sub-standard advances Draft->Frozen only with
+    "complete bidirectional clause-to-test traceability". One unbacked clause
+    blocks the freeze.
+  * umbrella §8.1 — an implementation "conforms to a sub-standard ... if and
+    only if it passes the unmodified KISS-Conform suite for that sub-standard".
+    For an unbacked clause there is no suite, so the claim is unbacked for it.
+
+Same predicate, two consequences. The 812 untested MUSTs are therefore errors
+where they bite (no sub-standard may freeze; no conformance claim to one is
+backed) and a recorded, ratcheted debt everywhere else.
+
 Exit status is 0 when the suite is clean and 1 when any violation is found, so
 the checker doubles as the CI gate the standard describes. Stdlib only.
 
 Usage:
-  python tools/kiss_trace.py                  # both checks, ratcheted by the ledger
-  python tools/kiss_trace.py --strict         # fail on ANY unbacked clause (§6.2 verbatim)
-  python tools/kiss_trace.py --update-ledger  # rewrite the ledger to the current truth
-  python tools/kiss_trace.py --report         # per-sub-standard coverage breakdown
+  python tools/kiss_trace.py                     # both checks, ratcheted by the ledger
+  python tools/kiss_trace.py --strict            # fail on ANY unbacked clause (§6.2 verbatim)
+  python tools/kiss_trace.py --freeze-ready      # §5.3 cond. 3 for all nine; fails unless all backed
+  python tools/kiss_trace.py --freeze-ready OPS  # ... for one sub-standard
+  python tools/kiss_trace.py --update-ledger     # rewrite the ledger to the current truth
+  python tools/kiss_trace.py --report            # per-sub-standard coverage breakdown
 """
 from __future__ import annotations
 
@@ -314,6 +338,12 @@ def main():
                     help="path to the conformance/ harness")
     ap.add_argument("--strict", action="store_true",
                     help="fail on ANY unbacked clause, ignoring the ledger (§6.2 verbatim)")
+    ap.add_argument("--freeze-ready", nargs="?", const="ALL", default=None,
+                    metavar="SUB",
+                    help="umbrella §5.3 condition 3: fail unless every clause of SUB "
+                         "(or of all nine) is backed by an executable test. This is "
+                         "the gate a Draft->Frozen transition must pass, and the same "
+                         "predicate a §8.1 conformance claim to SUB depends on.")
     ap.add_argument("--update-ledger", action="store_true",
                     help="rewrite the unbacked ledger to the current truth")
     ap.add_argument("--report", action="store_true",
@@ -481,6 +511,45 @@ def main():
             b, n = per[sub]
             bar = "#" * int(round(20.0 * b / n)) if n else ""
             print(f"      {sub:<9} {b:>4}/{n:<4} {100.0*b/n:>5.1f}%  {bar}")
+
+    if args.freeze_ready:
+        # umbrella §5.3 condition 3 — "The sub-standard's KISS-Conform suite exists
+        # and passes, with complete bidirectional clause-to-test traceability."
+        # A sub-standard with even one unbacked clause cannot advance Draft->Frozen,
+        # and a §8.1 conformance claim to it ("passes the unmodified suite for that
+        # sub-standard") is unbacked for exactly those clauses. Same predicate, two
+        # consequences. This is where an untested MUST is a hard error rather than a
+        # recorded one: it blocks the transition it invalidates, not every commit.
+        want = args.freeze_ready.upper()
+        subs = sorted({sub_of(c) for c in clause_test})
+        if want != "ALL" and want not in subs:
+            print(f"\n  unknown sub-standard `{want}`; known: {', '.join(subs)}")
+            return 1
+        targets = subs if want == "ALL" else [want]
+        print("-" * 68)
+        print("  FREEZE READINESS (umbrella §5.3 condition 3 — complete clause<->test")
+        print("  traceability; also the §8.1 predicate a conformance claim rests on):")
+        ready = 0
+        for sub in targets:
+            miss = sorted(c for c in unbacked if sub_of(c) == sub)
+            tot = sum(1 for c in clause_test if sub_of(c) == sub)
+            if miss:
+                any_fail = True
+                print(f"      [FAIL] {sub:<9} {tot - len(miss):>3}/{tot:<4} backed — "
+                      f"{len(miss)} clause(s) have no executable test")
+                for cid in miss[:3]:
+                    print(f"                 e.g. {cid} names `{unbacked[cid]}` — no such test")
+                if len(miss) > 3:
+                    print(f"                 ... and {len(miss) - 3} more")
+            else:
+                ready += 1
+                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} backed — may freeze on §5.3 cond. 3")
+        print()
+        print(f"      {ready} of {len(targets)} sub-standard(s) satisfy §5.3 condition 3.")
+        if any_fail:
+            print("      A Draft->Frozen transition is BLOCKED for each [FAIL] above, and a")
+            print("      §8.1 conformance claim to it is unbacked for its untested clauses.")
+        return 1 if any_fail else 0
 
     if args.strict:
         if unbacked:

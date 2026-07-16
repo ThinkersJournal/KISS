@@ -31,8 +31,15 @@ jobs:
         run: python tools/kiss_trace.py --report
 
   strict:
-    # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST.
-    # Non-blocking while the ledger burns down; the number is the point.
+    # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
+    # plus umbrella §5.3 condition 3 per sub-standard.
+    #
+    # Non-blocking BY DESIGN, and the reason matters: a gate that can never go
+    # green — including for the commits that would fix it — gets bypassed by
+    # habit, and decays back into a green check that means nothing. So an
+    # untested MUST is reported here on every PR, and hard-fails the two
+    # transitions it actually invalidates (a freeze, and a conformance claim)
+    # rather than every commit. The number is the point; see UNBACKED.tsv.
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -42,3 +49,6 @@ jobs:
           python-version: "3.x"
       - name: Untested-MUST count (§6.2 target state)
         run: python tools/kiss_trace.py --strict
+      - name: Freeze readiness (umbrella §5.3 condition 3)
+        if: always()
+        run: python tools/kiss_trace.py --freeze-ready
