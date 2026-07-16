@@ -19,10 +19,10 @@ KISS-OPS-6.7-0001	OPS	trivial	DONE	round_even lowered to C's `roundf` / Rust's `
 KISS-OPS-6.15-0001	OPS	trivial	DONE	An `fmax_ieee` built from `max_prop`: fmax_ieee(NaN, 2.0) returns NaN where the spec pins 2.0. The harness ALREADY has all four functions in src/semantics.rs, w
 KISS-OPS-6.19-0038	OPS	trivial	DONE	src/opattrs.rs::validate_reduce_axes REJECTS the 0x0100..=0xFFFD reserved band and ACCEPTS 0x0000 — the harness's own reader is the wrong implementation this te
 KISS-OPS-6.6-0002	OPS	trivial	DONE	cmp_ge lowered as `!(a < b)` — the standard trick on an ISA with only an lt predicate, and the standard trick in a comparator written for a sort. It returns TRU
-KISS-OPS-6.15-0003	OPS	trivial	todo	rem_floor lowered to C's fmodf: rem_floor(-7,3) returns -1 where the spec's decomposition `sub(a, mul(floor(div(a,b)), b))` pins 2. fmodf is the only remainder 
+KISS-OPS-6.15-0003	OPS	trivial	DONE	rem_floor lowered to C's fmodf: rem_floor(-7,3) returns -1 where the spec's decomposition `sub(a, mul(floor(div(a,b)), b))` pins 2. fmodf is the only remainder 
 KISS-OPS-6.5-0003	OPS	trivial	todo	BOTH natural lowerings are wrong, in opposite directions. `cond > 0 || cond < 0` (the branch-free comparison form) makes NaN test FALSE. `cond.to_bits() != 0` (
 KISS-OPS-6.18-0004	OPS	trivial	todo	cconj implemented as `cmake(a, sub(const(0), b))` — the obvious spelling of 'negate the imaginary part'. For b=+0.0 it yields 0.0-0.0 = +0.0 under IEEE round-to
-KISS-OPS-6.13-0007	OPS	trivial	todo	The clause names its own wrong implementation in its own text: the literal reference `sqrt(add(sqr(a), sqr(b)))` evaluates hypot(inf, NaN) as sqrt(inf + NaN) = 
+KISS-OPS-6.13-0007	OPS	trivial	DONE	The clause names its own wrong implementation in its own text: the literal reference `sqrt(add(sqr(a), sqr(b)))` evaluates hypot(inf, NaN) as sqrt(inf + NaN) = 
 KISS-OPS-6.16-0004	OPS	small	todo	A converter that treats e4m3 as a mini-IEEE format: emits +inf for an overflowing input (where the pin is 448.0), and decodes 0x7F as +inf (where the pin is the
 KISS-OPS-6.18-0017	OPS	small	todo	The harness's own ULP comparator is the wrong implementation. lib.rs::total_order_f32 maps -0.0→0x7FFFFFFF and +0.0→0x80000000, so ulp_distance_f32(-0.0,+0.0)=1
 KISS-OPS-6.18-0006	OPS	small	todo	The clause spells out its own wrong implementation AND its own value. The naive §6.18 table decomposition on a (±0,±0) denominator computes t = 0*0+0*0 = +0.0 t

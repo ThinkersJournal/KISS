@@ -161,6 +161,39 @@ fn comparisons_are_ieee_ordered() {
     assert!(isnan(f32::NAN) && !isnan(0.0));
 }
 
+/// Enforces KISS-OPS-6.15-0003 — `rem_floor` (sign of divisor) and `rem_trunc`
+/// (sign of dividend) are distinct ops. Catches an implementation that merges
+/// them or substitutes one for the other: they diverge on any operand pair whose
+/// quotient is negative and non-integer.
+#[test]
+fn test_ops_rem_floor_vs_trunc() {
+    // -7 / 3 = -2.33: floor -> -3, trunc -> -2, so the remainders differ in sign.
+    assert_eq!(rem_floor(-7.0, 3.0), 2.0); // sign of the divisor (+)
+    assert_eq!(rem_trunc(-7.0, 3.0), -1.0); // sign of the dividend (-)
+    assert_ne!(rem_floor(-7.0, 3.0), rem_trunc(-7.0, 3.0), "the two ops must not merge");
+    // they agree when the quotient is exact or positive
+    assert_eq!(rem_floor(7.0, 3.0), rem_trunc(7.0, 3.0));
+    assert_eq!(rem_floor(6.0, 3.0), 0.0);
+}
+
+/// Enforces KISS-OPS-6.13-0007 — `hypot` yields +∞ whenever either operand is
+/// infinite, even if the other is NaN, overriding the naive `sqrt(a²+b²)`.
+/// Catches exactly that naive lowering: it returns NaN for `(±∞, NaN)`.
+#[test]
+fn test_ops_hypot_inf_nan() {
+    let inf = f32::INFINITY;
+    let nan = f32::NAN;
+    // the infinity rule overrides NaN on an infinite input ...
+    assert_eq!(hypot(inf, nan), inf);
+    assert_eq!(hypot(nan, -inf), inf);
+    assert_eq!(hypot(inf, 3.0), inf);
+    // ... but the naive reference (which the clause overrides) would give NaN:
+    assert!((inf * inf + nan * nan).sqrt().is_nan());
+    // for finite inputs a NaN operand propagates, and ordinary values are exact.
+    assert!(hypot(3.0, nan).is_nan());
+    assert_eq!(hypot(3.0, 4.0), 5.0);
+}
+
 #[test]
 fn transcendental_agrees_within_declared_ulp() {
     // §6.8: a transcendental's semantics is "the named function to within a

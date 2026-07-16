@@ -584,7 +584,6 @@ KISS-OPS-6.13-0003	test_ops_decomposition_accuracy_refinement
 KISS-OPS-6.13-0004	test_ops_parameterized_attributes_explicit
 KISS-OPS-6.13-0005	test_ops_pow_full_domain
 KISS-OPS-6.13-0006	test_ops_decomposition_body_grammar
-KISS-OPS-6.13-0007	test_ops_hypot_inf_nan
 KISS-OPS-6.13-0008	test_ops_norm_axis_all_four
 KISS-OPS-6.14-0001	test_ops_level_assignment
 KISS-OPS-6.14-0002	test_ops_decomposition_acyclic
@@ -592,7 +591,6 @@ KISS-OPS-6.14-0003	test_ops_resolution_terminates
 KISS-OPS-6.14-0004	test_ops_consumer_resolves_unknown_op
 KISS-OPS-6.14-0005	test_ops_op_not_in_own_decomposition
 KISS-OPS-6.14-0006	test_ops_embedded_body_level
-KISS-OPS-6.15-0003	test_ops_rem_floor_vs_trunc
 KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts
 KISS-OPS-6.16-0002	test_ops_ieee754_dtype_encodings

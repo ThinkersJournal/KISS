@@ -102,6 +102,29 @@ pub fn round_even(x: f32) -> f32 {
     x.round_ties_even()
 }
 
+/// `rem_floor` — floored remainder, taking the sign of the **divisor** (§6.15-0003).
+/// `a - b * floor(a / b)`. Distinct from `rem_trunc`; MUST NOT be substituted.
+pub fn rem_floor(a: f32, b: f32) -> f32 {
+    sub(a, mul(b, floor(div(a, b))))
+}
+
+/// `rem_trunc` — truncated remainder / `fmod`, taking the sign of the **dividend**
+/// (§6.15-0003). `a - b * trunc(a / b)`. Distinct from `rem_floor`.
+pub fn rem_trunc(a: f32, b: f32) -> f32 {
+    sub(a, mul(b, trunc(div(a, b))))
+}
+
+/// `hypot(a, b)` (§6.13-0007). Yields `+∞` whenever **either** operand is infinite,
+/// even if the other is NaN (the IEEE-754 hypot infinity rule), overriding the
+/// naive `sqrt(a² + b²)` — which yields NaN for `(±∞, NaN)`. For finite inputs a
+/// NaN operand propagates NaN.
+pub fn hypot(a: f32, b: f32) -> f32 {
+    if a.is_infinite() || b.is_infinite() {
+        return f32::INFINITY;
+    }
+    (a * a + b * b).sqrt()
+}
+
 // ---- oracle boundary rounding (Conform §6.5-0006) ---------------------------
 
 /// Narrow an f64 differential value to an f32 compute dtype and back
