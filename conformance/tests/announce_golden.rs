@@ -143,3 +143,46 @@ fn hex_of_golden_is_stable() {
     // documents the exact wire bytes in the test output on demand
     assert!(hex(&reference().encode()).starts_with("53 45 41 4D 01"));
 }
+
+/// Enforces KISS-ANNOUNCE-7.1-0001 — negotiate returns max(L ∩ R), not the first mutual.
+#[test]
+fn test_announce_negotiate_selects_highest_mutual() {
+    // L = {2, 5, 9}, R = {1, 5, 9}  ->  L ∩ R = {5, 9}  ->  max = 9.
+    // The lowest mutual profile is 5; a "return the first mutual" impl would pick 5.
+    let local = Envelope { envelope_version: 1, profiles: vec![2, 5, 9], capabilities: 0 };
+    let remote = Envelope { envelope_version: 1, profiles: vec![1, 5, 9], capabilities: 0 };
+    assert_eq!(negotiate(&local, &remote), Ok(9));
+    // Symmetry: swapping roles yields the same highest-mutual profile.
+    assert_eq!(negotiate(&remote, &local), Ok(9));
+}
+
+/// Enforces KISS-ANNOUNCE-7.1-0002 — disjoint live-profile sets yield a typed decline, no panic.
+#[test]
+fn test_announce_negotiate_empty_intersection_declines() {
+    // L = {1, 3}, R = {2, 4}  ->  L ∩ R = {}  ->  typed NoMutualProfile decline.
+    let local = Envelope { envelope_version: 1, profiles: vec![1, 3], capabilities: 0 };
+    let remote = Envelope { envelope_version: 1, profiles: vec![2, 4], capabilities: 0 };
+    assert_eq!(negotiate(&local, &remote), Err(AnnounceDecline::NoMutualProfile));
+}
+
+/// Enforces KISS-ANNOUNCE-7.2-0007 — an unrecognized capability bit is ignored (not rejected),
+/// while recognized bits still round-trip. Regression lock over decode()'s pass-through.
+#[test]
+fn test_announce_reader_ignores_unknown_capability_bits() {
+    // bit 48 = SPEAKS_ANNOUNCE (recognized, §7.2-0004); bit 63 = SUB vendor range,
+    // unassigned in the first-draft registry (§7.2 table) -> unrecognized by this reader.
+    let recognized = 1u64 << 48; // 0x0001_0000_0000_0000
+    let unknown = 1u64 << 63;    // 0x8000_0000_0000_0000
+    let caps = recognized | unknown; // 0x8001_0000_0000_0000
+    let e = Envelope { envelope_version: 1, profiles: vec![1], capabilities: caps };
+    // decode MUST accept the envelope despite the unrecognized bit, and preserve
+    // the full bitset verbatim (no masking, no hard-reject).
+    let decoded = decode(&e.encode())
+        .expect("§7.2-0007: an unrecognized capability bit MUST NOT cause rejection");
+    assert_eq!(decoded.capabilities, caps);
+    // Contrast with §6.2: an unknown byte in a reserved region IS hard-rejected,
+    // proving the ignore-unknown rule is confined to the capabilities bitset.
+    let mut bad = e.encode();
+    bad[42] = 1; // reserved1 (offset 42) MBZ
+    assert_eq!(decode(&bad), Err(AnnounceDecline::ReservedNonZero { region: "reserved1" }));
+}

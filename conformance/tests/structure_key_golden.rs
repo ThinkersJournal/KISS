@@ -300,3 +300,233 @@ fn test_classify_token_version_prefix() {
     );
     assert!(from_token(A_GOLDEN).is_ok()); // `sk2` is canonical
 }
+
+/// KISS-CLASSIFY-6.6-0010 (`test_classify_contraction_field_optional`): the
+/// contraction field is present IFF op_family == gem. A reader MUST reject a
+/// 10-field non-gem token and a 9-field gem token with a typed decline. Catches a
+/// reader that does not cross-check family vs contraction presence (the shipped
+/// from_token parsed both as valid).
+#[test]
+fn test_classify_contraction_field_optional() {
+    let gem = A_GOLDEN.replacen("|bin|", "|gem|", 1);
+    // gem WITH contraction (10 fields) — the only valid gem form.
+    let gem_10 = format!("{gem}|ctll/d16");
+    assert!(from_token(&gem_10).is_ok(), "valid gem+contraction rejected");
+    // gem WITHOUT contraction (9 fields) — must be rejected.
+    assert_eq!(from_token(&gem), Err(KeyDecline::ContractionPresenceMismatch));
+    // non-gem (bin) WITH contraction (10 fields) — must be rejected.
+    let bin_10 = format!("{A_GOLDEN}|ctll/d16");
+    assert_eq!(from_token(&bin_10), Err(KeyDecline::ContractionPresenceMismatch));
+    // non-gem (bin) WITHOUT contraction (9 fields) — the base codec, accepted.
+    assert!(from_token(A_GOLDEN).is_ok());
+}
+
+/// KISS-CLASSIFY-6.6-0017 (`test_classify_reduce_field_op_family_gated`): the
+/// reduce field is non-`-` ONLY for a reduction cell (op_family == red); every
+/// other family MUST carry `-`. A reader MUST reject a non-`red` token whose
+/// reduce field is not `-` with a typed decline. Catches a reader that parses the
+/// reduce field without gating it on op_family (the shipped from_token did).
+#[test]
+fn test_classify_reduce_field_op_family_gated() {
+    let stem = A_GOLDEN.strip_suffix('-').unwrap(); // "...|"
+    // a non-red (bin) cell carrying any non-`-` reduce value is rejected.
+    for r in ["rall", "rlast", "x0a"] {
+        let t = format!("{stem}{r}");
+        assert_eq!(
+            from_token(&t),
+            Err(KeyDecline::ReduceNotGatedToRed),
+            "non-red cell accepted reduce `{r}`"
+        );
+    }
+    // a non-red cell with `-` is the base form, accepted.
+    assert!(from_token(A_GOLDEN).is_ok());
+    // a red cell carries the same reduce values legitimately.
+    let red_stem = stem.replacen("|bin|", "|red|", 1);
+    for r in ["rall", "rlast", "x0a", "-"] {
+        let t = format!("{red_stem}{r}");
+        assert!(from_token(&t).is_ok(), "red cell rejected reduce `{r}`");
+    }
+}
+
+/// KISS-CLASSIFY-7.1-0002 (`test_classify_unclaimed_input_typed_decline`): every
+/// unrecognized or out-of-range input yields a typed decline (an Err), never a
+/// panic / OOB read. Each arm catches a reader that would silently ACCEPT (return
+/// Ok for) that malformed input. (The "collapsed reduction" arm of §7.1-0002 is a
+/// derivation-side concern, not a from_token token defect, and is out of scope for
+/// the token reader tested here.)
+#[test]
+fn test_classify_unclaimed_input_typed_decline() {
+    // unknown dtype
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("|f32|", "|f99|", 1)),
+        Err(KeyDecline::UnknownDtype)
+    );
+    // unknown op-family
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("|bin|", "|zzz|", 1)),
+        Err(KeyDecline::UnknownOpFamily)
+    );
+    // over-MAX_RANK rank: r9 with MAX_RANK == 8
+    assert_eq!(MAX_RANK, 8);
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("|r2|", "|r9|", 1)),
+        Err(KeyDecline::BadRank)
+    );
+    // boundary: r8 == MAX_RANK is accepted (the bound is not off-by-one).
+    assert!(from_token(&A_GOLDEN.replacen("|r2|", "|r8|", 1)).is_ok());
+    // over-MAX_OPERANDS count: 9 sub-keys
+    let nine = std::iter::repeat("co/00/v4/d16/f").take(9).collect::<Vec<_>>().join(";");
+    let over_ops = A_GOLDEN.replacen(
+        "co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f",
+        &nine,
+        1,
+    );
+    assert_eq!(from_token(&over_ops), Err(KeyDecline::TooManyOperands { got: 9 }));
+    // malformed operand sub-key (unknown contig code)
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("co/00/v4/d16/f", "zz/00/v4/d16/f", 1)),
+        Err(KeyDecline::BadOperandSubKey)
+    );
+    // over-length token (> MAX_STRUCTURE_KEY_LEN), rejected without OOB
+    let too_long = "x".repeat(MAX_STRUCTURE_KEY_LEN + 1);
+    assert_eq!(
+        from_token(&too_long),
+        Err(KeyDecline::TokenLengthOutOfBound { len: 4097 })
+    );
+    // malformed target (missing capability set)
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("cuda:sm89", "cuda", 1)),
+        Err(KeyDecline::BadTargetGrammar)
+    );
+    // wholly malformed / garbage token — a typed decline, not a panic.
+    assert!(from_token("not-a-structure-key").is_err());
+    // the canonical golden still parses (the battery is not over-broad).
+    assert!(from_token(A_GOLDEN).is_ok());
+}
+
+/// KISS-CLASSIFY-6.3-0011 (`test_classify_axis_ordering_convention`): the
+/// innermost axis is the HIGHEST active index (axis `rank-1`), not axis 0. Teeth:
+/// a column-major reader that treats axis 0 as innermost picks the wrong extent
+/// for the divisibility bucket. Verified against Appendix A `[4,1]` -> `da`
+/// (inner axis 1 extent 1), which a column-major reader would mis-bucket `d4`
+/// (axis 0 extent 4).
+#[test]
+fn test_classify_axis_ordering_convention() {
+    // the innermost active axis index is rank-1 (row-major / outermost-first).
+    assert_eq!(innermost_active_axis(0), None); // rank-0 scalar: no axis
+    assert_eq!(innermost_active_axis(1), Some(0));
+    assert_eq!(innermost_active_axis(2), Some(1)); // NOT Some(0): catches column-major
+    assert_eq!(innermost_active_axis(4), Some(3));
+
+    // bound to a real derivation: the div bucket reads extents[rank-1], the LAST
+    // extent. For [8,5] the inner axis is extent 5 (odd) -> `da`; a column-major
+    // reader taking extents[0]=8 would wrongly bucket `d8`.
+    assert_eq!(derive_div_bucket_of(&[8, 5]), DivBucket::Da);
+    assert_eq!(derive_div_bucket_of(&[5, 8]), DivBucket::D8);
+    // Appendix A `[4,1] -> [4,1]` output: inner axis 1 extent 1 -> `da`
+    // (not axis 0 extent 4 -> `d4`).
+    assert_eq!(derive_div_bucket_of(&[4, 1]), DivBucket::Da);
+}
+
+/// KISS-CLASSIFY-6.5-0002 (`test_classify_layout_tag_derivation`): the 4-step
+/// layout algorithm over `|stride|`, innermost-first. Teeth: (a) uses `|stride|`
+/// so a reversed view is `co` (a signed-stride impl would call it `ic`/`st`); (b)
+/// broadcast requires extent > 1 with stride 0 (an "any stride 0" impl mis-flags a
+/// unit axis); (c) the product is innermost-first (a column-major impl mis-classes
+/// a transpose). Verified against Appendix A: `[128,256]/[256,1]` -> `co`,
+/// `[4,1]/[1,1]` -> `co`, `[1,1]/[1,1]` -> `co`.
+#[test]
+fn test_classify_layout_tag_derivation() {
+    // contiguous multi-axis (Appendix A binary-add operand): P=1 at inner (|1|==1),
+    // then |256|==256. -> co.
+    assert_eq!(derive_layout_tag(&[128, 256], &[256, 1]), Contig::Contiguous);
+    // empty product: every active axis extent 0 or 1 -> contiguous (Appendix A [1,1]).
+    assert_eq!(derive_layout_tag(&[1, 1], &[1, 1]), Contig::Contiguous);
+    // Appendix A output [4,1]/[1,1]: axis 1 (extent 1) dropped, axis 0 (4,|1|==P=1) -> co.
+    assert_eq!(derive_layout_tag(&[4, 1], &[1, 1]), Contig::Contiguous);
+
+    // real broadcast: axis 0 extent 128 (>1) has stride 0 -> br.
+    assert_eq!(derive_layout_tag(&[128, 256], &[0, 1]), Contig::Broadcast);
+    // NOT broadcast: the stride-0 axis has extent 1 (<=1); it is excluded, the
+    // remaining axis is contiguous -> co. Catches an "any stride == 0" impl.
+    assert_eq!(derive_layout_tag(&[1, 256], &[0, 1]), Contig::Contiguous);
+
+    // reversed inner axis (stride -1): |stride| is used, so still contiguous (the
+    // reversal lives only in the flipped flag). Catches a signed-stride impl.
+    assert_eq!(derive_layout_tag(&[128, 256], &[256, -1]), Contig::Contiguous);
+
+    // inner-contiguous: padded rows (outer |16| != product 8) but inner |1|==1.
+    assert_eq!(derive_layout_tag(&[4, 8], &[16, 1]), Contig::InnerContiguous);
+
+    // strided / transposed: inner axis |stride|=4 != 1 and product fails -> st.
+    assert_eq!(derive_layout_tag(&[4, 8], &[1, 4]), Contig::Strided);
+    // column-major-contiguous [2,3]/[1,2]: under the innermost-first product the
+    // inner axis has |2| != P=1 and |stride|!=1 -> strided. A column-major
+    // (outermost-first) product impl would wrongly call it contiguous.
+    assert_eq!(derive_layout_tag(&[2, 3], &[1, 2]), Contig::Strided);
+}
+
+/// KISS-CLASSIFY-6.5-0011 (`test_classify_index_width_offset`): max touched offset
+/// = max over operands of sum of `|stride|*(extent-1)` over non-broadcast axes;
+/// `< 2^31` is `ix32`. Teeth: the `(extent-1)` off-by-one, and the exclusive 2^31
+/// boundary. Verified against Appendix A binary-add operand
+/// `256*127 + 1*255 = 32767`.
+#[test]
+fn test_classify_index_width_offset() {
+    // Appendix A: [128,256]/[256,1] -> 256*127 + 1*255 = 32512 + 255 = 32767.
+    // An (extent) impl gives 256*128 + 1*256 = 33024 -> caught by the exact value.
+    assert_eq!(operand_touched_offset(&[128, 256], &[256, 1]), 32767);
+
+    // a broadcast axis (stride 0) contributes 0: only the inner axis counts.
+    assert_eq!(operand_touched_offset(&[128, 256], &[0, 1]), 255);
+
+    // |stride| is used: a reversed (stride -1) axis contributes +255, not -255.
+    assert_eq!(operand_touched_offset(&[256], &[-1]), 255);
+
+    // boundary teeth: extent 2^31, stride 1 -> offset 2^31 - 1 = 2147483647 < 2^31
+    // -> ix32. An (extent) off-by-one gives exactly 2^31 -> ix64.
+    let big = 1i64 << 31; // 2147483648
+    assert_eq!(operand_touched_offset(&[big], &[1]), big - 1);
+    assert_eq!(derive_index_width(&[(&[big], &[1])]), "ix32");
+    // one element further: extent 2^31 + 1 -> offset exactly 2^31 -> ix64
+    // (the boundary is exclusive).
+    assert_eq!(derive_index_width(&[(&[big + 1], &[1])]), "ix64");
+
+    // max is taken over all operands: the larger rhs offset (16777215) decides,
+    // still < 2^31 -> ix32.
+    let e0: &[i64] = &[128, 256];
+    let s0: &[i64] = &[256, 1];
+    let e1: &[i64] = &[4096, 4096];
+    let s1: &[i64] = &[4096, 1];
+    assert_eq!(operand_touched_offset(e1, s1), 16_777_215);
+    assert_eq!(derive_index_width(&[(e0, s0), (e1, s1)]), "ix32");
+}
+
+/// KISS-CLASSIFY-6.5-0012 (`test_classify_div_bucket_derivation`): the div bucket
+/// from the innermost extent E, with the `E >= N` guard. Teeth: the E=0 trap —
+/// `0 % 16 == 0`, so an impl that drops the `E >= 16` guard mis-buckets a
+/// zero-extent axis as `d16` instead of `da`. Verified against Appendix A:
+/// inner extent 256 -> d16, 8 -> d8, 5 (odd) -> da, 1 -> da.
+#[test]
+fn test_classify_div_bucket_derivation() {
+    // the E=0 trap: guard makes it `da`, a guardless `E % 16 == 0` impl says d16.
+    assert_eq!(derive_div_bucket(0), DivBucket::Da);
+
+    // d16: divisible by 16 (Appendix A inner 256).
+    assert_eq!(derive_div_bucket(16), DivBucket::D16);
+    assert_eq!(derive_div_bucket(256), DivBucket::D16);
+    assert_eq!(derive_div_bucket(48), DivBucket::D16); // 48 % 16 == 0
+    // d8: divisible by 8 not 16 (Appendix A inner 8).
+    assert_eq!(derive_div_bucket(8), DivBucket::D8);
+    assert_eq!(derive_div_bucket(24), DivBucket::D8); // 24 % 16 == 8, 24 % 8 == 0
+    // d4: divisible by 4 not 8.
+    assert_eq!(derive_div_bucket(4), DivBucket::D4);
+    assert_eq!(derive_div_bucket(12), DivBucket::D4); // 12 % 8 == 4, 12 % 4 == 0
+    // d2: divisible by 2 not 4.
+    assert_eq!(derive_div_bucket(2), DivBucket::D2);
+    assert_eq!(derive_div_bucket(6), DivBucket::D2); // 6 % 4 == 2, 6 % 2 == 0
+    // da: odd, unit, zero (Appendix A inner 5 odd, output inner 1).
+    assert_eq!(derive_div_bucket(5), DivBucket::Da);
+    assert_eq!(derive_div_bucket(3), DivBucket::Da);
+    assert_eq!(derive_div_bucket(1), DivBucket::Da);
+}

@@ -14,62 +14,62 @@
 # Pick a `todo` row, write the test the clause names, cite the clause, run the gate.
 #
 # clause	sub	effort	status	teeth-it-catches
-KISS-OPS-6.11-0002	OPS	trivial	todo	Two distinct wrong impls. (a) A reduce(max) tree built on CUDA fmaxf — NaN-SUPPRESSING — returns 2.0 for [1.0, NaN, 2.0] where §6.11-0002 pins NaN; this is the 
+KISS-OPS-6.11-0002	OPS	trivial	DONE	Two distinct wrong impls. (a) A reduce(max) tree built on CUDA fmaxf — NaN-SUPPRESSING — returns 2.0 for [1.0, NaN, 2.0] where §6.11-0002 pins NaN; this is the 
 KISS-OPS-6.7-0001	OPS	trivial	DONE	round_even lowered to C's `roundf` / Rust's `f32::round` — round-half-AWAY-from-zero. Diverges on every single .5 tie: 2.5 → 3 where the spec pins 2, 0.5 → 1 wh
 KISS-OPS-6.15-0001	OPS	trivial	DONE	An `fmax_ieee` built from `max_prop`: fmax_ieee(NaN, 2.0) returns NaN where the spec pins 2.0. The harness ALREADY has all four functions in src/semantics.rs, w
 KISS-OPS-6.19-0038	OPS	trivial	DONE	src/opattrs.rs::validate_reduce_axes REJECTS the 0x0100..=0xFFFD reserved band and ACCEPTS 0x0000 — the harness's own reader is the wrong implementation this te
 KISS-OPS-6.6-0002	OPS	trivial	DONE	cmp_ge lowered as `!(a < b)` — the standard trick on an ISA with only an lt predicate, and the standard trick in a comparator written for a sort. It returns TRU
 KISS-OPS-6.15-0003	OPS	trivial	DONE	rem_floor lowered to C's fmodf: rem_floor(-7,3) returns -1 where the spec's decomposition `sub(a, mul(floor(div(a,b)), b))` pins 2. fmodf is the only remainder 
-KISS-OPS-6.5-0003	OPS	trivial	todo	BOTH natural lowerings are wrong, in opposite directions. `cond > 0 || cond < 0` (the branch-free comparison form) makes NaN test FALSE. `cond.to_bits() != 0` (
-KISS-OPS-6.18-0004	OPS	trivial	todo	cconj implemented as `cmake(a, sub(const(0), b))` — the obvious spelling of 'negate the imaginary part'. For b=+0.0 it yields 0.0-0.0 = +0.0 under IEEE round-to
+KISS-OPS-6.5-0003	OPS	trivial	DONE	BOTH natural lowerings are wrong, in opposite directions. `cond > 0 || cond < 0` (the branch-free comparison form) makes NaN test FALSE. `cond.to_bits() != 0` (
+KISS-OPS-6.18-0004	OPS	trivial	DONE	cconj implemented as `cmake(a, sub(const(0), b))` — the obvious spelling of 'negate the imaginary part'. For b=+0.0 it yields 0.0-0.0 = +0.0 under IEEE round-to
 KISS-OPS-6.13-0007	OPS	trivial	DONE	The clause names its own wrong implementation in its own text: the literal reference `sqrt(add(sqr(a), sqr(b)))` evaluates hypot(inf, NaN) as sqrt(inf + NaN) = 
-KISS-OPS-6.16-0004	OPS	small	todo	A converter that treats e4m3 as a mini-IEEE format: emits +inf for an overflowing input (where the pin is 448.0), and decodes 0x7F as +inf (where the pin is the
+KISS-OPS-6.16-0004	OPS	small	DONE	A converter that treats e4m3 as a mini-IEEE format: emits +inf for an overflowing input (where the pin is 448.0), and decodes 0x7F as +inf (where the pin is the
 KISS-OPS-6.18-0017	OPS	small	todo	The harness's own ULP comparator is the wrong implementation. lib.rs::total_order_f32 maps -0.0→0x7FFFFFFF and +0.0→0x80000000, so ulp_distance_f32(-0.0,+0.0)=1
-KISS-OPS-6.18-0006	OPS	small	todo	The clause spells out its own wrong implementation AND its own value. The naive §6.18 table decomposition on a (±0,±0) denominator computes t = 0*0+0*0 = +0.0 t
-KISS-OPS-6.11-0007	OPS	small	todo	Three catches. (a) A sort whose comparator is `a < b`: NaN makes it non-transitive, and std::sort with a non-strict-weak-ordering comparator is genuine UB in C+
-KISS-OPS-6.0-0006	OPS	small	todo	A backend compiled with FMA contraction enabled (nvcc's DEFAULT is -fmad=true; gcc/clang -ffp-contract=fast is the default at -O2). add(mul(a,b),c) becomes fmaf
-KISS-OPS-6.16-0003	OPS	small	todo	f32→bf16 by truncating the low 16 bits — which is what the spec's own prose ('a truncated mantissa') invites, and what every naive `(uint16_t)(bits >> 16)` conv
-KISS-OPS-6.13-0005	OPS	small	todo	Two catches, in opposite directions. (a) The literal reference `exp(mul(b, log(a)))` returns NaN for EVERY negative base — so pow(-2,3) is NaN where the spec pi
-KISS-OPS-6.16-0005	OPS	small	todo	The subtle one: e5m2 HAS an infinity encoding, so a converter naturally produces +inf on overflow — but the clause pins saturation to 57344 anyway. f32 1e30 → e
-KISS-OPS-6.13-0003	OPS	small	todo	The reference decompositions in the §6.13 table are WRONG at the boundary and the clause mandates deviating from them. tanh(100.0f): reference = (e^100 - e^-100
+KISS-OPS-6.18-0006	OPS	small	DONE	The clause spells out its own wrong implementation AND its own value. The naive §6.18 table decomposition on a (±0,±0) denominator computes t = 0*0+0*0 = +0.0 t
+KISS-OPS-6.11-0007	OPS	small	DONE	Three catches. (a) A sort whose comparator is `a < b`: NaN makes it non-transitive, and std::sort with a non-strict-weak-ordering comparator is genuine UB in C+
+KISS-OPS-6.0-0006	OPS	small	DONE	A backend compiled with FMA contraction enabled (nvcc's DEFAULT is -fmad=true; gcc/clang -ffp-contract=fast is the default at -O2). add(mul(a,b),c) becomes fmaf
+KISS-OPS-6.16-0003	OPS	small	DONE	f32→bf16 by truncating the low 16 bits — which is what the spec's own prose ('a truncated mantissa') invites, and what every naive `(uint16_t)(bits >> 16)` conv
+KISS-OPS-6.13-0005	OPS	small	DONE	Two catches, in opposite directions. (a) The literal reference `exp(mul(b, log(a)))` returns NaN for EVERY negative base — so pow(-2,3) is NaN where the spec pi
+KISS-OPS-6.16-0005	OPS	small	DONE	The subtle one: e5m2 HAS an infinity encoding, so a converter naturally produces +inf on overflow — but the clause pins saturation to 57344 anyway. f32 1e30 → e
+KISS-OPS-6.13-0003	OPS	small	DONE	The reference decompositions in the §6.13 table are WRONG at the boundary and the clause mandates deviating from them. tanh(100.0f): reference = (e^100 - e^-100
 KISS-CLASSIFY-6.7-0002	CLASSIFY	trivial	DONE	A live canonicalization hole in the shipped codec: from_token strips "sk" and calls ver.parse::<u32>(), and "02".parse::<u32>() == Ok(2) — so `sk02|...` is ACCE
 KISS-CLASSIFY-6.4-0002	CLASSIFY	trivial	DONE	The shipped codec has no count check — field 7 is split on ';' and collected into an unbounded Vec, so a 64-operand token parses cleanly today. A reader copying
-KISS-CLASSIFY-6.6-0010	CLASSIFY	trivial	todo	Again the shipped codec: from_token today accepts a 10-field `bin` token carrying `|ctll/d16`, and accepts a 9-field `gem` token with no contraction field. Both
+KISS-CLASSIFY-6.6-0010	CLASSIFY	trivial	DONE	Again the shipped codec: from_token today accepts a 10-field `bin` token carrying `|ctll/d16`, and accepts a 9-field `gem` token with no contraction field. Both
 KISS-CLASSIFY-6.8-0001	CLASSIFY	trivial	DONE	The current codec does not validate field 3 AT ALL — it copies f[3] into a String. `sk2|bin|f32|cuda|ix32|grid|r2|co/00/v4/d16/f|-` (bare namespace, no colon), 
-KISS-CLASSIFY-6.5-0012	CLASSIFY	trivial	todo	Two concrete wrong impls. (a) The E=0 trap: 0 % 16 == 0, so an impl that omits the E>=16 guard buckets a zero-extent axis as d16 and a downstream kernel emits a
+KISS-CLASSIFY-6.5-0012	CLASSIFY	trivial	DONE	Two concrete wrong impls. (a) The E=0 trap: 0 % 16 == 0, so an impl that omits the E>=16 guard buckets a zero-extent axis as d16 and a downstream kernel emits a
 KISS-CLASSIFY-6.4-0004	CLASSIFY	trivial	DONE	The shipped from_token has no length check: a 1 MB token is split and parsed. This is the exact bound KISS-Announce relies on when it carries the key as a lengt
-KISS-CLASSIFY-6.6-0017	CLASSIFY	trivial	todo	The current reference codec itself. from_token("sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|rlast") is ACCEPTED today — parse_reduce never consults field 
-KISS-CLASSIFY-6.1-0010	CLASSIFY	small	todo	An IEEE-754-style mini-float reader that treats exp=1111 as infinity. That impl's max finite is 240 (0x77), not 448, and it reports 0x78 as +inf. The spec's 448
-KISS-CLASSIFY-6.1-0008	CLASSIFY	small	todo	A high-nibble-first unpacker — which is what GPTQ/AWQ and several 4-bit quant kernels actually use. Feed byte 0xF1: spec says index0 = low nibble = 0x1, index1 
-KISS-CLASSIFY-6.3-0011	CLASSIFY	small	todo	A column-major/Fortran-convention impl that reads axis 0 as innermost. Vector: extents [4,16], strides [16,1]. Div bucket must come from E=16 -> d16; the invert
-KISS-CLASSIFY-6.1-0009	CLASSIFY	small	todo	An MSB-first bit packer — numpy.packbits' DEFAULT is bitorder='big' (MSB-first), so the most obvious reference impl is wrong. Byte 0x01 must decode to logical i
+KISS-CLASSIFY-6.6-0017	CLASSIFY	trivial	DONE	The current reference codec itself. from_token("sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|rlast") is ACCEPTED today — parse_reduce never consults field 
+KISS-CLASSIFY-6.1-0010	CLASSIFY	small	DONE	An IEEE-754-style mini-float reader that treats exp=1111 as infinity. That impl's max finite is 240 (0x77), not 448, and it reports 0x78 as +inf. The spec's 448
+KISS-CLASSIFY-6.1-0008	CLASSIFY	small	DONE	A high-nibble-first unpacker — which is what GPTQ/AWQ and several 4-bit quant kernels actually use. Feed byte 0xF1: spec says index0 = low nibble = 0x1, index1 
+KISS-CLASSIFY-6.3-0011	CLASSIFY	small	DONE	A column-major/Fortran-convention impl that reads axis 0 as innermost. Vector: extents [4,16], strides [16,1]. Div bucket must come from E=16 -> d16; the invert
+KISS-CLASSIFY-6.1-0009	CLASSIFY	small	DONE	An MSB-first bit packer — numpy.packbits' DEFAULT is bitorder='big' (MSB-first), so the most obvious reference impl is wrong. Byte 0x01 must decode to logical i
 KISS-CLASSIFY-6.5-0009	CLASSIFY	small	todo	A power-of-two-floor alignment gate. IMPORTANT: the clause's own parenthetical example (alignment 48, f32, 'v4 not the floor's v8') is WRONG and proves nothing 
-KISS-CLASSIFY-6.5-0011	CLASSIFY	small	todo	(a) The (extent) vs (extent-1) off-by-one — an impl summing |stride|*extent overshoots by exactly sum(|stride|), which flips ix32 to ix64 right at the boundary.
-KISS-CLASSIFY-6.5-0002	CLASSIFY	medium	todo	Four separate wrong impls, each caught by one vector. (a) Signed-stride impl: extents [4,16] strides [16,-1] must be `contiguous` (reversal captured only by the
+KISS-CLASSIFY-6.5-0011	CLASSIFY	small	DONE	(a) The (extent) vs (extent-1) off-by-one — an impl summing |stride|*extent overshoots by exactly sum(|stride|), which flips ix32 to ix64 right at the boundary.
+KISS-CLASSIFY-6.5-0002	CLASSIFY	medium	DONE	Four separate wrong impls, each caught by one vector. (a) Signed-stride impl: extents [4,16] strides [16,-1] must be `contiguous` (reversal captured only by the
 KISS-CLASSIFY-6.6-0008	CLASSIFY	medium	todo	The 'any zero stride sets the bit' impl. A size-1 axis legitimately carries stride 0 in nearly every framework, so extents [1,256] strides [0,1] must yield mask
-KISS-CLASSIFY-7.1-0002	CLASSIFY	medium	todo	A decline battery over all seven named inputs. Four of the seven have no rejection path in the shipped codec today (rank>8, operands>8, over-length, malformed t
+KISS-CLASSIFY-7.1-0002	CLASSIFY	medium	DONE	A decline battery over all seven named inputs. Four of the seven have no rejection path in the shipped codec today (rank>8, operands>8, over-length, malformed t
 KISS-CLASSIFY-6.5-0010	CLASSIFY	medium	todo	An impl that takes operand-0's extents (the obvious shortcut). Broadcast vector: op0 = [1,256], op1 = [128,256]. Frame is [128,256] = 32768 -> `grid`. The op0-o
-KISS-GRAMMAR-6.4-0003	GRAMMAR	trivial	todo	An impl that emits one leaf entry per authored occurrence — the naive traversal. For `out = a + a` it emits node_count 3 (Bind(0), Bind(0), add) with operands [
-KISS-GRAMMAR-6.8-0005	GRAMMAR	trivial	todo	An impl that assigns 0x00=ROOT / 0x01=INTERIOR — a pure coin flip, nothing in the names implies an ordering. Every region then advertises its interior node as t
-KISS-GRAMMAR-6.8-0003	GRAMMAR	trivial	todo	An impl that uses a u8 length prefix (op names are short — an obvious economy) or NUL-terminated C strings. G1 pins ops_version as `01 00 31` and "mul" as `03 0
-KISS-GRAMMAR-6.4-0004	GRAMMAR	small	todo	An impl that reads `consumers` as "number of users" — the natural reading of the field name — and so counts in-region edges. In G4 the single Bind(0) entry has 
-KISS-GRAMMAR-6.8-0010	GRAMMAR	small	todo	An impl that emits operand_count immediately after op_name (grouping the operand fields together — the natural struct layout) instead of after the role tuple. B
-KISS-GRAMMAR-6.8-0002	GRAMMAR	small	todo	An impl that encodes operand_count as u32 (`02 00 00 00`) instead of u16 (`02 00`) — every subsequent byte in the node table shifts and a foreign reader desyncs
-KISS-GRAMMAR-6.8-0006	GRAMMAR	small	todo	An impl that encodes path steps as u32 to match the u32 operand node-indices of §6.8-0002 — a genuinely reasonable inference, since both are 'operand indices', 
-KISS-GRAMMAR-6.4-0011	GRAMMAR	small	todo	An impl that dedups Bind leaves (easy — key on an integer) but not Op subtrees (real CSE work). For `(a*b) + (a*b)` it emits two `mul` entries: node_count 5 wit
-KISS-GRAMMAR-6.8-0004	GRAMMAR	small	todo	An impl that emits Bind leaves in input-index order — the obvious choice — giving table [Bind(0),Bind(1),Bind(2),mul,add] with add operands [2,3]. G1 pins Bind(
-KISS-GRAMMAR-6.1-0008	GRAMMAR	small	todo	An impl that always emits k = operand_count (uniform, no special-casing). For G1's add it emits k=2 with two explicit (data,*) entries instead of the pinned `00
-KISS-GRAMMAR-6.4-0001	GRAMMAR	small	todo	A reader that trusts its operand indices and just indexes the node table — the default for any hand-written parser. Feed it a stream where node 1's operand is 3
-KISS-GRAMMAR-6.4-0008	GRAMMAR	small	todo	An impl that infers n_inputs = max(bound index)+1 — the spec names this exact wrong impl. It then CANNOT detect a strict-subset bind: a region declaring 3 input
-KISS-GRAMMAR-6.4-0010	GRAMMAR	medium	todo	An impl that sorts operands by node-table index instead of by subtree key — cheap and plausible, and it coincidentally reproduces G1's add=[0,3], so G1 alone do
-KISS-GRAMMAR-6.8-0001	GRAMMAR	medium	todo	An impl that omits the trailing extract_count when the extract list is empty ("why emit a zero count?"). G1 and G4 both pin a trailing `00 00`. A foreign reader
+KISS-GRAMMAR-6.4-0003	GRAMMAR	trivial	DONE	An impl that emits one leaf entry per authored occurrence — the naive traversal. For `out = a + a` it emits node_count 3 (Bind(0), Bind(0), add) with operands [
+KISS-GRAMMAR-6.8-0005	GRAMMAR	trivial	DONE	An impl that assigns 0x00=ROOT / 0x01=INTERIOR — a pure coin flip, nothing in the names implies an ordering. Every region then advertises its interior node as t
+KISS-GRAMMAR-6.8-0003	GRAMMAR	trivial	DONE	An impl that uses a u8 length prefix (op names are short — an obvious economy) or NUL-terminated C strings. G1 pins ops_version as `01 00 31` and "mul" as `03 0
+KISS-GRAMMAR-6.4-0004	GRAMMAR	small	DONE	An impl that reads `consumers` as "number of users" — the natural reading of the field name — and so counts in-region edges. In G4 the single Bind(0) entry has 
+KISS-GRAMMAR-6.8-0010	GRAMMAR	small	DONE	An impl that emits operand_count immediately after op_name (grouping the operand fields together — the natural struct layout) instead of after the role tuple. B
+KISS-GRAMMAR-6.8-0002	GRAMMAR	small	DONE	An impl that encodes operand_count as u32 (`02 00 00 00`) instead of u16 (`02 00`) — every subsequent byte in the node table shifts and a foreign reader desyncs
+KISS-GRAMMAR-6.8-0006	GRAMMAR	small	DONE	An impl that encodes path steps as u32 to match the u32 operand node-indices of §6.8-0002 — a genuinely reasonable inference, since both are 'operand indices', 
+KISS-GRAMMAR-6.4-0011	GRAMMAR	small	DONE	An impl that dedups Bind leaves (easy — key on an integer) but not Op subtrees (real CSE work). For `(a*b) + (a*b)` it emits two `mul` entries: node_count 5 wit
+KISS-GRAMMAR-6.8-0004	GRAMMAR	small	DONE	An impl that emits Bind leaves in input-index order — the obvious choice — giving table [Bind(0),Bind(1),Bind(2),mul,add] with add operands [2,3]. G1 pins Bind(
+KISS-GRAMMAR-6.1-0008	GRAMMAR	small	DONE	An impl that always emits k = operand_count (uniform, no special-casing). For G1's add it emits k=2 with two explicit (data,*) entries instead of the pinned `00
+KISS-GRAMMAR-6.4-0001	GRAMMAR	small	DONE	A reader that trusts its operand indices and just indexes the node table — the default for any hand-written parser. Feed it a stream where node 1's operand is 3
+KISS-GRAMMAR-6.4-0008	GRAMMAR	small	DONE	An impl that infers n_inputs = max(bound index)+1 — the spec names this exact wrong impl. It then CANNOT detect a strict-subset bind: a region declaring 3 input
+KISS-GRAMMAR-6.4-0010	GRAMMAR	medium	DONE	An impl that sorts operands by node-table index instead of by subtree key — cheap and plausible, and it coincidentally reproduces G1's add=[0,3], so G1 alone do
+KISS-GRAMMAR-6.8-0001	GRAMMAR	medium	DONE	An impl that omits the trailing extract_count when the extract list is empty ("why emit a zero count?"). G1 and G4 both pin a trailing `00 00`. A foreign reader
 KISS-ANNOUNCE-6.3-0011	ANNOUNCE	trivial	todo	A producer writing `0x4C564153u32.to_be_bytes()` or `u32::to_be_bytes` on the LE constant — either reverses the tag to 4C 56 41 53. §2.4 exists as a whole secti
-KISS-ANNOUNCE-7.2-0007	ANNOUNCE	trivial	todo	A reader that applies §6.2's hard-reject discipline to `capabilities` — validating it against the assigned-bit mask and declining on any bit outside. This is th
+KISS-ANNOUNCE-7.2-0007	ANNOUNCE	trivial	DONE	A reader that applies §6.2's hard-reject discipline to `capabilities` — validating it against the assigned-bit mask and declining on any bit outside. This is th
 KISS-ANNOUNCE-6.3-0012	ANNOUNCE	trivial	todo	A producer that packs record_count immediately after the 4-byte tag, omitting the version block entirely — easy to do, since §6.3-0005 describes the framing 'af
-KISS-ANNOUNCE-7.1-0002	ANNOUNCE	trivial	todo	`l.intersection(&r).max().unwrap()` — the idiomatic one-liner, which panics on an empty intersection. L={1}, R={2} is a two-envelope handshake between a v1-only
+KISS-ANNOUNCE-7.1-0002	ANNOUNCE	trivial	DONE	`l.intersection(&r).max().unwrap()` — the idiomatic one-liner, which panics on an empty intersection. L={1}, R={2} is a two-envelope handshake between a v1-only
 KISS-ANNOUNCE-6.4-0007	ANNOUNCE	small	todo	A producer emitting the decline_code as a u16 (six values fit in a byte — why spend four?), which truncates every vendor-range code and leaves two bytes of the 
 KISS-ANNOUNCE-6.4-0006	ANNOUNCE	small	todo	`bytes[off..off+32].try_into().unwrap()` for the revision_hash on a request truncated mid-hash — the exact idiom the current envelope decoder uses at conformanc
-KISS-ANNOUNCE-7.1-0001	ANNOUNCE	small	todo	A negotiator that returns the FIRST mutual profile instead of the highest — the natural result of iterating the ascending profiles array and returning on first 
+KISS-ANNOUNCE-7.1-0001	ANNOUNCE	small	DONE	A negotiator that returns the FIRST mutual profile instead of the highest — the natural result of iterating the ascending profiles array and returning on first 
 KISS-ANNOUNCE-6.4-0004	ANNOUNCE	medium	todo	A producer writing the tag as `0x50535243u32.to_be_bytes()` — the §2.4 table gives both the ASCII and the u32, and picking the u32 with the wrong endianness rev
 KISS-ANNOUNCE-6.3-0005	ANNOUNCE	medium	todo	A producer emitting record_count/key_len big-endian (the `htonl` reflex on anything called a network format — the envelope is the only place the spec's own work
 KISS-ANNOUNCE-6.4-0001	ANNOUNCE	medium	todo	A reader that treats revision_present as truthy (`if flag != 0 { read 32 bytes }`) accepts flag=0xFF on a request with no trailing hash and reads 32 bytes past 

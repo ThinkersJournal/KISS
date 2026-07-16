@@ -161,12 +161,19 @@ pub enum KeyDecline {
     TooManyOperands { got: usize },
     /// `target_capability` is not `<namespace>:<capability-set>` (§6.8-0001).
     BadTargetGrammar,
+    /// The contraction field's presence does not match `op_family` (§6.6-0010):
+    /// present IFF `op_family == gem`.
+    ContractionPresenceMismatch,
+    /// The reduce field is non-`-` for an `op_family` other than `red` (§6.6-0017).
+    ReduceNotGatedToRed,
 }
 
 /// The pinned closed-set bounds (§6.4). Named so a reader can reject an
 /// over-large key without allocating on the unchecked length.
 pub const MAX_OPERANDS: usize = 8;
 pub const MAX_STRUCTURE_KEY_LEN: usize = 4096;
+/// The pinned rank bound (§6.4-0001): `rank` is the inclusive range `0..=MAX_RANK`.
+pub const MAX_RANK: u32 = 8;
 
 // ---- serialize (to_token) ---------------------------------------------------
 
@@ -325,6 +332,11 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         .strip_prefix('r')
         .and_then(|r| r.parse::<u32>().ok())
         .ok_or(KeyDecline::BadRank)?;
+    // §6.4-0001: `rank` is the inclusive range `0..=MAX_RANK`; a greater rank is a
+    // typed decline (§7.1-0002), never a panic.
+    if rank > MAX_RANK {
+        return Err(KeyDecline::BadRank);
+    }
     let operands = f[7]
         .split(';')
         .map(parse_operand)
@@ -334,7 +346,17 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         return Err(KeyDecline::TooManyOperands { got: operands.len() });
     }
     let reduce = parse_reduce(f[8])?;
+    // §6.6-0017: a non-`-` reduce field is valid ONLY for a reduction cell
+    // (`op_family == red`); reject any other family carrying one.
+    if f[1] != "red" && reduce != Reduce::None {
+        return Err(KeyDecline::ReduceNotGatedToRed);
+    }
     let contraction = if f.len() == 10 { Some(parse_contraction(f[9])?) } else { None };
+    // §6.6-0010: the contraction field is present IFF the cell is a dense-contraction
+    // cell (`op_family == gem`).
+    if (f[1] == "gem") != contraction.is_some() {
+        return Err(KeyDecline::ContractionPresenceMismatch);
+    }
     Ok(StructureKey {
         op_family: f[1].to_string(),
         dtype: f[2].to_string(),
@@ -346,4 +368,134 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         reduce,
         contraction,
     })
+}
+
+// ---- reference derivations: layout / divisibility / index-width / axis order ----
+// These are the from-scratch reference derivations for the cell-level facts that
+// feed the per-operand sub-key (§6.5) under the outermost-first axis convention
+// (§6.3-0011). They take raw `extents` (elements) and signed `strides`
+// (§6.3-0003) and reproduce the spec-pinned classification.
+
+/// §6.3-0011: axes are ordered **outermost-first** — axis `0` is outermost and
+/// axis `rank-1` is innermost. The innermost active axis is therefore the highest
+/// active axis index. Returns `None` for a rank-0 (scalar) operand, which has no
+/// axis. A column-major reader that treats axis `0` as innermost returns `Some(0)`
+/// and is caught here.
+#[must_use]
+pub fn innermost_active_axis(rank: usize) -> Option<usize> {
+    rank.checked_sub(1)
+}
+
+/// §6.5-0012: the inner-extent divisibility bucket from the innermost active axis
+/// (§6.3-0011) extent `E` (in **elements**). `d16` iff `E >= 16 && E % 16 == 0`;
+/// else `d8` iff `E >= 8 && E % 8 == 0`; else `d4` iff `E >= 4 && E % 4 == 0`;
+/// else `d2` iff `E >= 2 && E % 2 == 0`; else `da` (odd `E`, `E == 1`, `E == 0`).
+/// The `E >= N` guard is load-bearing: without it `E == 0` (`0 % 16 == 0`) would
+/// mis-bucket a zero-extent axis as `d16`.
+#[must_use]
+pub fn derive_div_bucket(inner_extent: i64) -> DivBucket {
+    let e = inner_extent;
+    if e >= 16 && e % 16 == 0 {
+        DivBucket::D16
+    } else if e >= 8 && e % 8 == 0 {
+        DivBucket::D8
+    } else if e >= 4 && e % 4 == 0 {
+        DivBucket::D4
+    } else if e >= 2 && e % 2 == 0 {
+        DivBucket::D2
+    } else {
+        DivBucket::Da
+    }
+}
+
+/// §6.5-0012 applied over an operand's `extents`: buckets the innermost active
+/// axis, i.e. axis `rank-1` = the **last** extent (§6.3-0011). A column-major
+/// reader that buckets `extents[0]` disagrees on any non-square extent tuple. A
+/// rank-0 operand (empty `extents`) has no inner axis and buckets `da`.
+#[must_use]
+pub fn derive_div_bucket_of(extents: &[i64]) -> DivBucket {
+    match extents.last() {
+        Some(&e) => derive_div_bucket(e),
+        None => DivBucket::Da,
+    }
+}
+
+/// §6.5-0011: the maximum touched element offset of a **single** operand — the sum
+/// over its active non-broadcast axes of `|stride| * (extent - 1)`, in element
+/// units. A broadcast axis (stride `0`) contributes `0`. The `(extent - 1)` term
+/// is load-bearing: `(extent)` would over-count by `|stride|` per axis and can push
+/// a boundary operand from `ix32` to `ix64`.
+#[must_use]
+pub fn operand_touched_offset(extents: &[i64], strides: &[i64]) -> i64 {
+    extents
+        .iter()
+        .zip(strides.iter())
+        .map(|(&e, &s)| if s == 0 { 0 } else { s.abs() * (e - 1) })
+        .sum()
+}
+
+/// §6.5-0011 + §6.5-0005: the maximum touched element offset over **all** operands,
+/// then the index-width token — `ix32` iff that maximum is `< 2^31`, else `ix64`
+/// (the boundary is exclusive: exactly `2^31` is `ix64`).
+#[must_use]
+pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
+    let max_off = operands
+        .iter()
+        .map(|&(e, s)| operand_touched_offset(e, s))
+        .max()
+        .unwrap_or(0);
+    if max_off < (1i64 << 31) {
+        "ix32"
+    } else {
+        "ix64"
+    }
+}
+
+/// §6.5-0002: derive the `layout_tag` from `extents` and `strides` using
+/// `|stride|` (a fully reversed view is `contiguous`; the reversal is captured only
+/// by the flipped flag, §6.6-0007). Axes are outermost-first (§6.3-0011); the
+/// active **non-unit** axes (extent neither `0` nor `1`) are visited innermost-first.
+/// **(1)** `broadcast` if any axis of extent `> 1` has stride `0`. **(2)** else
+/// `contiguous` if, with a running product `P = 1` visited innermost->outermost,
+/// `|stride|` equals `P` immediately before `P *= extent` for every active non-unit
+/// axis (an empty product — no non-unit axis — is `contiguous`). **(3)** else
+/// `inner-contiguous` if the innermost active non-unit axis has `|stride| == 1`.
+/// **(4)** else `strided`.
+#[must_use]
+pub fn derive_layout_tag(extents: &[i64], strides: &[i64]) -> Contig {
+    // (1) broadcast: any axis of extent > 1 with stride 0.
+    for (&e, &s) in extents.iter().zip(strides.iter()) {
+        if e > 1 && s == 0 {
+            return Contig::Broadcast;
+        }
+    }
+    // active non-unit axes (extent neither 0 nor 1), in natural outermost-first order.
+    let nonunit: Vec<(i64, i64)> = extents
+        .iter()
+        .zip(strides.iter())
+        .filter(|&(&e, _)| e != 0 && e != 1)
+        .map(|(&e, &s)| (e, s))
+        .collect();
+    // (2) contiguous: |stride| == running product P, visited innermost->outermost.
+    // The empty product (no non-unit axis) satisfies this and is contiguous.
+    let mut p: i64 = 1;
+    let mut contiguous = true;
+    for &(e, s) in nonunit.iter().rev() {
+        if s.abs() != p {
+            contiguous = false;
+            break;
+        }
+        p *= e;
+    }
+    if contiguous {
+        return Contig::Contiguous;
+    }
+    // (3) inner-contiguous: innermost active non-unit axis (the last) has |stride| == 1.
+    if let Some(&(_, s)) = nonunit.last() {
+        if s.abs() == 1 {
+            return Contig::InnerContiguous;
+        }
+    }
+    // (4) strided.
+    Contig::Strided
 }

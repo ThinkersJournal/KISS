@@ -211,3 +211,149 @@ fn transcendental_agrees_within_declared_ulp() {
         );
     }
 }
+
+/// Enforces KISS-OPS-6.5-0003 — `select`'s `cond` test is the IEEE compare
+/// `cond != 0`: `-0.0` compares equal to zero (FALSE, choose `b`) and any NaN
+/// (quiet or signaling) is non-zero (TRUE, choose `a`). Catches a `cond` test
+/// lowered as an integer bit-nonzero check (`cond.to_bits() != 0`), which treats
+/// `-0.0` (bits 0x8000_0000) as true, and a `cond > 0` test, which treats NaN as
+/// false.
+#[test]
+fn test_ops_select_cond_zero_nan() {
+    // -0.0 compares EQUAL to zero => FALSE => choose b.
+    assert!(bits_eq(select(-0.0, 10.0, 20.0), 20.0));
+    // +0.0 is likewise false.
+    assert!(bits_eq(select(0.0, 10.0, 20.0), 20.0));
+    // any NaN is non-zero => TRUE => choose a (quiet ...
+    assert!(bits_eq(select(f32::NAN, 10.0, 20.0), 10.0));
+    // ... and signaling).
+    let snan = f32::from_bits(0x7F80_0001);
+    assert!(bits_eq(select(snan, 10.0, 20.0), 10.0));
+    // an ordinary nonzero cond is true; a negative nonzero cond is still true.
+    assert!(bits_eq(select(1.0, 10.0, 20.0), 10.0));
+    assert!(bits_eq(select(-3.0, 10.0, 20.0), 10.0));
+}
+
+/// Enforces KISS-OPS-6.18-0004 — `cadd`/`csub`/`cneg`/`cconj` are componentwise,
+/// preserving IEEE signed zero per lane; `cconj` flips the SIGN BIT of the
+/// imaginary lane so `+0.0 -> -0.0` (and `-0.0 -> +0.0`), a bit flip, not `0 - b`.
+/// Catches `cconj`/`cneg` built from `sub(0.0, b)`: `0.0 - (+0.0)` and
+/// `0.0 - (-0.0)` both yield `+0.0`, so a `+0.0` imaginary lane never becomes
+/// `-0.0` as the clause pins.
+#[test]
+fn test_ops_complex_add_sub_neg_conj() {
+    fn c_bits_eq(a: C32, b: C32) -> bool {
+        a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits()
+    }
+    let z = [1.0f32, 2.0];
+    let w = [3.0f32, 4.0];
+    assert!(c_bits_eq(cadd(z, w), [4.0, 6.0]));
+    assert!(c_bits_eq(csub(z, w), [-2.0, -2.0]));
+    assert!(c_bits_eq(cneg(z), [-1.0, -2.0]));
+    assert!(c_bits_eq(cconj(z), [1.0, -2.0]));
+    // cconj flips the sign BIT of the imaginary lane: +0.0 -> -0.0 ...
+    assert!(c_bits_eq(cconj([5.0, 0.0]), [5.0, -0.0]));
+    // ... and -0.0 -> +0.0 (a bit flip, NOT 0 - b) ...
+    assert!(c_bits_eq(cconj([5.0, -0.0]), [5.0, 0.0]));
+    // ... while the real lane is a raw move that preserves -0.0.
+    assert!(c_bits_eq(cconj([-0.0, 7.0]), [-0.0, -7.0]));
+    // cneg flips both lanes' sign bits: (+0.0,+0.0) -> (-0.0,-0.0).
+    assert!(c_bits_eq(cneg([0.0, 0.0]), [-0.0, -0.0]));
+}
+
+/// Enforces KISS-OPS-6.18-0006 — `cdiv` applies the Annex G recovery with pinned
+/// component signs and MUST NOT route the zero-denominator / infinite-denominator
+/// cases through the real `div` atom. A nonzero finite `(a,b)` over a complex
+/// ZERO denominator yields `copysign(∞,a) + i·copysign(∞,b)`, NOT `0/0 = NaN`;
+/// a complex-infinity denominator yields a complex zero, NOT `inf/inf = NaN`.
+/// Catches exactly the forbidden real-`div` route: [`cdiv_via_real_div`] yields
+/// NaN components where Annex G pins signed infinities / a zero.
+#[test]
+fn test_ops_cdiv_annexg() {
+    fn c_bits_eq(a: C32, b: C32) -> bool {
+        a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits()
+    }
+    let inf = f32::INFINITY;
+    // nonzero finite (a,b) over (±0,±0): Annex G G.5.1 pins copysign(inf,a) + i*copysign(inf,b).
+    assert!(c_bits_eq(cdiv([2.0, 3.0], [0.0, 0.0]), [inf, inf]));
+    assert!(c_bits_eq(cdiv([-2.0, 3.0], [0.0, 0.0]), [-inf, inf]));
+    // the signs follow the NUMERATOR (a,b), not the denominator's signed zeros.
+    assert!(c_bits_eq(cdiv([2.0, -3.0], [-0.0, -0.0]), [inf, -inf]));
+    // the forbidden real-div route yields 0/0 = NaN in BOTH lanes -- the exact
+    // reason cdiv must not evaluate this case through the real `div` atom.
+    let bad_zero = cdiv_via_real_div([2.0, 3.0], [0.0, 0.0]);
+    assert!(bad_zero[0].is_nan() && bad_zero[1].is_nan());
+    // complex-infinity denominator, finite numerator -> a complex zero (pinned
+    // magnitude), where the real-div route would give inf/inf = NaN.
+    let q = cdiv([1.0, 1.0], [inf, 4.0]);
+    assert!(q[0] == 0.0 && q[1] == 0.0);
+    let bad_inf = cdiv_via_real_div([1.0, 1.0], [inf, 4.0]);
+    assert!(bad_inf[0].is_nan() && bad_inf[1].is_nan());
+    // finite operands with a nonzero denominator: the real decomposition
+    // ((ac+bd) + (bc-ad)i) / (c^2+d^2) -- a smoke check the guards don't misfire.
+    let f = cdiv([1.0, 2.0], [3.0, 4.0]);
+    assert!(c_bits_eq(
+        f,
+        [(1.0f32 * 3.0 + 2.0 * 4.0) / 25.0, (2.0f32 * 3.0 - 1.0 * 4.0) / 25.0],
+    ));
+}
+
+/// Enforces KISS-OPS-6.13-0005 — `pow` over its full domain: `pow(0,0)=1`;
+/// signed-zero bases with the IEEE odd/even-integer sign rule; and negative bases
+/// with an integer exponent giving `|a|^b` (even) or `-(|a|^b)` (odd) rather than
+/// NaN. Catches a `pow` that is only the `a>0` reference `exp(b*log(a))`
+/// ([`pow_via_exp_log`]): `log(a)` is NaN for `a<0` (so `pow(-2,3)` is NaN, not
+/// -8) and `0*log(0)=NaN` (so `pow(0,0)` is NaN, not 1).
+#[test]
+fn test_ops_pow_full_domain() {
+    let inf = f32::INFINITY;
+    // pow(0,0) = 1 (and the reference exp(0*log(0)) = NaN -- the forbidden form).
+    assert_eq!(pow(0.0, 0.0), 1.0);
+    assert!(pow_via_exp_log(0.0, 0.0).is_nan());
+    // negative base, integer exponent: sign follows odd/even.
+    assert_eq!(pow(-2.0, 3.0), -8.0); // odd -> -(|a|^b)
+    assert_eq!(pow(-2.0, 2.0), 4.0);  // even -> |a|^b
+    assert!(pow_via_exp_log(-2.0, 3.0).is_nan()); // the forbidden reference is NaN here
+    // negative base, NON-integer exponent -> NaN.
+    assert!(pow(-2.0, 2.5).is_nan());
+    // +0.0 base: +0.0 for b>0, +inf for b<0.
+    assert!(bits_eq(pow(0.0, 3.0), 0.0));
+    assert_eq!(pow(0.0, -3.0), inf);
+    // -0.0 base: sign flips ONLY for an odd-integer exponent.
+    assert!(bits_eq(pow(-0.0, 3.0), -0.0));   // positive odd integer -> -0.0
+    assert!(bits_eq(pow(-0.0, 2.0), 0.0));    // positive even integer -> +0.0
+    assert!(bits_eq(pow(-0.0, 0.5), 0.0));    // positive non-integer   -> +0.0
+    assert_eq!(pow(-0.0, -3.0), -inf);         // negative odd integer   -> -inf
+    assert_eq!(pow(-0.0, -2.0), inf);          // negative even integer  -> +inf
+    assert_eq!(pow(-0.0, -0.5), inf);          // negative non-integer   -> +inf
+    // a>0 reference (exact power) still holds.
+    assert_eq!(pow(2.0, 10.0), 1024.0);
+}
+
+/// Enforces KISS-OPS-6.13-0003 — a Refine-marked exp-of-large-argument op MUST
+/// deviate from the literal reference decomposition where that reference would
+/// overflow while the true function is finite, yet agree with the reference's
+/// pinned meaning within the declared ULP elsewhere. Catches a kernel that emits
+/// the literal `tanh` reference `(exp(x)-exp(-x))/(exp(x)+exp(-x))` verbatim: at
+/// x=100 `exp(100)` overflows to +inf and `inf/inf = NaN`, where tanh(100)=1.
+#[test]
+fn test_ops_decomposition_accuracy_refinement() {
+    // The literal reference OVERFLOWS to NaN at x=100 (exp(100) > f32::MAX -> +inf,
+    // inf/inf = NaN) while the true tanh(100) = 1.
+    assert!(tanh_literal_ref(100.0).is_nan());
+    // §6.13-0003 REQUIRES the refined (overflow-safe) form here.
+    assert_eq!(tanh_refined(100.0), 1.0);
+    assert_eq!(tanh_refined(-100.0), -1.0);
+    // Yet in the ordinary range the refined form still agrees with the
+    // reference's pinned mathematical meaning within the op's declared ULP.
+    let bound = 4;
+    for &x in &[-1.5f32, -0.5, 0.5, 1.0, 2.0] {
+        let r = tanh_refined(x);
+        let lit = tanh_literal_ref(x);
+        assert!(
+            compare_f32(DeterminismClass::UlpTolerance, r, lit, bound).is_ok(),
+            "tanh refined vs literal at {x}: {} ULP exceeds {bound}",
+            ulp_distance_f32(r, lit)
+        );
+    }
+}

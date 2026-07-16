@@ -39,6 +39,8 @@ pub enum AnnounceDecline {
     ZeroLiveProfile,
     ProfilesNotStrictlyAscending,
     TrailingProfileNonZero,
+    /// Version negotiation found no profile common to both live-profile sets (§7.1-0002).
+    NoMutualProfile,
 }
 
 impl Envelope {
@@ -106,4 +108,24 @@ pub fn decode(bytes: &[u8]) -> Result<Envelope, AnnounceDecline> {
     }
     let capabilities = u64::from_le_bytes(bytes[48..56].try_into().unwrap());
     Ok(Envelope { envelope_version: version, profiles, capabilities })
+}
+
+// ---- §7.1 Version-negotiation algorithm -------------------------------------
+
+/// Negotiate the mutually-highest live profile (§7.1-0001, §7.1-0002).
+///
+/// `local` and `remote` carry the live-profile sets `L` and `R` (each the nonzero
+/// `profiles[0..profiles_len]` of the respective envelope, per §7.1). The negotiated
+/// profile is `max(L ∩ R)` — the highest integer present in both sets (§7.1-0001).
+/// If the intersection is empty, this returns a typed
+/// [`AnnounceDecline::NoMutualProfile`] and never panics, aborts, or selects a
+/// profile (§7.1-0002).
+pub fn negotiate(local: &Envelope, remote: &Envelope) -> Result<u16, AnnounceDecline> {
+    local
+        .profiles
+        .iter()
+        .copied()
+        .filter(|p| remote.profiles.contains(p))
+        .max()
+        .ok_or(AnnounceDecline::NoMutualProfile)
 }
