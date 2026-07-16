@@ -107,9 +107,7 @@ KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length
 KISS-CLASSIFY-6.3-0011	test_classify_axis_ordering_convention
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8
-KISS-CLASSIFY-6.4-0002	test_classify_max_operands_is_8
 KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_2
-KISS-CLASSIFY-6.4-0004	test_classify_structure_key_token_length_bound
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum
 KISS-CLASSIFY-6.5-0002	test_classify_layout_tag_derivation
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum
@@ -139,13 +137,11 @@ KISS-CLASSIFY-6.6-0015	test_classify_secondary_dtype_unkeyed
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles
 KISS-CLASSIFY-6.6-0017	test_classify_reduce_field_op_family_gated
 KISS-CLASSIFY-6.6-0018	test_classify_no_colliding_cell_registration
-KISS-CLASSIFY-6.7-0002	test_classify_token_version_prefix
 KISS-CLASSIFY-6.7-0007	test_classify_token_codec_additive
 KISS-CLASSIFY-6.7-0008	test_classify_token_roundtrip
 KISS-CLASSIFY-6.7-0009	test_classify_token_reject_malformed
 KISS-CLASSIFY-6.7-0010	test_classify_mask_hex_lowercase
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form
-KISS-CLASSIFY-6.8-0001	test_classify_target_token_grammar
 KISS-CLASSIFY-6.8-0002	test_classify_target_byte_exact_match
 KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered
 KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace

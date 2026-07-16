@@ -155,7 +155,18 @@ pub enum KeyDecline {
     UnknownOpFamily,
     /// Dtype token outside the closed §6.1 set.
     UnknownDtype,
+    /// Token length is `0` or exceeds `MAX_STRUCTURE_KEY_LEN` (§6.4-0004).
+    TokenLengthOutOfBound { len: usize },
+    /// More than `MAX_OPERANDS` per-operand sub-keys (§6.4-0002).
+    TooManyOperands { got: usize },
+    /// `target_capability` is not `<namespace>:<capability-set>` (§6.8-0001).
+    BadTargetGrammar,
 }
+
+/// The pinned closed-set bounds (§6.4). Named so a reader can reject an
+/// over-large key without allocating on the unchecked length.
+pub const MAX_OPERANDS: usize = 8;
+pub const MAX_STRUCTURE_KEY_LEN: usize = 4096;
 
 // ---- serialize (to_token) ---------------------------------------------------
 
@@ -278,13 +289,20 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
 /// Parse a token into a `StructureKey`, rejecting a malformed one with a typed
 /// decline (§6.7-0009). Round-trips with `to_token` byte-for-byte (§6.7-0008).
 pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
+    // §6.4-0004: reject an out-of-bound length FIRST, on the O(1) byte length,
+    // before the split allocates — "without allocating on the unchecked length".
+    if token.is_empty() || token.len() > MAX_STRUCTURE_KEY_LEN {
+        return Err(KeyDecline::TokenLengthOutOfBound { len: token.len() });
+    }
     let f: Vec<&str> = token.split('|').collect();
     if f.len() != 9 && f.len() != 10 {
         return Err(KeyDecline::WrongFieldCount { got: f.len() });
     }
-    // field 0: sk<ver>
+    // field 0: `sk` + the canonical decimal version. `parse::<u32>()` would accept
+    // a non-canonical "sk02" (parses to 2); compare the exact decimal instead so a
+    // leading-zero token is refused (§6.7-0002).
     let ver = f[0].strip_prefix("sk").ok_or(KeyDecline::BadVersionPrefix)?;
-    if ver.parse::<u32>() != Ok(SCHEMA_VERSION) {
+    if ver != SCHEMA_VERSION.to_string() {
         return Err(KeyDecline::BadVersionPrefix);
     }
     // field 1/2: op-family and dtype must be in their closed sets (§6.5-0006, §6.1)
@@ -293,6 +311,14 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     }
     if !DTYPES.contains(&f[2]) {
         return Err(KeyDecline::UnknownDtype);
+    }
+    // field 3: target_capability = <namespace>:<capability-set>, exactly one `:`,
+    // both parts non-empty (§6.8-0001).
+    {
+        let parts: Vec<&str> = f[3].split(':').collect();
+        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+            return Err(KeyDecline::BadTargetGrammar);
+        }
     }
     let work_class = WorkClass::parse(f[5]).ok_or(KeyDecline::BadWorkClass)?;
     let rank = f[6]
@@ -303,6 +329,10 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         .split(';')
         .map(parse_operand)
         .collect::<Result<Vec<_>, _>>()?;
+    // §6.4-0002: no more than MAX_OPERANDS per-operand sub-keys.
+    if operands.len() > MAX_OPERANDS {
+        return Err(KeyDecline::TooManyOperands { got: operands.len() });
+    }
     let reduce = parse_reduce(f[8])?;
     let contraction = if f.len() == 10 { Some(parse_contraction(f[9])?) } else { None };
     Ok(StructureKey {

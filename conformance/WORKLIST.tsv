@@ -32,12 +32,12 @@ KISS-OPS-6.16-0003	OPS	small	todo	f32→bf16 by truncating the low 16 bits — w
 KISS-OPS-6.13-0005	OPS	small	todo	Two catches, in opposite directions. (a) The literal reference `exp(mul(b, log(a)))` returns NaN for EVERY negative base — so pow(-2,3) is NaN where the spec pi
 KISS-OPS-6.16-0005	OPS	small	todo	The subtle one: e5m2 HAS an infinity encoding, so a converter naturally produces +inf on overflow — but the clause pins saturation to 57344 anyway. f32 1e30 → e
 KISS-OPS-6.13-0003	OPS	small	todo	The reference decompositions in the §6.13 table are WRONG at the boundary and the clause mandates deviating from them. tanh(100.0f): reference = (e^100 - e^-100
-KISS-CLASSIFY-6.7-0002	CLASSIFY	trivial	todo	A live canonicalization hole in the shipped codec: from_token strips "sk" and calls ver.parse::<u32>(), and "02".parse::<u32>() == Ok(2) — so `sk02|...` is ACCE
-KISS-CLASSIFY-6.4-0002	CLASSIFY	trivial	todo	The shipped codec has no count check — field 7 is split on ';' and collected into an unbounded Vec, so a 64-operand token parses cleanly today. A reader copying
+KISS-CLASSIFY-6.7-0002	CLASSIFY	trivial	DONE	A live canonicalization hole in the shipped codec: from_token strips "sk" and calls ver.parse::<u32>(), and "02".parse::<u32>() == Ok(2) — so `sk02|...` is ACCE
+KISS-CLASSIFY-6.4-0002	CLASSIFY	trivial	DONE	The shipped codec has no count check — field 7 is split on ';' and collected into an unbounded Vec, so a 64-operand token parses cleanly today. A reader copying
 KISS-CLASSIFY-6.6-0010	CLASSIFY	trivial	todo	Again the shipped codec: from_token today accepts a 10-field `bin` token carrying `|ctll/d16`, and accepts a 9-field `gem` token with no contraction field. Both
-KISS-CLASSIFY-6.8-0001	CLASSIFY	trivial	todo	The current codec does not validate field 3 AT ALL — it copies f[3] into a String. `sk2|bin|f32|cuda|ix32|grid|r2|co/00/v4/d16/f|-` (bare namespace, no colon), 
+KISS-CLASSIFY-6.8-0001	CLASSIFY	trivial	DONE	The current codec does not validate field 3 AT ALL — it copies f[3] into a String. `sk2|bin|f32|cuda|ix32|grid|r2|co/00/v4/d16/f|-` (bare namespace, no colon), 
 KISS-CLASSIFY-6.5-0012	CLASSIFY	trivial	todo	Two concrete wrong impls. (a) The E=0 trap: 0 % 16 == 0, so an impl that omits the E>=16 guard buckets a zero-extent axis as d16 and a downstream kernel emits a
-KISS-CLASSIFY-6.4-0004	CLASSIFY	trivial	todo	The shipped from_token has no length check: a 1 MB token is split and parsed. This is the exact bound KISS-Announce relies on when it carries the key as a lengt
+KISS-CLASSIFY-6.4-0004	CLASSIFY	trivial	DONE	The shipped from_token has no length check: a 1 MB token is split and parsed. This is the exact bound KISS-Announce relies on when it carries the key as a lengt
 KISS-CLASSIFY-6.6-0017	CLASSIFY	trivial	todo	The current reference codec itself. from_token("sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|rlast") is ACCEPTED today — parse_reduce never consults field 
 KISS-CLASSIFY-6.1-0010	CLASSIFY	small	todo	An IEEE-754-style mini-float reader that treats exp=1111 as infinity. That impl's max finite is 240 (0x77), not 448, and it reports 0x78 as +inf. The spec's 448
 KISS-CLASSIFY-6.1-0008	CLASSIFY	small	todo	A high-nibble-first unpacker — which is what GPTQ/AWQ and several 4-bit quant kernels actually use. Feed byte 0xF1: spec says index0 = low nibble = 0x1, index1 

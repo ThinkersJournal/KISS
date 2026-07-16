@@ -235,3 +235,68 @@ fn producer_emits_rall_not_equivalent_mask() {
     let last = key("red", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::Trailing, None);
     assert!(last.to_token().ends_with("|rlast"));
 }
+
+// ---- §6.4 / §6.7 / §6.8 codec bounds: a reader MUST reject a malformed key -----
+// Each of the four below caught a real hole in the shipped from_token: it parsed
+// the malformed token as valid. The reference reader is now a validating reader.
+
+/// KISS-CLASSIFY-6.4-0004 (`test_classify_structure_key_token_length_bound`): a
+/// reader MUST reject a token of length 0 or > MAX_STRUCTURE_KEY_LEN (4096), and
+/// on the O(1) byte length before allocating on it. Catches a reader that splits
+/// first and parses an attacker-sized token (the previous one did).
+#[test]
+fn test_classify_structure_key_token_length_bound() {
+    assert_eq!(MAX_STRUCTURE_KEY_LEN, 4096);
+    assert_eq!(from_token(""), Err(KeyDecline::TokenLengthOutOfBound { len: 0 }));
+    let too_long = "x".repeat(MAX_STRUCTURE_KEY_LEN + 1);
+    assert_eq!(
+        from_token(&too_long),
+        Err(KeyDecline::TokenLengthOutOfBound { len: 4097 })
+    );
+    // the canonical golden is well within bound and still parses.
+    assert!(from_token(A_GOLDEN).is_ok());
+}
+
+/// KISS-CLASSIFY-6.4-0002 (`test_classify_max_operands_is_8`): a reader MUST
+/// reject a key declaring more than MAX_OPERANDS (8) per-operand sub-keys. Catches
+/// a reader that `split(';').collect()`s an unbounded operand vector.
+#[test]
+fn test_classify_max_operands_is_8() {
+    assert_eq!(MAX_OPERANDS, 8);
+    let nine = std::iter::repeat("co/00/v4/d16/f").take(9).collect::<Vec<_>>().join(";");
+    let t = A_GOLDEN.replacen("co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", &nine, 1);
+    assert_eq!(from_token(&t), Err(KeyDecline::TooManyOperands { got: 9 }));
+    // exactly 8 is accepted (the boundary is not over-tight).
+    let eight = std::iter::repeat("co/00/v4/d16/f").take(8).collect::<Vec<_>>().join(";");
+    let t8 = A_GOLDEN.replacen("co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", &eight, 1);
+    assert!(from_token(&t8).is_ok());
+}
+
+/// KISS-CLASSIFY-6.8-0001 (`test_classify_target_token_grammar`): target_capability
+/// MUST be `<namespace>:<capability-set>` — exactly one `:`, both parts non-empty.
+/// Catches a reader that copies field 3 unchecked (the previous one did): a bare
+/// `cuda` with no capability set would pass and later fail to select a kernel.
+#[test]
+fn test_classify_target_token_grammar() {
+    for bad in ["cuda", "cuda:sm89:extra", ":sm89", "cuda:"] {
+        let t = A_GOLDEN.replacen("cuda:sm89", bad, 1);
+        assert_eq!(from_token(&t), Err(KeyDecline::BadTargetGrammar), "accepted `{bad}`");
+    }
+    assert!(from_token(A_GOLDEN).is_ok()); // `cuda:sm89` is well-formed
+}
+
+/// KISS-CLASSIFY-6.7-0002 (`test_classify_token_version_prefix`): field 0 is `sk`
+/// followed by the canonical decimal version. Catches a reader that `parse::<u32>()`s
+/// the version (accepting the non-canonical `sk02`, which parses to 2).
+#[test]
+fn test_classify_token_version_prefix() {
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("sk2|", "sk02|", 1)),
+        Err(KeyDecline::BadVersionPrefix)
+    );
+    assert_eq!(
+        from_token(&A_GOLDEN.replacen("sk2|", "sk9|", 1)),
+        Err(KeyDecline::BadVersionPrefix) // unsupported version
+    );
+    assert!(from_token(A_GOLDEN).is_ok()); // `sk2` is canonical
+}
