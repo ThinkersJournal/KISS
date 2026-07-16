@@ -40,6 +40,25 @@ The full verified list, with the wrong implementation each test catches, is
 [`WORKLIST.tsv`](WORKLIST.tsv). By sub-standard: OPS 18, Classify 17, Grammar 14, Announce
 10, Synth 6, Contract 6, Conform 1. By effort: 26 trivial, 35 small, 11 medium.
 
+### Progress — 62 of the 72 are now written
+
+Backing has gone **45 → 109 / 857 clauses (12.7%)**, with five new reference modules
+(`grammar`, `fp`, `dtype`, `contract`, plus the `§6.18-0017` split comparator) and 192
+passing tests. `WORKLIST.tsv` marks each done row `DONE`. Coverage by sub-standard:
+OPS 25.6%, Announce 30.7%, Classify 23.1%, Grammar 19.2%, Contract 5.8%.
+
+The **10 still `todo`** are exactly the ones that should wait:
+- **Synth (6)** — the provision-protocol frames. Fuel implements provision (JitRequest/
+  JitResponse, two-phase handover); these want its input before the frame shapes are pinned.
+- **Classify (3)** — `§6.5-0009` (its own example is wrong — see PR #35 review), `§6.5-0010`
+  (the M-vs-K work-class contradiction), `§6.6-0008` (touches the keepdim-stride
+  contradiction). All want the single-classifier-division decision settled first.
+- **Conform (1)** — `§6.2-0003` (the gate must reject a test citing a *retired* clause ID):
+  a `kiss_trace.py` feature, not a Rust-harness oracle; a clean follow-up.
+
+Writing the tests surfaced real defects in the reference harness along the way — see the
+next section.
+
 ## Why the buckets are shaped the way they are
 
 - **OPS is the most testable and should be embarrassed by that, not comforted.** It pins
