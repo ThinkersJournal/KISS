@@ -135,6 +135,15 @@ fn test_classify_vec_width_unit_stride() {
     // v1. This is the transposed/reversed-operand trap §6.5-0013 closes.
     assert_eq!(derive_vec_width(-1, 256, f32, 256, false), VecWidth::V1);
 
+    // NOTE on the §6.6-0007 flipped flag: it is deliberately NOT a parameter here.
+    // The flag is set iff *any* axis of the operand has a negative stride, whereas
+    // §6.5-0013 tests the INNERMOST axis's signed stride. An operand whose outer
+    // axis is reversed but whose innermost run is forward-contiguous has the flag
+    // set and still derives v4 -- gating on the flag would wrongly derive v1.
+    // This derivation cannot make that mistake because it never sees the flag;
+    // the hazard is for a foreign implementer reading the clause, which no test
+    // here can catch. Hence the wording of §6.5-0013 rather than a case below.
+
     // strided innermost axis (|stride| == 2, e.g. a transpose): -> v1.
     assert_eq!(derive_vec_width(2, 256, f32, 256, false), VecWidth::V1);
 

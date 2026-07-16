@@ -765,12 +765,15 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   (§6.5-0009(c)) MUST additionally require that the operand's **innermost active
   axis** (§6.3-0011) is **forward-unit-stride** — its signed stride (§6.3-0003) is
   exactly `+1` — and that **no** axis of the operand broadcasts. An innermost axis
-  whose stride is `-1` (a **flipped** axis: `|stride| = 1` but the operand's flipped
-  flag §6.6-0007 is set), or whose `|stride| > 1` (a transposed / non-inner-
-  contiguous axis), MUST derive `v1`, because its elements are not a contiguous
-  forward run in memory and no conformant packed / vector load (`ld.128`, a SPIR-V
-  vector load, a CPU SIMD load) can honor `L > 1` for them. Only a forward-unit
-  stride qualifies; a reversed run derives `v1` even though `|stride| = 1`. This
+  whose stride is `-1` (a **reversed** run), or whose `|stride| > 1` (a transposed /
+  non-inner-contiguous axis), MUST derive `v1`, because its elements are not a
+  contiguous forward run in memory and no conformant packed / vector load (`ld.128`,
+  a SPIR-V vector load, a CPU SIMD load) can honor `L > 1` for them. Only a
+  forward-unit stride qualifies; a reversed run derives `v1` even though
+  `|stride| = 1`. The test is the **innermost** axis's signed stride, and **not**
+  the §6.6-0007 flipped flag: that flag is set iff *any* axis of the operand has a
+  negative stride, so an operand whose outer axis is reversed but whose innermost
+  active axis is forward-unit-stride derives `vL` with the flag set. This
   precondition gates §6.5-0009(c) before its byte-cap, extent-divisibility, and
   alignment tests are applied. *Test:* `test_classify_vec_width_unit_stride`.
 
