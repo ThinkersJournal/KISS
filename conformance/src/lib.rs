@@ -19,6 +19,7 @@
 //! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
 pub mod announce;
+pub mod contract;
 pub mod differential;
 pub mod grammar;
 pub mod fp;

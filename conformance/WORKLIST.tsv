@@ -24,7 +24,7 @@ KISS-OPS-6.5-0003	OPS	trivial	DONE	BOTH natural lowerings are wrong, in opposite
 KISS-OPS-6.18-0004	OPS	trivial	DONE	cconj implemented as `cmake(a, sub(const(0), b))` — the obvious spelling of 'negate the imaginary part'. For b=+0.0 it yields 0.0-0.0 = +0.0 under IEEE round-to
 KISS-OPS-6.13-0007	OPS	trivial	DONE	The clause names its own wrong implementation in its own text: the literal reference `sqrt(add(sqr(a), sqr(b)))` evaluates hypot(inf, NaN) as sqrt(inf + NaN) = 
 KISS-OPS-6.16-0004	OPS	small	DONE	A converter that treats e4m3 as a mini-IEEE format: emits +inf for an overflowing input (where the pin is 448.0), and decodes 0x7F as +inf (where the pin is the
-KISS-OPS-6.18-0017	OPS	small	todo	The harness's own ULP comparator is the wrong implementation. lib.rs::total_order_f32 maps -0.0→0x7FFFFFFF and +0.0→0x80000000, so ulp_distance_f32(-0.0,+0.0)=1
+KISS-OPS-6.18-0017	OPS	small	DONE	The harness's own ULP comparator is the wrong implementation. lib.rs::total_order_f32 maps -0.0→0x7FFFFFFF and +0.0→0x80000000, so ulp_distance_f32(-0.0,+0.0)=1
 KISS-OPS-6.18-0006	OPS	small	DONE	The clause spells out its own wrong implementation AND its own value. The naive §6.18 table decomposition on a (±0,±0) denominator computes t = 0*0+0*0 = +0.0 t
 KISS-OPS-6.11-0007	OPS	small	DONE	Three catches. (a) A sort whose comparator is `a < b`: NaN makes it non-transitive, and std::sort with a non-strict-weak-ordering comparator is genuine UB in C+
 KISS-OPS-6.0-0006	OPS	small	DONE	A backend compiled with FMA contraction enabled (nvcc's DEFAULT is -fmad=true; gcc/clang -ffp-contract=fast is the default at -O2). add(mul(a,b),c) becomes fmaf
@@ -63,26 +63,26 @@ KISS-GRAMMAR-6.4-0001	GRAMMAR	small	DONE	A reader that trusts its operand indice
 KISS-GRAMMAR-6.4-0008	GRAMMAR	small	DONE	An impl that infers n_inputs = max(bound index)+1 — the spec names this exact wrong impl. It then CANNOT detect a strict-subset bind: a region declaring 3 input
 KISS-GRAMMAR-6.4-0010	GRAMMAR	medium	DONE	An impl that sorts operands by node-table index instead of by subtree key — cheap and plausible, and it coincidentally reproduces G1's add=[0,3], so G1 alone do
 KISS-GRAMMAR-6.8-0001	GRAMMAR	medium	DONE	An impl that omits the trailing extract_count when the extract list is empty ("why emit a zero count?"). G1 and G4 both pin a trailing `00 00`. A foreign reader
-KISS-ANNOUNCE-6.3-0011	ANNOUNCE	trivial	todo	A producer writing `0x4C564153u32.to_be_bytes()` or `u32::to_be_bytes` on the LE constant — either reverses the tag to 4C 56 41 53. §2.4 exists as a whole secti
+KISS-ANNOUNCE-6.3-0011	ANNOUNCE	trivial	DONE	A producer writing `0x4C564153u32.to_be_bytes()` or `u32::to_be_bytes` on the LE constant — either reverses the tag to 4C 56 41 53. §2.4 exists as a whole secti
 KISS-ANNOUNCE-7.2-0007	ANNOUNCE	trivial	DONE	A reader that applies §6.2's hard-reject discipline to `capabilities` — validating it against the assigned-bit mask and declining on any bit outside. This is th
-KISS-ANNOUNCE-6.3-0012	ANNOUNCE	trivial	todo	A producer that packs record_count immediately after the 4-byte tag, omitting the version block entirely — easy to do, since §6.3-0005 describes the framing 'af
+KISS-ANNOUNCE-6.3-0012	ANNOUNCE	trivial	DONE	A producer that packs record_count immediately after the 4-byte tag, omitting the version block entirely — easy to do, since §6.3-0005 describes the framing 'af
 KISS-ANNOUNCE-7.1-0002	ANNOUNCE	trivial	DONE	`l.intersection(&r).max().unwrap()` — the idiomatic one-liner, which panics on an empty intersection. L={1}, R={2} is a two-envelope handshake between a v1-only
-KISS-ANNOUNCE-6.4-0007	ANNOUNCE	small	todo	A producer emitting the decline_code as a u16 (six values fit in a byte — why spend four?), which truncates every vendor-range code and leaves two bytes of the 
-KISS-ANNOUNCE-6.4-0006	ANNOUNCE	small	todo	`bytes[off..off+32].try_into().unwrap()` for the revision_hash on a request truncated mid-hash — the exact idiom the current envelope decoder uses at conformanc
+KISS-ANNOUNCE-6.4-0007	ANNOUNCE	small	DONE	A producer emitting the decline_code as a u16 (six values fit in a byte — why spend four?), which truncates every vendor-range code and leaves two bytes of the 
+KISS-ANNOUNCE-6.4-0006	ANNOUNCE	small	DONE	`bytes[off..off+32].try_into().unwrap()` for the revision_hash on a request truncated mid-hash — the exact idiom the current envelope decoder uses at conformanc
 KISS-ANNOUNCE-7.1-0001	ANNOUNCE	small	DONE	A negotiator that returns the FIRST mutual profile instead of the highest — the natural result of iterating the ascending profiles array and returning on first 
-KISS-ANNOUNCE-6.4-0004	ANNOUNCE	medium	todo	A producer writing the tag as `0x50535243u32.to_be_bytes()` — the §2.4 table gives both the ASCII and the u32, and picking the u32 with the wrong endianness rev
-KISS-ANNOUNCE-6.3-0005	ANNOUNCE	medium	todo	A producer emitting record_count/key_len big-endian (the `htonl` reflex on anything called a network format — the envelope is the only place the spec's own work
-KISS-ANNOUNCE-6.4-0001	ANNOUNCE	medium	todo	A reader that treats revision_present as truthy (`if flag != 0 { read 32 bytes }`) accepts flag=0xFF on a request with no trailing hash and reads 32 bytes past 
+KISS-ANNOUNCE-6.4-0004	ANNOUNCE	medium	DONE	A producer writing the tag as `0x50535243u32.to_be_bytes()` — the §2.4 table gives both the ASCII and the u32, and picking the u32 with the wrong endianness rev
+KISS-ANNOUNCE-6.3-0005	ANNOUNCE	medium	DONE	A producer emitting record_count/key_len big-endian (the `htonl` reflex on anything called a network format — the envelope is the only place the spec's own work
+KISS-ANNOUNCE-6.4-0001	ANNOUNCE	medium	DONE	A reader that treats revision_present as truthy (`if flag != 0 { read 32 bytes }`) accepts flag=0xFF on a request with no trailing hash and reads 32 bytes past 
 KISS-SYNTH-6.6-0004b	SYNTH	trivial	todo	A reader that reuses its §6.1-0004 request-validation (key length must be in [1,4096]) on the response path — and therefore REJECTS the provider's own perfectly
 KISS-SYNTH-6.6-0004a	SYNTH	trivial	todo	A provider that echoes back whatever key bytes it managed to read before the parse failed — a partial, attacker-chosen key of some other length — or that omits 
 KISS-SYNTH-6.6-0004	SYNTH	small	todo	An encoder that puts decline_code immediately after the tag (the natural shape if you think of a decline as 'an error code, plus context') instead of after the 
 KISS-SYNTH-6.1-0004	SYNTH	small	todo	A reader that treats revision_present as a C-style truthy byte (`!= 0` means present) and so accepts 0x02 — where the spec mandates a decline. It then reads 32 
 KISS-SYNTH-6.1-0002	SYNTH	small	todo	An encoder that writes the tag via `0x51525943u32.to_le_bytes()` on a big-endian host, or — far more likely — one that always emits the 32-byte revision_hash fi
 KISS-SYNTH-6.4-0001b	SYNTH	medium	todo	An encoder that makes the artifact length a u32 (matching CRSP's u32 payload length, the obvious copy-paste source) instead of a u64 — the frame parses identica
-KISS-CONTRACT-6.11-0002	CONTRACT	trivial	todo	A Windows-side emitter writing the header with CRLF. `\r` lands inside the body/header split, `len` is then off by one on every document, and a reader that stri
-KISS-CONTRACT-6.1-0002	CONTRACT	small	todo	A reader that repairs — skips leading junk to find `KISC`, or defaults a missing `crc32=` to "unchecked." Tolerant readers are written on purpose ('be liberal i
-KISS-CONTRACT-6.1-0004	CONTRACT	small	todo	`Vec::with_capacity(declared_len)` before validating that the buffer actually holds that many bytes. Feed a 40-byte input whose header says `len=4294967295`: th
-KISS-CONTRACT-6.11-0005	CONTRACT	small	todo	A HashMap/BTreeMap-backed emitter. A HashMap iterates in random order (different every run — so the document's own CRC is nondeterministic across two runs of th
-KISS-CONTRACT-6.11-0001	CONTRACT	small	todo	An emitter writing `key=value` (no spaces) or `[a,b]` (no space after comma) — the natural output of every join(",") and every format!("{k}={v}"). Both are read
-KISS-CONTRACT-6.11-0007	CONTRACT	medium	todo	Root-FIRST serialization. A recursive-descent emitter (`fn emit(node) { push(node); for c in children { emit(c) } }`) is the obvious way to write this and produ
+KISS-CONTRACT-6.11-0002	CONTRACT	trivial	DONE	A Windows-side emitter writing the header with CRLF. `\r` lands inside the body/header split, `len` is then off by one on every document, and a reader that stri
+KISS-CONTRACT-6.1-0002	CONTRACT	small	DONE	A reader that repairs — skips leading junk to find `KISC`, or defaults a missing `crc32=` to "unchecked." Tolerant readers are written on purpose ('be liberal i
+KISS-CONTRACT-6.1-0004	CONTRACT	small	DONE	`Vec::with_capacity(declared_len)` before validating that the buffer actually holds that many bytes. Feed a 40-byte input whose header says `len=4294967295`: th
+KISS-CONTRACT-6.11-0005	CONTRACT	small	DONE	A HashMap/BTreeMap-backed emitter. A HashMap iterates in random order (different every run — so the document's own CRC is nondeterministic across two runs of th
+KISS-CONTRACT-6.11-0001	CONTRACT	small	DONE	An emitter writing `key=value` (no spaces) or `[a,b]` (no space after comma) — the natural output of every join(",") and every format!("{k}={v}"). Both are read
+KISS-CONTRACT-6.11-0007	CONTRACT	medium	DONE	Root-FIRST serialization. A recursive-descent emitter (`fn emit(node) { push(node); for c in children { emit(c) } }`) is the obvious way to write this and produ
 KISS-CONFORM-6.2-0003	CONFORM	small	todo	A gate that treats sidecar membership as liveness and ignores the Appendix-E `status` field. A test citing a retired ID then credits coverage for a requirement 
