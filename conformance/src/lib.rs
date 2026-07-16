@@ -20,6 +20,9 @@
 
 pub mod announce;
 pub mod differential;
+pub mod grammar;
+pub mod fp;
+pub mod dtype;
 pub mod integer;
 pub mod opattrs;
 pub mod semantics;
