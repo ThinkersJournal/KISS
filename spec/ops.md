@@ -334,8 +334,8 @@ golden vectors are in Appendix E.
 
 ### 2.8 Terms are joined, not restated
 
-KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 u8 i32 i64 u32
-bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
+KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 s16 u8 u16 i32 i64
+u32 u64 bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
