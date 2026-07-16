@@ -221,6 +221,59 @@ fn test_ops_popcount_clz_ctz() {
     assert_eq!(ctz(0x8000_0000u32), 31);
 }
 
+// KISS-OPS-6.10-0006 — `test_ops_narrow_int_promote_truncate_composition`: for a
+// sub-32-bit integer dtype (`s8`/`u8`/`s16`/`u16`/…) every §6.10 atom MUST behave as
+// promote-to-width → apply → TRUNCATE-ON-STORE, and its result MUST be INDEPENDENT of
+// DAG sharing/hoisting. The hazard: C-family lowering promotes a narrow operand to
+// `int` (32-bit) before the atom, so a COMPOSED narrow operand is observed un-truncated
+// (the promoted value) when its producer is inlined but truncated (an 8-/16-bit temp)
+// when hoisted. The pin: the operand carries its TRUNCATED narrow value either way —
+// equivalently, narrow §6.10 operands are direct loads (leaf inputs). The narrow-typed
+// oracle embodies (a): every intermediate stores in its own width, so it is exactly the
+// leaf/hoisted evaluation; the un-truncated promoted path is constructed here in `u32`
+// as the OUTLAWED value, and shown to genuinely diverge (so the clause is load-bearing).
+#[test]
+fn test_ops_narrow_int_promote_truncate_composition() {
+    // (1) truncate-on-store: a single narrow atom already wraps mod 2^bitwidth. The u8
+    // oracle stores 8 bits, so `bit_not`/`shl` equal the native narrow op, NOT the
+    // 32-bit promoted result (`~0u8` is 0xFF, not the promoted 0xFFFF_FFFF).
+    assert_eq!(bit_not(0x00u8), 0xFFu8);
+    assert_eq!(shl(0x01u8, 7), Some(0x80u8)); // 1<<7 stays in 8 bits (0x80)
+
+    // (2) the composition hazard, made concrete on u8. Let the narrow operand be a
+    // COMPOSED value: t = add(200, 100). Truncate-on-store gives the 8-bit temp 44
+    // (0x2C); the un-truncated PROMOTED intermediate is 300 (0x12C). A downstream narrow
+    // atom MUST observe the truncated 44, never the promoted 300.
+    let (a, b) = (200u8, 100u8);
+    let narrow_temp: u8 = add(a, b); // truncate-on-store => 44
+    assert_eq!(narrow_temp, 44u8);
+    let promoted_untruncated: u32 = a as u32 + b as u32; // 300 — the outlawed value
+    assert_eq!(promoted_untruncated, 300u32);
+
+    // `shr` by 4 makes the two evaluations DIVERGE — exactly the DAG-sharing ambiguity
+    // the clause outlaws. The PINNED result follows truncate-on-store (leaf/hoisted).
+    let pinned = shr(narrow_temp, 4).unwrap(); // 44 >> 4 = 2  (PINNED)
+    let hazard = (promoted_untruncated >> 4) as u8; // 300 >> 4 = 18 (inlined-promoted)
+    assert_ne!(pinned, hazard); // the two genuinely differ -> the hazard is real
+    assert_eq!(pinned, 2u8); // pinned: the atom sees the 8-bit temp
+    assert_eq!(hazard, 18u8); // the outlawed inlined-promoted result
+
+    // A bit-count atom is an unambiguous witness of the same split: `popcount` over the
+    // NARROW bit pattern of 44 (0b0010_1100) is 3; over the promoted 300 (0b1_0010_1100)
+    // it is 4. The atom MUST count the 8-bit truncated pattern (§6.10-0005 "over the
+    // integer bit pattern" = the operand dtype's own bits), never the promoted pattern.
+    assert_eq!(popcount(narrow_temp), 3);
+    assert_eq!(promoted_untruncated.count_ones(), 4);
+
+    // (3) a 16-bit witness — "any width narrower than 32 bits". add(0xFFFF, 2) stores
+    // 1 (0x1_0001 mod 2^16); the promoted intermediate is 0x1_0001. A narrow atom sees
+    // the truncated 1, and the promoted value is a distinct 17-bit pattern.
+    let t16: u16 = add(0xFFFFu16, 2u16); // 0x1_0001 mod 2^16 = 1
+    assert_eq!(t16, 1u16);
+    assert_eq!(shr(t16, 0).unwrap(), 1u16); // narrow atom observes 1, not 0x1_0001
+    assert_ne!(0x1_0001u32, t16 as u32);
+}
+
 // KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
 // now includes the 16-bit tokens `s16`/`u16` and 64-bit unsigned `u64` (the
 // former open question is resolved the other way: they are IN, made
