@@ -7,6 +7,7 @@
 //! and atomic-add.
 
 use kiss_conformance::differential::SplitMix64;
+use kiss_conformance::semantics::{add, fmax_ieee, fmin_ieee, mul};
 use kiss_conformance::structural::*;
 use kiss_conformance::{compare_f32, DeterminismClass};
 
@@ -353,5 +354,152 @@ fn differential_catches_gather_ignoring_oob_policy() {
     assert!(
         good != bad,
         "a wrapping gather must be caught by the differential vs the clamp policy"
+    );
+}
+
+/// KISS-OPS-6.11-0002: `reduce` folds an axis under a monoid from {sum,prod,max,min}
+/// with the pinned identities; `max`/`min` are **NaN-propagating**; an empty axis
+/// yields the identity.
+/// Teeth: a reduce(max) built on the NaN-*suppressing* IEEE `fmax` (seeded at −∞)
+/// returns a finite value on a NaN-containing axis instead of NaN — caught here.
+#[test]
+fn test_ops_reduce_monoids() {
+    // (a) pinned identities — also the empty-axis result (§6.11-0002).
+    assert!(bits_eq(reduce_f32(&[], Monoid::Sum), 0.0)); // sum identity +0.0
+    assert_eq!(reduce_f32(&[], Monoid::Prod), 1.0); // prod identity 1
+    assert_eq!(reduce_f32(&[], Monoid::Max), f32::NEG_INFINITY); // max identity −∞ (dtype min)
+    assert_eq!(reduce_f32(&[], Monoid::Min), f32::INFINITY); // min identity +∞ (dtype max)
+
+    // (b) ordinary fold values over the golden multiset {2, 4, 3, 1}.
+    let xs = [2.0f32, 4.0, 3.0, 1.0];
+    assert_eq!(reduce_f32(&xs, Monoid::Sum), 10.0);
+    assert_eq!(reduce_f32(&xs, Monoid::Prod), 24.0);
+    assert_eq!(reduce_f32(&xs, Monoid::Max), 4.0);
+    assert_eq!(reduce_f32(&xs, Monoid::Min), 1.0);
+
+    // (c) THE teeth: max/min are NaN-PROPAGATING (§6.11-0002), NOT IEEE maxNum/minNum.
+    let with_nan = [3.0f32, f32::NAN, 1.0];
+    assert!(reduce_f32(&with_nan, Monoid::Max).is_nan());
+    assert!(reduce_f32(&with_nan, Monoid::Min).is_nan());
+
+    // A reduce(max) built on the NaN-SUPPRESSING IEEE fmax (seeded at −∞) silently
+    // drops the NaN and returns 3.0 — the exact wrong impl this clause forbids.
+    let wrong_max = with_nan
+        .iter()
+        .fold(f32::NEG_INFINITY, |acc, &x| fmax_ieee(acc, x));
+    let wrong_min = with_nan
+        .iter()
+        .fold(f32::INFINITY, |acc, &x| fmin_ieee(acc, x));
+    assert_eq!(wrong_max, 3.0);
+    assert_eq!(wrong_min, 1.0);
+    assert!(reduce_f32(&with_nan, Monoid::Max).to_bits() != wrong_max.to_bits());
+    assert!(reduce_f32(&with_nan, Monoid::Min).to_bits() != wrong_min.to_bits());
+}
+
+/// KISS-OPS-6.0-0006: for an exact-byte op over a float dtype each arithmetic atom
+/// rounds independently — `add(mul(a,b),c)` MUST round the `mul` then the `add`, and
+/// MUST NOT contract to a single-rounding `fma(a,b,c)`.
+/// Teeth: an oracle that fuses `mul`+`add` into `f32::mul_add` produces a different
+/// byte result on the chosen a,b,c — caught by the exact-byte comparator.
+#[test]
+fn test_ops_no_fma_contraction_exact_byte() {
+    // a = 1 + 2^-12 (exactly representable). a*a = 1 + 2^-11 + 2^-24; the trailing
+    // 2^-24 is exactly half a ULP at 1.0, so round-to-nearest-even rounds it DOWN to
+    // mul = 1 + 2^-11 (0x3F801000). add(mul, -1) = 2^-11 (0x3A000000).
+    let a = f32::from_bits(0x3F80_0800); // 1.0002441 = 1 + 2^-12
+    let c = -1.0f32;
+
+    // Separate per-atom rounding: round(mul) THEN round(add) — the required behavior.
+    let sep = add(mul(a, a), c);
+    assert_eq!(mul(a, a).to_bits(), 0x3F80_1000); // 1 + 2^-11
+    assert_eq!(sep.to_bits(), 0x3A00_0000); // 2^-11, exactly
+
+    // The contracted (fused) alternative keeps the exact product, so a*a-1 rounds only
+    // ONCE to 2^-11 + 2^-24 (0x3A000400) — a genuinely different byte pattern.
+    let fused = a.mul_add(a, c);
+    assert_eq!(fused.to_bits(), 0x3A00_0400);
+
+    // §6.0-0006: the exact-byte decomposition MUST equal the separately-rounded value
+    // and MUST NOT equal the fused one; an FMA-contracted oracle fails the comparator.
+    assert_ne!(sep.to_bits(), fused.to_bits());
+    assert!(
+        compare_f32(DeterminismClass::ExactByte, sep, fused, 0).is_err(),
+        "an FMA-contracted oracle would fail the exact-byte comparator"
+    );
+}
+
+/// A deliberately WRONG `sort_network` comparator: the raw `a < b` relation, which is
+/// **non-transitive on NaN** (every comparison involving NaN is `false`, so NaN
+/// compares "equal" to every key). It leaves NaNs wherever they started and scrambles
+/// the order — exactly the bug §6.11-0007's total order forbids.
+fn wrong_sort_less_than(row: &[f32]) -> Vec<usize> {
+    use std::cmp::Ordering;
+    let mut order: Vec<usize> = (0..row.len()).collect();
+    order.sort_by(|&i, &j| {
+        let (a, b) = (row[i], row[j]);
+        if a < b {
+            Ordering::Less
+        } else if a > b {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    });
+    order
+}
+
+/// KISS-OPS-6.11-0007: `sort_network` is a stable per-row permutation under a total
+/// order on (key, original-index) where NaN orders greatest (ascending → NaN last,
+/// descending → NaN first) and ties break by the lower original index. Two outputs:
+/// the raw-bit value permutation and the original-index vector.
+/// Teeth: an `a < b` comparator is non-transitive on NaN, so it leaves NaN unsorted
+/// and scrambles the order — caught by asserting the exact index vector.
+#[test]
+fn test_ops_sort_network_total_order() {
+    let nan = f32::NAN;
+    // keys 3,1,NaN,1,2,NaN — duplicate 1.0s (idx 1,3) and two NaNs (idx 2,5) exercise
+    // the stability tie-break in both the finite and the NaN region.
+    let row = [3.0f32, 1.0, nan, 1.0, 2.0, nan];
+
+    // Ascending: NaN LAST; ties (the two 1.0s, the two NaNs) keep input order.
+    let (av, ai) = sort_network(&row, SortDirection::Ascending);
+    assert_eq!(ai, vec![1, 3, 4, 0, 2, 5]);
+    assert_eq!(av[0], 1.0);
+    assert_eq!(av[1], 1.0);
+    assert_eq!(av[2], 2.0);
+    assert_eq!(av[3], 3.0);
+    assert!(av[4].is_nan() && av[5].is_nan());
+
+    // Descending: NaN FIRST; ties STILL break by lower original index (stability does
+    // NOT flip with direction).
+    let (dv, di) = sort_network(&row, SortDirection::Descending);
+    assert_eq!(di, vec![2, 5, 0, 4, 1, 3]);
+    assert!(dv[0].is_nan() && dv[1].is_nan());
+    assert_eq!(dv[2], 3.0);
+    assert_eq!(dv[3], 2.0);
+    assert_eq!(dv[4], 1.0);
+    assert_eq!(dv[5], 1.0);
+
+    // argmax = rank 0 of the descending index vector (§6.13 table). Use a NaN-free row
+    // (NaN-first would otherwise mask the numeric maximum).
+    let clean = [3.0f32, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0];
+    let (_, ci) = sort_network(&clean, SortDirection::Descending);
+    assert_eq!(ci[0], 5); // argmax → index of 9.0
+
+    // Raw-bit value permutation carries ±0 signs verbatim (no normalization): with
+    // all-equal zero keys the order is pure stability and each sign bit rides along.
+    let zeros = [0.0f32, -0.0, 0.0];
+    let (zv, zi) = sort_network(&zeros, SortDirection::Ascending);
+    assert_eq!(zi, vec![0, 1, 2]);
+    assert_eq!(zv[0].to_bits(), 0x0000_0000);
+    assert_eq!(zv[1].to_bits(), 0x8000_0000); // -0.0 preserved
+    assert_eq!(zv[2].to_bits(), 0x0000_0000);
+
+    // THE teeth: a raw `a < b` comparator is non-transitive on NaN, leaving NaN
+    // unsorted and scrambling the permutation — it does NOT reproduce the total order.
+    let wrong = wrong_sort_less_than(&row);
+    assert_ne!(
+        wrong, ai,
+        "an `a < b` comparator must not reproduce the §6.11-0007 total order"
     );
 }

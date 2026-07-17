@@ -19,7 +19,11 @@
 //! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
 pub mod announce;
+pub mod contract;
 pub mod differential;
+pub mod grammar;
+pub mod fp;
+pub mod dtype;
 pub mod integer;
 pub mod opattrs;
 pub mod semantics;
@@ -100,6 +104,54 @@ pub fn compare_f32(class: DeterminismClass, actual: f32, expected: f32, ulp_boun
             Err("order-invariant comparator applies to reductions, not scalar results".into())
         }
     }
+}
+
+/// The split comparator for the complex transcendental ops `carg` / `clog` /
+/// `csqrt` / `cexp` (KISS-OPS-6.18-0017). These carry exact-signed-zero and ±π
+/// branch-endpoint requirements (§6.18-0008/0009/0010/0011) yet are class
+/// **ULP/tolerance** (§6.18-0014) — and a plain tolerance comparator cannot see
+/// either, because `ulp_distance_f32(-0.0, +0.0) == 1` (so any bound ≥ 1 accepts a
+/// wrong sign of zero) and it treats a ±π endpoint as an in-tolerance value.
+///
+/// So each `c32` result component `[re, im]` is compared thus (§6.18-0017):
+///   (a) a component whose **expected** value is zero MUST match its sign bit
+///       **exactly** (a `+0.0` result where `-0.0` is pinned is a failure);
+///   (b) a component whose expected magnitude is π (a ±π branch endpoint) MUST
+///       match its **sign** exactly;
+///   (c) any other component is compared under ULP-tolerance within `ulp_bound`.
+pub fn compare_c32_transcendental(
+    actual: [f32; 2],
+    expected: [f32; 2],
+    ulp_bound: u64,
+) -> Result<(), String> {
+    for (lane, (&a, &e)) in ["re", "im"].iter().zip(actual.iter().zip(expected.iter())) {
+        if e == 0.0 {
+            // (a) exact sign of a zero-valued component.
+            if a.to_bits() != e.to_bits() {
+                return Err(format!(
+                    "{lane}: signed-zero mismatch (actual {:#010X}, expected {:#010X})",
+                    a.to_bits(),
+                    e.to_bits()
+                ));
+            }
+        } else if e.abs() == std::f32::consts::PI {
+            // (b) exact sign of a ±π branch endpoint.
+            if a.is_sign_negative() != e.is_sign_negative() || a.abs() != e.abs() {
+                return Err(format!(
+                    "{lane}: ±π branch-endpoint mismatch (actual {a}, expected {e})"
+                ));
+            }
+        } else {
+            // (c) ULP-tolerance on an ordinary component.
+            let d = ulp_distance_f32(a, e);
+            if d > ulp_bound {
+                return Err(format!(
+                    "{lane}: ULP distance {d} exceeds bound {ulp_bound} (actual {a}, expected {e})"
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Render bytes as space-separated uppercase hex — the spec's "bytes on the wire,

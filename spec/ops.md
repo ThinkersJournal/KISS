@@ -334,8 +334,8 @@ golden vectors are in Appendix E.
 
 ### 2.8 Terms are joined, not restated
 
-KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 u8 i32 i64 u32
-bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
+KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 s16 u8 u16 i32 i64
+u32 u64 bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
@@ -465,6 +465,14 @@ reader holding only KISS-Ops plus the umbrella.
   E4M3 and E5M2** — the normative reference for the `e4m3` and `e5m2` encodings,
   saturation, and NaN/infinity conventions restated in §6.16. `bf16` (bfloat16) is
   pinned directly in §6.16 as a truncated binary32 layout with round-to-nearest-even.
+- **ISO/IEC 9899 (C99 or C11) Annex G — "IEC 60559-compatible complex arithmetic"** —
+  the normative reference for the **complex-arithmetic op family** (§6.18) over the
+  `c32` / `c64` dtypes: the principal branch cuts of `clog` / `csqrt` / `carg` / `cpow`,
+  the signed zero of the real and imaginary components, and the infinity/NaN recovery
+  rules restated in §6.18 (the `cmul` / `cdiv` Annex-G recovery of §6.18-0005 / §6.18-0006,
+  applied with the Annex-G trigger verbatim). Every §6.18 op is non-primitive over the
+  real primitive floor; Annex G governs only the complex edge cases the real
+  decomposition alone does not fix.
 - **Two's-complement integer representation** — the integer model for wrapping
   arithmetic, arithmetic/logical shift, and the bitwise atoms (§6.4, §6.10).
 - **KISS Umbrella Specification** — the suite conventions: the RFC-2119 keyword

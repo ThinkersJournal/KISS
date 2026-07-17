@@ -39,6 +39,275 @@ pub enum AnnounceDecline {
     ZeroLiveProfile,
     ProfilesNotStrictlyAscending,
     TrailingProfileNonZero,
+    /// Version negotiation found no profile common to both live-profile sets (§7.1-0002).
+    NoMutualProfile,
+    /// A 4-byte message tag did not match the expected code (§2.4, §6.3-0011, §6.4).
+    BadTag { region: &'static str, got: u32 },
+    /// An availability list carried an unsupported `list_version` (§6.3-0012).
+    ListVersionUnsupported { got: u8 },
+    /// Input ended before a fixed-width field could be read — the truncation guard
+    /// that keeps a reader from an out-of-bounds slice (§6.4-0006).
+    Truncated { region: &'static str },
+    /// A declared `structure_key` byte-length fell outside `[1, 4096]` (§6.3-0009, §6.4-0001).
+    StructureKeyLenOutOfRange { got: u32 },
+    /// A declared `record_count` exceeded `MAX_AVAILABILITY_RECORDS` (§6.3-0010).
+    RecordCountOverflow { got: u32 },
+    /// A `revision_present` flag was neither `0` nor `1` (§6.4-0001).
+    BadRevisionPresent { got: u8 },
+}
+
+// ---- §6.3 Availability list + §6.4 contract-query frames ---------------------
+//
+// Every 4-character code is four ASCII bytes in wire order (first char at the
+// lowest offset); reading those same four bytes as a little-endian u32 yields the
+// numeric constant (§2.4). We store the u32 and serialize with `to_le_bytes()`,
+// exactly as the envelope `MAGIC` does — so a big-endian (`htonl` reflex) tag
+// write is a *wrong* implementation the golden vectors catch.
+
+/// Availability-list tag `SAVL` (§2.4, §6.3-0011): wire bytes `53 41 56 4C`.
+pub const SAVL: u32 = 0x4C56_4153;
+/// Contract-query request tag `CYRQ` (§2.4, §6.4-0001): wire bytes `43 59 52 51`.
+pub const CYRQ: u32 = 0x5152_5943;
+/// Contract response tag `CRSP` (§2.4, §6.4-0004): wire bytes `43 52 53 50`.
+pub const CRSP: u32 = 0x5053_5243;
+/// Decline response tag `CDEC` (§2.4, §6.4-0007): wire bytes `43 44 45 43`.
+pub const CDEC: u32 = 0x4345_4443;
+
+/// Inclusive upper bound on a `structure_key` byte-length (§6.3-0009, §6.4-0001).
+pub const MAX_STRUCTURE_KEY_LEN: u32 = 4096;
+/// Upper bound on an availability list's `record_count` (§6.3-0010, `2^20`).
+pub const MAX_AVAILABILITY_RECORDS: u32 = 1 << 20;
+
+/// The pinned little-endian u32 `decline_code` values (§6.4-0009).
+pub mod decline_code {
+    pub const UNKNOWN_STRUCTURE_KEY: u32 = 0x0000_0001;
+    pub const CANNOT_PROVISION: u32 = 0x0000_0002;
+    pub const MALFORMED_REQUEST: u32 = 0x0000_0003;
+    pub const QUERY_NOT_SUPPORTED: u32 = 0x0000_0004;
+    pub const VERSION_UNSUPPORTED: u32 = 0x0000_0005;
+    pub const UNKNOWN_REVISION: u32 = 0x0000_0006;
+}
+
+/// One availability record: the identity pair `(structure_key, revision_hash)`
+/// and nothing else (§6.3-0001). `revision_hash` is exactly 32 bytes (§6.3-0003).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AvailabilityRecord {
+    pub structure_key: Vec<u8>,
+    pub revision_hash: [u8; 32],
+}
+
+/// A decoded availability list (§6.3): tag, `list_version` block, `record_count`,
+/// then the records.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AvailabilityList {
+    pub list_version: u8,
+    pub records: Vec<AvailabilityRecord>,
+}
+
+impl AvailabilityList {
+    /// Serialize per §6.3-0011/§6.3-0012/§6.3-0005:
+    /// `SAVL` tag, `list_version` (1 byte) + 3 MBZ bytes, u32-LE `record_count`,
+    /// then each record as {u32-LE `structure_key` length, key bytes, 32-byte
+    /// `revision_hash`}. All multi-byte fields little-endian.
+    pub fn encode(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&SAVL.to_le_bytes()); // [0] tag  (LE => 53 41 56 4C)
+        b.push(self.list_version); // [4] list_version
+        b.extend_from_slice(&[0u8; 3]); // [5] 3 MBZ bytes
+        b.extend_from_slice(&(self.records.len() as u32).to_le_bytes()); // [8] record_count
+        for r in &self.records {
+            b.extend_from_slice(&(r.structure_key.len() as u32).to_le_bytes()); // u32-LE key_len
+            b.extend_from_slice(&r.structure_key);
+            b.extend_from_slice(&r.revision_hash); // 32 bytes
+        }
+        b
+    }
+}
+
+/// Decode + hard-reject an availability list (§6.3). Every malformation yields a
+/// typed decline; no panic, abort, or out-of-bounds read. The `record_count` is
+/// *not* pre-allocated on (§6.3-0010): records are pushed as they are validated.
+pub fn decode_availability_list(bytes: &[u8]) -> Result<AvailabilityList, AnnounceDecline> {
+    // tag + list_version block = 8 bytes minimum
+    if bytes.len() < 8 {
+        return Err(AnnounceDecline::Truncated { region: "savl_header" });
+    }
+    let tag = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+    if tag != SAVL {
+        return Err(AnnounceDecline::BadTag { region: "savl", got: tag });
+    }
+    let list_version = bytes[4];
+    if list_version != 1 {
+        return Err(AnnounceDecline::ListVersionUnsupported { got: list_version });
+    }
+    if bytes[5..8] != [0, 0, 0] {
+        return Err(AnnounceDecline::ReservedNonZero { region: "savl_mbz" });
+    }
+    if bytes.len() < 12 {
+        return Err(AnnounceDecline::Truncated { region: "record_count" });
+    }
+    let record_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+    if record_count > MAX_AVAILABILITY_RECORDS {
+        return Err(AnnounceDecline::RecordCountOverflow { got: record_count });
+    }
+    let mut off = 12usize;
+    let mut records = Vec::new(); // NOT sized to record_count (§6.3-0010)
+    for _ in 0..record_count {
+        if bytes.len() < off + 4 {
+            return Err(AnnounceDecline::Truncated { region: "key_len" });
+        }
+        let key_len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+        off += 4;
+        if key_len < 1 || key_len > MAX_STRUCTURE_KEY_LEN {
+            return Err(AnnounceDecline::StructureKeyLenOutOfRange { got: key_len });
+        }
+        let key_len = key_len as usize;
+        if bytes.len() < off + key_len {
+            // checked before allocating on the unchecked length (§6.3-0009)
+            return Err(AnnounceDecline::Truncated { region: "structure_key" });
+        }
+        let structure_key = bytes[off..off + key_len].to_vec();
+        off += key_len;
+        if bytes.len() < off + 32 {
+            return Err(AnnounceDecline::Truncated { region: "revision_hash" });
+        }
+        let mut revision_hash = [0u8; 32];
+        revision_hash.copy_from_slice(&bytes[off..off + 32]);
+        off += 32;
+        records.push(AvailabilityRecord { structure_key, revision_hash });
+    }
+    Ok(AvailabilityList { list_version, records })
+}
+
+/// The echoed `(structure_key, revision_hash)` identity block shared by a
+/// contract-query request (§6.4-0001) and a response (§6.4-0011): a u32-LE
+/// `structure_key` length, the key bytes, a 1-byte `revision_present` flag, and —
+/// only when the flag is `1` — the 32-byte `revision_hash`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Identity {
+    pub structure_key: Vec<u8>,
+    pub revision_hash: Option<[u8; 32]>,
+}
+
+impl Identity {
+    fn encode_into(&self, b: &mut Vec<u8>) {
+        b.extend_from_slice(&(self.structure_key.len() as u32).to_le_bytes());
+        b.extend_from_slice(&self.structure_key);
+        b.push(if self.revision_hash.is_some() { 1 } else { 0 });
+        if let Some(h) = &self.revision_hash {
+            b.extend_from_slice(h);
+        }
+    }
+
+    /// Decode an identity block starting at `off`; returns the block and the new
+    /// offset. Truncation and out-of-range length yield a typed decline, never a
+    /// panic or OOB slice (§6.4-0006).
+    fn decode_at(bytes: &[u8], mut off: usize) -> Result<(Identity, usize), AnnounceDecline> {
+        if bytes.len() < off + 4 {
+            return Err(AnnounceDecline::Truncated { region: "structure_key_len" });
+        }
+        let key_len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+        off += 4;
+        if key_len < 1 || key_len > MAX_STRUCTURE_KEY_LEN {
+            return Err(AnnounceDecline::StructureKeyLenOutOfRange { got: key_len });
+        }
+        let key_len = key_len as usize;
+        if bytes.len() < off + key_len {
+            return Err(AnnounceDecline::Truncated { region: "structure_key" });
+        }
+        let structure_key = bytes[off..off + key_len].to_vec();
+        off += key_len;
+        if bytes.len() < off + 1 {
+            return Err(AnnounceDecline::Truncated { region: "revision_present" });
+        }
+        let revision_present = bytes[off];
+        off += 1;
+        // MUST be exactly 0 or 1 — never a truthy `flag != 0` test (§6.4-0001).
+        if revision_present > 1 {
+            return Err(AnnounceDecline::BadRevisionPresent { got: revision_present });
+        }
+        let revision_hash = if revision_present == 1 {
+            if bytes.len() < off + 32 {
+                return Err(AnnounceDecline::Truncated { region: "revision_hash" });
+            }
+            let mut h = [0u8; 32];
+            h.copy_from_slice(&bytes[off..off + 32]);
+            off += 32;
+            Some(h)
+        } else {
+            None
+        };
+        Ok((Identity { structure_key, revision_hash }, off))
+    }
+}
+
+/// A contract-query request (§6.4-0001): `CYRQ` tag then the identity block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueryRequest {
+    pub identity: Identity,
+}
+
+impl QueryRequest {
+    /// Serialize per §6.4-0001: `CYRQ` tag, u32-LE `structure_key` length, key
+    /// bytes, 1-byte `revision_present`, and the 32-byte `revision_hash` iff present.
+    pub fn encode(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&CYRQ.to_le_bytes());
+        self.identity.encode_into(&mut b);
+        b
+    }
+}
+
+/// Decode + hard-reject a contract-query request (§6.4-0001, §6.4-0006). A
+/// truncated request (e.g. cut off mid-`revision_hash`) yields a typed
+/// [`AnnounceDecline::Truncated`] — never a panic or out-of-bounds slice.
+pub fn decode_query_request(bytes: &[u8]) -> Result<QueryRequest, AnnounceDecline> {
+    if bytes.len() < 4 {
+        return Err(AnnounceDecline::Truncated { region: "cyrq_tag" });
+    }
+    let tag = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+    if tag != CYRQ {
+        return Err(AnnounceDecline::BadTag { region: "cyrq", got: tag });
+    }
+    let (identity, _off) = Identity::decode_at(bytes, 4)?;
+    Ok(QueryRequest { identity })
+}
+
+/// A contract response (§6.4-0004): `CRSP` tag, echoed identity, u32-LE payload
+/// byte-length, then that many bytes of the KISS-Contract document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContractResponse {
+    pub identity: Identity,
+    pub payload: Vec<u8>,
+}
+
+impl ContractResponse {
+    pub fn encode(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&CRSP.to_le_bytes());
+        self.identity.encode_into(&mut b);
+        b.extend_from_slice(&(self.payload.len() as u32).to_le_bytes());
+        b.extend_from_slice(&self.payload);
+        b
+    }
+}
+
+/// A decline response (§6.4-0007): `CDEC` tag, echoed identity, u32-LE
+/// `decline_code` (§6.4-0009).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeclineResponse {
+    pub identity: Identity,
+    pub decline_code: u32,
+}
+
+impl DeclineResponse {
+    pub fn encode(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&CDEC.to_le_bytes());
+        self.identity.encode_into(&mut b);
+        b.extend_from_slice(&self.decline_code.to_le_bytes()); // u32-LE, not u16
+        b
+    }
 }
 
 impl Envelope {
@@ -106,4 +375,24 @@ pub fn decode(bytes: &[u8]) -> Result<Envelope, AnnounceDecline> {
     }
     let capabilities = u64::from_le_bytes(bytes[48..56].try_into().unwrap());
     Ok(Envelope { envelope_version: version, profiles, capabilities })
+}
+
+// ---- §7.1 Version-negotiation algorithm -------------------------------------
+
+/// Negotiate the mutually-highest live profile (§7.1-0001, §7.1-0002).
+///
+/// `local` and `remote` carry the live-profile sets `L` and `R` (each the nonzero
+/// `profiles[0..profiles_len]` of the respective envelope, per §7.1). The negotiated
+/// profile is `max(L ∩ R)` — the highest integer present in both sets (§7.1-0001).
+/// If the intersection is empty, this returns a typed
+/// [`AnnounceDecline::NoMutualProfile`] and never panics, aborts, or selects a
+/// profile (§7.1-0002).
+pub fn negotiate(local: &Envelope, remote: &Envelope) -> Result<u16, AnnounceDecline> {
+    local
+        .profiles
+        .iter()
+        .copied()
+        .filter(|p| remote.profiles.contains(p))
+        .max()
+        .ok_or(AnnounceDecline::NoMutualProfile)
 }

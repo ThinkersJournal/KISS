@@ -706,3 +706,73 @@ mod structural_tests {
         assert!(compare_scattered_f32(Combine::Assign, &a, &b, 0.0, 0.0).is_err());
     }
 }
+
+// =============================================================================
+// sort_network — stable per-row permutation under a total order (KISS-Ops §6.11-0007)
+// =============================================================================
+
+use std::cmp::Ordering;
+
+/// The `sort_network` sort direction (KISS-Ops §6.11-0007): one of
+/// `{ascending, descending}`, default `ascending`. This is the *numeric-oracle* twin
+/// of the wire-ordinal [`crate::opattrs::SortDirection`], exactly as [`Monoid`] here is
+/// the twin of [`crate::opattrs::Monoid`]: this one drives the fold/permutation, that
+/// one only encodes the OpAttrs byte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Ascending,
+    Descending,
+}
+
+/// The **key** half of the `sort_network` total order (KISS-Ops §6.11-0007): a
+/// comparison in which **NaN orders as the greatest value** and every non-NaN pair
+/// follows the IEEE numeric order (so `-0.0` and `+0.0` compare *equal* — a tie that
+/// the original-index rule resolves). Because NaN is forced greatest here, a NaN never
+/// yields the non-transitive `false`-on-both-sides result a raw `a < b` / `partial_cmp`
+/// gives against a NaN — the exact break §6.11-0007's total order forbids.
+fn nan_greatest_cmp(a: f32, b: f32) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => Ordering::Equal,
+        (true, false) => Ordering::Greater,
+        (false, true) => Ordering::Less,
+        // Neither is NaN: `partial_cmp` is total on the non-NaN f32 domain.
+        (false, false) => a.partial_cmp(&b).expect("non-NaN f32 pair is totally ordered"),
+    }
+}
+
+/// The full `sort_network` **total order** on `(key, original_index)` pairs (KISS-Ops
+/// §6.11-0007). The primary comparison is [`nan_greatest_cmp`] (NaN greatest),
+/// **reversed** for `Descending` so the greatest key — NaN — lands *first* (ascending →
+/// NaN last, descending → NaN first). The secondary comparison is the **original index,
+/// ascending in BOTH directions**: equal keys retain their input order (the pinned
+/// stability rule, "ties break by the lower original index"), which does *not* flip with
+/// the sort direction. Because original indices are unique, this is a strict total order
+/// (never `Equal` for two distinct positions), so the permutation is fixed regardless of
+/// the underlying sort's own stability.
+fn sort_network_cmp(direction: SortDirection, a: (f32, usize), b: (f32, usize)) -> Ordering {
+    let key = nan_greatest_cmp(a.0, b.0);
+    let key = match direction {
+        SortDirection::Ascending => key,
+        SortDirection::Descending => key.reverse(),
+    };
+    // Stability: lower original index first, ascending in both directions.
+    key.then_with(|| a.1.cmp(&b.1))
+}
+
+/// `sort_network` — a **stable per-row permutation** under the total order
+/// [`sort_network_cmp`] (KISS-Ops §6.11-0007). Returns the op's **two** pinned outputs:
+/// * `.0` (values) — the keys written back as a **raw-bit permutation** of the input
+///   (a `-0.0` sign or a NaN payload rides along on its element, never normalized), and
+/// * `.1` (index vector) — for each output rank, the **source position** that key came
+///   from (the vector `argmax` reads rank 0 of under `Descending`, §6.13 table).
+///
+/// NaN sorts to one end (last under `Ascending`, first under `Descending`) and equal
+/// keys — including `±0` and two NaNs — keep their input order (lower original index
+/// first). Determinism-class **exact-byte** (§6.0-0002): a structural atom with no
+/// monoid, its outputs compare bit-for-bit.
+pub fn sort_network(row: &[f32], direction: SortDirection) -> (Vec<f32>, Vec<usize>) {
+    let mut order: Vec<usize> = (0..row.len()).collect();
+    order.sort_by(|&i, &j| sort_network_cmp(direction, (row[i], i), (row[j], j)));
+    let values = order.iter().map(|&i| row[i]).collect();
+    (values, order)
+}

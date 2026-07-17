@@ -195,7 +195,17 @@ pub enum Decline {
     ReservedReduceAxes { value: u16 },
     /// The blob was shorter than the op's schema requires.
     TruncatedBlob { need: usize, got: usize },
+    /// A bounded field exceeded its pinned maximum (§6.19-0027, §6.19-0037):
+    /// `axis` must be < MAX_RANK, `index_operand` < MAX_OPERANDS.
+    FieldOutOfRange { field: &'static str, value: u8, max: u8 },
 }
+
+/// The pinned shared-anchor bounds for the OpAttrs channel of this op-set
+/// version (§6.19-0037), co-versioned with KISS-Classify (§2.8). Inlined as
+/// concrete values so the range MUSTs of §6.19 are verifiable from KISS-Ops plus
+/// the umbrella alone.
+pub const MAX_RANK: u8 = 8;
+pub const MAX_OPERANDS: u8 = 8;
 
 /// Validate a decoded `gather` blob (`[axis, oob, index_operand, index_dtype]`),
 /// returning a typed decline for a malformed one. Demonstrates modality 4.
@@ -217,12 +227,29 @@ pub fn decode_gather(blob: &[u8]) -> Result<(u8, OobPolicy, u8, IndexDtype), Dec
         3 => IndexDtype::I64,
         _ => return Err(Decline::ReservedZeroOrdinal { field: "index_dtype" }),
     };
+    // §6.19-0027: axis is range 0..MAX_RANK-1, index_operand 0..MAX_OPERANDS-1.
+    // An out-of-range field would index a nonexistent axis/operand downstream, so
+    // a reader MUST reject it rather than pass it through (§6.19-0037 pins the
+    // bounds). The previous decoder returned both fields unchecked.
+    if blob[0] >= MAX_RANK {
+        return Err(Decline::FieldOutOfRange { field: "axis", value: blob[0], max: MAX_RANK });
+    }
+    if blob[2] >= MAX_OPERANDS {
+        return Err(Decline::FieldOutOfRange { field: "index_operand", value: blob[2], max: MAX_OPERANDS });
+    }
     Ok((blob[0], oob, blob[2], idt))
 }
 
-/// Validate a `reduce_axes` u16 is not in the reserved band (§6.19-0020).
+/// Validate a `reduce_axes` u16 on a carrier OpAttrs blob (§6.19-0020, §6.19-0038).
+///
+/// The reserved band `0x0100..=0xFFFD` is malformed (§6.19-0020). So is `0x0000`:
+/// it is the none/not-a-reduction sentinel whose sole role is the Classify
+/// `structure_key` `-` token reconciliation (§6.19-0035), and every carrier op
+/// that owns this field is a reduction or a scan, so `0x0000` is unreachable on
+/// the OpAttrs channel and a reader MUST reject it as malformed (§6.19-0038).
 pub fn validate_reduce_axes(value: u16) -> Result<(), Decline> {
     match value {
+        0x0000 => Err(Decline::ReservedReduceAxes { value }),
         0x0100..=0xFFFD => Err(Decline::ReservedReduceAxes { value }),
         _ => Ok(()),
     }
