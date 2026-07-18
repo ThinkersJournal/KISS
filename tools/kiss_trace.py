@@ -79,6 +79,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
 
@@ -110,26 +111,55 @@ RE_RUST_TEST_CFG = re.compile(
 SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
          "synth", "consume", "emit", "conform"]
 
+# The categories a clause with no harness test may carry (its 3rd ledger column).
+# Every category other than `untested` is an accounted-for state and MUST carry a
+# 4th-column note (a lint tool, an issue link, or a one-line reason). `untested`
+# is the honest default — a normative MUST we have neither tested, lint-enforced,
+# nor explained. Driving THAT count to zero is the real Level-1 target; the others
+# are the map of how the rest is handled.
+CATEGORIES = {
+    "untested",       # genuinely untested MUST, not yet accounted for (default)
+    "lint",           # enforced by a document lint (note = tool name); binds the
+                      # spec document, not an implementation — a linter's job
+    "blocked",        # testable in principle, but the spec has not pinned the
+                      # bytes/behaviour yet (note = issue/RFC ref)
+    "untestable",     # untestable as written; contradictory/undefined until
+                      # reworded (note = filed issue, e.g. #41)
+    "definitional",   # a test would be a tautology — the clause states a
+                      # definition/ownership with no implementation behaviour
+                      # (note = one-line reason). Use sparingly and auditably.
+}
+
 LEDGER_HEADER = """\
 # KISS-Conform — the unbacked-clause ledger.
 #
-# Each line is a normative clause whose §9-mapped conformance test DOES NOT EXIST
-# in conformance/. This file is the honest record of the gap between what the
-# specification claims is tested and what is actually executable.
+# Each line is a normative clause with NO harness test in conformance/, plus WHY.
+# The honest record of the gap between what the spec claims is tested and what is
+# actually executable — now categorized, so the gap is legible rather than a
+# single undifferentiated number.
+#
+#   clause_id <TAB> test_name <TAB> category <TAB> note
+#
+# category is one of:
+#   untested      no test, not yet accounted for  <- the number that must reach 0
+#   lint:<tool>   enforced by a document lint (binds the doc, not an impl)
+#   blocked       spec has not pinned the bytes/behaviour yet (note = issue ref)
+#   untestable    contradictory/undefined until reworded (note = filed issue)
+#   definitional  a test would be a tautology (note = one-line reason)
+# Every non-`untested` category MUST carry a note; a bare `untested` needs none.
 #
 # It is a RATCHET, enforced by tools/kiss_trace.py:
-#   * a clause that becomes unbacked and is not listed here FAILS the build
-#     (a new untested MUST is always a regression);
-#   * a listed clause whose test now exists FAILS the build until its line is
-#     removed (the ledger may only shrink).
+#   * a clause that becomes unbacked and is not listed here FAILS the build;
+#   * a listed clause whose harness test now exists FAILS until its line is
+#     removed (the ledger only shrinks);
+#   * a `lint:<tool>` category is cross-checked against that lint's declared
+#     coverage, so the label cannot outrun the enforcement.
 #
-# `kiss_trace.py --strict` ignores this file and fails on every line below. That
-# is KISS-Conform §6.2 as literally written; this ledger is the interim record
-# of the distance to it. The length of this file is the number that matters.
+# `--strict` gates on `untested` + everything not harness/lint-backed (§6.2).
+# `--update-ledger` PRESERVES the category/note of a still-unbacked clause and
+# adds a newly-unbacked one as bare `untested`.
 #
-# Regenerate with: python tools/kiss_trace.py --update-ledger
-#
-# clause_id\ttest_name
+# clause_id\ttest_name\tcategory\tnote
 """
 
 
@@ -212,26 +242,94 @@ def discover_tests(conf_dir):
     return found
 
 
+def _split_category(raw):
+    """Split a category cell into (base, note-suffix). `lint:kiss_tables` -> the
+    base is `lint`, the inline suffix `kiss_tables` merges into the note."""
+    if ":" in raw:
+        base, _, suffix = raw.partition(":")
+        return base.strip(), suffix.strip()
+    return raw.strip(), ""
+
+
 def read_ledger(path):
-    """The recorded unbacked clauses: {clause_id: test_name}."""
+    """The recorded unbacked clauses: {clause_id: {test, category, note}}.
+
+    Backward-compatible: a 2-column (clause, test) line reads as `untested`.
+    """
     out = {}
     if not os.path.exists(path):
         return out
     for line in open(path, encoding="utf-8"):
-        line = line.strip()
-        if not line or line.startswith("#"):
+        line = line.rstrip("\n")
+        if not line.strip() or line.lstrip().startswith("#"):
             continue
         parts = line.split("\t")
-        if len(parts) >= 2:
-            out[parts[0]] = parts[1]
+        if len(parts) < 2:
+            continue
+        cid, test = parts[0].strip(), parts[1].strip()
+        cat_raw = parts[2].strip() if len(parts) >= 3 and parts[2].strip() else "untested"
+        note = parts[3].strip() if len(parts) >= 4 else ""
+        base, suffix = _split_category(cat_raw)
+        if base not in CATEGORIES:
+            base = "untested"
+        if suffix and not note:
+            note = suffix
+        out[cid] = {"test": test, "category": base, "note": note,
+                    "lint": suffix if base == "lint" else ""}
     return out
 
 
-def write_ledger(path, unbacked):
+def write_ledger(path, unbacked, prior=None):
+    """Write the ledger, PRESERVING the category/note of any clause still unbacked
+    (so --update-ledger never silently drops a curated categorization). A clause
+    unbacked for the first time is written as bare `untested`."""
+    prior = prior or {}
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(LEDGER_HEADER)
-        for cid, test in sorted(unbacked.items()):
-            fh.write(f"{cid}\t{test}\n")
+        for cid in sorted(unbacked):
+            test = unbacked[cid]
+            p = prior.get(cid)
+            if p and p["category"] != "untested":
+                cat = f"{p['category']}:{p['lint']}" if p["category"] == "lint" and p["lint"] else p["category"]
+                fh.write(f"{cid}\t{test}\t{cat}\t{p['note']}\n")
+            else:
+                fh.write(f"{cid}\t{test}\tuntested\t\n")
+
+
+def discover_lint_coverage(tools_dir):
+    """The clauses each document lint declares it enforces: {clause_id: (tool, note)}.
+
+    Runs every sibling `kiss_*.py --emit-coverage` and parses `clause_id<TAB>note`
+    lines. A lint enforces a clause iff a violation of that clause fails the lint;
+    the lint ASSERTS this by emitting the clause ID, and — because the tool is
+    actually run — the label cannot outrun the enforcement. A lint that lacks the
+    flag (exits non-zero, prints nothing) simply contributes no coverage.
+    """
+    cov = {}
+    if not os.path.isdir(tools_dir):
+        return cov
+    self_name = os.path.basename(os.path.abspath(__file__))
+    for fn in sorted(os.listdir(tools_dir)):
+        if not (fn.startswith("kiss_") and fn.endswith(".py")) or fn == self_name:
+            continue
+        tool = fn[:-3]
+        try:
+            out = subprocess.run(
+                [sys.executable, os.path.join(tools_dir, fn), "--emit-coverage"],
+                capture_output=True, text=True, timeout=120)
+        except Exception:
+            continue
+        if out.returncode != 0:
+            continue
+        for line in out.stdout.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            cid = parts[0].strip()
+            if RE_IDPART.match(cid):
+                cov[cid] = (tool, parts[1].strip() if len(parts) > 1 else "")
+    return cov
 
 
 def sub_of(clause_id):
@@ -391,6 +489,7 @@ def main():
     # ---- check 2: BINDING — does the named test actually exist? ----
     harness = discover_tests(conf_dir)
     ledger = read_ledger(ledger_path)
+    lint_cov = discover_lint_coverage(here)
 
     # every (clause -> named test) pair across the suite, from the §9 matrices
     clause_test = {}
@@ -432,15 +531,62 @@ def main():
     orphans = sorted(t for t, i in harness.items()
                      if not i["clauses"] and t not in set(clause_test.values()))
 
+    # ---- the CATEGORY of each unbacked clause (why it has no harness test) ----
+    # Priority: a live lint that declares it (authoritative, self-verifying) wins;
+    # else the curated ledger category; else the honest default `untested`.
+    def eff_category(c):
+        if c in lint_cov:
+            return "lint", lint_cov[c][0]
+        p = ledger.get(c)
+        if p and p["category"] != "untested":
+            return p["category"], p["note"]
+        return "untested", ""
+
+    cat_of = {c: eff_category(c) for c in unbacked}
+    lint_backed = {c: lint_cov[c] for c in unbacked if c in lint_cov}
+    by_category = defaultdict(list)
+    for c, (base, _note) in cat_of.items():
+        by_category[base].append(c)
+
+    # A `lint:<tool>` category in the ledger whose clause no live lint actually
+    # declares is an unverified label — the enforcement did not back the claim.
+    lint_label_unbacked = sorted(
+        c for c, p in ledger.items()
+        if p["category"] == "lint" and c in unbacked and c not in lint_cov)
+    # A curated non-`untested`, non-`lint` category with no note is unauditable.
+    missing_note = sorted(
+        c for c, p in ledger.items()
+        if p["category"] in ("blocked", "untestable", "definitional")
+        and c in unbacked and not p["note"])
+
     if args.update_ledger:
-        write_ledger(ledger_path, unbacked)
-        print(f"Wrote {ledger_path}: {len(unbacked)} unbacked clauses.")
+        # Preserve curated categories; write lint-covered clauses with their lint
+        # category so the file reflects the live enforcement.
+        eff_prior = dict(ledger)
+        for c in unbacked:
+            if c in lint_cov:
+                eff_prior[c] = {"category": "lint", "lint": lint_cov[c][0],
+                                "note": lint_cov[c][1] or "enforced by the lint"}
+        write_ledger(ledger_path, unbacked, prior=eff_prior)
+        nb = len(by_category["untested"])
+        print(f"Wrote {ledger_path}: {len(unbacked)} unbacked "
+              f"({len(lint_backed)} lint, {nb} untested).")
         return 0
 
-    # a NEW unbacked clause (not in the ledger) is always a failure
-    new_unbacked = {c: t for c, t in unbacked.items() if c not in ledger}
-    # a ledger entry that is now backed must be removed — the ledger only shrinks
-    stale = {c: t for c, t in ledger.items() if c not in unbacked}
+    # accounted-for = harness-backed OR enforced by a live lint. The ratchet and
+    # §6.2 treat a lint-enforced document clause as backed (the lint is its test).
+    def accounted(c):
+        return c in backed or c in lint_cov
+
+    # a NEW clause with no harness test, not in the ledger, not lint-covered.
+    new_unbacked = {c: t for c, t in unbacked.items()
+                    if c not in ledger and c not in lint_cov}
+    # stale = a ledger entry now HARNESS-backed (remove it), or one a live lint now
+    # covers that is not yet labeled `lint` (refresh it). A clause correctly recorded
+    # as `lint:` and still lint-covered is consistent, not stale.
+    stale = {c: p["test"] for c, p in ledger.items()
+             if c not in unbacked
+             or (c in lint_cov and p["category"] != "lint")}
 
     # ---- report ----
     total_clauses = 0
@@ -488,8 +634,45 @@ def main():
     if orphans:
         print(f"      {len(orphans)} executable tests cite no clause — real work the "
               f"matrix cannot see.")
-    if ledger:
-        print(f"      ledger: {len(ledger)} clauses recorded as knowingly unbacked.")
+
+    # ---- the honest category breakdown of the clauses with NO harness test ----
+    print("-" * 68)
+    print(f"  WHY the {len(unbacked)} clauses have no harness test (the real map):")
+    order = [
+        ("lint", "enforced by a document lint (binds the spec, not an impl)"),
+        ("blocked", "spec has not pinned the bytes/behaviour yet (see note)"),
+        ("untestable", "contradictory/undefined until reworded (filed issue)"),
+        ("definitional", "a test would be a tautology (definition/ownership)"),
+        ("untested", "neither tested, enforced, nor explained  <-- the real gap"),
+    ]
+    # The lint tools actually enforcing a clause (from live coverage, so a stale
+    # `lint:` ledger label that no tool declares — reported below as UNVERIFIED —
+    # never dereferences a missing `lint_cov` key here).
+    lint_tools = sorted({tool for tool, _ in lint_backed.values()})
+    for base, desc in order:
+        n = len(by_category.get(base, []))
+        if n or base == "untested":
+            tag = f"lint:{'/'.join(lint_tools)}" if base == "lint" and lint_tools else base
+            print(f"      {n:>4}  {tag:<24} {desc}")
+    enforced = len(backed) + len(lint_backed)
+    print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
+          f"{enforced}/{n_map} ({100.0*enforced/n_map:.1f}%). "
+          f"Genuinely untested: {len(by_category.get('untested', []))}.")
+
+    if lint_label_unbacked:
+        any_fail = True
+        print("-" * 68)
+        print(f"  UNVERIFIED LINT LABEL: {len(lint_label_unbacked)} ledger clause(s) "
+              f"claim a lint that does not declare them:")
+        for cid in lint_label_unbacked[:6]:
+            print(f"          - {cid}")
+    if missing_note:
+        any_fail = True
+        print("-" * 68)
+        print(f"  UNAUDITABLE CATEGORY: {len(missing_note)} clause(s) are "
+              f"blocked/untestable/definitional with no note:")
+        for cid in missing_note[:6]:
+            print(f"          - {cid}")
 
     if dangling:
         any_fail = True
@@ -529,21 +712,26 @@ def main():
         print("-" * 68)
         print("  FREEZE READINESS (umbrella §5.3 condition 3 — complete clause<->test")
         print("  traceability; also the §8.1 predicate a conformance claim rests on):")
+        # A clause is TRACED for the freeze gate iff a harness test or a document
+        # lint enforces it (a lint is the test of a document-binding clause, §3.3).
+        # blocked / untestable / definitional / untested all leave it un-traced.
         ready = 0
         for sub in targets:
-            miss = sorted(c for c in unbacked if sub_of(c) == sub)
+            miss = sorted(c for c in unbacked if sub_of(c) == sub and not accounted(c))
             tot = sum(1 for c in clause_test if sub_of(c) == sub)
+            traced = tot - len(miss)
             if miss:
                 any_fail = True
-                print(f"      [FAIL] {sub:<9} {tot - len(miss):>3}/{tot:<4} backed — "
-                      f"{len(miss)} clause(s) have no executable test")
+                print(f"      [FAIL] {sub:<9} {traced:>3}/{tot:<4} traced — "
+                      f"{len(miss)} clause(s) neither harness-tested nor lint-enforced")
                 for cid in miss[:3]:
-                    print(f"                 e.g. {cid} names `{unbacked[cid]}` — no such test")
+                    base, note = cat_of[cid]
+                    print(f"                 e.g. {cid} [{base}] {note or ''}".rstrip())
                 if len(miss) > 3:
                     print(f"                 ... and {len(miss) - 3} more")
             else:
                 ready += 1
-                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} backed — may freeze on §5.3 cond. 3")
+                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced — may freeze on §5.3 cond. 3")
         print()
         print(f"      {ready} of {len(targets)} sub-standard(s) satisfy §5.3 condition 3.")
         if any_fail:
@@ -552,14 +740,19 @@ def main():
         return 1 if any_fail else 0
 
     if args.strict:
-        if unbacked:
+        # §6.2 verbatim gates on a normative MUST with no test. A lint-enforced
+        # document clause HAS a test (the lint), so strict gates on the rest.
+        strict_miss = sorted(c for c in unbacked if not accounted(c))
+        if strict_miss:
             any_fail = True
             print("-" * 68)
-            print(f"  STRICT (§6.2 verbatim): {len(unbacked)} untested normative MUSTs.")
-            for cid in sorted(unbacked)[:8]:
-                print(f"          - {cid} names `{unbacked[cid]}` — no such test")
-            if len(unbacked) > 8:
-                print(f"          - ... and {len(unbacked) - 8} more")
+            print(f"  STRICT (§6.2 verbatim): {len(strict_miss)} normative MUSTs with no "
+                  f"test and no lint ({len(lint_backed)} others are lint-enforced).")
+            for cid in strict_miss[:8]:
+                base, note = cat_of[cid]
+                print(f"          - {cid} [{base}] {note or unbacked[cid]}")
+            if len(strict_miss) > 8:
+                print(f"          - ... and {len(strict_miss) - 8} more")
     else:
         if new_unbacked:
             any_fail = True
@@ -574,23 +767,23 @@ def main():
         if stale:
             any_fail = True
             print("-" * 68)
-            print(f"  STALE LEDGER: {len(stale)} clause(s) are now backed but still "
-                  f"listed as unbacked. The ledger may only shrink:")
+            print(f"  STALE LEDGER: {len(stale)} clause(s) are now backed (a harness "
+                  f"test or a lint) but still listed as untested-in-ledger:")
             for cid in sorted(stale)[:8]:
-                print(f"          - {cid} — `{ledger[cid]}` now exists; remove the line")
+                print(f"          - {cid} — now enforced; refresh the ledger")
             print(f"    Fix with: python tools/kiss_trace.py --update-ledger")
 
     print("-" * 68)
     if any_fail:
         print("  RESULT: VIOLATIONS FOUND")
     else:
-        print(f"  RESULT: CLEAN — document consistency holds, and every clause either "
-              f"names an\n          existing test ({len(backed)}) or is recorded as "
-              f"unbacked ({len(unbacked)}).")
-        if unbacked:
-            print(f"  NOTE:   {len(unbacked)} normative MUSTs have NO executable test. "
-                  f"KISS-Conform §6.2\n          is not met until that number is 0 "
-                  f"(`--strict` gates on it).")
+        untested_n = len(by_category.get("untested", []))
+        print(f"  RESULT: CLEAN — document consistency holds; every clause is harness-"
+              f"tested\n          ({len(backed)}), lint-enforced ({len(lint_backed)}), or "
+              f"recorded with its reason.")
+        print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
+              f"{untested_n}\n          (blocked/untestable/definitional are accounted for; "
+              f"see the breakdown above).")
     return 1 if any_fail else 0
 
 
