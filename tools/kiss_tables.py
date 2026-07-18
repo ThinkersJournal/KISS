@@ -48,6 +48,10 @@ NUMBER_WORDS = {
     "twenty-one": 21, "twenty-two": 22, "twenty-three": 23,
 }
 
+# The nine sub-standards (umbrella defines no clauses; enums may appear anywhere).
+SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
+         "synth", "consume", "emit", "conform"]
+
 
 def _is_dtype_token(w):
     """A dtype token is a lowercase alnum word that contains a digit (f16, bf16,
@@ -179,15 +183,78 @@ def check(spec_dir):
     for kind, toks in inline_anchor_lists(classify):
         diff(f"classify.md {kind} inline list", toks)
 
+    # (4) the determinism/fidelity enum — owned by KISS-OPS-6.0-0001, spelled
+    # verbatim, imported never re-forked (umbrella §2.1, §3.3). Every brace-form
+    # of the enum across the suite must carry EXACTLY the canonical member set.
+    violations += check_determinism_enum(spec_dir)
+
     return violations, auth
+
+
+# The canonical determinism/fidelity enum owned by KISS-OPS-6.0-0001.
+DETERMINISM_MEMBERS = {"exact-byte", "ULP/tolerance", "order-invariant/nondeterministic"}
+
+
+def check_determinism_enum(spec_dir):
+    """Every `{...}` enum form containing `exact-byte`, anywhere in the suite, MUST
+    carry exactly the canonical member set — this catches a downstream sub-standard
+    re-forking the enum (adding/renaming a class) instead of importing it, which
+    would silently split the comparator vocabulary the whole DAG shares."""
+    out = []
+    owner_seen = False
+    for stem in SPECS:
+        p = os.path.join(spec_dir, stem + ".md")
+        if not os.path.exists(p):
+            continue
+        text = open(p, encoding="utf-8").read()
+        for m in re.finditer(r"\{[^{}]*exact-byte[^{}]*\}", text):
+            members = {t.strip() for t in re.split(r"[,\s]*,[,\s]*",
+                       " ".join(m.group(0)[1:-1].split())) if t.strip()}
+            if stem == "ops":
+                owner_seen = True
+            if members != DETERMINISM_MEMBERS:
+                miss = sorted(DETERMINISM_MEMBERS - members)
+                extra = sorted(members - DETERMINISM_MEMBERS)
+                parts = []
+                if miss:
+                    parts.append(f"missing {miss}")
+                if extra:
+                    parts.append(f"unexpected {extra}")
+                out.append(f"{stem}.md determinism enum re-forked: {'; '.join(parts)} "
+                           f"(vs KISS-OPS-6.0-0001 owner)")
+    if not owner_seen:
+        out.append("KISS-OPS-6.0-0001 owner: no canonical determinism enum found in ops.md")
+    return out
+
+
+# The normative clauses this lint ENFORCES: a violation of each fails the lint,
+# so the traceability gate may count them lint-backed (they bind the spec document
+# — the closed dtype set restated in two owners — which is a linter's job, not a
+# harness test). Each is (clause_id, what a violation looks like).
+COVERS = [
+    ("KISS-CLASSIFY-6.1-0001",
+     "the closed 20-token dtype set drifts (count word or a full dtype table)"),
+    ("KISS-OPS-6.16-0001",
+     "the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner"),
+    ("KISS-OPS-6.0-0001",
+     "a sub-standard re-forks the determinism/fidelity enum instead of importing it"),
+]
 
 
 def main():
     ap = argparse.ArgumentParser(description="KISS shared-enumeration consistency lint")
     ap.add_argument("--spec-dir", default=None)
+    ap.add_argument("--emit-coverage", action="store_true",
+                    help="print the clause IDs this lint enforces (clause<TAB>note), "
+                         "for tools/kiss_trace.py to count as lint-backed")
     args = ap.parse_args()
     here = os.path.dirname(os.path.abspath(__file__))
     spec_dir = args.spec_dir or os.path.join(os.path.dirname(here), "spec")
+
+    if args.emit_coverage:
+        for cid, note in COVERS:
+            print(f"{cid}\t{note}")
+        return 0
 
     result = check(spec_dir)
     if isinstance(result, list):  # fatal
