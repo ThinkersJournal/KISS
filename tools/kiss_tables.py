@@ -48,7 +48,8 @@ NUMBER_WORDS = {
     "twenty-one": 21, "twenty-two": 22, "twenty-three": 23,
 }
 
-# The nine sub-standards (umbrella defines no clauses; enums may appear anywhere).
+# The umbrella + the nine sub-standards (umbrella defines no clauses, but the
+# shared enums it narrates may appear in any of the ten files).
 SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
          "synth", "consume", "emit", "conform"]
 

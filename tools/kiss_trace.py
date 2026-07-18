@@ -645,10 +645,14 @@ def main():
         ("definitional", "a test would be a tautology (definition/ownership)"),
         ("untested", "neither tested, enforced, nor explained  <-- the real gap"),
     ]
+    # The lint tools actually enforcing a clause (from live coverage, so a stale
+    # `lint:` ledger label that no tool declares — reported below as UNVERIFIED —
+    # never dereferences a missing `lint_cov` key here).
+    lint_tools = sorted({tool for tool, _ in lint_backed.values()})
     for base, desc in order:
         n = len(by_category.get(base, []))
         if n or base == "untested":
-            tag = f"lint:{'/'.join(sorted({lint_cov[c][0] for c in by_category['lint']}))}" if base == "lint" and by_category.get("lint") else base
+            tag = f"lint:{'/'.join(lint_tools)}" if base == "lint" and lint_tools else base
             print(f"      {n:>4}  {tag:<24} {desc}")
     enforced = len(backed) + len(lint_backed)
     print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
