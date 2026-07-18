@@ -1,10 +1,11 @@
-# How much of the 806 is actually testable?
+# How much of the unbacked backlog is actually testable?
 
 **Informative.** A companion to [`UNBACKED.tsv`](UNBACKED.tsv): that file says *which*
 clauses have no executable test; this one says *why*, and *which of them can be fixed
-today*.
+today*. (The suite has **857** normative clauses total; when this analysis was first run,
+**~812** were unbacked. Track the live split with `python tools/kiss_trace.py --report`.)
 
-The honest short answer: **not the whole 806.** A clause names a conformance test, but a
+The honest short answer: **not the whole backlog.** A clause names a conformance test, but a
 conformance test is only worth writing if it has **teeth** — a plausible wrong
 implementation it catches. `DESIGN.md` and this crate's README both state the bar: *"A
 harness that only ever passed correct code would prove nothing."* Roughly a third of the
