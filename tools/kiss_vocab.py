@@ -43,11 +43,36 @@ NUMBER_WORDS = {
     "twenty-two": 22, "twenty-three": 23, "twenty-four": 24, "twenty-five": 25,
 }
 
+# The OpAttrs sub-vocabularies: each is owned by one KISS-Ops §6.19 clause as a
+# frozen `{ordinal=name}` enum, restated in the §6.19.2 summary table under a
+# field name, and bound in the reference codec as an `ordinal_enum!(Name {...})`.
+# (clause_id, rust_enum_name, §6.19.2 table field name).
+OPATTRS_ENUMS = [
+    ("KISS-OPS-6.19-0014", "Monoid", "monoid"),
+    ("KISS-OPS-6.19-0015", "OobPolicy", "oob_policy"),
+    ("KISS-OPS-6.19-0016", "ScatterCombine", "scatter_combine"),
+    ("KISS-OPS-6.19-0017", "IndexDtype", "index_dtype"),
+    ("KISS-OPS-6.19-0018", "SortDirection", "sort_direction"),
+    ("KISS-OPS-6.19-0019", "ScanExclusivity", "scan_exclusivity"),
+    ("KISS-OPS-6.19-0021", "ColumnOrdering", "column_ordering"),
+]
+
 # Each entry: a closed set the spec pins and the harness binds, plus the clause a
-# drift fails. (name, clause_id, spec-extractor, harness-file, harness-const).
+# drift fails.
 COVERS = [("KISS-CLASSIFY-6.5-0006",
            "the 24 op-family codes drift between Classify §6.5-0006 and the "
            "reference structure_key codec (OP_FAMILIES)")]
+COVERS += [(cid, f"the {enum} OpAttrs enum drifts between its §6.19 clause, the "
+            f"§6.19.2 table, and the reference opattrs codec")
+           for cid, enum, _field in OPATTRS_ENUMS]
+
+
+def _norm(name):
+    """Fold a spec name (`zero-fill`, `atomic-add`, `channel-major (tap-minor)`) and
+    a Rust variant (`ZeroFill`, `AtomicAdd`, `ChannelMajor`) to one comparable key:
+    lowercase, alnum only, parenthetical dropped."""
+    name = name.split("(")[0]
+    return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
 def _markdown_tables(text):
@@ -92,6 +117,61 @@ def harness_op_families(rs_text):
     return re.findall(r'"([a-z0-9]+)"', m.group(1))
 
 
+def spec_ordinal_enum(ops_text, clause_id):
+    """The `{ordinal -> normalized name}` map a §6.19 clause pins, e.g. from
+    `{1=sum, 2=prod, 3=max, 4=min}`. Returns None if the clause or its brace-form
+    is not found."""
+    short = clause_id.split("-", 2)[-1]  # e.g. 6.19-0014
+    m = re.search(r"\*\*KISS-OPS-" + re.escape(short) + r"\*\*(.*?)(?=\n\s*-\s+\*\*KISS|\n#)",
+                  ops_text, re.S)
+    if not m:
+        return None
+    body = m.group(1)
+    brace = re.search(r"\{([^{}]*\d+\s*=[^{}]*)\}", body)
+    if not brace:
+        return None
+    out = {}
+    for pair in brace.group(1).split(","):
+        pm = re.match(r"\s*(\d+)\s*=\s*(.+)", pair)
+        if pm:
+            out[int(pm.group(1))] = _norm(pm.group(2))
+    return out
+
+
+def spec_table_enum(ops_text, field):
+    """The `{ordinal -> normalized name}` a §6.19.2 sub-vocabulary TABLE row pins,
+    e.g. from `| `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp ... |`.
+    `0`=RESERVED is dropped. This is the same enum restated within ops.md, so
+    comparing it to the per-clause form is a pure-spec internal-consistency check
+    (no harness coupling)."""
+    m = re.search(r"^\|\s*`" + re.escape(field) + r"`\s*\|[^|]*\|([^|]*)\|", ops_text, re.M)
+    if not m:
+        return None
+    out = {}
+    for pm in re.finditer(r"`?(\d+)`?\s*=\s*([^,|]+)", m.group(1)):
+        ordv, name = int(pm.group(1)), _norm(pm.group(2))
+        if name != "reserved":
+            out[ordv] = name
+    return out
+
+
+def harness_ordinal_enums(opattrs_text):
+    """Every reference `ordinal_enum!(Name { Variant = ord, ... })` as
+    {enum_name: {ordinal -> normalized variant}}."""
+    out = {}
+    for m in re.finditer(r"ordinal_enum!\((.*?)\)\s*;", opattrs_text, re.S):
+        block = m.group(1)
+        nm = re.search(r"(\w+)\s*\{(.*)\}", block, re.S)
+        if not nm:
+            continue
+        name, body = nm.group(1), nm.group(2)
+        pairs = {}
+        for vm in re.finditer(r"(\w+)\s*=\s*(\d+)", body):
+            pairs[int(vm.group(2))] = _norm(vm.group(1))
+        out[name] = pairs
+    return out
+
+
 def check(spec_dir, conf_dir):
     violations = []
     classify = os.path.join(spec_dir, "classify.md")
@@ -130,7 +210,42 @@ def check(spec_dir, conf_dir):
             parts.append(f"in the codec but not §6.5-0006: {only_harness}")
         violations.append("op-family set drift — " + "; ".join(parts))
 
-    return violations, sorted(spec_set)
+    # ---- OpAttrs sub-vocabularies: KISS-Ops §6.19 {ordinal=name} <-> opattrs.rs ----
+    ops_md = os.path.join(spec_dir, "ops.md")
+    opattrs_rs = os.path.join(conf_dir, "src", "opattrs.rs")
+    checked_enums = 0
+    if os.path.exists(ops_md) and os.path.exists(opattrs_rs):
+        ops_text = open(ops_md, encoding="utf-8").read()
+        h_enums = harness_ordinal_enums(open(opattrs_rs, encoding="utf-8").read())
+        for clause, enum, field in OPATTRS_ENUMS:
+            short = clause.split("-", 2)[-1]
+            clause_map = spec_ordinal_enum(ops_text, clause)   # the §6.19-00xx clause
+            table_map = spec_table_enum(ops_text, field)       # the §6.19.2 table
+            harness_map = h_enums.get(enum)                    # the reference codec
+            if clause_map is None:
+                violations.append(f"§{short}: no `{{ordinal=name}}` form found in the clause")
+                continue
+            if table_map is None:
+                violations.append(f"§6.19.2 table: no `{field}` row found")
+                continue
+            if harness_map is None:
+                violations.append(f"{enum}: no ordinal_enum! found in opattrs.rs")
+                continue
+            checked_enums += 1
+            # (a) pure-spec internal consistency: the §6.19 clause vs the §6.19.2 table.
+            if clause_map != table_map:
+                violations.append(
+                    f"{field} within-doc drift (§{short} clause vs §6.19.2 table): "
+                    f"{dict(sorted(clause_map.items()))} vs {dict(sorted(table_map.items()))}")
+            # (b) spec<->binding: the (agreed) spec form vs the reference codec.
+            if clause_map != harness_map:
+                violations.append(
+                    f"{enum} enum drift (§{short} spec vs codec): "
+                    f"{dict(sorted(clause_map.items()))} vs {dict(sorted(harness_map.items()))}")
+    else:
+        violations.append("could not read ops.md or opattrs.rs for the §6.19 enums")
+
+    return violations, (sorted(spec_set), checked_enums)
 
 
 def main():
@@ -156,20 +271,22 @@ def main():
         for v in result:
             print(f"  - {v}")
         return 1
-    violations, codes = result
+    violations, (codes, n_enums) = result
 
     print("KISS spec<->binding enumeration lint")
     print("=" * 68)
     print(f"  op-family codes (KISS-CLASSIFY-6.5-0006): {len(codes)}")
     print(f"    {' '.join(codes)}")
+    print(f"  OpAttrs enums checked (KISS-Ops §6.19): {n_enums}  "
+          f"(§6.19 clause <-> §6.19.2 table <-> codec)")
     print("-" * 68)
     if violations:
-        print(f"  DRIFT — {len(violations)} disagreement(s) spec <-> reference codec:")
+        print(f"  DRIFT — {len(violations)} disagreement(s):")
         for v in violations:
             print(f"      - {v}")
         print("  RESULT: DRIFT FOUND")
         return 1
-    print("  the spec's op-family set and the reference codec agree.")
+    print("  op-family set + the 7 OpAttrs enums agree: clause, §6.19.2 table, and codec.")
     print("  RESULT: CLEAN")
     return 0
 
