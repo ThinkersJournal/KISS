@@ -189,6 +189,16 @@ def check(spec_dir):
     # of the enum across the suite must carry EXACTLY the canonical member set.
     violations += check_determinism_enum(spec_dir)
 
+    # (5) the compute-fidelity (MathPrecision) enum — owned by KISS-OPS-6.17-0001,
+    # same import-never-re-fork rule as the determinism enum.
+    violations += check_mathprecision_enum(spec_dir)
+
+    # (6) the KISS-Consume refusal taxonomy — owned by KISS-CONSUME-6.4-0001.
+    violations += check_refusal_taxonomy(spec_dir)
+
+    # (7) the KISS-Contract universal seven-section core — owned by KISS-CONTRACT-6.2-0001.
+    violations += check_seven_sections(spec_dir)
+
     return violations, auth
 
 
@@ -228,6 +238,174 @@ def check_determinism_enum(spec_dir):
     return out
 
 
+# The canonical compute-fidelity (MathPrecision) enum owned by KISS-OPS-6.17-0001.
+MATHPRECISION_MEMBERS = {"bit-stable", "reduced-mantissa-permitted"}
+
+
+def check_mathprecision_enum(spec_dir):
+    """Every `{...}` form containing `bit-stable`, anywhere in the suite, MUST carry
+    exactly the two canonical members — Contract/Consume/Emit/Synth import this enum
+    "verbatim, never re-forked", so a downstream copy that renames or adds a value is
+    a re-fork this catches. The owner also declares the count word `two-member`."""
+    out = []
+    owner_seen = False
+    for stem in SPECS:
+        p = os.path.join(spec_dir, stem + ".md")
+        if not os.path.exists(p):
+            continue
+        text = open(p, encoding="utf-8").read()
+        # brace forms may straddle a line break, so scan whole-file text
+        for m in re.finditer(r"\{[^{}]*bit-stable[^{}]*\}", text):
+            members = {t.strip() for t in re.split(r"[,\s]*,[,\s]*",
+                       " ".join(m.group(0)[1:-1].split())) if t.strip()}
+            if stem == "ops":
+                owner_seen = True
+            if members != MATHPRECISION_MEMBERS:
+                miss = sorted(MATHPRECISION_MEMBERS - members)
+                extra = sorted(members - MATHPRECISION_MEMBERS)
+                parts = []
+                if miss:
+                    parts.append(f"missing {miss}")
+                if extra:
+                    parts.append(f"unexpected {extra}")
+                out.append(f"{stem}.md MathPrecision enum re-forked: {'; '.join(parts)} "
+                           f"(vs KISS-OPS-6.17-0001 owner)")
+    if not owner_seen:
+        out.append("KISS-OPS-6.17-0001 owner: no canonical MathPrecision enum found in ops.md")
+    # the owner's count word `two-member` must equal the member-set size
+    ops = os.path.join(spec_dir, "ops.md")
+    if os.path.exists(ops):
+        otext = open(ops, encoding="utf-8").read()
+        m = re.search(r"the\s+([a-z]+)-member enum `\{[^}]*bit-stable", otext)
+        words = {"two": 2, "three": 3}
+        if m and words.get(m.group(1)) not in (None, len(MATHPRECISION_MEMBERS)):
+            out.append(f"§6.17-0001 says '{m.group(1)}-member' but the enum has "
+                       f"{len(MATHPRECISION_MEMBERS)} members")
+    return out
+
+
+# The KISS-Consume refusal taxonomy owned by KISS-CONSUME-6.4-0001. The two whole-input
+# tokens `not-a-kernel`/`wrong-op-class` never appear in the legitimate 2-token residue
+# subset {unrecognized-but-expressible, inexpressible-residue}, so their presence in a
+# list marks it as a FULL-set restatement that must then name all four.
+REFUSAL_MEMBERS = {"not-a-kernel", "wrong-op-class",
+                   "unrecognized-but-expressible", "inexpressible-residue"}
+REFUSAL_DISCRIMINATORS = {"not-a-kernel", "wrong-op-class"}
+
+
+def _undecorate(s):
+    """Drop markdown emphasis/backtick decoration so `**\\`not-a-kernel\\`**` == the token."""
+    return s.replace("*", "").replace("`", "")
+
+
+def check_refusal_taxonomy(spec_dir):
+    """The owner clause names all four categories and the count word `four`; and every
+    parenthetical list anywhere in the suite that names a whole-input category (the
+    discriminator) MUST name all four — catching a downstream copy that drops or
+    renames one. The deliberate 2-token residue subset carries no discriminator, so it
+    is never mistaken for a full-set restatement."""
+    out = []
+    # (a) the owner clause: all four present + count word 'four'
+    consume = os.path.join(spec_dir, "consume.md")
+    if os.path.exists(consume):
+        ctext = open(consume, encoding="utf-8").read()
+        m = re.search(r"\*\*KISS-CONSUME-6\.4-0001\*\*(.*?)(?=\n\s*-\s+\*\*KISS|\n#)", ctext, re.S)
+        if m:
+            body = _undecorate(m.group(1))
+            miss = sorted(t for t in REFUSAL_MEMBERS if t not in body)
+            if miss:
+                out.append(f"§6.4-0001 owner is missing categor(y/ies): {miss}")
+            cw = re.search(r"MUST be exactly the\s+(\w+)\s+categories", body)
+            words = {"four": 4}
+            if cw and words.get(cw.group(1)) not in (None, len(REFUSAL_MEMBERS)):
+                out.append(f"§6.4-0001 says '{cw.group(1)}' but names {len(REFUSAL_MEMBERS)}")
+        else:
+            out.append("KISS-CONSUME-6.4-0001 owner clause not found")
+    # (b) every DOWNSTREAM parenthetical full-set restatement must carry all four.
+    # The owner doc (consume.md) is excluded here — it discusses the categories in
+    # deliberate subsets (the two whole-input failures, the two residue categories),
+    # so token presence cannot tell an intentional subset from a typo there; the owner
+    # is instead covered by check (a). Downstream docs only ever restate the full
+    # taxonomy, so a discriminator token marks a full-set list that must name all four.
+    for stem in SPECS:
+        if stem == "consume":
+            continue
+        p = os.path.join(spec_dir, stem + ".md")
+        if not os.path.exists(p):
+            continue
+        text = open(p, encoding="utf-8").read()
+        for m in re.finditer(r"\(([^()]*)\)", text):
+            grp = _undecorate(m.group(1))
+            if REFUSAL_DISCRIMINATORS & {t for t in REFUSAL_MEMBERS if t in grp}:
+                miss = sorted(t for t in REFUSAL_MEMBERS if t not in grp)
+                if miss:
+                    out.append(f"{stem}.md refusal-taxonomy list is missing {miss} "
+                               f"(vs KISS-CONSUME-6.4-0001 owner)")
+    return out
+
+
+# The KISS-Contract universal required core owned by KISS-CONTRACT-6.2-0001, in order.
+SEVEN_SECTIONS = ["Identity", "Semantics", "Interface", "Dispatch",
+                  "Capabilities", "Guarantees", "Provenance"]
+
+
+def _contract_clause(ctext, cid):
+    m = re.search(r"\*\*KISS-CONTRACT-" + re.escape(cid) +
+                  r"\*\*(.*?)(?=\n\s*-\s+\*\*KISS|\n#)", ctext, re.S)
+    return m.group(1) if m else None
+
+
+def check_seven_sections(spec_dir):
+    """The seven contract-core section names, consistent everywhere the full ordered
+    list is restated. Each list is order-checked, not just membership-checked, because
+    §6.11-0004 carries the names TWICE (a numbered `Name(n)` order list and a lowercase
+    `\\`name\\`` list) and a membership check would pass a rename of only one copy.
+
+      (a) §6.2-0001 owner:  the `Name (§6.x)` core list == the seven in order + count 'seven'
+      (b) §6.11-0004:       the `Name(n)` order list AND the `\\`name\\`` list each == the seven
+      (c) restatements:     every clean delimited Identity..Provenance list == the seven in order
+    """
+    out = []
+    canon = set(SEVEN_SECTIONS)
+    canon_lower = [s.lower() for s in SEVEN_SECTIONS]
+    contract = os.path.join(spec_dir, "contract.md")
+    if os.path.exists(contract):
+        ctext = open(contract, encoding="utf-8").read()
+        # (a) owner §6.2-0001 — names each carry a `(§6.x)` section reference
+        body = _contract_clause(ctext, "6.2-0001")
+        if body is None:
+            out.append("KISS-CONTRACT-6.2-0001 clause not found")
+        else:
+            names = re.findall(r"([A-Z][a-z]+)\s*\(§", body)
+            if names != SEVEN_SECTIONS:
+                out.append(f"§6.2-0001 core list drift: {names} (vs the seven in order)")
+        if "seven section" not in ctext.lower():
+            out.append("§6.2-0001: the count word 'seven' is gone from the core description")
+        # (b) §6.11-0004 — both the numbered order list and the lowercase name list
+        body = _contract_clause(ctext, "6.11-0004")
+        if body is None:
+            out.append("KISS-CONTRACT-6.11-0004 clause not found")
+        else:
+            numbered = [n for n, _d in re.findall(r"([A-Z][a-z]+)\((\d)\)", body)]
+            if numbered != SEVEN_SECTIONS:
+                out.append(f"§6.11-0004 numbered-order list drift: {numbered}")
+            low = [w for w in re.findall(r"`([a-z]+)`", body) if w in set(canon_lower)]
+            if low != canon_lower:
+                out.append(f"§6.11-0004 lowercase name list drift: {low}")
+    # (c) clean delimited Identity..Provenance lists across the suite (no inner parens)
+    for stem in SPECS:
+        p = os.path.join(spec_dir, stem + ".md")
+        if not os.path.exists(p):
+            continue
+        text = open(p, encoding="utf-8").read()
+        for m in re.finditer(r"[{(]\s*(Identity[^{}()]*?Provenance)\s*[})]", text):
+            names = [w for w in re.split(r"[,\s]+", _undecorate(m.group(1))) if w in canon]
+            if names != SEVEN_SECTIONS:
+                out.append(f"{stem}.md seven-section list drift: {names} "
+                           f"(vs KISS-CONTRACT-6.2-0001 order)")
+    return out
+
+
 # The normative clauses this lint ENFORCES: a violation of each fails the lint,
 # so the traceability gate may count them lint-backed (they bind the spec document
 # — the closed dtype set restated in two owners — which is a linter's job, not a
@@ -239,6 +417,14 @@ COVERS = [
      "the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner"),
     ("KISS-OPS-6.0-0001",
      "a sub-standard re-forks the determinism/fidelity enum instead of importing it"),
+    ("KISS-OPS-6.17-0001",
+     "a sub-standard re-forks the compute-fidelity (MathPrecision) enum instead of importing it"),
+    ("KISS-CONSUME-6.4-0001",
+     "a refusal-taxonomy restatement drops/renames one of the four categories"),
+    ("KISS-CONTRACT-6.2-0001",
+     "the universal seven-section core drifts in an owner clause or a restated list"),
+    ("KISS-CONTRACT-6.11-0004",
+     "the seven-section document order drifts from the §6.2-0001 core"),
 ]
 
 
@@ -269,6 +455,7 @@ def main():
     print("=" * 68)
     print(f"  dtype set (owner KISS-CLASSIFY-6.1-0001): {len(auth)} tokens")
     print(f"    {' '.join(auth)}")
+    print("  + determinism, MathPrecision, refusal-taxonomy and seven-section-core enums")
     print("-" * 68)
     if violations:
         print(f"  DRIFT — {len(violations)} enumeration(s) disagree with the owner:")

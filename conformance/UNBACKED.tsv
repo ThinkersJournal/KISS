@@ -275,7 +275,7 @@ KISS-CONSUME-6.3-0005	test_consume_residue_records_opset_version	untested
 KISS-CONSUME-6.3-0006	test_consume_handwritten_semantics_via_lifting	untested	
 KISS-CONSUME-6.3-0007	test_consume_no_silent_drop_of_residue	untested	
 KISS-CONSUME-6.3-0008	test_consume_residue_entry_schema	untested	
-KISS-CONSUME-6.4-0001	test_consume_taxonomy_four_categories	untested	
+KISS-CONSUME-6.4-0001	test_consume_taxonomy_four_categories	lint:kiss_tables	a refusal-taxonomy restatement drops/renames one of the four categories
 KISS-CONSUME-6.4-0002	test_consume_taxonomy_mece_ordered	untested	
 KISS-CONSUME-6.4-0003	test_consume_refusal_not_a_kernel	untested	
 KISS-CONSUME-6.4-0004	test_consume_refusal_wrong_op_class	untested	
@@ -310,11 +310,11 @@ KISS-CONTRACT-6.10-0002	test_contract_edge_case_and_ulp_from_ops	untested
 KISS-CONTRACT-6.10-0003	test_contract_single_op_vocabulary	untested	
 KISS-CONTRACT-6.10-0004	test_contract_opattrs_cited_from_ops	untested	
 KISS-CONTRACT-6.11-0003	test_contract_document_inner_length_and_crc	untested	
-KISS-CONTRACT-6.11-0004	test_contract_document_section_headings	untested	
+KISS-CONTRACT-6.11-0004	test_contract_document_section_headings	lint:kiss_tables	the seven-section document order drifts from the §6.2-0001 core
 KISS-CONTRACT-6.11-0006	test_contract_text_positional_signature	untested	
 KISS-CONTRACT-6.11-0008	test_contract_text_dispatch	untested	
 KISS-CONTRACT-6.11-0009	test_contract_text_op_identity	untested	
-KISS-CONTRACT-6.2-0001	test_contract_seven_section_core	untested	
+KISS-CONTRACT-6.2-0001	test_contract_seven_section_core	lint:kiss_tables	the universal seven-section core drifts in an owner clause or a restated list
 KISS-CONTRACT-6.2-0002	test_contract_existence_is_intrinsic	untested	
 KISS-CONTRACT-6.2-0003	test_contract_no_op_class_withhold	untested	
 KISS-CONTRACT-6.2-0004	test_contract_completeness_tracks_lift_fraction	untested	
@@ -560,7 +560,7 @@ KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh	untested
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts	lint:kiss_tables	the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner
 KISS-OPS-6.16-0002	test_ops_ieee754_dtype_encodings	untested	
 KISS-OPS-6.16-0007	test_ops_complex_storage_layout	untested	
-KISS-OPS-6.17-0001	test_ops_math_precision_enum	untested	
+KISS-OPS-6.17-0001	test_ops_math_precision_enum	lint:kiss_tables	a sub-standard re-forks the compute-fidelity (MathPrecision) enum instead of importing it
 KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested	
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
