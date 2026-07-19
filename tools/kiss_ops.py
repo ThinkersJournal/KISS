@@ -20,8 +20,9 @@ The checks (each a set/dict equality between two independent restatements):
   2. non-primitive set    §2.7 non-primitive table     == §6.13 decomposition table
   3. non-primitive family §2.7 family column           == §6.13 Family column (per op)
   4. refine set           §6.13 Refine ✓ column        == §6.13-0003 clause list
-  5. complex op set       §6.18-0001 {...} / §6.18-0016 == §6.18 tables
-  6. carrier op set       §2.7 carrier sentence        == §6.19.3 schema table
+  5. membership partition  §6.3 / §6.13 / §6.18 op classes are pairwise disjoint (§6.1-0004)
+  6. complex op set        §6.18-0001 {...} / §6.18-0016 == §6.18 tables
+  7. carrier op set        §2.7 carrier sentence        == §6.19.3 schema table
 
 An OP TOKEN is a backtick span that is ENTIRELY `[a-z][a-z0-9_]{2,}` — every real
 KISS op is ≥3 lowercase-alnum chars, so this admits them all while excluding scalar
@@ -45,10 +46,10 @@ OP_TOKEN = re.compile(r"[a-z][a-z0-9_]{2,}")
 
 
 def _op(cell):
-    """The op token a table cell names, or None. Strips backticks/space, then
-    requires the whole cell to be one op-shaped token — so a family word like
-    `arithmetic` (not backticked in these tables) or a separator `---` yields None
-    only if malformed; op cells are backticked and pass."""
+    """The op token a table cell names, or None: strips backticks/space and returns
+    the cell iff it is a single op-shaped token `[a-z][a-z0-9_]{2,}`. This is a shape
+    test only — a lowercase family word like `arithmetic` is ALSO op-shaped and would
+    pass, so callers apply _op only to op columns (0/2), never to a family column."""
     c = cell.strip().strip("`").strip()
     return c if re.fullmatch(r"[a-z][a-z0-9_]{2,}", c) else None
 
@@ -230,7 +231,10 @@ def check(spec_dir):
     else:
         _diff("refine set (§6.13 ✓ column vs §6.13-0003 clause)", refine_table, refine_clause, v)
 
-    # (5) complex op set: §6.18-0001 {...} == §6.18 tables == §2.7 complex
+    # (6) complex op set: §6.18-0001 {...} and the §6.18-0016 split == the §6.18 tables.
+    # (The §2.7 complex paragraph is deliberately NOT parsed here: after its op-set
+    # sentence it lists real-floor decomposition atoms in backticks, so it is an FP
+    # hazard; the machine-clean §6.18-0001/§6.18-0016 clauses are the authoritative copy.)
     body1 = clause_body(ops, "6.18-0001")
     cx_clause = brace_set(body1) if body1 else []
     cx_bridge = sec618_table_ops(ops, "bridge")
@@ -254,7 +258,23 @@ def check(spec_dir):
     else:
         v.append("§6.18-0016: clause not found")
 
-    # (6) carrier set: §2.7 carrier sentence == §6.19.3 schema table (col 0)
+    # (5) membership partition (§6.1-0004): every op carries exactly one primitive-floor
+    # membership flag (primitive = in §6.3; non-primitive = in §6.13 or §6.18), so the
+    # three op classes MUST be pairwise disjoint. Without this, the per-class roster
+    # checks above could each pass while an op is mis-flagged into two classes at once —
+    # which is the specific failure §6.1-0004 forbids.
+    classes = [("primitive (§6.3)", set(floor_27)),
+               ("non-primitive (§6.13)", set(np_613)),
+               ("complex (§6.18)", set(cx_clause))]
+    for a in range(len(classes)):
+        for b in range(a + 1, len(classes)):
+            (an, aset), (bn, bset) = classes[a], classes[b]
+            overlap = sorted(aset & bset)
+            if overlap:
+                v.append(f"membership partition (§6.1-0004): {overlap} in both the "
+                         f"{an} and {bn} op classes")
+
+    # (7) carrier set: §2.7 carrier sentence == §6.19.3 schema table (col 0)
     carrier_sentence = between(ops, "The carrier ops for this version are", ". Their schemas")
     carrier_27 = op_tokens(carrier_sentence)
     region = between(ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
