@@ -108,7 +108,7 @@ KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	untested
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	untested	
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	untested	
 KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	untested	
-KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	untested	
+KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	lint:kiss_vocab	the 24 op-family codes drift between Classify §6.5-0006 and the reference structure_key codec (OP_FAMILIES)
 KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	untested	
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	untested	
 KISS-CLASSIFY-6.5-0009	test_classify_vec_width_derivation	untested	

@@ -29,8 +29,10 @@ jobs:
           python-version: "3.x"
       - name: Clause↔test traceability + binding (ratcheted)
         run: python tools/kiss_trace.py --report
-      - name: Shared-enumeration consistency (dtype set across tables + anchors)
+      - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
+      - name: Spec<->binding enumeration consistency (op-family set)
+        run: python tools/kiss_vocab.py
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
