@@ -199,6 +199,12 @@ def check(spec_dir):
     # (7) the KISS-Contract universal seven-section core — owned by KISS-CONTRACT-6.2-0001.
     violations += check_seven_sections(spec_dir)
 
+    # (8) the reduce_axes four-category set — Ops §6.11-0011 <-> Classify §6.7-0005.
+    violations += check_reduce_axes(spec_dir)
+
+    # (9) the two FEAT capability bits — Announce §7.2 definition <-> §7.2-0003 clause.
+    violations += check_feat_bits(spec_dir)
+
     return violations, auth
 
 
@@ -355,6 +361,80 @@ def _contract_clause(ctext, cid):
     return m.group(1) if m else None
 
 
+def _clause_body(text, sub, short):
+    """Body of a `- **KISS-<SUB>-<short>** — ...` clause, up to the next clause or heading."""
+    m = re.search(r"\*\*KISS-" + sub + r"-" + re.escape(short) +
+                  r"\*\*(.*?)(?=\n\s*-\s+\*\*KISS|\n#)", text, re.S)
+    return m.group(1) if m else None
+
+
+# The four reduce-field categories (KISS-Ops §6.11-0011 / KISS-Classify §6.7-0005): three
+# literal tokens plus the `x<hh>` keepdim-mask token (spelled `x<hh>` in Ops, `x` in Classify).
+REDUCE_LITERALS = ["-", "rall", "rlast"]
+
+
+def _reduce_literals(body):
+    """The three literal reduce categories a clause DEFINES, keyed on the definition form
+    `\\`tok\\` (meaning)` so an incidental later mention of the token is not counted."""
+    return {m.group(1) for m in re.finditer(r"`([^`]+)`\s*\(", body)
+            if m.group(1) in ("-", "rall", "rlast")}
+
+
+def check_reduce_axes(spec_dir):
+    """The reduce_axes field distinguishes exactly four categories, restated in both the
+    Ops-semantics clause (§6.11-0011, the backed clause) and the Classify token-codec clause
+    (§6.7-0005). Each MUST name the three literal categories `-`/`rall`/`rlast` (keyed on the
+    `\\`tok\\` (meaning)` definition form) plus the `x`/`x<hh>` keepdim-mask, and carry the
+    count word `four`. The Ops enumeration lists each token in that form exactly once, so a
+    rename/drop there is caught (the backing for §6.11-0011); the Classify side restates some
+    tokens more than once, so its check is a full-drop guard rather than a rename detector."""
+    out = []
+    for label, sub, short, stem in (("Ops", "OPS", "6.11-0011", "ops"),
+                                    ("Classify", "CLASSIFY", "6.7-0005", "classify")):
+        p = os.path.join(spec_dir, stem + ".md")
+        body = _clause_body(open(p, encoding="utf-8").read(), sub, short) if os.path.exists(p) else None
+        if not body:
+            out.append(f"{label} §{short}: reduce_axes clause not found")
+            continue
+        lits = _reduce_literals(body)
+        if lits != {"-", "rall", "rlast"}:
+            miss = sorted({"-", "rall", "rlast"} - lits)
+            out.append(f"{label} §{short} reduce_axes literal categories drift: missing {miss}")
+        if not re.search(r"`x(<hh>)?`", body):
+            out.append(f"{label} §{short}: the `x`/`x<hh>` keepdim-mask category is gone")
+        if "four" not in body:
+            out.append(f"{label} §{short}: the count word 'four' is gone from the reduce_axes description")
+    return out
+
+
+# The two provider-level FEAT capability bits (KISS-Announce §7.2), restated in the §7.2
+# FEAT definition and the §7.2-0003 interpretation clause.
+FEAT_BITS = {32: "PROVISION_ON_REQUEST", 33: "CONTRACT_QUERY"}
+
+
+def check_feat_bits(spec_dir):
+    """Within announce.md the bit->name mapping of the two FEAT capability bits is stated
+    twice — the §7.2 `- **FEAT**` definition and the §7.2-0003 clause — and both MUST agree
+    with {32: PROVISION_ON_REQUEST, 33: CONTRACT_QUERY}. Extraction uses strict adjacency
+    (`bit NN [as] \\`NAME\\``), so a bare 'bit 32' mention with no adjacent name is ignored."""
+    out = []
+    p = os.path.join(spec_dir, "announce.md")
+    if not os.path.exists(p):
+        return ["announce.md not found for the FEAT-bit check"]
+    text = open(p, encoding="utf-8").read()
+    feat_def = re.search(r"- \*\*FEAT\*\*(.*?)(?=\n\s*-\s+\*\*|\n#)", text, re.S)
+    sources = [("§7.2 FEAT definition", feat_def.group(1) if feat_def else None),
+               ("§7.2-0003 clause", _clause_body(text, "ANNOUNCE", "7.2-0003"))]
+    for label, region in sources:
+        if region is None:
+            out.append(f"announce {label}: not found")
+            continue
+        pairs = {int(b): n for b, n in re.findall(r"bit (3[23])\s+(?:as\s+)?`(\w+)`", region)}
+        if pairs != FEAT_BITS:
+            out.append(f"announce {label} FEAT-bit map drift: {pairs} (vs {FEAT_BITS})")
+    return out
+
+
 def check_seven_sections(spec_dir):
     """The seven contract-core section names, consistent everywhere the full ordered
     list is restated. Each list is order-checked, not just membership-checked, because
@@ -425,6 +505,10 @@ COVERS = [
      "the universal seven-section core drifts in an owner clause or a restated list"),
     ("KISS-CONTRACT-6.11-0004",
      "the seven-section document order drifts from the §6.2-0001 core"),
+    ("KISS-OPS-6.11-0011",
+     "the reduce_axes four-category set drifts between Ops §6.11-0011 and Classify §6.7-0005"),
+    ("KISS-ANNOUNCE-7.2-0003",
+     "a FEAT capability bit's name drifts between the §7.2 definition and the §7.2-0003 clause"),
 ]
 
 

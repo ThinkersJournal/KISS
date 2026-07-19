@@ -65,7 +65,7 @@ KISS-ANNOUNCE-7.1-0003	test_announce_producer_never_exceeds_profile_cap	untested
 KISS-ANNOUNCE-7.1-0004	test_announce_retire_by_floor_window	untested	
 KISS-ANNOUNCE-7.2-0001	test_announce_capabilities_axis_partition	untested	
 KISS-ANNOUNCE-7.2-0002	test_announce_ext_bit_assignments	untested	
-KISS-ANNOUNCE-7.2-0003	test_announce_feat_bit_assignments	untested	
+KISS-ANNOUNCE-7.2-0003	test_announce_feat_bit_assignments	lint:kiss_tables	a FEAT capability bit's name drifts between the §7.2 definition and the §7.2-0003 clause
 KISS-ANNOUNCE-7.2-0004	test_announce_sub_bit_assignments	untested	
 KISS-ANNOUNCE-7.2-0005	test_announce_reserved_range_tiers	untested	
 KISS-ANNOUNCE-7.2-0006	test_announce_unassigned_bits_zero	untested	
@@ -538,7 +538,7 @@ KISS-OPS-6.11-0006	test_ops_scatter_fp_atomic_add_nondeterministic	untested
 KISS-OPS-6.11-0008	test_ops_reduce_keepdim_broadcast	untested	
 KISS-OPS-6.11-0009	test_ops_index_dtype_set	untested	
 KISS-OPS-6.11-0010	test_ops_scatter_atomic_minmax_nan	untested	
-KISS-OPS-6.11-0011	test_ops_reduce_axes_four_categories	untested	
+KISS-OPS-6.11-0011	test_ops_reduce_axes_four_categories	lint:kiss_tables	the reduce_axes four-category set drifts between Ops §6.11-0011 and Classify §6.7-0005
 KISS-OPS-6.11-0012	test_ops_index_operand_role	untested	
 KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	
 KISS-OPS-6.11-0014	test_ops_sort_network_axis_attribute	untested	
