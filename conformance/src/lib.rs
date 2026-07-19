@@ -20,6 +20,7 @@
 
 pub mod announce;
 pub mod contract;
+pub mod corpus;
 pub mod differential;
 pub mod grammar;
 pub mod fp;
