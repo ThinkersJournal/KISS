@@ -21,6 +21,7 @@
 pub mod announce;
 pub mod contract;
 pub mod corpus;
+pub mod decomp_grammar;
 pub mod differential;
 pub mod grammar;
 pub mod fp;

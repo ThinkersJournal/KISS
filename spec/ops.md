@@ -1142,14 +1142,28 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   signed zero); for `a<0`, `pow(a,b)` MUST yield NaN unless `b` is an exact integer, in
   which case `pow(a,b)` MUST yield `|a|^b` when `b` is even and `-(|a|^b)` when `b` is odd.
   *Test:* `test_ops_pow_full_domain`.
-- **KISS-OPS-6.13-0006** — A reference-decomposition body MUST conform to this grammar: a
-  body is either (a) a single expression tree over KISS-Ops ops and the §6.12 scalar-
-  source leaves, or (b) a sequence of single-assignment let-bindings `name = expr;`
-  followed by a final result expression, where each `expr` is a tree over KISS-Ops ops,
-  the §6.12 scalar-source leaves, and previously-bound names. Each `name` MUST be bound
-  exactly once (static single assignment), MUST NOT reference itself or a
-  not-yet-bound name, and is scoped to the body; a mechanical resolver MUST parse the
-  body as this tree/binding form and no other. *Test:* `test_ops_decomposition_body_grammar`.
+- **KISS-OPS-6.13-0006** — A reference-decomposition body **that is a scalar-expression
+  body** MUST conform to this grammar: a body is either (a) a single expression tree over
+  KISS-Ops ops and the §6.12 scalar-source leaves, or (b) a sequence of single-assignment
+  let-bindings `name = expr;` followed by a final result expression, where each `expr` is
+  a tree over KISS-Ops ops, the §6.12 scalar-source leaves, and previously-bound names.
+  Each `name` MUST be bound exactly once (static single assignment), MUST NOT reference
+  itself or a not-yet-bound name, and is scoped to the body; a mechanical resolver MUST
+  parse a scalar-expression body as this tree/binding form and no other. This clause does
+  **not** constrain the body of a **structured op** (§6.13-0009), whose decomposition is a
+  §6.11 structural-op reference rather than a scalar-expression tree and MUST NOT be
+  required to parse as this grammar. *Test:* `test_ops_decomposition_body_grammar`.
+- **KISS-OPS-6.13-0009** — A **structured op** — `matmul`, `argmax`, `argmin`,
+  `avg_pool`, `max_pool`, `index_select`, `embedding`, `scatter_add`, and `im2col` — MUST
+  have its reference decomposition expressed as a named §6.11 structural op (`reduce`,
+  `prefix_scan`, `gather`, `scatter`, `sort_network`) or a `matmul` contraction,
+  parameterized by the op's §6.13-0004 attribute record together with the operand-role and
+  iteration-space facts named in the §6.13 table (e.g. a `matmul`'s M/N/K iteration space,
+  a pool's window view, a gather/scatter's axis and index operand). Its pinned semantics
+  and its inf/NaN/OOB edges MUST be those of the referenced §6.11 structural op under those
+  attributes, evaluated by the §6.11 structural oracle; KISS-Ops MUST NOT require a
+  structured op's body to be a §6.13-0006 scalar-expression tree. *Test:*
+  `test_ops_structured_decomposition_reference`.
 - **KISS-OPS-6.13-0007** — `hypot(a, b)` MUST yield `+∞` whenever either operand is
   infinite, **even if the other operand is NaN** (the IEEE 754 `hypot` infinity rule),
   overriding the naive `sqrt(add(sqr(a), sqr(b)))` — which would yield NaN for `(±∞, NaN)` —
@@ -2215,6 +2229,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0006 | `test_ops_decomposition_body_grammar` |
 | KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
 | KISS-OPS-6.13-0008 | `test_ops_norm_axis_all_four` |
+| KISS-OPS-6.13-0009 | `test_ops_structured_decomposition_reference` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |

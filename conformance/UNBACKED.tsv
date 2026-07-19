@@ -548,7 +548,6 @@ KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested
 KISS-OPS-6.13-0001	test_ops_reference_decompositions	untested	
 KISS-OPS-6.13-0002	test_ops_decomposition_strictly_lower_level	untested	
 KISS-OPS-6.13-0004	test_ops_parameterized_attributes_explicit	untested	
-KISS-OPS-6.13-0006	test_ops_decomposition_body_grammar	untestable	#41 — decomposition grammar can't parse its own rows
 KISS-OPS-6.13-0008	test_ops_norm_axis_all_four	untested	
 KISS-OPS-6.14-0001	test_ops_level_assignment	untested	
 KISS-OPS-6.14-0002	test_ops_decomposition_acyclic	untested	
