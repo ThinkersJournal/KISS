@@ -187,6 +187,37 @@ def brace_set(text):
     return list_ops(m.group(1)) if m else []
 
 
+def transcendental_atoms(ops):
+    """The atoms with a declared ULP ceiling — ops.md §6.8 table. §6.5-0008 cites §6.8
+    for 'every transcendental atom'. Those atoms (exp/log/sin/cos/atan/atan2/erf/
+    lgamma/sqrt) live in the PRIMITIVE FLOOR, so they come from the ULP-ceiling table,
+    NOT the non-primitive family column (verified against spec/ops.md)."""
+    region = between(ops, "Maximum ULP ceiling", "KISS-OPS-6.8-0001")
+    atoms = []
+    for cells in table_cells(region):
+        if cells:
+            atoms += op_tokens(cells[0])  # col 0 may list several: `exp`, `log`, ...
+    return sorted(set(atoms))
+
+
+def build_manifest(spec_dir):
+    """Derive the op/atom coverage manifest from ops.md (§6.5-0008 checks against it)."""
+    ops = open(os.path.join(spec_dir, "ops.md"), encoding="utf-8").read()
+    primitive = set(sec27_primitive(ops))
+    nonprim = set(sec27_nonprimitive_family(ops))
+    all_ops = sorted(primitive | nonprim)
+    atoms = transcendental_atoms(ops)  # sqrt, exp, log, sin, cos, atan, atan2, erf, lgamma
+    # Plan A's declared coverage set: the exact-byte arithmetic floor that is minted now.
+    declared = sorted(o for o in ("add",) if o in all_ops)
+    return {
+        "schema": "kiss-op-manifest-v1",
+        "generated_from": "spec/ops.md",
+        "all_ops": all_ops,
+        "transcendental_atoms": atoms,
+        "declared_coverage_set": declared,
+    }
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -305,9 +336,26 @@ def main():
     ap.add_argument("--spec-dir", default=None)
     ap.add_argument("--emit-coverage", action="store_true",
                     help="print the clause IDs this lint enforces (clause<TAB>note)")
+    ap.add_argument("--emit-manifest", action="store_true",
+                    help="write conformance/corpus/op_manifest.json (the §6.5-0008 coverage source)")
+    ap.add_argument("--stdout", action="store_true",
+                    help="with --emit-manifest, print the manifest instead of writing the file")
     args = ap.parse_args()
     here = os.path.dirname(os.path.abspath(__file__))
     spec_dir = args.spec_dir or os.path.join(os.path.dirname(here), "spec")
+
+    if args.emit_manifest:
+        import json as _json
+        manifest = build_manifest(spec_dir)
+        text = _json.dumps(manifest, indent=2) + "\n"
+        if args.stdout:
+            sys.stdout.write(text)
+        else:
+            out_path = os.path.join(os.path.dirname(spec_dir), "conformance", "corpus", "op_manifest.json")
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            open(out_path, "w", encoding="utf-8", newline="\n").write(text)
+            print(f"wrote {out_path}")
+        return 0
 
     if args.emit_coverage:
         for cid, note in COVERS:

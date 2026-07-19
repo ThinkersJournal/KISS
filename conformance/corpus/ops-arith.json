@@ -1,0 +1,18 @@
+{
+  "schema": "kiss-oracle-vectors-v1.json",
+  "kiss_substandard": "OPS",
+  "schema_version": 1,
+  "spec_clause": "KISS-CONFORM-6.4-0002",
+  "generator": "kiss_mint 0.1.0",
+  "number_of_vectors": 5,
+  "byte_order": "hex is the value's bytes most-significant first, left to right",
+  "hex_encoding": "uppercase hex bytes; ' ' and '·' are grouping marks (lib.rs::parse_hex)",
+  "ulp_metric": "integer totalOrder distance (lib.rs::ulp_distance_f32)",
+  "vectors": [
+    {"tcId": 1, "op": "add", "dtype": "f32", "rounding": "roundTiesToEven", "inputs": [{"role":"a","dtype":"f32","bits":"80 00 00 00"}, {"role":"b","dtype":"f32","bits":"00 00 00 00"}], "expected": {"dtype":"f32","bits":"00 00 00 00"}, "class": "exact-byte", "ulp_bound": 0, "provenance": "oracle", "tags": ["signed-zero"], "certificate": {"hardness_margin_bits": 0, "stabilized_precision_bits": 24}},
+    {"tcId": 2, "op": "add", "dtype": "f32", "rounding": "roundTiesToEven", "inputs": [{"role":"a","dtype":"f32","bits":"80 00 00 00"}, {"role":"b","dtype":"f32","bits":"80 00 00 00"}], "expected": {"dtype":"f32","bits":"80 00 00 00"}, "class": "exact-byte", "ulp_bound": 0, "provenance": "oracle", "tags": ["signed-zero"], "certificate": {"hardness_margin_bits": 0, "stabilized_precision_bits": 24}},
+    {"tcId": 3, "op": "add", "dtype": "f32", "rounding": "roundTiesToEven", "inputs": [{"role":"a","dtype":"f32","bits":"00 00 00 00"}, {"role":"b","dtype":"f32","bits":"00 00 00 00"}], "expected": {"dtype":"f32","bits":"00 00 00 00"}, "class": "exact-byte", "ulp_bound": 0, "provenance": "oracle", "tags": ["signed-zero"], "certificate": {"hardness_margin_bits": 0, "stabilized_precision_bits": 24}},
+    {"tcId": 4, "op": "add", "dtype": "f32", "rounding": "roundTiesToEven", "inputs": [{"role":"a","dtype":"f32","bits":"3F 80 00 00"}, {"role":"b","dtype":"f32","bits":"3F 80 00 00"}], "expected": {"dtype":"f32","bits":"40 00 00 00"}, "class": "exact-byte", "ulp_bound": 0, "provenance": "oracle", "tags": [], "certificate": {"hardness_margin_bits": 0, "stabilized_precision_bits": 24}},
+    {"tcId": 5, "op": "add", "dtype": "f32", "rounding": "roundTiesToEven", "inputs": [{"role":"a","dtype":"f32","bits":"3F 80 00 00"}, {"role":"b","dtype":"f32","bits":"BF 80 00 00"}], "expected": {"dtype":"f32","bits":"00 00 00 00"}, "class": "exact-byte", "ulp_bound": 0, "provenance": "oracle", "tags": ["signed-zero"], "certificate": {"hardness_margin_bits": 0, "stabilized_precision_bits": 24}}
+  ]
+}
