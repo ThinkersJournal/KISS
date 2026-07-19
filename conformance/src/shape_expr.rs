@@ -47,8 +47,10 @@ pub const SYMBOLIC: i64 = i64::MIN;
 
 /// The reserved `axis` sentinel denoting the **last (trailing)** axis, resolved to
 /// `rank − 1` at evaluation time (§6.20-0002/-0003). Concrete axes are
-/// `0..MAX_RANK-1` (MAX_RANK = 8), so `0xFF` is unambiguously the sentinel — the
-/// single-axis analogue of the §6.19-0020 `reduce_axes` trailing-axis sentinel.
+/// `0..MAX_RANK-1` (MAX_RANK = 8), so `0xFF` is unambiguously the sentinel. It is a
+/// **distinct** single-axis (`u8`) sentinel, chosen high in the spirit of the
+/// §6.19-0020 `reduce_axes` trailing-axis sentinel but **not** byte-identical to it
+/// — that `0xFFFE` is a `u16` axis-*set* mask, a different field.
 pub const LAST: u8 = 0xFF;
 
 // ---- AST ---------------------------------------------------------------------
@@ -330,6 +332,34 @@ pub fn reduce_shape(input: &[i64], reduce_axes: &[usize], keepdim: bool) -> Vec<
             out.push(e);
         }
     }
+    out
+}
+
+// ---- §6.20-0008 the output-shape ≠ operand-shape class -----------------------
+
+/// The shape rule of a `gather` / `index_select` / `embedding`: the data operand's
+/// shape with the gathered `axis` replaced by the index operand's shape
+/// (`data[..axis] ++ index ++ data[axis+1..]`). In general the output equals no
+/// operand's shape — which is exactly why advertising `SameAs(data)` for a gather is
+/// a bug the shape oracle catches (§6.20-0008).
+pub fn gather_shape(data: &[i64], index: &[i64], axis: usize) -> Vec<i64> {
+    let mut out = Vec::with_capacity(data.len() - 1 + index.len());
+    out.extend_from_slice(&data[..axis]);
+    out.extend_from_slice(index);
+    out.extend_from_slice(&data[axis + 1..]);
+    out
+}
+
+/// The shape rule of a `matmul` (contraction): its role-vector-derived output
+/// (KISS-Classify §6.6-0016 M/N/K axis roles — carried as axis roles, not a
+/// `ShapeExpr`). For the canonical same-rank ≥ 2 cell,
+/// `lhs [..batch, M, K] · rhs [..batch, K, N] -> [..batch, M, N]`; the output
+/// equals neither operand (§6.20-0008).
+pub fn matmul_shape(lhs: &[i64], rhs: &[i64]) -> Vec<i64> {
+    let r = lhs.len();
+    let mut out = lhs[..r - 2].to_vec(); // aligned leading batch dims
+    out.push(lhs[r - 2]); // M (lhs second-last)
+    out.push(rhs[r - 1]); // N (rhs last)
     out
 }
 

@@ -1986,9 +1986,11 @@ the shared surface is two constructors.
   `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`; the
   reserved `Reduce=0x09` / `WithDim=0x0A` / `Dims=0x0B`), fixed-width little-endian
   fields (`operand` and `field` as `u8`, `axis` as a non-negative `u8` with `0xFF`
-  reserved as the `last` sentinel above the `0..MAX_RANK-1` concrete range — the
-  single-axis analogue of the §6.19-0020 trailing-axis sentinel, `Const` as `i64`
-  LE, §6.19-0007), and each child expression **definite-length-prefixed** with a `u16` LE
+  reserved as the `last` sentinel above the `0..MAX_RANK-1` concrete range — a
+  **distinct** single-axis `u8` sentinel chosen high in the spirit of the §6.19-0020
+  trailing-axis sentinel, **not** byte-identical to that `u16` axis-set mask `0xFFFE`;
+  `Const` as `i64` LE, §6.19-0007), and each child expression
+  **definite-length-prefixed** with a `u16` LE
   byte length (§6.19-0010). The encoding MUST be byte-deterministic so a shape-bearing
   blob is hashable and byte-comparable under the shared canonicalization; an encoder
   MUST NOT place a name on the wire and MUST NOT emit a tag outside this set. *Test:*
@@ -2008,6 +2010,16 @@ the shared surface is two constructors.
   respectively. An implementation MUST NOT bake an absolute constant output shape
   where the shape derives from an operand extent. *Test:*
   `test_shape_expr_primitive_floor_rules`.
+- **KISS-OPS-6.20-0008** — The shape oracle MUST cover the class where the output
+  shape equals **no** operand's shape — the class it most exists to catch. A `gather`
+  / `index_select` / `embedding` output shape MUST be the data operand's shape with
+  the gathered `axis` replaced by the index operand's shape (`data[..axis] ++ index
+  ++ data[axis+1..]`); a **contraction** (`matmul`) output shape MUST be its
+  role-vector-derived shape (KISS-Classify §6.6-0016 M/N/K axis roles — leading batch
+  dims, then `[M, N]` — carried as axis roles, not a `ShapeExpr`). An implementation
+  MUST NOT advertise `SameAs(operand)` for an op whose output rank/extents differ from
+  that operand (e.g. a gather declaring `same_as(data)`). *Test:*
+  `test_shape_expr_out_differs_from_operands`.
 
 ---
 
@@ -2287,6 +2299,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.20-0005 | `test_shape_expr_serialization_golden` |
 | KISS-OPS-6.20-0006 | `test_shape_expr_decode_declines` |
 | KISS-OPS-6.20-0007 | `test_shape_expr_primitive_floor_rules` |
+| KISS-OPS-6.20-0008 | `test_shape_expr_out_differs_from_operands` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |

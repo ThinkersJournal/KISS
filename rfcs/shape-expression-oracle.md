@@ -1,6 +1,6 @@
 # KISS RFC — a shape-expression vocabulary as the shape-side oracle
 
-**RFC:** (number to be assigned on filing to ThinkersJournal) · **Status:** Draft — **ready to file** once Fuel's doc corrections land (Fuel accepted the reframe 2026-07-18; see §9) · **Date:** 2026-07-18 (updated 2026-07-19)
+**RFC:** (number to be assigned on filing to ThinkersJournal) · **Status:** Draft — **ready to file** (both cosignatories accepted: Fuel 2026-07-18, Baracuda 2026-07-19; see §9) · **Date:** 2026-07-18 (updated 2026-07-19)
 **Affects:** KISS-Ops §6 (new §6.20) and KISS-Contract §6.4 (new §6.4-0011 tie to §6.5 Interface). Complements §6.4-0006 (value oracle), §6.4-0009 (op_dag node schema), §6.12 (scalar-source leaves), §6.19 (canonical OpAttrs serialization).
 **Category:** Standards-track, backward-compatible, additive.
 
@@ -41,13 +41,13 @@ operand   := a positional operand index  (KISS-Classify canonical operand order)
 
 - **Input:** the concrete shapes (and, for `Param`, the param values) of the node's operands.
 - **Output:** a concrete shape / dimension.
-- **Axis resolution:** `last` resolves to `rank − 1`; a concrete axis `≥ rank` (or `last` on a rank-0 operand) is a typed decline. Axes are non-negative (KISS §6.19 convention; co-pinned with Fuel/Baracuda, replacing the earlier signed `−1`), with `last` a reserved sentinel — the single-axis analogue of the §6.19-0020 trailing-axis sentinel.
+- **Axis resolution:** `last` resolves to `rank − 1`; a concrete axis `≥ rank` (or `last` on a rank-0 operand) is a typed decline. Axes are non-negative (KISS §6.19 convention; co-pinned with Fuel/Baracuda, replacing the earlier signed `−1`), with `last` a reserved `u8` sentinel (`0xFF`) — a *distinct* single-axis sentinel chosen high in the spirit of the §6.19-0020 trailing-axis sentinel, **not** byte-identical to that `u16` axis-set mask `0xFFFE`.
 - **`÷` is floor division** (toward −∞); a `÷` by zero is a typed decline. A producer relying on exact division (e.g. an even head dim) owns that invariant.
 - **Symbolic extents → surfaced gap.** If an operand extent is symbolic / data-dependent, the expression resolves to a surfaced gap — never a decline, never a panic — and the gap propagates through arithmetic and through a whole-shape `SameAs`. A consumer surfaces it as an opaque-op / telemetry gap.
 
 ## Layer boundary — shapes vs. values
 
-`ShapeExpr`/`DimExpr` describe **shapes** only. A value a decomposition needs as an **operand** — e.g. a reduction divisor equal to an axis-extent product — is not a shape descriptor; it is a **scalar-source leaf** inside the op body (KISS-Ops §6.12: `extent(axis)`, and `reduced_count` = the product of extents over the `reduce_axes` set — this standard's Mean divisor, §6.12-0001). The two "extent" notions share the signed-axis convention: `DimExpr::Extent(op, axis)` is a single-axis **shape** parameter; the value-side `reduced_count` is the product of the reduced axes as a **runtime value**; a multi-axis product on the shape side is `Extent(op,a) × Extent(op,b)`. Keeping the boundary explicit stops a shape rule and an operand value from being confused across the seam.
+`ShapeExpr`/`DimExpr` describe **shapes** only. A value a decomposition needs as an **operand** — e.g. a reduction divisor equal to an axis-extent product — is not a shape descriptor; it is a **scalar-source leaf** inside the op body (KISS-Ops §6.12: `extent(axis)`, and `reduced_count` = the product of extents over the `reduce_axes` set — this standard's Mean divisor, §6.12-0001). The two "extent" notions share the (non-negative + `last`) axis convention: `DimExpr::Extent(op, axis)` is a single-axis **shape** parameter; the value-side `reduced_count` is the product of the reduced axes as a **runtime value**; a multi-axis product on the shape side is `Extent(op,a) × Extent(op,b)`. Keeping the boundary explicit stops a shape rule and an operand value from being confused across the seam. (Spelling: the standard owns `reduced_count`/`extent(axis)`; the Fuel/Baracuda co-design token `reduce_extent` **converges onto `reduced_count`** — Baracuda re-spells its emit, no permanent alias, per its cosignatory reply.)
 
 ## Serialization (§6.20-0005)
 
@@ -64,9 +64,10 @@ A shape expression serializes as a recursive, tag-prefixed, definite-length-pref
 | KISS-OPS-6.20-0005 | §6.19-canonical serialization; byte-deterministic | `test_shape_expr_serialization_golden` |
 | KISS-OPS-6.20-0006 | typed-decline reader; round-trip | `test_shape_expr_decode_declines` |
 | KISS-OPS-6.20-0007 | primitive-floor shape rules (elementwise `SameAs`, reduce drop/keepdim, DimExpr offsets) | `test_shape_expr_primitive_floor_rules` |
+| KISS-OPS-6.20-0008 | the output-shape ≠ operand class (gather out = index-woven; matmul out = role-derived) | `test_shape_expr_out_differs_from_operands` |
 | KISS-CONTRACT-6.4-0011 | Interface output shape MUST equal the op's shape rule; the shape-side oracle | `test_contract_output_shape_consistency` |
 
-The reference evaluator + serializer is `conformance/src/shape_expr.rs`; the golden/decline/behaviour vectors are `conformance/tests/shape_expr.rs`. All eight clauses are harness-backed (`tools/kiss_trace.py` reports them backed; `cargo test` green).
+The reference evaluator + serializer is `conformance/src/shape_expr.rs`; the golden/decline/behaviour vectors are `conformance/tests/shape_expr.rs`. All nine clauses are harness-backed (`tools/kiss_trace.py` reports them backed; `cargo test` green).
 
 ## Relationship to adjacent sections
 
@@ -83,10 +84,12 @@ Purely additive. No existing clause changes; no wire-format break to §6.4-0009 
 
 This RFC reframes Fuel's outreach draft `kiss-rfc-shape-rule-expression-vocabulary.md` (2026-07-18) and the parallel `baracuda-shape-expression-grammar-ask.md`. Those drafts attribute the field `OutputDesc.shape_rule` (with `same_as(role)` / `from_params(...)`) to KISS-Contract §5. **That field is a Fuel FKC field** (`fuel-dispatch/src/fkc/schema.rs:220`), already parsed and evaluated on Fuel's side (`eval_shape_rule`, `fuel-dispatch/src/fkc/return_check.rs:29`); KISS-Contract has no `OutputDesc` and no `shape_rule`, and its §5 is *Conventions*. The KISS-side gap is not "an unevaluated §5 string" but the **missing shape oracle** described above.
 
-**Fuel accepted the reframe** (reply, 2026-07-18), owning the error verbatim — *"I conflated the FKC seed with the diverged KISS-Contract standard"* — and confirming both that `OutputDesc.shape_rule` is FKC-side and that its evaluator already exists (so the original "no evaluator" claim was stale too). Fuel is correcting three of its docs (its RFC draft, the Baracuda ask, and `ROADMAP.md`) so the premise reads correctly; the **axis encoding** here is the non-negative-index + `last`-sentinel form Fuel and Baracuda co-pinned (replacing the earlier signed `−1`), consistent with KISS §6.19. On those corrections landing, this RFC files through umbrella §7.2 to the KISS-Ops and KISS-Contract editors-of-record with cosignatory comment. The vocabulary and the shape/value boundary carry over unchanged; only the KISS-side framing was corrected.
+**Fuel accepted the reframe** (reply, 2026-07-18), owning the error verbatim — *"I conflated the FKC seed with the diverged KISS-Contract standard"* — and confirming both that `OutputDesc.shape_rule` is FKC-side and that its evaluator already exists (so the original "no evaluator" claim was stale too). Fuel corrected three of its docs (its RFC draft, the Baracuda ask, and `ROADMAP.md`) so the premise reads correctly; the **axis encoding** here is the non-negative-index + `last`-sentinel form Fuel and Baracuda co-pinned (replacing the earlier signed `−1`), consistent with KISS §6.19.
 
-## Open questions
+**Baracuda gave cosignatory ACCEPT** (reply, 2026-07-19, umbrella §7.2) of §6.20 + §6.4-0011 as drafted, and closed the two reconciliations: (1) it **re-spells its emit token `reduce_extent` → `reduced_count`** (converging onto the standard's spelling, no permanent alias); (2) it accepts `0xFF` as the `last` sentinel (Baracuda emits functional text, not the byte, so is unconstrained), with the wording clarification folded in above that `0xFF` (`u8`) is a *distinct* field from the §6.19-0020 `0xFFFE` (`u16`) set-mask. Its scoping input — add a **gather** (out = index-woven) and a **contraction** (out = role-derived) case so the oracle demonstrably catches the output-shape ≠ operand class — is folded in as §6.20-0008. Both cosignatories (Fuel, Baracuda) have now accepted; this RFC is ready to file through umbrella §7.2 to the KISS-Ops and KISS-Contract editors-of-record. The vocabulary and the shape/value boundary carry over unchanged; only the KISS-side framing was corrected.
 
-1. Is `SameAs` + `DimExpr` sufficient, or does a real decomposition force `Reduce`/`WithDim` into the shared surface? (KISS read: sufficient; keep reserved.)
-2. Should the §6.4-0011 tie extend to a **full** primitive-floor shape-rule table (every op), or stay at the representative + irreducible-case coverage drafted here until a consumer needs more?
-3. Spelling reconciliation (deferred to a three-way pin at filing, with Baracuda): KISS's value-side divisor is `reduced_count` over `reduce_axes` (§6.12-0001); Fuel/Baracuda froze the token `reduce_extent` this week. They are 1:1; the RFC's inclination is to converge onto the standard's `reduced_count`/`extent(axis)` with `reduce_extent` as the Fuel/Baracuda alias, but Baracuda must be in the loop. (The axis *encoding* — non-negative index + `last` — is already reconciled across all three and consistent with §6.19.)
+## Questions — all resolved
+
+1. **`SameAs` + `DimExpr` sufficient?** Resolved — yes; keep `Reduce`/`WithDim`/`Dims` reserved. Both Fuel and Baracuda confirmed no decomposition forces them into the shared surface.
+2. **Coverage of the §6.4-0011 tie.** Resolved — representative + irreducible coverage, **plus** a gather and a contraction case (the output-shape ≠ operand class), per Baracuda's cosignatory input. Realized as §6.20-0007 + §6.20-0008. A full per-op table can grow additively later if a consumer needs it.
+3. **Spelling reconciliation.** Resolved — converge onto the standard's `reduced_count`/`extent(axis)`; Baracuda re-spells its `reduce_extent` emit token, no permanent alias. (The axis *encoding* — non-negative index + `last` — was already reconciled across all three and is consistent with §6.19.) A residual `last`-byte pin (`0xFF`) matters only KISS↔Fuel, both blob-minters; Baracuda emits text and is unconstrained.

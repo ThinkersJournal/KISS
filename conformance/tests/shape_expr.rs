@@ -201,3 +201,31 @@ fn test_contract_output_shape_consistency() {
     // surfaced gap, so a consumer cannot assert a mismatch it cannot compute.
     assert!(shape_consistent(&[8], &ShapeValue::Gap));
 }
+
+// ---- §6.20-0008 the output-shape ≠ operand-shape class (gather, contraction) --
+
+#[test]
+fn test_shape_expr_out_differs_from_operands() {
+    // KISS-OPS-6.20-0008: the class the shape oracle most exists to catch — the
+    // output shape equals NO operand's shape, so a `same_as(operand)` claim is a
+    // real bug (the u32-gather-declaring-same_as(data) class).
+
+    // gather / index_select / embedding: out = data shape with the gathered axis
+    // replaced by the index shape. data [8,4096], axis 0, 1-D index [16] -> [16,4096].
+    let g = gather_shape(&[8, 4096], &[16], 0);
+    assert_eq!(g, vec![16, 4096]);
+    // embedding: table [1000,64], axis 0, 2-D index [2,5] -> [2,5,64].
+    assert_eq!(gather_shape(&[1000, 64], &[2, 5], 0), vec![2, 5, 64]);
+    // The bug: advertising same_as(data) when the output differs from data — the
+    // oracle rejects it (same_as(data) = [8,4096] ≠ the gather output [16,4096]).
+    assert!(!shape_consistent(&[8, 4096], &ShapeValue::Concrete(g)));
+
+    // matmul (contraction): role-vector-derived shape. lhs [8,4096]·rhs [4096,1024]
+    // -> [8,1024]; batched [4,8,16]·[4,16,32] -> [4,8,32].
+    let m = matmul_shape(&[8, 4096], &[4096, 1024]);
+    assert_eq!(m, vec![8, 1024]);
+    assert_eq!(matmul_shape(&[4, 8, 16], &[4, 16, 32]), vec![4, 8, 32]);
+    // The output equals neither operand -> a same_as claim on either is caught.
+    assert!(!shape_consistent(&[8, 4096], &ShapeValue::Concrete(m.clone())));
+    assert!(!shape_consistent(&[4096, 1024], &ShapeValue::Concrete(m)));
+}
