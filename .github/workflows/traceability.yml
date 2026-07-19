@@ -33,6 +33,8 @@ jobs:
         run: python tools/kiss_tables.py
       - name: Spec<->binding enumeration consistency (op-family set)
         run: python tools/kiss_vocab.py
+      - name: KISS-Ops within-document op-set consistency
+        run: python tools/kiss_ops.py
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,

@@ -528,7 +528,7 @@ KISS-OPS-6.0-0005	test_ops_determinism_class_precedence	untested
 KISS-OPS-6.1-0001	test_ops_op_set_closed	untested	
 KISS-OPS-6.1-0002	test_ops_op_token_spelling	untested	
 KISS-OPS-6.1-0003	test_ops_op_family_tags	untested	
-KISS-OPS-6.1-0004	test_ops_primitive_flags	untested	
+KISS-OPS-6.1-0004	test_ops_primitive_flags	lint:kiss_ops	the primitive/non-primitive membership partition drifts between §2.7, §6.3 and §6.13
 KISS-OPS-6.10-0001	test_ops_bitwise_integer_only	untested	
 KISS-OPS-6.11-0001	test_ops_element_map_base_access	untested	
 KISS-OPS-6.11-0003	test_ops_prefix_scan_length_preserving	untested	
@@ -565,7 +565,7 @@ KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
-KISS-OPS-6.18-0001	test_ops_complex_op_set	untested	
+KISS-OPS-6.18-0001	test_ops_complex_op_set	lint:kiss_ops	the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables
 KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	untested	
 KISS-OPS-6.18-0003	test_ops_complex_component_bridge	untested	
 KISS-OPS-6.18-0005	test_ops_cmul_annexg	untested	
@@ -578,7 +578,7 @@ KISS-OPS-6.18-0012	test_ops_cpow_principal	untested
 KISS-OPS-6.18-0013	test_ops_complex_nan_inf_annexg	untested	
 KISS-OPS-6.18-0014	test_ops_complex_determinism_class	untested	
 KISS-OPS-6.18-0015	test_ops_complex_component_dtype	untested	
-KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	untested	
+KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	lint:kiss_ops	the advertised-vs-bridge complex split drifts between §6.18-0016 and the §6.18 tables
 KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	
 KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs	untested	
 KISS-OPS-6.19-0003	test_ops_opattrs_carrier_set_closed	untested	
@@ -611,7 +611,7 @@ KISS-OPS-6.2-0006	test_ops_bool_normalization	untested
 KISS-OPS-6.2-0007	test_ops_u32_ordinary_dtype	untested	
 KISS-OPS-6.2-0008	test_ops_const_bits_roundtrip	untested	
 KISS-OPS-6.2-0009	test_ops_nonprimitive_semantics_from_decomposition	untested	
-KISS-OPS-6.3-0001	test_ops_primitive_floor_set	untested	
+KISS-OPS-6.3-0001	test_ops_primitive_floor_set	lint:kiss_ops	the primitive-floor op set drifts between the §6.3-0001 clause and the §2.7 table
 KISS-OPS-6.3-0002	test_ops_floor_is_mandatory_core	untested	
 KISS-OPS-6.3-0003	test_ops_floor_ops_have_no_decomposition	untested	
 KISS-OPS-6.3-0004	test_ops_decomposition_terminates_at_floor	untested	
