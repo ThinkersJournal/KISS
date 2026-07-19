@@ -29,6 +29,7 @@ pub struct Cell {
     pub provenance: String,
     pub tags: Vec<String>,
     pub has_certificate: bool,
+    pub certificate_precision_bits: Option<u64>,
 }
 
 fn class_from_str(s: &str) -> Result<DeterminismClass, String> {
@@ -89,6 +90,9 @@ fn load_cell(v: &Json) -> Result<Cell, String> {
         provenance,
         tags,
         has_certificate: v.get("certificate").is_some(),
+        certificate_precision_bits: v.get("certificate")
+            .and_then(|c| c.get("stabilized_precision_bits"))
+            .and_then(|n| n.as_u64()),
     })
 }
 
