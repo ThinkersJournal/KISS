@@ -16,20 +16,21 @@ fn test_shape_expr_serialization_golden() {
     // SameAs(operand=0): tag 0x01, operand 0x00.
     assert_golden("KISS-OPS-6.20-0005", "same_as_0",
         &ShapeExpr::SameAs { operand: 0 }.encode(), "01 00");
-    // Extent(operand=0, axis=-1): tag 0x02, operand 0x00, axis 0xFF (i8 -1).
+    // Extent(operand=0, axis=last): tag 0x02, operand 0x00, axis 0xFF (the `last`
+    // sentinel; concrete axes are 0..MAX_RANK-1, so 0xFF is unambiguously last).
     assert_golden("KISS-OPS-6.20-0005", "extent_0_last",
-        &Dim::Extent { operand: 0, axis: -1 }.encode(), "02 00 FF");
+        &Dim::Extent { operand: 0, axis: LAST }.encode(), "02 00 FF");
     // Const(2): tag 0x03, i64 LE.
     assert_golden("KISS-OPS-6.20-0005", "const_2",
         &Dim::Const(2).encode(), "03 02 00 00 00 00 00 00 00");
     // Param(field=0): tag 0x04, field 0x00.
     assert_golden("KISS-OPS-6.20-0005", "param_0",
         &Dim::Param(0).encode(), "04 00");
-    // Div(Extent(0,-1), Const(2)) — the rope-half dim: tag 0x08, then each child
+    // Div(Extent(0,last), Const(2)) — the rope-half dim: tag 0x08, then each child
     // as u16-LE byte-length + child blob. child1 = 02 00 FF (len 3), child2 =
     // 03 02.. (len 9).
     let half = Dim::Div(
-        Box::new(Dim::Extent { operand: 0, axis: -1 }),
+        Box::new(Dim::Extent { operand: 0, axis: LAST }),
         Box::new(Dim::Const(2)),
     );
     assert_golden("KISS-OPS-6.20-0005", "rope_half_div",
@@ -70,21 +71,23 @@ fn test_shape_expr_vocabulary_eval() {
 
 #[test]
 fn test_shape_expr_axis_and_floordiv() {
-    // KISS-OPS-6.20-0003: negative-axis resolution, out-of-range decline, floor
-    // division, and divide-by-zero decline.
+    // KISS-OPS-6.20-0003: `last`-sentinel resolution, concrete axis, out-of-range
+    // decline, floor division, and divide-by-zero decline. Axes are non-negative
+    // (KISS §6.19 convention) with `last` a reserved sentinel — no signed axis.
     let ops = vec![vec![2i64, 3, 5]]; // rank 3
 
-    // Negative axis resolves against rank: -1 -> last (5), -3 -> first (2).
-    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: -1 }, &ops, &[]).unwrap(),
+    // `last` resolves to rank-1 (the trailing axis, 5); a concrete axis indexes
+    // directly (axis 0 -> 2, axis 2 -> 5).
+    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: LAST }, &ops, &[]).unwrap(),
                DimValue::Concrete(5));
-    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: -3 }, &ops, &[]).unwrap(),
+    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: 0 }, &ops, &[]).unwrap(),
                DimValue::Concrete(2));
+    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: 2 }, &ops, &[]).unwrap(),
+               DimValue::Concrete(5));
 
-    // An axis outside [-rank, rank) is a typed decline (not a resolved value).
+    // A concrete axis >= rank is a typed decline (not a resolved value).
     assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: 3 }, &ops, &[]),
                Err(ShapeExprError::AxisOutOfRange { axis: 3, rank: 3 }));
-    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: -4 }, &ops, &[]),
-               Err(ShapeExprError::AxisOutOfRange { axis: -4, rank: 3 }));
 
     // ÷ is floor division (rounds toward −∞), including for negatives.
     let fd = |a: i64, b: i64| {
@@ -103,10 +106,10 @@ fn test_shape_expr_symbolic_gap() {
     // over it resolves to a surfaced Gap — never a typed decline, never a panic.
     // KISS-OPS-6.20-0004.
     let ops = vec![vec![4i64, SYMBOLIC]]; // last axis is data-dependent
-    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: -1 }, &ops, &[]).unwrap(),
+    assert_eq!(eval_dim(&Dim::Extent { operand: 0, axis: LAST }, &ops, &[]).unwrap(),
                DimValue::Gap);
     // Arithmetic that touches a Gap is a Gap (propagates, does not crash).
-    let half = Dim::Div(Box::new(Dim::Extent { operand: 0, axis: -1 }), Box::new(Dim::Const(2)));
+    let half = Dim::Div(Box::new(Dim::Extent { operand: 0, axis: LAST }), Box::new(Dim::Const(2)));
     assert_eq!(eval_dim(&half, &ops, &[]).unwrap(), DimValue::Gap);
     // A whole-shape SameAs over a partially-symbolic operand surfaces a Gap.
     assert_eq!(eval_shape(&ShapeExpr::SameAs { operand: 0 }, &ops, &[]).unwrap(),
@@ -122,7 +125,7 @@ fn test_shape_expr_symbolic_gap() {
 fn test_shape_expr_decode_declines() {
     // Round-trip: a well-formed blob decodes back to its AST (KISS-OPS-6.20-0005).
     let half = Dim::Div(
-        Box::new(Dim::Extent { operand: 0, axis: -1 }),
+        Box::new(Dim::Extent { operand: 0, axis: LAST }),
         Box::new(Dim::Const(2)),
     );
     assert_eq!(decode_dim(&half.encode()).unwrap(), half);
@@ -153,8 +156,8 @@ fn test_shape_expr_primitive_floor_rules() {
     assert_eq!(reduce_shape(&[2, 3, 5], &[0, 2], false), vec![3]);       // multi-axis
 
     // The irreducible slice/iota offset case rides a DimExpr: rope half of the
-    // last axis is Extent(x,−1) ÷ 2.
-    let half = Dim::Div(Box::new(Dim::Extent { operand: 0, axis: -1 }), Box::new(Dim::Const(2)));
+    // last axis is Extent(x, last) ÷ 2.
+    let half = Dim::Div(Box::new(Dim::Extent { operand: 0, axis: LAST }), Box::new(Dim::Const(2)));
     assert_eq!(eval_dim(&half, &[vec![4, 8]], &[]).unwrap(), DimValue::Concrete(4));
 }
 

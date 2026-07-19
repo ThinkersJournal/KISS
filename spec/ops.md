@@ -1959,19 +1959,21 @@ the shared surface is two constructors.
   **positional** operand index in KISS-Classify canonical operand order — an op_dag
   interior node carries no operand-role tuple (KISS-CONTRACT §6.4-0009), so a role
   name is a KISS-Grammar/Contract surface alias defined by the position mapping,
-  never a second wire form. An `axis` MUST be a signed integer with `−1` denoting the
-  last axis. An implementation MUST NOT introduce a constructor outside this
+  never a second wire form. An `axis` MUST be a **non-negative** operand-axis index
+  or the reserved **`last`** sentinel denoting the trailing axis — the KISS axis
+  convention is non-negative (§6.19-0007, §6.13-0008); a signed/negative axis MUST
+  NOT appear. An implementation MUST NOT introduce a constructor outside this
   vocabulary; `Reduce(operand, axis, keepdim)`, `WithDim(operand, axis, DimExpr)`, and
   `Dims([DimExpr, …])` are **reserved** and MUST NOT be emitted by a producer at this
   vocabulary version (they enter through the extension registry, umbrella §6.4).
   *Test:* `test_shape_expr_vocabulary_eval`.
-- **KISS-OPS-6.20-0003** — The shape-expression evaluator MUST resolve a negative
-  `axis` as `rank + axis` against the referenced operand's rank, and MUST reject an
-  `axis` outside `[−rank, rank)` with a typed decline; `÷` MUST be **floor division**
-  (quotient toward −∞), and a `÷` by zero MUST be a typed decline. An implementation
-  MUST NOT round `÷` toward zero, and MUST NOT panic on a malformed axis or a zero
-  divisor (a producer relying on exact division, e.g. an even head dim, owns that
-  invariant). *Test:* `test_shape_expr_axis_and_floordiv`.
+- **KISS-OPS-6.20-0003** — The shape-expression evaluator MUST resolve the `last`
+  sentinel to `rank − 1` against the referenced operand's rank, and MUST reject a
+  concrete `axis >= rank` (and `last` on a rank-0 operand) with a typed decline; `÷`
+  MUST be **floor division** (quotient toward −∞), and a `÷` by zero MUST be a typed
+  decline. An implementation MUST NOT round `÷` toward zero, and MUST NOT panic on an
+  out-of-range axis or a zero divisor (a producer relying on exact division, e.g. an
+  even head dim, owns that invariant). *Test:* `test_shape_expr_axis_and_floordiv`.
 - **KISS-OPS-6.20-0004** — When a referenced operand extent is **symbolic /
   data-dependent** (not a concrete integer at evaluation time), the evaluator MUST
   resolve the expression to a **surfaced gap** — never a typed decline and never a
@@ -1983,8 +1985,10 @@ the shared surface is two constructors.
   form: a one-byte **tag** (`0` reserved per §6.19-0006; `SameAs=0x01`, `Extent=0x02`,
   `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`; the
   reserved `Reduce=0x09` / `WithDim=0x0A` / `Dims=0x0B`), fixed-width little-endian
-  fields (`operand` and `field` as `u8`, `axis` as `i8`, `Const` as `i64` LE,
-  §6.19-0007), and each child expression **definite-length-prefixed** with a `u16` LE
+  fields (`operand` and `field` as `u8`, `axis` as a non-negative `u8` with `0xFF`
+  reserved as the `last` sentinel above the `0..MAX_RANK-1` concrete range — the
+  single-axis analogue of the §6.19-0020 trailing-axis sentinel, `Const` as `i64`
+  LE, §6.19-0007), and each child expression **definite-length-prefixed** with a `u16` LE
   byte length (§6.19-0010). The encoding MUST be byte-deterministic so a shape-bearing
   blob is hashable and byte-comparable under the shared canonicalization; an encoder
   MUST NOT place a name on the wire and MUST NOT emit a tag outside this set. *Test:*

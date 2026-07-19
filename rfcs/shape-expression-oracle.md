@@ -1,6 +1,6 @@
 # KISS RFC — a shape-expression vocabulary as the shape-side oracle
 
-**RFC:** (number to be assigned on filing to ThinkersJournal) · **Status:** Draft — **held, propose-first** (pending the premise correction in §9) · **Date:** 2026-07-18
+**RFC:** (number to be assigned on filing to ThinkersJournal) · **Status:** Draft — **ready to file** once Fuel's doc corrections land (Fuel accepted the reframe 2026-07-18; see §9) · **Date:** 2026-07-18 (updated 2026-07-19)
 **Affects:** KISS-Ops §6 (new §6.20) and KISS-Contract §6.4 (new §6.4-0011 tie to §6.5 Interface). Complements §6.4-0006 (value oracle), §6.4-0009 (op_dag node schema), §6.12 (scalar-source leaves), §6.19 (canonical OpAttrs serialization).
 **Category:** Standards-track, backward-compatible, additive.
 
@@ -30,7 +30,7 @@ DimExpr   := Extent(operand, axis)                // the size of the operand's a
            | Param(field)                          // a value from the op's declared params
            | DimExpr BinOp DimExpr                  // BinOp ∈ {+, −, ×, ÷}; ÷ is floor division
 
-axis      := signed integer  (−1 = last; resolved against the operand's rank at eval)
+axis      := non-negative index | last   (last resolves to rank−1 at eval; KISS §6.19 axis convention)
 operand   := a positional operand index  (KISS-Classify canonical operand order)
 ```
 
@@ -41,7 +41,7 @@ operand   := a positional operand index  (KISS-Classify canonical operand order)
 
 - **Input:** the concrete shapes (and, for `Param`, the param values) of the node's operands.
 - **Output:** a concrete shape / dimension.
-- **Axis resolution:** a negative axis is `rank + axis`; an axis outside `[−rank, rank)` is a typed decline.
+- **Axis resolution:** `last` resolves to `rank − 1`; a concrete axis `≥ rank` (or `last` on a rank-0 operand) is a typed decline. Axes are non-negative (KISS §6.19 convention; co-pinned with Fuel/Baracuda, replacing the earlier signed `−1`), with `last` a reserved sentinel — the single-axis analogue of the §6.19-0020 trailing-axis sentinel.
 - **`÷` is floor division** (toward −∞); a `÷` by zero is a typed decline. A producer relying on exact division (e.g. an even head dim) owns that invariant.
 - **Symbolic extents → surfaced gap.** If an operand extent is symbolic / data-dependent, the expression resolves to a surfaced gap — never a decline, never a panic — and the gap propagates through arithmetic and through a whole-shape `SameAs`. A consumer surfaces it as an opaque-op / telemetry gap.
 
@@ -81,10 +81,12 @@ Purely additive. No existing clause changes; no wire-format break to §6.4-0009 
 
 ## Provenance and the corrected premise (§9)
 
-This RFC reframes Fuel's outreach draft `kiss-rfc-shape-rule-expression-vocabulary.md` (2026-07-18) and the parallel `baracuda-shape-expression-grammar-ask.md`. Those drafts attribute the field `OutputDesc.shape_rule` (with `same_as(role)` / `from_params(...)`) to KISS-Contract §5. **That field is a Fuel FKC field** (`fuel-dispatch/src/fkc/schema.rs`), already parsed and evaluated on Fuel's side; KISS-Contract has no `OutputDesc` and no `shape_rule`, and its §5 is *Conventions*. The KISS-side gap is not "an unevaluated §5 string" but the **missing shape oracle** described above. This RFC is therefore **held** (propose-first) until that premise is corrected in the Fuel drafts (see `../Fuel/docs/outreach/kiss-shape-expression-rfc-reply.md`); on correction it routes through umbrella §7.2 to the KISS-Ops and KISS-Contract editors-of-record with cosignatory comment. The vocabulary and the shape/value boundary carry over unchanged; only the KISS-side framing is corrected.
+This RFC reframes Fuel's outreach draft `kiss-rfc-shape-rule-expression-vocabulary.md` (2026-07-18) and the parallel `baracuda-shape-expression-grammar-ask.md`. Those drafts attribute the field `OutputDesc.shape_rule` (with `same_as(role)` / `from_params(...)`) to KISS-Contract §5. **That field is a Fuel FKC field** (`fuel-dispatch/src/fkc/schema.rs:220`), already parsed and evaluated on Fuel's side (`eval_shape_rule`, `fuel-dispatch/src/fkc/return_check.rs:29`); KISS-Contract has no `OutputDesc` and no `shape_rule`, and its §5 is *Conventions*. The KISS-side gap is not "an unevaluated §5 string" but the **missing shape oracle** described above.
+
+**Fuel accepted the reframe** (reply, 2026-07-18), owning the error verbatim — *"I conflated the FKC seed with the diverged KISS-Contract standard"* — and confirming both that `OutputDesc.shape_rule` is FKC-side and that its evaluator already exists (so the original "no evaluator" claim was stale too). Fuel is correcting three of its docs (its RFC draft, the Baracuda ask, and `ROADMAP.md`) so the premise reads correctly; the **axis encoding** here is the non-negative-index + `last`-sentinel form Fuel and Baracuda co-pinned (replacing the earlier signed `−1`), consistent with KISS §6.19. On those corrections landing, this RFC files through umbrella §7.2 to the KISS-Ops and KISS-Contract editors-of-record with cosignatory comment. The vocabulary and the shape/value boundary carry over unchanged; only the KISS-side framing was corrected.
 
 ## Open questions
 
 1. Is `SameAs` + `DimExpr` sufficient, or does a real decomposition force `Reduce`/`WithDim` into the shared surface? (KISS read: sufficient; keep reserved.)
 2. Should the §6.4-0011 tie extend to a **full** primitive-floor shape-rule table (every op), or stay at the representative + irreducible-case coverage drafted here until a consumer needs more?
-3. Spelling reconciliation: pin `DimExpr::Extent` and the §6.12 `reduced_count`/`reduce_axes` anchor to one signed-axis convention in the text, so "shared axis convention" is literally one anchor.
+3. Spelling reconciliation (deferred to a three-way pin at filing, with Baracuda): KISS's value-side divisor is `reduced_count` over `reduce_axes` (§6.12-0001); Fuel/Baracuda froze the token `reduce_extent` this week. They are 1:1; the RFC's inclination is to converge onto the standard's `reduced_count`/`extent(axis)` with `reduce_extent` as the Fuel/Baracuda alias, but Baracuda must be in the loop. (The axis *encoding* — non-negative index + `last` — is already reconciled across all three and consistent with §6.19.)

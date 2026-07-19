@@ -11,8 +11,11 @@
 //!
 //! Operand references are **positional** (KISS-Classify canonical operand order),
 //! because an op_dag interior node carries no operand-role tuple (Contract
-//! §6.4-0009). `axis` is a signed `i8` (−1 = last), resolved against the operand's
-//! rank at evaluation time. `÷` is floor division.
+//! §6.4-0009). `axis` is a **non-negative** operand-axis index or the reserved
+//! `last` sentinel ([`LAST`]) — the KISS §6.19 axis convention is non-negative
+//! (§6.19-0007 `u8`; §6.13-0008 `norm_axis`), so a signed axis never appears on the
+//! wire; `last` is resolved against the operand's rank at evaluation time. `÷` is
+//! floor division.
 //!
 //! `Reduce` / `WithDim` / `Dims` are **reserved** (tags allocated, never emitted by
 //! a core encoder, rejected by a reader) pending extension-registry promotion
@@ -42,13 +45,19 @@ pub const TAG_DIMS: u8 = 0x0B; // reserved
 /// decline, never a panic (§6.20-0004).
 pub const SYMBOLIC: i64 = i64::MIN;
 
+/// The reserved `axis` sentinel denoting the **last (trailing)** axis, resolved to
+/// `rank − 1` at evaluation time (§6.20-0002/-0003). Concrete axes are
+/// `0..MAX_RANK-1` (MAX_RANK = 8), so `0xFF` is unambiguously the sentinel — the
+/// single-axis analogue of the §6.19-0020 `reduce_axes` trailing-axis sentinel.
+pub const LAST: u8 = 0xFF;
+
 // ---- AST ---------------------------------------------------------------------
 
 /// A single-dimension expression (`DimExpr`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Dim {
-    /// The size of `operand`'s `axis` (signed; −1 = last).
-    Extent { operand: u8, axis: i8 },
+    /// The size of `operand`'s `axis` (non-negative index, or [`LAST`] = trailing).
+    Extent { operand: u8, axis: u8 },
     /// A pinned integer constant.
     Const(i64),
     /// The value of the op's `field`-th declared param.
@@ -98,8 +107,8 @@ pub enum ShapeExprError {
     TruncatedBlob { need: usize, got: usize },
     /// Bytes remained after a complete expression was decoded.
     TrailingBytes { extra: usize },
-    /// An axis fell outside `[−rank, rank)` for the operand it indexes (§6.20-0003).
-    AxisOutOfRange { axis: i8, rank: usize },
+    /// A concrete axis was `>= rank` (or `last` on a rank-0 operand), §6.20-0003.
+    AxisOutOfRange { axis: u8, rank: usize },
     /// An operand index named no operand.
     OperandOutOfRange { operand: u8, operands: usize },
     /// A param index named no declared param.
@@ -123,7 +132,7 @@ impl Dim {
     /// The canonical wire bytes for this dim expression (§6.20-0005).
     pub fn encode(&self) -> Vec<u8> {
         match self {
-            Dim::Extent { operand, axis } => vec![TAG_EXTENT, *operand, *axis as u8],
+            Dim::Extent { operand, axis } => vec![TAG_EXTENT, *operand, *axis],
             Dim::Const(c) => {
                 let mut v = vec![TAG_CONST];
                 v.extend_from_slice(&c.to_le_bytes());
@@ -168,7 +177,7 @@ fn decode_dim_at(blob: &[u8], pos: usize) -> Result<(Dim, usize), ShapeExprError
         0x00 => Err(ShapeExprError::ZeroTag),
         TAG_EXTENT => {
             need(blob, pos, 3)?;
-            Ok((Dim::Extent { operand: blob[pos + 1], axis: blob[pos + 2] as i8 }, pos + 3))
+            Ok((Dim::Extent { operand: blob[pos + 1], axis: blob[pos + 2] }, pos + 3))
         }
         TAG_CONST => {
             need(blob, pos, 9)?;
@@ -222,15 +231,18 @@ fn need(blob: &[u8], pos: usize, n: usize) -> Result<(), ShapeExprError> {
 
 // ---- evaluation (§6.20-0002/0003/0004) ---------------------------------------
 
-/// Resolve a signed axis against `rank` (§6.20-0003): negative is `rank + axis`;
-/// an axis outside `[−rank, rank)` is a typed decline.
-fn resolve_axis(axis: i8, rank: usize) -> Result<usize, ShapeExprError> {
-    let (a, r) = (axis as i64, rank as i64);
-    let resolved = if a < 0 { a + r } else { a };
-    if resolved < 0 || resolved >= r {
+/// Resolve a non-negative `axis` (or the [`LAST`] sentinel) against `rank`
+/// (§6.20-0003): `last` is `rank − 1`; a concrete axis `>= rank`, or `last` on a
+/// rank-0 operand, is a typed decline.
+fn resolve_axis(axis: u8, rank: usize) -> Result<usize, ShapeExprError> {
+    if axis == LAST {
+        return rank.checked_sub(1).ok_or(ShapeExprError::AxisOutOfRange { axis, rank });
+    }
+    let a = axis as usize;
+    if a >= rank {
         return Err(ShapeExprError::AxisOutOfRange { axis, rank });
     }
-    Ok(resolved as usize)
+    Ok(a)
 }
 
 /// Floor division (rounds the quotient toward −∞), unlike Rust's truncating `/`.
