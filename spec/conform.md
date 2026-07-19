@@ -664,6 +664,32 @@ enum (§6.0). See umbrella §3 for the full statement.
   compute-dtype precision as the implementation under test) MUST NOT be admitted, because it
   measures the oracle's error rather than the implementation's and yields false passes. *Test:*
   `test_conform_oracle_tighter_than_declared_ulp`.
+- **KISS-CONFORM-6.5-0008** — The **frozen oracle-vector set MUST cover every op carrying an
+  oracle-differential obligation** (§6.5-0001) in the enumerated op-set version the suite bundles,
+  and for **every transcendental atom** (KISS-OPS §6.8) the covering vectors MUST include the
+  **load-bearing edges** the §6 op-semantics tables pin — the §6.15 non-mergeable distinctions,
+  signed zero, NaN propagation, and each atom's declared domain boundaries and overflow arguments —
+  each minted per §6.5-0007; a bundled oracle-vector set that omits an obligated op, or that covers
+  a transcendental atom only at ordinary interior points while skipping its pinned edges, MUST be
+  rejected. This is the oracle-modality analogue of the golden-byte-vector coverage bijection
+  (§6.4-0003): once the oracle is a minting instrument rather than a live service (§6.5-0007
+  requires a precision wider than the compute dtype), the frozen oracle vectors are the **sole tight
+  evidence** for the ULP-class atoms, so a partial set silently leaves those atoms in the
+  widened-band regime with no tight check anywhere. *Test:*
+  `test_conform_oracle_vector_coverage_complete`.
+- **KISS-CONFORM-6.5-0009** — Each frozen oracle vector MUST **store its oracle-computed expected
+  value inline** (a pinned `input → expected output → declared tolerance`), so the corpus is
+  verifiable **offline without re-running the oracle**; a vector that carries only an input and
+  defers its expected value to a live oracle invocation MUST be rejected, because the §6.5-0007
+  oracle — evaluating wider than the compute dtype, which at the widest supported compute dtype is
+  not a native machine float — is a minting instrument, not a hot-path service a consumer or foreign
+  reader can call. For a **transcendental atom** the stored value MUST be the §6.5-0007
+  wide-precision reference, and at the **widest supported floating compute dtype**, where no wider
+  native float exists, it MUST be produced with an **extended- or arbitrary-precision facility** (a
+  correctly-rounded or not-less-than-double-mantissa reference) and rounded once to the compute
+  dtype; a stored transcendental reference computed at that dtype's own native precision MUST be
+  rejected under §6.5-0007. KISS-Conform MUST NOT mandate a specific such facility. *Test:*
+  `test_conform_oracle_vector_stores_wide_precision_value`.
 
 ### 6.6 Modality 3 — the IR-DAG fuzzer emitting to every backend
 
@@ -1195,6 +1221,8 @@ the traceability lint.
 | KISS-CONFORM-6.5-0005 | `test_conform_oracle_authoring_independence` |
 | KISS-CONFORM-6.5-0006 | `test_conform_boundary_decision_compute_dtype` |
 | KISS-CONFORM-6.5-0007 | `test_conform_oracle_tighter_than_declared_ulp` |
+| KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
+| KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
 | KISS-CONFORM-6.6-0003 | `test_conform_fuzzer_cross_backend_agreement` |
