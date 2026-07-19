@@ -843,6 +843,18 @@ without renumbering existing ones.
   distinct typed **unresolved/deferred** outcome, neither a decline nor an accept. An
   implementation MUST NOT conflate an unavailable decomposition with a genuinely
   non-resolvable op. *Test:* `test_contract_semantics_resolution_outcomes`.
+- **KISS-CONTRACT-6.4-0011** — The Interface (§6.5) declared output shape — its `rank`
+  and per-output extents — MUST equal the Semantics op's KISS-Ops **shape rule** (KISS-OPS
+  §6.20) evaluated over the operand shapes; a contract whose declared output shape
+  disagrees with its op's shape rule MUST be a **typed decline** (§6.2-0005). This is the
+  **shape-side companion** to the §6.4-0006 value oracle: §6.4-0006 makes the fully-lowered
+  primitive form the oracle for the kernel's *values*, and this clause makes the op's shape
+  rule the oracle for the kernel's *output shape* — closing the return-contract shape check
+  that had no evaluator before. Where the shape rule resolves to a **surfaced gap** (a
+  symbolic / data-dependent output, KISS-OPS §6.20-0004), a consumer MUST NOT treat the gap
+  as an inconsistency. An implementation MUST NOT accept a contract whose Interface output
+  shape is inconsistent with its Semantics op's shape rule. *Test:*
+  `test_contract_output_shape_consistency`.
 
 ### 6.5 Interface section (ABI)
 
@@ -1428,6 +1440,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.4-0008 | `test_contract_region_maps_to_semantics` |
 | KISS-CONTRACT-6.4-0009 | `test_contract_op_dag_node_schema` |
 | KISS-CONTRACT-6.4-0010 | `test_contract_semantics_resolution_outcomes` |
+| KISS-CONTRACT-6.4-0011 | `test_contract_output_shape_consistency` |
 | KISS-CONTRACT-6.5-0001 | `test_contract_interface_field_schema` |
 | KISS-CONTRACT-6.5-0002 | `test_contract_positional_signature_complete` |
 | KISS-CONTRACT-6.5-0003 | `test_contract_interface_references_identity_target` |

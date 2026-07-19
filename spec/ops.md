@@ -1929,6 +1929,82 @@ promoted to this normative OpAttrs encoding for that channel only.
   `reduce_axes=0x0000` on any carrier OpAttrs blob as malformed. *Test:*
   `test_ops_opattrs_reduce_axes_zero_unreachable`.
 
+### 6.20 Op shape rules — the shape-side oracle
+
+Every op's output shape is a function of its operands' shapes together with its
+OpAttrs (§6.19) and declared params. §6.13 pins each op's **value** behaviour (the
+reference decomposition, whose fully-lowered form is the KISS-Contract §6.4-0006
+value oracle); this subsection pins the **shape** behaviour as its companion, in a
+small closed vocabulary that is evaluable against concrete operand shapes and
+serializable under the §6.19 canonical discipline. Most ops derive their output
+shape from their operands directly (elementwise, `matmul`, `concat`, axis-based
+`reduce` with `keepdim`, `transpose`, `unsqueeze`, `cast`) and carry no shape attr;
+the only *irreducible* free cases are a **broadcast target** (another operand's
+whole shape) and a **slice/iota offset** (arithmetic on an operand's extent), so
+the shared surface is two constructors.
+
+- **KISS-OPS-6.20-0001** — Every op MUST have a **shape rule**: a function from the
+  concrete shapes of its operands (in KISS-Classify canonical operand order, §6.5)
+  together with its OpAttrs (§6.19) and declared params to the concrete shape of its
+  output(s). The shape rule is the **shape-side companion to the KISS-Contract
+  §6.4-0006 value oracle** — the value oracle pins what a kernel computes, the shape
+  rule pins the shape that computation produces. An implementation MUST NOT leave an
+  op's output shape underivable from its operand shapes plus attrs, and MUST NOT
+  declare an output shape that disagrees with its op's shape rule. *Test:*
+  `test_shape_rule_exists_and_matches`.
+- **KISS-OPS-6.20-0002** — A shape rule MUST be expressed in the closed
+  **shape-expression vocabulary** `ShapeExpr := SameAs(operand)` (the operand's whole
+  shape) and `DimExpr := Extent(operand, axis) | Const(i64) | Param(field) | DimExpr
+  BinOp DimExpr` with `BinOp ∈ {+, −, ×, ÷}`. An `operand` reference MUST be a
+  **positional** operand index in KISS-Classify canonical operand order — an op_dag
+  interior node carries no operand-role tuple (KISS-CONTRACT §6.4-0009), so a role
+  name is a KISS-Grammar/Contract surface alias defined by the position mapping,
+  never a second wire form. An `axis` MUST be a signed integer with `−1` denoting the
+  last axis. An implementation MUST NOT introduce a constructor outside this
+  vocabulary; `Reduce(operand, axis, keepdim)`, `WithDim(operand, axis, DimExpr)`, and
+  `Dims([DimExpr, …])` are **reserved** and MUST NOT be emitted by a producer at this
+  vocabulary version (they enter through the extension registry, umbrella §6.4).
+  *Test:* `test_shape_expr_vocabulary_eval`.
+- **KISS-OPS-6.20-0003** — The shape-expression evaluator MUST resolve a negative
+  `axis` as `rank + axis` against the referenced operand's rank, and MUST reject an
+  `axis` outside `[−rank, rank)` with a typed decline; `÷` MUST be **floor division**
+  (quotient toward −∞), and a `÷` by zero MUST be a typed decline. An implementation
+  MUST NOT round `÷` toward zero, and MUST NOT panic on a malformed axis or a zero
+  divisor (a producer relying on exact division, e.g. an even head dim, owns that
+  invariant). *Test:* `test_shape_expr_axis_and_floordiv`.
+- **KISS-OPS-6.20-0004** — When a referenced operand extent is **symbolic /
+  data-dependent** (not a concrete integer at evaluation time), the evaluator MUST
+  resolve the expression to a **surfaced gap** — never a typed decline and never a
+  panic — consistent with the standard's treatment of symbolic reduction extents and
+  data-dependent lengths. The gap MUST propagate through arithmetic and through a
+  whole-shape `SameAs` over a partially-symbolic operand, and a consumer surfaces it
+  as an opaque-op / telemetry gap. *Test:* `test_shape_expr_symbolic_gap`.
+- **KISS-OPS-6.20-0005** — A shape expression MUST serialize in the §6.19 canonical
+  form: a one-byte **tag** (`0` reserved per §6.19-0006; `SameAs=0x01`, `Extent=0x02`,
+  `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`; the
+  reserved `Reduce=0x09` / `WithDim=0x0A` / `Dims=0x0B`), fixed-width little-endian
+  fields (`operand` and `field` as `u8`, `axis` as `i8`, `Const` as `i64` LE,
+  §6.19-0007), and each child expression **definite-length-prefixed** with a `u16` LE
+  byte length (§6.19-0010). The encoding MUST be byte-deterministic so a shape-bearing
+  blob is hashable and byte-comparable under the shared canonicalization; an encoder
+  MUST NOT place a name on the wire and MUST NOT emit a tag outside this set. *Test:*
+  `test_shape_expr_serialization_golden`.
+- **KISS-OPS-6.20-0006** — A reader MUST decode a shape-expression blob with a
+  **typed decline, never a panic** (KISS-Conform §6.7): the reserved `0` tag, a
+  reserved-but-unregistered tag, a blob shorter than its tag's schema, and trailing
+  bytes after a complete expression MUST each raise a typed decline; a well-formed
+  blob MUST round-trip (`decode(encode(x)) = x`). *Test:*
+  `test_shape_expr_decode_declines`.
+- **KISS-OPS-6.20-0007** — The primitive-floor shape rules MUST be: an **elementwise**
+  op's output shape is `SameAs` its (broadcast) operand; a **`reduce`-family** op's
+  output shape is the input shape with the `reduce_axes` (§6.19-0020) removed when
+  `keepdim = false` or set to `1` when `keepdim = true` — derived from the op's
+  semantics, not a free shape attr; and the only **irreducible** free cases — a
+  broadcast target and a slice/iota offset — use `SameAs` and a `DimExpr`
+  respectively. An implementation MUST NOT bake an absolute constant output shape
+  where the shape derives from an operand extent. *Test:*
+  `test_shape_expr_primitive_floor_rules`.
+
 ---
 
 ## 7. Capability, Profile & Extension model
@@ -2200,6 +2276,13 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0036 | `test_ops_opattrs_noncarrier_axis_resolution` |
 | KISS-OPS-6.19-0037 | `test_ops_opattrs_max_rank_operands_pinned` |
 | KISS-OPS-6.19-0038 | `test_ops_opattrs_reduce_axes_zero_unreachable` |
+| KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
+| KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
+| KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
+| KISS-OPS-6.20-0004 | `test_shape_expr_symbolic_gap` |
+| KISS-OPS-6.20-0005 | `test_shape_expr_serialization_golden` |
+| KISS-OPS-6.20-0006 | `test_shape_expr_decode_declines` |
+| KISS-OPS-6.20-0007 | `test_shape_expr_primitive_floor_rules` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |

@@ -27,6 +27,7 @@ pub mod dtype;
 pub mod integer;
 pub mod opattrs;
 pub mod semantics;
+pub mod shape_expr;
 pub mod structural;
 pub mod structure_key;
 
