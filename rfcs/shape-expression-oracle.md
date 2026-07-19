@@ -1,6 +1,6 @@
 # KISS RFC — a shape-expression vocabulary as the shape-side oracle
 
-**RFC:** (number to be assigned on filing to ThinkersJournal) · **Status:** Draft — **ready to file** (both cosignatories accepted: Fuel 2026-07-18, Baracuda 2026-07-19; see §9) · **Date:** 2026-07-18 (updated 2026-07-19)
+**RFC:** (ThinkersJournal number pending assignment) · **Status:** **ACCEPTED** — cosignatories Fuel (2026-07-18) and Baracuda (2026-07-19) + KISS-Ops/KISS-Contract editors-of-record; integrated to `main` 2026-07-19 (§9) · **Date:** 2026-07-18 (accepted 2026-07-19)
 **Affects:** KISS-Ops §6 (new §6.20) and KISS-Contract §6.4 (new §6.4-0011 tie to §6.5 Interface). Complements §6.4-0006 (value oracle), §6.4-0009 (op_dag node schema), §6.12 (scalar-source leaves), §6.19 (canonical OpAttrs serialization).
 **Category:** Standards-track, backward-compatible, additive.
 
