@@ -18,6 +18,14 @@ vocabularies first), and prepends an <audit-brief> that tells the model what KIS
 is, how to read the DAG, the normative conventions, the LIVE traceability status
 (reused from tools/kiss_trace.py), and what kinds of critique are most useful.
 
+The suite SHAPE is not hardcoded: the document set, the dependency DAG, its edge
+labels, and the topological order are all DERIVED at run time from the umbrella's
+§2.2 edge table (which the umbrella declares authoritative for prerequisite
+closure) and reconciled against kiss_trace's SPECS list and the spec/ directory.
+Any disagreement between those three — a new sub-standard, a changed edge, a doc
+on disk nobody wired in — is a hard error, not a silently stale bundle. A tool
+whose whole job is faithful audit input must not drift from the spec it mirrors.
+
 Three tiers, because ~860 clauses of spec is ~250k tokens — only a 1M-context
 model swallows the whole suite, and even then audit quality is better focused:
 
@@ -45,6 +53,7 @@ Python 3.8+, standard library only. Reuses tools/kiss_trace.py for coverage.
 from __future__ import annotations
 
 import argparse
+import heapq
 import os
 import re
 import sys
@@ -61,18 +70,16 @@ try:
 except Exception:  # pragma: no cover - kiss_trace is a repo sibling and stdlib-only
     kt = None
 
-# ---------------------------------------------------------------------------
-# The suite shape. A valid topological sort (a document appears after every
-# document it depends on) and, per edge, the label the umbrella's §2.2 edge
-# table gives it. This mirrors spec/umbrella.md §2.2; kiss_bundle draws only the
-# dependency structure from it, and the umbrella document itself remains the
-# authority (it is included verbatim in every whole-suite and skeleton bundle).
-# ---------------------------------------------------------------------------
+# The informative front-door document, and the single cross-cutting sub-standard
+# whose dependency is "every other one" (summarized, not enumerated, in the
+# umbrella's edge table). Both are stable, named members of the suite.
 FRONT_DOOR = "umbrella"
-SUITE_ORDER = ["classify", "ops", "grammar", "contract",
-               "announce", "synth", "consume", "emit", "conform"]
-FULL_ORDER = [FRONT_DOOR] + SUITE_ORDER
+CROSS_CUTTING = "conform"
 
+# Editorial one-line role descriptions, used only for the <document role="...">
+# attribute. Purely cosmetic: a document without an entry falls back to a role
+# derived from its position in the DAG (see Suite.role), so a newly-added
+# sub-standard still gets a sensible label without a code change.
 ROLE = {
     "umbrella": "front-door (informative; defines no normative clauses)",
     "classify": "foundational — data vocabulary",
@@ -86,39 +93,221 @@ ROLE = {
     "conform":  "cross-cutting (tests every other sub-standard)",
 }
 
-# Direct dependencies, each with its umbrella §2.2 edge label.
-DEPS = {
-    "umbrella": [],
-    "classify": [],
-    "ops":      [],
-    "grammar":  [("classify", "STRUCTURAL"), ("ops", "STRUCTURAL")],
-    "contract": [("classify", "STRUCTURAL"), ("ops", "STRUCTURAL"),
-                 ("grammar", "STRUCTURAL")],
-    "announce": [("classify", "OPAQUE"), ("contract", "OPAQUE")],
-    "synth":    [("announce", "STRUCTURAL"), ("contract", "STRUCTURAL"),
-                 ("ops", "STRUCTURAL")],
-    "consume":  [("classify", "STRUCTURAL"), ("ops", "STRUCTURAL"),
-                 ("contract", "STRUCTURAL")],
-    "emit":     [("classify", "STRUCTURAL"), ("ops", "STRUCTURAL"),
-                 ("contract", "STRUCTURAL")],
-    "conform":  [(s, "TEST") for s in
-                 ["classify", "ops", "grammar", "contract",
-                  "announce", "synth", "consume", "emit"]],
-}
+_NUMWORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+             7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven",
+             12: "twelve"}
 
 
-def transitive_deps(stem):
-    """Every stem `stem` depends on, directly or transitively, in topological
-    order (a dependency before anything that depends on it)."""
-    seen = set()
+def _numword(n):
+    return _NUMWORDS.get(n, str(n))
 
-    def visit(s):
-        for dep, _label in DEPS.get(s, []):
-            if dep not in seen:
-                seen.add(dep)
-                visit(dep)
-    visit(stem)
-    return [s for s in FULL_ORDER if s in seen]
+
+class SuiteError(Exception):
+    """The derived suite shape disagrees with an authoritative source (the
+    umbrella §2.2 DAG, kiss_trace's SPECS, or the spec/ directory). Raised rather
+    than silently emitting a stale or partial bundle."""
+
+
+# ---------------------------------------------------------------------------
+# Deriving the suite shape from the spec itself.
+# ---------------------------------------------------------------------------
+def _name_to_stem(name):
+    """`KISS-Synth/Provision` -> `synth`, `KISS-Conform` -> `conform`; anything
+    not spelled `KISS-<Name>` (a table header cell, prose) -> None."""
+    name = name.strip()
+    if not name.startswith("KISS-"):
+        return None
+    return name[len("KISS-"):].split("/")[0].strip().lower()
+
+
+def parse_edge_table(umbrella_text):
+    """Derive the dependency DAG from the umbrella's §2.2 edge table.
+
+    Returns (deps, nodes) where deps maps each sub-standard stem to a list of
+    (dependency_stem, label) pairs and nodes is the set of every sub-standard.
+    The table's explicit `| KISS-X → KISS-Y | LABEL |` rows give every non-test
+    edge; the single summary row `each of the other eight → KISS-Conform` is
+    expanded to a TEST edge from every other node. Raises SuiteError if the
+    section, the rows, or the labels are not what this tool knows how to read —
+    a loud failure is correct, because a mis-parsed DAG would mis-order and
+    mis-scope every bundle.
+    """
+    lines = umbrella_text.splitlines()
+    start = next((i for i, ln in enumerate(lines)
+                  if re.match(r"^###\s+2\.2(\s|\.|$)", ln)), None)
+    if start is None:
+        raise SuiteError("umbrella §2.2 (Dependency DAG) heading not found")
+    end = next((j for j in range(start + 1, len(lines))
+                if re.match(r"^#{2,3}\s+\d", lines[j])), len(lines))
+
+    edges = []          # (dep_stem, dependent_stem, label)
+    nodes = set()
+    aggregate = set()   # dependents whose dependency is "each of the others"
+    in_fence = False
+    for ln in lines[start:end]:
+        if RE_FENCE.match(ln):
+            in_fence = not in_fence
+            continue
+        if in_fence or "→" not in ln or not ln.lstrip().startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 2 or "→" not in cells[0]:
+            continue
+        dep_s, dependent_s = (x.strip() for x in cells[0].split("→", 1))
+        dependent = _name_to_stem(dependent_s)
+        if dependent is None:          # the `Dependency → Dependent` header row
+            continue
+        nodes.add(dependent)
+        dep = _name_to_stem(dep_s)
+        if dep is None:                # `each of the other eight → KISS-Conform`
+            aggregate.add(dependent)
+        else:
+            nodes.add(dep)
+            edges.append((dep, dependent, cells[1].split()[0].upper() if cells[1] else ""))
+
+    if not edges:
+        raise SuiteError("umbrella §2.2 edge table parsed no dependency rows")
+    bad = sorted({lab for _, _, lab in edges if lab not in ("STRUCTURAL", "OPAQUE")})
+    if bad:
+        raise SuiteError("umbrella §2.2 has unrecognized edge label(s): " + ", ".join(bad))
+
+    deps = {n: [] for n in nodes}
+    for dep, dependent, lab in edges:
+        deps[dependent].append((dep, lab))
+    for agg in aggregate:              # conform depends on all others, as tests
+        deps[agg] = [(n, "TEST") for n in sorted(nodes) if n != agg]
+    return deps, nodes
+
+
+def reconcile(nodes, front_door, trace_specs, disk_stems):
+    """Every way the derived DAG can disagree with an authoritative source,
+    as a list of human-readable error strings (empty == consistent). This is the
+    ratchet: a new sub-standard, a renamed doc, or a file nobody wired in shows
+    up here and stops the build until the three sources agree again."""
+    errs = []
+    if trace_specs is not None:
+        expected = set(trace_specs) - {front_door}
+        extra = nodes - expected
+        gone = expected - nodes
+        if extra:
+            errs.append("umbrella §2.2 names sub-standard(s) kiss_trace SPECS lacks: "
+                        + ", ".join(sorted(extra)))
+        if gone:
+            errs.append("kiss_trace SPECS has sub-standard(s) absent from umbrella §2.2: "
+                        + ", ".join(sorted(gone)))
+    ghost = nodes - disk_stems
+    if ghost:
+        errs.append("umbrella §2.2 names doc(s) with no spec/ file: " + ", ".join(sorted(ghost)))
+    unwired = disk_stems - nodes - {front_door}
+    if unwired:
+        errs.append("spec/ has doc(s) not in the umbrella §2.2 DAG "
+                    "(new sub-standard? wire it into the umbrella): " + ", ".join(sorted(unwired)))
+    return errs
+
+
+def _topo_key(stem):
+    """Order nodes by their position in kiss_trace's SPECS sequence when known,
+    so the derived order matches the suite's own declared sequence; fall back to
+    alphabetical for a node kiss_trace does not list (kt absent, or brand-new)."""
+    if kt is not None and stem in kt.SPECS:
+        return (0, kt.SPECS.index(stem))
+    return (1, stem)
+
+
+def topo_order(deps, key=_topo_key):
+    """Kahn's algorithm over the DAG (edges point dependency -> dependent), with a
+    priority queue on `key` so the order is deterministic. Raises SuiteError on a
+    cycle — which would mean the suite's prerequisite closure is ill-defined."""
+    indeg = {n: 0 for n in deps}
+    dependents = {n: [] for n in deps}
+    for stem, dl in deps.items():
+        for dep, _ in dl:
+            indeg[stem] += 1
+            dependents[dep].append(stem)
+    heap = [(key(n), n) for n in deps if indeg[n] == 0]
+    heapq.heapify(heap)
+    order = []
+    while heap:
+        _, n = heapq.heappop(heap)
+        order.append(n)
+        for m in dependents[n]:
+            indeg[m] -= 1
+            if indeg[m] == 0:
+                heapq.heappush(heap, (key(m), m))
+    if len(order) != len(deps):
+        stuck = sorted(n for n in deps if n not in order)
+        raise SuiteError("dependency DAG has a cycle among: " + ", ".join(stuck))
+    return order
+
+
+class Suite:
+    """The derived, validated suite shape passed to every builder."""
+
+    def __init__(self, front_door, suite_order, deps, roles):
+        self.front_door = front_door
+        self.suite_order = suite_order            # topological, sub-standards only
+        self.full_order = [front_door] + suite_order
+        self.deps = deps                          # stem -> [(dep, label), ...]
+        self._roles = roles
+
+    def role(self, stem):
+        if stem in self._roles:
+            return self._roles[stem]
+        dl = self.deps.get(stem, [])              # graph-derived fallback
+        if not dl:
+            return "foundational"
+        labels = {lab for _, lab in dl}
+        if labels == {"OPAQUE"}:
+            return "protocol"
+        if labels == {"TEST"}:
+            return "cross-cutting"
+        return "structural"
+
+    def transitive_deps(self, stem):
+        """Every stem `stem` depends on, directly or transitively, in topological
+        order (a dependency before anything that depends on it)."""
+        seen = set()
+
+        def visit(s):
+            for dep, _ in self.deps.get(s, []):
+                if dep not in seen:
+                    seen.add(dep)
+                    visit(dep)
+        visit(stem)
+        return [s for s in self.full_order if s in seen]
+
+    def edge_table_text(self):
+        """The umbrella §2.2 edge set, rendered for the audit brief: one line per
+        explicit edge, then the cross-cutting sub-standard summarized (mirroring
+        the umbrella, which does not enumerate its every-other-doc test edges)."""
+        rows = []
+        for stem in self.suite_order:
+            if stem == CROSS_CUTTING:
+                continue
+            for dep, label in self.deps[stem]:
+                rows.append(f"  KISS-{dep.capitalize()} -> KISS-{stem.capitalize()}  [{label}]")
+        n = len(self.deps.get(CROSS_CUTTING, []))
+        rows.append(f"  each of the other {_numword(n)} -> KISS-Conform  [TEST]")
+        return "\n".join(rows)
+
+
+def load_suite(spec_dir):
+    """Read the umbrella, derive the DAG, reconcile it against kiss_trace and the
+    filesystem, and return a validated Suite. Raises SuiteError on any drift."""
+    upath = os.path.join(spec_dir, FRONT_DOOR + ".md")
+    if not os.path.exists(upath):
+        raise SuiteError(f"missing front-door spec: {upath}")
+    deps, nodes = parse_edge_table(read_doc(spec_dir, FRONT_DOOR))
+
+    disk_stems = {f[:-3] for f in os.listdir(spec_dir) if f.endswith(".md")}
+    errs = reconcile(nodes, FRONT_DOOR, kt.SPECS if kt else None, disk_stems)
+    if errs:
+        raise SuiteError("suite shape has drifted from its sources:\n  - " + "\n  - ".join(errs))
+
+    order = topo_order(deps)
+    if CROSS_CUTTING in deps:      # display the cross-cutting deps in suite order
+        deps[CROSS_CUTTING].sort(key=lambda dl: order.index(dl[0]))
+    return Suite(FRONT_DOOR, order, deps, dict(ROLE))
 
 
 # ---------------------------------------------------------------------------
@@ -291,12 +480,12 @@ def outline(text, summary_len=140):
     return "\n".join(out)
 
 
-def doc_block(spec_dir, stem, mode):
+def doc_block(spec_dir, suite, stem, mode):
     """A single document wrapped in its boundary tag. `mode` is 'full' (verbatim
     text) or 'outline' (skeleton only)."""
-    deps = ", ".join(d for d, _ in DEPS.get(stem, [])) or "none"
+    deps = ", ".join(d for d, _ in suite.deps.get(stem, [])) or "none"
     attrs = (f'path="spec/{stem}.md" sub-standard="{stem}" '
-             f'role="{ROLE.get(stem, "?")}" depends-on="{deps}" mode="{mode}"')
+             f'role="{suite.role(stem)}" depends-on="{deps}" mode="{mode}"')
     if mode == "outline":
         body = ("(OUTLINE ONLY — headings and clause identifiers, no clause "
                 "bodies. Included as dependency context; audit the full text via "
@@ -310,16 +499,8 @@ def doc_block(spec_dir, stem, mode):
 # The audit brief (preamble). The single most important part of the bundle: it
 # is what turns a wall of text into a targeted audit.
 # ---------------------------------------------------------------------------
-def edge_table_text():
-    rows = []
-    for stem in SUITE_ORDER:
-        for dep, label in DEPS[stem]:
-            rows.append(f"  KISS-{dep.capitalize()} -> KISS-{stem.capitalize()}  [{label}]")
-    rows.append("  each of the other eight -> KISS-Conform  [TEST]")
-    return "\n".join(rows)
-
-
-def build_preamble(what_you_see, coverage_text):
+def build_preamble(suite, what_you_see, coverage_text):
+    n = _numword(len(suite.suite_order))
     return f"""<audit-brief>
 # KISS Specification Suite — audit bundle
 
@@ -346,12 +527,12 @@ contain their own `#`/`##` headings, including mid-document H1s (e.g. a bare
 as a file boundary. A `mode="outline"` document is headings + clause identifiers
 ONLY (dependency context), not the full clause text.
 
-## The suite: nine sub-standards + one informative umbrella
+## The suite: {n} sub-standards + one informative umbrella
 Read a dependency before its dependents; documents below are in topological
 order. Edges point dependency -> dependent; each carries the umbrella §2.2 label
 (STRUCTURAL = depends on the other's parsed structure; OPAQUE = carries it as
 length-delimited bytes it never parses; TEST = Conform tests it):
-{edge_table_text()}
+{suite.edge_table_text()}
 
 ## Normative conventions you need to critique accurately
 - Clause identifiers look like `KISS-OPS-6.0-0001` = `KISS-<SUB>-<section>-<NNNN>`
@@ -393,42 +574,43 @@ replacement text.
 # ---------------------------------------------------------------------------
 # Tier builders.
 # ---------------------------------------------------------------------------
-def build_full(spec_dir, coverage_text):
-    what = ("The COMPLETE suite: the informative umbrella followed by all nine "
+def build_full(spec_dir, suite, coverage_text):
+    n = _numword(len(suite.suite_order))
+    what = (f"The COMPLETE suite: the informative umbrella followed by all {n} "
             "sub-standards in full, in topological order. This is large (~250k "
             "tokens) — paste it only into a long-context model. For a focused "
             "single-document audit on a smaller context, use a per-document bundle.")
-    parts = [build_preamble(what, coverage_text)]
-    for stem in FULL_ORDER:
-        parts.append(doc_block(spec_dir, stem, "full"))
+    parts = [build_preamble(suite, what, coverage_text)]
+    for stem in suite.full_order:
+        parts.append(doc_block(spec_dir, suite, stem, "full"))
     return "\n\n".join(parts) + "\n"
 
 
-def build_per_doc(spec_dir, stem, coverage_text):
-    deps = transitive_deps(stem)
+def build_per_doc(spec_dir, suite, stem, coverage_text):
+    deps = suite.transitive_deps(stem)
     dep_note = (", ".join(deps) if deps else "none")
     what = (f"ONE sub-standard in full — KISS-{stem.capitalize()} — preceded by "
             f"the OUTLINE (headings + clause ids only) of its dependency closure "
             f"({dep_note}) so you can check its imports without their full text. "
             f"Focus your audit on the full document; treat the outlines as the "
             f"vocabulary it is entitled to rely on.")
-    parts = [build_preamble(what, coverage_text)]
+    parts = [build_preamble(suite, what, coverage_text)]
     for dep in deps:
-        parts.append(doc_block(spec_dir, dep, "outline"))
-    parts.append(doc_block(spec_dir, stem, "full"))
+        parts.append(doc_block(spec_dir, suite, dep, "outline"))
+    parts.append(doc_block(spec_dir, suite, stem, "full"))
     return "\n\n".join(parts) + "\n"
 
 
-def build_skeleton(spec_dir, coverage_text):
+def build_skeleton(spec_dir, suite, coverage_text):
     what = ("The SKELETON: the informative umbrella in full, then every "
             "sub-standard reduced to headings + clause identifiers (no clause "
             "bodies). Use it for a cheap cross-document consistency pass — does "
             "the dependency DAG hold together, are clause ranges contiguous, does "
             "an owned concept appear where it should? — not for wording-level review.")
-    parts = [build_preamble(what, coverage_text)]
-    parts.append(doc_block(spec_dir, FRONT_DOOR, "full"))
-    for stem in SUITE_ORDER:
-        parts.append(doc_block(spec_dir, stem, "outline"))
+    parts = [build_preamble(suite, what, coverage_text)]
+    parts.append(doc_block(spec_dir, suite, suite.front_door, "full"))
+    for stem in suite.suite_order:
+        parts.append(doc_block(spec_dir, suite, stem, "outline"))
     return "\n\n".join(parts) + "\n"
 
 
@@ -451,7 +633,7 @@ def main(argv=None):
                     help="directory for the generated bundles (default: repo dist/)")
     ap.add_argument("--tier", choices=["all", "full", "per-doc", "skeleton"],
                     default="all", help="which tier(s) to write (default: all)")
-    ap.add_argument("--doc", choices=SUITE_ORDER, default=None,
+    ap.add_argument("--doc", default=None,
                     help="with --stdout, which sub-standard's per-doc bundle to emit")
     ap.add_argument("--stdout", action="store_true",
                     help="emit ONE bundle to stdout instead of writing files "
@@ -471,10 +653,15 @@ def main(argv=None):
     conf_dir = args.conformance_dir or os.path.join(root, "conformance")
     out_dir = args.out_dir or os.path.join(root, "dist")
 
-    missing = [s for s in FULL_ORDER if not os.path.exists(os.path.join(spec_dir, s + ".md"))]
-    if missing:
-        print(f"error: spec files missing from {spec_dir}: {', '.join(missing)}",
-              file=sys.stderr)
+    try:
+        suite = load_suite(spec_dir)
+    except SuiteError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if args.doc is not None and args.doc not in suite.suite_order:
+        print(f"error: --doc {args.doc!r} is not a sub-standard; choose from: "
+              f"{', '.join(suite.suite_order)}", file=sys.stderr)
         return 2
 
     if args.no_coverage:
@@ -485,11 +672,11 @@ def main(argv=None):
 
     if args.stdout:
         if args.doc:
-            text = build_per_doc(spec_dir, args.doc, coverage_text)
+            text = build_per_doc(spec_dir, suite, args.doc, coverage_text)
         elif args.tier == "skeleton":
-            text = build_skeleton(spec_dir, coverage_text)
+            text = build_skeleton(spec_dir, suite, coverage_text)
         else:
-            text = build_full(spec_dir, coverage_text)
+            text = build_full(spec_dir, suite, coverage_text)
         # Write UTF-8 bytes directly: the spec text carries —, ±, ∞, → and the
         # like, and sys.stdout on Windows defaults to a legacy code page that
         # cannot encode them (a silent 0-byte emit when piped). The file paths
@@ -502,18 +689,18 @@ def main(argv=None):
     if args.tier in ("all", "full"):
         p = os.path.join(out_dir, "kiss-suite-full.md")
         with open(p, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(build_full(spec_dir, coverage_text))
+            fh.write(build_full(spec_dir, suite, coverage_text))
         _report(p, open(p, encoding="utf-8").read())
     if args.tier in ("all", "per-doc"):
-        for stem in SUITE_ORDER:
+        for stem in suite.suite_order:
             p = os.path.join(out_dir, f"kiss-{stem}.md")
             with open(p, "w", encoding="utf-8", newline="\n") as fh:
-                fh.write(build_per_doc(spec_dir, stem, coverage_text))
+                fh.write(build_per_doc(spec_dir, suite, stem, coverage_text))
             _report(p, open(p, encoding="utf-8").read())
     if args.tier in ("all", "skeleton"):
         p = os.path.join(out_dir, "kiss-skeleton.md")
         with open(p, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(build_skeleton(spec_dir, coverage_text))
+            fh.write(build_skeleton(spec_dir, suite, coverage_text))
         _report(p, open(p, encoding="utf-8").read())
     return 0
 
