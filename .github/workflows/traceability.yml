@@ -35,6 +35,8 @@ jobs:
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency
         run: python tools/kiss_ops.py
+      - name: Wire-format spec<->binding consistency (magics, limits, decline codes)
+        run: python tools/kiss_wire.py
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
