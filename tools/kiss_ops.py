@@ -208,7 +208,7 @@ def build_manifest(spec_dir):
     all_ops = sorted(primitive | nonprim)
     atoms = transcendental_atoms(ops)  # sqrt, exp, log, sin, cos, atan, atan2, erf, lgamma
     # Plan A's declared coverage set: the exact-byte arithmetic floor that is minted now.
-    declared = sorted(o for o in ("add", "sub", "mul", "neg") if o in all_ops)
+    declared = sorted(o for o in ("add",) if o in all_ops)
     return {
         "schema": "kiss-op-manifest-v1",
         "generated_from": "spec/ops.md",

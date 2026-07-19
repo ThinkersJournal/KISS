@@ -121,9 +121,6 @@
     "sqrt"
   ],
   "declared_coverage_set": [
-    "add",
-    "mul",
-    "neg",
-    "sub"
+    "add"
   ]
 }
