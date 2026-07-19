@@ -52,6 +52,40 @@ pub enum Value {
     /// An opaque byte blob: `<n>:<hex>` where `<n>` is the decimal byte count and
     /// `<hex>` is exactly `2·n` **lowercase** hex digits (empty blob is `0:`).
     Blob(Vec<u8>),
+    /// A real (floating-point) value pinned by its IEEE-754 bit pattern (§6.11-0010).
+    Real(Real),
+}
+
+/// A real value carried by its IEEE 754-2019 bit pattern in a KISS-Classify float
+/// dtype (§6.11-0010). Pinned by bits, never a decimal spelling (umbrella §3.5), so
+/// ±0, ±∞, and NaN payloads round-trip exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Real {
+    /// `f32` (IEEE-754 binary32) bit pattern.
+    F32(u32),
+    /// `f64` (IEEE-754 binary64) bit pattern.
+    F64(u64),
+}
+
+impl Real {
+    /// The `f32` real with the given value's bit pattern.
+    pub fn f32(v: f32) -> Real {
+        Real::F32(v.to_bits())
+    }
+    /// The `f64` real with the given value's bit pattern.
+    pub fn f64(v: f64) -> Real {
+        Real::F64(v.to_bits())
+    }
+
+    /// Render as `<dtype>:<hex>` — the dtype token, then the bit pattern as
+    /// most-significant-byte-first (big-endian) lowercase hex, zero-padded to the
+    /// dtype width (8 digits for `f32`, 16 for `f64`).
+    pub fn render(&self) -> String {
+        match self {
+            Real::F32(bits) => format!("f32:{bits:08x}"),
+            Real::F64(bits) => format!("f64:{bits:016x}"),
+        }
+    }
 }
 
 impl Value {
@@ -71,6 +105,7 @@ impl Value {
                 }
                 s
             }
+            Value::Real(r) => r.render(),
         }
     }
 }

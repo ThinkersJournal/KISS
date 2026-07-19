@@ -1201,7 +1201,8 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   decimal ASCII, a negative value carrying a leading `-` (two's-complement value); an **array**
   MUST be `[` then the elements separated by `, ` (comma then one space) then `]`, in the pinned
   element order; an **opaque byte blob** MUST be `<n>:<hex>` where `<n>` is the decimal byte
-  count and `<hex>` is exactly `2·n` lowercase hex digits (an empty blob is `0:`). An
+  count and `<hex>` is exactly `2·n` lowercase hex digits (an empty blob is `0:`); and a
+  **real** (floating-point) value MUST be encoded per §6.11-0010. An
   implementation MUST NOT vary these encodings by platform. *Test:*
   `test_contract_text_field_encoding`.
 - **KISS-CONTRACT-6.11-0002** — A contract document MUST begin with the pinned **header line**:
@@ -1304,6 +1305,19 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   text line, so that a defaulted-vs-explicit attribute difference surfacing in the text render
   (this clause's default-eliding `{<op_attrs>}` presence rule) can never split, or falsely
   merge, a single op identity. *Test:* `test_contract_text_op_identity`.
+- **KISS-CONTRACT-6.11-0010** — A **real** (floating-point) field value MUST be encoded as
+  `<dtype>:<hex>` where `<dtype>` is the KISS-Classify float dtype token (`f32` or `f64`) and
+  `<hex>` is the value's IEEE 754-2019 bit pattern in that dtype written **most-significant
+  byte first** (big-endian, matching the header line's `crc32=<HHHHHHHH>` hex convention) as
+  exactly `2·width_bytes` lowercase hex digits (`8` for `f32`, `16` for `f64`); the value MUST
+  be pinned by this bit pattern and MUST NOT be encoded as a decimal spelling (umbrella §3.5),
+  so each non-finite value (±∞, quiet NaN, signaling NaN, ±0, subnormal) is carried by its bit
+  pattern and round-trips exactly. A reader MUST reject, with a typed decline, a real value
+  whose `<dtype>` is neither `f32` nor `f64` or whose `<hex>` is not exactly the dtype width in
+  lowercase hex. This clause defines only the real-number **encoding primitive**; the field
+  schemas that carry real values (for example the Guarantees accuracy tiers and the cost
+  expression coefficients) reference it once their layouts are pinned. *Test:*
+  `test_contract_text_real_encoding`.
 
 ---
 
@@ -1497,6 +1511,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.11-0007 | `test_contract_text_op_dag` |
 | KISS-CONTRACT-6.11-0008 | `test_contract_text_dispatch` |
 | KISS-CONTRACT-6.11-0009 | `test_contract_text_op_identity` |
+| KISS-CONTRACT-6.11-0010 | `test_contract_text_real_encoding` |
 | KISS-CONTRACT-7.1-0001 | `test_contract_mandatory_core` |
 | KISS-CONTRACT-7.1-0002 | `test_contract_semantics_degrade_axis` |
 | KISS-CONTRACT-7.1-0003 | `test_contract_typed_decline_core` |

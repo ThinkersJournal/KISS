@@ -310,3 +310,37 @@ fn test_contract_rejection_is_typed_decline() {
         Err(ContractDecline::MalformedHeader)
     );
 }
+
+/// KISS-CONTRACT-6.11-0010: a real value encodes as `<dtype>:<hex>`, the IEEE-754
+/// bit pattern in big-endian lowercase hex, bit-exact for finite and special values.
+#[test]
+fn test_contract_text_real_encoding() {
+    // f32: 8 hex digits, big-endian bit pattern.
+    assert_eq!(Real::f32(1.0).render(), "f32:3f800000");
+    assert_eq!(Real::f32(0.5).render(), "f32:3f000000");
+    assert_eq!(Real::f32(-0.0).render(), "f32:80000000"); // signed zero preserved
+    assert_eq!(Real::f32(f32::INFINITY).render(), "f32:7f800000");
+    assert_eq!(Real::f32(f32::NEG_INFINITY).render(), "f32:ff800000");
+    assert_eq!(Real::f32(f32::from_bits(0x7fc0_0000)).render(), "f32:7fc00000"); // qNaN
+
+    // f64: 16 hex digits, big-endian bit pattern.
+    assert_eq!(Real::f64(1.0).render(), "f64:3ff0000000000000");
+    assert_eq!(Real::f64(0.1).render(), "f64:3fb999999999999a");
+    assert_eq!(Real::f64(-0.0).render(), "f64:8000000000000000");
+    assert_eq!(Real::f64(f64::NEG_INFINITY).render(), "f64:fff0000000000000");
+
+    // The value is pinned by bits and round-trips exactly (umbrella §3.5), including a
+    // NaN payload and a subnormal that no decimal spelling could carry unambiguously.
+    for bits in [0x0000_0001u32, 0x7fc0_1234, 0x8000_0000, 0xffff_ffff] {
+        let rendered = Real::F32(bits).render();
+        let hex = rendered.strip_prefix("f32:").unwrap();
+        assert_eq!(u32::from_str_radix(hex, 16).unwrap(), bits, "f32 bits round-trip");
+        assert_eq!(hex.len(), 8, "f32 is exactly 8 hex digits");
+    }
+
+    // As a full field line through the §6.11-0001 `<key> = <value>` framing.
+    assert_eq!(
+        field_line("max_relative", &Value::Real(Real::f64(0.1))),
+        "max_relative = f64:3fb999999999999a\n"
+    );
+}
