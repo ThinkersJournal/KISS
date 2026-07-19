@@ -28,10 +28,10 @@
 #
 # clause_id	test_name	category	note
 KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte	untested	
-KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56	untested	
+KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56	lint:kiss_wire	the 56-byte envelope size drifts between §6.1-0001 and ENVELOPE_LEN
 KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1	untested	
 KISS-ANNOUNCE-6.1-0006	test_announce_reserved0_is_zero	untested	
-KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap	untested	
+KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap	lint:kiss_wire	the profiles cap 16 drifts between §6.1-0007 and MAX_PROFILES
 KISS-ANNOUNCE-6.1-0008	test_announce_trailing_profiles_zero	untested	
 KISS-ANNOUNCE-6.1-0009	test_announce_profiles_strictly_ascending	untested	
 KISS-ANNOUNCE-6.1-0010	test_announce_reserved1_pad_zero	untested	
@@ -49,13 +49,13 @@ KISS-ANNOUNCE-6.3-0004	test_announce_structure_key_is_opaque	untested
 KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	
 KISS-ANNOUNCE-6.3-0007	test_announce_revision_hash_compared_bytewise	untested	
 KISS-ANNOUNCE-6.3-0008	test_announce_revision_hash_opaque_identity	untested	
-KISS-ANNOUNCE-6.3-0009	test_announce_structure_key_length_bounds	untested	
-KISS-ANNOUNCE-6.3-0010	test_announce_record_count_bounds	untested	
+KISS-ANNOUNCE-6.3-0009	test_announce_structure_key_length_bounds	lint:kiss_wire	MAX_STRUCTURE_KEY_LEN drifts between §6.3-0009 and announce.rs
+KISS-ANNOUNCE-6.3-0010	test_announce_record_count_bounds	lint:kiss_wire	MAX_AVAILABILITY_RECORDS drifts between §6.3-0010 and announce.rs
 KISS-ANNOUNCE-6.4-0002	test_announce_query_response_is_contract_or_decline	untested	
 KISS-ANNOUNCE-6.4-0003	test_announce_query_revision_match_or_decline	untested	
 KISS-ANNOUNCE-6.4-0005	test_announce_query_bit_implies_endpoint	untested	
 KISS-ANNOUNCE-6.4-0008	test_announce_no_query_bit_declines	untested	
-KISS-ANNOUNCE-6.4-0009	test_announce_decline_code_enum	untested	
+KISS-ANNOUNCE-6.4-0009	test_announce_decline_code_enum	lint:kiss_wire	a decline_code value drifts between the §6.4-0009 owner and the reference codec
 KISS-ANNOUNCE-6.4-0010	test_announce_unknown_decline_code_is_generic	untested	
 KISS-ANNOUNCE-6.4-0011	test_announce_response_echoes_identity	untested	
 KISS-ANNOUNCE-6.4-0012	test_announce_query_default_revision_is_highest	untested	
@@ -102,7 +102,7 @@ KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested
 KISS-CLASSIFY-6.3-0008	test_classify_op_family_is_cell_level	untested	
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
-KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	untested	
+KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
 KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_2	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk2) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
@@ -303,8 +303,8 @@ KISS-CONTRACT-6.1-0001	test_contract_self_delimiting_document	untested
 KISS-CONTRACT-6.1-0003	test_contract_reject_unknown_version	untested	
 KISS-CONTRACT-6.1-0005	test_contract_opaque_length_delimited_over_announce	untested	
 KISS-CONTRACT-6.1-0006	test_contract_strict_schema	untested	
-KISS-CONTRACT-6.1-0007	test_contract_kind_recognized_token	untested	
-KISS-CONTRACT-6.1-0008	test_contract_version_value_pinned	untested	
+KISS-CONTRACT-6.1-0007	test_contract_kind_recognized_token	lint:kiss_wire	the recognized kind `kiss-contract` drifts between §6.1-0007 and the reader
+KISS-CONTRACT-6.1-0008	test_contract_version_value_pinned	lint:kiss_wire	the schema version token `1` drifts between §6.1-0008 and the reader
 KISS-CONTRACT-6.10-0001	test_contract_grammar_ops_seam_two_sections	untested	
 KISS-CONTRACT-6.10-0002	test_contract_edge_case_and_ulp_from_ops	untested	
 KISS-CONTRACT-6.10-0003	test_contract_single_op_vocabulary	untested	
@@ -507,7 +507,7 @@ KISS-GRAMMAR-6.8-0008	test_grammar_wire_operand_role_tuple	untested
 KISS-GRAMMAR-6.8-0009	test_grammar_wire_excludes_synthesis_attrs	untested	
 KISS-GRAMMAR-6.8-0011	test_grammar_wire_extract_record_order	untested	
 KISS-GRAMMAR-6.8-0012	test_grammar_tag_canonical_serialization	untested	
-KISS-GRAMMAR-6.8-0013	test_grammar_wire_magic_and_schema_version	untested	
+KISS-GRAMMAR-6.8-0013	test_grammar_wire_magic_and_schema_version	lint:kiss_wire	the region magic `KGRM` drifts between §6.8-0013 and grammar.rs
 KISS-GRAMMAR-7.1-0001	test_grammar_mandatory_core_is_frozen_shape	untested	
 KISS-GRAMMAR-7.1-0002	test_grammar_op_name_set_is_open_via_ops	untested	
 KISS-GRAMMAR-7.1-0003	test_grammar_typed_decline_never_panic	untested	
@@ -719,7 +719,7 @@ KISS-SYNTH-6.6-0001	test_synth_failure_is_typed_decline	untested
 KISS-SYNTH-6.6-0001a	test_synth_never_panics	untested	
 KISS-SYNTH-6.6-0001b	test_synth_no_oob_read	untested	
 KISS-SYNTH-6.6-0001c	test_synth_bounded_latency	untested	
-KISS-SYNTH-6.6-0002	test_synth_decline_code_enum	untested	
+KISS-SYNTH-6.6-0002	test_synth_decline_code_enum	lint:kiss_wire	a Synth-reused decline_code drifts from the §6.4-0009 owner
 KISS-SYNTH-6.6-0002a	test_synth_decline_core_meaning_fixed	untested	
 KISS-SYNTH-6.6-0003	test_synth_map_unknown_structure_key	untested	
 KISS-SYNTH-6.6-0003a	test_synth_map_cannot_provision	untested	
