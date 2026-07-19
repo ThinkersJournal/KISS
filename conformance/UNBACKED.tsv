@@ -213,6 +213,8 @@ KISS-CONFORM-6.5-0002	test_conform_oracle_independent	untested
 KISS-CONFORM-6.5-0003	test_conform_reject_circular_vector	untested	
 KISS-CONFORM-6.5-0004	test_conform_oracle_resolves_to_floor	untested	
 KISS-CONFORM-6.5-0005	test_conform_oracle_authoring_independence	untested	
+KISS-CONFORM-6.5-0008	test_conform_oracle_vector_coverage_complete	untested	
+KISS-CONFORM-6.5-0009	test_conform_oracle_vector_stores_wide_precision_value	untested	
 KISS-CONFORM-6.6-0001	test_conform_fuzzer_generates_valid_dags	untested	
 KISS-CONFORM-6.6-0002	test_conform_fuzzer_every_backend	untested	
 KISS-CONFORM-6.6-0003	test_conform_fuzzer_cross_backend_agreement	untested	
