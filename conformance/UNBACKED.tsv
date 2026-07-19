@@ -523,8 +523,6 @@ KISS-GRAMMAR-8-0006	test_grammar_freeze_gate_conform_suite_passes	untested
 KISS-GRAMMAR-8-0007	test_grammar_retire_by_floor	untested	
 KISS-GRAMMAR-8-0008	test_grammar_opattrs_freeze_precondition	untested	
 KISS-OPS-6.0-0001	test_ops_determinism_class_enum	lint:kiss_tables	a sub-standard re-forks the determinism/fidelity enum instead of importing it
-KISS-OPS-6.0-0002	test_ops_exact_byte_ops	untestable	#42 — atan2 determinism class self-contradiction
-KISS-OPS-6.0-0003	test_ops_ulp_class_ops	untested	
 KISS-OPS-6.0-0004	test_ops_nondeterministic_class_ops	untested	
 KISS-OPS-6.0-0005	test_ops_determinism_class_precedence	untested	
 KISS-OPS-6.1-0001	test_ops_op_set_closed	untested	

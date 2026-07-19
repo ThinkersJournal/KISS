@@ -780,11 +780,15 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 ### 6.8 Transcendental atoms (declared-ULP)
 
 The transcendental atoms are `exp` (`e^x`), `log` (`ln x`), `sin`, `cos`, `sqrt` (√x),
-`erf` (Gauss error function), `atan` (arctangent), and `lgamma` (`ln|Γ(x)|`). Each
-carries a normative **maximum ULP ceiling** below; a kernel's contract declares a
-per-target ULP no looser than the ceiling, and KISS-Conform evaluates the atom
-under that declared ULP (the normative requirement is carried by KISS-OPS-6.8-0001;
-this section-intro paragraph is an informative pointer to it):
+`erf` (Gauss error function), `atan` (arctangent), `atan2` (two-argument arctangent),
+and `lgamma` (`ln|Γ(x)|`). `atan2` is structurally an op-family `binary_math` atom
+(§6.9) but is a **declared-ULP transcendental atom** for accuracy and determinism-class
+purposes: it carries a ULP ceiling in the table below and is class ULP/tolerance
+(§6.0-0003, §6.8-0005), never exact-byte. Each atom carries a normative **maximum ULP
+ceiling** below; a kernel's contract declares a per-target ULP no looser than the
+ceiling, and KISS-Conform evaluates the atom under that declared ULP (the normative
+requirement is carried by KISS-OPS-6.8-0001; this section-intro paragraph is an
+informative pointer to it):
 
 | Atom | Maximum ULP ceiling (compute dtype ≥ 16-bit float) |
 |---|---|
@@ -811,6 +815,15 @@ this section-intro paragraph is an informative pointer to it):
   with no elementary decomposition over other KISS-Ops ops; an implementation MUST NOT
   require them to be expressed via `exp`/`log`/etc. *Test:*
   `test_ops_special_function_atoms`.
+- **KISS-OPS-6.8-0005** — `atan2` MUST be assigned the **ULP/tolerance** determinism
+  class (§6.0-0003) and MUST NOT be assigned the exact-byte class or evaluated with a
+  byte-exact comparator: although `atan2` is an op-family `binary_math` atom (§6.9), it
+  is a declared-ULP transcendental atom (this section, 4-ULP ceiling), so the exact-byte
+  "if and only if" of §6.0-0002 MUST NOT apply to it (its condition (a) excludes any op
+  containing a §6.8 transcendental atom) and no clause MUST require its byte-exact
+  reproduction across targets — consistent with `carg`, which is derived from `atan2`
+  (§6.18-0008) and whose determinism class is ULP/tolerance (§6.18-0014). *Test:*
+  `test_ops_atan2_class_is_ulp`.
 
 ### 6.9 Binary-math atoms
 
@@ -2181,6 +2194,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.8-0002 | `test_ops_transcendental_no_cross_lang_identity` |
 | KISS-OPS-6.8-0003 | `test_ops_sqrt_correctly_rounded_or_ulp` |
 | KISS-OPS-6.8-0004 | `test_ops_special_function_atoms` |
+| KISS-OPS-6.8-0005 | `test_ops_atan2_class_is_ulp` |
 | KISS-OPS-6.9-0001 | `test_ops_atan2_quadrants` |
 | KISS-OPS-6.9-0002 | `test_ops_copysign_raw_bit` |
 | KISS-OPS-6.9-0003 | `test_ops_nextafter_own_lattice` |
