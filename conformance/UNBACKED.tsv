@@ -103,14 +103,14 @@ KISS-CLASSIFY-6.3-0008	test_classify_op_family_is_cell_level	untested
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	untested	
-KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_2	untested	
-KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	untested	
-KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	untested	
-KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	untested	
-KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	untested	
+KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_2	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk2) and SCHEMA_VERSION
+KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
+KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
+KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
+KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	lint:kiss_vocab	the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width
 KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	lint:kiss_vocab	the 24 op-family codes drift between Classify §6.5-0006 and the reference structure_key codec (OP_FAMILIES)
-KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	untested	
-KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	untested	
+KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	lint:kiss_vocab	the WorkClass structure_key token-code set drifts between §6.5 and the reference code_enum!
+KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0009	test_classify_vec_width_derivation	untested	
 KISS-CLASSIFY-6.5-0010	test_classify_work_class_element_count	untested	
 KISS-CLASSIFY-6.6-0001	test_classify_structure_key_is_admissibility_predicate	untested	
