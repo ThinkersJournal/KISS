@@ -57,6 +57,17 @@ OPATTRS_ENUMS = [
     ("KISS-OPS-6.19-0021", "ColumnOrdering", "column_ordering"),
 ]
 
+# The closed structure_key sub-vocabularies KISS-Classify §6.5 pins as "MUST be exactly
+# {...} with token codes `x`, `y`" and the reference codec binds as a `code_enum!`.
+# (clause_id, rust code_enum! name).
+CLASSIFY_CODE_ENUMS = [
+    ("KISS-CLASSIFY-6.5-0001", "Contig"),      # layout_tag: co/ic/st/br
+    ("KISS-CLASSIFY-6.5-0003", "VecWidth"),     # vector width: v1/v2/v4/v8
+    ("KISS-CLASSIFY-6.5-0004", "DivBucket"),    # divisibility bucket: d16/d8/d4/d2/da
+    ("KISS-CLASSIFY-6.5-0007", "WorkClass"),    # work class: warp/block/grid
+    ("KISS-CLASSIFY-6.5-0008", "SizeClass"),    # size class: t/s/m/l
+]
+
 # Each entry: a closed set the spec pins and the harness binds, plus the clause a
 # drift fails.
 COVERS = [("KISS-CLASSIFY-6.5-0006",
@@ -65,6 +76,15 @@ COVERS = [("KISS-CLASSIFY-6.5-0006",
 COVERS += [(cid, f"the {enum} OpAttrs enum drifts between its §6.19 clause, the "
             f"§6.19.2 table, and the reference opattrs codec")
            for cid, enum, _field in OPATTRS_ENUMS]
+COVERS += [(cid, f"the {enum} structure_key token-code set drifts between §6.5 and the "
+            f"reference code_enum!")
+           for cid, enum in CLASSIFY_CODE_ENUMS]
+COVERS += [
+    ("KISS-CLASSIFY-6.5-0005",
+     "the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width"),
+    ("KISS-CLASSIFY-6.4-0003",
+     "the structure_key schema version drifts between §6.4-0003 (sk2) and SCHEMA_VERSION"),
+]
 
 
 def _norm(name):
@@ -172,6 +192,43 @@ def harness_ordinal_enums(opattrs_text):
     return out
 
 
+def classify_clause_body(classify_text, clause_id):
+    """The body of a `- **KISS-CLASSIFY-<short>** — ...` clause up to the next clause
+    bullet or heading."""
+    short = clause_id.split("-", 2)[-1]
+    m = re.search(r"\*\*KISS-CLASSIFY-" + re.escape(short) +
+                  r"\*\*(.*?)(?=\n\s*-\s+\*\*KISS|\n#)", classify_text, re.S)
+    return m.group(1) if m else None
+
+
+def spec_token_codes(classify_text, clause_id):
+    """The token-code set a §6.5 clause pins: the FIRST contiguous backtick run after
+    the phrase 'token codes' (so a later backtick — e.g. §6.5-0004's `where \\`d16\\`
+    selects...` or §6.5-0005's dtype-orthogonality aside — is never swept in)."""
+    body = classify_clause_body(classify_text, clause_id)
+    if not body:
+        return None
+    m = re.search(r"token codes\s+((?:`[a-z0-9]+`[\s,/]*)+)", body)
+    if not m:
+        return None
+    return set(re.findall(r"`([a-z0-9]+)`", m.group(1)))
+
+
+def harness_code_enum(rs_text, name):
+    """The code set a reference `code_enum!(Name { Variant = "code", ... })` binds."""
+    m = re.search(r"code_enum!\(\s*" + re.escape(name) + r"\s*\{([^}]*)\}", rs_text, re.S)
+    if not m:
+        return None
+    return set(re.findall(r'"([a-z0-9]+)"', m.group(1)))
+
+
+def harness_index_width_codes(rs_text):
+    """The `ixNN` string literals the reference `derive_index_width` returns."""
+    m = re.search(r"fn derive_index_width[^{]*\{(.*?)\n\}", rs_text, re.S)
+    body = m.group(1) if m else rs_text
+    return set(re.findall(r'"(ix\d+)"', body))
+
+
 def check(spec_dir, conf_dir):
     violations = []
     classify = os.path.join(spec_dir, "classify.md")
@@ -245,7 +302,54 @@ def check(spec_dir, conf_dir):
     else:
         violations.append("could not read ops.md or opattrs.rs for the §6.19 enums")
 
-    return violations, (sorted(spec_set), checked_enums)
+    # ---- Classify §6.5 structure_key sub-vocabularies <-> structure_key.rs codecs ----
+    classify_text = open(classify, encoding="utf-8").read()
+    rs_text = open(rs, encoding="utf-8").read()
+    checked_codes = 0
+    for clause, enum_name in CLASSIFY_CODE_ENUMS:
+        short = clause.split("-", 2)[-1]
+        spec_codes_set = spec_token_codes(classify_text, clause)
+        harness_set = harness_code_enum(rs_text, enum_name)
+        if spec_codes_set is None:
+            violations.append(f"§{short}: no 'token codes `...`' run found in the clause")
+            continue
+        if harness_set is None:
+            violations.append(f"{enum_name}: no code_enum! found in structure_key.rs")
+            continue
+        checked_codes += 1
+        if spec_codes_set != harness_set:
+            only_spec = sorted(spec_codes_set - harness_set)
+            only_h = sorted(harness_set - spec_codes_set)
+            parts = []
+            if only_spec:
+                parts.append(f"in §{short} but not {enum_name}: {only_spec}")
+            if only_h:
+                parts.append(f"in {enum_name} but not §{short}: {only_h}")
+            violations.append(f"{enum_name} code set drift — " + "; ".join(parts))
+
+    # index-width (§6.5-0005): the `ix32`/`ix64` codes <-> derive_index_width literals
+    iw_spec = spec_token_codes(classify_text, "KISS-CLASSIFY-6.5-0005")
+    iw_harness = harness_index_width_codes(rs_text)
+    if iw_spec and iw_harness:
+        checked_codes += 1
+        if iw_spec != iw_harness:
+            violations.append(f"index-width code drift (§6.5-0005 vs derive_index_width): "
+                              f"{sorted(iw_spec)} vs {sorted(iw_harness)}")
+    else:
+        violations.append("could not extract the §6.5-0005 index-width codes on both sides")
+
+    # schema version (§6.4-0003): the token prefix `sk2` <-> SCHEMA_VERSION
+    sv_spec = re.search(r"token prefix `sk(\d+)`", classify_text)
+    sv_harness = re.search(r"SCHEMA_VERSION\s*:\s*u32\s*=\s*(\d+)", rs_text)
+    if sv_spec and sv_harness:
+        checked_codes += 1
+        if sv_spec.group(1) != sv_harness.group(1):
+            violations.append(f"structure_key schema version drift (§6.4-0003 'sk{sv_spec.group(1)}' "
+                              f"vs SCHEMA_VERSION {sv_harness.group(1)})")
+    else:
+        violations.append("could not extract the structure_key schema version on both sides")
+
+    return violations, (sorted(spec_set), checked_enums, checked_codes)
 
 
 def main():
@@ -271,7 +375,7 @@ def main():
         for v in result:
             print(f"  - {v}")
         return 1
-    violations, (codes, n_enums) = result
+    violations, (codes, n_enums, n_codes) = result
 
     print("KISS spec<->binding enumeration lint")
     print("=" * 68)
@@ -279,6 +383,8 @@ def main():
     print(f"    {' '.join(codes)}")
     print(f"  OpAttrs enums checked (KISS-Ops §6.19): {n_enums}  "
           f"(§6.19 clause <-> §6.19.2 table <-> codec)")
+    print(f"  structure_key sub-vocabularies checked (KISS-Classify §6.5): {n_codes}  "
+          f"(§6.5 clause <-> code_enum!/derive/SCHEMA_VERSION)")
     print("-" * 68)
     if violations:
         print(f"  DRIFT — {len(violations)} disagreement(s):")
@@ -286,7 +392,8 @@ def main():
             print(f"      - {v}")
         print("  RESULT: DRIFT FOUND")
         return 1
-    print("  op-family set + the 7 OpAttrs enums agree: clause, §6.19.2 table, and codec.")
+    print("  op-family, the 7 OpAttrs enums, and the §6.5 structure_key sub-vocabularies")
+    print("  all agree with the reference codec.")
     print("  RESULT: CLEAN")
     return 0
 
