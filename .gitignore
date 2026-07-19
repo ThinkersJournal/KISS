@@ -1,0 +1,9 @@
+# Generated audit bundles (tools/kiss_bundle.py) — derived from spec/, never committed.
+/dist/
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Rust build output
+/conformance/target/
