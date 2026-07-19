@@ -25,6 +25,7 @@ pub mod grammar;
 pub mod fp;
 pub mod dtype;
 pub mod integer;
+pub mod json;
 pub mod opattrs;
 pub mod semantics;
 pub mod structural;
