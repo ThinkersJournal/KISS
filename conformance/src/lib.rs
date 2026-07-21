@@ -95,6 +95,7 @@ pub mod dispatch_expr;
 pub mod expressibility;
 pub mod grammar;
 pub mod fp;
+pub mod hp;
 pub mod dtype;
 pub mod integer;
 pub mod json;
