@@ -1168,11 +1168,11 @@ separating a registered namespace from that namespace's capability-set token.
 
 ## 8. Versioning & Lifecycle
 
-KISS-Classify tracks the umbrella's **two version axes** — the wire/ABI *structure-key
+KISS-Classify tracks the umbrella's **two version axes**: the wire/ABI *structure-key
 schema version* (`STRUCTURE_KEY_VERSION`, currently `3`) and the published
-reference-crate *semver*; they move independently — plus a third, Classify-local handle,
-`DTYPE_LAYOUT_VERSION` (§8-0007), which tracks the pinned dtype bit **layouts** of §6.1 on
-its own axis, independent of both.
+reference-crate *semver*. They move independently. A third, Classify-local handle —
+`DTYPE_LAYOUT_VERSION` (§8-0007) — separately tracks the pinned dtype bit **layouts** of
+§6.1, on its own axis independent of both.
 
 - **KISS-CLASSIFY-8-0001** — The `structure_key` schema version and the
   reference-crate semver MUST be tracked as independent axes; a crate semver change

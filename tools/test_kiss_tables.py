@@ -60,6 +60,11 @@ class SectionAnchor(unittest.TestCase):
         self.assertIn("BBB", kt._section_slice(text, "6.16"))
         self.assertNotIn("CCC", kt._section_slice(text, "6.16"))  # stops at next same-level heading
 
+    def test_slice_lookahead_rejects_6_16_when_querying_6_1(self):
+        # (?!\d): querying "6.1" against text whose only matching heading is "6.16"
+        # must return "" — not silently slice 6.16's body as if it were 6.1's.
+        self.assertEqual(kt._section_slice("## 6.16 beta\nBBB\n## 7 g\nCCC\n", "6.1"), "")
+
     def test_classify_6_1_slice_excludes_informative_2_6(self):
         classify = open(os.path.join(SPEC_DIR, "classify.md"), encoding="utf-8").read()
         sl = kt._section_slice(classify, "6.1")
