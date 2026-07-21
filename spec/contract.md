@@ -357,7 +357,8 @@ mean them.
   extents, workspace pointer, workspace byte size, and scalar op params); carried as a
   typed sub-view equal to the launch-scalar tail of `positional_signature` (§6.5-0011).
 - **rank** — the fixed, per-contract compile-time-constant operand logical rank; every
-  per-operand `extents` / `strides` / `off` array has length `rank` (§6.5-0012).
+  per-operand `extents` / `strides` array has length `rank`, while the base offset `off{i}`
+  is a single scalar per operand, not a rank-length array (§6.5-0012).
 - **fully packed** — a cell whose KISS-Classify contiguous-layout predicate marks every
   operand contiguous in canonical order with unit innermost stride; a non-packed cell
   (strided / broadcast / reversed) carries the class-2 signed strides (§6.5-0005).
@@ -956,8 +957,10 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   with that tail. *Test:* `test_contract_launch_scalars_match_signature_tail`.
 - **KISS-CONTRACT-6.5-0012** — The Interface `rank` field MUST declare the operand logical
   rank as a fixed, per-contract compile-time constant (a non-negative integer); every
-  per-operand `extents` / `strides` / `off` array length MUST equal `rank`, and a consumer
-  MUST size those arrays from `rank` alone. An implementation MUST NOT require a consumer to
+  per-operand `extents` / `strides` array length MUST equal `rank`, and a consumer MUST size
+  those arrays from `rank` alone. The per-operand base offset `off{i}` (§6.5-0004a class 4)
+  is a **single scalar** value per operand — one linear base offset, not a rank-length array —
+  and a consumer MUST NOT size it from `rank`. An implementation MUST NOT require a consumer to
   recover `rank` by parsing the `accept_predicate` bytes (§6.3-0002 forbids reinterpreting
   them). *Test:* `test_contract_rank_declared`.
 - **KISS-CONTRACT-6.5-0013** — The Interface MUST carry an explicit scalar-op-param **count**
@@ -1001,12 +1004,24 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   machine-evaluable expression, not free prose, in the pinned expression grammar: an
   expression is an ASCII string over the launch-scalar symbol vocabulary (§6.5-0004a /
   §6.7-0006), non-negative decimal integer literals, the binary operators `+ - * /`, the
-  function `ceil_div(a, b)`, and parentheses, with conventional precedence and left
-  associativity; evaluating it against concrete launch-scalar values MUST yield a non-negative
-  integer (or a fixed-length tuple of such, for a multi-dimensional workgroup/grid). An
-  implementation MUST NOT carry a Dispatch derivation field the grammar does not accept, and
-  MUST NOT reference a symbol absent from the launch-scalar vocabulary. *Test:*
-  `test_contract_dispatch_expressions_machine_evaluable`.
+  function `ceil_div(a, b)`, parentheses, and the **element-subscript operator** `sym[k]`,
+  where `sym` is one of the rank-length array launch-scalar symbols (§6.5-0004a — exactly the
+  symbols whose `array_len_kind` is `rank`, §6.11-0006: `extents{i}`, `strides{i}`,
+  `idx_extents{i}`) and `k` is a non-negative decimal integer literal naming an axis; `sym[k]`
+  is valid iff `0 <= k < rank`, where `rank` is the Interface `rank` for `extents{i}`/`strides{i}`
+  and the index-operand rank for `idx_extents{i}`. Subscript binds tighter than `*` and `/`,
+  which in turn bind tighter than `+` and `-`; operators of equal precedence are
+  left-associative. Evaluating an `invocation_domain`,
+  `workgroup_sizing`, or `count_to_grid` expression against concrete launch-scalar values MUST
+  yield a non-negative integer (or a fixed-length tuple of such, for a multi-dimensional
+  workgroup/grid); `thread_mapping` and `addressing_rule` are structural model declarations
+  (per KISS-Emit §6.3-0003 the concrete signed-stride index arithmetic renders no target
+  surface and is driver-owned) and are NOT subject to the non-negative-integer post-condition,
+  since class-2 strides may be negative. An implementation MUST NOT carry a Dispatch derivation
+  field the grammar does not accept, MUST NOT reference a symbol absent from the launch-scalar
+  vocabulary, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
+  subscript, and MUST NOT use an out-of-bounds subscript; each such case is a typed decline.
+  *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
 
 ### 6.7 Capabilities section
 
