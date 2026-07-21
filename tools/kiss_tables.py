@@ -15,7 +15,9 @@ dtype table and the Ops §6.16 layout table, but left the Ops §2.8 shared-ancho
 list at seventeen tokens. A markdown check finds that class of drift the moment
 it lands, at the PR, instead of years later by inspection.
 
-THE DTYPE SET is the first (and, today, only) enumeration checked. Its owner and
+THE DTYPE SET was the first enumeration checked; the lint now also covers the
+determinism / MathPrecision / refusal / seven-section / reduce_axes / FEAT enums
+and the dtype bit-LAYOUT agreement (Ops §6.16 <-> Classify §6.1). The dtype set's owner and
 single source of truth is KISS-CLASSIFY-6.1-0001, whose own words are "The scalar
 dtype set MUST be **exactly** the twenty tokens in the table above (...)". This
 lint extracts that authoritative set and asserts that:
@@ -204,6 +206,9 @@ def check(spec_dir):
 
     # (9) the two FEAT capability bits — Announce §7.2 definition <-> §7.2-0003 clause.
     violations += check_feat_bits(spec_dir)
+
+    # (10) dtype bit-layout agreement — Ops §6.16 <-> Classify §6.1 (KISS-OPS-6.16-0008).
+    violations += check_dtype_layouts(spec_dir)
 
     return violations, auth
 
@@ -590,6 +595,10 @@ COVERS = [
      "the reduce_axes four-category set drifts between Ops §6.11-0011 and Classify §6.7-0005"),
     ("KISS-ANNOUNCE-7.2-0003",
      "a FEAT capability bit's name drifts between the §7.2 definition and the §7.2-0003 clause"),
+    ("KISS-OPS-6.16-0008",
+     "the Ops §6.16 dtype bit LAYOUTS drift from the Classify §6.1 pinned layouts"),
+    ("KISS-CLASSIFY-8-0007",
+     "the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008"),
 ]
 
 
