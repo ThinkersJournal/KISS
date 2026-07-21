@@ -101,6 +101,25 @@ fn a1_binary_two_operands() {
     assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-");
 }
 
+/// The reference-generator (`baracuda-kernelgen`) `relu_add` cell — the freeze-gate
+/// head-to-head token (KISS #60). This `bin` f32 cell is **rank-1**: the generator
+/// emits a flat grid-stride kernel over the flattened tensor (three contiguous
+/// vectorized operands, no reduce). Its token is pinned in
+/// `cuda/generated/PROVENANCE.md` and the emitted `.cu` header comment; this golden
+/// makes the match **machine-checked** rather than comment-deep. Independently
+/// reproduced by Fuel's Baracuda-free deriver and Baracuda's `sk2` codec —
+/// same-namespace three-way reproduction (records condition-1; NOT the §6.4-0004
+/// cross-namespace gate, and NOT a KISS-Classify freeze).
+#[test]
+fn relu_add_generated_r1_cell() {
+    let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 1, vec![co4(), co4(), co4()], Reduce::None, None);
+    assert_token(
+        "KISS-CLASSIFY-6.7-0001",
+        &k,
+        "sk2|bin|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+    );
+}
+
 #[test]
 fn a1_dense_contraction_cuda() {
     let c = Contraction { m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16 };
