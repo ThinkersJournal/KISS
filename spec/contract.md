@@ -1004,12 +1004,23 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   machine-evaluable expression, not free prose, in the pinned expression grammar: an
   expression is an ASCII string over the launch-scalar symbol vocabulary (§6.5-0004a /
   §6.7-0006), non-negative decimal integer literals, the binary operators `+ - * /`, the
-  function `ceil_div(a, b)`, and parentheses, with conventional precedence and left
-  associativity; evaluating it against concrete launch-scalar values MUST yield a non-negative
-  integer (or a fixed-length tuple of such, for a multi-dimensional workgroup/grid). An
-  implementation MUST NOT carry a Dispatch derivation field the grammar does not accept, and
-  MUST NOT reference a symbol absent from the launch-scalar vocabulary. *Test:*
-  `test_contract_dispatch_expressions_machine_evaluable`.
+  function `ceil_div(a, b)`, parentheses, and the **element-subscript operator** `sym[k]`,
+  where `sym` is one of the rank-length array launch-scalar symbols (§6.5-0004a — exactly the
+  symbols whose `array_len_kind` is `rank`, §6.11-0006: `extents{i}`, `strides{i}`,
+  `idx_extents{i}`) and `k` is a non-negative decimal integer literal naming an axis; `sym[k]`
+  is valid iff `0 <= k < rank`, where `rank` is the Interface `rank` for `extents{i}`/`strides{i}`
+  and the index-operand rank for `idx_extents{i}`. Subscript binds tighter than the binary
+  operators; expressions are left-associative. Evaluating an `invocation_domain`,
+  `workgroup_sizing`, or `count_to_grid` expression against concrete launch-scalar values MUST
+  yield a non-negative integer (or a fixed-length tuple of such, for a multi-dimensional
+  workgroup/grid); `thread_mapping` and `addressing_rule` are structural model declarations
+  (per KISS-Emit §6.3-0003 the concrete signed-stride index arithmetic renders no target
+  surface and is driver-owned) and are NOT subject to the non-negative-integer post-condition,
+  since class-2 strides may be negative. An implementation MUST NOT carry a Dispatch derivation
+  field the grammar does not accept, MUST NOT reference a symbol absent from the launch-scalar
+  vocabulary, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
+  subscript, and MUST NOT use an out-of-bounds subscript; each such case is a typed decline.
+  *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
 
 ### 6.7 Capabilities section
 

@@ -91,6 +91,14 @@ each now tracked:
 - **#43** — `KISS-CONTRACT-6.6-0004` vs `-6.6-0006`: `thread_mapping` / `addressing_rule`
   are functions of a per-thread index the Dispatch grammar has no symbol for (the Dispatch
   ungrammar, WIRE-FIRST §1.4).
+  **Resolved (R1.1):** `KISS-CONTRACT-6.6-0006` rewritten to add the `sym[k]`
+  element-subscript operator over the rank-length array launch-scalar symbols
+  (`extents{i}`/`strides{i}`/`idx_extents{i}`, §6.5-0004a/§6.11-0006), so per-axis
+  signed strides/extents are expressible without a per-thread-index symbol, and to
+  declare `thread_mapping`/`addressing_rule` structural model declarations (driver-owned
+  per-thread arithmetic, KISS-Emit §6.3-0003) exempt from the non-negative-integer
+  post-condition. The grammar now expresses exactly its own fields, thread-index-free;
+  `KISS-CONTRACT-6.6-0006` moves `untestable` → `untested` in `UNBACKED.tsv`.
 - **#44** — `KISS-CONTRACT-6.7-0006` / `-6.8-0002`: §6.11 pins no byte layout for the
   compound `cost` and `per_backend_ulp_tiers` fields, and **no float encoding exists
   anywhere in KISS-Contract** — so no fractional value (rel/abs error) can be byte-compared.
