@@ -973,11 +973,14 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 
 ### 6.6 Dispatch section
 
-- **KISS-CONTRACT-6.6-0001** — The Dispatch section MUST carry the **normative** launch model
-  as exactly the fields `{invocation_domain, workgroup_sizing, count_to_grid, thread_mapping,
-  addressing_rule}`, serialized in that order (§6.11-0005); an implementation MUST NOT declare
-  the launch geometry "provider-internal" or omit any of these fields, since a consumer
-  launches the kernel from this section. *Test:* `test_contract_dispatch_field_schema`.
+- **KISS-CONTRACT-6.6-0001** — The Dispatch section is **optional** (§6.6-0007). A kernel that
+  **declares** launch geometry MUST carry the launch model as exactly the fields
+  `{invocation_domain, workgroup_sizing, count_to_grid, thread_mapping, addressing_rule}`,
+  serialized in that order (§6.11-0005), and MUST NOT declare that geometry "provider-internal"
+  or omit any of these fields, since a consumer launches the kernel from this section; but a
+  **geometry-agnostic** kernel (§6.6-0007) MAY instead declare **no** Dispatch section (an
+  explicit absent sentinel), and a consumer MUST NOT require the geometry fields for it. *Test:*
+  `test_contract_dispatch_field_schema`.
 - **KISS-CONTRACT-6.6-0002** — The `invocation_domain` MUST declare the iteration/index frame
   derived from the operand extents (the widest-rank iteration frame) as a machine-evaluable
   expression (§6.6-0006) over the launch-scalar symbols; an implementation MUST NOT declare an
@@ -988,12 +991,19 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   (§6.5-0008), maps to grid size; the expression MUST divide the element count by `w` for a
   `vectors_xw` count before deriving the grid, and an implementation MUST NOT state a grid
   derivation that ignores the `count_unit`. *Test:* `test_contract_count_to_grid`.
-- **KISS-CONTRACT-6.6-0004** — The `thread_mapping` and `addressing_rule` MUST each be a
-  machine-evaluable expression (§6.6-0006): `thread_mapping` MUST declare the thread→element
-  mapping (the grid-stride model), and `addressing_rule` MUST declare how the class-2 signed
-  strides and class-4 base offsets (§6.5-0004a) drive per-thread addressing; an implementation
-  MUST NOT omit the signed-stride / base-offset addressing rule for a non-packed or offset
-  cell. *Test:* `test_contract_thread_and_addressing`.
+- **KISS-CONTRACT-6.6-0004** — The `thread_mapping` and `addressing_rule` are **thread-index-free
+  structural model declarations** (§6.6-0006): the §6.6-0006 grammar carries no thread/lane index
+  symbol (by design — §6.6-0008), so these fields declare only the parameters expressible without
+  one. `thread_mapping` MUST declare the **grid-stride constant** — the stride, in elements,
+  between successive elements one thread handles (for a standard grid-stride launch, the total
+  thread count) — and `addressing_rule` MUST declare the per-operand class-2 **signed-stride** and
+  class-4 **base-offset** coefficients (§6.5-0004a, subscripted per axis via the §6.6-0006 `sym[k]`
+  operator) that scale a thread's element index into an address; an implementation MUST NOT omit
+  the signed-stride / base-offset coefficients for a non-packed or offset cell. The **per-thread
+  element index itself** is the normative **grid-stride semantic** — the element handled by thread
+  `t` on iteration `k` is `t + k · thread_mapping`, applied by the executor/driver — and is **not**
+  a declared expression (there is no per-thread index symbol to spell it; that surface is reserved
+  to §6.6-0008, post-v1). *Test:* `test_contract_thread_and_addressing`.
 - **KISS-CONTRACT-6.6-0005** — The Dispatch section MUST be consistent with the Interface
   section: the launch scalars the addressing and grid derivations reference MUST be exactly
   those declared in the Interface `positional_signature` (§6.5), and an implementation MUST
@@ -1022,6 +1032,26 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   vocabulary, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
   subscript, and MUST NOT use an out-of-bounds subscript; each such case is a typed decline.
   *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
+- **KISS-CONTRACT-6.6-0007** — A **geometry-agnostic** kernel — one launched grid-stride from a
+  host-computed launch dimension (`Dim3`) whose element→thread mapping is not consumer-visible —
+  MAY declare **no** Dispatch section: the section is carried as an explicit **absent sentinel**,
+  and KISS-Conform MUST accept a contract with an absent Dispatch section and MUST NOT require any
+  of the five geometry fields for it. Launch geometry is then the **executor's**, not the
+  contract's — the consumer launches the kernel with its own `Dim3` under the grid-stride semantic
+  (§6.6-0004), needing no declared geometry (this is KISS's answer to the "a kernel contract should
+  not declare launch geometry" objection, PRIOR-ART §5.1). A contract MUST NOT carry a **partial**
+  Dispatch section: it declares either all five fields (§6.6-0001) or the absent sentinel, never a
+  subset. *Test:* `test_contract_dispatch_optional`.
+- **KISS-CONTRACT-6.6-0008** — KISS-Contract **reserves** — as a **named post-v1 extension**, NOT
+  required for v1 conformance — a **richer thread-mapping form** for launches whose element→thread
+  mapping is neither grid-stride nor thread-index-free (e.g. a pinned-tile / warp-lane→output-tile
+  schedule, as in a tiled tensor-core GEMM): either a named **tile-mapping** rule or a bound
+  per-thread index symbol (`gid`) added to the §6.6-0006 grammar. A v1 contract MUST express its
+  launch as either a geometry-agnostic kernel (§6.6-0007) or a grid-stride Dispatch section with
+  thread-index-free coefficients (§6.6-0004); KISS-Conform MUST NOT require the reserved form in v1,
+  MUST NOT reject a v1 kernel for not carrying it, and the §6.6-0006 grammar MUST remain
+  **thread-index-free** in v1 (no per-thread index symbol). *Test:*
+  `test_contract_reserved_tile_mapping`.
 
 ### 6.7 Capabilities section
 
@@ -1496,6 +1526,8 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.6-0004 | `test_contract_thread_and_addressing` |
 | KISS-CONTRACT-6.6-0005 | `test_contract_dispatch_interface_consistent` |
 | KISS-CONTRACT-6.6-0006 | `test_contract_dispatch_expressions_machine_evaluable` |
+| KISS-CONTRACT-6.6-0007 | `test_contract_dispatch_optional` |
+| KISS-CONTRACT-6.6-0008 | `test_contract_reserved_tile_mapping` |
 | KISS-CONTRACT-6.7-0001 | `test_contract_capabilities_field_schema` |
 | KISS-CONTRACT-6.7-0002 | `test_contract_capabilities_accept_matches_identity` |
 | KISS-CONTRACT-6.7-0003 | `test_contract_capabilities_is_envelope` |
