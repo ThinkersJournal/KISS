@@ -956,8 +956,10 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   with that tail. *Test:* `test_contract_launch_scalars_match_signature_tail`.
 - **KISS-CONTRACT-6.5-0012** — The Interface `rank` field MUST declare the operand logical
   rank as a fixed, per-contract compile-time constant (a non-negative integer); every
-  per-operand `extents` / `strides` / `off` array length MUST equal `rank`, and a consumer
-  MUST size those arrays from `rank` alone. An implementation MUST NOT require a consumer to
+  per-operand `extents` / `strides` array length MUST equal `rank`, and a consumer MUST size
+  those arrays from `rank` alone. The per-operand base offset `off{i}` (§6.5-0004a class 4)
+  is a **single scalar** value per operand — one linear base offset, not a rank-length array —
+  and a consumer MUST NOT size it from `rank`. An implementation MUST NOT require a consumer to
   recover `rank` by parsing the `accept_predicate` bytes (§6.3-0002 forbids reinterpreting
   them). *Test:* `test_contract_rank_declared`.
 - **KISS-CONTRACT-6.5-0013** — The Interface MUST carry an explicit scalar-op-param **count**
