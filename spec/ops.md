@@ -1341,6 +1341,17 @@ shared naming convention spelled identically in both foundational vocabularies.
   complex-arithmetic op family of §6.18, every member of which is non-primitive and
   decomposes into the real primitive floor (no new primitive is introduced, §6.18-0002).
   *Test:* `test_ops_complex_storage_layout`.
+- **KISS-OPS-6.16-0008** — The dtype bit layouts inlined in §6.16 are a shared layout
+  convention spelled per foundational vocabulary (the shared anchor), not an import, and
+  create **no dependency edge** (§2.8, §4). Any non-additive change to a dtype's pinned layout
+  facts — storage width, float sign/exponent/mantissa split and exponent bias, integer
+  signedness, complex `(re,im)` interleave, or sub-byte packing — MUST co-bump **both** the
+  KISS-Ops op-vocabulary schema version **and** the Classify `DTYPE_LAYOUT_VERSION`
+  (KISS-CLASSIFY-8-0007), never a silent in-place change to one table; the Ops §6.16 and
+  Classify §6.1 normative tables MUST agree on every layout fact they both state. For sub-byte
+  packing (`s4`/`u4`/`b1`, §6.16-0006) and complex storage (`c32`/`c64`, §6.16-0007) whose
+  normative owner is Classify, this obligation is that the Ops restatement tracks the Classify
+  owner, not a symmetric dual pinning. *Test:* `test_ops_dtype_layout_coversioned`.
 
 ### 6.17 Compute-fidelity (math-precision) attribute
 
@@ -2312,6 +2323,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0005 | `test_ops_e5m2_layout` |
 | KISS-OPS-6.16-0006 | `test_ops_integer_dtype_layouts` |
 | KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
+| KISS-OPS-6.16-0008 | `test_ops_dtype_layout_coversioned` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
 | KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |

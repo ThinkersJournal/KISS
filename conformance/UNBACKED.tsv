@@ -146,6 +146,7 @@ KISS-CLASSIFY-8-0003	test_classify_additive_no_version_bump	untested
 KISS-CLASSIFY-8-0004	test_classify_freeze_gate_two_dissimilar_impls	untested	
 KISS-CLASSIFY-8-0005	test_classify_freeze_gate_foreign_reader	untested	
 KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	untested	
+KISS-CLASSIFY-8-0007	test_classify_dtype_layout_version_handle	lint:kiss_tables	the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008
 KISS-CONFORM-6.0-0001	test_conform_determinism_enum_imported	untested	
 KISS-CONFORM-6.0-0002	test_conform_comparator_selected_by_class	untested	
 KISS-CONFORM-6.0-0003	test_conform_structural_artifacts_byte_exact	untested	
@@ -553,6 +554,7 @@ KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh	untested
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts	lint:kiss_tables	the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner
 KISS-OPS-6.16-0002	test_ops_ieee754_dtype_encodings	untested	
 KISS-OPS-6.16-0007	test_ops_complex_storage_layout	untested	
+KISS-OPS-6.16-0008	test_ops_dtype_layout_coversioned	lint:kiss_tables	the Ops §6.16 dtype bit layouts drift from the Classify §6.1 pinned layouts
 KISS-OPS-6.17-0001	test_ops_math_precision_enum	lint:kiss_tables	a sub-standard re-forks the compute-fidelity (MathPrecision) enum instead of importing it
 KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested	
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	

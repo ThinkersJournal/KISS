@@ -1203,6 +1203,12 @@ reference-crate *semver*. They move independently.
   Frozen until this sub-standard's KISS-Conform suite exists and passes with
   complete bidirectional clause-to-test traceability. *Test:*
   `test_classify_freeze_gate_conform_suite_passes` (checklist gate; AUDIT-signed).
+- **KISS-CLASSIFY-8-0007** — The dtype bit **layouts** pinned in §6.1 (each dtype's storage
+  width, and for the float dtypes the sign/exponent/mantissa split and exponent bias) are
+  tracked by a dedicated schema handle, `DTYPE_LAYOUT_VERSION` (initial value `1`), on an
+  axis independent of `STRUCTURE_KEY_VERSION` and the crate semver. Any non-additive change
+  to a pinned layout fact MUST bump `DTYPE_LAYOUT_VERSION`; assigning a previously-unused
+  dtype code MUST NOT (additive, §8-0003). *Test:* `test_classify_dtype_layout_version_handle`.
 
 > **Resolved decisions (informative; ratified 2026-07-12, tracked as RFCs).**
 > **(8.1 — RESOLVED)** Compute precision is **not** a dtype. The dtype set is pure
@@ -1341,6 +1347,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-8-0004 | `test_classify_freeze_gate_two_dissimilar_impls` |
 | KISS-CLASSIFY-8-0005 | `test_classify_freeze_gate_foreign_reader` |
 | KISS-CLASSIFY-8-0006 | `test_classify_freeze_gate_conform_suite_passes` |
+| KISS-CLASSIFY-8-0007 | `test_classify_dtype_layout_version_handle` |
 
 Every normative clause above appears in this matrix exactly once; the KISS-Conform
 build fails if any clause ID lacks a passing mapped test (bidirectional
