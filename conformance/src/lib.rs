@@ -18,10 +18,12 @@
 //! KISS-Classify `structure_key` token codec ([`structure_key`], Classify §6.7),
 //! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
+pub mod accuracy;
 pub mod announce;
 pub mod contract;
 pub mod corpus;
 pub mod decomp_grammar;
+pub mod determinism;
 pub mod differential;
 pub mod grammar;
 pub mod fp;

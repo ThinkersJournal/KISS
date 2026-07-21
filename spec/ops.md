@@ -177,13 +177,14 @@ which would perturb exactly these values.
 
 `exp`, `log`, `sin`, `cos`, `sqrt`, `erf`, `atan`, `lgamma`, and the binary-math atoms
 `atan2`, `copysign`, `nextafter` are **atoms**: each is implemented per-target to a
-**declared ULP** bound, itself bounded above by a normative per-atom ULP ceiling
-pinned in §6.8. KISS-Ops does **not** mandate a reference polynomial and does **not**
-claim cross-language bit identity for them — `sin` under one target's math library
-differs in the last bit from another's. Mandating a polynomial would over-specify while
-still failing to deliver cross-language identity, so the semantics is "the named
-function to within a declared ULP no looser than the §6.8 ceiling," and the determinism
-class is ULP/tolerance, not exact-byte.
+**declared accuracy tier** (KISS-Contract §6.8-0002) — a tagged quantity carrying at
+least one of `{max_ulp, max_relative, max_absolute}` — which is the **sole** conformance
+gate; §6.8 carries an *informative advisory floor*, not a normative ceiling. KISS-Ops
+does **not** mandate a reference polynomial and does **not** claim cross-language bit
+identity for them — `sin` under one target's math library differs in the last bit from
+another's. Mandating a polynomial would over-specify while still failing to deliver
+cross-language identity, so the semantics is "the named function to within its declared
+per-target accuracy tier," and the determinism class is ULP/tolerance, not exact-byte.
 
 ### 2.5 A worked resolution — `gelu`
 
@@ -780,13 +781,19 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 ### 6.8 Transcendental atoms (declared-ULP)
 
 The transcendental atoms are `exp` (`e^x`), `log` (`ln x`), `sin`, `cos`, `sqrt` (√x),
-`erf` (Gauss error function), `atan` (arctangent), and `lgamma` (`ln|Γ(x)|`). Each
-carries a normative **maximum ULP ceiling** below; a kernel's contract declares a
-per-target ULP no looser than the ceiling, and KISS-Conform evaluates the atom
-under that declared ULP (the normative requirement is carried by KISS-OPS-6.8-0001;
-this section-intro paragraph is an informative pointer to it):
+`erf` (Gauss error function), `atan` (arctangent), `atan2` (two-argument arctangent),
+and `lgamma` (`ln|Γ(x)|`). `atan2` is structurally an op-family `binary_math` atom
+(§6.9) but is a **declared-ULP transcendental atom** for accuracy and determinism-class
+purposes: it appears in the advisory-floor table below and is class ULP/tolerance
+(§6.0-0003, §6.8-0005), never exact-byte. Each atom's accuracy is governed by the
+**per-target accuracy tier its kernel's contract declares** (KISS-Contract §6.8-0002),
+which KISS-Conform evaluates against an audited reference; the declared tier is the
+**sole** normative gate. The table below is an *informative advisory floor* — a
+reasonableness reference drawn from incumbent (Khronos/OpenCL) practice, **not** a
+normative cap (the normative requirement is carried by KISS-OPS-6.8-0001; this
+section-intro paragraph is an informative pointer to it):
 
-| Atom | Maximum ULP ceiling (compute dtype ≥ 16-bit float) |
+| Atom | Advisory-floor ULP — *informative*, typical incumbent-conformant value (compute dtype ≥ 16-bit float); **not** a normative cap |
 |---|---|
 | `sqrt` | 0.5 ULP (correctly rounded) where the target guarantees it, else 2 ULP |
 | `exp`, `log`, `sin`, `cos`, `atan`, `atan2` | 4 ULP |
@@ -794,23 +801,49 @@ this section-intro paragraph is an informative pointer to it):
 | `lgamma` | 8 ULP |
 
 - **KISS-OPS-6.8-0001** — Each transcendental atom MUST compute its named mathematical
-  function to within its **maximum ULP ceiling** in the table above; a kernel's contract
-  MAY declare a tighter per-target ULP but MUST NOT declare one looser than the ceiling,
-  and KISS-Conform MUST reject a declared ULP exceeding the ceiling. KISS-Ops MUST NOT
+  function to within the **per-target accuracy tier its kernel's contract declares** for
+  that target (KISS-Contract §6.8-0002); the declared tier is the **sole** conformance
+  gate. The accuracy tier is a tagged quantity carrying at least one of `{max_ulp,
+  max_relative, max_absolute}`, and KISS-Conform MUST evaluate the atom against the
+  declared tier under the ULP/tolerance determinism class (§6.0-0003), measured against an
+  audited wide-precision reference — never a byte-exact comparison across languages or
+  targets. KISS-Conform MUST NOT impose a fixed suite-wide ULP cap and MUST NOT reject a
+  declared tier for exceeding the §6.8 advisory-floor table (that table is *informative* —
+  a reasonableness reference, not a normative threshold; a truthful Khronos-conformant
+  provider whose atom exceeds a table value MUST NOT be rejected for it). KISS-Ops MUST NOT
   mandate a specific reference polynomial or table for a transcendental atom. *Test:*
-  `test_ops_transcendental_declared_ulp`.
+  `test_ops_transcendental_declared_tier_is_gate`.
 - **KISS-OPS-6.8-0002** — KISS-Ops MUST NOT claim cross-language or cross-target bit
   identity for any transcendental atom; conformance for these atoms MUST be evaluated
   under the ULP/tolerance determinism class (§6.0-0003), and byte-exact identity MUST be
   claimed only same-language on-device (deferred to KISS-Emit / KISS-Conform). *Test:*
   `test_ops_transcendental_no_cross_lang_identity`.
 - **KISS-OPS-6.8-0003** — `sqrt` MUST be correctly rounded per IEEE 754-2019 on any target
-  that guarantees correctly-rounded square root, and MUST otherwise meet its declared ULP
-  bound (≤ the 2 ULP ceiling). *Test:* `test_ops_sqrt_correctly_rounded_or_ulp`.
+  that guarantees correctly-rounded square root, and MUST otherwise meet its **declared
+  per-target accuracy tier** (§6.8-0001). *Test:* `test_ops_sqrt_correctly_rounded_or_ulp`.
 - **KISS-OPS-6.8-0004** — `erf` and `lgamma` MUST be treated as special-function atoms
   with no elementary decomposition over other KISS-Ops ops; an implementation MUST NOT
   require them to be expressed via `exp`/`log`/etc. *Test:*
   `test_ops_special_function_atoms`.
+- **KISS-OPS-6.8-0005** — `atan2` MUST be assigned the **ULP/tolerance** determinism
+  class (§6.0-0003) and MUST NOT be assigned the exact-byte class or evaluated with a
+  byte-exact comparator: although `atan2` is an op-family `binary_math` atom (§6.9), it
+  is a declared-ULP transcendental atom (this section, 4-ULP advisory floor), so the exact-byte
+  "if and only if" of §6.0-0002 MUST NOT apply to it (its condition (a) excludes any op
+  containing a §6.8 transcendental atom) and no clause MUST require its byte-exact
+  reproduction across targets — consistent with `carg`, which is derived from `atan2`
+  (§6.18-0008) and whose determinism class is ULP/tolerance (§6.18-0014). *Test:*
+  `test_ops_atan2_class_is_ulp`.
+- **KISS-OPS-6.8-0006** — The v1 accuracy tier (§6.8-0001) is a **flat, argument-independent**
+  quantity over the atom's declared input domain: a single `{max_ulp | max_relative |
+  max_absolute}` per target, not a function of the argument. KISS-Ops **reserves** — as a
+  **named post-v1 accuracy-model extension**, NOT required for v1 conformance — an
+  *argument-dependent / range-scoped* form: accuracy expressed as a function of input
+  magnitude (e.g. `3 + 2·|x|` ULP) or as an absolute error over a bounded range (e.g.
+  `≤ 2⁻¹¹` on `[−π, π]`), the forms incumbent tables (Vulkan `sin`/`cos`/`exp`) already
+  use. A v1 kernel whose true accuracy is argument-dependent MUST declare a flat tier that
+  bounds it over the declared input domain; KISS-Conform MUST NOT require the reserved form
+  in v1. *Test:* `test_ops_accuracy_tier_flat_v1`.
 
 ### 6.9 Binary-math atoms
 
@@ -2191,10 +2224,12 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.6-0004 | `test_ops_compare_signed_zero` |
 | KISS-OPS-6.7-0001 | `test_ops_rounding_directions` |
 | KISS-OPS-6.7-0002 | `test_ops_rounding_nan_signed_zero` |
-| KISS-OPS-6.8-0001 | `test_ops_transcendental_declared_ulp` |
+| KISS-OPS-6.8-0001 | `test_ops_transcendental_declared_tier_is_gate` |
 | KISS-OPS-6.8-0002 | `test_ops_transcendental_no_cross_lang_identity` |
 | KISS-OPS-6.8-0003 | `test_ops_sqrt_correctly_rounded_or_ulp` |
 | KISS-OPS-6.8-0004 | `test_ops_special_function_atoms` |
+| KISS-OPS-6.8-0005 | `test_ops_atan2_class_is_ulp` |
+| KISS-OPS-6.8-0006 | `test_ops_accuracy_tier_flat_v1` |
 | KISS-OPS-6.9-0001 | `test_ops_atan2_quadrants` |
 | KISS-OPS-6.9-0002 | `test_ops_copysign_raw_bit` |
 | KISS-OPS-6.9-0003 | `test_ops_nextafter_own_lattice` |
