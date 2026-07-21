@@ -1009,8 +1009,9 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   symbols whose `array_len_kind` is `rank`, §6.11-0006: `extents{i}`, `strides{i}`,
   `idx_extents{i}`) and `k` is a non-negative decimal integer literal naming an axis; `sym[k]`
   is valid iff `0 <= k < rank`, where `rank` is the Interface `rank` for `extents{i}`/`strides{i}`
-  and the index-operand rank for `idx_extents{i}`. Subscript binds tighter than the binary
-  operators; expressions are left-associative. Evaluating an `invocation_domain`,
+  and the index-operand rank for `idx_extents{i}`. Subscript binds tighter than `*` and `/`,
+  which in turn bind tighter than `+` and `-`; operators of equal precedence are
+  left-associative. Evaluating an `invocation_domain`,
   `workgroup_sizing`, or `count_to_grid` expression against concrete launch-scalar values MUST
   yield a non-negative integer (or a fixed-length tuple of such, for a multi-dimensional
   workgroup/grid); `thread_mapping` and `addressing_rule` are structural model declarations
