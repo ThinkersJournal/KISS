@@ -34,6 +34,8 @@
 
 use std::cmp::Ordering;
 
+pub mod consts;
+
 /// Floating-point class. Zero carries a sign; Inf/NaN only arise from the atom /
 /// semantics layer (they are canonicalized to an all-zero mantissa here).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
