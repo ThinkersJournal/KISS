@@ -52,6 +52,22 @@ class CompareLayoutFacts(unittest.TestCase):
         self.assertEqual(kt._compare_layout_facts(f, dict(f)), [])
 
 
+class SectionAnchor(unittest.TestCase):
+    def test_slice_distinguishes_6_1_from_6_16(self):
+        text = "## 6.1 alpha\nAAA\n## 6.16 beta\nBBB\n## 7 gamma\nCCC\n"
+        self.assertIn("AAA", kt._section_slice(text, "6.1"))
+        self.assertNotIn("BBB", kt._section_slice(text, "6.1"))   # must NOT bleed into 6.16
+        self.assertIn("BBB", kt._section_slice(text, "6.16"))
+        self.assertNotIn("CCC", kt._section_slice(text, "6.16"))  # stops at next same-level heading
+
+    def test_classify_6_1_slice_excludes_informative_2_6(self):
+        classify = open(os.path.join(SPEC_DIR, "classify.md"), encoding="utf-8").read()
+        sl = kt._section_slice(classify, "6.1")
+        self.assertIn("pinned scalar dtype set", sl)          # the normative §6.1 heading body
+        self.assertNotIn("Readable catalog", sl)              # the informative §2.6 table is excluded
+        self.assertNotEqual(sl, "")
+
+
 class RealSpecIsClean(unittest.TestCase):
     def test_whole_lint_is_clean_on_shipped_spec(self):
         result = kt.check(SPEC_DIR)

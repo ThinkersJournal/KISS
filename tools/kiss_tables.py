@@ -505,15 +505,40 @@ def _compare_layout_facts(ops_facts, cls_facts):
     return out
 
 
+def _section_slice(text, sec):
+    """The body text of the Markdown section whose heading number is exactly `sec`
+    (e.g. "6.1"), from its heading line down to (not including) the next heading of the
+    SAME OR HIGHER level. Empty string if no such heading exists. `sec` matches only an
+    exact section number — `_section_slice(text, "6.1")` does NOT match a `6.16` heading."""
+    # Heading like "### 6.1 The pinned scalar dtype set". The negative lookahead (?!\d)
+    # is what distinguishes "6.1" from "6.16" (after "6.1" in "6.16" comes a digit).
+    head = re.compile(r"^(#{1,6})\s+" + re.escape(sec) + r"(?!\d)", re.MULTILINE)
+    m = head.search(text)
+    if not m:
+        return ""
+    level = len(m.group(1))
+    start = m.end()
+    # terminate at the next heading whose level is <= this section's level
+    stop = re.compile(r"^#{1," + str(level) + r"}\s", re.MULTILINE)
+    n = stop.search(text, start)
+    return text[start:n.start()] if n else text[start:]
+
+
 def check_dtype_layouts(spec_dir):
-    """Cross-table dtype-layout fact agreement + the DTYPE_LAYOUT_VERSION handle presence —
-    the teeth for KISS-OPS-6.16-0008 / KISS-CLASSIFY-8-0007."""
+    """Cross-table dtype-layout fact agreement (Ops §6.16 <-> Classify §6.1 NORMATIVE tables,
+    section-anchored so an informative restatement or a reorder can't shadow the pinned table)
+    + the DTYPE_LAYOUT_VERSION handle presence — teeth for KISS-OPS-6.16-0008 / KISS-CLASSIFY-8-0007."""
     out = []
     def read(stem):
         p = os.path.join(spec_dir, stem + ".md")
         return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
     classify, ops = read("classify"), read("ops")
-    out += _compare_layout_facts(_table_layout_facts(ops), _table_layout_facts(classify))
+    ops_sec, cls_sec = _section_slice(ops, "6.16"), _section_slice(classify, "6.1")
+    if not ops_sec:
+        out.append("Ops §6.16 (self-contained dtype bit layouts) section not found (KISS-OPS-6.16-0008)")
+    if not cls_sec:
+        out.append("Classify §6.1 (pinned scalar dtype set) section not found (KISS-CLASSIFY-8-0007)")
+    out += _compare_layout_facts(_table_layout_facts(ops_sec), _table_layout_facts(cls_sec))
     if "DTYPE_LAYOUT_VERSION" not in classify:
         out.append("Classify §8 no longer declares DTYPE_LAYOUT_VERSION (KISS-CLASSIFY-8-0007 handle)")
     if "DTYPE_LAYOUT_VERSION" not in ops:
@@ -596,7 +621,7 @@ COVERS = [
     ("KISS-ANNOUNCE-7.2-0003",
      "a FEAT capability bit's name drifts between the §7.2 definition and the §7.2-0003 clause"),
     ("KISS-OPS-6.16-0008",
-     "the Ops §6.16 dtype bit LAYOUTS drift from the Classify §6.1 pinned layouts"),
+     "the Ops §6.16 dtype bit layouts drift from the Classify §6.1 pinned layouts"),
     ("KISS-CLASSIFY-8-0007",
      "the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008"),
 ]
