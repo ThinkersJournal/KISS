@@ -48,4 +48,28 @@ fn dispatch_subscript_declines() {
     let mut neg = scalars();
     neg.strides[0][0] = -4;
     assert!(matches!(eval("strides0[0]", &neg, EvalMode::Domain), Err(Decline::NegativeInDomain(-4))));
+    // integer overflow (+ - * and the a+b-1 inside ceil_div) MUST decline, never panic.
+    assert!(matches!(
+        eval("9223372036854775807 + 1", &s, EvalMode::Domain),
+        Err(Decline::ParseError(_))
+    ));
+    assert!(matches!(
+        eval("9223372036854775807 * 2", &s, EvalMode::Domain),
+        Err(Decline::ParseError(_))
+    ));
+    assert!(matches!(
+        eval("ceil_div(9223372036854775807, 2)", &s, EvalMode::Domain),
+        Err(Decline::ParseError(_))
+    ));
+    // i64::MIN / -1 overflow MUST decline, never panic.
+    assert!(matches!(
+        eval("(0 - 9223372036854775807 - 1) / (0 - 1)", &s, EvalMode::Structural),
+        Err(Decline::ParseError(_))
+    ));
+    // an oversized subscript literal (> u32::MAX) MUST NOT be silently
+    // truncated by narrowing into a valid axis — it must decline out-of-bounds.
+    assert!(matches!(
+        eval("extents0[4294967296]", &s, EvalMode::Domain),
+        Err(Decline::SubscriptOutOfBounds { .. })
+    ));
 }

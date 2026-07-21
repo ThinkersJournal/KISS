@@ -71,8 +71,9 @@ pub enum Decline {
     BareArraySymbol(String),
     /// `sym[k]` with `k >= rank` for that symbol's operand.
     SubscriptOutOfBounds { sym: String, k: u32, rank: u32 },
-    /// Malformed input: an unexpected character, unexpected token, or
-    /// unparseable arithmetic (e.g. a zero/non-positive divisor).
+    /// Malformed input: an unexpected character, unexpected token,
+    /// unparseable arithmetic (e.g. a zero/non-positive divisor), or an `i64`
+    /// overflow in `+ - * /` / `ceil_div`.
     ParseError(String),
     /// A Domain-mode expression (or one of its sub-expressions) evaluated
     /// negative.
@@ -185,8 +186,12 @@ enum Ast {
     Int(i64),
     /// A scalar symbol reference (no subscript in source).
     Symbol(String),
-    /// A `sym[k]` element-subscript reference.
-    Subscript(String, u32),
+    /// A `sym[k]` element-subscript reference. `k` is kept as the raw `i64`
+    /// the lexer produced (not yet narrowed to `u32`) because the parser has
+    /// no `rank` to bounds-check against — narrowing happens at resolution
+    /// time, once `rank` is known, so an oversized literal (`> u32::MAX`)
+    /// can't wrap into a spuriously in-range axis.
+    Subscript(String, i64),
     Add(Box<Ast>, Box<Ast>),
     Sub(Box<Ast>, Box<Ast>),
     Mul(Box<Ast>, Box<Ast>),
@@ -291,10 +296,13 @@ impl<'a> Parser<'a> {
                     Ok(Ast::CeilDiv(Box::new(a), Box::new(b)))
                 } else if matches!(self.peek(), Tok::LBracket) {
                     self.bump();
+                    // Kept as `i64` here (not narrowed to `u32`) — see the
+                    // `Ast::Subscript` doc comment: bounds-checking against
+                    // `rank` happens at resolution time, not here.
                     let k = match self.peek().clone() {
                         Tok::Int(v) if v >= 0 => {
                             self.bump();
-                            v as u32
+                            v
                         }
                         other => {
                             return Err(Decline::ParseError(format!(
@@ -354,26 +362,35 @@ fn resolve_scalar(name: &str, s: &LaunchScalars) -> Result<i64, Decline> {
 
 /// Resolve one array row (`extents[i]` or `strides[i]`) against the shared
 /// Interface `rank`, then subscript it at axis `k`.
+///
+/// `k` is compared against `rank` as `i64` **before** any narrowing to `u32`,
+/// so an oversized subscript literal (larger than `u32::MAX`) can never wrap
+/// around into a spuriously in-range axis — it always declines out-of-bounds.
 fn resolve_rank_array(
     name: &str,
     rows: &[Vec<i64>],
     i: u32,
-    k: u32,
+    k: i64,
     rank: u32,
 ) -> Result<i64, Decline> {
     let row = rows
         .get(i as usize)
         .ok_or_else(|| Decline::UnknownSymbol(name.to_string()))?;
-    if k >= rank {
-        return Err(Decline::SubscriptOutOfBounds { sym: name.to_string(), k, rank });
+    if k >= rank as i64 {
+        // The decline just needs to REPORT an out-of-bounds `k`; the exact
+        // (possibly huge) literal value need not round-trip through `u32`.
+        let k_reported = k.min(u32::MAX as i64) as u32;
+        return Err(Decline::SubscriptOutOfBounds { sym: name.to_string(), k: k_reported, rank });
     }
-    row.get(k as usize)
+    // k is now known to be in 0..rank and rank: u32, so this narrowing is exact.
+    let k_u32 = k as u32;
+    row.get(k_u32 as usize)
         .copied()
-        .ok_or_else(|| Decline::SubscriptOutOfBounds { sym: name.to_string(), k, rank })
+        .ok_or_else(|| Decline::SubscriptOutOfBounds { sym: name.to_string(), k: k_u32, rank })
 }
 
 /// Resolve a `sym[k]` element-subscript reference.
-fn resolve_subscript(name: &str, k: u32, s: &LaunchScalars) -> Result<i64, Decline> {
+fn resolve_subscript(name: &str, k: i64, s: &LaunchScalars) -> Result<i64, Decline> {
     let (base, idx) = split_ident(name);
     match (base, idx) {
         ("n", None) | ("ws_bytes", None) | ("off", Some(_)) | ("param", Some(_)) => {
@@ -387,8 +404,9 @@ fn resolve_subscript(name: &str, k: u32, s: &LaunchScalars) -> Result<i64, Decli
                 .get(i as usize)
                 .ok_or_else(|| Decline::UnknownSymbol(name.to_string()))?;
             let rank = row.len() as u32;
-            if k >= rank {
-                return Err(Decline::SubscriptOutOfBounds { sym: name.to_string(), k, rank });
+            if k >= rank as i64 {
+                let k_reported = k.min(u32::MAX as i64) as u32;
+                return Err(Decline::SubscriptOutOfBounds { sym: name.to_string(), k: k_reported, rank });
             }
             Ok(row[k as usize])
         }
@@ -408,7 +426,14 @@ fn ceil_div(a: i64, b: i64) -> Result<i64, Decline> {
             "ceil_div divisor must be positive, got {b}"
         )));
     }
-    Ok((a + b - 1).div_euclid(b))
+    // `a + b - 1` in checked arithmetic: this module never panics, including
+    // on the near-i64::MAX inputs a Dispatch expression's launch scalars can
+    // legitimately carry.
+    let numerator = a
+        .checked_add(b)
+        .and_then(|x| x.checked_sub(1))
+        .ok_or_else(|| Decline::ParseError("integer overflow in ceil_div".to_string()))?;
+    Ok(numerator.div_euclid(b))
 }
 
 fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Decline> {
@@ -416,15 +441,34 @@ fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Declin
         Ast::Int(v) => *v,
         Ast::Symbol(name) => resolve_scalar(name, s)?,
         Ast::Subscript(name, k) => resolve_subscript(name, *k, s)?,
-        Ast::Add(a, b) => eval_ast(a, s, mode)? + eval_ast(b, s, mode)?,
-        Ast::Sub(a, b) => eval_ast(a, s, mode)? - eval_ast(b, s, mode)?,
-        Ast::Mul(a, b) => eval_ast(a, s, mode)? * eval_ast(b, s, mode)?,
+        // `+ - *` use checked arithmetic — a bare `i64` op panics on overflow
+        // (aborting the process) in a debug/conformance build, which would
+        // break this module's "never a panic" contract (KISS-Conform §6.7).
+        Ast::Add(a, b) => {
+            let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
+            av.checked_add(bv)
+                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+        }
+        Ast::Sub(a, b) => {
+            let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
+            av.checked_sub(bv)
+                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+        }
+        Ast::Mul(a, b) => {
+            let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
+            av.checked_mul(bv)
+                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+        }
         Ast::Div(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
-            if bv == 0 {
-                return Err(Decline::ParseError("division by zero".to_string()));
-            }
-            av / bv
+            // `/` truncates toward zero (Rust's native `i64` division) — the
+            // pinned reference rounding for this operator, distinct from
+            // `ceil_div`'s flooring `div_euclid`. `checked_div` covers BOTH
+            // a zero divisor and the one other way integer division can trap
+            // (`i64::MIN / -1`, which overflows the positive result).
+            av.checked_div(bv).ok_or_else(|| {
+                Decline::ParseError("division by zero or overflow (i64::MIN / -1)".to_string())
+            })?
         }
         Ast::CeilDiv(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
