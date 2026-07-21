@@ -130,8 +130,11 @@ stage (Draft → Frozen) requires passing the **freeze gate** — at least two d
 independent implementations plus an adversarial-outsider review. See umbrella §5.3 and
 §7, and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-Comment and proposals are welcome now, while the drafts are still soft. Open an issue or
-a pull request.
+Comment and proposals are welcome now, while the drafts are still soft. A substantive
+change is an **RFC — a GitHub issue** labeled `rfc` (use the RFC issue template); the issue
+is the durable record from proposal through accept-via-PR or decline-with-rationale. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md#the-rfc-lifecycle). Small, obvious fixes may go straight
+to a pull request.
 
 ## License
 

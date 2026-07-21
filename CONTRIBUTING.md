@@ -12,9 +12,10 @@ in the umbrella specification: [`spec/umbrella.md`](spec/umbrella.md) §7 (Gover
 
 - **Comment or ask a question** — open an issue. Point at the document and clause ID
   (e.g. `KISS-ANNOUNCE-6-0003`) so the discussion is anchored to specific normative text.
-- **Propose a change** — open a pull request, or an issue tagged as an RFC for anything
-  substantive (a new clause, a wire-format change, a vocabulary addition). Explain the
-  problem before the solution.
+- **Propose a change** — open an **RFC issue** (use the *RFC* issue template) for anything
+  substantive: a new clause, a wire-format change, or a vocabulary addition. The RFC *is*
+  the issue (see [The RFC lifecycle](#the-rfc-lifecycle) below). Explain the problem before
+  the solution. Small, obvious fixes may skip straight to a pull request.
 - **Report an interoperability failure** — if two implementations read the same clause
   and behaved differently, that is a defect in the *specification*, not just the code.
   File it against the clause; ambiguity that admits two readings is a bug we want.
@@ -27,6 +28,32 @@ in the umbrella specification: [`spec/umbrella.md`](spec/umbrella.md) §7 (Gover
   parties may co-sign and comment on. The editor integrates or declines with a rationale.
 - Anyone may implement, comment, and co-sign. Stewardship is about maintaining a coherent,
   testable, vendor-neutral specification — not about gatekeeping who may use it.
+
+## The RFC lifecycle
+
+A KISS RFC **is a GitHub issue** labeled `rfc`. The issue is the durable record of the
+change: the problem, the discussion, who co-signed, and the final accept-or-decline
+rationale all live in one place and stay visible after the issue is closed. Open one with
+the **RFC** issue template (or **Spec defect / interoperability failure** for a clause that
+is ambiguous or self-contradictory).
+
+An RFC moves through these states:
+
+1. **Proposed** — the issue is opened with the problem, the affected clause IDs, and the
+   proposal. Interested cosignatories (the providers, consumers, and emitters it affects)
+   comment and co-sign. Propose-first: float the RFC before it is wired.
+2. **Discussion** — the **editor of record** for each affected sub-standard and the
+   cosignatories converge on a decision in the thread. Disagreement is resolved here.
+3. **Accepted** — the change is authored as a **pull request that cites the issue**
+   (`Refs #NNN`), adds the clause text **and** its mapped KISS-Conform test, and — for a
+   heavyweight design — an accompanying `rfcs/<slug>.md` document. Merging the PR and
+   closing the issue records acceptance. A cross-party-visible wire/ABI schema-version bump
+   is coordinated across affected parties before it lands.
+4. **Declined** — the issue is closed with a comment stating why. The reasoning stays
+   visible; a dropped idea is recorded, not silently forgotten.
+
+This is the process the umbrella describes in §7.2: the GitHub issue tracker **is** the
+ThinkersJournal RFC directory of record.
 
 ## Maturity and the freeze gate (summary of umbrella §5)
 

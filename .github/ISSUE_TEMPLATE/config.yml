@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Governance & the RFC process
+    url: https://github.com/ThinkersJournal/KISS/blob/main/CONTRIBUTING.md
+    about: How KISS handles RFCs (they are GitHub issues), the freeze gate, and contributor licensing.
+  - name: Umbrella specification
+    url: https://github.com/ThinkersJournal/KISS/blob/main/spec/umbrella.md
+    about: The authoritative governance (§7), versioning & freeze gate (§5), and legal terms (§9).

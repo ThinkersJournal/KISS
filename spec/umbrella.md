@@ -287,7 +287,7 @@ Optional features and external tokens are recorded in an **extension registry un
 
 ### 7.2 The RFC process
 
-Every surfaced ambiguity or proposed change becomes a **numbered RFC** in the ThinkersJournal RFC directory. The flow is propose-first: a change is floated to the affected cosignatories as an RFC before it is wired; cross-party-visible version bumps (any change to a wire/ABI schema version) are coordinated across affected parties. The RFC record is public and is the durable account of why each decision was made.
+Every surfaced ambiguity or proposed change becomes a **numbered RFC** — a GitHub issue labeled `rfc` in the KISS repository issue tracker, which is the ThinkersJournal RFC directory of record. The flow is propose-first: a change is floated to the affected cosignatories on the issue before it is wired; an accepted change is authored as a pull request that cites the issue and adds the clause text together with its mapped KISS-Conform test; cross-party-visible version bumps (any change to a wire/ABI schema version) are coordinated across affected parties. The issue is public and remains the durable account of why each decision was made — whether the RFC is accepted or declined. The contribution guide's *RFC lifecycle* section states the per-state mechanics; this clause owns the propose-first governance obligation.
 
 ### 7.3 Advancing a maturity stage
 
