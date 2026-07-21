@@ -828,7 +828,7 @@ section-intro paragraph is an informative pointer to it):
 - **KISS-OPS-6.8-0005** — `atan2` MUST be assigned the **ULP/tolerance** determinism
   class (§6.0-0003) and MUST NOT be assigned the exact-byte class or evaluated with a
   byte-exact comparator: although `atan2` is an op-family `binary_math` atom (§6.9), it
-  is a declared-ULP transcendental atom (this section, 4-ULP ceiling), so the exact-byte
+  is a declared-ULP transcendental atom (this section, 4-ULP advisory floor), so the exact-byte
   "if and only if" of §6.0-0002 MUST NOT apply to it (its condition (a) excludes any op
   containing a §6.8 transcendental atom) and no clause MUST require its byte-exact
   reproduction across targets — consistent with `carg`, which is derived from `atan2`
