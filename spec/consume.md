@@ -724,14 +724,16 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   KISS-Ops-decomposable region signatures** published for that op-set version — although **this**
   lifter emitted no node for it (a lifter-coverage gap, not a fundamental limit). An implementation
   MUST distinguish this category from `inexpressible-residue` on exactly this **decidable
-  membership test**, not on an open existential search. *Test:*
+  membership test**, not on an open existential search (downstream: the byte form of a region
+  signature and the set is pinned by KISS-Conform Appendix F). *Test:*
   `test_consume_refusal_unrecognized_but_expressible`.
 - **KISS-CONSUME-6.4-0006** — **Step 4 — inexpressible-residue (per-region).** An un-lifted residue
   region whose region signature is **not** a member of the enumerated KISS-Ops-decomposable
   region-signature set at the referenced op-set version (per the same expressibility oracle; steps
   1–3 did not fire) MUST be classified **`inexpressible-residue`** — the truly un-liftable remainder
   — and MUST be recorded honestly as residue (`semantics_kind = declared-op-tag` plus the recorded
-  entry, §6.3), never faked into a machine-checkable-IR Semantics it does not have. *Test:*
+  entry, §6.3), never faked into a machine-checkable-IR Semantics it does not have (downstream: the
+  byte form of a region signature and the set is pinned by KISS-Conform Appendix F). *Test:*
   `test_consume_refusal_inexpressible_residue`.
 - **KISS-CONSUME-6.4-0007** — Category assignment MUST itself be **structure-based** (§6.1): an
   implementation MUST NOT decide `not-a-kernel`, `wrong-op-class`,
