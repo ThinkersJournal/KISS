@@ -357,7 +357,8 @@ mean them.
   extents, workspace pointer, workspace byte size, and scalar op params); carried as a
   typed sub-view equal to the launch-scalar tail of `positional_signature` (§6.5-0011).
 - **rank** — the fixed, per-contract compile-time-constant operand logical rank; every
-  per-operand `extents` / `strides` / `off` array has length `rank` (§6.5-0012).
+  per-operand `extents` / `strides` array has length `rank`, while the base offset `off{i}`
+  is a single scalar per operand, not a rank-length array (§6.5-0012).
 - **fully packed** — a cell whose KISS-Classify contiguous-layout predicate marks every
   operand contiguous in canonical order with unit innermost stride; a non-packed cell
   (strided / broadcast / reversed) carries the class-2 signed strides (§6.5-0005).
