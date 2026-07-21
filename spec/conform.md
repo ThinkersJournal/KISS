@@ -1553,6 +1553,66 @@ prose is reconciled to it only by the deterministic clause-ID-token match of §6
 
 ---
 
+## Appendix F — Expressible-signature-set schema (normative)
+
+This appendix is **normative** and is referenced by §6.10-0005 and KISS-CONFORM-6.10-0006.
+It pins the byte format of the enumerated expressible-signature set so that two
+independently-built suites, and an offline foreign reader, enumerate the identical
+membership set the expressibility oracle (§6.10-0001) evaluates against.
+
+**Encoding.** The set MUST be a single UTF-8, JSON-encoded document with byte-deterministic
+serialization: object member keys in ascending Unicode code-point order, no insignificant
+whitespace, and LF line endings, so the file is byte-comparable (§6.0-0003, §8-0010).
+
+**Top-level fields (all REQUIRED).**
+- `owner` — the string `KISS-OPS` (the set is KISS-Ops-editor-owned, §6.10-0005).
+- `ops_op_set_version` — the KISS-Ops op-set version stamp (§6.10-0005).
+- `opattrs_wire_version` — the KISS-Ops OpAttrs wire-freeze version (per-node OpAttrs bytes
+  are part of a signature; §6.8-0007 / KISS-OPS §8-0008).
+- `generator` — an enumerant naming how the set was produced (e.g. `canonical-regen`).
+- `signatures` — an array of signature objects, ordered ascending by the unsigned-byte
+  lexicographic order of each signature's `bytes` (matching KISS-Grammar §6.4-0010).
+
+**Signature object fields (all REQUIRED).** A signature is the residue region resolved to the
+primitive floor (§6.9), serialized as the §6.4-0009 flat-DAG node form:
+- `nodes` — the ordered node list in §6.9 canonical order, each `Op{name; opattrs_hex}` or
+  `Bind{index}`; `name` is a KISS-Ops op name at the primitive floor; `opattrs_hex` is the
+  per-node §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr form).
+- `edges` — per node, the operand node-indices (the flat-DAG child edges). **The order of
+  operands within a node's `edges` list is significant and part of the signature identity**:
+  it is fixed by §6.9 canonicalization and MUST NOT be reordered even for commutative ops
+  (`add(Bind 0, Bind 1)` and `add(Bind 1, Bind 0)` are, at this layer, distinct edge lists;
+  §6.9 decides which is canonical).
+- `bytes` — the canonical byte serialization over which membership is decided, lowercase hex.
+  Within `bytes`, a `Bind{index}` node's `index` (the input-operand position) is encoded per the
+  §6.4-0009 canonical serialization at a fixed width and endianness; the JSON `nodes` `Bind{index}`
+  spelling is the human-readable rendering of that same index, and the two MUST agree.
+- `signature_hash` — the hash over `bytes` (the decidable-membership key, §6.4-0005).
+
+Expressibility is **structure-only**: the same op-DAG over `f32` vs `f16` is one signature.
+Dtype enters a signature only where it *is* the computation — a `Cast` node's target dtype,
+which rides inside that node's `opattrs_hex`. A `Cast`'s `opattrs_hex` is the **sole**
+dtype-bearing path in a signature; **no other node carries dtype**, and there is no separate
+operand-dtype field anywhere in the schema.
+
+**Determinism.** Two regenerations of the set at the same `ops_op_set_version` MUST be
+byte-identical. A set that omits a REQUIRED field, carries an unknown field, or violates an
+enumerant MUST be rejected; an oracle evaluated against a set that does not conform to this
+appendix MUST be rejected (§6.10-0005).
+
+**Golden example (informative transcription target for the conformance suite).** A one-signature
+set over the primitive `add(Bind 0, Bind 1)` at op-set version `1`, OpAttrs wire version `1`:
+
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{add;}"],"signature_hash":"<hex>"}]}
+
+A second golden over the non-commutative-order primitive `sub(Bind 0, Bind 1)` (whose edge list
+`[0,1]` is distinct from `[1,0]`, exercising the operand-order significance and the `Bind` index
+encoding) is pinned alongside the `add` golden by the conformance suite:
+
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{sub;}"],"signature_hash":"<hex>"}]}
+
+---
+
 *End of KISS-Conform (Draft proposal). This sub-standard is informative in §0–§5 and normative in
 §6+ (and in the Appendix E sidecar schema §6.1-0007 references); every binding requirement carries
 an identified clause `KISS-CONFORM-<section>-<nnnn>` with a mapped `test_conform_<slug>` test.
