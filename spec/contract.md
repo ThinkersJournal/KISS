@@ -1034,10 +1034,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   determinism vocabulary. *Test:* `test_contract_capabilities_determinism_from_ops`.
 - **KISS-CONTRACT-6.7-0005** — The Capabilities `precision_class` MUST be drawn from the
   **closed precision-class token set imported verbatim from KISS-Ops** and MUST be consistent
-  with the Guarantees per-backend ULP tiers (§6.8-0002) per the KISS-Ops
-  precision-class↔ULP-tier correspondence (KISS-OPS §6.8): the `correctly-rounded` and
-  `bit-reproducible` classes MUST map to ULP tier 0, and every looser class MUST carry the ULP
-  tier the KISS-Ops correspondence assigns it. An implementation MUST NOT define a
+  with the Guarantees per-backend accuracy tiers (§6.8-0002) per the KISS-Ops
+  precision-class↔tier correspondence (KISS-OPS §6.8): the `correctly-rounded` and
+  `bit-reproducible` classes MUST map to tier 0 (a definitional floor, not a retired
+  ceiling), and every looser class MUST carry a declared tier consistent with the
+  precision-class ordering (a looser class MUST NOT declare a tighter tier than a stricter
+  class for the same reference). An implementation MUST NOT define a
   KISS-Contract-local precision-class vocabulary and MUST NOT declare a precision class the
   Guarantees ULP tiers contradict. *Test:* `test_contract_precision_class_consistent`.
 - **KISS-CONTRACT-6.7-0006** — The Capabilities `cost` MUST carry a cost **class** plus cost
@@ -1059,11 +1061,13 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   the Provenance section (§6.9-0001). *Test:* `test_contract_guarantees_field_schema`.
 - **KISS-CONTRACT-6.8-0002** — Precision MUST **name its reference function**: the
   `reference_function` MUST be the NAMED KISS-Ops function the kernel's precision is measured
-  against, and the `per_backend_ulp_tiers` MUST declare, per target backend, the maximum ULP
-  (and, where used, the maximum relative and maximum absolute) error against that reference,
-  each per-transcendental tier no looser than the KISS-Ops per-atom ULP ceiling (KISS-OPS
-  §6.8); an implementation MUST NOT declare a precision bound without naming its reference, and
-  MUST NOT declare a per-backend tier looser than the KISS-Ops ceiling. *Test:*
+  against, and the `per_backend_ulp_tiers` MUST declare, per target backend, the kernel's
+  **accuracy tier** — a tagged quantity carrying at least one of `{max_ulp, max_relative,
+  max_absolute}` against that reference. The declared per-target tier is the **sole** accuracy
+  gate (KISS-OPS §6.8-0001): an implementation MUST NOT declare a precision bound without naming
+  its reference, but KISS-Contract MUST NOT constrain a declared tier against a fixed KISS-Ops
+  ceiling — the §6.8 table is an *informative advisory floor*, not a normative cap, so a
+  truthful tier looser than a table value MUST NOT be rejected. *Test:*
   `test_contract_precision_names_reference`.
 - **KISS-CONTRACT-6.8-0003** — The `determinism_class` MUST be the single canonical KISS-Ops
   enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001),
