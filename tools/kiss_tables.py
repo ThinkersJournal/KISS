@@ -435,6 +435,87 @@ def check_feat_bits(spec_dir):
     return out
 
 
+# ---- (10) dtype bit-LAYOUT agreement (KISS-OPS-6.16-0008 / KISS-CLASSIFY-8-0007) ----
+# The float sign/exponent/mantissa split (and exponent bias) of each dtype is pinned in
+# TWO normative tables — Ops §6.16 and Classify §6.1 — deliberately spelled three ways
+# ("1 sign, 8 exp, 7 mantissa, bias 127" / "sign 1, exp 8, mantissa 7" / "1s+8e+7m").
+# This extracts the FACTS, not the prose, and asserts that where BOTH tables state a
+# fact for a token they AGREE (intersection semantics: a fact only one table states is
+# not a conflict — the co-versioning clause + review cover single-sourced facts).
+
+# (sign, exp, mantissa) regexes, tried in order; first whose three parts all hit wins.
+_SEM_PATTERNS = (
+    (r"(\d+)\s*sign", r"(\d+)\s*exp", r"(\d+)\s*mantissa"),
+    (r"sign\s*(\d+)", r"exp(?:onent)?\s*(\d+)", r"mantissa\s*(\d+)"),
+    (r"(\d+)\s*s\b", r"(\d+)\s*e\b", r"(\d+)\s*m\b"),
+)
+
+
+def _layout_facts(cell_text):
+    """The dtype layout FACTS a cell expresses, as a dict over {sign,exp,mantissa,bias}.
+    Tolerant of the three spellings; absent facts are simply not in the dict."""
+    facts = {}
+    for sp, ep, mp in _SEM_PATTERNS:
+        s, e, m = re.search(sp, cell_text), re.search(ep, cell_text), re.search(mp, cell_text)
+        if s and e and m:
+            facts["sign"], facts["exp"], facts["mantissa"] = int(s.group(1)), int(e.group(1)), int(m.group(1))
+            break
+    b = re.search(r"bias\s*(\d+)", cell_text)
+    if b:
+        facts["bias"] = int(b.group(1))
+    return facts
+
+
+def _table_layout_facts(text):
+    """{dtype_token: facts} for every token of every FULL dtype table (>=15 tokens),
+    reading the whole row (minus col0) so the layout cell is found regardless of column."""
+    out = {}
+    for rows in markdown_tables(text):
+        toks = []
+        for r in rows:
+            if not r:
+                continue
+            cell = r[0].strip().strip("`").strip()
+            t = backtick_tokens(r[0]) or ([cell] if _is_dtype_token(cell) else [])
+            if t:
+                toks.append((t[0], r))
+        if sum(1 for tok, _ in toks if _is_dtype_token(tok)) >= 15:
+            for tok, row in toks:
+                facts = _layout_facts(" | ".join(row[1:]))
+                if facts:
+                    out[tok] = facts
+    return out
+
+
+def _compare_layout_facts(ops_facts, cls_facts):
+    """Violations where Ops §6.16 and Classify §6.1 both state a fact for a token but
+    disagree (intersection semantics)."""
+    out = []
+    for tok in sorted(set(ops_facts) & set(cls_facts)):
+        of, cf = ops_facts[tok], cls_facts[tok]
+        for key in sorted(set(of) & set(cf)):
+            if of[key] != cf[key]:
+                out.append(f"dtype `{tok}` layout drift: Ops §6.16 says {key}={of[key]} but "
+                           f"Classify §6.1 says {key}={cf[key]} (vs KISS-OPS-6.16-0008 co-versioning)")
+    return out
+
+
+def check_dtype_layouts(spec_dir):
+    """Cross-table dtype-layout fact agreement + the DTYPE_LAYOUT_VERSION handle presence —
+    the teeth for KISS-OPS-6.16-0008 / KISS-CLASSIFY-8-0007."""
+    out = []
+    def read(stem):
+        p = os.path.join(spec_dir, stem + ".md")
+        return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
+    classify, ops = read("classify"), read("ops")
+    out += _compare_layout_facts(_table_layout_facts(ops), _table_layout_facts(classify))
+    if "DTYPE_LAYOUT_VERSION" not in classify:
+        out.append("Classify §8 no longer declares DTYPE_LAYOUT_VERSION (KISS-CLASSIFY-8-0007 handle)")
+    if "DTYPE_LAYOUT_VERSION" not in ops:
+        out.append("Ops §6.16-0008 no longer references DTYPE_LAYOUT_VERSION (the Classify handle)")
+    return out
+
+
 def check_seven_sections(spec_dir):
     """The seven contract-core section names, consistent everywhere the full ordered
     list is restated. Each list is order-checked, not just membership-checked, because
