@@ -360,7 +360,7 @@ KISS-CONTRACT-6.5-0013	test_contract_param_count_and_index_descriptor	untested
 KISS-CONTRACT-6.6-0001	test_contract_dispatch_field_schema	untested	
 KISS-CONTRACT-6.6-0002	test_contract_invocation_domain	untested	
 KISS-CONTRACT-6.6-0003	test_contract_count_to_grid	untested	
-KISS-CONTRACT-6.6-0004	test_contract_thread_and_addressing	untestable	#43 — thread_mapping unspellable in Dispatch grammar
+KISS-CONTRACT-6.6-0004	test_contract_thread_and_addressing	untested	
 KISS-CONTRACT-6.6-0005	test_contract_dispatch_interface_consistent	untested	
 KISS-CONTRACT-6.7-0001	test_contract_capabilities_field_schema	untested	
 KISS-CONTRACT-6.7-0002	test_contract_capabilities_accept_matches_identity	untested	

@@ -461,11 +461,11 @@ fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Declin
         }
         Ast::Div(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
-            // `/` truncates toward zero (Rust's native `i64` division) — the
-            // pinned reference rounding for this operator, distinct from
-            // `ceil_div`'s flooring `div_euclid`. `checked_div` covers BOTH
-            // a zero divisor and the one other way integer division can trap
-            // (`i64::MIN / -1`, which overflows the positive result).
+            // `/` truncates toward zero (Rust's native `i64` division) — the reference
+            // evaluator's chosen rounding — §6.6-0006 does not pin `/` rounding (a
+            // recorded residual) — distinct from `ceil_div`'s flooring `div_euclid`.
+            // `checked_div` covers BOTH a zero divisor and the one other way integer
+            // division can trap (`i64::MIN / -1`, which overflows the positive result).
             av.checked_div(bv).ok_or_else(|| {
                 Decline::ParseError("division by zero or overflow (i64::MIN / -1)".to_string())
             })?
