@@ -1573,27 +1573,35 @@ whitespace, and LF line endings, so the file is byte-comparable (§6.0-0003, §8
 - `signatures` — an array of signature objects, ordered ascending by the unsigned-byte
   lexicographic order of each signature's `bytes` (matching KISS-Grammar §6.4-0010).
 
-**Signature object fields (all REQUIRED).** A signature is the residue region resolved to the
-primitive floor (§6.9), serialized as the §6.4-0009 flat-DAG node form:
+**Signature bytes (the membership key).** A signature is the residue region resolved to the
+primitive floor (§6.9). Its canonical byte form is the **KISS-Grammar §6.4-0010 canonical
+subtree serialization** computed as a **structure-only projection**: every operand dtype-role
+token is first normalized to the KISS-Grammar §6.6-0006 dtype-role **wildcard** token, so
+op-DAGs that are structurally identical but differ only in operand dtypes collapse to a single
+signature. The **sole** exception is a `Cast` node's target dtype, which rides inside that
+node's §6.19 OpAttrs blob and is retained verbatim — it is the only dtype-bearing path in a
+signature; no operand dtype-role token survives the wildcarding anywhere else. Membership is
+KISS-Conform structural op-DAG equality (§6.9): two signatures are the same iff their
+wildcarded §6.4-0010 serializations are byte-identical.
+
+**Signature object fields (all REQUIRED).**
 - `nodes` — the ordered node list in §6.9 canonical order, each `Op{name; opattrs_hex}` or
   `Bind{index}`; `name` is a KISS-Ops op name at the primitive floor; `opattrs_hex` is the
-  per-node §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr form).
-- `edges` — per node, the operand node-indices (the flat-DAG child edges). **The order of
-  operands within a node's `edges` list is significant and part of the signature identity**:
-  it is fixed by §6.9 canonicalization and MUST NOT be reordered even for commutative ops
-  (`add(Bind 0, Bind 1)` and `add(Bind 1, Bind 0)` are, at this layer, distinct edge lists;
-  §6.9 decides which is canonical).
-- `bytes` — the canonical byte serialization over which membership is decided, lowercase hex.
-  Within `bytes`, a `Bind{index}` node's `index` (the input-operand position) is encoded per the
-  §6.4-0009 canonical serialization at a fixed width and endianness; the JSON `nodes` `Bind{index}`
-  spelling is the human-readable rendering of that same index, and the two MUST agree.
+  per-node §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr form; a
+  `Cast`'s target dtype retained).
+- `edges` — per node, the operand node-indices, in **KISS-Grammar §6.4-0010 canonical operand
+  order**: for a node whose op KISS-Ops declares **commutative** (§6.2-0005), operands are
+  ordered by the §6.4-0010 pinned total order — ascending unsigned-byte-lexicographic
+  comparison of each operand's **wildcarded** canonical subtree serialization — so
+  `add(Bind 0, Bind 1)` and `add(Bind 1, Bind 0)` are the *same* signature; for a **positional**
+  (non-commutative) op, operand order is preserved as authored, so `sub(Bind 0, Bind 1)` and
+  `sub(Bind 1, Bind 0)` are *distinct* signatures.
+- `bytes` — the §6.4-0010 wildcarded canonical subtree serialization over which membership is
+  decided, lowercase hex. Within `bytes`, a `Bind{index}` leaf serializes as the byte `0x00`
+  followed by its `input_index` as a `u32` **little-endian** (§6.4-0010); the commutative
+  byte-lex order above is computed over these same wildcarded subtree serializations, so the
+  ordering, the projection, and the Bind encoding compose consistently.
 - `signature_hash` — the hash over `bytes` (the decidable-membership key, §6.4-0005).
-
-Expressibility is **structure-only**: the same op-DAG over `f32` vs `f16` is one signature.
-Dtype enters a signature only where it *is* the computation — a `Cast` node's target dtype,
-which rides inside that node's `opattrs_hex`. A `Cast`'s `opattrs_hex` is the **sole**
-dtype-bearing path in a signature; **no other node carries dtype**, and there is no separate
-operand-dtype field anywhere in the schema.
 
 **Determinism.** Two regenerations of the set at the same `ops_op_set_version` MUST be
 byte-identical. A set that omits a REQUIRED field, carries an unknown field, or violates an
@@ -1601,13 +1609,16 @@ enumerant MUST be rejected; an oracle evaluated against a set that does not conf
 appendix MUST be rejected (§6.10-0005).
 
 **Golden example (informative transcription target for the conformance suite).** A one-signature
-set over the primitive `add(Bind 0, Bind 1)` at op-set version `1`, OpAttrs wire version `1`:
+set over the primitive `add(Bind 0, Bind 1)` at op-set version `1`, OpAttrs wire version `1`
+(add is commutative; its edge list `[0,1]` is already the §6.4-0010 byte-lex-canonical order,
+since `Bind 0` sorts before `Bind 1`):
 
     {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{add;}"],"signature_hash":"<hex>"}]}
 
-A second golden over the non-commutative-order primitive `sub(Bind 0, Bind 1)` (whose edge list
-`[0,1]` is distinct from `[1,0]`, exercising the operand-order significance and the `Bind` index
-encoding) is pinned alongside the `add` golden by the conformance suite:
+A second golden over the positional (non-commutative) primitive `sub(Bind 0, Bind 1)` — whose
+edge list `[0,1]` is order-significant (distinct from `[1,0]`), exercising the Bind index
+encoding and the positional-order rule — is pinned alongside the `add` golden by the
+conformance suite:
 
     {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{sub;}"],"signature_hash":"<hex>"}]}
 
