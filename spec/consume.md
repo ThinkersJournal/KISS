@@ -746,6 +746,31 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   NOT return a per-region expressible/inexpressible remainder as a whole-input decline, and MUST NOT
   record a whole-input not-a-kernel or wrong-op-class result as a residue entry. *Test:*
   `test_consume_decline_vs_residue_partition`.
+- **KISS-CONSUME-6.4-0009** — Every whole-input typed decline (§6.4-0008 Phase A) and every
+  `lift_residue` entry (§6.4-0008 Phase B) MUST carry a **`decline_code`** drawn from the **closed**
+  normative set `{not-a-region, multi-output, bind-set-mismatch, unknown-op,
+  operand-tuple-inexpressible, attrs-can't-carry, out-of-range-index}` — a finer, orthogonal
+  refinement of the four-category classification (§6.4-0001) that names the *specific* structural
+  failure or lift-miss. The `decline_code` is the part a consumer's next-action decision **binds on**
+  — it distinguishes, for example, "retry with a different operand dtype" (`operand-tuple-inexpressible`)
+  from "this op has no KISS-Ops name" (`unknown-op`) — so it MUST be a closed, agreed set: an
+  implementation MUST NOT emit a `decline_code` outside it. The four categories (§6.4-0001) remain the
+  MECE partition; the `decline_code` refines within a frame and MUST be consistent with its category
+  (a Phase-A decline carries a structural code; a Phase-B residue carries the lift-miss code its region
+  exhibits). *Test:* `test_consume_decline_code_closed_set`.
+- **KISS-CONSUME-6.4-0010** — A `lift_residue` entry (§6.4-0008 Phase B) and a missing-kernel
+  honest-miss frame MAY additionally carry an informative **`blocker_reason`** — a **set** (a single
+  lift-miss can couple multiple blockers, e.g. a `gather` blocked by both the OpAttrs channel and the
+  operand keying) drawn from an **open registry** seeded with `{vocabulary, attrs-channel, keying,
+  determinism, shape-layout-inexpressible, dispatch-envelope}`. `blocker_reason` is purely
+  **informative** — a diagnostic that lets a consumer route its next action (fallback-decompose /
+  request-op-addition / try-another-provider / retry) or emit telemetry — and MUST NEVER be a binding
+  gate: no conformance or interop decision keys on it (that is the `decline_code`'s role, §6.4-0009).
+  The registry is **open** so any ecosystem may name a novel blocker without a spec change, but a party
+  whose blocker matches a seed entry **MUST use the seed's spelling** (the recommended-spelling rule —
+  no `attrs-channel` vs `attr_gap` vs `no-attrs` for one blocker); a genuinely new reason is additive.
+  The principle: **close the normative gate (`decline_code`), open the informative diagnostic
+  (`blocker_reason`).** *Test:* `test_consume_blocker_reason_open_seeded_set`.
 
 ### 6.5 Typed decline, never panic
 
@@ -955,6 +980,8 @@ any normative MUST without a mapped test and on any test citing a retired or non
 | KISS-CONSUME-6.4-0006 | `test_consume_refusal_inexpressible_residue` |
 | KISS-CONSUME-6.4-0007 | `test_consume_taxonomy_structure_based` |
 | KISS-CONSUME-6.4-0008 | `test_consume_decline_vs_residue_partition` |
+| KISS-CONSUME-6.4-0009 | `test_consume_decline_code_closed_set` |
+| KISS-CONSUME-6.4-0010 | `test_consume_blocker_reason_open_seeded_set` |
 | KISS-CONSUME-6.5-0001 | `test_consume_refusal_is_typed_decline` |
 | KISS-CONSUME-6.5-0002 | `test_consume_never_panic_on_adversarial_input` |
 | KISS-CONSUME-6.5-0003 | `test_consume_no_hallucinated_node` |
