@@ -165,7 +165,6 @@ KISS-CONFORM-6.10-0002	test_conform_expressibility_split	untested
 KISS-CONFORM-6.10-0003	test_conform_mislabeled_kernel_structural	untested	
 KISS-CONFORM-6.10-0004	test_conform_consume_emit_siblings	untested	
 KISS-CONFORM-6.10-0005	test_conform_expressibility_set_bundled	untested	
-KISS-CONFORM-6.10-0006	test_conform_expressible_signature_set_schema	untested	
 KISS-CONFORM-6.11-0001	test_conform_emit_consume_correspondence_lint	untested	
 KISS-CONFORM-6.11-0002	test_conform_neutrality_audit_manifest	untested	
 KISS-CONFORM-6.11-0003	test_conform_determinism_import_site_lint	untested	

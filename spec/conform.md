@@ -1628,14 +1628,14 @@ set over the primitive `add(Bind 0, Bind 1)` at op-set version `1`, OpAttrs wire
 (add is commutative; its edge list `[0,1]` is already the §6.4-0010 byte-lex-canonical order,
 since `Bind 0` sorts before `Bind 1`):
 
-    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{add;}"],"signature_hash":"<hex>"}]}
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"010300616464010000000000000000000001000000","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{add;}"],"signature_hash":"23ed69eedebe6a50"}]}
 
 A second golden over the positional (non-commutative) primitive `sub(Bind 0, Bind 1)` — whose
 edge list `[0,1]` is order-significant (distinct from `[1,0]`), exercising the Bind index
 encoding and the positional-order rule — is pinned alongside the `add` golden by the
 conformance suite:
 
-    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"<hex>","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{sub;}"],"signature_hash":"<hex>"}]}
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"010300737562010000000000000000000001000000","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{sub;}"],"signature_hash":"3cda77a1e825ea1f"}]}
 
 ---
 
