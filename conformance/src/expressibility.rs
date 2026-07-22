@@ -116,14 +116,23 @@ fn node_bytes(nodes: &[Node], edges: &[Vec<u32>], idx: usize) -> Vec<u8> {
         Node::Op { name, opattrs } => {
             let mut b = Vec::new();
             b.push(0x01);
-            // 1. op_name: u16 LE byte-length, then UTF-8 bytes (§6.8-0003).
+            // 1. op_name: u16 LE byte-length, then UTF-8 bytes (§6.8-0003). A
+            //    silent `as u16` truncation for a length >= 65536 would emit a
+            //    WRONG length prefix while still appending all the bytes --
+            //    corrupt-but-non-panicking output, the worst failure mode for
+            //    a byte-format reference. Loudly refuse instead.
             let name_bytes = name.as_bytes();
-            b.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            let name_len = u16::try_from(name_bytes.len())
+                .expect("op_name/OpAttrs length exceeds u16 -- not a valid region");
+            b.extend_from_slice(&name_len.to_le_bytes());
             b.extend_from_slice(name_bytes);
             // 2. consumers: u8 -- ROOT iff this is the region root (§6.8-0005).
             b.push(if idx == root_idx { 0x01 } else { 0x00 });
-            // 3. OpAttrs blob: u16 LE byte-length, then that many bytes (§6.8-0007).
-            b.extend_from_slice(&(opattrs.len() as u16).to_le_bytes());
+            // 3. OpAttrs blob: u16 LE byte-length, then that many bytes
+            //    (§6.8-0007). Same silent-truncation guard as op_name above.
+            let opattrs_len = u16::try_from(opattrs.len())
+                .expect("op_name/OpAttrs length exceeds u16 -- not a valid region");
+            b.extend_from_slice(&opattrs_len.to_le_bytes());
             b.extend_from_slice(opattrs);
             // 4. operand-role tuple: u16 LE entry count (§6.8-0008). Always 0
             //    in this reference slice -- see the module doc comment.
@@ -137,9 +146,44 @@ fn node_bytes(nodes: &[Node], edges: &[Vec<u32>], idx: usize) -> Vec<u8> {
     }
 }
 
+/// Validate the structural precondition the encoder relies on (§6.8-0004: an
+/// operand MUST reference a strictly-earlier node than its parent, KISS-Grammar
+/// canonical node order): `edges` has exactly one entry per node, and every
+/// operand index in `edges[i]` is `< i`. Without this check, a malformed
+/// `Signature` (an out-of-range operand index, an `edges`/`nodes` length
+/// mismatch, or a self/cyclic edge) would cause an out-of-bounds index panic
+/// or unbounded recursion deeper inside the encoder -- UB-adjacent failure
+/// modes for a byte-format reference. This turns any of those into one
+/// immediate, clearly-worded panic at the public entry point instead.
+fn validate_signature_shape(sig: &Signature) {
+    assert_eq!(
+        sig.edges.len(),
+        sig.nodes.len(),
+        "Signature is malformed: edges.len() ({}) != nodes.len() ({}) -- exactly one operand-index list is required per node",
+        sig.edges.len(),
+        sig.nodes.len()
+    );
+    for (i, ops) in sig.edges.iter().enumerate() {
+        for &oi in ops {
+            assert!(
+                (oi as usize) < i,
+                "Signature is malformed: node {i}'s operand index {oi} does not reference a \
+                 strictly-earlier node (§6.8-0004) -- an out-of-range, self-referential, or \
+                 cyclic edge is not a valid region"
+            );
+        }
+    }
+}
+
 /// The §6.4-0010 canonical subtree serialization of `sig`'s root (the last
 /// node) -- the membership key of the expressibility oracle (Appendix F).
+///
+/// **Precondition** (validated up front via [`validate_signature_shape`],
+/// which panics loudly on violation rather than risk out-of-bounds/UB deeper
+/// in the recursion): `sig.edges.len() == sig.nodes.len()`, and every operand
+/// index in `sig.edges[i]` MUST be strictly less than `i` (§6.8-0004).
 pub fn serialize_signature_bytes(sig: &Signature) -> Vec<u8> {
+    validate_signature_shape(sig);
     if sig.nodes.is_empty() {
         return Vec::new();
     }
@@ -340,15 +384,21 @@ pub fn reject_set(json: &[u8]) -> Result<(), Decline> {
         return Err(Decline::BadEnumerant(format!("owner={owner}")));
     }
 
-    // each signature object gets the same missing/unknown-field check.
-    if let Some(Json::Arr(sigs)) = doc.get("signatures") {
-        for s in sigs {
-            if let Json::Obj(m) = s {
-                check_fields(m, &SIGNATURE_FIELDS)?;
-            } else {
-                return Err(Decline::MissingField(SIGNATURE_FIELDS[0].to_string()));
+    // `signatures` (already confirmed present by `check_fields` above) MUST be
+    // an array (Appendix F); present-but-wrong-shaped (e.g. a bare number or
+    // an object) is as much a schema violation as absent, and must not
+    // silently pass. Each element gets the same missing/unknown-field check.
+    match doc.get("signatures") {
+        Some(Json::Arr(sigs)) => {
+            for s in sigs {
+                if let Json::Obj(m) = s {
+                    check_fields(m, &SIGNATURE_FIELDS)?;
+                } else {
+                    return Err(Decline::MissingField(SIGNATURE_FIELDS[0].to_string()));
+                }
             }
         }
+        _ => return Err(Decline::MissingField("signatures[array]".to_string())),
     }
     Ok(())
 }
