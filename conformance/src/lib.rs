@@ -25,6 +25,7 @@ pub mod corpus;
 pub mod decomp_grammar;
 pub mod determinism;
 pub mod differential;
+pub mod dispatch;
 pub mod dispatch_expr;
 pub mod grammar;
 pub mod fp;
