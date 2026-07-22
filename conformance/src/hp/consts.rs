@@ -228,6 +228,16 @@ pub fn two_over_pi_bit(i: usize) -> u64 {
 /// The reduction then multiplies it by the integer significand `M` of `x`.
 pub fn two_over_pi_window(i0: usize, i1: usize) -> (Vec<u64>, usize) {
     assert!(i0 >= 1 && i1 >= i0, "invalid 2/pi window [{i0}, {i1}]");
+    // Defense-in-depth (T3-review Minor): the reduction kernel already asserts
+    // `i1 <= TWO_OVER_PI_BITS` before calling, but re-check it at the table's own
+    // edge so a future index bug is a LOUD panic rather than a silently-wrong
+    // large-|x| trig value (the accessor otherwise zero-fills past the table,
+    // which is exactly the "systematic, Ziv-blind" failure §5 names as most
+    // dangerous). See reduction spec §2.3 / §5.
+    assert!(
+        i1 <= TWO_OVER_PI_BITS,
+        "2/pi window past the stored table: requested bit {i1}, table is {TWO_OVER_PI_BITS} bits"
+    );
     let nbits = i1 - i0 + 1;
     let mut out = vec![0u64; nbits.div_ceil(64)];
     for i in i0..=i1 {
