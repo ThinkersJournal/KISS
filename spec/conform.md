@@ -1616,7 +1616,12 @@ wildcarded §6.4-0010 serializations are byte-identical.
   followed by its `input_index` as a `u32` **little-endian** (§6.4-0010); the commutative
   byte-lex order above is computed over these same wildcarded subtree serializations, so the
   ordering, the projection, and the Bind encoding compose consistently.
-- `signature_hash` — the hash over `bytes` (the decidable-membership key, §6.4-0005).
+- `signature_hash` — a fixed 64-bit **membership index** over `bytes`: the **FNV-1a-64** hash of
+  `bytes` (offset basis `0xcbf29ce484222325`, multiply prime `0x00000100000001b3`, one
+  XOR-then-multiply per input byte), rendered as 16 lowercase hex digits. It is an index only —
+  the **decidable** membership key is `bytes` itself, compared for byte-identity under the §6.9
+  structural-equality comparator; where `signature_hash` and a `bytes` comparison disagree,
+  `bytes` governs.
 
 **Determinism.** Two regenerations of the set at the same `ops_op_set_version` MUST be
 byte-identical. A set that omits a REQUIRED field, carries an unknown field, or violates an
