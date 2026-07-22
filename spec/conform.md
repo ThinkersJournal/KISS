@@ -1583,7 +1583,7 @@ whitespace, and LF line endings, so the file is byte-comparable (§6.0-0003, §8
 - `owner` — the string `KISS-OPS` (the set is KISS-Ops-editor-owned, §6.10-0005).
 - `ops_op_set_version` — the KISS-Ops op-set version stamp (§6.10-0005).
 - `opattrs_wire_version` — the KISS-Ops OpAttrs wire-freeze version (per-node OpAttrs bytes
-  are part of a signature; §6.8-0007 / KISS-OPS §8-0008).
+  are part of a signature; KISS-Grammar §6.8-0007 / KISS-Grammar §8-0008).
 - `generator` — an enumerant naming how the set was produced (e.g. `canonical-regen`).
 - `signatures` — an array of signature objects, ordered ascending by the unsigned-byte
   lexicographic order of each signature's `bytes` (matching KISS-Grammar §6.4-0010).
@@ -1594,19 +1594,19 @@ subtree serialization** computed as a **structure-only projection**: every opera
 token is first normalized to the KISS-Grammar §6.6-0006 dtype-role **wildcard** token, so
 op-DAGs that are structurally identical but differ only in operand dtypes collapse to a single
 signature. The **sole** exception is a `Cast` node's target dtype, which rides inside that
-node's §6.19 OpAttrs blob and is retained verbatim — it is the only dtype-bearing path in a
-signature; no operand dtype-role token survives the wildcarding anywhere else. Membership is
+node's KISS-OPS §6.19 OpAttrs blob and is retained verbatim — it is the only dtype-bearing
+path in a signature; no operand dtype-role token survives the wildcarding anywhere else. Membership is
 KISS-Conform structural op-DAG equality (§6.9): two signatures are the same iff their
 wildcarded §6.4-0010 serializations are byte-identical.
 
 **Signature object fields (all REQUIRED).**
 - `nodes` — the ordered node list in §6.9 canonical order, each `Op{name; opattrs_hex}` or
   `Bind{index}`; `name` is a KISS-Ops op name at the primitive floor; `opattrs_hex` is the
-  per-node §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr form; a
-  `Cast`'s target dtype retained).
+  per-node KISS-OPS §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr
+  form; a `Cast`'s target dtype retained).
 - `edges` — per node, the operand node-indices, in **KISS-Grammar §6.4-0010 canonical operand
-  order**: for a node whose op KISS-Ops declares **commutative** (§6.2-0005), operands are
-  ordered by the §6.4-0010 pinned total order — ascending unsigned-byte-lexicographic
+  order**: for a node whose op KISS-Ops declares **commutative** (KISS-Grammar §6.2-0005),
+  operands are ordered by the §6.4-0010 pinned total order — ascending unsigned-byte-lexicographic
   comparison of each operand's **wildcarded** canonical subtree serialization — so
   `add(Bind 0, Bind 1)` and `add(Bind 1, Bind 0)` are the *same* signature; for a **positional**
   (non-commutative) op, operand order is preserved as authored, so `sub(Bind 0, Bind 1)` and

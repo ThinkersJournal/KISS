@@ -219,6 +219,66 @@ fn full_set_json_matches_appendix_f_golden() {
     assert_eq!(got, want);
 }
 
+fn valid_sub_set() -> SignatureSet {
+    SignatureSet {
+        owner: "KISS-OPS".to_string(),
+        ops_op_set_version: "1".to_string(),
+        opattrs_wire_version: "1".to_string(),
+        generator: "canonical-regen".to_string(),
+        signatures: vec![binary_sig("sub", [0, 1])],
+    }
+}
+
+/// Appendix F full-set JSON golden — the `sub` set (the SECOND Appendix-F
+/// golden; only the `add` set was previously asserted end-to-end through
+/// `serialize_set`, leaving the `sub` golden JSON doc unexercised by anything
+/// but the raw `bytes` check). Mirrors `full_set_json_matches_appendix_f_golden`.
+#[test]
+fn full_set_json_matches_appendix_f_golden_for_sub() {
+    let sub_bytes = kiss_conformance::parse_hex(SUB_BYTES_HEX);
+    assert_eq!(
+        signature_hash_hex(&sub_bytes),
+        SUB_SIGNATURE_HASH_HEX,
+        "pinned Appendix F sub signature_hash (FNV-1a-64)"
+    );
+
+    let set = valid_sub_set();
+    let got = String::from_utf8(serialize_set(&set)).unwrap();
+    let want = format!(
+        "{{\"generator\":\"canonical-regen\",\"opattrs_wire_version\":\"1\",\"ops_op_set_version\":\"1\",\"owner\":\"KISS-OPS\",\"signatures\":[{{\"bytes\":\"{}\",\"edges\":[[],[],[0,1]],\"nodes\":[\"Bind{{0}}\",\"Bind{{1}}\",\"Op{{sub;}}\"],\"signature_hash\":\"{}\"}}]}}",
+        SUB_BYTES_HEX,
+        SUB_SIGNATURE_HASH_HEX,
+    );
+    assert_eq!(got, want);
+}
+
+/// `serialize_set` MUST order the `signatures` array ascending by each
+/// signature's `bytes` (unsigned-byte-lex, Appendix F "Top-level fields"):
+/// `add`'s bytes (`0103006164...`) < `sub`'s bytes (`0103007375...`) since
+/// `0x61` (`'a'`) < `0x73` (`'s'`) at the first differing byte (the op_name).
+/// The set is authored with `sub` FIRST to prove the sort actually reorders,
+/// rather than merely preserving an input that happened to already be sorted
+/// (the previously-only-tested one-signature sets never exercised this sort
+/// at all).
+#[test]
+fn serialize_set_orders_signatures_ascending_by_bytes() {
+    let set = SignatureSet {
+        owner: "KISS-OPS".to_string(),
+        ops_op_set_version: "1".to_string(),
+        opattrs_wire_version: "1".to_string(),
+        generator: "canonical-regen".to_string(),
+        signatures: vec![binary_sig("sub", [0, 1]), binary_sig("add", [0, 1])], // authored sub-then-add
+    };
+    let got = String::from_utf8(serialize_set(&set)).unwrap();
+    let sig_array_start = got.find("\"signatures\":[").expect("signatures array present");
+    let add_pos = got.find(ADD_BYTES_HEX).expect("add bytes present");
+    let sub_pos = got.find(SUB_BYTES_HEX).expect("sub bytes present");
+    assert!(
+        sig_array_start < add_pos && add_pos < sub_pos,
+        "expected `add`'s signature object to precede `sub`'s in the ascending-by-bytes `signatures` array despite being authored sub-then-add; got: {got}"
+    );
+}
+
 // ---- declines (§6.10-0006: reject a set missing a REQUIRED field, carrying
 // an unknown field, or violating an enumerant) --------------------------------
 

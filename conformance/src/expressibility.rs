@@ -27,9 +27,10 @@
 //!     **positional** op, the authored order unchanged.
 //!
 //! Zero-dependency (stdlib only), mirroring `contract.rs`'s from-scratch
-//! CRC-32: `signature_hash` uses a from-scratch FNV-1a (64-bit) — see the
-//! ASSUMPTION note on [`fnv1a64`] for why, since no concrete hash algorithm is
-//! pinned anywhere in the KISS spec suite.
+//! CRC-32: `signature_hash` uses a from-scratch FNV-1a (64-bit), the
+//! algorithm Appendix F pins directly for it — see [`fnv1a64`] for the
+//! resolved-spec-gap history and the KISS issue #67 cross-ecosystem tracking
+//! note.
 
 use crate::json::Json;
 
@@ -123,7 +124,7 @@ fn node_bytes(nodes: &[Node], edges: &[Vec<u32>], idx: usize) -> Vec<u8> {
             //    a byte-format reference. Loudly refuse instead.
             let name_bytes = name.as_bytes();
             let name_len = u16::try_from(name_bytes.len())
-                .expect("op_name/OpAttrs length exceeds u16 -- not a valid region");
+                .expect("op_name length exceeds u16 -- not a valid region");
             b.extend_from_slice(&name_len.to_le_bytes());
             b.extend_from_slice(name_bytes);
             // 2. consumers: u8 -- ROOT iff this is the region root (§6.8-0005).
@@ -131,7 +132,7 @@ fn node_bytes(nodes: &[Node], edges: &[Vec<u32>], idx: usize) -> Vec<u8> {
             // 3. OpAttrs blob: u16 LE byte-length, then that many bytes
             //    (§6.8-0007). Same silent-truncation guard as op_name above.
             let opattrs_len = u16::try_from(opattrs.len())
-                .expect("op_name/OpAttrs length exceeds u16 -- not a valid region");
+                .expect("OpAttrs blob length exceeds u16 -- not a valid region");
             b.extend_from_slice(&opattrs_len.to_le_bytes());
             b.extend_from_slice(opattrs);
             // 4. operand-role tuple: u16 LE entry count (§6.8-0008). Always 0
@@ -191,31 +192,31 @@ pub fn serialize_signature_bytes(sig: &Signature) -> Vec<u8> {
 }
 
 // ---------------------------------------------------------------------------
-// signature_hash -- the hash over `bytes` (Appendix F, "the decidable-
-// membership key, §6.4-0005").
+// signature_hash -- the FNV-1a-64 membership INDEX over `bytes` (Appendix F);
+// `bytes` itself remains the decidable membership key (§6.9).
 // ---------------------------------------------------------------------------
 
 /// FNV-1a (64-bit), from scratch (zero-dependency): offset basis
 /// `0xcbf29ce484222325`, prime `0x100000001b3`, one XOR-then-multiply step per
 /// byte.
 ///
-/// **ASSUMPTION / byte-format ambiguity, flagged for confirmation with the
-/// partner projects.** Appendix F cites "§6.4-0005" for the `signature_hash`
-/// algorithm, but no clause anywhere in the KISS spec suite named `§6.4-0005`
-/// defines a hash *algorithm*: KISS-GRAMMAR-6.4-0005 is commutative-operand
-/// canonicalization (unrelated); KISS-CONTRACT/CONSUME/EMIT/ANNOUNCE/OPS
-/// `§6.4-0005` are each unrelated clauses in their own sub-standards. No
-/// existing hash helper exists in this harness to reuse either:
-/// `structure_key.rs` (the other Classify/Conform codec this task was told to
-/// mirror) has no hash at all, and the suite's one other "hash"-named field,
-/// `revision_hash` (`announce.rs`), is explicitly a provider-assigned opaque
-/// label with "no hash algorithm implied" (`spec/announce.md` §6.3-0002/-0006
-/// equivalents, lines ~201/382) -- the opposite of a pinned algorithm.
-/// Pending upstream resolution of which concrete algorithm `§6.4-0005` is
-/// meant to name, this reference encoder uses FNV-1a-64: a small,
-/// non-cryptographic, fully-specified, from-scratch-implementable hash, so two
-/// independent implementations reading this same ASSUMPTION can reproduce it
-/// byte-for-byte without a library dependency.
+/// **RESOLVED spec gap** (was flagged as an open ASSUMPTION during initial
+/// development; resolved in-branch by commit `6481633`). Appendix F originally
+/// cited a bare "§6.4-0005" for `signature_hash`, but no clause anywhere in
+/// the KISS spec suite named `§6.4-0005` ever defined a hash *algorithm* (it
+/// was a copy/collision artifact — every sub-standard's own `§6.4-0005` is an
+/// unrelated clause, e.g. KISS-GRAMMAR-6.4-0005 is commutative-operand
+/// canonicalization). Appendix F now pins FNV-1a-64 **directly**, self-contained,
+/// with no cross-reference: this function is that pinned algorithm, not a
+/// standing guess. `signature_hash` is a fixed 64-bit **membership index**
+/// only — the *decidable* membership key is `bytes` itself, compared for
+/// byte-identity under the §6.9 structural-equality comparator (Appendix F,
+/// `signature_hash` bullet); where the two disagree, `bytes` governs.
+/// Cross-ecosystem reconciliation of the hash *algorithm* choice against
+/// Fuel's `base_map_hash` is tracked in KISS issue #67 — if `base_map_hash`
+/// turns out to differ from FNV-1a-64, the two Appendix-F goldens re-mint
+/// (bytes-wise they are unaffected; the algorithm choice does not change
+/// `bytes`, only `signature_hash`).
 #[must_use]
 pub fn fnv1a64(data: &[u8]) -> u64 {
     const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
