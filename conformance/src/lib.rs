@@ -20,6 +20,7 @@
 
 pub mod accuracy;
 pub mod announce;
+pub mod antifork;
 pub mod contract;
 pub mod corpus;
 pub mod decomp_grammar;

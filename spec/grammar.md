@@ -882,6 +882,22 @@ the full statement.
   entries with byte-identical canonical subtree serializations. This makes the operand-order
   tie-break of §6.4-0010 total and the node table byte-exact. *Test:*
   `test_grammar_structural_dedup_and_repeated_bind`.
+- **KISS-GRAMMAR-6.4-0012** — **The anti-fork op-tag rule.** The op name is the sole identity
+  anchor of an advertisable op (§6.4, §6.6-0004): a party that meets an operation it cannot
+  re-base onto a KISS-Ops op name of the pinned version MUST yield a **typed decline** (the
+  never-panic decline of §7.1) and MUST **never fabricate a tag** — it MUST NOT invent, guess,
+  or approximate a KISS-Ops name for an op it does not recognize, MUST NOT emit a Grammar-local
+  or core-namespace op name that KISS-Ops does not declare, and MUST route a genuinely new
+  provider op through the vendor-namespaced tier (KISS-Ops §7.3), never the core namespace.
+  This is the primary anti-silent-fork obligation, stated first-class and made testable as a
+  positive emit-side invariant: **every `op_name` an implementation emits — whether it
+  advertises (§6.4), lifts (KISS-Consume), or generates (KISS-Emit) — MUST be a member of the
+  confirmed KISS-Ops vocabulary of the pinned version; an operation with no such name MUST
+  surface as a typed decline / honest-miss, never a fabricated tag.** This complements the
+  advertise-side op-name validity of §6.6-0004 and the KISS-Contract anti-fabrication clauses
+  (a lifter MUST NOT fabricate a machine-checkable IR Semantics it did not derive, nor an origin
+  it cannot substantiate): together they close the silent-fork vector at every surface. *Test:*
+  `test_grammar_no_fabricated_op_tag`.
 
 ### 6.5 The growth rule — frozen shape, growing op-name set
 
@@ -1252,6 +1268,7 @@ restated as a free-standing KISS-Grammar clause.
 | KISS-GRAMMAR-6.4-0009 | `test_grammar_single_output_region` |
 | KISS-GRAMMAR-6.4-0010 | `test_grammar_canonical_operand_order_key` |
 | KISS-GRAMMAR-6.4-0011 | `test_grammar_structural_dedup_and_repeated_bind` |
+| KISS-GRAMMAR-6.4-0012 | `test_grammar_no_fabricated_op_tag` |
 | KISS-GRAMMAR-6.5-0001 | `test_grammar_add_op_by_rebasing` |
 | KISS-GRAMMAR-6.5-0002 | `test_grammar_rebasing_is_additive_no_bump` |
 | KISS-GRAMMAR-6.5-0003 | `test_grammar_independent_cadence` |
