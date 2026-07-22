@@ -4,7 +4,8 @@
 //! (§6.7-0011), a `|`-separated string:
 //! ```text
 //!   sk<ver> | <op_family> | <dtype> | <target> | <index_width> | <work_class>
-//!           | r<rank> | <op0>;<op1>;… | <reduce> [ | c<m><n><k>/<kdiv> ]
+//!           | r<rank> | <op0>;<op1>;… | <reduce>
+//!           [ | c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp> ]  (gem only, sk3)
 //! ```
 //! where each `<opI>` is `<contig>/<bcasthex>/<vec>/<div>/<flip>`. `to_token`
 //! and `from_token` round-trip byte-identically (§6.7-0008); every hex mask is
@@ -12,7 +13,7 @@
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// The closed op-family-tag set at this schema version — exactly the 24 codes of
 /// Classify §6.5-0006. A token whose op-family field is outside this set is
@@ -22,10 +23,14 @@ pub const OP_FAMILIES: [&str; 24] = [
     "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
 ];
 
-/// The closed dtype-token set — exactly the 20 tokens of Classify §6.1.
-pub const DTYPES: [&str; 20] = [
+/// The closed dtype-token set — the 22 tokens of Classify §6.1. sk3 makes the FP8
+/// spellings variant-explicit: `e4m3fn` = OCP finite/no-inf (max 448); `e4m3fnuz` =
+/// AMD reserved (distinct bias, no −0); `e5m2` = IEEE inf/NaN (max 57344); `e5m2fnuz`
+/// = AMD reserved. The ambiguous bare `e4m3` is gone; an inf-carrying `e4m3`, if ever
+/// needed, is added additively with its own explicit spelling, never the bare token.
+pub const DTYPES: [&str; 22] = [
     "f16", "bf16", "f32", "f64", "s8", "s16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
-    "e4m3", "e5m2", "s4", "u4", "b1", "c32", "c64",
+    "e4m3fn", "e4m3fnuz", "e5m2", "e5m2fnuz", "s4", "u4", "b1", "c32", "c64",
 ];
 
 // ---- small enum codecs -------------------------------------------------------
@@ -46,6 +51,10 @@ code_enum!(VecWidth { V1 = "v1", V2 = "v2", V4 = "v4", V8 = "v8" });
 code_enum!(DivBucket { D16 = "d16", D8 = "d8", D4 = "d4", D2 = "d2", Da = "da" });
 code_enum!(WorkClass { Warp = "warp", Block = "block", Grid = "grid" });
 code_enum!(SizeClass { Tiny = "t", Small = "s", Medium = "m", Large = "l" });
+// sk3: the math-precision code in the gem contraction field. Codes never begin with
+// `b` — that prefix is reserved for the conditionally-present batch coordinate — so
+// the geometry and precision groups never collide in spelling.
+code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
 
 /// Derive an operand's vector-access width from its innermost-active-axis facts
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
@@ -118,13 +127,30 @@ pub enum Reduce {
     Subset(u8),
 }
 
-/// The optional contraction field `c<m><n><k>/<kdiv>` (§6.7-0006).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The optional dense-contraction field (§6.7-0006), present IFF `op_family == gem`.
+/// sk3 grows it from `c<m><n><k>/<kdiv>` to
+/// `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`: a geometry group
+/// (`m`/`n`/`k`, `k_div`, and the conditionally-present `batch` size-class) followed
+/// by a precision group (weight / accumulator / output dtypes + the MathPrecision
+/// code, in input→compute→output dataflow order). `batch` is present IFF the cell is
+/// batched — a non-batched cell omits it entirely, so a non-batched token carries no
+/// batch coordinate at all (the general optional-coordinate rule).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Contraction {
     pub m: SizeClass,
     pub n: SizeClass,
     pub k: SizeClass,
     pub k_div: DivBucket,
+    /// Conditionally present: `Some(class)` iff batched (serialized `b<class>`).
+    pub batch: Option<SizeClass>,
+    /// Weight (operand-1) dtype token, from the closed §6.1 set.
+    pub wdt: String,
+    /// Accumulator / compute dtype token, from the closed §6.1 set.
+    pub acc: String,
+    /// Output dtype token, from the closed §6.1 set.
+    pub out: String,
+    /// Math-precision code (`st` bit-stable / `rm` reduced-mantissa).
+    pub mp: MathPrecision,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,14 +252,22 @@ impl StructureKey {
             operands,
             self.reduce.to_field(),
         );
-        if let Some(c) = self.contraction {
-            token.push_str(&format!(
-                "|c{}{}{}/{}",
-                c.m.code(),
-                c.n.code(),
-                c.k.code(),
-                c.k_div.code()
-            ));
+        if let Some(c) = &self.contraction {
+            // geometry group, then the conditionally-present batch coordinate, then
+            // the precision group — joined by `/` (§6.7-0006, sk3).
+            let mut parts = vec![
+                format!("c{}{}{}", c.m.code(), c.n.code(), c.k.code()),
+                c.k_div.code().to_string(),
+            ];
+            if let Some(cls) = c.batch {
+                parts.push(format!("b{}", cls.code()));
+            }
+            parts.push(c.wdt.clone());
+            parts.push(c.acc.clone());
+            parts.push(c.out.clone());
+            parts.push(c.mp.code().to_string());
+            token.push('|');
+            token.push_str(&parts.join("/"));
         }
         token
     }
@@ -279,18 +313,55 @@ fn parse_reduce(s: &str) -> Result<Reduce, KeyDecline> {
 }
 
 fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
-    // c<m><n><k>/<kdiv>
+    // sk3: c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>
+    // 6 `/`-parts when non-batched, 7 when batched (the batch coordinate is the only
+    // conditionally-present one; its presence is unambiguous by part count + the `b`
+    // prefix, which no dtype token or `<mp>` code shares).
     let body = s.strip_prefix('c').ok_or(KeyDecline::BadContractionField)?;
-    let (sizes, kdiv) = body.split_once('/').ok_or(KeyDecline::BadContractionField)?;
-    let sc: Vec<char> = sizes.chars().collect();
+    let parts: Vec<&str> = body.split('/').collect();
+    if parts.len() != 6 && parts.len() != 7 {
+        return Err(KeyDecline::BadContractionField);
+    }
+    // geometry: <m><n><k> (exactly 3 size-class chars) then <kdiv>.
+    let sc: Vec<char> = parts[0].chars().collect();
     if sc.len() != 3 {
         return Err(KeyDecline::BadContractionField);
     }
     let m = SizeClass::parse(&sc[0].to_string()).ok_or(KeyDecline::BadContractionField)?;
     let n = SizeClass::parse(&sc[1].to_string()).ok_or(KeyDecline::BadContractionField)?;
     let k = SizeClass::parse(&sc[2].to_string()).ok_or(KeyDecline::BadContractionField)?;
-    let k_div = DivBucket::parse(kdiv).ok_or(KeyDecline::BadContractionField)?;
-    Ok(Contraction { m, n, k, k_div })
+    let k_div = DivBucket::parse(parts[1]).ok_or(KeyDecline::BadContractionField)?;
+    // conditionally-present batch coordinate `b<class>` (present iff 7 parts).
+    let (batch, rest) = if parts.len() == 7 {
+        let cls = parts[2]
+            .strip_prefix('b')
+            .and_then(SizeClass::parse)
+            .ok_or(KeyDecline::BadContractionField)?;
+        (Some(cls), 3usize)
+    } else {
+        (None, 2usize)
+    };
+    // precision group: <wdt> <acc> <out> from the closed dtype set, then <mp>.
+    let wdt = parts[rest];
+    let acc = parts[rest + 1];
+    let out = parts[rest + 2];
+    for dt in [wdt, acc, out] {
+        if !DTYPES.contains(&dt) {
+            return Err(KeyDecline::UnknownDtype);
+        }
+    }
+    let mp = MathPrecision::parse(parts[rest + 3]).ok_or(KeyDecline::BadContractionField)?;
+    Ok(Contraction {
+        m,
+        n,
+        k,
+        k_div,
+        batch,
+        wdt: wdt.to_string(),
+        acc: acc.to_string(),
+        out: out.to_string(),
+        mp,
+    })
 }
 
 /// Parse a token into a `StructureKey`, rejecting a malformed one with a typed
