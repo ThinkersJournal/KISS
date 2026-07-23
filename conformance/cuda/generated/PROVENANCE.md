@@ -9,30 +9,32 @@ the KISS-pinned semantics.
 | | |
 |---|---|
 | Generator | `baracuda-kernelgen` (the reference kernel generator) |
-| Commit | `aca0aa85` (`feat/kiss-convergence` — D8 codec alignment; body byte-identical to the prior `1ba6f4ab` emission, [#60](https://github.com/ThinkersJournal/KISS/issues/60)) |
+| Commit | `e3530a39` (`feat/sk3-codec-bump`; `structure_key.rs` untouched since the codec commit `b5082bc5`, so codec-identical; body byte-identical to the prior `aca0aa85` emission — sk3 regen [#81](https://github.com/ThinkersJournal/KISS/pull/81)) |
 | Command | `cargo run --bin kernelgen -- <out-dir>` |
 | Op | `relu_add` = `relu(input(0) + input(1))`, f32 |
-| Cell (generator's key) | `sk2\|bin\|f32\|cuda:sm89\|ix32\|grid\|r1\|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f\|-` |
+| Cell (generator's key) | `sk3\|bin\|f32\|cuda:sm89\|ix32\|grid\|r1\|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f\|-` |
 | Kernel signature | `extern "C" __global__ void baracuda_gen_relu_add_f32_co_v4(const float4*, const float4*, float4*, long long nv)` |
 
-The generator's key is now schema-conformant `sk2|…|cuda:sm89`: the Baracuda
-generator's D8 codec alignment (schema `1→2`, `sm*`→`cuda:sm*`, `i32/i64`→`ix32/ix64`
-per KISS-CLASSIFY §6.7-0003 / §6.8-0002) closed the earlier `sk1|…|sm89` divergence
-([#60](https://github.com/ThinkersJournal/KISS/issues/60)). The kernel body is
-byte-identical across the codec change — the token lives only in the header comment,
-not the emitted CUDA — so this remains the generator's verbatim output. Beyond the key,
-this differential certifies the kernel's **numeric semantics**, which is what an
-implementation must get right.
+The generator's key is schema-conformant `sk3|…|cuda:sm89`: the sk2→sk3 bump (the
+sk3 GEMM-precision RFC / [PR #66](https://github.com/ThinkersJournal/KISS/pull/66),
+`SCHEMA_VERSION 3`) re-prefixes every token, and for this non-`gem` `bin` cell the
+change is **prefix-only** (`sk2|` → `sk3|`) — the cell carries no `gem` precision
+group. The kernel body is byte-identical across the bump — the token lives only in
+the header comment, not the emitted CUDA — so this remains the generator's verbatim
+output. Beyond the key, this differential certifies the kernel's **numeric
+semantics**, which is what an implementation must get right.
 
-> **sk3 staging note (2026-07-23).** The KISS reference codec is now **sk3**
-> (`SCHEMA_VERSION 3`, the sk3 GEMM-precision RFC / PR #66); the committed `.cu`
-> above is still the **verbatim sk2-era emission** recorded in the table — its
-> header token is re-emitted **by Baracuda**, never edited here. The fresh
-> Baracuda emission (from `b5082bc5`, branch `feat/sk3-codec-bump`) and the
-> recorded three-way byte-match re-record at sk3 happen at the coordinated
-> regen — the same process as the sk2/[#60](https://github.com/ThinkersJournal/KISS/issues/60)
-> regen. For this `bin` cell the token change is prefix-only (`sk2|` → `sk3|`);
-> the kernel body is unaffected.
+> **sk3 regen record (2026-07-23, [#81](https://github.com/ThinkersJournal/KISS/pull/81)).**
+> The KISS reference codec is **sk3** (`SCHEMA_VERSION 3`). The `.cu` above was
+> re-emitted by the Baracuda generator from `e3530a39` (codec-identical to
+> `b5082bc5`, branch `feat/sk3-codec-bump`): the header token updated `sk2|` →
+> `sk3|`, and the emitted CUDA is **byte-identical** to the prior sk2-era emission
+> (Baracuda confirmed the `.cu` diff is exactly that one header-comment line; the
+> `bin` cell carries no `gem` group). The three-way byte-match was re-recorded at
+> sk3 — the same process as the sk2/[#60](https://github.com/ThinkersJournal/KISS/issues/60)
+> regen: Baracuda emitted fresh from `e3530a39` (header token = the machine-checked
+> `relu_add` golden byte-for-byte, sha256 `ee182f9f…`), and Fuel's independent
+> `structure_key` deriver cross-verified the goldens (14/14 expressible, byte-identical).
 
 ## Regenerating
 
