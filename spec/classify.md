@@ -193,9 +193,9 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; `0` = false, any non-zero byte = true; ops normalize to 0/1; storage width equals `u8` |
 | `e4m3fn` | float | 8 | FP8 E4M3 OCP (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN |
-| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; reserved (recognized on parse) |
+| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; reserved (recognized on parse; use typed-declines at this schema version) |
 | `e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN |
-| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; reserved (recognized on parse) |
+| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; reserved (recognized on parse; use typed-declines at this schema version) |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `s4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
@@ -446,9 +446,9 @@ where it fixes storage bytes.
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
 | `e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding |
-| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; **reserved** (recognized on parse) |
+| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; **reserved** (recognized on parse; use typed-declines at this schema version) |
 | `e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN |
-| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; **reserved** (recognized on parse) |
+| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version) |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `s4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
@@ -464,7 +464,14 @@ where it fixes storage bytes.
   by `e4m3fn` (OCP) with `e4m3fnuz` reserved, and `e5m2` (IEEE) with `e5m2fnuz` reserved
   — byte-incompatible hardware variants MUST NOT share a token. In particular, no
   strict-precision float variant is a dtype: the dtype set is **pure storage**
-  (§6.1-0005). *Test:* `test_classify_dtype_set_is_closed`.
+  (§6.1-0005). A **reserved** spelling (`e4m3fnuz`, `e5m2fnuz`) is part of the
+  closed vocabulary — a reader MUST recognize it and distinguish it from an
+  unknown token — but has **no computation semantics at this schema version**: a
+  `structure_key` using a reserved dtype in **any** dtype position MUST be
+  answered with a typed decline (§6.7-0009) distinct from the unknown-token
+  decline (decline vectors: `reserved_fnuz_dtypes_typed_decline`). Activating a
+  reserved spelling is a future additive schema event.
+  *Test:* `test_classify_dtype_set_is_closed`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
   the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `s8` = 8;
   `s16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;

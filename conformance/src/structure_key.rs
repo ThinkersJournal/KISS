@@ -33,6 +33,13 @@ pub const DTYPES: [&str; 22] = [
     "e4m3fn", "e4m3fnuz", "e5m2", "e5m2fnuz", "s4", "u4", "b1", "c32", "c64",
 ];
 
+/// The two **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
+/// closed vocabulary so the spellings are pinned now, but with **no computation
+/// semantics at this schema version** — a `structure_key` using one in any dtype
+/// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
+/// from the unknown-token decline. Activation is a future additive schema event.
+pub const RESERVED_DTYPES: [&str; 2] = ["e4m3fnuz", "e5m2fnuz"];
+
 // ---- small enum codecs -------------------------------------------------------
 
 macro_rules! code_enum {
@@ -181,6 +188,11 @@ pub enum KeyDecline {
     UnknownOpFamily,
     /// Dtype token outside the closed §6.1 set.
     UnknownDtype,
+    /// Dtype token inside the closed §6.1 vocabulary but **reserved** at this
+    /// schema version (`e4m3fnuz` / `e5m2fnuz`): recognized on parse — a reader
+    /// distinguishes it from an unknown token — but its use MUST typed-decline
+    /// until a future schema version activates it (§6.1-0001).
+    ReservedDtype,
     /// Token length is `0` or exceeds `MAX_STRUCTURE_KEY_LEN` (§6.4-0004).
     TokenLengthOutOfBound { len: usize },
     /// More than `MAX_OPERANDS` per-operand sub-keys (§6.4-0002).
@@ -346,6 +358,11 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
     let acc = parts[rest + 1];
     let out = parts[rest + 2];
     for dt in [wdt, acc, out] {
+        // reserved before unknown: RESERVED_DTYPES ⊂ DTYPES, and the two
+        // declines are distinct — recognized-reserved vs unknown token.
+        if RESERVED_DTYPES.contains(&dt) {
+            return Err(KeyDecline::ReservedDtype);
+        }
         if !DTYPES.contains(&dt) {
             return Err(KeyDecline::UnknownDtype);
         }
@@ -386,6 +403,9 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     // field 1/2: op-family and dtype must be in their closed sets (§6.5-0006, §6.1)
     if !OP_FAMILIES.contains(&f[1]) {
         return Err(KeyDecline::UnknownOpFamily);
+    }
+    if RESERVED_DTYPES.contains(&f[2]) {
+        return Err(KeyDecline::ReservedDtype);
     }
     if !DTYPES.contains(&f[2]) {
         return Err(KeyDecline::UnknownDtype);

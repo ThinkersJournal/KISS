@@ -372,8 +372,34 @@ fn accepts_every_closed_op_family_and_dtype() {
     }
     for dt in DTYPES {
         let t = A_GOLDEN.replacen("|f32|", &format!("|{dt}|"), 1);
-        assert_ne!(from_token(&t), Err(KeyDecline::UnknownDtype), "dtype {dt} rejected");
+        if RESERVED_DTYPES.contains(&dt) {
+            // in the closed vocabulary — recognized on parse — but reserved:
+            // use typed-declines at this schema version (§6.1-0001).
+            assert_eq!(from_token(&t), Err(KeyDecline::ReservedDtype), "reserved dtype {dt}");
+        } else {
+            assert_ne!(from_token(&t), Err(KeyDecline::UnknownDtype), "dtype {dt} rejected");
+            assert_ne!(from_token(&t), Err(KeyDecline::ReservedDtype), "active dtype {dt} declined as reserved");
+        }
     }
+}
+
+#[test]
+fn reserved_fnuz_dtypes_typed_decline() {
+    // §6.1-0001: `e4m3fnuz`/`e5m2fnuz` are IN the closed vocabulary (their
+    // spellings pinned now so a byte-incompatible variant can never squat on
+    // them) but reserved — recognized on parse, distinct from an unknown token,
+    // and their use typed-declines at this schema version. Cross-implementation
+    // seam: Baracuda's reader declines them identically (PR #81 review note).
+    for dt in RESERVED_DTYPES {
+        let t = A_GOLDEN.replacen("|f32|", &format!("|{dt}|"), 1);
+        assert_eq!(from_token(&t), Err(KeyDecline::ReservedDtype), "{dt} in the dtype field");
+    }
+    // the retired bare spelling stays an UNKNOWN token — the two declines differ.
+    let bare = A_GOLDEN.replacen("|f32|", "|e4m3|", 1);
+    assert_eq!(from_token(&bare), Err(KeyDecline::UnknownDtype));
+    // a reserved spelling inside the gem precision group declines the same way.
+    let gem = "sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/e4m3fnuz/f32/st";
+    assert_eq!(from_token(gem), Err(KeyDecline::ReservedDtype));
 }
 
 #[test]
