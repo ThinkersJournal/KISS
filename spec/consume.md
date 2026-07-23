@@ -995,7 +995,7 @@ consumer, implementation, kernel, contract, and target.
 - **A.1 Full lift (strided binary `add`).** Structure: two `f32` operand reads → one `add` → one
   store, strided cell, `target = cuda:sm89`. Lift → one-node DAG `{ op: add }`;
   `semantics_kind = machine-checkable-IR`; Identity `op_identity = add` (bare KISS-Ops name, form
-  (b)), `accept_predicate = <structure_key sk1|bin|f32|…>` (cell op-category code `bin`); residue =
+  (b)), `accept_predicate = <structure_key sk3|bin|f32|…>` (cell op-category code `bin`); residue =
   ∅ (lift fraction, informally, ≈ 1.0).
 - **A.2 Partial lift with inexpressible residue.** Structure: `matmul` → proprietary activation with
   no KISS-Ops decomposable-signature entry. Lift → `{ op: matmul }` node; `semantics_kind =

@@ -1099,7 +1099,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 
 - **KISS-CONTRACT-6.8-0001** — The Guarantees section MUST carry exactly the fields
   `{reference_function, per_backend_ulp_tiers, determinism_class, math_precision,
-  bit_stability, audited_status, cost_provenance}`, serialized in that order (§6.11-0005); an
+  accumulation_type, bit_stability, audited_status, cost_provenance}`, serialized in that
+  order (§6.11-0005); an
   implementation MUST NOT omit any of these fields, and MUST NOT scatter these facts across
   other sections. The `audited_status` field is a **derived** trust field whose single
   normative home is this Guarantees section (§6.8-0008/-0009/-0010); it MUST NOT be carried in
@@ -1123,6 +1124,17 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   KISS-Ops and orthogonal to the determinism class; an implementation MUST NOT re-fork it,
   MUST NOT model it as a dtype, and MUST NOT infer it from a KISS-Classify dtype token. *Test:*
   `test_contract_math_precision_imported`.
+- **KISS-CONTRACT-6.8-0011** — The `accumulation_type` MUST declare the dtype in which a
+  contraction/reduction-bearing kernel accumulates (matmul, reduce-sum/prod, any op with a
+  float fold), drawn from the **same closed dtype-token set** as the KISS-Classify `<acc>`
+  key coordinate (KISS-CLASSIFY §6.7-0006). For a given kernel the contract's
+  `accumulation_type` MUST **denote the same dtype** as the key's `<acc>`, using the same
+  closed dtype-token spelling — one dtype, two surfaces (the key carries it for
+  identity/lookup, the contract declares it as a guarantee). An implementation MUST NOT
+  declare an `accumulation_type` outside the closed set, and MUST NOT let
+  `accumulation_type` and the key's `<acc>` disagree. This is a guarantee-only surface: it
+  does not restate the KISS-Ops MathPrecision or determinism facts, which live in their own
+  fields (§6.8-0003/-0004). *Test:* `test_contract_accumulation_type_matches_key_acc`.
 - **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state whether the kernel is
   bit-stable on the same hardware and is the **single authoritative home** of that fact; it
   MUST be consistent with the `determinism_class`, and in particular a kernel of class
@@ -1544,6 +1556,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0008 | `test_contract_audited_status_derived` |
 | KISS-CONTRACT-6.8-0009 | `test_contract_audited_derivation_rule` |
 | KISS-CONTRACT-6.8-0010 | `test_contract_unaudited_derivation_rule` |
+| KISS-CONTRACT-6.8-0011 | `test_contract_accumulation_type_matches_key_acc` |
 | KISS-CONTRACT-6.9-0001 | `test_contract_provenance_field_schema` |
 | KISS-CONTRACT-6.9-0002 | `test_contract_provenance_source` |
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |

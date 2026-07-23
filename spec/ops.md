@@ -336,7 +336,7 @@ golden vectors are in Appendix E.
 ### 2.8 Terms are joined, not restated
 
 KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 s16 u8 u16 i32 i64
-u32 u64 bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
+u32 u64 bool e4m3fn e4m3fnuz e5m2 e5m2fnuz s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
@@ -461,9 +461,9 @@ reader holding only KISS-Ops plus the umbrella.
   `minNum`, rounding-direction attributes, signed zero, quiet/signaling NaN, and
   subnormals. The per-op float semantics of §6 are pinned against this reference for the
   IEEE-754 dtypes (`f16`, `f32`, `f64`) only; `bf16` and the FP8 formats
-  `e4m3` / `e5m2` are **not** IEEE-754 formats and are pinned explicitly in §6.16.
+  `e4m3fn` / `e5m2` are **not** IEEE-754 formats and are pinned explicitly in §6.16.
 - **Open Compute Project (OCP) 8-bit Floating Point Specification (OFP8), FP8 formats
-  E4M3 and E5M2** — the normative reference for the `e4m3` and `e5m2` encodings,
+  E4M3 and E5M2** — the normative reference for the `e4m3fn` and `e5m2` encodings,
   saturation, and NaN/infinity conventions restated in §6.16. `bf16` (bfloat16) is
   pinned directly in §6.16 as a truncated binary32 layout with round-to-nearest-even.
 - **ISO/IEC 9899 (C99 or C11) Annex G — "IEC 60559-compatible complex arithmetic"** —
@@ -619,7 +619,7 @@ verbatim, everywhere).
   (`f16` binary16, `f32` binary32, `f64` binary64), the arithmetic MUST follow
   IEEE 754-2019 for that operation and dtype, except where a specific op clause below
   pins a departure (e.g. the NaN-suppressing min/max family, the declared-ULP
-  transcendental atoms). For the non-IEEE-754 float dtypes `bf16`, `e4m3`, and `e5m2`,
+  transcendental atoms). For the non-IEEE-754 float dtypes `bf16`, `e4m3fn`, and `e5m2`,
   the arithmetic MUST follow the encodings, rounding, saturation, and NaN/infinity
   conventions pinned in §6.16 (these formats are **not** governed by IEEE 754-2019).
   *Test:* `test_ops_float_ieee754`.
@@ -855,7 +855,7 @@ section-intro paragraph is an informative pointer to it):
   of a NaN `b` are carried into the result. *Test:* `test_ops_copysign_raw_bit`.
 - **KISS-OPS-6.9-0003** — `nextafter` MUST produce the next representable value after `a`
   toward `b` in the **dtype's own** representation lattice; `nextafter` MUST reject `f16`,
-  `bf16`, `e4m3`, and `e5m2` operands (each carries the identical promotion hazard —
+  `bf16`, `e4m3fn`, and `e5m2` operands (each carries the identical promotion hazard —
   stepping in a promoted `f32` yields the wrong neighbor in the narrow lattice) with a
   typed decline. *Test:* `test_ops_nextafter_own_lattice`.
 
@@ -1286,8 +1286,10 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `u32` | 32 | uint | unsigned 32-bit two's-complement; **ordinary** storage/compute dtype (§6.2-0007); MAY serve the index-operand role (§6.11-0012) |
 | `u64` | 64 | uint | unsigned 64-bit |
 | `bool` | 8 | bool | 1 byte; `0`=false, any non-zero byte=true; ops normalize to strictly `0`/`1` |
-| `e4m3` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e4m3fn` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e4m3fnuz` | 8 | float | FP8 E4M3 AMD `fnuz` variant (1 sign, 4 exp, 3 mantissa), bias 8; no −0; **no infinities**; byte-incompatible with `e4m3fn`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
 | `e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e5m2fnuz` | 8 | float | FP8 E5M2 AMD `fnuz` variant (1 sign, 5 exp, 2 mantissa), bias 16; no −0; **no infinities**; byte-incompatible with `e5m2`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
 | `s4` | 4 | int | signed 4-bit, range [−8,+7]; packed pair per byte, low nibble = even logical index, sign-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `u4` | 4 | uint | unsigned 4-bit, range [0,15]; packed pair per byte, low nibble = even index, zero-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `b1` | 1 | uint | 1-bit binary-GEMM operand; storage packing (8 bits/byte, LSB = lowest logical index) **owned normatively by the data-vocabulary sub-standard §6.1-0008/0009** and restated here informatively; the **xor+popcount accumulation to raw `s32` output** is the Ops-owned computation semantics |
@@ -1307,9 +1309,9 @@ shared naming convention spelled identically in both foundational vocabularies.
   (bias 127) with the binary32 exponent range and a truncated mantissa; it is **not** an
   IEEE 754-2019 format, and any op producing a `bf16` result MUST round to nearest, ties
   to even. *Test:* `test_ops_bf16_layout`.
-- **KISS-OPS-6.16-0004** — `e4m3` MUST be encoded per OCP OFP8 as 1-sign / 4-exp /
+- **KISS-OPS-6.16-0004** — `e4m3fn` MUST be encoded per OCP OFP8 as 1-sign / 4-exp /
   3-mantissa (bias 7) with maximum finite magnitude ±448, **no** infinity encoding, and a
-  single NaN encoding; conversion into `e4m3` MUST saturate to the maximum finite
+  single NaN encoding; conversion into `e4m3fn` MUST saturate to the maximum finite
   magnitude under round-half-to-even. *Test:* `test_ops_e4m3_layout`.
 - **KISS-OPS-6.16-0005** — `e5m2` MUST be encoded per OCP OFP8 as 1-sign / 5-exp /
   2-mantissa (bias 15) with maximum finite magnitude ±57344 and IEEE-style infinity and
@@ -1394,6 +1396,34 @@ surfaces it in a kernel's guarantees section.
   and reduced-mantissa-permitted is verified by the same per-atom mantissa-width probe. The
   attribute therefore constrains per-atom mantissa width independently of reduction order.
   *Test:* `test_ops_math_precision_order_invariant_scope`.
+- **KISS-OPS-6.17-0006** — For each MathPrecision value, §6.17 MUST pin the exact
+  input-rounding applied to each operand before compute, as
+  `(retained_mantissa_bits, rounding_mode)`, precise enough for a spec-derived reference
+  to (a) derive the accuracy bound (`u = 2^−(retained_mantissa_bits + 1)`) and (b)
+  reproduce the rounded operand bit-for-bit. **bit-stable** applies no input rounding
+  (each operand at its storage-dtype mantissa). **reduced-mantissa-permitted** rounds each
+  operand's mantissa to a pinned width via the named mode before compute; the canonical
+  value is **TF32** (`f32` primary, `cuda:sm80+`): 10 retained mantissa bits, exponent
+  unchanged, round-to-nearest-even, `u = 2⁻¹¹`. The rounding MUST be a true round (RNE),
+  not truncation, and MUST carry into the exponent (`1.11…1` → `10.0…0`, exponent + 1); a
+  reference that truncates is non-conformant. Where a target admits more than one
+  reduced-mantissa width for the same primary dtype and capability, each MUST be named
+  separately (an additive refinement); the §6.17-0003 floor (no fewer than 10 mantissa
+  bits) still governs. This pin is what the KISS-Classify `<mp>` key coordinate
+  (KISS-CLASSIFY §6.7-0006, `st`/`rm`) resolves to per `(primary_dtype, target)`. *Test:*
+  `test_ops_math_precision_input_rounding`.
+- **KISS-OPS-6.17-0007** — Input-rounding (§6.17-0006) and accumulator width do NOT by
+  themselves fix a float contraction's bits: float accumulation is non-associative, so the
+  reduction order/schedule also moves bits. A contraction cell is bit-reproducible (admits
+  a bit-pattern golden) ONLY if input-rounding is pinned per §6.17-0006 AND the accumulation
+  schedule (order + per-step accumulator rounding) is deterministic and specified to the
+  reference; otherwise the cell is `order-invariant/nondeterministic` (§6.0-0001) and MUST
+  be compared under a declared tolerance, never a bit golden. A `reduced-mantissa-permitted`
+  value shifts a tolerance cell's tolerance *magnitude* but MUST NOT flip a tolerance cell
+  to bit-golden. A tolerance cell's declared tolerance MUST bound the combined
+  input-rounding-plus-reduction-order error against the wide-precision truth — the
+  KISS-Conform §6.5-0007 oracle evaluation. *Test:*
+  `test_ops_math_precision_reproducibility_class`.
 
 ### 6.18 Complex-arithmetic op family (c32 / c64)
 
@@ -2287,6 +2317,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
 | KISS-OPS-6.17-0004 | `test_ops_math_precision_not_dtype` |
 | KISS-OPS-6.17-0005 | `test_ops_math_precision_order_invariant_scope` |
+| KISS-OPS-6.17-0006 | `test_ops_math_precision_input_rounding` |
+| KISS-OPS-6.17-0007 | `test_ops_math_precision_reproducibility_class` |
 | KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
 | KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
 | KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |

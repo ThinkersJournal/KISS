@@ -55,50 +55,50 @@ fn co1_da() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V1, DivBuc
 #[test]
 fn a1_elementwise_binary_canonical() {
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-");
 }
 
 #[test]
 fn a1_elementwise_with_broadcast_operand() {
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), br1(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0004", &k, "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0004", &k, "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-");
 }
 
 #[test]
 fn a1_unary_f16_v8() {
     let k = key("une", "f16", "cuda:sm89", WorkClass::Grid, 2, vec![co8(), co8()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0003", &k, "sk2|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0003", &k, "sk3|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-");
 }
 
 #[test]
 fn a1_reduction_trailing_axis() {
     let k = key("red", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk2|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk3|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast");
 }
 
 #[test]
 fn a1_reduction_all_axes() {
     let k = key("red", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk2|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk3|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall");
 }
 
 #[test]
 fn a1_reduction_rank1_all_axes() {
     let k = key("red", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), co1_da()], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk2|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk3|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall");
 }
 
 #[test]
 fn a1_reduction_subset_mask() {
     // rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask 0x0a
     let k = key("red", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), co1_da()], Reduce::Subset(0x0a), None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk2|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk3|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a");
 }
 
 #[test]
 fn a1_binary_two_operands() {
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-");
 }
 
 /// The reference-generator (`baracuda-kernelgen`) `relu_add` cell — the freeze-gate
@@ -107,31 +107,162 @@ fn a1_binary_two_operands() {
 /// vectorized operands, no reduce). Its token is pinned in
 /// `cuda/generated/PROVENANCE.md` and the emitted `.cu` header comment; this golden
 /// makes the match **machine-checked** rather than comment-deep. Independently
-/// reproduced by Fuel's Baracuda-free deriver and Baracuda's `sk2` codec —
+/// reproduced by Fuel's Baracuda-free deriver and Baracuda's codec —
 /// same-namespace three-way reproduction (records condition-1; NOT the §6.4-0004
-/// cross-namespace gate, and NOT a KISS-Classify freeze).
+/// cross-namespace gate, and NOT a KISS-Classify freeze). The `.cu`/`PROVENANCE`
+/// tokens re-prefix to sk3 in the coordinated regen.
 #[test]
 fn relu_add_generated_r1_cell() {
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 1, vec![co4(), co4(), co4()], Reduce::None, None);
     assert_token(
         "KISS-CLASSIFY-6.7-0001",
         &k,
-        "sk2|bin|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk3|bin|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
     );
 }
 
 #[test]
 fn a1_dense_contraction_cuda() {
-    let c = Contraction { m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16 };
+    // sk3: the gem contraction field now carries the precision group. This f32 gem is
+    // non-batched (no `b<class>`), f32 weight/accumulator/output, bit-stable (`st`).
+    let c = Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
+        mp: MathPrecision::Stable,
+    };
     let k = key("gem", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
-    assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk2|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16");
+    assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
 }
 
 #[test]
 fn a1_dense_contraction_vulkan_target() {
-    let c = Contraction { m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16 };
+    let c = Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
+        mp: MathPrecision::Stable,
+    };
     let k = key("gem", "f32", "vulkan:spirv1.6", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
-    assert_token("KISS-CLASSIFY-6.8", &k, "sk2|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16");
+    assert_token("KISS-CLASSIFY-6.8", &k, "sk3|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
+}
+
+// ---- sk3 gem precision-coordinate goldens (D1/D4/D5) -------------------------
+
+/// KISS-CLASSIFY-6.7-0006 (sk3): a **batched** gem cell carries the conditionally-
+/// present `b<class>` coordinate in the geometry group (right after `<kdiv>`). A
+/// non-batched cell of the same shape omits it entirely, so the two are distinct
+/// tokens — the batch coordinate is additive over the non-batched form, and `bm`
+/// (batch-medium) never collides with the `<mp>` codes `{st,rm}` (which never begin
+/// with `b`).
+#[test]
+fn sk3_gem_batched_cell() {
+    let c = Contraction {
+        m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: Some(SizeClass::Medium),
+        wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
+        mp: MathPrecision::Stable,
+    };
+    let k = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
+    assert_token(
+        "KISS-CLASSIFY-6.7-0006",
+        &k,
+        "sk3|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
+    );
+}
+
+/// KISS-CLASSIFY-6.7-0006 (sk3, D4): SIMT-`f32` (bit-stable, `mp=st`) and TF32
+/// (reduced-mantissa, `mp=rm`) are the SAME shape but numerically- and
+/// determinism-distinct cells requiring different kernels — so they MUST hold
+/// distinct tokens. The `<mp>` coordinate distinguishes them; the spec-forbidden
+/// `f32s` dtype hack is retired (§6.1-0005).
+#[test]
+fn sk3_simt_f32_vs_tf32_distinct_by_mp() {
+    let base = |mp| Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(), mp,
+    };
+    let simt = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathPrecision::Stable)));
+    let tf32 = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathPrecision::ReducedMantissa)));
+    assert_token(
+        "KISS-CLASSIFY-6.7-0006",
+        &simt,
+        "sk3|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+    );
+    assert_token(
+        "KISS-CLASSIFY-6.7-0006",
+        &tf32,
+        "sk3|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm",
+    );
+    assert_ne!(simt.to_token(), tf32.to_token(), "SIMT-f32 and TF32 must not collide");
+}
+
+/// KISS-CLASSIFY-6.6-0018 (sk3, D1): the mixed-precision FP8 collision the sk3 bump
+/// exists to resolve. Under sk2 these two GEMMs derived BYTE-IDENTICAL tokens
+/// (operand-0 `e4m3`, no dtype in the contraction field), so a provider was forbidden
+/// to register both (§6.6-0018). sk3's `<wdt>/<acc>/<out>` coordinates make them
+/// distinct — and the FP8 spelling is variant-explicit (`e4m3fn`, not bare `e4m3`).
+#[test]
+fn sk3_mixed_precision_fp8_disambiguated() {
+    // E4M3 x E5M2 -> F32, f32 acc, bit-stable.
+    let e4m3_e5m2_f32 = Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: None, wdt: "e5m2".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
+        mp: MathPrecision::Stable,
+    };
+    // E4M3 x E4M3 -> F16, f32 acc, bit-stable.
+    let e4m3_e4m3_f16 = Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
+        batch: None, wdt: "e4m3fn".to_string(), acc: "f32".to_string(), out: "f16".to_string(),
+        mp: MathPrecision::Stable,
+    };
+    let a = key("gem", "e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_e5m2_f32));
+    let b = key("gem", "e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_e4m3_f16));
+    assert_token(
+        "KISS-CLASSIFY-6.6-0018",
+        &a,
+        "sk3|gem|e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/e5m2/f32/f32/st",
+    );
+    assert_token(
+        "KISS-CLASSIFY-6.6-0018",
+        &b,
+        "sk3|gem|e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/e4m3fn/f32/f16/st",
+    );
+    assert_ne!(a.to_token(), b.to_token(), "mixed-precision FP8 cells must not collide under sk3");
+}
+
+/// KISS-CLASSIFY-6.7-0009 (sk3): the grown contraction field declines malformed
+/// precision groups with a typed decline — a dtype outside the closed set, a bad
+/// `<mp>` code, and a wrong part-count (5 or 8 parts) are all rejected.
+#[test]
+fn sk3_contraction_precision_group_declines() {
+    // valid sk3 gem stem for mutation.
+    let ok = "sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st";
+    assert!(from_token(ok).is_ok());
+    // unknown dtype in the precision group (`f99` weight).
+    assert_eq!(
+        from_token(&ok.replace("/f32/f32/f32/st", "/f99/f32/f32/st")),
+        Err(KeyDecline::UnknownDtype)
+    );
+    // bad `<mp>` code (`zz` — not st/rm).
+    assert_eq!(
+        from_token(&ok.replace("/f32/f32/f32/st", "/f32/f32/f32/zz")),
+        Err(KeyDecline::BadContractionField)
+    );
+    // `<mp>` beginning with `b` is refused (reserved for the batch coordinate).
+    assert_eq!(
+        from_token(&ok.replace("/f32/f32/f32/st", "/f32/f32/f32/bs")),
+        Err(KeyDecline::BadContractionField)
+    );
+    // wrong part-count: 5 parts (missing `<mp>`).
+    assert_eq!(
+        from_token(&ok.replace("/f32/f32/f32/st", "/f32/f32/f32")),
+        Err(KeyDecline::BadContractionField)
+    );
+    // batched form parses (7 parts); a bad batch class `bx` is refused.
+    assert!(from_token(&ok.replace("ctll/d16/", "ctll/d16/bm/")).is_ok());
+    assert_eq!(
+        from_token(&ok.replace("ctll/d16/", "ctll/d16/bx/")),
+        Err(KeyDecline::BadContractionField)
+    );
 }
 
 // ---- §6.5-0013 vector-width derivation: forward-unit-stride precondition ------
@@ -174,16 +305,16 @@ fn test_classify_vec_width_unit_stride() {
 
 // ---- A.2 decline vectors: structural codec rejects (§6.7-0009) ---------------
 
-const A_GOLDEN: &str = "sk2|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+const A_GOLDEN: &str = "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
 
 #[test]
 fn reject_wrong_field_count() {
-    assert_eq!(from_token("sk2|bin|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
+    assert_eq!(from_token("sk3|bin|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
 #[test]
 fn reject_bad_version_prefix() {
-    let t = A_GOLDEN.replacen("sk2", "sk9", 1);
+    let t = A_GOLDEN.replacen("sk3", "sk9", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::BadVersionPrefix));
 }
 
@@ -220,29 +351,55 @@ fn reject_bad_rank() {
 
 #[test]
 fn reject_unknown_op_family() {
-    // A.2 decline vector: `sk2|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
+    // A.2 decline vector: `sk3|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
     let t = A_GOLDEN.replacen("|bin|", "|zzz|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownOpFamily));
 }
 
 #[test]
 fn reject_unknown_dtype() {
-    // A.2 decline vector: `sk2|bin|f99|…` — dtype outside the closed §6.1 set.
+    // A.2 decline vector: `sk3|bin|f99|…` — dtype outside the closed §6.1 set.
     let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
 }
 
 #[test]
 fn accepts_every_closed_op_family_and_dtype() {
-    // every one of the 24 op-family codes and 20 dtype tokens is recognized
+    // every one of the 24 op-family codes and 22 dtype tokens is recognized
     for fam in OP_FAMILIES {
         let t = A_GOLDEN.replacen("|bin|", &format!("|{fam}|"), 1);
         assert_ne!(from_token(&t), Err(KeyDecline::UnknownOpFamily), "op-family {fam} rejected");
     }
     for dt in DTYPES {
         let t = A_GOLDEN.replacen("|f32|", &format!("|{dt}|"), 1);
-        assert_ne!(from_token(&t), Err(KeyDecline::UnknownDtype), "dtype {dt} rejected");
+        if RESERVED_DTYPES.contains(&dt) {
+            // in the closed vocabulary — recognized on parse — but reserved:
+            // use typed-declines at this schema version (§6.1-0001).
+            assert_eq!(from_token(&t), Err(KeyDecline::ReservedDtype), "reserved dtype {dt}");
+        } else {
+            assert_ne!(from_token(&t), Err(KeyDecline::UnknownDtype), "dtype {dt} rejected");
+            assert_ne!(from_token(&t), Err(KeyDecline::ReservedDtype), "active dtype {dt} declined as reserved");
+        }
     }
+}
+
+#[test]
+fn reserved_fnuz_dtypes_typed_decline() {
+    // §6.1-0001: `e4m3fnuz`/`e5m2fnuz` are IN the closed vocabulary (their
+    // spellings pinned now so a byte-incompatible variant can never squat on
+    // them) but reserved — recognized on parse, distinct from an unknown token,
+    // and their use typed-declines at this schema version. Cross-implementation
+    // seam: Baracuda's reader declines them identically (PR #81 review note).
+    for dt in RESERVED_DTYPES {
+        let t = A_GOLDEN.replacen("|f32|", &format!("|{dt}|"), 1);
+        assert_eq!(from_token(&t), Err(KeyDecline::ReservedDtype), "{dt} in the dtype field");
+    }
+    // the retired bare spelling stays an UNKNOWN token — the two declines differ.
+    let bare = A_GOLDEN.replacen("|f32|", "|e4m3|", 1);
+    assert_eq!(from_token(&bare), Err(KeyDecline::UnknownDtype));
+    // a reserved spelling inside the gem precision group declines the same way.
+    let gem = "sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/e4m3fnuz/f32/st";
+    assert_eq!(from_token(gem), Err(KeyDecline::ReservedDtype));
 }
 
 #[test]
@@ -306,18 +463,18 @@ fn test_classify_target_token_grammar() {
 
 /// KISS-CLASSIFY-6.7-0002 (`test_classify_token_version_prefix`): field 0 is `sk`
 /// followed by the canonical decimal version. Catches a reader that `parse::<u32>()`s
-/// the version (accepting the non-canonical `sk02`, which parses to 2).
+/// the version (accepting the non-canonical `sk03`, which parses to 3).
 #[test]
 fn test_classify_token_version_prefix() {
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk2|", "sk02|", 1)),
+        from_token(&A_GOLDEN.replacen("sk3|", "sk03|", 1)),
         Err(KeyDecline::BadVersionPrefix)
     );
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk2|", "sk9|", 1)),
+        from_token(&A_GOLDEN.replacen("sk3|", "sk9|", 1)),
         Err(KeyDecline::BadVersionPrefix) // unsupported version
     );
-    assert!(from_token(A_GOLDEN).is_ok()); // `sk2` is canonical
+    assert!(from_token(A_GOLDEN).is_ok()); // `sk3` is canonical
 }
 
 /// KISS-CLASSIFY-6.6-0010 (`test_classify_contraction_field_optional`): the
@@ -328,13 +485,14 @@ fn test_classify_token_version_prefix() {
 #[test]
 fn test_classify_contraction_field_optional() {
     let gem = A_GOLDEN.replacen("|bin|", "|gem|", 1);
-    // gem WITH contraction (10 fields) — the only valid gem form.
-    let gem_10 = format!("{gem}|ctll/d16");
+    // gem WITH contraction (10 fields) — the only valid gem form (sk3 precision group).
+    let gem_10 = format!("{gem}|ctll/d16/f32/f32/f32/st");
     assert!(from_token(&gem_10).is_ok(), "valid gem+contraction rejected");
     // gem WITHOUT contraction (9 fields) — must be rejected.
     assert_eq!(from_token(&gem), Err(KeyDecline::ContractionPresenceMismatch));
-    // non-gem (bin) WITH contraction (10 fields) — must be rejected.
-    let bin_10 = format!("{A_GOLDEN}|ctll/d16");
+    // non-gem (bin) WITH a well-formed contraction (10 fields) — rejected on presence,
+    // not shape (the contraction parses fine; the family/presence cross-check fails).
+    let bin_10 = format!("{A_GOLDEN}|ctll/d16/f32/f32/f32/st");
     assert_eq!(from_token(&bin_10), Err(KeyDecline::ContractionPresenceMismatch));
     // non-gem (bin) WITHOUT contraction (9 fields) — the base codec, accepted.
     assert!(from_token(A_GOLDEN).is_ok());
