@@ -542,6 +542,52 @@ pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
     }
 }
 
+/// §6.5-0010 + §6.6-0013: the work-class **total element count** — the product,
+/// over the iteration-frame axes, of each axis's iteration-frame extent, where the
+/// iteration-frame extent of an axis is the **maximum extent across operands** at
+/// that axis (**frame-max**, §6.6-0013), NOT the output operand's extent. Operands
+/// are **right-aligned** to the iteration rank (`= max operand rank`): an operand of
+/// rank `r` covers frame axes `[iteration_rank − r, iteration_rank − 1]` and is
+/// broadcast (contributes extent `1`) on any lower frame axis. `operands` is the
+/// per-operand extent vectors, outermost-first.
+///
+/// This is the ruled reading (KISS #82 finding 2, 2026-07-23): the output-frame
+/// reading — product of the output operand's extents only — is NOT used, because it
+/// drops the contracted `K` axis of a `gem` cell and so cannot distinguish `K = 64`
+/// from `K = 65536`. For a `gem` cell whose output is much smaller than the frame
+/// (e.g. `lhs[8,4096] · rhs[4096,8] → out[8,8]`) the two readings land in different
+/// work-class buckets; this function implements frame-max.
+#[must_use]
+pub fn work_class_element_count(operands: &[&[i64]]) -> i64 {
+    let iteration_rank = operands.iter().map(|e| e.len()).max().unwrap_or(0);
+    (0..iteration_rank)
+        .map(|j| {
+            // per frame axis j (outermost-first): max extent across operands that
+            // cover it under right-alignment; an operand not covering j broadcasts (1).
+            operands
+                .iter()
+                .map(|e| {
+                    let offset = iteration_rank - e.len(); // e's axes start at frame axis `offset`
+                    if j < offset { 1 } else { e[j - offset] }
+                })
+                .max()
+                .unwrap_or(1)
+        })
+        .product()
+}
+
+/// §6.5-0010 + §6.5-0007: derive the `work_class` from the frame-max total element
+/// count ([`work_class_element_count`]) via the §6.5-0007 boundaries — `warp` iff
+/// `count ≤ 32`, `block` iff `count ≤ 1024`, else `grid`.
+#[must_use]
+pub fn derive_work_class(operands: &[&[i64]]) -> WorkClass {
+    match work_class_element_count(operands) {
+        c if c <= 32 => WorkClass::Warp,
+        c if c <= 1024 => WorkClass::Block,
+        _ => WorkClass::Grid,
+    }
+}
+
 /// §6.5-0002: derive the `layout_tag` from `extents` and `strides` using
 /// `|stride|` (a fully reversed view is `contiguous`; the reversal is captured only
 /// by the flipped flag, §6.6-0007). Axes are outermost-first (§6.3-0011); the
