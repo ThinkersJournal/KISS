@@ -29,12 +29,13 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**31 of 855 normative clauses (3.6%).** The other 824 name a conformance test that
-does not exist — see [`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is
-enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 131 test fns, 96
-cite no clause at all, so the traceability matrix cannot see them: they are real
-tests doing real work that no clause claims credit for. Closing that is cheap and
-is the first task below.
+**114 of 861 normative clauses (13.2%) — 17.7% counting the 38 lint-enforced (as of
+2026-07-19).** The other 747 have no executable harness test — see
+[`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is enforced as a ratchet by
+`tools/kiss_trace.py`. Of this crate's 198 test fns, 80 cite no clause at all, so the
+traceability matrix cannot see them: they are real tests doing real work that no clause
+claims credit for. Closing that is cheap and is the first task below. Run
+`tools/kiss_trace.py --report` for the live numbers.
 
 `boundary_rounding.rs` (§6.5-0006/-0007) is the model to copy: it was added with the
 clause, under the name the clause names, so it counted the day it landed.

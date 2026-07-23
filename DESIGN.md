@@ -52,17 +52,18 @@ carries an append-only clause identifier `KISS-<SUB>-<section>-<nnnn>` that maps
 specification cannot drift from its tests, and "conformant" is a factual,
 checkable property rather than a marketing claim.
 
-**This is the goal, and the suite does not meet it yet.** As of the pre-1.0 draft,
-853 clauses each *name* a test, but only **29 (3.4%) are backed by executable
-code**; the other 824 name tests that do not exist. That gap is recorded, clause
-by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv), and
-`tools/kiss_trace.py --strict` fails on every line of it. The ledger is a ratchet:
-a new untested MUST fails the build, and a clause that gains a test must be struck
-from the ledger. Earlier drafts of this document claimed the build already failed
-on any untested MUST — it did not. The checker compared markdown to markdown and
-never read `conformance/`, so 846 of 852 named tests could not have been detected
-as missing. The number in the ledger is the honest measure of how far the suite is
-from the property this section describes, and closing it is the pre-1.0 priority.
+**This is the goal, and the suite does not meet it yet.** As of 2026-07-19, of 861
+normative clauses **114 (13.2%) are backed by executable code**, a further 38 are
+enforced by document lints (**17.7% enforced** in total), and 704 remain genuinely
+untested (5 untestable). The gap is recorded clause by clause in
+[`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv); `tools/kiss_trace.py --report`
+prints the live numbers (the source of truth, which move as coverage lands) and the
+freeze gate fails on any untested MUST. The ledger is a ratchet: a new untested MUST
+fails the gate, and a clause that gains a test is struck from the ledger. (Two earlier
+claims in this section have since been fixed: it quoted 3.4% / 29 clauses — long
+superseded — and it described a checker that compared markdown to markdown and never
+read `conformance/`; the checker now reads the harness, which is how the
+846-of-852-missing gap was surfaced.) Closing the remainder is the pre-1.0 priority.
 
 ### 1.5 Determinism and fidelity are first-class
 

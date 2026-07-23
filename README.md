@@ -93,7 +93,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
 | [`PRIOR-ART.md`](PRIOR-ART.md) | Prior art (informative): KISS measured against StableHLO/PJRT, ONNX, Triton/MLIR, PyTorch, DLPack, SPIR-V/IREE, the vendor kernel libraries, and the Khronos ULP/CTS precedent — what they already solve, what they do not, and the one claim that survives. **Read this before implementing.** |
 | [`WIRE-FIRST.md`](WIRE-FIRST.md) | A work order (informative): the 38 confirmed blockers between here and one real handshake+provision across a process boundary, what is already green, and what each implementation can do now. |
-| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 824 normative clauses with no executable test. The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
+| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 747 normative clauses with no executable harness test (38 enforced by document lints, 5 untestable, 704 genuinely untested). The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
 
 ## How to read a KISS sub-standard
 
@@ -107,12 +107,13 @@ Every sub-standard follows one **dual-document template** (umbrella §4):
 
 Read the informative half for understanding; implement against the normative half.
 
-> **Test coverage is currently 3.4%, and the drafts say otherwise in places.**
-> Of 853 normative clauses, 29 are backed by executable code; 824 name a
-> conformance test that **does not exist yet**. Every one of those is listed in
-> [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv). Treat a clause as
-> *proposed* unless it appears outside that ledger — a named test is not a test.
-> `python tools/kiss_trace.py --strict` prints the live number.
+> **Test coverage (2026-07-19): 114 of 861 normative clauses (13.2%) are backed by
+> executable code**, with a further 38 enforced by document lints — **17.7% enforced in
+> total**; 704 remain genuinely untested (5 untestable). Every unbacked clause is listed in
+> [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv). Treat a clause as *proposed* unless
+> it appears outside that ledger — a named test is not a test. Run `python tools/kiss_trace.py
+> --report` for the live numbers — the checker is the source of truth and the figure climbs as
+> coverage is burned down (earlier drafts quoted 3.4%, long superseded).
 
 ## Conformance
 
@@ -130,11 +131,8 @@ stage (Draft → Frozen) requires passing the **freeze gate** — at least two d
 independent implementations plus an adversarial-outsider review. See umbrella §5.3 and
 §7, and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-Comment and proposals are welcome now, while the drafts are still soft. A substantive
-change is an **RFC — a GitHub issue** labeled `rfc` (use the RFC issue template); the issue
-is the durable record from proposal through accept-via-PR or decline-with-rationale. See
-[`CONTRIBUTING.md`](CONTRIBUTING.md#the-rfc-lifecycle). Small, obvious fixes may go straight
-to a pull request.
+Comment and proposals are welcome now, while the drafts are still soft. Open an issue or
+a pull request.
 
 ## License
 
