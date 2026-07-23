@@ -336,7 +336,7 @@ golden vectors are in Appendix E.
 ### 2.8 Terms are joined, not restated
 
 KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 s16 u8 u16 i32 i64
-u32 u64 bool e4m3 e5m2 s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
+u32 u64 bool e4m3fn e4m3fnuz e5m2 e5m2fnuz s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
@@ -1287,7 +1287,9 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `u64` | 64 | uint | unsigned 64-bit |
 | `bool` | 8 | bool | 1 byte; `0`=false, any non-zero byte=true; ops normalize to strictly `0`/`1` |
 | `e4m3fn` | 8 | float | FP8 E4M3 (1 sign, 4 exp, 3 mantissa), bias 7; max finite ±448; **no infinities**; a single NaN encoding; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e4m3fnuz` | 8 | float | FP8 E4M3 AMD `fnuz` variant (1 sign, 4 exp, 3 mantissa), bias 8; no −0; **no infinities**; byte-incompatible with `e4m3fn`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
 | `e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
+| `e5m2fnuz` | 8 | float | FP8 E5M2 AMD `fnuz` variant (1 sign, 5 exp, 2 mantissa), bias 16; no −0; **no infinities**; byte-incompatible with `e5m2`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
 | `s4` | 4 | int | signed 4-bit, range [−8,+7]; packed pair per byte, low nibble = even logical index, sign-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `u4` | 4 | uint | unsigned 4-bit, range [0,15]; packed pair per byte, low nibble = even index, zero-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `b1` | 1 | uint | 1-bit binary-GEMM operand; storage packing (8 bits/byte, LSB = lowest logical index) **owned normatively by the data-vocabulary sub-standard §6.1-0008/0009** and restated here informatively; the **xor+popcount accumulation to raw `s32` output** is the Ops-owned computation semantics |

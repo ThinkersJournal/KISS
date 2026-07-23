@@ -24,6 +24,16 @@ not the emitted CUDA — so this remains the generator's verbatim output. Beyond
 this differential certifies the kernel's **numeric semantics**, which is what an
 implementation must get right.
 
+> **sk3 staging note (2026-07-23).** The KISS reference codec is now **sk3**
+> (`SCHEMA_VERSION 3`, the sk3 GEMM-precision RFC / PR #66); the committed `.cu`
+> above is still the **verbatim sk2-era emission** recorded in the table — its
+> header token is re-emitted **by Baracuda**, never edited here. The fresh
+> Baracuda emission (from `b5082bc5`, branch `feat/sk3-codec-bump`) and the
+> recorded three-way byte-match re-record at sk3 happen at the coordinated
+> regen — the same process as the sk2/[#60](https://github.com/ThinkersJournal/KISS/issues/60)
+> regen. For this `bin` cell the token change is prefix-only (`sk2|` → `sk3|`);
+> the kernel body is unaffected.
+
 ## Regenerating
 
 From the `baracuda` repo:

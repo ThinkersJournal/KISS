@@ -83,7 +83,7 @@ COVERS += [
     ("KISS-CLASSIFY-6.5-0005",
      "the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width"),
     ("KISS-CLASSIFY-6.4-0003",
-     "the structure_key schema version drifts between §6.4-0003 (sk2) and SCHEMA_VERSION"),
+     "the structure_key schema version drifts between §6.4-0003 (sk3) and SCHEMA_VERSION"),
 ]
 
 
@@ -338,7 +338,7 @@ def check(spec_dir, conf_dir):
     else:
         violations.append("could not extract the §6.5-0005 index-width codes on both sides")
 
-    # schema version (§6.4-0003): the token prefix `sk2` <-> SCHEMA_VERSION
+    # schema version (§6.4-0003): the token prefix `sk3` <-> SCHEMA_VERSION
     sv_spec = re.search(r"token prefix `sk(\d+)`", classify_text)
     sv_harness = re.search(r"SCHEMA_VERSION\s*:\s*u32\s*=\s*(\d+)", rs_text)
     if sv_spec and sv_harness:

@@ -103,7 +103,7 @@ KISS-CLASSIFY-6.3-0008	test_classify_op_family_is_cell_level	untested
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
-KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_2	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk2) and SCHEMA_VERSION
+KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_3	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk3) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
@@ -127,10 +127,8 @@ KISS-CLASSIFY-6.6-0013	test_classify_mixed_rank_axis_alignment	untested
 KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested	
 KISS-CLASSIFY-6.6-0015	test_classify_secondary_dtype_unkeyed	untested	
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
-KISS-CLASSIFY-6.6-0018	test_classify_no_colliding_cell_registration	untested	
 KISS-CLASSIFY-6.7-0007	test_classify_token_codec_additive	untested	
 KISS-CLASSIFY-6.7-0008	test_classify_token_roundtrip	untested	
-KISS-CLASSIFY-6.7-0009	test_classify_token_reject_malformed	untested	
 KISS-CLASSIFY-6.7-0010	test_classify_mask_hex_lowercase	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
 KISS-CLASSIFY-6.8-0002	test_classify_target_byte_exact_match	untested	
@@ -377,6 +375,7 @@ KISS-CONTRACT-6.8-0007	test_contract_cost_single_home	untested
 KISS-CONTRACT-6.8-0008	test_contract_audited_status_derived	untested	
 KISS-CONTRACT-6.8-0009	test_contract_audited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0010	test_contract_unaudited_derivation_rule	untested	
+KISS-CONTRACT-6.8-0011	test_contract_accumulation_type_matches_key_acc	untested	
 KISS-CONTRACT-6.9-0001	test_contract_provenance_field_schema	untested	
 KISS-CONTRACT-6.9-0002	test_contract_provenance_source	untested	
 KISS-CONTRACT-6.9-0003	test_contract_provenance_revision_matches_identity	untested	
@@ -560,6 +559,8 @@ KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
+KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	
+KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested	
 KISS-OPS-6.18-0001	test_ops_complex_op_set	lint:kiss_ops	the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables
 KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	untested	
 KISS-OPS-6.18-0003	test_ops_complex_component_bridge	untested	

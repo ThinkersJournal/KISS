@@ -193,14 +193,16 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; `0` = false, any non-zero byte = true; ops normalize to 0/1; storage width equals `u8` |
 | `e4m3fn` | float | 8 | FP8 E4M3 OCP (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN |
+| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; reserved (recognized on parse) |
 | `e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN |
+| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; reserved (recognized on parse) |
 | `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `s4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
 | `c32` | complex | 64 | single-precision complex: interleaved (re,im) pair of `f32`, 64 bits total; complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
 | `c64` | complex | 128 | double-precision complex: interleaved (re,im) pair of `f64`, 128 bits total |
 
-Twenty dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
+Twenty-two dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
 no "etc.".
 
 ### 2.7 Readable catalog — the operand descriptor
@@ -363,7 +365,7 @@ Classify defines no op meaning.
   (Classify's op-category enum and the KISS-Ops per-op family taxonomy are separate,
   Classify-owned and Ops-owned respectively; neither imports the other.) The
   value-conversion and result-normalization obligations that Classify factors out
-  (e.g. bool 0/1 normalization, e4m3/e5m2 saturating conversion) are owned by
+  (e.g. bool 0/1 normalization, e4m3fn/e5m2 saturating conversion) are owned by
   KISS-Ops / KISS-Emit.
 - **KISS-Grammar** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**:
   re-bases advertisable ops onto the dtype set and operand vocabulary defined here.
@@ -483,7 +485,7 @@ where it fixes storage bytes.
   compute-precision or numeric-fidelity guarantee. In particular, `f32` MUST be a
   single IEEE-754 binary32 **storage** dtype, and a strict-precision (bit-stable,
   full-precision multiply-add) float variant MUST NOT exist as a distinct dtype
-  token; equivalently, the closed twenty-token set (§6.1-0001) contains no such
+  token; equivalently, the closed twenty-two-token set (§6.1-0001) contains no such
   token and the dtype record carries no precision field. Compute precision — whether
   a computation must be bit-stable full-precision or may use a reduced-mantissa
   reduction — is a **KISS-Ops fidelity attribute** (a `MathPrecision`-style attribute
@@ -563,7 +565,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `rank` | u8 | `0 ..= MAX_RANK` (§6.4) |
 | `extents` | `i64[MAX_RANK]` | any i64; only `extents[0..rank]` meaningful; symbolic-axis entry is the capacity |
 | `strides` | `i64[MAX_RANK]` | any signed i64 (`0` = broadcast, `< 0` = reversed); element units; only `strides[0..rank]` meaningful |
-| `dtype` | dtype token | one of the twenty (§6.1) |
+| `dtype` | dtype token | one of the twenty-two (§6.1) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
@@ -1123,7 +1125,7 @@ separating a registered namespace from that namespace's capability-set token.
 
 - **KISS-CLASSIFY-7.1-0001** — The KISS-Classify **mandatory core** — which every
   conforming implementation MUST satisfy regardless of claimed options — MUST be:
-  the full twenty-dtype set (§6.1), the operand-descriptor field set (§6.3), the
+  the full twenty-two-dtype set (§6.1), the operand-descriptor field set (§6.3), the
   pinned constants (§6.4), the enumerations and derivations (§6.5), the
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
@@ -1496,7 +1498,7 @@ provenance and examples only; no normative clause names any project.
   by the namespace maintainer (e.g. `sm89`, `spirv1.6`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
-- **dtype** — a scalar element type from the twenty-token set of §6.1; pure
+- **dtype** — a scalar element type from the twenty-two-token set of §6.1; pure
   storage (byte layout only), never a compute-precision guarantee.
 - **extent** — an axis's logical length (capacity for a symbolic axis).
 - **inner-contiguous** — a layout tag: the innermost non-unit axis has `|stride| ==
