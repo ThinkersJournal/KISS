@@ -2039,14 +2039,30 @@ promoted to this normative OpAttrs encoding for that channel only.
 The recipe/FlatDag container wire that carries these references — its node list, its
 value-lane `outputs` root list, and its framing — is **not yet pinned in the KISS spec
 tree**; it is owned by the recipe-grammar consolidation (issue #67) and its byte grammar
-(PR #78). The two clauses below pin the **index-lane** encodings the reference
-implementation and Baracuda have already locked (issue #76): how an index-consuming node
-names its index operand, and how the recipe exports an index-lane product. They ride the
-recipe wire's next `SCHEMA_VERSION` bump. The field grammar is given in the kiss-ref
-draft form (a `u8` tag plus a `varint`); it is **decoded-semantics normative** and will be
-reconciled onto the PR #78 byte-grammar owner's conventions without changing these decoded
-semantics. The third §6.19 wire-pin — the `sort_network` index-lane **output dtype** — is
-resolved **producer-side with no wire field** at §6.11-0019, so it carries no clause here.
+(PR #78). The terms these clauses reference — the external index-input array, node ids,
+and the `outputs` root list — are defined by that container wire (#67 / PR #78); this
+subsection pins only their **index-lane encoding**. The two clauses below pin the encodings
+the reference implementation and Baracuda have already locked (issue #76): how an
+index-consuming node names its index operand, and how the recipe exports an index-lane
+product. They ride the recipe wire's next `SCHEMA_VERSION` bump.
+
+The field grammar is given in the kiss-ref draft form (a `u8` tag plus a `varint`); it is
+**decoded-semantics normative** and will be reconciled onto the PR #78 byte-grammar owner's
+conventions without changing these decoded semantics. To make that hand-off unambiguous,
+the line between what any encoding MUST preserve and what PR #78 MAY re-spell is: the
+**normative** decoded semantics — surviving any re-spelling — are (a) exactly two
+index-source kinds, external-slot and node-product, distinguished by a leading discriminant;
+(b) reserved-is-error on every undefined discriminant value; (c) the decode-time validations
+(a `node` target that is out of range or has no index-lane product, and likewise an
+`index_outputs` entry, is a typed decline); (d) the canonical form with no dual-form
+aliasing; and (e) `index_outputs` ordered after `outputs`, symmetric, count-prefixed, with
+unconditional presence at a version boundary. The **#78-reconcilable spelling** — changeable
+without a further ruling — is the `varint` width of each integer payload (`ref_value`,
+`count`, `node_id`) and whether the discriminant values are literally `0x00` / `0x01`; the
+`u8` tag is already width- and endianness-neutral, so a fixed-width-LE realization is
+conformant **iff** it preserves (a)–(e). The third §6.19 wire-pin — the `sort_network`
+index-lane **output dtype** — is resolved **producer-side with no wire field** at
+§6.11-0019, so it carries no clause here.
 
 - **KISS-OPS-6.19-0039** — Every **index-operand** field of an index-consuming node
   (`gather.index`, `scatter.index`, and the §6.13-0009 gather/scatter wrappers) MUST be
