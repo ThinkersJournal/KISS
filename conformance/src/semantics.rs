@@ -35,6 +35,31 @@ pub fn fmin_ieee(a: f32, b: f32) -> f32 {
     if a != a { b } else if b != b { a } else if a <= b { a } else { b }
 }
 
+// The same four minmax decompositions at the `f64` compute dtype. The §6.13
+// signed-zero tie vectors are pinned per-dtype (f32 / f64 / bf16), so the oracle
+// carries each compute width explicitly rather than assuming the f32 path
+// generalizes. Branch structure is identical to the f32 forms above.
+
+/// `max_prop` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+pub fn max_prop_f64(a: f64, b: f64) -> f64 {
+    if a != a { a } else if b != b { b } else if a >= b { a } else { b }
+}
+
+/// `min_prop` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+pub fn min_prop_f64(a: f64, b: f64) -> f64 {
+    if a != a { a } else if b != b { b } else if a <= b { a } else { b }
+}
+
+/// `fmax_ieee` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+pub fn fmax_ieee_f64(a: f64, b: f64) -> f64 {
+    if a != a { b } else if b != b { a } else if a >= b { a } else { b }
+}
+
+/// `fmin_ieee` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+pub fn fmin_ieee_f64(a: f64, b: f64) -> f64 {
+    if a != a { b } else if b != b { a } else if a <= b { a } else { b }
+}
+
 /// `relu` — `x < 0 ? 0 : x`. NaN-**propagating** and `-0.0`-preserving (§2.3).
 /// It is **not** `max(x, 0)`, which would scrub NaN and normalize `-0.0`.
 pub fn relu(x: f32) -> f32 {

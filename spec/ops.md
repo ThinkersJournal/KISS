@@ -2452,11 +2452,28 @@ level 0), `reduce_var` (level 2, over `reduce_mean`), `rsqrt` (level 1, over `sq
 class: order-invariant/nondeterministic (depends on float `sum` reductions, §6.0-0004/-0005).
 
 **A.3 `relu` versus `max(x,0)`.** `relu(-0.0)` = `select(cmp_lt(-0.0, 0), 0, -0.0)`;
-`cmp_lt(-0.0, 0)` is false (−0.0 is not less than 0), so the result is the raw-bit `-0.0`,
-preserved. `max_prop(-0.0, 0)` would return `+0.0` (via `cmp_ge`), and `relu` of a NaN input
-returns NaN (the `select` moves the raw NaN through the else arm) whereas `max_prop(NaN, 0)`
-returns `NaN` too but `fmax_ieee(NaN,0)` returns `0` — which is exactly why `relu` is pinned
-to `select`, not to any `max`.
+`cmp_lt(-0.0, 0)` is false (−0.0 is not less than 0 under §6.6 signed-zero equality), so
+the result is the raw-bit `-0.0`, preserved. The same signed-zero equality drives the
+minmax ties: the four §6.13 minmax decompositions share the identical innermost select —
+`cmp_ge(a,b) → a` for `max_prop`/`fmax_ieee`, `cmp_le(a,b) → a` for
+`min_prop`/`fmin_ieee` — and differ only in their NaN arms, so on a `±0` tie, where
+`cmp_ge` and `cmp_le` are both true, **operand `a` wins in all four ops**; no op in the
+minmax family is b-biased on a tie. In particular `max_prop(-0.0, const(0))` returns
+`-0.0` (the normative decomposition keeps `a` via `cmp_ge`), matching `relu(-0.0)` — and
+under the normative decompositions `relu(x)` is pointwise-identical to a conformant
+`max_prop(x, const(0))`: both propagate a NaN input raw (`relu` moves it through the
+`select` else arm; `max_prop` keeps the NaN operand) and both keep `x` on a `±0` tie.
+Argument order matters: `max_prop(const(0), x)` differs at `-0.0`, where
+`cmp_ge(0, -0.0)` is true and yields `+0.0`. The separations are therefore precisely
+these: `relu` versus `max_prop(x, const(0))` is a **decomposition-shape** separation — a
+distinct pinned op token for classification, fusion identity, and lineage, not a
+pointwise-semantics difference — while `relu` versus `fmax_ieee(x, const(0))` is a
+**semantic** separation in the NaN arm (`fmax_ieee(NaN, 0)` scrubs the NaN to `0` where
+`relu(NaN)` stays NaN through the `select` else arm). That is why `relu` is pinned to
+`select` rather than lowered to whichever `max` a backend happens to supply. The `±0`
+tie behavior of all four minmax ops is pinned bit-for-bit by the §6.13 signed-zero tie
+conformance vectors (raw-bit comparison — a value compare of `0.0 == -0.0` passes
+vacuously).
 
 **A.4 The min/max quartet on a NaN operand.** With `a = NaN`, `b = 3.0`: `max_prop(a,b) =
 NaN` (propagate); `fmax_ieee(a,b) = 3.0` (suppress); `min_prop(a,b) = NaN`; `fmin_ieee(a,b)

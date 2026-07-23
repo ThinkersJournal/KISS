@@ -4,6 +4,7 @@
 //! min/max, `relu` ≠ `max(x,0)`, and the §6.8 "declared-ULP, not bit-identity"
 //! transcendental model. Determinism-class comparators from Conform §6.8.
 
+use kiss_conformance::fp::{bf16_to_f32, f32_to_bf16};
 use kiss_conformance::semantics::*;
 use kiss_conformance::{compare_c32_transcendental, compare_f32, ulp_distance_f32, DeterminismClass};
 
@@ -56,6 +57,124 @@ fn signed_zero_follows_cmp_ge_operand_order() {
     // fmax_ieee(-0, +0): both numbers, cmp_ge(-0,+0) is true (equal) -> returns a.
     assert!(bits_eq(fmax_ieee(-0.0, 0.0), -0.0));
     assert!(bits_eq(fmax_ieee(0.0, -0.0), 0.0));
+}
+
+// ---- §6.13 signed-zero tie vectors (issue #74): operand `a` wins every tie ---
+//
+// All four §6.13 minmax decompositions share the IDENTICAL innermost select —
+// `cmp_ge(a,b) -> a` for max_prop/fmax_ieee, `cmp_le(a,b) -> a` for
+// min_prop/fmin_ieee (the §6.13 table) — and differ ONLY in the NaN arms. Under
+// §6.6 signed-zero equality `cmp_ge(-0.0, +0.0)` and `cmp_le(-0.0, +0.0)` are
+// both TRUE, so operand `a` wins every ±0 tie in ALL FOUR ops; no op in the
+// minmax family is b-biased on a tie.
+//
+// The 16-row vector set, applied at each covered dtype (expected = operand `a`,
+// bit-for-bit):
+//
+// |     op      |   a  |   b  | expected |
+// |-------------|------|------|----------|
+// | `max_prop`  | +0.0 | -0.0 |   +0.0   |
+// | `max_prop`  | -0.0 | +0.0 |   -0.0   |
+// | `max_prop`  | +0.0 | +0.0 |   +0.0   |
+// | `max_prop`  | -0.0 | -0.0 |   -0.0   |
+// | `min_prop`  | +0.0 | -0.0 |   +0.0   |
+// | `min_prop`  | -0.0 | +0.0 |   -0.0   |
+// | `min_prop`  | +0.0 | +0.0 |   +0.0   |
+// | `min_prop`  | -0.0 | -0.0 |   -0.0   |
+// | `fmax_ieee` | +0.0 | -0.0 |   +0.0   |
+// | `fmax_ieee` | -0.0 | +0.0 |   -0.0   |
+// | `fmax_ieee` | +0.0 | +0.0 |   +0.0   |
+// | `fmax_ieee` | -0.0 | -0.0 |   -0.0   |
+// | `fmin_ieee` | +0.0 | -0.0 |   +0.0   |
+// | `fmin_ieee` | -0.0 | +0.0 |   -0.0   |
+// | `fmin_ieee` | +0.0 | +0.0 |   +0.0   |
+// | `fmin_ieee` | -0.0 | -0.0 |   -0.0   |
+//
+// HARNESS RULE: the comparison MUST be raw bits (`to_bits()`), never a float
+// value compare — `0.0 == -0.0` is true, so a value compare passes VACUOUSLY;
+// the expected column above is a BIT PATTERN. Dtype coverage is f32 + f64 +
+// one narrow float dtype (bf16): a promote-compute-round implementation must
+// prove the sign bit survives the widen -> compute -> round-back trip.
+//
+// Provenance (non-normative): the `max_prop` rows are decomposition-traced AND
+// empirically cross-confirmed by the kiss-ref<->Baracuda step-2 recipe
+// differential (Baracuda fix 7297f17d); the `min_prop`/`fmax_ieee`/`fmin_ieee`
+// rows are decomposition-traced. Drafted by kiss-ref; cosigned kiss-ref +
+// Baracuda (issue #74). The same 16 rows are frozen per-dtype as fixture cells
+// in `corpus/ops-minmax-signed-zero.json` and run differentially by
+// `tests/corpus_differential.rs`.
+
+/// The 16 f32 rows: every ±0 tie returns operand `a` bit-for-bit in all four
+/// minmax ops. Catches a `>`-spelled tie (`a > b ? a : b` — b on ties), the
+/// exact cross-implementation divergence that motivated the set, and any
+/// tie-normalizing lowering (e.g. `+0.0` on every tie).
+#[test]
+fn minmax_signed_zero_ties_keep_operand_a_f32() {
+    let ops: [(&str, fn(f32, f32) -> f32); 4] = [
+        ("max_prop", max_prop),
+        ("min_prop", min_prop),
+        ("fmax_ieee", fmax_ieee),
+        ("fmin_ieee", fmin_ieee),
+    ];
+    let ties: [(f32, f32); 4] = [(0.0, -0.0), (-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)];
+    for (name, f) in ops {
+        for (a, b) in ties {
+            assert_eq!(
+                f(a, b).to_bits(),
+                a.to_bits(),
+                "{name}({a:?}, {b:?}) must keep operand `a` bit-for-bit on the ±0 tie"
+            );
+        }
+    }
+}
+
+/// The 16 f64 rows — the same decompositions at the f64 compute dtype.
+#[test]
+fn minmax_signed_zero_ties_keep_operand_a_f64() {
+    let ops: [(&str, fn(f64, f64) -> f64); 4] = [
+        ("max_prop", max_prop_f64),
+        ("min_prop", min_prop_f64),
+        ("fmax_ieee", fmax_ieee_f64),
+        ("fmin_ieee", fmin_ieee_f64),
+    ];
+    let ties: [(f64, f64); 4] = [(0.0, -0.0), (-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)];
+    for (name, f) in ops {
+        for (a, b) in ties {
+            assert_eq!(
+                f(a, b).to_bits(),
+                a.to_bits(),
+                "{name}({a:?}, {b:?}) must keep operand `a` bit-for-bit on the ±0 tie"
+            );
+        }
+    }
+}
+
+/// The 16 bf16 rows through the promote -> compute -> round path (§6.16-0003
+/// RNE store rounding): widen each bf16 operand exactly to f32, run the f32
+/// oracle, round the result back to bf16. The tie result is ±0 — exactly
+/// representable — so the ONLY thing the round-trip could lose is the sign
+/// bit; these rows prove it survives.
+#[test]
+fn minmax_signed_zero_ties_keep_operand_a_bf16_roundtrip() {
+    const PZ: u16 = 0x0000; // bf16 +0.0
+    const NZ: u16 = 0x8000; // bf16 -0.0
+    let ops: [(&str, fn(f32, f32) -> f32); 4] = [
+        ("max_prop", max_prop),
+        ("min_prop", min_prop),
+        ("fmax_ieee", fmax_ieee),
+        ("fmin_ieee", fmin_ieee),
+    ];
+    let ties: [(u16, u16); 4] = [(PZ, NZ), (NZ, PZ), (PZ, PZ), (NZ, NZ)];
+    for (name, f) in ops {
+        for (a, b) in ties {
+            let r = f32_to_bf16(f(bf16_to_f32(a), bf16_to_f32(b)));
+            assert_eq!(
+                r, a,
+                "{name}(bf16 {a:#06X}, {b:#06X}) must keep operand `a`'s sign bit \
+                 through promote-compute-round"
+            );
+        }
+    }
 }
 
 // ---- relu is NOT max(x, 0) ---------------------------------------------------
