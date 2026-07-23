@@ -805,7 +805,7 @@ form (§6.7-0011).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `version` | u16 (`= 2`) | schema version; extra fields append so old tokens stay byte-identical |
+| `version` | u16 (`= 3`) | schema version; extra fields append so old tokens stay byte-identical |
 | `op_family` | op category (§6.5-0006) | the coarse op category — **NOT** the semantic op name |
 | `dtype` | dtype token | operand-0 / primary element dtype |
 | `target` | target_capability (§6.8) | the namespaced compilation-target descriptor |
@@ -815,7 +815,7 @@ form (§6.7-0011).
 | `n_operands` | u8 (`≤ MAX_OPERANDS`) | count of populated per-operand sub-keys |
 | `operands[]` | sub-key array | per-operand: `{layout_tag, broadcast-axis mask, vector-access width, inner-extent divisibility bucket, flipped flag}` |
 | `reduce_axes` | tagged reduce spec | one of three distinct values — none/not-a-reduction, all-axes, trailing-axis — or an explicit keepdim axis bitmask (u8) for any other set (§6.6-0009) |
-| `contraction` | optional | `{M size class, N size class, K size class, K divisibility bucket}`; absent for non-contraction cells |
+| `contraction` | optional | `{M, N, K size classes, K divisibility bucket, conditionally-present batch size class, weight dtype, accumulator dtype, output dtype, math-precision}` (sk3, §6.7-0006); absent for non-contraction cells |
 
 - **KISS-CLASSIFY-6.6-0001** — A `structure_key` MUST be an **admissibility
   predicate**: a kernel MUST admit an invocation **if and only if** the
@@ -835,7 +835,8 @@ form (§6.7-0011).
   `test_classify_structure_key_extent_free`.
 - **KISS-CLASSIFY-6.6-0004** — The `structure_key` fields MUST appear in exactly
   the order and with exactly the types of the table above; `version` MUST be the
-  first field and MUST equal `2`. *Test:* `test_classify_structure_key_field_layout`.
+  first field and MUST equal `3` (§6.4-0003, §6.7-0002). *Test:*
+  `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
   ordering of §6.6-0014. *Test:* `test_classify_structure_key_primary_dtype`.
@@ -884,7 +885,10 @@ form (§6.7-0011).
 - **KISS-CLASSIFY-6.6-0010** — A **dense-contraction cell** is defined as a cell
   whose `op_family` is `gem` (§6.5-0006). The `contraction` field MUST be present
   **if and only if** the cell is a dense-contraction cell (`op_family == gem`), and
-  MUST then carry `{M, N, K size classes, K divisibility bucket}`; for every cell
+  MUST then carry `{M, N, K size classes, K divisibility bucket, the
+  conditionally-present batch size class, and the precision group: weight dtype,
+  accumulator dtype, output dtype, math-precision}` (sk3 grammar
+  `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`, §6.7-0006); for every cell
   whose `op_family` is not `gem` the `contraction` field MUST be absent, so the token
   is byte-identical to the base (non-contraction) codec. A reader MUST reject, with a
   typed decline (§7.1-0002), a token that carries the contraction field on a non-`gem`
