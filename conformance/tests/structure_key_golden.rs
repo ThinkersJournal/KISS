@@ -410,6 +410,24 @@ fn test_classify_work_class_element_count() {
     // prove the rejected output-frame reading really would disagree:
     assert_eq!(derive_work_class(&[&out]), WorkClass::Block, "output-frame alone => block (the rejected reading)");
 
+    // Second disambiguating cell — catches the OPERAND-0-NUMEL reading (distinct from
+    // the output-frame reading above). A gem lhs[M,K]=[8,8], rhs[K,N]=[8,4096],
+    // out[M,N]=[8,4096]:
+    //   frame-max: axis0 = max(8,8,8) = 8, axis1 = max(8,4096,4096) = 4096
+    //     => 8 * 4096 = 32768 (> 1024)          => grid   <- RULED reading
+    //   operand-0 (lhs) numel: 8 * 8 = 64  (33..=1024)  => block  <- a REJECTED reading
+    //   output-frame (out): 8 * 4096 = 32768            => grid   (agrees here — so this
+    //     cell does NOT catch output-frame; the first cell does. The two cells together
+    //     pin frame-max against BOTH the output-frame and operand-0-numel readings.)
+    // Operand-0-numel diverges from frame-max whenever operand-0 is not the frame-
+    // defining operand — here lhs is small on the N axis that rhs/out make large.
+    let g2_lhs = [8i64, 8];
+    let g2_rhs = [8i64, 4096];
+    let g2_out = [8i64, 4096];
+    assert_eq!(work_class_element_count(&[&g2_lhs, &g2_rhs, &g2_out]), 32_768, "frame-max mixes the large N axis in");
+    assert_eq!(derive_work_class(&[&g2_lhs, &g2_rhs, &g2_out]), WorkClass::Grid, "frame-max => grid");
+    assert_eq!(derive_work_class(&[&g2_lhs]), WorkClass::Block, "operand-0 (lhs) numel alone => block (a rejected reading)");
+
     // Appendix A.1 skinny-decode cell: here both readings bucket the same (grid), so it
     // does NOT disambiguate — pinned to lock the frame-max VALUE (4096*4096), not 8*4096.
     let a1_lhs = [8i64, 4096];
