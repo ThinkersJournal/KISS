@@ -23,6 +23,7 @@ pub mod announce;
 pub mod antifork;
 pub mod contract;
 pub mod corpus;
+pub mod decline;
 pub mod decomp_grammar;
 pub mod determinism;
 pub mod differential;
