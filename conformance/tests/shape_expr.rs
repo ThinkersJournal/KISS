@@ -38,6 +38,122 @@ fn test_shape_expr_serialization_golden() {
         "08 03 00 02 00 FF 09 00 03 02 00 00 00 00 00 00 00");
 }
 
+// ---- §6.20-0009 WithDim — experimental extension (umbrella §6.4, issue #80) ---
+
+#[test]
+fn test_shape_expr_withdim_extension() {
+    // KISS-OPS-6.20-0009: `with_dim(operand, axis, dim)` = the operand's shape with
+    // the resolved axis replaced by `dim`. Wire: tag 0x0A, u8 operand, u8 axis
+    // (0xFF = last), one u16-LE length-prefixed child DimExpr blob. Experimental
+    // extension tag activated via the umbrella §6.4 registry — NOT core.
+
+    // Golden — with_dim(operand=0, axis=1, Const(7)): tag 0x0A, operand 0x00,
+    // axis 0x01, child Const(7) = 03 07.. (len 9 -> prefix 09 00).
+    let wd = ShapeExpr::WithDim { operand: 0, axis: 1, dim: Box::new(Dim::Const(7)) };
+    assert_golden("KISS-OPS-6.20-0009", "with_dim_0_1_const7",
+        &wd.encode(), "0A 00 01 09 00 03 07 00 00 00 00 00 00 00");
+
+    // Golden — with_dim(operand=1, axis=last, Param(0)): axis is the 0xFF `last`
+    // sentinel, child Param(0) = 04 00 (len 2 -> prefix 02 00).
+    let wd_last = ShapeExpr::WithDim { operand: 1, axis: LAST, dim: Box::new(Dim::Param(0)) };
+    assert_golden("KISS-OPS-6.20-0009", "with_dim_1_last_param0",
+        &wd_last.encode(), "0A 01 FF 02 00 04 00");
+
+    // Round-trip: a well-formed WithDim blob decodes back to its AST.
+    assert_eq!(decode_shape(&wd.encode()).unwrap(), wd);
+    assert_eq!(decode_shape(&wd_last.encode()).unwrap(), wd_last);
+
+    // Typed decline, never a panic (§6.20-0006): a blob truncated before the
+    // axis byte, and a blob whose child-length prefix over-runs the buffer.
+    assert_eq!(decode_shape(&[0x0A, 0x00]),
+               Err(ShapeExprError::TruncatedBlob { need: 3, got: 2 }));
+    assert_eq!(decode_shape(&[0x0A, 0x00, 0x01, 0x09, 0x00]),
+               Err(ShapeExprError::TruncatedBlob { need: 9, got: 0 }));
+
+    // Eval — axis-replacement (§6.20-0003 resolution). Operand [2,3,5]:
+    let ops = vec![vec![2i64, 3, 5]];
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: 1, dim: Box::new(Dim::Const(9)) },
+               &ops, &[]).unwrap(), ShapeValue::Concrete(vec![2, 9, 5]));
+    // `last` resolves to the trailing axis.
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: LAST, dim: Box::new(Dim::Const(9)) },
+               &ops, &[]).unwrap(), ShapeValue::Concrete(vec![2, 3, 9]));
+    // Gap propagation (§6.20-0004): a symbolic extent in a KEPT axis surfaces the
+    // whole shape as a Gap; but REPLACING the symbolic axis clears it.
+    let sym = vec![vec![4i64, SYMBOLIC]];
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: 0, dim: Box::new(Dim::Const(7)) },
+               &sym, &[]).unwrap(), ShapeValue::Gap);
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: LAST, dim: Box::new(Dim::Const(7)) },
+               &sym, &[]).unwrap(), ShapeValue::Concrete(vec![4, 7]));
+    // A Gap replacement expression also surfaces a Gap.
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: 0,
+               dim: Box::new(Dim::Extent { operand: 0, axis: LAST }) }, &sym, &[]).unwrap(),
+               ShapeValue::Gap);
+    // An out-of-range axis is a typed decline, never a panic (§6.20-0003).
+    assert_eq!(eval_shape(&ShapeExpr::WithDim { operand: 0, axis: 5, dim: Box::new(Dim::Const(1)) },
+               &vec![vec![2i64, 3]], &[]),
+               Err(ShapeExprError::AxisOutOfRange { axis: 5, rank: 2 }));
+}
+
+// ---- §6.20-0010 Dims — experimental extension (umbrella §6.4, issue #80) ------
+
+#[test]
+fn test_shape_expr_dims_extension() {
+    // KISS-OPS-6.20-0010: `dims([dim, …])` = the whole shape built from N>=0 ordered
+    // DimExprs (N=0 = rank-0 scalar). Wire: tag 0x0B, u8 count, then count × u16-LE
+    // length-prefixed child DimExpr blobs. Experimental extension — NOT core.
+
+    // Golden — dims([Extent(0,0), Const(2)]): tag 0x0B, count 0x02, child1
+    // Extent(0,0) = 02 00 00 (len 3 -> 03 00), child2 Const(2) = 03 02.. (len 9 ->
+    // 09 00).
+    let dims = ShapeExpr::Dims(vec![
+        Dim::Extent { operand: 0, axis: 0 },
+        Dim::Const(2),
+    ]);
+    assert_golden("KISS-OPS-6.20-0010", "dims_extent_const",
+        &dims.encode(),
+        "0B 02 03 00 02 00 00 09 00 03 02 00 00 00 00 00 00 00");
+
+    // Golden — the empty Dims (N=0): tag 0x0B, count 0x00, no children -> the
+    // rank-0 scalar shape.
+    let scalar = ShapeExpr::Dims(vec![]);
+    assert_golden("KISS-OPS-6.20-0010", "dims_empty_scalar",
+        &scalar.encode(), "0B 00");
+
+    // Round-trip.
+    assert_eq!(decode_shape(&dims.encode()).unwrap(), dims);
+    assert_eq!(decode_shape(&scalar.encode()).unwrap(), scalar);
+
+    // Typed decline, never a panic (§6.20-0006): a count that promises children the
+    // blob does not contain; the still-reserved Reduce tag (0x09, no consumer);
+    // and trailing bytes after a complete expression.
+    assert_eq!(decode_shape(&[0x0B, 0x02]),
+               Err(ShapeExprError::TruncatedBlob { need: 2, got: 0 }));
+    assert_eq!(decode_shape(&[0x09, 0x00]),
+               Err(ShapeExprError::ReservedTag { tag: 0x09 }));
+    assert_eq!(decode_shape(&[0x0B, 0x00, 0xAB]),
+               Err(ShapeExprError::TrailingBytes { extra: 1 }));
+
+    // Eval — whole-shape construction. A qmatmul/scan-style reweave across two
+    // operands: dims([Extent(0,0), Extent(0,2), Extent(0,3), Extent(1,3)]).
+    let ops = vec![vec![8i64, 16, 32, 64], vec![1i64, 1, 1, 128]];
+    assert_eq!(eval_shape(&ShapeExpr::Dims(vec![
+        Dim::Extent { operand: 0, axis: 0 },
+        Dim::Extent { operand: 0, axis: 2 },
+        Dim::Extent { operand: 0, axis: 3 },
+        Dim::Extent { operand: 1, axis: 3 },
+    ]), &ops, &[]).unwrap(), ShapeValue::Concrete(vec![8, 32, 64, 128]));
+    // The empty Dims evaluates to the rank-0 scalar shape.
+    assert_eq!(eval_shape(&ShapeExpr::Dims(vec![]), &ops, &[]).unwrap(),
+               ShapeValue::Concrete(vec![]));
+    // Gap propagation (§6.20-0004): a symbolic extent in any element surfaces the
+    // whole shape as a Gap.
+    let sym = vec![vec![4i64, SYMBOLIC]];
+    assert_eq!(eval_shape(&ShapeExpr::Dims(vec![
+        Dim::Extent { operand: 0, axis: 0 },
+        Dim::Extent { operand: 0, axis: LAST },
+    ]), &sym, &[]).unwrap(), ShapeValue::Gap);
+}
+
 // ---- §6.20-0002 the closed vocabulary, evaluated -----------------------------
 
 #[test]

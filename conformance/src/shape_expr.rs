@@ -9,6 +9,13 @@
 //!   * `ShapeExpr := SameAs(operand)`            — the operand's whole shape
 //!   * `DimExpr   := Extent(operand, axis) | Const | Param | DimExpr BinOp DimExpr`
 //!
+//! Two further whole-shape constructors — `WithDim(operand, axis, DimExpr)` and
+//! `Dims([DimExpr, …])` — are **experimental-range** extensions of this vocabulary,
+//! entered through the umbrella §6.4 extension registry (issue #80, owner Fuel;
+//! Ops §6.20-0009/-0010). Their functional spellings are `with_dim(...)` and
+//! `dims(...)`. They are NOT core: a core encoder never emits them, and until a
+//! reader opts into the registered extension it declines their tags typed.
+//!
 //! Operand references are **positional** (KISS-Classify canonical operand order),
 //! because an op_dag interior node carries no operand-role tuple (Contract
 //! §6.4-0009). `axis` is a **non-negative** operand-axis index or the reserved
@@ -17,9 +24,10 @@
 //! wire; `last` is resolved against the operand's rank at evaluation time. `÷` is
 //! floor division.
 //!
-//! `Reduce` / `WithDim` / `Dims` are **reserved** (tags allocated, never emitted by
-//! a core encoder, rejected by a reader) pending extension-registry promotion
-//! (umbrella §6.4).
+//! `Reduce` (`0x09`) remains **reserved** (tag allocated, never emitted by a core
+//! encoder, rejected by a reader) pending an extension-registry entry (umbrella
+//! §6.4) — it has no consumer today. `WithDim` (`0x0A`) / `Dims` (`0x0B`) are the
+//! now-**activated** experimental extension (§6.20-0009/-0010).
 //!
 //! Serialization follows the §6.19 canonical discipline: a one-byte tag (`0`
 //! reserved, §6.19-0006), fixed-width little-endian fields (§6.19-0007), and
@@ -36,9 +44,9 @@ pub const TAG_ADD: u8 = 0x05;
 pub const TAG_SUB: u8 = 0x06;
 pub const TAG_MUL: u8 = 0x07;
 pub const TAG_DIV: u8 = 0x08;
-pub const TAG_REDUCE: u8 = 0x09; // reserved (extension-registry, umbrella §6.4)
-pub const TAG_WITH_DIM: u8 = 0x0A; // reserved
-pub const TAG_DIMS: u8 = 0x0B; // reserved
+pub const TAG_REDUCE: u8 = 0x09; // reserved (no consumer; extension-registry, umbrella §6.4)
+pub const TAG_WITH_DIM: u8 = 0x0A; // ShapeExpr, experimental extension (§6.20-0009, umbrella §6.4)
+pub const TAG_DIMS: u8 = 0x0B; // ShapeExpr, experimental extension (§6.20-0010, umbrella §6.4)
 
 /// The sentinel extent for a symbolic / data-dependent axis length. An expression
 /// over it resolves to a surfaced [`DimValue::Gap`] / [`ShapeValue::Gap`] — never a
@@ -71,12 +79,21 @@ pub enum Dim {
     Div(Box<Dim>, Box<Dim>),
 }
 
-/// A whole-shape expression (`ShapeExpr`). The closed core is `SameAs`; the
-/// reserved constructors are not representable by this reference encoder.
+/// A whole-shape expression (`ShapeExpr`). The closed core is `SameAs`; `WithDim`
+/// and `Dims` are the experimental-range extension constructors registered via
+/// umbrella §6.4 (Ops §6.20-0009/-0010), activating the §6.20-0005 tags 0x0A/0x0B.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ShapeExpr {
     /// The operand's whole shape.
     SameAs { operand: u8 },
+    /// EXPERIMENTAL (umbrella §6.4; tag `0x0A`). The `operand`'s shape with the
+    /// resolved `axis` (non-negative, or [`LAST`] = trailing, §6.20-0003) replaced
+    /// by `dim`. Functional spelling `with_dim(operand, axis, dim)` (§6.20-0009).
+    WithDim { operand: u8, axis: u8, dim: Box<Dim> },
+    /// EXPERIMENTAL (umbrella §6.4; tag `0x0B`). A whole shape built from `N >= 0`
+    /// ordered `DimExpr`s (`N = 0` = the rank-0 scalar shape). Functional spelling
+    /// `dims([dim, …])` (§6.20-0010).
+    Dims(Vec<Dim>),
 }
 
 // ---- evaluation outcomes -----------------------------------------------------
@@ -102,8 +119,10 @@ pub enum ShapeValue {
 pub enum ShapeExprError {
     /// The reserved `0` tag was read (§6.19-0006).
     ZeroTag,
-    /// A tag not defined for a `DimExpr` in this vocabulary version (includes the
-    /// reserved `Reduce`/`WithDim`/`Dims` tags until registry promotion).
+    /// A tag not valid at the grammar level being decoded: for a `DimExpr` reader,
+    /// any non-`DimExpr` tag (the still-reserved `Reduce` 0x09, or the whole-shape
+    /// `SameAs`/`WithDim`/`Dims` tags); for a `ShapeExpr` reader, the still-reserved
+    /// `Reduce` 0x09 or any unregistered/`DimExpr`-only tag (§6.20-0006/-0009/-0010).
     ReservedTag { tag: u8 },
     /// The blob was shorter than the tag's schema requires.
     TruncatedBlob { need: usize, got: usize },
@@ -122,10 +141,31 @@ pub enum ShapeExprError {
 // ---- serialization (§6.20-0005) ----------------------------------------------
 
 impl ShapeExpr {
-    /// The canonical wire bytes for this shape expression (§6.20-0005).
+    /// The canonical wire bytes for this shape expression (§6.20-0005; the
+    /// experimental extension tags 0x0A/0x0B per §6.20-0009/-0010).
     pub fn encode(&self) -> Vec<u8> {
         match self {
             ShapeExpr::SameAs { operand } => vec![TAG_SAME_AS, *operand],
+            // 0x0A, u8 operand, u8 axis (0xFF = last), one u16-LE length-prefixed
+            // child DimExpr blob (§6.20-0009).
+            ShapeExpr::WithDim { operand, axis, dim } => {
+                let child = dim.encode();
+                let mut v = vec![TAG_WITH_DIM, *operand, *axis];
+                v.extend_from_slice(&(child.len() as u16).to_le_bytes());
+                v.extend_from_slice(&child);
+                v
+            }
+            // 0x0B, u8 count, then count × (u16-LE length-prefixed child DimExpr
+            // blob) (§6.20-0010).
+            ShapeExpr::Dims(dims) => {
+                let mut v = vec![TAG_DIMS, dims.len() as u8];
+                for d in dims {
+                    let child = d.encode();
+                    v.extend_from_slice(&(child.len() as u16).to_le_bytes());
+                    v.extend_from_slice(&child);
+                }
+                v
+            }
         }
     }
 }
@@ -231,6 +271,54 @@ fn need(blob: &[u8], pos: usize, n: usize) -> Result<(), ShapeExprError> {
     }
 }
 
+/// Decode one whole-shape `ShapeExpr` blob, rejecting a malformed one with a typed
+/// decline (§6.20-0006). Reads `SameAs` (core) plus the registered experimental
+/// extension constructors `WithDim`/`Dims` (§6.20-0009/-0010); the still-reserved
+/// `Reduce` (0x09) and `DimExpr`-only tags decline typed. A well-formed blob
+/// round-trips: `decode_shape(&s.encode()) == Ok(s)`.
+pub fn decode_shape(blob: &[u8]) -> Result<ShapeExpr, ShapeExprError> {
+    let (s, consumed) = decode_shape_at(blob, 0)?;
+    if consumed != blob.len() {
+        return Err(ShapeExprError::TrailingBytes { extra: blob.len() - consumed });
+    }
+    Ok(s)
+}
+
+fn decode_shape_at(blob: &[u8], pos: usize) -> Result<(ShapeExpr, usize), ShapeExprError> {
+    let tag = *blob
+        .get(pos)
+        .ok_or(ShapeExprError::TruncatedBlob { need: pos + 1, got: blob.len() })?;
+    match tag {
+        0x00 => Err(ShapeExprError::ZeroTag),
+        TAG_SAME_AS => {
+            need(blob, pos, 2)?;
+            Ok((ShapeExpr::SameAs { operand: blob[pos + 1] }, pos + 2))
+        }
+        // 0x0A, u8 operand, u8 axis, one u16-LE length-prefixed child (§6.20-0009).
+        TAG_WITH_DIM => {
+            need(blob, pos, 3)?;
+            let operand = blob[pos + 1];
+            let axis = blob[pos + 2];
+            let (child, next) = read_child(blob, pos + 3)?;
+            Ok((ShapeExpr::WithDim { operand, axis, dim: Box::new(child) }, next))
+        }
+        // 0x0B, u8 count, then count × u16-LE length-prefixed children (§6.20-0010).
+        TAG_DIMS => {
+            need(blob, pos, 2)?;
+            let count = blob[pos + 1] as usize;
+            let mut dims = Vec::with_capacity(count);
+            let mut p = pos + 2;
+            for _ in 0..count {
+                let (child, next) = read_child(blob, p)?;
+                dims.push(child);
+                p = next;
+            }
+            Ok((ShapeExpr::Dims(dims), p))
+        }
+        other => Err(ShapeExprError::ReservedTag { tag: other }),
+    }
+}
+
 // ---- evaluation (§6.20-0002/0003/0004) ---------------------------------------
 
 /// Resolve a non-negative `axis` (or the [`LAST`] sentinel) against `rank`
@@ -297,7 +385,7 @@ pub fn eval_dim(d: &Dim, operands: &[Vec<i64>], params: &[i64]) -> Result<DimVal
 }
 
 /// Evaluate a `ShapeExpr` to a concrete shape (or a surfaced gap).
-pub fn eval_shape(s: &ShapeExpr, operands: &[Vec<i64>], _params: &[i64]) -> Result<ShapeValue, ShapeExprError> {
+pub fn eval_shape(s: &ShapeExpr, operands: &[Vec<i64>], params: &[i64]) -> Result<ShapeValue, ShapeExprError> {
     match s {
         ShapeExpr::SameAs { operand } => {
             let op = *operand as usize;
@@ -310,6 +398,46 @@ pub fn eval_shape(s: &ShapeExpr, operands: &[Vec<i64>], _params: &[i64]) -> Resu
             } else {
                 Ok(ShapeValue::Concrete(shape.clone()))
             }
+        }
+        // §6.20-0009 `with_dim`: the operand's shape with the resolved axis replaced
+        // by `dim`. A Gap replacement, or a symbolic extent in any *kept* axis,
+        // surfaces the whole shape as a Gap (§6.20-0004); an out-of-range axis is a
+        // typed decline (§6.20-0003), never a panic.
+        ShapeExpr::WithDim { operand, axis, dim } => {
+            let op = *operand as usize;
+            let shape = operands.get(op).ok_or(ShapeExprError::OperandOutOfRange {
+                operand: *operand,
+                operands: operands.len(),
+            })?;
+            let idx = resolve_axis(*axis, shape.len())?;
+            let replacement = eval_dim(dim, operands, params)?;
+            let mut out = shape.clone();
+            let mut gap = false;
+            for (i, e) in out.iter_mut().enumerate() {
+                if i == idx {
+                    match &replacement {
+                        DimValue::Concrete(v) => *e = *v,
+                        DimValue::Gap => gap = true,
+                    }
+                } else if *e == SYMBOLIC {
+                    gap = true;
+                }
+            }
+            if gap { Ok(ShapeValue::Gap) } else { Ok(ShapeValue::Concrete(out)) }
+        }
+        // §6.20-0010 `dims`: build the whole shape from the ordered DimExprs. A Gap
+        // in any element surfaces the whole shape as a Gap (§6.20-0004); an empty
+        // list is the rank-0 scalar shape.
+        ShapeExpr::Dims(dims) => {
+            let mut out = Vec::with_capacity(dims.len());
+            let mut gap = false;
+            for d in dims {
+                match eval_dim(d, operands, params)? {
+                    DimValue::Concrete(v) => out.push(v),
+                    DimValue::Gap => gap = true,
+                }
+            }
+            if gap { Ok(ShapeValue::Gap) } else { Ok(ShapeValue::Concrete(out)) }
         }
     }
 }

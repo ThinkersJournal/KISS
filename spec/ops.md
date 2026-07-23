@@ -2040,9 +2040,12 @@ the shared surface is two constructors.
   or the reserved **`last`** sentinel denoting the trailing axis — the KISS axis
   convention is non-negative (§6.19-0007, §6.13-0008); a signed/negative axis MUST
   NOT appear. An implementation MUST NOT introduce a constructor outside this
-  vocabulary; `Reduce(operand, axis, keepdim)`, `WithDim(operand, axis, DimExpr)`, and
-  `Dims([DimExpr, …])` are **reserved** and MUST NOT be emitted by a producer at this
-  vocabulary version (they enter through the extension registry, umbrella §6.4).
+  **core** vocabulary; `Reduce(operand, axis, keepdim)` is **reserved** and MUST NOT be
+  emitted by a producer at this vocabulary version. `WithDim(operand, axis, DimExpr)` and
+  `Dims([DimExpr, …])` are **not core** either, but are the now-activated **experimental
+  extension** constructors registered through the extension registry (umbrella §6.4) and
+  specified at §6.20-0009 / §6.20-0010; a producer MUST NOT emit them as core, and MUST
+  NOT emit them at all until the registry entry they cite is in force.
   *Test:* `test_shape_expr_vocabulary_eval`.
 - **KISS-OPS-6.20-0003** — The shape-expression evaluator MUST resolve the `last`
   sentinel to `rank − 1` against the referenced operand's rank, and MUST reject a
@@ -2061,7 +2064,9 @@ the shared surface is two constructors.
 - **KISS-OPS-6.20-0005** — A shape expression MUST serialize in the §6.19 canonical
   form: a one-byte **tag** (`0` reserved per §6.19-0006; `SameAs=0x01`, `Extent=0x02`,
   `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`; the
-  reserved `Reduce=0x09` / `WithDim=0x0A` / `Dims=0x0B`), fixed-width little-endian
+  reserved `Reduce=0x09` — never emitted, no consumer; and the **experimental,
+  registry-gated** `WithDim=0x0A` / `Dims=0x0B`, activated by the umbrella §6.4 entry
+  and specified at §6.20-0009 / §6.20-0010), fixed-width little-endian
   fields (`operand` and `field` as `u8`, `axis` as a non-negative `u8` with `0xFF`
   reserved as the `last` sentinel above the `0..MAX_RANK-1` concrete range — a
   **distinct** single-axis `u8` sentinel chosen high in the spirit of the §6.19-0020
@@ -2097,6 +2102,38 @@ the shared surface is two constructors.
   MUST NOT advertise `SameAs(operand)` for an op whose output rank/extents differ from
   that operand (e.g. a gather declaring `same_as(data)`). *Test:*
   `test_shape_expr_out_differs_from_operands`.
+- **KISS-OPS-6.20-0009** — The shape-expression constructor `WithDim(operand, axis, DimExpr)`
+  — canonical functional spelling **`with_dim(operand, axis, dim)`** — MUST denote the
+  `operand`'s whole shape with its resolved `axis` replaced by the `DimExpr`. The `axis`
+  MUST resolve exactly as in §6.20-0003 — a **non-negative** operand-axis index, or the
+  reserved **`last`** (`0xFF`) sentinel denoting the trailing axis — and a concrete
+  `axis >= rank` (or `last` on a rank-0 operand) MUST be a **typed decline**, never a
+  panic. It MUST serialize under the §6.19 canonical discipline as the one-byte tag
+  `0x0A`, a `u8` `operand`, a `u8` `axis` (`0xFF` = `last`), and exactly one `u16`-LE
+  **length-prefixed** child `DimExpr` blob (§6.19-0010, §6.20-0005). A surfaced **gap**
+  in the replacement `DimExpr`, or a symbolic/data-dependent extent in any *kept* axis of
+  the operand, MUST propagate to a whole-shape surfaced gap (§6.20-0004); replacing the
+  symbolic axis itself with a concrete `DimExpr` clears that axis's gap. A malformed,
+  short, or trailing blob MUST decode to a typed decline, never a panic (§6.20-0006).
+  `WithDim` is **NOT core**: it is an **experimental-range** extension of this vocabulary,
+  entered through the umbrella §6.4 extension registry (owner **Fuel**, issue #80, activating
+  the §6.20-0005 tag `0x0A`). A core encoder MUST NOT emit `0x0A`, and a producer MUST NOT
+  emit it at all until that registry entry is in force. *Test:*
+  `test_shape_expr_withdim_extension`.
+- **KISS-OPS-6.20-0010** — The shape-expression constructor `Dims([DimExpr, …])` —
+  canonical functional spelling **`dims([dim, …])`** — MUST denote the whole shape built
+  from `N >= 0` ordered `DimExpr`s in order, where `N = 0` is the **rank-0 scalar** shape.
+  It MUST serialize under the §6.19 canonical discipline as the one-byte tag `0x0B`, a
+  `u8` `count`, then `count` × (one `u16`-LE **length-prefixed** child `DimExpr` blob,
+  §6.19-0010, §6.20-0005). A surfaced **gap** in any element `DimExpr` MUST propagate to a
+  whole-shape surfaced gap (§6.20-0004). A malformed, short, or trailing blob — including a
+  `count` that promises more children than the blob carries — MUST decode to a typed
+  decline, never a panic (§6.20-0006); the still-reserved `Reduce` (`0x09`) MUST continue to
+  decline as it has no consumer. `Dims` is **NOT core**: it is an **experimental-range**
+  extension entered through the umbrella §6.4 extension registry (owner **Fuel**, issue #80,
+  activating the §6.20-0005 tag `0x0B`). A core encoder MUST NOT emit `0x0B`, and a producer
+  MUST NOT emit it at all until that registry entry is in force. *Test:*
+  `test_shape_expr_dims_extension`.
 
 ---
 
@@ -2382,6 +2419,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.20-0006 | `test_shape_expr_decode_declines` |
 | KISS-OPS-6.20-0007 | `test_shape_expr_primitive_floor_rules` |
 | KISS-OPS-6.20-0008 | `test_shape_expr_out_differs_from_operands` |
+| KISS-OPS-6.20-0009 | `test_shape_expr_withdim_extension` |
+| KISS-OPS-6.20-0010 | `test_shape_expr_dims_extension` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |

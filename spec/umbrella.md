@@ -275,6 +275,17 @@ An implementation claims a **DAG-aligned subset** of the suite. A claim is **pre
 
 Optional features and external tokens are recorded in an **extension registry under ThinkersJournal**, PR-gated. The lifecycle is **experimental → arbitrated → core**: a feature enters as an experimental-range extension owned by its proposer, may be arbitrated into a shared/interoperable extension, and — once at least two dissimilar implementations use it and it has a conformance test — may be promoted into the core range of the owning sub-standard by that sub-standard's editor. Promotion is additive and never renumbers existing core bits. External-token (Axis 3) bits are governed here: the registry is the single source of truth for which external interchange token a bit denotes, is versioned, and each KISS clause pins only the bit range, deferring the token's semantics to its external standard. The all-hardware target-capability descriptor uses a parallel **namespace registry**: ThinkersJournal registers namespaces; each namespace's maintainer owns that namespace's capability-set vocabulary; tokens match byte-exact on the full string.
 
+#### 6.4.1 Extension-registry entries (record)
+
+The registry of record is this table. Each entry is PR-gated (§7.2) and names the owning sub-standard's clause(s) that pin the token's wire/semantics; the registry itself pins only the lifecycle stage, the tag/bit range, the owner, and the promotion path. An entry is **additive** and never renumbers an existing core token.
+
+| Token | Owning sub-standard | Tag / range | Lifecycle stage | Owner | Consumers / promotion path | Reference |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dims(...)` / `Dims` | KISS-Ops §6.20 shape-expression vocabulary | `ShapeExpr` tag `0x0B` (experimental range of the §6.20-0005 tag space) | **experimental** | Fuel | Promotion to §6.20 core requires ≥2 dissimilar implementations + a conformance test: **Fuel** (byte-matches the minted goldens) + the **KISS conformance reference** (`conformance/src/shape_expr.rs`, goldens in `conformance/tests/shape_expr.rs`). Declared future consumer: Baracuda (pooling/conv output shapes). | KISS-Ops §6.20-0010; RFC #80 |
+| `with_dim(...)` / `WithDim` | KISS-Ops §6.20 shape-expression vocabulary | `ShapeExpr` tag `0x0A` (experimental range of the §6.20-0005 tag space) | **experimental** | Fuel | Promotion to §6.20 core requires ≥2 dissimilar implementations + a conformance test: **Fuel** (byte-matches the minted goldens) + the **KISS conformance reference**. Declared future consumer: Baracuda (rank-polymorphic conv/qmatmul output shapes). | KISS-Ops §6.20-0009; RFC #80 |
+
+Both entries activate the two §6.20-0005 tags that were allocated-reserved before RFC #80; the still-reserved `Reduce` (`0x09`) is **not** registered (no consumer). The canonical functional spellings are `dims(...)` and `with_dim(...)` (Baracuda cosign pin, RFC #80 comment 5060433119), pinned alongside the wire tags in the owning clauses so text-emitters and byte-emitters converge on one spelling.
+
 ---
 
 ## 7. Governance
