@@ -393,6 +393,71 @@ fn accepts_every_closed_op_family_and_dtype() {
 }
 
 #[test]
+fn test_classify_work_class_element_count() {
+    // §6.5-0010 + §6.6-0013 (backs the clause; KISS #82 finding 2 ruling, 2026-07-23):
+    // the work-class total element count is the FRAME-MAX — the product over the
+    // iteration-frame axes of each axis's max extent across operands — NOT the output
+    // operand's frame. Boundaries §6.5-0007: <=32 warp, <=1024 block, else grid.
+
+    // The disambiguating cell the ruling asks for: a `gem` whose two readings land in
+    // DIFFERENT buckets. lhs[M,K]=[8,4096], rhs[K,N]=[4096,8], out[M,N]=[8,8].
+    //   frame-max (all rank 2, right-aligned): axis0 = max(8,4096,8) = 4096,
+    //                                          axis1 = max(4096,8,8) = 4096
+    //     => 4096 * 4096 = 16_777_216  (> 1024)            => grid    <- RULED reading
+    //   output-frame (out only): 8 * 8 = 64  (in 33..=1024) => block  <- REJECTED reading
+    // The two readings genuinely diverge, so this golden forces any implementation
+    // (incl. Baracuda at the next regen) to reveal which one it computes.
+    let lhs = [8i64, 4096];
+    let rhs = [4096i64, 8];
+    let out = [8i64, 8];
+    assert_eq!(
+        work_class_element_count(&[&lhs, &rhs, &out]),
+        16_777_216,
+        "frame-max element count for the skinny-output gem cell"
+    );
+    assert_eq!(derive_work_class(&[&lhs, &rhs, &out]), WorkClass::Grid, "frame-max => grid");
+    // prove the rejected output-frame reading really would disagree:
+    assert_eq!(derive_work_class(&[&out]), WorkClass::Block, "output-frame alone => block (the rejected reading)");
+
+    // Second disambiguating cell — catches the OPERAND-0-NUMEL reading (distinct from
+    // the output-frame reading above). A gem lhs[M,K]=[8,8], rhs[K,N]=[8,4096],
+    // out[M,N]=[8,4096]:
+    //   frame-max: axis0 = max(8,8,8) = 8, axis1 = max(8,4096,4096) = 4096
+    //     => 8 * 4096 = 32768 (> 1024)          => grid   <- RULED reading
+    //   operand-0 (lhs) numel: 8 * 8 = 64  (33..=1024)  => block  <- a REJECTED reading
+    //   output-frame (out): 8 * 4096 = 32768            => grid   (agrees here — so this
+    //     cell does NOT catch output-frame; the first cell does. The two cells together
+    //     pin frame-max against BOTH the output-frame and operand-0-numel readings.)
+    // Operand-0-numel diverges from frame-max whenever operand-0 is not the frame-
+    // defining operand — here lhs is small on the N axis that rhs/out make large.
+    let g2_lhs = [8i64, 8];
+    let g2_rhs = [8i64, 4096];
+    let g2_out = [8i64, 4096];
+    assert_eq!(work_class_element_count(&[&g2_lhs, &g2_rhs, &g2_out]), 32_768, "frame-max mixes the large N axis in");
+    assert_eq!(derive_work_class(&[&g2_lhs, &g2_rhs, &g2_out]), WorkClass::Grid, "frame-max => grid");
+    assert_eq!(derive_work_class(&[&g2_lhs]), WorkClass::Block, "operand-0 (lhs) numel alone => block (a rejected reading)");
+
+    // Appendix A.1 skinny-decode cell: here both readings bucket the same (grid), so it
+    // does NOT disambiguate — pinned to lock the frame-max VALUE (4096*4096), not 8*4096.
+    let a1_lhs = [8i64, 4096];
+    let a1_rhs = [4096i64, 4096];
+    let a1_out = [8i64, 4096];
+    assert_eq!(work_class_element_count(&[&a1_lhs, &a1_rhs, &a1_out]), 16_777_216);
+    assert_eq!(derive_work_class(&[&a1_lhs, &a1_rhs, &a1_out]), WorkClass::Grid);
+
+    // §6.5-0007 boundary cells (single-operand frames): exact thresholds.
+    assert_eq!(derive_work_class(&[&[32i64]]), WorkClass::Warp, "32 is the warp ceiling");
+    assert_eq!(derive_work_class(&[&[33i64]]), WorkClass::Block, "33 crosses to block");
+    assert_eq!(derive_work_class(&[&[1024i64]]), WorkClass::Block, "1024 is the block ceiling");
+    assert_eq!(derive_work_class(&[&[1025i64]]), WorkClass::Grid, "1025 crosses to grid");
+
+    // right-alignment: a lower-rank operand broadcasts on the leading frame axis
+    // (contributes extent 1), so [4,8] vs [8] => axis0 max(4,1)=4, axis1 max(8,8)=8 => 32.
+    assert_eq!(work_class_element_count(&[&[4i64, 8], &[8i64]]), 32);
+    assert_eq!(derive_work_class(&[&[4i64, 8], &[8i64]]), WorkClass::Warp);
+}
+
+#[test]
 fn reserved_fnuz_dtypes_typed_decline() {
     // §6.1-0001: `e4m3fnuz`/`e5m2fnuz` are IN the closed vocabulary (their
     // spellings pinned now so a byte-incompatible variant can never squat on

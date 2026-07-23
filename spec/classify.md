@@ -1455,8 +1455,10 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   `t`), N = K = 4096 (large `l`), K divisible by 16 (`d16`). This f32 GEMM is
   non-batched with f32 weight/accumulator/output and bit-stable compute, so the sk3
   precision group is `/f32/f32/f32/st` and the contraction field is
-  `ctll/d16/f32/f32/f32/st`. Max offset (rhs) `4096·4095 + 1·4095 = 16781315 < 2³¹` ⇒
-  `ix32`; output frame `8·4096 = 32768 > 1024` ⇒ `grid`; rank 2:
+  `ctll/d16/f32/f32/f32/st`. Max offset (rhs) `4096·4095 + 1·4095 = 16777215 < 2³¹` ⇒
+  `ix32`; work-class **frame-max** (§6.5-0010, the §6.6-0013 per-axis maximum across
+  operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
+  = 16777216 > 1024` ⇒ `grid`; rank 2:
   `sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 - **The same GEMM cell built for a Vulkan target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except

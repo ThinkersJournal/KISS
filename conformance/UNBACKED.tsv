@@ -112,7 +112,6 @@ KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	lint:kiss_vocab	the 24 op-fa
 KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	lint:kiss_vocab	the WorkClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0009	test_classify_vec_width_derivation	untested	
-KISS-CLASSIFY-6.5-0010	test_classify_work_class_element_count	untested	
 KISS-CLASSIFY-6.6-0001	test_classify_structure_key_is_admissibility_predicate	untested	
 KISS-CLASSIFY-6.6-0002	test_classify_structure_key_is_not_op_identity	untested	
 KISS-CLASSIFY-6.6-0003	test_classify_structure_key_extent_free	untested	
