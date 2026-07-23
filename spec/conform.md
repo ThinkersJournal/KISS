@@ -8,7 +8,7 @@
 > This document follows the KISS dual-doc template defined in the *KISS Umbrella
 > Specification* (umbrella §4): an **informative Overview** (§0–§5) and a
 > **normative Conformance specification** (§6+). Only §6+ (and the normative
-> Appendix E sidecar schema it references) is normative. Normative clauses use
+> Appendix E and Appendix F schemas it references) is normative. Normative clauses use
 > RFC-2119 / RFC-8174 uppercase keywords, carry an append-only clause
 > ID `KISS-CONFORM-<section>-<nnnn>`, and each MUST/MUST NOT/SHALL maps 1:1 to at
 > least one named KISS-Conform test `test_conform_<slug>`. The KISS-Conform suite
@@ -582,7 +582,8 @@ enum (§6.0). See umbrella §3 for the full statement.
   reader: the matrix, golden vectors, oracle vectors, and negative vectors MUST be bundled as
   versioned machine-readable artifacts WITH the suite for that version, and the versioned
   KISS-Classify namespace-registry snapshot, the target-capability vocabulary, and the
-  KISS-Ops enumerated expressible-signature set (§6.10-0005) MUST be bundled alongside so a
+  KISS-Ops enumerated expressible-signature set (§6.10-0005, conforming to the schema of
+  **Appendix F**) MUST be bundled alongside so a
   reader built from the document alone holds a complete, self-contained copy. *Test:*
   `test_conform_suite_self_contained_bundle`.
 - **KISS-CONFORM-6.3-0004** — The matrix (and every bundled vector set) for a **Frozen**
@@ -831,7 +832,9 @@ enum (§6.0). See umbrella §3 for the full statement.
 - **KISS-CONFORM-6.10-0001** — KISS-Conform MUST define the **expressibility oracle**: a residue
   region is judged **expressible** iff its region signature is a member of the enumerated
   expressible-signature set at the **referenced KISS-Ops op-set version**; the oracle MUST be
-  evaluated at the referenced op-set version, not an implementation's current op set. *Test:*
+  evaluated at the referenced op-set version, not an implementation's current op set. The byte
+  form of a region signature and the membership test are pinned by **Appendix F**
+  (§6.10-0006). *Test:*
   `test_conform_expressibility_oracle`.
 - **KISS-CONFORM-6.10-0002** — The expressibility oracle MUST drive the KISS-Consume
   **unrecognized-but-expressible vs inexpressible-residue** split (KISS-CONSUME §6.4): a residue
@@ -849,10 +852,18 @@ enum (§6.0). See umbrella §3 for the full statement.
   `test_consume_emit_are_siblings_no_edge`. *Test:* `test_conform_consume_emit_siblings`.
 - **KISS-CONFORM-6.10-0005** — The enumerated **expressible-signature set** MUST be a concrete,
   versioned artifact **stamped by the KISS-Ops op-set version**, **owned by the KISS-Ops
-  editor**, regenerated on each op-set-version bump, and **bundled WITH the suite** for that
+  editor**, regenerated on each op-set-version bump, **serialized in the byte format pinned by
+  Appendix F (KISS-CONFORM-6.10-0006)**, and **bundled WITH the suite** for that
   version (like the namespace-registry snapshot, §6.3-0003), so an offline foreign reader holds
-  the exact set the oracle evaluates against; an oracle evaluated against an unbundled or
-  differently-versioned set MUST be rejected. *Test:* `test_conform_expressibility_set_bundled`.
+  the exact set the oracle evaluates against; an oracle evaluated against an unbundled,
+  differently-versioned, **or Appendix-F-nonconforming** set MUST be rejected. *Test:*
+  `test_conform_expressibility_set_bundled`.
+- **KISS-CONFORM-6.10-0006** — The enumerated expressible-signature set MUST be serialized in
+  the byte format pinned by **Appendix F**; a reader MUST reject with a typed decline a set that
+  omits a REQUIRED field, carries an unknown field, or violates an enumerant, and MUST reject an
+  oracle evaluated against a set that does not conform to Appendix F. Two regenerations of the
+  set at the same `ops_op_set_version` MUST be byte-identical. *Test:*
+  `test_conform_expressible_signature_set_schema`.
 
 ### 6.11 The cross-standard document lint
 
@@ -1014,7 +1025,8 @@ atomic clause with its own append-only ID and dedicated test.
 - **KISS-CONFORM-6.13-0015** — KISS-Conform MUST define the **expressibility oracle** (§6.10) at
   the referenced KISS-Ops op-set version (KISS-CONSUME §6.4 / region-signature membership) driving
   the unrecognized-but-expressible vs inexpressible-residue split against the bundled, op-set-
-  version-stamped expressible-signature set (§6.10-0005), MUST require a deliberately
+  version-stamped expressible-signature set (§6.10-0005) — the byte form of a region signature
+  and the membership test are pinned by **Appendix F** (§6.10-0006) — MUST require a deliberately
   **mislabeled-kernel** vector demanding the structurally-correct lift (§6.10-0003), and MUST
   verify the emit↔consume round-trip as a **join** (`test_consume_emit_are_siblings_no_edge`,
   §6.10-0004), not a DAG edge. *Test:* `test_conform_consume_expressibility_and_join`.
@@ -1156,7 +1168,8 @@ version)`; the reference **crate** carries an ordinary semver that moves on any 
   (checklist gate; AUDIT-signed).
 - **KISS-CONFORM-8-0010** — There MUST be, per `(sub-standard, schema version)`, a single
   steward-published, versioned **canonical suite artifact** (the matrix plus the exact
-  golden/oracle/negative vector set) that is authoritative for a conformance verdict; a foreign or
+  golden/oracle/negative vector set and the Appendix-F-conforming expressible-signature set) that
+  is authoritative for a conformance verdict; a foreign or
   independently-built suite MUST reproduce that canonical vector set **byte-for-byte** before it
   may issue a conformance verdict, and a verdict from a suite whose vector set differs from the
   canonical artifact MUST NOT back a conformance claim. *Test:*
@@ -1252,6 +1265,7 @@ the traceability lint.
 | KISS-CONFORM-6.10-0003 | `test_conform_mislabeled_kernel_structural` |
 | KISS-CONFORM-6.10-0004 | `test_conform_consume_emit_siblings` |
 | KISS-CONFORM-6.10-0005 | `test_conform_expressibility_set_bundled` |
+| KISS-CONFORM-6.10-0006 | `test_conform_expressible_signature_set_schema` |
 | KISS-CONFORM-6.11-0001 | `test_conform_emit_consume_correspondence_lint` |
 | KISS-CONFORM-6.11-0002 | `test_conform_neutrality_audit_manifest` |
 | KISS-CONFORM-6.11-0003 | `test_conform_determinism_import_site_lint` |
@@ -1514,7 +1528,8 @@ conformance run. They are surfaced so the design record is honest about what is 
 > **Resolved (formerly open) — expressibility-oracle maintenance (§6.10).** The update cadence and
 > ownership of the enumerated expressible-signature set are now pinned normatively: the set is owned
 > by the **KISS-Ops editor**, regenerated on each **KISS-Ops op-set-version bump**, stamped by that
-> op-set version, and bundled WITH the suite (§6.10-0005). This item is retained here for the design
+> op-set version, and bundled WITH the suite (§6.10-0005). The set's byte **format** is now pinned
+> by **Appendix F** (§6.10-0006). This item is retained here for the design
 > record and is no longer an open question.
 
 ---
@@ -1553,8 +1568,85 @@ prose is reconciled to it only by the deterministic clause-ID-token match of §6
 
 ---
 
+## Appendix F — Expressible-signature-set schema (normative)
+
+This appendix is **normative** and is referenced by §6.10-0005 and KISS-CONFORM-6.10-0006.
+It pins the byte format of the enumerated expressible-signature set so that two
+independently-built suites, and an offline foreign reader, enumerate the identical
+membership set the expressibility oracle (§6.10-0001) evaluates against.
+
+**Encoding.** The set MUST be a single UTF-8, JSON-encoded document with byte-deterministic
+serialization: object member keys in ascending Unicode code-point order, no insignificant
+whitespace, and LF line endings, so the file is byte-comparable (§6.0-0003, §8-0010).
+
+**Top-level fields (all REQUIRED).**
+- `owner` — the string `KISS-OPS` (the set is KISS-Ops-editor-owned, §6.10-0005).
+- `ops_op_set_version` — the KISS-Ops op-set version stamp (§6.10-0005).
+- `opattrs_wire_version` — the KISS-Ops OpAttrs wire-freeze version (per-node OpAttrs bytes
+  are part of a signature; KISS-Grammar §6.8-0007 / KISS-Grammar §8-0008).
+- `generator` — an enumerant naming how the set was produced (e.g. `canonical-regen`).
+- `signatures` — an array of signature objects, ordered ascending by the unsigned-byte
+  lexicographic order of each signature's `bytes` (matching KISS-Grammar §6.4-0010).
+
+**Signature bytes (the membership key).** A signature is the residue region resolved to the
+primitive floor (§6.9). Its canonical byte form is the **KISS-Grammar §6.4-0010 canonical
+subtree serialization** computed as a **structure-only projection**: every operand dtype-role
+token is first normalized to the KISS-Grammar §6.6-0006 dtype-role **wildcard** token, so
+op-DAGs that are structurally identical but differ only in operand dtypes collapse to a single
+signature. The **sole** exception is a `Cast` node's target dtype, which rides inside that
+node's KISS-OPS §6.19 OpAttrs blob and is retained verbatim — it is the only dtype-bearing
+path in a signature; no operand dtype-role token survives the wildcarding anywhere else. Membership is
+KISS-Conform structural op-DAG equality (§6.9): two signatures are the same iff their
+wildcarded §6.4-0010 serializations are byte-identical.
+
+**Signature object fields (all REQUIRED).**
+- `nodes` — the ordered node list in §6.9 canonical order, each `Op{name; opattrs_hex}` or
+  `Bind{index}`; `name` is a KISS-Ops op name at the primitive floor; `opattrs_hex` is the
+  per-node KISS-OPS §6.19 OpAttrs wire bytes as lowercase hex (empty string for the empty-attr
+  form; a `Cast`'s target dtype retained).
+- `edges` — per node, the operand node-indices, in **KISS-Grammar §6.4-0010 canonical operand
+  order**: for a node whose op KISS-Ops declares **commutative** (KISS-Grammar §6.2-0005),
+  operands are ordered by the §6.4-0010 pinned total order — ascending unsigned-byte-lexicographic
+  comparison of each operand's **wildcarded** canonical subtree serialization — so
+  `add(Bind 0, Bind 1)` and `add(Bind 1, Bind 0)` are the *same* signature; for a **positional**
+  (non-commutative) op, operand order is preserved as authored, so `sub(Bind 0, Bind 1)` and
+  `sub(Bind 1, Bind 0)` are *distinct* signatures.
+- `bytes` — the §6.4-0010 wildcarded canonical subtree serialization over which membership is
+  decided, lowercase hex. Within `bytes`, a `Bind{index}` leaf serializes as the byte `0x00`
+  followed by its `input_index` as a `u32` **little-endian** (§6.4-0010); the commutative
+  byte-lex order above is computed over these same wildcarded subtree serializations, so the
+  ordering, the projection, and the Bind encoding compose consistently.
+- `signature_hash` — a fixed 64-bit **membership index** over `bytes`: the **FNV-1a-64** hash of
+  `bytes` (offset basis `0xcbf29ce484222325`, multiply prime `0x00000100000001b3`, one
+  XOR-then-multiply per input byte), rendered as 16 lowercase hex digits. It is an index only —
+  the **decidable** membership key is `bytes` itself, compared for byte-identity under the §6.9
+  structural-equality comparator; where `signature_hash` and a `bytes` comparison disagree,
+  `bytes` governs.
+
+**Determinism.** Two regenerations of the set at the same `ops_op_set_version` MUST be
+byte-identical. A set that omits a REQUIRED field, carries an unknown field, or violates an
+enumerant MUST be rejected; an oracle evaluated against a set that does not conform to this
+appendix MUST be rejected (§6.10-0005).
+
+**Golden example (informative transcription target for the conformance suite).** A one-signature
+set over the primitive `add(Bind 0, Bind 1)` at op-set version `1`, OpAttrs wire version `1`
+(add is commutative; its edge list `[0,1]` is already the §6.4-0010 byte-lex-canonical order,
+since `Bind 0` sorts before `Bind 1`):
+
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"010300616464010000000000000000000001000000","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{add;}"],"signature_hash":"23ed69eedebe6a50"}]}
+
+A second golden over the positional (non-commutative) primitive `sub(Bind 0, Bind 1)` — whose
+edge list `[0,1]` is order-significant (distinct from `[1,0]`), exercising the Bind index
+encoding and the positional-order rule — is pinned alongside the `add` golden by the
+conformance suite:
+
+    {"generator":"canonical-regen","opattrs_wire_version":"1","ops_op_set_version":"1","owner":"KISS-OPS","signatures":[{"bytes":"010300737562010000000000000000000001000000","edges":[[],[],[0,1]],"nodes":["Bind{0}","Bind{1}","Op{sub;}"],"signature_hash":"3cda77a1e825ea1f"}]}
+
+---
+
 *End of KISS-Conform (Draft proposal). This sub-standard is informative in §0–§5 and normative in
-§6+ (and in the Appendix E sidecar schema §6.1-0007 references); every binding requirement carries
+§6+ (and in the Appendix E sidecar schema §6.1-0007 references and the Appendix F
+expressible-signature-set schema §6.10-0006 references); every binding requirement carries
 an identified clause `KISS-CONFORM-<section>-<nnnn>` with a mapped `test_conform_<slug>` test.
 KISS-Conform is the cross-cutting root of the suite's test relation: it depends on and TESTS all
 eight other sub-standards, is depended on by none, imports the determinism/fidelity enum from

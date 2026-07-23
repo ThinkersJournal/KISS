@@ -32,6 +32,7 @@ pub mod determinism;
 pub mod differential;
 pub mod dispatch;
 pub mod dispatch_expr;
+pub mod expressibility;
 pub mod grammar;
 pub mod fp;
 pub mod dtype;
