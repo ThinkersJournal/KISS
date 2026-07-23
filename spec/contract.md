@@ -1199,6 +1199,35 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   be empty (zero length). A reader MUST NOT interpret its bytes as contract semantics and MUST
   NOT reject a contract on its content (only a missing field or a malformed length is a decline,
   §6.1-0006). *Test:* `test_contract_negotiation_metadata_opaque`.
+- **KISS-CONTRACT-6.9-0009** — A provider publishing a **catalog** of co-published
+  kernels MAY carry an OPTIONAL bundle-level **`bundle_envelope`**
+  `{provider_id, revision_base, derivation_lineage, contained}`; a single-kernel
+  provider MUST NOT be required to emit one — the envelope is a catalog-level
+  feature, not a per-contract field, and its absence is never a decline. The
+  envelope's `revision_base` and `derivation_lineage` are a **bundle-level
+  projection** of the Provenance vocabulary and MUST be authored against the
+  **single** field definition this clause establishes; they MUST NOT fork between
+  the per-cell provenance (which rides each contained contract, §6.9-0001) and the
+  bundle-level envelope. Specifically:
+  - **`revision_base`** MUST be the versioning triple
+    `(kiss_ops_spec_version, recipe_grammar_version, kiss_ref_semver)` together with
+    the `generator_commit`. This is the one shared definition of the Provenance
+    `revision_base` field (§6.9-0001/-0003): the per-cell Provenance `revision_base`
+    and the envelope `revision_base` MUST carry the identical field shape, and an
+    implementation MUST NOT define a bundle-local `revision_base`.
+  - **`derivation_lineage`** MUST be a lineage tag drawn from the closed set
+    `{generated, spec-6.13-table, external-cold-reader}` — respectively a
+    generator-produced kernel, a kernel derived from the KISS-Ops reference-
+    decomposition table (KISS-OPS-6.13-0001), and a kernel produced by an external
+    cold reader of the frozen spec. This is the one shared lineage vocabulary; where
+    the per-cell provenance records a derivation lineage it MUST draw from this same
+    set, and an implementation MUST NOT fork the token domain between the two levels.
+  Each `contained` entry MUST be the pair `{contract_ref, structure_key_token}`
+  naming one co-published cell, where `structure_key_token` is carried **opaquely**
+  as the KISS-Classify `structure_key` token (never reinterpreted or re-encoded) and
+  `contract_ref` references that cell's contract document; the envelope MUST NOT
+  restate any per-cell Provenance field whose single home is the contained contract.
+  *Test:* `test_contract_bundle_envelope_shared_provenance`.
 
 ### 6.10 The structural seams onto the foundational vocabularies
 
@@ -1379,6 +1408,28 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   schemas that carry real values (for example the Guarantees accuracy tiers and the cost
   expression coefficients) reference it once their layouts are pinned. *Test:*
   `test_contract_text_real_encoding`.
+- **KISS-CONTRACT-6.11-0011** — A reader consuming a **bundle** (a catalog of multiple
+  contract documents carried together on the wire, such as a provider catalog) MUST treat each
+  contained document as a **self-delimiting member**. It MUST determine each member's exact
+  byte extent from that member's own §6.11-0003 frame — the header line (through its LF) plus
+  the `len=<N>` body bytes — **before** validating the member body, sourcing that extent from
+  the frame and never from a body it has not yet validated, so one member's bytes cannot bleed
+  into a sibling. A member that is well-framed (its magic, header line, and `len=<N>` parse)
+  but whose body is malformed under §6.1-0002 / §6.11-0003 / §6.11-0004 — a length or CRC-32
+  mismatch, a headingless body, an unsupported `contract_version`, or a section-schema
+  violation — MUST be **hard-rejected as a typed decline** (§6.1-0002, §6.1-0004) that
+  **isolates** to that member alone: the reader MUST still parse every well-formed sibling,
+  MUST NOT treat a single malformed member as **bundle-fatal**, MUST NOT repair it or import it
+  as an empty or no-op contract (§6.1-0002), and MUST NOT panic, abort, hang, or read outside
+  the input (§6.1-0004). Where a member's **frame** itself is unrecoverable (no magic, no
+  header LF, or no parsable `len=<N>`) so the next member boundary cannot be located, the
+  reader MUST still return a typed decline and MUST NOT panic (§6.1-0004), and every well-formed
+  member already read MUST be preserved — a frame break cannot un-read an earlier well-formed
+  sibling. This length-delimited, integrity-checked per-member isolation is the required
+  **wire** discipline for a bundle of provider contracts; a reader MAY apply a stricter
+  fail-fast (rejecting the whole import) to a **local authoring corpus**, but MUST NOT let a
+  malformed member poison its siblings on the wire. *Test:*
+  `test_contract_bundle_member_isolation`.
 
 ---
 
@@ -1562,6 +1613,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |
 | KISS-CONTRACT-6.9-0006 | `test_contract_cost_provenance_consistent` |
 | KISS-CONTRACT-6.9-0008 | `test_contract_negotiation_metadata_opaque` |
+| KISS-CONTRACT-6.9-0009 | `test_contract_bundle_envelope_shared_provenance` |
 | KISS-CONTRACT-6.10-0001 | `test_contract_grammar_ops_seam_two_sections` |
 | KISS-CONTRACT-6.10-0002 | `test_contract_edge_case_and_ulp_from_ops` |
 | KISS-CONTRACT-6.10-0003 | `test_contract_single_op_vocabulary` |
@@ -1576,6 +1628,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.11-0008 | `test_contract_text_dispatch` |
 | KISS-CONTRACT-6.11-0009 | `test_contract_text_op_identity` |
 | KISS-CONTRACT-6.11-0010 | `test_contract_text_real_encoding` |
+| KISS-CONTRACT-6.11-0011 | `test_contract_bundle_member_isolation` |
 | KISS-CONTRACT-7.1-0001 | `test_contract_mandatory_core` |
 | KISS-CONTRACT-7.1-0002 | `test_contract_semantics_degrade_axis` |
 | KISS-CONTRACT-7.1-0003 | `test_contract_typed_decline_core` |

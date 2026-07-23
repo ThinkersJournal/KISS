@@ -479,6 +479,23 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.4-0008** — A provider that does not advertise the contract-query
   capability bit MUST answer any contract-query request with a `QUERY_NOT_SUPPORTED`
   typed decline. *Test:* `test_announce_no_query_bit_declines`.
+- **KISS-ANNOUNCE-6.4-0013** — An implementation MAY carry an OPTIONAL 8-byte
+  request-correlation id on a contract-query request frame (`CYRQ`, §6.4-0001) and its
+  response frame, so a **concurrent** transport can match a response to the right
+  in-flight request. When carried, it is appended after the frame body as a 1-byte
+  `correlation_present` flag (`0` or `1`) and — only when `correlation_present == 1` —
+  an 8-byte `correlation_id`. When a request carries `correlation_present == 1`, the
+  response answering it (a `CRSP` §6.4-0004, a `CDEC` §6.4-0007, or — on the KISS-Synth
+  provision path that reuses this request verbatim, KISS-SYNTH-6.1-0002 — a `PRSP`
+  provision-success frame, KISS-SYNTH-6.4-0001b) MUST echo the identical 8
+  `correlation_id` bytes **unchanged**. The field is OPTIONAL and reserved: a
+  synchronous seam MAY omit it entirely (the frames are then exactly §6.4-0001 /
+  §6.4-0004 / §6.4-0007), and it MUST NOT be required for v1 conformance — a conforming
+  reader MUST accept a frame carrying no correlation field, and a provider MUST NOT
+  decline a request solely because it omits one. A reader MUST reject a
+  `correlation_present` value other than `0` or `1` with a `MALFORMED_REQUEST` typed
+  decline (§6.4-0009), never a panic. *Test:*
+  `test_announce_correlation_id_echoed_when_present`.
 
 ### 6.5 Zero-dependency budget
 
@@ -712,6 +729,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.4-0010 | `test_announce_unknown_decline_code_is_generic` |
 | KISS-ANNOUNCE-6.4-0005 | `test_announce_query_bit_implies_endpoint` |
 | KISS-ANNOUNCE-6.4-0008 | `test_announce_no_query_bit_declines` |
+| KISS-ANNOUNCE-6.4-0013 | `test_announce_correlation_id_echoed_when_present` |
 | KISS-ANNOUNCE-6.5-0001 | `test_announce_zero_dependency_no_driver_load` |
 | KISS-ANNOUNCE-6.5-0002 | `test_announce_impl_std_only` |
 | KISS-ANNOUNCE-7.1-0001 | `test_announce_negotiate_selects_highest_mutual` |

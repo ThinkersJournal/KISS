@@ -20,6 +20,9 @@
 
 pub mod accuracy;
 pub mod announce;
+pub mod bundle_envelope;
+pub mod correlation_id;
+pub mod bundle_isolation;
 pub mod antifork;
 pub mod contract;
 pub mod corpus;
