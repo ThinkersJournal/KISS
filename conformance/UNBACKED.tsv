@@ -401,16 +401,6 @@ KISS-EMIT-6.1-0007	test_emit_other_input_not_conforming	untested
 KISS-EMIT-6.1-0008	test_emit_no_scheduler_in_abi	untested	
 KISS-EMIT-6.1-0009	test_emit_opdef_outside_opset_declines	untested	
 KISS-EMIT-6.1-0010	test_emit_accept_predicate_is_structure_key	untested	
-KISS-EMIT-6.3-0001	test_emit_driver_spells_dag_topology	untested	
-KISS-EMIT-6.3-0002	test_emit_driver_spells_operand_binding	untested	
-KISS-EMIT-6.3-0003	test_emit_driver_spells_index_arithmetic	untested	
-KISS-EMIT-6.3-0004	test_emit_infix_operators_gated_on_audit	untested	
-KISS-EMIT-6.3-0005	test_emit_driver_spells_control_flow	untested	
-KISS-EMIT-6.4-0003	test_emit_transcendental_spelling_emitter_supplied	untested	
-KISS-EMIT-6.4-0004	test_emit_type_spelling_emitter_supplied	untested	
-KISS-EMIT-6.5-0001	test_emit_neutrality_audit_manifest_is_freeze_precondition	untested	
-KISS-EMIT-6.5-0002	test_emit_audit_moves_unproven_spelling	untested	
-KISS-EMIT-6.5-0003	test_emit_audit_hunts_const_lit_siblings	untested	
 KISS-EMIT-6.6-0001	test_emit_output_has_contract	untested	
 KISS-EMIT-6.6-0002	test_emit_fidelity_declared_in_guarantees	untested	
 KISS-EMIT-6.6-0003	test_emit_output_is_artifact_contract_pair	untested	
