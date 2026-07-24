@@ -14,6 +14,21 @@ follows is only what survived.
 **The headline: the blockers are not missing code. They are missing decisions and missing
 bytes.** Every item below is answerable from the desk. None needs hardware.
 
+> **Dated snapshot — read this as of 2026-07-15; several items below are now closed
+> (update 2026-07-23).** (1) **§1.4 Dispatch is resolved.** The §6.6-0006 grammar gained `/`,
+> `ceil_div`, tuple-valued results and an element subscript, so `ceil(n/block)` and
+> multi-dimensional grids *are* expressible; and because every reference implementation
+> declines to emit a Dispatch section at all (a grid-stride kernel declares no geometry and the
+> host picks the launch), **§6.6 Dispatch is now optional** with a geometry-agnostic kernel
+> class. The question this document poses in §1.4 has been answered — it is not still open.
+> (2) **The "no byte has crossed a process boundary" framing is overtaken.** Independent
+> `structure_key` derivations now byte-match three ways (KISS, Fuel, Baracuda) — first at `sk2`
+> for the `relu_add` cell, then re-verified at `sk3` after the schema bump. (3) Several §1.5
+> `structure_key` derivation gaps are closed in the current spec. For the current
+> cross-implementation state, see
+> [`docs/kiss-convergence-reconciliation.md`](docs/kiss-convergence-reconciliation.md); for
+> live coverage, run `python tools/kiss_trace.py --report`.
+
 ---
 
 ## 0. What is already green — start here
@@ -113,6 +128,12 @@ critical path — an owner decision, and a cheap one.
   and §6.2-0006's byte-for-byte equality requirement are uncheckable. (Pairs with issue #26.)
 
 ### 1.4 Dispatch is unwritable in its own grammar
+
+> **RESOLVED (2026-07-23) — see the snapshot banner above.** The §6.6-0006 grammar has since
+> gained `/`, `ceil_div`, tuple-valued results and an element subscript, so the specifics below
+> are overtaken; and **§6.6 Dispatch is now optional** (geometry-agnostic kernel class), because
+> every reference implementation declines to emit the section. The item is retained for the
+> reasoning that produced the fix, not as an open blocker.
 
 **This is the flagship contribution, and it cannot express its own mandatory fields.**
 
