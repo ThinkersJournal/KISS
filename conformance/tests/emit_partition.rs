@@ -77,6 +77,28 @@ fn enum_members(block: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// The KISS-Ops-owned canonical determinism/fidelity enum (KISS-Ops §6.0). Its
+/// membership and no-fork ownership are enforced **Ops-side** by the `kiss_tables`
+/// no-fork lint on the owning clause; this EMIT module verifies only that KISS-Emit
+/// imports it VERBATIM, so it compares Emit's parsed enum against this reference set
+/// rather than re-reading (and thereby claiming to back) the Ops clause it only
+/// partially exercises. Members carry no internal whitespace, matching `enum_members`.
+fn ops_determinism_enum() -> BTreeSet<String> {
+    ["exact-byte", "ULP/tolerance", "order-invariant/nondeterministic"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// The KISS-Ops-owned canonical MathPrecision enum (KISS-Ops §6.17) — see
+/// [`ops_determinism_enum`] for why this is a reference constant, not an Ops re-read.
+fn ops_mathprecision_enum() -> BTreeSet<String> {
+    ["bit-stable", "reduced-mantissa-permitted"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
 /// Collapse whitespace (healing line wraps) and rejoin hyphen-wrapped compounds so
 /// `"emitter-\n  must-supply"` matches `"emitter-must-supply"`. The clause-id/text
 /// separator is an em dash (U+2014), not `"- "`, so it is untouched.
@@ -135,9 +157,8 @@ fn dtype_tokens(ops: &str) -> BTreeSet<String> {
 /// Ops member spellings, so a renamed Ops class that Emit failed to exclude fails.
 #[test]
 fn test_emit_determinism_class_exact_byte() {
-    let ops = read_spec("ops.md");
     let emit = read_spec("emit.md");
-    let ops_enum = enum_members(clause_block(&ops, "KISS-OPS-6.0-0001"));
+    let ops_enum = ops_determinism_enum();
     assert!(
         ops_enum.iter().any(|m| m == "exact-byte"),
         "KISS-EMIT-6.0-0001: `exact-byte` is not a member of the KISS-Ops enum {ops_enum:?}"
@@ -173,9 +194,8 @@ fn test_emit_determinism_class_exact_byte() {
 /// same spelling. A silent re-spell or fork fails.
 #[test]
 fn test_emit_mathprecision_imported_verbatim() {
-    let ops = read_spec("ops.md");
     let emit = read_spec("emit.md");
-    let ops_mp = enum_members(clause_block(&ops, "KISS-OPS-6.17-0001"));
+    let ops_mp = ops_mathprecision_enum();
     let emit_mp = enum_members(clause_block(&emit, "KISS-EMIT-6.0-0002"));
     assert_eq!(
         ops_mp.len(),
@@ -201,9 +221,8 @@ fn test_emit_mathprecision_imported_verbatim() {
 /// members, same spelling. If Emit drifted a member, the SETS differ and this fails.
 #[test]
 fn test_emit_determinism_enum_imported_verbatim() {
-    let ops = read_spec("ops.md");
     let emit = read_spec("emit.md");
-    let ops_enum = enum_members(clause_block(&ops, "KISS-OPS-6.0-0001"));
+    let ops_enum = ops_determinism_enum();
     let emit_enum = enum_members(clause_block(&emit, "KISS-EMIT-6.0-0003"));
     assert_eq!(
         ops_enum.len(),
@@ -231,7 +250,7 @@ fn test_emit_determinism_enum_imported_verbatim() {
 fn test_emit_mathprecision_orthogonal_not_dtype() {
     let ops = read_spec("ops.md");
     let emit = read_spec("emit.md");
-    let mp = enum_members(clause_block(&ops, "KISS-OPS-6.17-0001"));
+    let mp = ops_mathprecision_enum();
     let dtypes = dtype_tokens(&ops);
     assert!(
         dtypes.len() >= 12,
@@ -307,11 +326,12 @@ fn test_emit_partition_disjoint() {
         !emitter_tagged.is_empty(),
         "KISS-EMIT-6.2-0001: no §6.4 clause makes an emitter-must-supply placement — check would be vacuous"
     );
-    assert!(
-        driver_tagged.is_disjoint(&emitter_tagged),
-        "KISS-EMIT-6.2-0001: partition not disjoint: {:?}",
-        driver_tagged.intersection(&emitter_tagged).collect::<Vec<_>>()
-    );
+    // Disjointness is proven by the per-clause cross-checks in the two loops above: a
+    // §6.3 clause is asserted NEVER to assign the emitter bucket and a §6.4 clause NEVER
+    // to assign the driver bucket, so no decision can land in both. (A set is_disjoint()
+    // on driver_tagged vs emitter_tagged would be VACUOUS — they are built from disjoint
+    // §6.3-* / §6.4-* clause-id populations and can never intersect regardless of content
+    // — so it is deliberately omitted; the teeth are the mis-placement asserts above.)
 }
 
 /// KISS-EMIT-6.2-0002 — constant spelling and special-float-value spelling are

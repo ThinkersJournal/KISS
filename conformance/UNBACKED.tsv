@@ -501,6 +501,7 @@ KISS-GRAMMAR-8-0005	test_grammar_freeze_gate_foreign_reader	untested
 KISS-GRAMMAR-8-0006	test_grammar_freeze_gate_conform_suite_passes	untested	
 KISS-GRAMMAR-8-0007	test_grammar_retire_by_floor	untested	
 KISS-GRAMMAR-8-0008	test_grammar_opattrs_freeze_precondition	untested	
+KISS-OPS-6.0-0001	test_ops_determinism_class_enum	lint:kiss_tables	a sub-standard re-forks the determinism/fidelity enum instead of importing it
 KISS-OPS-6.0-0004	test_ops_nondeterministic_class_ops	untested	
 KISS-OPS-6.0-0005	test_ops_determinism_class_precedence	untested	
 KISS-OPS-6.1-0001	test_ops_op_set_closed	untested	
@@ -543,6 +544,7 @@ KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts	lint:kiss_tables	the Ops §6.16 dt
 KISS-OPS-6.16-0002	test_ops_ieee754_dtype_encodings	untested	
 KISS-OPS-6.16-0007	test_ops_complex_storage_layout	untested	
 KISS-OPS-6.16-0008	test_ops_dtype_layout_coversioned	lint:kiss_tables	the Ops §6.16 dtype bit layouts drift from the Classify §6.1 pinned layouts
+KISS-OPS-6.17-0001	test_ops_math_precision_enum	lint:kiss_tables	a sub-standard re-forks the compute-fidelity (MathPrecision) enum instead of importing it
 KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested	
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
