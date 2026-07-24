@@ -13,6 +13,15 @@ credible.
 
 > **Status.** Compiled 2026-07 against the then-current published specs. Every claim below is
 > sourced to a primary document. Where KISS is behind an incumbent, that is stated plainly.
+>
+> **Update 2026-07-23.** The strategic conclusions stand, but three "KISS is behind" points in
+> §4–§5.2 have since been **resolved**, not merely logged: the matmul accumulator-width gap is
+> closed by the Contract `accumulation_type` field and the `sk3` key's accumulator/output
+> precision coordinates (D1/D4/D5); the dtype-table points are closed by the variant-explicit
+> FP8 spellings (`e4m3fn`/`e5m2`, with the `fnuz` pair reserved) and the additive registry path
+> for MX; and the §6.8 fixed ULP ceiling was retired for a per-target declared tier (D2). Read
+> those three against [`docs/kiss-convergence-reconciliation.md`](docs/kiss-convergence-reconciliation.md),
+> which is the current cross-implementation reconciliation of record.
 
 ---
 
@@ -127,9 +136,15 @@ Stated plainly, so KISS stops claiming it:
 suite.** The Khronos CTS has done clause-to-test conformance for vendor-neutral compute for
 two decades, with an adopters program and a trademark to back it. `OpenCL-CTS`'s
 `math_brute_force` tests numeric accuracy against exhaustive references across the entire fp32
-input space. KISS currently has **29 of 853 clauses backed by an executable test (3.4%)**, and
-the gate that claimed otherwise compared markdown to markdown (see `conformance/UNBACKED.tsv`
-and `DESIGN.md` §1.4). Leading with this claim invites the comparison KISS loses worst.
+input space. KISS currently has **142 of 886 clauses backed by an executable test (16.0%)**,
+with a further 40 enforced by document lints (**20.5% enforced**); the remaining 702 are
+recorded clause-by-clause as an honest ratchet in `conformance/UNBACKED.tsv`. **Do not quote
+these figures as fixed — run `python tools/kiss_trace.py --report` for the live count**, which
+is the source of truth and moves as coverage lands. (Earlier drafts of this file quoted 3.4%
+from a gate that compared markdown to markdown; that gate has since been replaced by a real
+spec↔harness binding gate, which is how the true gap was surfaced — see `DESIGN.md` §1.4.)
+Even at the live number this is far below the Khronos CTS's two decades of coverage: leading
+with this claim invites the comparison KISS loses worst.
 
 **Claim 3 (numerics) is largely occupied, and StableHLO is ahead of KISS in places.**
 - `ResultAccuracyAttr` ships today with `atol` / `rtol` / **`ulps`** across ~12 transcendental
