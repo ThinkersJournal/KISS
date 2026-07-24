@@ -445,35 +445,12 @@ fn test_announce_revision_hash_opaque_identity() {
     );
 }
 
-/// Enforces KISS-ANNOUNCE-6.3-0006 — a consumer MUST treat an availability
-/// record as a cache HIT only when BOTH `structure_key` and `revision_hash`
-/// match byte-for-byte, and any other case as a MISS.
-/// TEETH: same key + hash differing only in byte 31 == miss; same hash + key
-/// differing == miss; the identical pair == hit. A key-only dedup that replaces
-/// the record's full-pair equality with a comparator ignoring `revision_hash`
-/// would report the differing-hash record as a hit — this fails it.
-/// (Lower-confidence, as noted in the plan: absent a dedicated consumer
-/// comparator surface, it exercises the record's derived full-pair equality.)
-#[test]
-fn test_announce_hit_miss_by_full_identity() {
-    let base = AvailabilityRecord { structure_key: vec![1, 2, 3], revision_hash: [7u8; 32] };
-
-    // hit: byte-for-byte identical pair.
-    assert_eq!(base, base.clone(), "KISS-ANNOUNCE-6.3-0006: identical (key, hash) is a hit");
-
-    // miss: same key, hash differs only in the LAST byte.
-    let mut h = [7u8; 32];
-    h[31] = 8;
-    let same_key_diff_hash = AvailabilityRecord { structure_key: vec![1, 2, 3], revision_hash: h };
-    assert_ne!(
-        base, same_key_diff_hash,
-        "KISS-ANNOUNCE-6.3-0006: a differing revision_hash (even one byte) is a MISS, not a key-only hit"
-    );
-
-    // miss: same hash, key differs.
-    let diff_key = AvailabilityRecord { structure_key: vec![1, 2, 4], revision_hash: [7u8; 32] };
-    assert_ne!(base, diff_key, "KISS-ANNOUNCE-6.3-0006: a differing structure_key is a MISS");
-}
+// NOTE: KISS-ANNOUNCE-6.3-0006 (consumer cache hit/miss logic) is intentionally
+// left UNBACKED here — it governs a consumer's dedup comparator, and no such
+// consumer-comparator surface exists in conformance/src. A test binding it to
+// AvailabilityRecord's derived PartialEq would be inert (a codec drift does not
+// fail it), so per the honest-teeth rule it is skipped until a real consumer
+// surface exists rather than over-credited.
 
 // ---- §6.4 contract-query protocol -------------------------------------------
 

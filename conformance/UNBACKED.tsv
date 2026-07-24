@@ -36,6 +36,7 @@ KISS-ANNOUNCE-6.1-0014	test_announce_fixed_prefix_stable_across_versions	unteste
 KISS-ANNOUNCE-6.1-0015	test_announce_live_profiles_nonzero	untested	
 KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length	untested	
 KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability	untested	
+KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	
 KISS-ANNOUNCE-6.3-0007	test_announce_revision_hash_compared_bytewise	untested	
 KISS-ANNOUNCE-6.3-0009	test_announce_structure_key_length_bounds	lint:kiss_wire	MAX_STRUCTURE_KEY_LEN drifts between §6.3-0009 and announce.rs
 KISS-ANNOUNCE-6.3-0010	test_announce_record_count_bounds	lint:kiss_wire	MAX_AVAILABILITY_RECORDS drifts between §6.3-0010 and announce.rs
