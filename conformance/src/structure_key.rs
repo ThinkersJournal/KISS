@@ -103,6 +103,13 @@ pub fn derive_vec_width(
         return VecWidth::V1;
     }
     let ext = inner_extent.max(0) as u64;
+    // §6.5-0009(c): a zero-extent innermost axis derives `v1`. The divisibility
+    // test below is VACUOUSLY true at E=0 (every L divides 0), which would elect
+    // the largest L the byte cap and alignment allow — but a zero-length run has
+    // nothing to load. Consistent with §6.5-0012 bucketing E=0 as `da`.
+    if ext == 0 {
+        return VecWidth::V1;
+    }
     let dsz = u64::from(dsz);
     let align = u64::from(alignment);
     for (l, w) in [(8u64, VecWidth::V8), (4, VecWidth::V4), (2, VecWidth::V2)] {

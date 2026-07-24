@@ -765,8 +765,13 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   non-power-of-two `alignment`; e.g. `alignment = 48`, `f32` derives `v4`, not the
   floor's `v8`). An operand with `alignment = 0` (unspecified base-pointer
   alignment) cannot honor a packed load and MUST derive `v1`. A sub-byte dtype
-  (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. *Test:*
-  `test_classify_vec_width_derivation`.
+  (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. An
+  innermost active axis of extent `E = 0` MUST derive `v1`: the divisibility test
+  is **vacuously** satisfied at `E = 0` (every `L` divides `0`), which would
+  otherwise elect the largest `L` the byte cap and alignment allow — but a
+  zero-length run has nothing to load, and the empty case MUST NOT be read as
+  maximally vectorizable. This is the reading consistent with §6.5-0012, which
+  buckets `E = 0` as `da`. *Test:* `test_classify_vec_width_derivation`.
 - **KISS-CLASSIFY-6.5-0010** — The work-class **total element count** MUST be the
   product, over the active axes of the iteration frame (§6.6-0006, §6.6-0013), of
   each axis's iteration-frame extent (the maximum extent across operands at that
