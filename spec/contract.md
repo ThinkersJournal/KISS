@@ -1150,7 +1150,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   §6.7-0012), while the numeric FORMULA lives here in the Contract Guarantees and is
   evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
   constant declared here. An implementation MUST NOT key `N`, and MUST NOT declare this
-  tolerance as a fixed constant or as a bound against cross-accumulator wide truth. *Test:*
+  tolerance as a fixed constant or as a bound against cross-accumulator wide truth. A
+  comparator applying this tolerance MUST use it as an **absolute** band — it scales with
+  `|max partial sum|`, NOT with `|result|` — and MUST NOT convert it to a metric taken in
+  ULP-of-`S` relative to the result: under catastrophic cancellation `|result| → 0` while
+  the reassociation error stays bounded by the `|max partial sum|` term, so a
+  result-relative metric would spuriously explode and reject a conformant kernel. *Test:*
   `test_contract_accumulator_tolerance_band`.
 - **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state whether the kernel is
   bit-stable on the same hardware and is the **single authoritative home** of that fact; it
