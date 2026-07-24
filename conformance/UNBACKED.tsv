@@ -30,25 +30,13 @@
 KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte	untested	
 KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56	lint:kiss_wire	the 56-byte envelope size drifts between §6.1-0001 and ENVELOPE_LEN
 KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1	untested	
-KISS-ANNOUNCE-6.1-0006	test_announce_reserved0_is_zero	untested	
 KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap	lint:kiss_wire	the profiles cap 16 drifts between §6.1-0007 and MAX_PROFILES
-KISS-ANNOUNCE-6.1-0008	test_announce_trailing_profiles_zero	untested	
 KISS-ANNOUNCE-6.1-0009	test_announce_profiles_strictly_ascending	untested	
-KISS-ANNOUNCE-6.1-0010	test_announce_reserved1_pad_zero	untested	
-KISS-ANNOUNCE-6.1-0011	test_announce_capabilities_field	untested	
-KISS-ANNOUNCE-6.1-0013	test_announce_field_sizes_match_table	untested	
 KISS-ANNOUNCE-6.1-0014	test_announce_fixed_prefix_stable_across_versions	untested	
 KISS-ANNOUNCE-6.1-0015	test_announce_live_profiles_nonzero	untested	
-KISS-ANNOUNCE-6.2-0007	test_announce_rejection_is_typed_decline	untested	
-KISS-ANNOUNCE-6.2-0008	test_announce_reader_never_repairs	untested	
 KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length	untested	
-KISS-ANNOUNCE-6.3-0001	test_announce_availability_is_identity_pair	untested	
 KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability	untested	
-KISS-ANNOUNCE-6.3-0003	test_announce_revision_hash_is_32_bytes	untested	
-KISS-ANNOUNCE-6.3-0004	test_announce_structure_key_is_opaque	untested	
-KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	
 KISS-ANNOUNCE-6.3-0007	test_announce_revision_hash_compared_bytewise	untested	
-KISS-ANNOUNCE-6.3-0008	test_announce_revision_hash_opaque_identity	untested	
 KISS-ANNOUNCE-6.3-0009	test_announce_structure_key_length_bounds	lint:kiss_wire	MAX_STRUCTURE_KEY_LEN drifts between §6.3-0009 and announce.rs
 KISS-ANNOUNCE-6.3-0010	test_announce_record_count_bounds	lint:kiss_wire	MAX_AVAILABILITY_RECORDS drifts between §6.3-0010 and announce.rs
 KISS-ANNOUNCE-6.4-0002	test_announce_query_response_is_contract_or_decline	untested	
@@ -57,7 +45,6 @@ KISS-ANNOUNCE-6.4-0005	test_announce_query_bit_implies_endpoint	untested
 KISS-ANNOUNCE-6.4-0008	test_announce_no_query_bit_declines	untested	
 KISS-ANNOUNCE-6.4-0009	test_announce_decline_code_enum	lint:kiss_wire	a decline_code value drifts between the §6.4-0009 owner and the reference codec
 KISS-ANNOUNCE-6.4-0010	test_announce_unknown_decline_code_is_generic	untested	
-KISS-ANNOUNCE-6.4-0011	test_announce_response_echoes_identity	untested	
 KISS-ANNOUNCE-6.4-0012	test_announce_query_default_revision_is_highest	untested	
 KISS-ANNOUNCE-6.5-0001	test_announce_zero_dependency_no_driver_load	untested	
 KISS-ANNOUNCE-6.5-0002	test_announce_impl_std_only	untested	
