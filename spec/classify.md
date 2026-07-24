@@ -596,8 +596,9 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   `test_classify_extent_is_capacity`.
 - **KISS-CLASSIFY-6.3-0005** — `alignment` MUST be the base-pointer alignment in
   **bytes** as an unsigned 32-bit value; the value `0` and non-power-of-two values
-  are permitted, and §6.5-0009 pins how they gate vector width (floor to the largest
-  power of two not exceeding the value, with `0` treated as `1`). *Test:*
+  are permitted, and §6.5-0009 pins how they gate vector width via an
+  **exact-modulo** alignment gate (a divisor test, not a power-of-two floor), with
+  `alignment = 0` (unspecified base-pointer alignment) forcing `v1`. *Test:*
   `test_classify_alignment_is_bytes`.
 - **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-two tokens
   of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
@@ -765,8 +766,13 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   non-power-of-two `alignment`; e.g. `alignment = 48`, `f32` derives `v4`, not the
   floor's `v8`). An operand with `alignment = 0` (unspecified base-pointer
   alignment) cannot honor a packed load and MUST derive `v1`. A sub-byte dtype
-  (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. *Test:*
-  `test_classify_vec_width_derivation`.
+  (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. An
+  innermost active axis of extent `E = 0` MUST derive `v1`: the divisibility test
+  is **vacuously** satisfied at `E = 0` (every `L` divides `0`), which would
+  otherwise elect the largest `L` the byte cap and alignment allow — but a
+  zero-length run has nothing to load, and the empty case MUST NOT be read as
+  maximally vectorizable. This is the reading consistent with §6.5-0012, which
+  buckets `E = 0` as `da`. *Test:* `test_classify_vec_width_derivation`.
 - **KISS-CLASSIFY-6.5-0010** — The work-class **total element count** MUST be the
   product, over the active axes of the iteration frame (§6.6-0006, §6.6-0013), of
   each axis's iteration-frame extent (the maximum extent across operands at that

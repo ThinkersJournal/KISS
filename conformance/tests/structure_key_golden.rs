@@ -265,6 +265,45 @@ fn sk3_contraction_precision_group_declines() {
     );
 }
 
+// ---- §6.5-0009 vector-width derivation ---------------------------------------
+
+/// KISS-CLASSIFY-6.5-0009: the vector-access width derivation — the byte cap, the
+/// exact-modulo alignment gate, extent divisibility, the `alignment = 0` and
+/// sub-byte-dtype `v1` cases, and the **zero-extent** rule (KISS #82 finding 4,
+/// ruled 2026-07-23): at `E = 0` the divisibility test is *vacuously* satisfied,
+/// so a naive derivation elects the largest admissible `L`; the ruled reading is
+/// `v1`, consistent with §6.5-0012 bucketing `E = 0` as `da`.
+#[test]
+fn test_classify_vec_width_derivation() {
+    let f32 = Some(4u32); // 4 storage bytes
+    let f64 = Some(8u32);
+
+    // (c) positive control: 4*4 = 16 <= cap, 256 % 16 == 0, 256 % 4 == 0 -> v4.
+    assert_eq!(derive_vec_width(1, 256, f32, 256, false), VecWidth::V4);
+    // byte cap: f64 v8 would be 64 bytes > 16; v2 = 16 bytes fits -> v2.
+    assert_eq!(derive_vec_width(1, 256, f64, 256, false), VecWidth::V2);
+    // extent divisibility: 6 is divisible by 2 but not 4 -> v2.
+    assert_eq!(derive_vec_width(1, 6, f32, 256, false), VecWidth::V2);
+    // odd extent divides by nothing -> v1.
+    assert_eq!(derive_vec_width(1, 7, f32, 256, false), VecWidth::V1);
+    // alignment = 0 (unspecified) cannot honor a packed load -> v1.
+    assert_eq!(derive_vec_width(1, 256, f32, 0, false), VecWidth::V1);
+    // sub-byte dtype (storage under one byte, encoded None) -> v1.
+    assert_eq!(derive_vec_width(1, 256, None, 256, false), VecWidth::V1);
+
+    // ---- the #82 finding-4 ruling: zero-extent innermost axis -> v1 ----------
+    // E = 0 satisfies "L divides E" for EVERY L, and 256 % 16 == 0, so the naive
+    // reading would return v4 here (the vacuous-truth trap Fuel surfaced). The
+    // ruled reading is v1: a zero-length run has nothing to load.
+    assert_eq!(derive_vec_width(1, 0, f32, 256, false), VecWidth::V1, "E=0 must not vectorize");
+    // ...and it holds however permissive the dtype and alignment are.
+    assert_eq!(derive_vec_width(1, 0, f64, 256, false), VecWidth::V1);
+    assert_eq!(derive_vec_width(1, 0, f32, 4096, false), VecWidth::V1);
+    // cross-check the §6.5-0012 companion: E=0 buckets `da`, so both derivations
+    // now agree that the empty case is the degenerate one, not the maximal one.
+    assert_eq!(derive_div_bucket(0), DivBucket::Da);
+}
+
 // ---- §6.5-0013 vector-width derivation: forward-unit-stride precondition ------
 
 /// KISS-CLASSIFY-6.5-0013 (`test_classify_vec_width_unit_stride`): a `vL` with
