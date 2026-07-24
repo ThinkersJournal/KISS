@@ -809,6 +809,29 @@ enum (§6.0). See umbrella §3 for the full statement.
   reductions and prefix scans) are **illustrative** of ops that CARRY the exact-byte declared
   class, and the declared class (§6.8-0006) is authoritative when an op appears to match two
   comparator-clause enumerations. *Test:* `test_conform_exact_byte_admissibility`.
+- **KISS-CONFORM-6.8-0010** — **Computed-NaN result comparison.** When an op's reference
+  (oracle/golden) result value is **NaN and that NaN is *computed* by the op** — an arithmetic
+  or transcendental result whose NaN the computation itself generates (`0.0/0.0`, `0.0·inf`,
+  `sqrt` of a negative, `log` of a negative, `sin`/`tan` of a non-finite argument) —
+  the comparator MUST treat an observed result as matching **iff it is also NaN**. The NaN
+  **payload and sign bits MUST NOT be compared**, and a differing payload or sign MUST NOT fail
+  a conformant implementation: NaN payload/sign propagation is architectural, not semantic, and
+  KISS-Ops pins **no** canonical qNaN for a computed result. A result that is NaN where a finite
+  or infinite value is expected — or finite/infinite where NaN is expected — MUST be a
+  **mismatch**; the disagreement about NaN-**ness** is the conformance-relevant fact. This
+  refinement applies under the **value comparators** — the oracle-differential agreement relation
+  (§6.5-0001) and the ULP/tolerance comparator (§6.8-0002), and the magnitude arm of the split
+  comparator (§6.8-0005). It MUST NOT relax, and does not apply to: **(a)** a **byte-preserving**
+  result — a raw-bit permutation (`gather` / `scatter` / `flip`), a `select`, or a bitcast —
+  whose NaN output is a **moved** input value rather than a computed one: the moved bytes,
+  payload included, are the contract and MUST compare **exact-byte** (§6.8-0001); **(b)** a NaN
+  **constant** serialized as a POD / wire / ABI field (e.g. the §6.11 real-number encoding),
+  which is exact-byte; **(c)** **signed zero**, whose sign is pinned exact-byte (KISS-Ops §6.13
+  signed-zero ties) and by the split comparator's zero-sign arm (§6.8-0005) — only NaN, never
+  `±0.0`, is exempted from bit comparison. NaN **propagation semantics** — which NaN a
+  propagating op yields (`max_prop` vs `fmax_ieee`) — remain pinned by the KISS-Ops §6.13
+  decompositions and are unaffected by this comparison rule. *Test:*
+  `test_conform_nan_result_compares_by_nanness`.
 
 ### 6.9 The structural op-DAG equality comparator (tier-1 round-trip)
 
@@ -1257,6 +1280,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0007 | `test_conform_whole_kernel_downgrade` |
 | KISS-CONFORM-6.8-0008 | `test_conform_comparator_precedence` |
 | KISS-CONFORM-6.8-0009 | `test_conform_exact_byte_admissibility` |
+| KISS-CONFORM-6.8-0010 | `test_conform_nan_result_compares_by_nanness` |
 | KISS-CONFORM-6.9-0001 | `test_conform_structural_dag_equality` |
 | KISS-CONFORM-6.9-0002 | `test_conform_structural_not_source_bytes` |
 | KISS-CONFORM-6.9-0003 | `test_conform_roundtrip_tier1` |

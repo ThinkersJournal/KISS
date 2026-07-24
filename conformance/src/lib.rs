@@ -107,6 +107,20 @@ pub fn compare_f32(class: DeterminismClass, actual: f32, expected: f32, ulp_boun
             }
         }
         DeterminismClass::UlpTolerance => {
+            // Computed-NaN result comparison (Conform §6.8-0010): under the value
+            // comparator a computed NaN compares by NaN-**ness** — two NaNs match
+            // whatever their payload/sign, and a one-sided NaN (NaN where a finite
+            // or infinite value is expected, or vice versa) is a mismatch. The
+            // exact-byte arm above is the moved/POD domain and still bit-compares.
+            if actual.is_nan() || expected.is_nan() {
+                return if actual.is_nan() && expected.is_nan() {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "computed-NaN mismatch: exactly one side is NaN (actual {actual}, expected {expected})"
+                    ))
+                };
+            }
             let d = ulp_distance_f32(actual, expected);
             if d <= ulp_bound {
                 Ok(())
@@ -153,6 +167,16 @@ pub fn compare_c32_transcendental(
             if a.is_sign_negative() != e.is_sign_negative() || a.abs() != e.abs() {
                 return Err(format!(
                     "{lane}: ±π branch-endpoint mismatch (actual {a}, expected {e})"
+                ));
+            }
+        } else if a.is_nan() || e.is_nan() {
+            // (c') Computed-NaN component (Conform §6.8-0010): the magnitude arm
+            // compares by NaN-**ness** — both NaN match (payload/sign not compared),
+            // a one-sided NaN is a mismatch. The zero-sign and ±π arms above stay
+            // bit/sign-exact, so this only relaxes the ordinary ULP-tolerance lane.
+            if !(a.is_nan() && e.is_nan()) {
+                return Err(format!(
+                    "{lane}: computed-NaN mismatch, exactly one side is NaN (actual {a}, expected {e})"
                 ));
             }
         } else {
