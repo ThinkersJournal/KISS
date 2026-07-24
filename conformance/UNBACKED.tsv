@@ -117,6 +117,7 @@ KISS-CLASSIFY-6.7-0007	test_classify_token_codec_additive	untested
 KISS-CLASSIFY-6.7-0008	test_classify_token_roundtrip	untested	
 KISS-CLASSIFY-6.7-0010	test_classify_mask_hex_lowercase	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
+KISS-CLASSIFY-6.7-0012	test_classify_reduction_accumulator_coordinate	untested	
 KISS-CLASSIFY-6.8-0002	test_classify_target_byte_exact_match	untested	
 KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered	untested	
 KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace	untested	
@@ -197,6 +198,7 @@ KISS-CONFORM-6.5-0002	test_conform_oracle_independent	untested
 KISS-CONFORM-6.5-0003	test_conform_reject_circular_vector	untested	
 KISS-CONFORM-6.5-0004	test_conform_oracle_resolves_to_floor	untested	
 KISS-CONFORM-6.5-0005	test_conform_oracle_authoring_independence	untested	
+KISS-CONFORM-6.5-0010	test_conform_reduction_cell_oracle_reference	untested	
 KISS-CONFORM-6.6-0001	test_conform_fuzzer_generates_valid_dags	untested	
 KISS-CONFORM-6.6-0002	test_conform_fuzzer_every_backend	untested	
 KISS-CONFORM-6.6-0003	test_conform_fuzzer_cross_backend_agreement	untested	
@@ -334,6 +336,7 @@ KISS-CONTRACT-6.8-0008	test_contract_audited_status_derived	untested
 KISS-CONTRACT-6.8-0009	test_contract_audited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0010	test_contract_unaudited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0011	test_contract_accumulation_type_matches_key_acc	untested	
+KISS-CONTRACT-6.8-0012	test_contract_accumulator_tolerance_band	untested	
 KISS-CONTRACT-6.9-0002	test_contract_provenance_source	untested	
 KISS-CONTRACT-6.9-0003	test_contract_provenance_revision_matches_identity	untested	
 KISS-CONTRACT-6.9-0006	test_contract_cost_provenance_consistent	untested	
@@ -490,6 +493,8 @@ KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
 KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	
 KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested	
+KISS-OPS-6.17-0008	test_ops_accumulator_tolerance_cell_class	untested	
+KISS-OPS-6.17-0009	test_ops_accumulator_reference_value	untested	
 KISS-OPS-6.18-0001	test_ops_complex_op_set	lint:kiss_ops	the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables
 KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	untested	
 KISS-OPS-6.18-0003	test_ops_complex_component_bridge	untested	

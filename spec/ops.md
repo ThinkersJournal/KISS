@@ -1500,10 +1500,42 @@ surfaces it in a kernel's guarantees section.
   reference; otherwise the cell is `order-invariant/nondeterministic` (§6.0-0001) and MUST
   be compared under a declared tolerance, never a bit golden. A `reduced-mantissa-permitted`
   value shifts a tolerance cell's tolerance *magnitude* but MUST NOT flip a tolerance cell
-  to bit-golden. A tolerance cell's declared tolerance MUST bound the combined
-  input-rounding-plus-reduction-order error against the wide-precision truth — the
-  KISS-Conform §6.5-0007 oracle evaluation. *Test:*
+  to bit-golden. The reference value of a (compute-dtype S, accumulator-dtype A)
+  reduction/scan/contraction cell is the §6.17-0005-ordered (ascending-index) evaluation
+  with each input rounded to S, each accumulate atom rounded to A, and the result rounded
+  to S. The cell's declared tolerance MUST bound a candidate's reduction-order
+  (reassociation) error against that per-cell reference. The cell whose A is the widest
+  permitted accumulator dtype is the wide-precision reduction reference (wide-precision
+  truth by construction — accumulating in the widest float is the tightest reduction);
+  every narrower-A cell's reference is a defined, representable point whose distance from
+  that widest reference is the cell's characteristic (the semantics of using that
+  accumulator), not an error to be toleranced away. *Test:*
   `test_ops_math_precision_reproducibility_class`.
+- **KISS-OPS-6.17-0008** — A float `sum`/`prod` reduction, scan (`prefix_scan`), or
+  contraction (`matmul` and every op carrying a float fold, §6.0-0004) is a
+  **tolerance-cell** whose determinism class and declared tolerance are a function of the
+  pair **(compute-dtype, accumulator-dtype)**. The accumulator dtype MUST be a **float**
+  dtype **at least as wide** as the compute dtype (a narrower accumulator cannot improve on
+  storage precision and is forbidden by the reference). The §6.17-0005 storage-precision
+  reference profile is exactly the **diagonal** cell accumulator-dtype == compute-dtype;
+  every off-diagonal (wider-accumulator) cell is a **distinct** tolerance-cell compared
+  against its own per-cell reference (§6.17-0009), never against the diagonal cell and never
+  across accumulator widths — the accumulator width is a determinism-class axis orthogonal
+  to the MathPrecision `<mp>` attribute (§6.17-0001). *Test:*
+  `test_ops_accumulator_tolerance_cell_class`.
+- **KISS-OPS-6.17-0009** — The **reference value** of a (compute-dtype S, accumulator-dtype
+  A) reduction/scan/contraction tolerance-cell (§6.17-0008) MUST be the §6.17-0005-ordered
+  (ascending-index) evaluation with **each input rounded to S**, **each accumulate atom
+  rounded to A**, and the **result rounded to S**. A cell's declared tolerance MUST bound a
+  candidate's reduction-order (reassociation) error against **that per-cell reference**, not
+  against a wide-precision truth taken across accumulator widths. The cell whose A is the
+  **widest permitted accumulator dtype** is the wide-precision reduction reference
+  (wide-precision truth by construction — accumulating in the widest float is the tightest
+  reduction); every narrower-A cell's reference is a defined, representable point whose
+  distance from the widest-A reference is the cell's **characteristic** (the semantics of
+  using that accumulator), not an error to be toleranced away. Wide-truth conformance is
+  thus preserved transitively, not discarded. *Test:*
+  `test_ops_accumulator_reference_value`.
 
 ### 6.18 Complex-arithmetic op family (c32 / c64)
 
@@ -2506,6 +2538,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.17-0005 | `test_ops_math_precision_order_invariant_scope` |
 | KISS-OPS-6.17-0006 | `test_ops_math_precision_input_rounding` |
 | KISS-OPS-6.17-0007 | `test_ops_math_precision_reproducibility_class` |
+| KISS-OPS-6.17-0008 | `test_ops_accumulator_tolerance_cell_class` |
+| KISS-OPS-6.17-0009 | `test_ops_accumulator_reference_value` |
 | KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
 | KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
 | KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |
