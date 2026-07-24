@@ -644,7 +644,6 @@ KISS-SYNTH-6.2-0005b	test_synth_consumer_binds_from_contract	untested
 KISS-SYNTH-6.2-0006	test_synth_response_identity_consistent	untested	
 KISS-SYNTH-6.2-0006a	test_synth_identity_mismatch_rejected	untested	
 KISS-SYNTH-6.2-0007	test_synth_capability_only_in_contract	untested	
-KISS-SYNTH-6.2-0007a	test_synth_availability_no_capability	untested	
 KISS-SYNTH-6.2-0008	test_synth_returned_contract_content_valid	untested	
 KISS-SYNTH-6.2-0008a	test_synth_content_validity_checked	untested	
 KISS-SYNTH-6.3-0001	test_synth_hit_and_miss_same_protocol	untested	
@@ -683,21 +682,13 @@ KISS-SYNTH-6.5-0004	test_synth_class_selects_comparator	untested
 KISS-SYNTH-6.5-0004a	test_synth_order_invariant_tolerance_declared	untested	
 KISS-SYNTH-6.5-0004b	test_synth_provider_no_byte_identity_claim	untested	
 KISS-SYNTH-6.5-0004c	test_synth_consumer_no_byte_identity_expect	untested	
-KISS-SYNTH-6.6-0001	test_synth_failure_is_typed_decline	untested	
-KISS-SYNTH-6.6-0001a	test_synth_never_panics	untested	
-KISS-SYNTH-6.6-0001b	test_synth_no_oob_read	untested	
 KISS-SYNTH-6.6-0001c	test_synth_bounded_latency	untested	
-KISS-SYNTH-6.6-0002	test_synth_decline_code_enum	lint:kiss_wire	a Synth-reused decline_code drifts from the §6.4-0009 owner
-KISS-SYNTH-6.6-0002a	test_synth_decline_core_meaning_fixed	untested	
 KISS-SYNTH-6.6-0003	test_synth_map_unknown_structure_key	untested	
 KISS-SYNTH-6.6-0003a	test_synth_map_cannot_provision	untested	
-KISS-SYNTH-6.6-0003b	test_synth_map_malformed_request	untested	
 KISS-SYNTH-6.6-0003c	test_synth_map_query_not_supported	untested	
 KISS-SYNTH-6.6-0003d	test_synth_map_version_unsupported	untested	
 KISS-SYNTH-6.6-0003e	test_synth_map_unknown_revision	untested	
-KISS-SYNTH-6.6-0003f	test_synth_decline_taxonomy_complete	untested	
 KISS-SYNTH-6.6-0003g	test_synth_no_mismatched_code	untested	
-KISS-SYNTH-6.6-0005	test_synth_decline_ranges	untested	
 KISS-SYNTH-6.6-0005a	test_synth_decline_no_core_reuse	untested	
 KISS-SYNTH-6.6-0006	test_synth_unknown_decline_generic	untested	
 KISS-SYNTH-6.6-0006a	test_synth_unknown_decline_never_panics	untested	
@@ -712,7 +703,6 @@ KISS-SYNTH-6.7-0002	test_synth_empty_profile_is_announce_owned	untested
 KISS-SYNTH-6.7-0002a	test_synth_empty_profile_never_panics	untested	
 KISS-SYNTH-6.7-0002b	test_synth_empty_profile_no_select	untested	
 KISS-SYNTH-6.7-0003	test_synth_availability_identity_only	untested	
-KISS-SYNTH-6.7-0003a	test_synth_availability_no_capability_fields	untested	
 KISS-SYNTH-6.7-0004	test_synth_hit_miss_by_identity	untested	
 KISS-SYNTH-6.7-0004a	test_synth_hit_not_key_alone	untested	
 KISS-SYNTH-6.7-0005	test_synth_level3_provision	untested	
