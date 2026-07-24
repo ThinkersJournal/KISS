@@ -596,8 +596,9 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   `test_classify_extent_is_capacity`.
 - **KISS-CLASSIFY-6.3-0005** — `alignment` MUST be the base-pointer alignment in
   **bytes** as an unsigned 32-bit value; the value `0` and non-power-of-two values
-  are permitted, and §6.5-0009 pins how they gate vector width (floor to the largest
-  power of two not exceeding the value, with `0` treated as `1`). *Test:*
+  are permitted, and §6.5-0009 pins how they gate vector width via an
+  **exact-modulo** alignment gate (a divisor test, not a power-of-two floor), with
+  `alignment = 0` (unspecified base-pointer alignment) forcing `v1`. *Test:*
   `test_classify_alignment_is_bytes`.
 - **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-two tokens
   of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
