@@ -1011,6 +1011,64 @@ section-intro paragraph is an informative pointer to it):
   sorted operand of rank `r`; it MUST be carried as the `u8` OpAttrs `axis` field of
   §6.19-0029. An implementation MUST reject an `axis` outside the range with a typed
   decline. *Test:* `test_ops_sort_network_axis_attribute`.
+- **KISS-OPS-6.11-0015** — Under the `skip` out-of-bounds policy (§6.11-0004,
+  §6.19-0015) `gather` MAY carry an **optional `base` operand** — a child-edge read at
+  the output position of any index that is skipped. The output element at a skipped
+  (out-of-bounds) position MUST take the value of the `base` operand at the
+  corresponding output position (a read-modify-passthrough), while every in-bounds
+  position MUST take the gathered value unchanged; `clamp` and `zero-fill` do not consult
+  a base. The `base` requirement is **dynamic, not structural**: a `skip` `gather` with
+  **no** `base` operand supplied MUST be legal and MUST evaluate to a defined result so
+  long as no index is actually out of bounds at evaluation — the base is consulted only
+  for an index that actually skips. An **actually out-of-bounds** `skip` read for which no
+  `base` operand was supplied MUST be a **typed decline** (KISS-Conform §6.7), never a
+  panic and never undefined behaviour. Because the base is required only on an actual
+  out-of-bounds read, the §6.13 `index_select` reference decomposition (`gather(oob=skip)`
+  with a 1-D index and no base) remains **valid and unchanged**: `index_select` carries no
+  base and declines only if an index is genuinely out of bounds. *Test:*
+  `test_ops_gather_skip_base_dynamic`.
+- **KISS-OPS-6.11-0016** — `scatter` MUST carry an explicit **`dest` operand** — the
+  owned destination the combined writes are applied onto. The op's output MUST equal
+  `dest` with the §6.11-0005 / §6.11-0006 combined writes applied at their scattered
+  positions; an out-of-bounds-skipped write (§6.11-0005) and any output position that is
+  never written MUST **retain the `dest` value** at that position. For an accumulating
+  combine (`atomic-add`, and the `scatter_add` wrapper of §6.13-0009) the accumulation
+  base at each written position MUST be the `dest` value there (the result is
+  `dest[j] + Σ updates`), so the accumulated result is fully defined. `scatter`'s
+  **output shape MUST equal `dest`'s shape** (`SameAs(dest)`), the rule carried by the
+  §6.20-0008 shape-rule enumeration. *Test:* `test_ops_scatter_dest_operand`.
+- **KISS-OPS-6.11-0017** — A `scatter` **`updates` (source) operand MUST broadcast to
+  the write shape under the full §6.11-0001 broadcast rules** (broadcast reads expressed
+  by a stride of `0` along an axis), exactly as an elementwise read broadcasts to its
+  output; the mapping from an `updates` element to each written destination position
+  follows that broadcast. A **rank-0 (scalar) `updates` operand is the degenerate case**
+  of that general broadcast (stride `0` on every axis), **not** a special-cased
+  rank-0-only rule: `scatter` MUST NOT restrict `updates` to rank-0, and MUST admit any
+  `updates` shape that broadcasts to the write shape under §6.11-0001. *Test:*
+  `test_ops_scatter_updates_broadcast`.
+- **KISS-OPS-6.11-0018** — The empty-axis (zero-extent) behaviour of the four
+  non-`reduce` structural atoms MUST be the shape-implied result of each atom's rule,
+  stated here so no implementation must infer it (the companion to the §6.11-0002
+  empty-`reduce` = monoid-identity pin): (a) `prefix_scan` over an **empty axis** MUST
+  produce **zero output positions** along that axis (length-preserving, §6.11-0003);
+  (b) `gather` with an **empty index operand** MUST produce an **empty gathered axis**
+  (§6.20-0008 with the index shape empty); (c) `scatter` with an **empty index** MUST
+  perform **no writes** and MUST return the `dest` operand unchanged (§6.11-0016);
+  (d) `sort_network` over an **empty row** MUST produce an **empty permutation** and an
+  empty original-index vector (§6.11-0007). Each is a clarification of the existing
+  shape/length rule, not a new behaviour. *Test:* `test_ops_structural_empty_axis`.
+- **KISS-OPS-6.11-0019** — The **index-lane output** of `sort_network` (the
+  original-index vector of §6.11-0007) MUST be dtype **`i64`**, pinned **producer-side
+  with no wire field**: the output dtype is producer-defined, `i64` is the only member of
+  the §6.11-0009 set covering every legal extent, and §6.11-0009 already obliges every
+  index-consumer to accept `i64`, so a `sort_network` index output feeds a downstream
+  `gather` / `index_select` index operand with no conversion. This pin MUST NOT be encoded
+  in OpAttrs or any recipe field — it removes a conformance dimension rather than adding a
+  byte. The §6.11-0009 legal index-**operand** set `{u32, i32, i64}` is **unchanged and
+  remains scoped to the index-operand role** (§6.11-0012); this clause pins only the sort
+  index-lane **output**, and thereby closes the §6.19 wire freeze-blocker for the sort
+  index-output dtype without a wire field. A device that prefers `u32` internally MUST
+  convert at the boundary it already owns. *Test:* `test_ops_sort_index_output_i64`.
 
 ### 6.12 Scalar-source leaves
 
@@ -2017,6 +2075,65 @@ promoted to this normative OpAttrs encoding for that channel only.
   `reduce_axes=0x0000` on any carrier OpAttrs blob as malformed. *Test:*
   `test_ops_opattrs_reduce_axes_zero_unreachable`.
 
+#### 6.19.6 Index-lane wire references (recipe/FlatDag seam)
+
+The recipe/FlatDag container wire that carries these references — its node list, its
+value-lane `outputs` root list, and its framing — is **not yet pinned in the KISS spec
+tree**; it is owned by the recipe-grammar consolidation (issue #67) and its byte grammar
+(PR #78). The terms these clauses reference — the external index-input array, node ids,
+and the `outputs` root list — are defined by that container wire (#67 / PR #78); this
+subsection pins only their **index-lane encoding**. The two clauses below pin the encodings
+the reference implementation and Baracuda have already locked (issue #76): how an
+index-consuming node names its index operand, and how the recipe exports an index-lane
+product. They ride the recipe wire's next `SCHEMA_VERSION` bump.
+
+The field grammar is given in the kiss-ref draft form (a `u8` tag plus a `varint`); it is
+**decoded-semantics normative** and will be reconciled onto the PR #78 byte-grammar owner's
+conventions without changing these decoded semantics. To make that hand-off unambiguous,
+the line between what any encoding MUST preserve and what PR #78 MAY re-spell is: the
+**normative** decoded semantics — surviving any re-spelling — are (a) exactly two
+index-source kinds, external-slot and node-product, distinguished by a leading discriminant;
+(b) reserved-is-error on every undefined discriminant value; (c) the decode-time validations
+(a `node` target that is out of range or has no index-lane product, and likewise an
+`index_outputs` entry, is a typed decline); (d) the canonical form with no dual-form
+aliasing; and (e) `index_outputs` ordered after `outputs`, symmetric, count-prefixed, with
+unconditional presence at a version boundary. The **#78-reconcilable spelling** — changeable
+without a further ruling — is the `varint` width of each integer payload (`ref_value`,
+`count`, `node_id`) and whether the discriminant values are literally `0x00` / `0x01`; the
+`u8` tag is already width- and endianness-neutral, so a fixed-width-LE realization is
+conformant **iff** it preserves (a)–(e). The third §6.19 wire-pin — the `sort_network`
+index-lane **output dtype** — is resolved **producer-side with no wire field** at
+§6.11-0019, so it carries no clause here.
+
+- **KISS-OPS-6.19-0039** — Every **index-operand** field of an index-consuming node
+  (`gather.index`, `scatter.index`, and the §6.13-0009 gather/scatter wrappers) MUST be
+  encoded as an **`index_ref`**: `index_ref := ref_tag:u8, ref_value:varint`.
+  `ref_tag = 0x00` (**slot**) MUST mean `ref_value` is an index into the recipe's external
+  index-input array (the only form v1 emitters produce). `ref_tag = 0x01` (**node**) MUST
+  mean `ref_value` is the id of a node whose **index-lane product** (this op-set version:
+  the `sort_network` original-index output of §6.11-0007) the operand consumes — a true
+  dataflow edge that a scheduler MUST treat as a dependency, with the §6.14 acyclicity /
+  cycle rules unchanged. Every `ref_tag >= 0x02` MUST be **reserved**, and a decoder MUST
+  **reject it with a typed decline** (KISS-Conform §6.7), never skip it (reserved-is-error,
+  matching the §6.19-0006 reserve-`0` and §6.19-0024 permutation precedents). Decode-time
+  validation (MUST): a `node` reference whose target id is `>= node_count`, or whose target
+  has **no** index-lane product, MUST be a typed decline. Canonical form (MUST): an
+  external operand MUST be emitted as `slot`; the same operand MUST NOT be aliased through
+  both the `slot` and `node` forms. *Test:* `test_ops_index_ref_wire_form`.
+- **KISS-OPS-6.19-0040** — The recipe/FlatDag MUST carry an **`index_outputs`** root list
+  — the node ids whose §6.11-0007 index-lane product is exported — immediately **after**
+  the value-lane `outputs` root list and **symmetric** with it: `index_outputs :=
+  count:varint, node_id:varint × count`, in output order. Its presence MUST be
+  **unconditional**, riding the next `SCHEMA_VERSION` bump of the recipe wire (`count = 0`
+  for a value-lane-only recipe — one byte — bit-compatible with a lattice that exports no
+  index output). Each listed `node_id` MUST have an index-lane product, or the decoder MUST
+  raise a **typed decline** (KISS-Conform §6.7), as in §6.19-0039.
+  routed to #67 and not resolved here: whether the recipe-wire version axis this field
+  rides is the **same** axis as the KISS-Classify `structure_key` `SCHEMA_VERSION` is
+  deferred to the recipe-grammar consolidation (#67) sequencing; this clause pins the field
+  and its unconditional presence, not which version counter advances.)* *Test:*
+  `test_ops_index_outputs_root_list`.
+
 ### 6.20 Op shape rules — the shape-side oracle
 
 Every op's output shape is a function of its operands' shapes together with its
@@ -2104,7 +2221,11 @@ the shared surface is two constructors.
   the gathered `axis` replaced by the index operand's shape (`data[..axis] ++ index
   ++ data[axis+1..]`); a **contraction** (`matmul`) output shape MUST be its
   role-vector-derived shape (KISS-Classify §6.6-0016 M/N/K axis roles — leading batch
-  dims, then `[M, N]` — carried as axis roles, not a `ShapeExpr`). An implementation
+  dims, then `[M, N]` — carried as axis roles, not a `ShapeExpr`). A **`scatter`** output
+  shape MUST equal its **`dest` operand's** whole shape (`SameAs(dest)`, §6.11-0016) — the
+  one index-family op whose output does coincide with an operand, enumerated here so the
+  index/scatter family is complete and no `scatter` is left without a pinned output shape.
+  An implementation
   MUST NOT advertise `SameAs(operand)` for an op whose output rank/extents differ from
   that operand (e.g. a gather declaring `same_as(data)`). *Test:*
   `test_shape_expr_out_differs_from_operands`.
@@ -2294,6 +2415,11 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0012 | `test_ops_index_operand_role` |
 | KISS-OPS-6.11-0013 | `test_ops_index_axis_attribute` |
 | KISS-OPS-6.11-0014 | `test_ops_sort_network_axis_attribute` |
+| KISS-OPS-6.11-0015 | `test_ops_gather_skip_base_dynamic` |
+| KISS-OPS-6.11-0016 | `test_ops_scatter_dest_operand` |
+| KISS-OPS-6.11-0017 | `test_ops_scatter_updates_broadcast` |
+| KISS-OPS-6.11-0018 | `test_ops_structural_empty_axis` |
+| KISS-OPS-6.11-0019 | `test_ops_sort_index_output_i64` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -2386,6 +2512,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0036 | `test_ops_opattrs_noncarrier_axis_resolution` |
 | KISS-OPS-6.19-0037 | `test_ops_opattrs_max_rank_operands_pinned` |
 | KISS-OPS-6.19-0038 | `test_ops_opattrs_reduce_axes_zero_unreachable` |
+| KISS-OPS-6.19-0039 | `test_ops_index_ref_wire_form` |
+| KISS-OPS-6.19-0040 | `test_ops_index_outputs_root_list` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |

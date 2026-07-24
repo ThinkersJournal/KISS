@@ -537,6 +537,11 @@ KISS-OPS-6.11-0011	test_ops_reduce_axes_four_categories	lint:kiss_tables	the red
 KISS-OPS-6.11-0012	test_ops_index_operand_role	untested	
 KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	
 KISS-OPS-6.11-0014	test_ops_sort_network_axis_attribute	untested	
+KISS-OPS-6.11-0015	test_ops_gather_skip_base_dynamic	untested	
+KISS-OPS-6.11-0016	test_ops_scatter_dest_operand	untested	
+KISS-OPS-6.11-0017	test_ops_scatter_updates_broadcast	untested	
+KISS-OPS-6.11-0018	test_ops_structural_empty_axis	untested	
+KISS-OPS-6.11-0019	test_ops_sort_index_output_i64	untested	
 KISS-OPS-6.12-0001	test_ops_scalar_source_leaves	untested	
 KISS-OPS-6.12-0002	test_ops_const_leaf_bits	untested	
 KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	
@@ -599,6 +604,8 @@ KISS-OPS-6.19-0022	test_ops_opattrs_boolean_flags	untested
 KISS-OPS-6.19-0024	test_ops_opattrs_permutation_reserved	untested	
 KISS-OPS-6.19-0035	test_ops_opattrs_reduce_axes_classify_reconciliation	untested	
 KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution	untested	
+KISS-OPS-6.19-0039	test_ops_index_ref_wire_form	untested	
+KISS-OPS-6.19-0040	test_ops_index_outputs_root_list	untested	
 KISS-OPS-6.2-0001	test_ops_float_ieee754	untested	
 KISS-OPS-6.2-0002	test_ops_int_wrapping	untested	
 KISS-OPS-6.2-0003	test_ops_default_nan_propagation	untested	
