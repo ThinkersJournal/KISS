@@ -2086,7 +2086,7 @@ index-lane **output dtype** — is resolved **producer-side with no wire field**
   **unconditional**, riding the next `SCHEMA_VERSION` bump of the recipe wire (`count = 0`
   for a value-lane-only recipe — one byte — bit-compatible with a lattice that exports no
   index output). Each listed `node_id` MUST have an index-lane product, or the decoder MUST
-  raise a **typed decline** of the same error class as §6.19-0039. *(Informative rider,
+  raise a **typed decline** (KISS-Conform §6.7), as in §6.19-0039.
   routed to #67 and not resolved here: whether the recipe-wire version axis this field
   rides is the **same** axis as the KISS-Classify `structure_key` `SCHEMA_VERSION` is
   deferred to the recipe-grammar consolidation (#67) sequencing; this clause pins the field
