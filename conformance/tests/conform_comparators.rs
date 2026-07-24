@@ -6,7 +6,7 @@
 //! result or a wire constant — and signed zero stay exact-byte.
 
 use kiss_conformance::differential::agree;
-use kiss_conformance::{compare_f32, DeterminismClass};
+use kiss_conformance::{compare_c32_transcendental, compare_f32, DeterminismClass};
 
 // two quiet NaNs with different payloads, and a NaN with the opposite sign bit.
 const NAN_A: u32 = 0x7FC0_1234;
@@ -38,6 +38,38 @@ fn test_conform_nan_result_compares_by_nanness() {
     assert!(agree(1.5, 1.5));
     assert!(!agree(1.5, 1.5000001));
     assert!(agree(f32::INFINITY, f32::INFINITY));
+
+    // ---- computed NaN, ULP/tolerance comparator (§6.8-0002) --------------------
+    // The clause scopes the refinement to the ULP/tolerance comparator too, not
+    // only the differential relation: a computed NaN result whose op carries the
+    // ULP/tolerance class (the transcendentals — `sin`/`exp`/…) is conformant iff
+    // it is a NaN, whatever payload/sign. A tiny bound is used so a match cannot be
+    // an accident of tolerance — differing NaN payloads are ~1e4 ULP apart under
+    // the total-order key, so a payload-comparing implementation would reject them.
+    let ulp = DeterminismClass::UlpTolerance;
+    assert!(compare_f32(ulp, nan_a, nan_b, 2).is_ok(), "computed NaN payloads must match under ULP/tolerance");
+    assert!(compare_f32(ulp, nan_a, nan_neg, 2).is_ok(), "computed NaN sign must not be compared under ULP/tolerance");
+    assert!(compare_f32(ulp, nan_a, 5.0, 2).is_err(), "NaN where a finite value is expected must mismatch (ULP)");
+    assert!(compare_f32(ulp, 5.0, nan_a, 2).is_err(), "finite where NaN is expected must mismatch (ULP)");
+    assert!(compare_f32(ulp, nan_a, f32::INFINITY, 2).is_err(), "NaN vs infinity must mismatch (ULP)");
+    // ordinary finite ULP behaviour is unchanged.
+    assert!(compare_f32(ulp, 1.0, 1.0, 0).is_ok());
+    assert!(compare_f32(ulp, 1.0, 2.0, 0).is_err());
+
+    // ---- computed NaN, split-comparator magnitude arm (§6.8-0005 / §6.18-0017) --
+    // The complex-transcendental split comparator routes an ordinary component
+    // (not a zero, not a ±π endpoint) through ULP-tolerance; a computed-NaN
+    // component there must likewise compare by NaN-ness, per the clause's explicit
+    // scope. (`im` is an ordinary finite lane held equal so only the `re` NaN lane
+    // is under test.)
+    assert!(
+        compare_c32_transcendental([nan_a, 1.0], [nan_b, 1.0], 2).is_ok(),
+        "computed NaN component must match by NaN-ness under the split comparator"
+    );
+    assert!(
+        compare_c32_transcendental([nan_a, 1.0], [5.0, 1.0], 2).is_err(),
+        "one-sided NaN component must mismatch under the split comparator"
+    );
 
     // ---- the exemption MUST NOT leak: exact-byte still distinguishes payloads ---
     // A byte-preserving result (gather/scatter/flip/select/bitcast) carries a MOVED

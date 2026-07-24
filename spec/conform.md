@@ -812,7 +812,7 @@ enum (§6.0). See umbrella §3 for the full statement.
 - **KISS-CONFORM-6.8-0010** — **Computed-NaN result comparison.** When an op's reference
   (oracle/golden) result value is **NaN and that NaN is *computed* by the op** — an arithmetic
   or transcendental result whose NaN the computation itself generates (`0.0/0.0`, `0.0·inf`,
-  `sqrt` of a negative, `log` of a non-positive, `sin`/`exp`/`tan` of a non-finite argument) —
+  `sqrt` of a negative, `log` of a negative, `sin`/`tan` of a non-finite argument) —
   the comparator MUST treat an observed result as matching **iff it is also NaN**. The NaN
   **payload and sign bits MUST NOT be compared**, and a differing payload or sign MUST NOT fail
   a conformant implementation: NaN payload/sign propagation is architectural, not semantic, and
