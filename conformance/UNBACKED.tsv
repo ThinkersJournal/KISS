@@ -253,7 +253,6 @@ KISS-CONFORM-8-0010	test_conform_canonical_suite_authoritative	untested
 KISS-CONSUME-6.1-0001	test_consume_recognition_structure_based	untested	
 KISS-CONSUME-6.1-0002	test_consume_recognition_renaming_invariant	untested	
 KISS-CONSUME-6.1-0003	test_consume_source_syntax_out_of_scope	untested	
-KISS-CONSUME-6.1-0004	test_consume_input_structure_graph	untested	
 KISS-CONSUME-6.2-0001	test_consume_lift_target_is_ops_dag	untested	
 KISS-CONSUME-6.2-0002	test_consume_lift_resolves_to_floor	untested	
 KISS-CONSUME-6.2-0003	test_consume_full_lift_produces_machine_checkable_ir	untested	
@@ -267,13 +266,7 @@ KISS-CONSUME-6.3-0003	test_consume_residue_never_withholds	untested
 KISS-CONSUME-6.3-0005	test_consume_residue_records_opset_version	untested	
 KISS-CONSUME-6.3-0006	test_consume_handwritten_semantics_via_lifting	untested	
 KISS-CONSUME-6.3-0007	test_consume_no_silent_drop_of_residue	untested	
-KISS-CONSUME-6.3-0008	test_consume_residue_entry_schema	untested	
 KISS-CONSUME-6.4-0001	test_consume_taxonomy_four_categories	lint:kiss_tables	a refusal-taxonomy restatement drops/renames one of the four categories
-KISS-CONSUME-6.4-0003	test_consume_refusal_not_a_kernel	untested	
-KISS-CONSUME-6.4-0004	test_consume_refusal_wrong_op_class	untested	
-KISS-CONSUME-6.4-0005	test_consume_refusal_unrecognized_but_expressible	untested	
-KISS-CONSUME-6.4-0006	test_consume_refusal_inexpressible_residue	untested	
-KISS-CONSUME-6.4-0007	test_consume_taxonomy_structure_based	untested	
 KISS-CONSUME-6.5-0001	test_consume_refusal_is_typed_decline	untested	
 KISS-CONSUME-6.5-0002	test_consume_never_panic_on_adversarial_input	untested	
 KISS-CONSUME-6.5-0003	test_consume_no_hallucinated_node	untested	
@@ -282,8 +275,6 @@ KISS-CONSUME-6.6-0002	test_consume_roundtrip_tier2_numeric_same_language_ondevic
 KISS-CONSUME-6.6-0003	test_consume_roundtrip_no_cross_language_numeric	untested	
 KISS-CONSUME-6.6-0006	test_consume_roundtrip_whole_kernel_aggregation	untested	
 KISS-CONSUME-7.2-0001	test_consume_declared_subset_advertised	untested	
-KISS-CONSUME-8.1-0001	test_consume_version_bump_rule	untested	
-KISS-CONSUME-8.1-0002	test_consume_residue_opset_relative	untested	
 KISS-CONSUME-9.1-0002	test_consume_out_of_claim_declines_cleanly	untested	
 KISS-CONTRACT-6.0-0001	test_contract_determinism_class_exact_byte	untested	
 KISS-CONTRACT-6.1-0001	test_contract_self_delimiting_document	untested	
