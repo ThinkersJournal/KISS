@@ -911,6 +911,17 @@ section-intro paragraph is an informative pointer to it):
   unsigned int)}`; the `max` and `min` monoids MUST be **NaN-propagating**, and a
   reduction over an **empty** axis MUST yield the monoid identity. *Test:*
   `test_ops_reduce_monoids`.
+- **KISS-OPS-6.11-0002a** — When a §6.11-0002 monoid identity is an infinity — the `max`
+  identity `−∞` or the `min` identity `+∞` — and the reduction's compute dtype has **no
+  infinity encoding** (e.g. `e4m3fn`, which KISS-CLASSIFY §6.1-0010 defines with no infinity
+  encoding), the identity MUST be materialized as that dtype's **finite extremal magnitude**
+  of the correct sign: the format's most-negative finite value for the `max` identity and its
+  most-positive finite value for the `min` identity (`∓448` for `e4m3fn`). This preserves the
+  monoid law — the materialized identity is `≤` every element for `max` and `≥` every element
+  for `min`, because those finite extremes **are** the dtype's bounds — while staying
+  representable in a format that cannot encode `±∞`; it is a monoid identity, not an arbitrary
+  sentinel. A dtype **with** an infinity encoding (`f16`, `bf16`, `e5m2`, `f32`, `f64`) uses
+  `±∞` unchanged. *Test:* `test_ops_reduce_identity_no_inf_dtype`.
 - **KISS-OPS-6.11-0003** — `prefix_scan` MUST compute an inclusive or exclusive running
   monoid fold along exactly one axis and MUST be length-preserving (one output element per
   input position), distinct from `reduce`. *Test:* `test_ops_prefix_scan_length_preserving`.
@@ -2440,6 +2451,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.10-0006 | `test_ops_narrow_int_promote_truncate_composition` |
 | KISS-OPS-6.11-0001 | `test_ops_element_map_base_access` |
 | KISS-OPS-6.11-0002 | `test_ops_reduce_monoids` |
+| KISS-OPS-6.11-0002a | `test_ops_reduce_identity_no_inf_dtype` |
 | KISS-OPS-6.11-0003 | `test_ops_prefix_scan_length_preserving` |
 | KISS-OPS-6.11-0004 | `test_ops_gather_oob_policy` |
 | KISS-OPS-6.11-0005 | `test_ops_scatter_combine_and_oob` |

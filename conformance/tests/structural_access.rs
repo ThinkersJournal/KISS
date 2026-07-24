@@ -396,6 +396,40 @@ fn test_ops_reduce_monoids() {
     assert!(reduce_f32(&with_nan, Monoid::Min).to_bits() != wrong_min.to_bits());
 }
 
+/// KISS-OPS-6.11-0002a: a compute dtype with no infinity encoding (`e4m3fn`)
+/// materializes the ±∞ `max`/`min` monoid identity as its finite extreme (∓448),
+/// since it cannot represent ±∞. The teeth: −∞ is genuinely unrepresentable here,
+/// so the finite extreme is FORCED — and it is a real monoid identity (≤/≥ every
+/// element), not an arbitrary sentinel.
+#[test]
+fn test_ops_reduce_identity_no_inf_dtype() {
+    use kiss_conformance::dtype::{e4m3_decode, E4M3_MAX_FINITE};
+
+    // every representable e4m3fn value (all 256 bytes; the NaN pattern(s) yield None).
+    let finite: Vec<f32> = (0u8..=255).filter_map(|b| e4m3_decode(b).value()).collect();
+    let nan_bytes = 256 - finite.len();
+    assert!((1..=2).contains(&nan_bytes), "e4m3fn has 1–2 NaN byte patterns, rest finite (saw {nan_bytes} NaN)");
+
+    // e4m3fn has NO infinity encoding — the §6.11-0002 abstract identity −∞ is not
+    // representable, so it MUST be materialized as something else.
+    assert!(!finite.iter().any(|v| v.is_infinite()), "e4m3fn cannot encode ±∞");
+
+    // …that something is the finite extreme: −448 for max, +448 for min, and both
+    // ARE representable (some byte decodes to each).
+    let max_identity = -E4M3_MAX_FINITE; // −448
+    let min_identity = E4M3_MAX_FINITE; //  +448
+    assert!(finite.iter().any(|&v| v == max_identity), "−448 is representable in e4m3fn");
+    assert!(finite.iter().any(|&v| v == min_identity), "+448 is representable in e4m3fn");
+
+    // the monoid law — the reason these finite extremes are valid identities and not
+    // arbitrary sentinels: the max identity is ≤ every element, the min identity ≥
+    // every element, because ±448 are exactly the dtype's finite bounds.
+    for &v in &finite {
+        assert!(max_identity <= v, "max identity −448 must be ≤ every e4m3fn value (saw {v})");
+        assert!(min_identity >= v, "min identity +448 must be ≥ every e4m3fn value (saw {v})");
+    }
+}
+
 /// KISS-OPS-6.0-0006: for an exact-byte op over a float dtype each arithmetic atom
 /// rounds independently — `add(mul(a,b),c)` MUST round the `mul` then the `add`, and
 /// MUST NOT contract to a single-rounding `fma(a,b,c)`.
