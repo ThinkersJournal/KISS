@@ -650,16 +650,7 @@ KISS-OPS-8-0006	test_ops_freeze_gate_conform_suite_passes	untested
 KISS-SYNTH-6.0-0001	test_synth_determinism_class_exact_byte	untested	
 KISS-SYNTH-6.0-0001a	test_synth_determinism_class_no_tolerance	untested	
 KISS-SYNTH-6.0-0001b	test_synth_determinism_class_not_reforked	untested	
-KISS-SYNTH-6.1-0001	test_synth_request_is_identity_only	untested	
-KISS-SYNTH-6.1-0001a	test_synth_request_no_capability_fields	untested	
-KISS-SYNTH-6.1-0002	test_synth_request_reuses_cyrq	untested	
 KISS-SYNTH-6.1-0002a	test_synth_request_no_new_shape	untested	
-KISS-SYNTH-6.1-0003	test_synth_request_structure_key_opaque	untested	
-KISS-SYNTH-6.1-0003a	test_synth_request_structure_key_not_reencoded	untested	
-KISS-SYNTH-6.1-0004	test_synth_request_malformed_declines	untested	
-KISS-SYNTH-6.1-0004a	test_synth_request_no_alloc_on_unchecked_length	untested	
-KISS-SYNTH-6.1-0005	test_synth_request_full_identity	untested	
-KISS-SYNTH-6.1-0005a	test_synth_request_key_alone_not_pinned	untested	
 KISS-SYNTH-6.2-0001	test_synth_response_artifact_contract_or_decline	untested	
 KISS-SYNTH-6.2-0001a	test_synth_response_no_third_outcome	untested	
 KISS-SYNTH-6.2-0002	test_synth_every_kernel_carries_contract	untested	
@@ -731,9 +722,6 @@ KISS-SYNTH-6.6-0003d	test_synth_map_version_unsupported	untested
 KISS-SYNTH-6.6-0003e	test_synth_map_unknown_revision	untested	
 KISS-SYNTH-6.6-0003f	test_synth_decline_taxonomy_complete	untested	
 KISS-SYNTH-6.6-0003g	test_synth_no_mismatched_code	untested	
-KISS-SYNTH-6.6-0004	test_synth_decline_framing	untested	
-KISS-SYNTH-6.6-0004a	test_synth_malformed_echoes_empty_identity	untested	
-KISS-SYNTH-6.6-0004b	test_synth_reader_accepts_empty_identity	untested	
 KISS-SYNTH-6.6-0005	test_synth_decline_ranges	untested	
 KISS-SYNTH-6.6-0005a	test_synth_decline_no_core_reuse	untested	
 KISS-SYNTH-6.6-0006	test_synth_unknown_decline_generic	untested	
