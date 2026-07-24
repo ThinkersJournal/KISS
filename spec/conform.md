@@ -691,6 +691,20 @@ enum (§6.0). See umbrella §3 for the full statement.
   dtype; a stored transcendental reference computed at that dtype's own native precision MUST be
   rejected under §6.5-0007. KISS-Conform MUST NOT mandate a specific such facility. *Test:*
   `test_conform_oracle_vector_stores_wide_precision_value`.
+- **KISS-CONFORM-6.5-0010** — The §6.5-0007 wide-precision oracle floor is scoped to
+  **transcendental atoms** (KISS-OPS §6.8) and MUST NOT be read as the oracle for
+  **reduction/scan/contraction tolerance-cells** (KISS-OPS §6.17-0008). In parallel, the
+  reference value of a (compute-dtype S, accumulator-dtype A) reduction/scan/contraction
+  cell is the intrinsically-defined per-cell reference of KISS-OPS §6.17-0009 — the
+  §6.17-0005-ordered (ascending-index) evaluation with each input rounded to S, each
+  accumulate atom to A, and the result to S — and the cell whose A is the **widest permitted
+  accumulator dtype** is the wide-precision reduction reference (wide-precision truth by
+  construction), the reduction-cell analogue of §6.5-0007's transcendental floor.
+  KISS-Conform MUST evaluate such a cell against **its own per-cell reference** under the
+  cell's declared tolerance (KISS-CONTRACT §6.8-0012), never against a cross-accumulator
+  wide truth; a suite that toleranced a narrow-A cell against the widest-A reference (or
+  against §6.5-0007's transcendental oracle) MUST be rejected. *Test:*
+  `test_conform_reduction_cell_oracle_reference`.
 
 ### 6.6 Modality 3 — the IR-DAG fuzzer emitting to every backend
 
@@ -1259,6 +1273,7 @@ the traceability lint.
 | KISS-CONFORM-6.5-0007 | `test_conform_oracle_tighter_than_declared_ulp` |
 | KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
 | KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
+| KISS-CONFORM-6.5-0010 | `test_conform_reduction_cell_oracle_reference` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
 | KISS-CONFORM-6.6-0003 | `test_conform_fuzzer_cross_backend_agreement` |

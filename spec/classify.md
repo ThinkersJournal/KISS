@@ -1076,6 +1076,24 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   implementation-internal and MUST NOT be relied upon across parties. Two parties
   exchanging a `structure_key` MUST exchange the token. *Test:*
   `test_classify_token_is_only_wire_form`.
+- **KISS-CLASSIFY-6.7-0012** — A float **reduction or scan** tolerance-cell (a `reduce` or
+  `prefix_scan` over a float `sum`/`prod`, KISS-OPS §6.17-0008) is keyed on its
+  accumulator dtype, but the current key grammar carries an accumulator coordinate ONLY for
+  dense-contraction `gem` cells (the field-9 `<acc>` of §6.7-0006); the non-contraction key
+  (§6.7-0001) has **no** accumulator coordinate. This clause states the **forward
+  requirement**: a non-contraction reduction/scan cell whose accumulator dtype differs from
+  its compute dtype MUST carry an accumulator-dtype coordinate drawn from the closed §6.1
+  dtype set — the non-contraction analogue of the contraction `<acc>`. When the coordinate
+  is **absent**, the accumulator dtype MUST default to the compute dtype
+  (accumulator-dtype == compute-dtype, the §6.17-0005 diagonal), so every existing token is
+  unchanged in meaning and every kernel that never opts in behaves exactly as at this
+  version. The **wire/codec realization** — the §6.7-0001 non-contraction field-count change
+  and the token codec that serializes the new coordinate (whether a new field or an
+  `<acc>`-bearing extension of the field-8 `<reduce>` code) — is **schema-affecting** and is
+  DEFERRED to the next coordinated `structure_key` schema-version bump (a 3-way
+  KISS/Fuel/Baracuda regen, the sk3 pattern). This clause does **not** modify the §6.7-0001
+  field grammar or the token codec at this version; it pins the requirement the coordinated
+  bump will realize. *Test:* `test_classify_reduction_accumulator_coordinate`.
 
 ### 6.8 The target-capability descriptor
 
@@ -1337,6 +1355,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.7-0009 | `test_classify_token_reject_malformed` |
 | KISS-CLASSIFY-6.7-0010 | `test_classify_mask_hex_lowercase` |
 | KISS-CLASSIFY-6.7-0011 | `test_classify_token_is_only_wire_form` |
+| KISS-CLASSIFY-6.7-0012 | `test_classify_reduction_accumulator_coordinate` |
 | KISS-CLASSIFY-6.8-0001 | `test_classify_target_token_grammar` |
 | KISS-CLASSIFY-6.8-0002 | `test_classify_target_byte_exact_match` |
 | KISS-CLASSIFY-6.8-0003 | `test_classify_target_namespace_registered` |

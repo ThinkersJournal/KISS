@@ -1135,6 +1135,28 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   `accumulation_type` and the key's `<acc>` disagree. This is a guarantee-only surface: it
   does not restate the KISS-Ops MathPrecision or determinism facts, which live in their own
   fields (§6.8-0003/-0004). *Test:* `test_contract_accumulation_type_matches_key_acc`.
+- **KISS-CONTRACT-6.8-0012** — The **declared tolerance** for an accumulator-keyed
+  reduction/scan/contraction tolerance-cell `(S, A)` (KISS-OPS §6.17-0008, where `S` is the
+  compute dtype and `A` the `accumulation_type` of §6.8-0011) MUST be declared in the
+  Guarantees (§6.8-0002 / §6.8-0004) as a **ULP-of-A band** of the form
+  `k(S,A) · N · eps_A · |max partial sum|` — where `eps_A` is the accumulator dtype's unit
+  roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell calibrated
+  constant — and MUST bound reassociation error against the per-cell reference of KISS-OPS
+  §6.17-0009, NOT as a fixed constant and NOT as a bound against wide-precision truth across
+  accumulator widths. The reduction extent `N` is **runtime**: the `structure_key` is
+  **extent-free** (KISS-CLASSIFY §6.6-0003), so `N` MUST NOT enter the key. The key carries
+  only the `(compute, accumulator)` class via the accumulator coordinate (the contraction
+  `<acc>` of KISS-CLASSIFY §6.7-0006, or the deferred non-contraction coordinate of
+  §6.7-0012), while the numeric FORMULA lives here in the Contract Guarantees and is
+  evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
+  constant declared here. An implementation MUST NOT key `N`, and MUST NOT declare this
+  tolerance as a fixed constant or as a bound against cross-accumulator wide truth. A
+  comparator applying this tolerance MUST use it as an **absolute** band — it scales with
+  `|max partial sum|`, NOT with `|result|` — and MUST NOT convert it to a metric taken in
+  ULP-of-`S` relative to the result: under catastrophic cancellation `|result| → 0` while
+  the reassociation error stays bounded by the `|max partial sum|` term, so a
+  result-relative metric would spuriously explode and reject a conformant kernel. *Test:*
+  `test_contract_accumulator_tolerance_band`.
 - **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state whether the kernel is
   bit-stable on the same hardware and is the **single authoritative home** of that fact; it
   MUST be consistent with the `determinism_class`, and in particular a kernel of class
@@ -1608,6 +1630,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0009 | `test_contract_audited_derivation_rule` |
 | KISS-CONTRACT-6.8-0010 | `test_contract_unaudited_derivation_rule` |
 | KISS-CONTRACT-6.8-0011 | `test_contract_accumulation_type_matches_key_acc` |
+| KISS-CONTRACT-6.8-0012 | `test_contract_accumulator_tolerance_band` |
 | KISS-CONTRACT-6.9-0001 | `test_contract_provenance_field_schema` |
 | KISS-CONTRACT-6.9-0002 | `test_contract_provenance_source` |
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |
