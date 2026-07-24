@@ -120,7 +120,7 @@ realization detail, not a semantics difference*. Surfacing that implicit base/de
 as an explicit operand is therefore a **recipe-grammar refinement** these clauses
 imply: the `gather` node gains an **optional `base` child-edge (skip only)** and the
 `scatter` node gains a **`dest` child-edge**. Routed to the recipe-grammar
-consolidation (mlgheozs) alongside these clauses; Baracuda backs the operand-surface
+consolidation (#67) alongside these clauses; Baracuda backs the operand-surface
 change on the provider side.
 
 ## Coverage-ledger status
