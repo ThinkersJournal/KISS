@@ -484,14 +484,7 @@ KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	lint:kiss_ops	the adve
 KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	
 KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs	untested	
 KISS-OPS-6.19-0003	test_ops_opattrs_carrier_set_closed	untested	
-KISS-OPS-6.19-0004	test_ops_opattrs_field_order_abi	untested	
-KISS-OPS-6.19-0006	test_ops_opattrs_enum_ordinal_reserve_zero	untested	
-KISS-OPS-6.19-0007	test_ops_opattrs_int_fixed_width_le	untested	
-KISS-OPS-6.19-0008	test_ops_opattrs_little_endian	untested	
-KISS-OPS-6.19-0009	test_ops_opattrs_optional_explicit_slot	untested	
-KISS-OPS-6.19-0010	test_ops_opattrs_definite_length_prefix	untested	
 KISS-OPS-6.19-0011	test_ops_opattrs_version_binding	untested	
-KISS-OPS-6.19-0012	test_ops_opattrs_opaque_embedding_byte_compare	untested	
 KISS-OPS-6.19-0013	test_ops_opattrs_golden_vector_conformance	untested	
 KISS-OPS-6.19-0014	test_ops_opattrs_monoid_enum	lint:kiss_vocab	the Monoid OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0015	test_ops_opattrs_oob_policy_enum	lint:kiss_vocab	the OobPolicy OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
@@ -500,9 +493,6 @@ KISS-OPS-6.19-0017	test_ops_opattrs_index_dtype_enum	lint:kiss_vocab	the IndexDt
 KISS-OPS-6.19-0018	test_ops_opattrs_sort_direction_enum	lint:kiss_vocab	the SortDirection OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0019	test_ops_opattrs_scan_exclusivity_enum	lint:kiss_vocab	the ScanExclusivity OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0021	test_ops_opattrs_column_ordering_enum	lint:kiss_vocab	the ColumnOrdering OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
-KISS-OPS-6.19-0022	test_ops_opattrs_boolean_flags	untested	
-KISS-OPS-6.19-0024	test_ops_opattrs_permutation_reserved	untested	
-KISS-OPS-6.19-0035	test_ops_opattrs_reduce_axes_classify_reconciliation	untested	
 KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution	untested	
 KISS-OPS-6.19-0039	test_ops_index_ref_wire_form	untested	
 KISS-OPS-6.19-0040	test_ops_index_outputs_root_list	untested	
