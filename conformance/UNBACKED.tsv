@@ -309,6 +309,8 @@ KISS-CONTRACT-6.8-0010	test_contract_unaudited_derivation_rule	untested
 KISS-CONTRACT-6.8-0011	test_contract_accumulation_type_matches_key_acc	untested	
 KISS-CONTRACT-6.8-0012	test_contract_accumulator_tolerance_band	untested	
 KISS-CONTRACT-6.9-0002	test_contract_provenance_source	untested	
+KISS-CONTRACT-6.9-0003	test_contract_provenance_revision_matches_identity	untested	
+KISS-CONTRACT-6.9-0006	test_contract_cost_provenance_consistent	untested	
 KISS-CONTRACT-6.9-0008	test_contract_negotiation_metadata_opaque	untested	
 KISS-CONTRACT-7.1-0001	test_contract_mandatory_core	untested	
 KISS-CONTRACT-7.1-0002	test_contract_semantics_degrade_axis	untested	

@@ -18,7 +18,9 @@
 //!       a grammatical one is accepted, free prose declines.
 //!
 //! Clauses bound: KISS-CONTRACT-6.6-0001, -6.4-0001, -6.5-0001, -6.7-0001,
-//! -6.7-0004, -6.8-0004, -6.8-0007, -6.8-0006, -6.9-0006, -6.9-0003, -6.11-0008.
+//! -6.7-0004, -6.8-0004, -6.8-0007, -6.8-0006, -6.11-0008.
+//! (§6.9-0003 and §6.9-0006 were scoped out as runtime value-equality clauses that
+//!  a schema/domain doc-lint cannot honestly back — see the skip note below.)
 //!
 //! The only golden transcribed here (Appendix C Semantics block) is copied verbatim
 //! from Contract Appendix C, identical to the copy in `contract_golden.rs`
@@ -415,24 +417,21 @@ fn test_contract_cost_single_home() {
 }
 
 /// KISS-CONTRACT-6.8-0006 — the Guarantees `cost_provenance` value domain is
-/// `{declared, measured}`, present in the §6.8-0001 Guarantees schema; §6.8-0006 and
-/// §6.9-0006 declare the identical 2-token domain (§6.9-0006 requires equality). The
-/// backtick value-token domains of §6.8-0006 and §6.9-0006 are cross-compared (both
-/// KISS-Contract's own).
+/// `{declared, measured}`, present in the §6.8-0001 Guarantees schema.
 ///
-/// TEETH: rename a token (`declared`→`stated`) in §6.8-0006 only → the two domains
-/// diverge; drop `cost_provenance` from §6.8-0001 → the presence precondition fails.
+/// TEETH: rename a token (`declared`→`stated`) in §6.8-0006 → the domain assertion
+/// fails; drop `cost_provenance` from §6.8-0001 → the presence precondition fails.
+///
+/// NOTE: this test deliberately does NOT cross-compare against §6.9-0006. That
+/// cross-domain equality is a shadow of §6.9-0006's runtime obligation, not a
+/// §6.8-0006 property; crediting it here would over-credit §6.9-0006 (left untested
+/// below). §6.8-0006's teeth survive on the `{declared, measured}` assertion alone.
 #[test]
 fn test_contract_guarantees_cost_provenance() {
     let contract = read_spec("contract.md");
     let dom_6806 = backtick_lower_words(clause_block(&contract, "KISS-CONTRACT-6.8-0006"));
-    let dom_6906 = backtick_lower_words(clause_block(&contract, "KISS-CONTRACT-6.9-0006"));
 
     assert_eq!(dom_6806, vec!["declared", "measured"], "KISS-CONTRACT-6.8-0006: the §6.8-0006 cost_provenance domain drifted from `{{declared, measured}}`");
-    assert_eq!(
-        dom_6806, dom_6906,
-        "KISS-CONTRACT-6.8-0006: the §6.8-0006 and §6.9-0006 cost_provenance value domains diverged (a token was renamed on one side only)"
-    );
 
     // `cost_provenance` is present in the Guarantees schema.
     let guarantees = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.8-0001"));
@@ -442,69 +441,21 @@ fn test_contract_guarantees_cost_provenance() {
     );
 }
 
-/// KISS-CONTRACT-6.9-0006 — the Provenance `cost_provenance` MUST equal the
-/// Guarantees `cost_provenance`; that equality is only satisfiable if
-/// `cost_provenance` is present in BOTH the §6.8-0001 and §6.9-0001 schemas and both
-/// clauses share the `{declared, measured}` domain (cross-presence + shared domain).
-///
-/// TEETH: drop `cost_provenance` from either schema → the cross-presence assert
-/// fails; fork its token domain between §6.8-0006/§6.9-0006 → the shared-domain
-/// assert fails.
-#[test]
-fn test_contract_cost_provenance_consistent() {
-    let contract = read_spec("contract.md");
-    let guarantees = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.8-0001"));
-    let provenance = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.9-0001"));
-
-    assert!(
-        guarantees.iter().any(|f| f == "cost_provenance"),
-        "KISS-CONTRACT-6.9-0006: `cost_provenance` must be present in the Guarantees (§6.8-0001) schema for the equality to hold"
-    );
-    assert!(
-        provenance.iter().any(|f| f == "cost_provenance"),
-        "KISS-CONTRACT-6.9-0006: `cost_provenance` must be present in the Provenance (§6.9-0001) schema for the equality to hold"
-    );
-
-    // Both clauses that pin the token domain agree on `{declared, measured}`.
-    let dom_6806 = backtick_lower_words(clause_block(&contract, "KISS-CONTRACT-6.8-0006"));
-    let dom_6906 = backtick_lower_words(clause_block(&contract, "KISS-CONTRACT-6.9-0006"));
-    assert_eq!(
-        dom_6906, dom_6806,
-        "KISS-CONTRACT-6.9-0006: the Provenance (§6.9-0006) and Guarantees (§6.8-0006) cost_provenance domains diverged"
-    );
-    assert_eq!(dom_6906, vec!["declared", "measured"], "KISS-CONTRACT-6.9-0006: the cost_provenance domain drifted from `{{declared, measured}}`");
-}
-
-/// KISS-CONTRACT-6.9-0003 — the Provenance `revision_hash` MUST equal the Identity
-/// `revision_hash` byte-for-byte; that obligation is only satisfiable if the
-/// identically-spelled `revision_hash` field exists in BOTH the §6.3-0001 Identity
-/// and §6.9-0001 Provenance schemas (cross-presence).
-///
-/// TEETH: rename `revision_hash`→`rev_hash` in Identity (§6.3-0001) but not
-/// Provenance (§6.9-0001) → the two schemas no longer share the field name and the
-/// cross-presence assert fails.
-#[test]
-fn test_contract_provenance_revision_matches_identity() {
-    let contract = read_spec("contract.md");
-    let identity = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.3-0001"));
-    let provenance = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.9-0001"));
-
-    assert!(
-        identity.iter().any(|f| f == "revision_hash"),
-        "KISS-CONTRACT-6.9-0003: `revision_hash` must be present in the Identity (§6.3-0001) schema"
-    );
-    assert!(
-        provenance.iter().any(|f| f == "revision_hash"),
-        "KISS-CONTRACT-6.9-0003: `revision_hash` must be present in the Provenance (§6.9-0001) schema"
-    );
-    // The SAME spelling is the shared field the byte-for-byte equality is taken over.
-    let shared = identity.iter().find(|f| *f == "revision_hash");
-    assert_eq!(
-        shared,
-        provenance.iter().find(|f| *f == "revision_hash"),
-        "KISS-CONTRACT-6.9-0003: Identity and Provenance must carry the identically-spelled `revision_hash` field"
-    );
-}
+// KISS-CONTRACT-6.9-0006 (Provenance `cost_provenance` MUST equal the Guarantees
+// `cost_provenance`; MUST NOT carry one that disagrees) and KISS-CONTRACT-6.9-0003
+// (Provenance `revision_hash` MUST equal the Identity `revision_hash` byte-for-byte;
+// MUST NOT carry one that disagrees) are INTENTIONALLY LEFT UNBACKED here.
+// Both are runtime *value-equality* obligations between two fields of a live
+// contract record. A doc-lint that only checks the field is spelled identically in
+// both schema blocks (and, for 0006, that the `{declared, measured}` domain matches
+// across §6.8-0006/§6.9-0006) proves a NECESSARY PRECONDITION — the equality is
+// well-formed — but NOT the equality itself: a record carrying a Provenance value
+// that DISAGREES with the Identity/Guarantees value would pass a schema-presence
+// lint and still violate the clause. The in-tree behavioral surface here is the
+// §6.6-0006 dispatch-expression acceptor (`dispatch_expr::eval`), which has no
+// contract-record consistency validator to drive these cross-field equalities.
+// Binding them to the schema doc-lints would over-credit, so they stay untested
+// until a record-consistency validator exists to exercise the disagreement path.
 
 // ===========================================================================
 // (B) Behavioral back via the in-tree §6.6-0006 acceptor.
