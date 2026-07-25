@@ -184,6 +184,34 @@ pub fn encode_operand_roles(roles: &[RoleEntry], operand_count: usize) -> Vec<u8
 }
 
 // ---------------------------------------------------------------------------
+// Tag canonical serialization (§6.8-0012).
+// ---------------------------------------------------------------------------
+
+/// Serialize an advertisable-op **tag** to its dedicated canonical serialization
+/// (§6.8-0012 / §6.1-0007): (1) `op_name` as a length-prefixed token (§6.8-0003),
+/// (2) the OpAttrs sub-block as a `u16`-LE byte length + the verbatim KISS-Ops
+/// OpAttrs bytes (§6.8-0007), (3) the operand-role tuple in canonical form
+/// (§6.1-0008 / §6.8-0008). It composes the **same** primitives the region node
+/// record uses (`push_token`, the length-prefixed OpAttrs blob, and
+/// `encode_operand_roles`), but carries **only** these identity-bearing fields and
+/// **none** of the region framing — no magic/schema-version header, no `kind`
+/// tag, no `consumers`, no `operand_count`, no operand indices, no
+/// `ops_version`/`classify_version` tokens, and no `extract` records. Tag equality
+/// (§6.1-0007(c)) is byte-exact comparison of this serialization. `synthesis_attrs`
+/// are not identity-bearing (§6.1-0007(a)) and are not an input to this function.
+pub fn encode_tag(op_name: &str, opattrs: &[u8], roles: &[RoleEntry], operand_count: usize) -> Vec<u8> {
+    let mut out = Vec::new();
+    // (1) op_name token (§6.8-0003).
+    push_token(&mut out, op_name);
+    // (2) OpAttrs sub-block: u16-LE length + verbatim KISS-Ops bytes (§6.8-0007).
+    out.extend_from_slice(&(opattrs.len() as u16).to_le_bytes());
+    out.extend_from_slice(opattrs);
+    // (3) operand-role tuple in canonical form (§6.1-0008 / §6.8-0008).
+    out.extend_from_slice(&encode_operand_roles(roles, operand_count));
+    out
+}
+
+// ---------------------------------------------------------------------------
 // Canonical subtree serialization + operand order (§6.4-0010).
 // ---------------------------------------------------------------------------
 
@@ -381,6 +409,12 @@ pub enum DecodeDecline {
     ForwardOperandReference { node: u32, operand: u32 },
     /// The last (root) node does not carry `consumers = ROOT` (§6.4-0002/0004).
     RootNotRoot,
+    /// More than one node carries `consumers = ROOT` — a multi-output forest,
+    /// which is not an expressible single-rooted region (§6.4-0009). A region has
+    /// exactly one root; a second ROOT-marked node means a second output. The
+    /// last-node-is-ROOT check alone (below) would silently admit such a forest, so
+    /// this counts the ROOT-marked nodes and declines when there is more than one.
+    MultipleRoots { count: usize },
     TrailingBytes,
 }
 
@@ -478,6 +512,16 @@ pub fn decode(bytes: &[u8]) -> Result<ParsedRegion, DecodeDecline> {
             }
             other => return Err(DecodeDecline::BadKind { got: other }),
         }
+    }
+    // §6.4-0009: a region has exactly one root. Count the ROOT-marked nodes and
+    // decline a multi-output forest before the last-node-is-ROOT check (which alone
+    // would admit a second, interior ROOT-marked node — a 2-output forest).
+    let root_count = nodes
+        .iter()
+        .filter(|n| matches!(n, ParsedNode::Op { consumers, .. } if *consumers == CONSUMERS_ROOT))
+        .count();
+    if root_count > 1 {
+        return Err(DecodeDecline::MultipleRoots { count: root_count });
     }
     if let Some(ParsedNode::Op { consumers, .. }) = nodes.last() {
         if *consumers != CONSUMERS_ROOT {
