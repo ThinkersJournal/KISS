@@ -142,40 +142,17 @@ fn test_synth_contract_not_pushed_to_announce() {
     assert!(crsp.len() > 12 + per_record.len(), "the announce record cannot be carrying the contract — CRSP is strictly larger by the payload");
 }
 
-/// KISS-SYNTH-6.2-0003a — the contract document MUST be carried OPAQUELY; the
-/// provision path MUST NOT reinterpret or re-encode its bytes.
-/// TEETH: an arbitrary contract blob spanning every byte value `0x00..=0xFF`
-/// (interior NULs, and byte runs that spell frame tags/magic) is carried in the
-/// length-delimited payload region VERBATIM — the sliced payload equals the input
-/// byte-for-byte and the frame length shows no truncation or expansion. MUTATION: a
-/// codec that treated the contract as UTF-8/base64/escaped text, or NUL-terminated
-/// it, would alter or truncate the bytes and fail the byte-for-byte / length
-/// assertions.
-/// CAVEAT: proxied through the Announce `CRSP` payload carrier because no `PRSP`
-/// frame exists in `conformance/src`. Clause §6.2-0003 pins the `PRSP`-enclosed
-/// contract byte-identical to exactly this `CRSP` payload, so the carrier is
-/// faithful and the opacity property transfers.
-#[test]
-fn test_synth_contract_opaque() {
-    // a contract blob covering all 256 byte values — breaks any UTF-8/base64/escape
-    // re-encode and contains interior NULs and bytes that spell tags/magic.
-    let payload: Vec<u8> = (0u16..=255).map(|x| x as u8).collect();
-    let crsp = ContractResponse {
-        identity: Identity { structure_key: vec![0x01], revision_hash: None },
-        payload: payload.clone(),
-    }
-    .encode();
-
-    // the payload region sits at the tail, delimited by a preceding u32-LE length.
-    let payload_off = crsp.len() - payload.len();
-    assert_eq!(
-        &crsp[payload_off - 4..payload_off],
-        &(payload.len() as u32).to_le_bytes(),
-        "the contract is delimited ONLY by its u32-LE length (256 = 00 01 00 00)"
-    );
-    assert_eq!(&crsp[payload_off..], payload.as_slice(), "contract bytes carried verbatim, incl. interior NULs and tag-spelling runs");
-    assert_eq!(crsp.len(), payload_off + 256, "no NUL-truncation and no base64/escape expansion — all 256 bytes survive");
-}
+// KISS-SYNTH-6.2-0003a (the contract is carried OPAQUELY; the provision path MUST
+// NOT reinterpret or re-encode its bytes) is INTENTIONALLY LEFT UNBACKED here.
+// It is a *provision-path* behavioral clause: the subject is the `PRSP` encoder,
+// which does not exist in `conformance/src` (no `PRSP` frame / provision codec).
+// A test that exercised the Announce `CRSP` carrier instead would only witness
+// CRSP's opacity, not the provision path's — a buggy `PRSP` encoder that re-encoded
+// the contract bytes would sail past it, since it never touches provision code.
+// Although §6.2-0003 pins the `PRSP` contract bytes byte-identical to the `CRSP`
+// payload, that pin is itself only verifiable once the `PRSP` codec exists. Binding
+// 0003a to a CRSP test would over-credit it, so it stays untested until a
+// provision-path codec lands (then bind it to that codec, not a proxy).
 
 // ---- §6.7 Level 1: provider handshake (Announce SeamHello) ------------------
 
