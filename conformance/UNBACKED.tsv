@@ -254,7 +254,6 @@ KISS-CONTRACT-6.10-0002	test_contract_edge_case_and_ulp_from_ops	untested
 KISS-CONTRACT-6.10-0003	test_contract_single_op_vocabulary	untested	
 KISS-CONTRACT-6.10-0004	test_contract_opattrs_cited_from_ops	untested	
 KISS-CONTRACT-6.11-0006	test_contract_text_positional_signature	untested	
-KISS-CONTRACT-6.11-0008	test_contract_text_dispatch	untested	
 KISS-CONTRACT-6.11-0009	test_contract_text_op_identity	untested	
 KISS-CONTRACT-6.2-0002	test_contract_existence_is_intrinsic	untested	
 KISS-CONTRACT-6.2-0003	test_contract_no_op_class_withhold	untested	
@@ -271,7 +270,6 @@ KISS-CONTRACT-6.3-0008	test_contract_revision_hash_opaque	untested
 KISS-CONTRACT-6.3-0009	test_contract_identity_header_match	untested	
 KISS-CONTRACT-6.3-0010	test_contract_kernel_name_distinct	untested	
 KISS-CONTRACT-6.3-0011	test_contract_structure_key_target_matches_capability	untested	
-KISS-CONTRACT-6.4-0001	test_contract_semantics_mandatory	untested	
 KISS-CONTRACT-6.4-0002	test_contract_op_dag_over_ops_and_grammar	untested	
 KISS-CONTRACT-6.4-0003	test_contract_node_carries_opattrs	untested	
 KISS-CONTRACT-6.4-0004	test_contract_edge_case_from_ops	untested	
@@ -281,7 +279,6 @@ KISS-CONTRACT-6.4-0007	test_contract_semantics_kind_matches_lift	untested
 KISS-CONTRACT-6.4-0008	test_contract_region_maps_to_semantics	untested	
 KISS-CONTRACT-6.4-0009	test_contract_op_dag_node_schema	untested	
 KISS-CONTRACT-6.4-0010	test_contract_semantics_resolution_outcomes	untested	
-KISS-CONTRACT-6.5-0001	test_contract_interface_field_schema	untested	
 KISS-CONTRACT-6.5-0002	test_contract_positional_signature_complete	untested	
 KISS-CONTRACT-6.5-0003	test_contract_interface_references_identity_target	untested	
 KISS-CONTRACT-6.5-0004a	test_contract_launch_scalar_pinned_order	untested	
@@ -297,29 +294,21 @@ KISS-CONTRACT-6.5-0010	test_contract_alignment_declared	untested
 KISS-CONTRACT-6.5-0011	test_contract_launch_scalars_match_signature_tail	untested	
 KISS-CONTRACT-6.5-0012	test_contract_rank_declared	untested	
 KISS-CONTRACT-6.5-0013	test_contract_param_count_and_index_descriptor	untested	
-KISS-CONTRACT-6.6-0001	test_contract_dispatch_field_schema	untested	
 KISS-CONTRACT-6.6-0002	test_contract_invocation_domain	untested	
 KISS-CONTRACT-6.6-0003	test_contract_count_to_grid	untested	
 KISS-CONTRACT-6.6-0005	test_contract_dispatch_interface_consistent	untested	
-KISS-CONTRACT-6.7-0001	test_contract_capabilities_field_schema	untested	
 KISS-CONTRACT-6.7-0002	test_contract_capabilities_accept_matches_identity	untested	
 KISS-CONTRACT-6.7-0003	test_contract_capabilities_is_envelope	untested	
-KISS-CONTRACT-6.7-0004	test_contract_capabilities_determinism_from_ops	untested	
 KISS-CONTRACT-6.7-0005	test_contract_precision_class_consistent	untested	
 KISS-CONTRACT-6.7-0006	test_contract_cost_expressions	untestable	#44 — cost has no byte layout / cost_class vocab
 KISS-CONTRACT-6.8-0002	test_contract_precision_names_reference	untestable	#44 — per_backend_ulp_tiers: no layout, no float encoding
-KISS-CONTRACT-6.8-0004	test_contract_math_precision_imported	untested	
 KISS-CONTRACT-6.8-0005	test_contract_bit_stability_consistent	untested	
-KISS-CONTRACT-6.8-0006	test_contract_guarantees_cost_provenance	untested	
-KISS-CONTRACT-6.8-0007	test_contract_cost_single_home	untested	
 KISS-CONTRACT-6.8-0008	test_contract_audited_status_derived	untested	
 KISS-CONTRACT-6.8-0009	test_contract_audited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0010	test_contract_unaudited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0011	test_contract_accumulation_type_matches_key_acc	untested	
 KISS-CONTRACT-6.8-0012	test_contract_accumulator_tolerance_band	untested	
 KISS-CONTRACT-6.9-0002	test_contract_provenance_source	untested	
-KISS-CONTRACT-6.9-0003	test_contract_provenance_revision_matches_identity	untested	
-KISS-CONTRACT-6.9-0006	test_contract_cost_provenance_consistent	untested	
 KISS-CONTRACT-6.9-0008	test_contract_negotiation_metadata_opaque	untested	
 KISS-CONTRACT-7.1-0001	test_contract_mandatory_core	untested	
 KISS-CONTRACT-7.1-0002	test_contract_semantics_degrade_axis	untested	
