@@ -520,12 +520,10 @@ KISS-OPS-8-0006	test_ops_freeze_gate_conform_suite_passes	untested
 KISS-SYNTH-6.0-0001	test_synth_determinism_class_exact_byte	untested	
 KISS-SYNTH-6.0-0001a	test_synth_determinism_class_no_tolerance	untested	
 KISS-SYNTH-6.0-0001b	test_synth_determinism_class_not_reforked	untested	
-KISS-SYNTH-6.1-0002a	test_synth_request_no_new_shape	untested	
 KISS-SYNTH-6.2-0001	test_synth_response_artifact_contract_or_decline	untested	
 KISS-SYNTH-6.2-0001a	test_synth_response_no_third_outcome	untested	
 KISS-SYNTH-6.2-0002	test_synth_every_kernel_carries_contract	untested	
 KISS-SYNTH-6.2-0002a	test_synth_no_artifact_without_contract	untested	
-KISS-SYNTH-6.2-0002b	test_synth_contract_not_pushed_to_announce	untested	
 KISS-SYNTH-6.2-0003	test_synth_contract_length_delimited	untested	
 KISS-SYNTH-6.2-0003a	test_synth_contract_opaque	untested	
 KISS-SYNTH-6.2-0003b	test_synth_contract_not_parsed_by_host	untested	
@@ -593,13 +591,6 @@ KISS-SYNTH-6.6-0008	test_synth_build_failure_declines	untested
 KISS-SYNTH-6.6-0008a	test_synth_build_failure_no_leak	untested	
 KISS-SYNTH-6.7-0001	test_synth_handshake_defers_to_announce	untested	
 KISS-SYNTH-6.7-0001a	test_synth_no_parallel_handshake	untested	
-KISS-SYNTH-6.7-0001b	test_synth_handshake_no_per_kernel_capability	untested	
-KISS-SYNTH-6.7-0002	test_synth_empty_profile_is_announce_owned	untested	
-KISS-SYNTH-6.7-0002a	test_synth_empty_profile_never_panics	untested	
-KISS-SYNTH-6.7-0002b	test_synth_empty_profile_no_select	untested	
-KISS-SYNTH-6.7-0003	test_synth_availability_identity_only	untested	
-KISS-SYNTH-6.7-0004	test_synth_hit_miss_by_identity	untested	
-KISS-SYNTH-6.7-0004a	test_synth_hit_not_key_alone	untested	
 KISS-SYNTH-6.7-0005	test_synth_level3_provision	untested	
 KISS-SYNTH-6.7-0005a	test_synth_no_separate_transaction	untested	
 KISS-SYNTH-7.1-0001	test_synth_mandatory_core	untested	
