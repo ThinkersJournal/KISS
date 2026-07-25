@@ -112,6 +112,7 @@ KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered	untested
 KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace	untested	
 KISS-CLASSIFY-6.8-0005	test_classify_target_token_charset	untested	
 KISS-CLASSIFY-6.9-0001	test_classify_no_upstream_dependency	untested	
+KISS-CLASSIFY-6.9-0002	test_classify_structure_key_opaque_carry	untested	
 KISS-CLASSIFY-6.9-0003	test_classify_zero_dependency	untested	
 KISS-CLASSIFY-7.1-0001	test_classify_mandatory_core	untested	
 KISS-CLASSIFY-7.2-0001	test_classify_extension_is_additive	untested	

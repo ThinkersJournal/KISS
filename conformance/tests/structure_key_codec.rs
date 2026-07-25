@@ -562,48 +562,4 @@ fn test_classify_target_byte_exact_match() {
     assert_eq!(mk("cuda:sm89"), exact, "KISS-CLASSIFY-6.8-0002: equal targets did not match");
 }
 
-// ============================================================================
-// KISS-CLASSIFY-6.9-0002 — structure_key carries opaquely across the announce seam
-// ============================================================================
-
-/// KISS-CLASSIFY-6.9-0002: a `structure_key` token is carriable as an OPAQUE,
-/// length-delimited byte token across the announce seam — the carrier never parses
-/// it, and it returns byte-identical and still parseable per the codec.
-#[test]
-fn test_classify_structure_key_opaque_carry() {
-    let mut battery: Vec<StructureKey> = Vec::new();
-    battery.push(key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co()], Reduce::None, None));
-    battery.push(key("red", "f32", "rocm:gfx942", WorkClass::Warp, 4,
-        vec![op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false)], Reduce::Subset(0x0a), None));
-    battery.push(key("gem", "e4m3fn", "cuda:sm90a", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None,
-        Some(Contraction {
-            m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D8,
-            batch: Some(SizeClass::Small), wdt: "e5m2".to_string(), acc: "f32".to_string(),
-            out: "f16".to_string(), mp: MathPrecision::Stable,
-        })));
-
-    for k in &battery {
-        let tok = k.to_token();
-        // opaque-carriable: a flat, length-delimited ASCII byte string with no control
-        // or whitespace byte for a length-framed carrier to trip on. A codec that
-        // pretty-printed a field with a space/control byte would break this.
-        assert!(tok.is_ascii(), "KISS-CLASSIFY-6.9-0002: non-ASCII token cannot carry opaquely");
-        assert!(
-            tok.bytes().all(|b| b > 0x20 && b != 0x7f),
-            "KISS-CLASSIFY-6.9-0002: token carries a control/whitespace byte"
-        );
-        // carry as opaque bytes — the carrier moves (len, bytes) and NEVER parses.
-        let carried: Vec<u8> = tok.clone().into_bytes();
-        assert_eq!(carried.len(), tok.len(), "KISS-CLASSIFY-6.9-0002: length not preserved");
-        let returned =
-            String::from_utf8(carried).expect("KISS-CLASSIFY-6.9-0002: opaque carry corrupted the bytes");
-        // returned byte-for-byte ...
-        assert_eq!(returned, tok, "KISS-CLASSIFY-6.9-0002: token not byte-identical after carry");
-        // ... and re-parses to an equal key that re-serializes identically (the codec
-        // stays stable across the non-parsing channel).
-        let reparsed =
-            from_token(&returned).expect("KISS-CLASSIFY-6.9-0002: carried token no longer parseable");
-        assert_eq!(&reparsed, k, "KISS-CLASSIFY-6.9-0002: carried token parsed to a different key");
-        assert_eq!(reparsed.to_token(), tok, "KISS-CLASSIFY-6.9-0002: re-serialization after carry drifted");
-    }
-}
+// KISS-CLASSIFY-6.9-0002 — test dropped per adversarial review; clause skipped-pending-a-real-surface (restored to UNBACKED.tsv as `untested`): no announce-seam carrier exists in this crate, so the ex-test's "opaque carry" was a std into_bytes()/from_utf8() identity on its own bytes (tautological) plus a re-parse already fully covered by test_classify_token_roundtrip — it had no unique mutation-provable teeth.
