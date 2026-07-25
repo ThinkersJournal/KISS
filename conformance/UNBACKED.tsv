@@ -72,7 +72,6 @@ KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested
 KISS-CLASSIFY-6.1-0001	test_classify_dtype_set_is_closed	lint:kiss_tables	the closed 20-token dtype set drifts (count word or a full dtype table)
 KISS-CLASSIFY-6.1-0002	test_classify_dtype_bit_widths	untested	
 KISS-CLASSIFY-6.1-0003	test_classify_dtype_numeric_kinds	untested	
-KISS-CLASSIFY-6.1-0004	test_classify_dtype_token_spelling	untested	
 KISS-CLASSIFY-6.1-0005	test_classify_dtypes_are_pure_storage	untested	
 KISS-CLASSIFY-6.1-0006	test_classify_u32_is_ordinary_storage	untested	
 KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
@@ -80,12 +79,9 @@ KISS-CLASSIFY-6.1-0011	test_classify_e5m2_format	untested
 KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
 KISS-CLASSIFY-6.2-0001	test_classify_numeric_kind_set_closed	untested	
 KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
-KISS-CLASSIFY-6.3-0001	test_classify_operand_rank_bounds	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
-KISS-CLASSIFY-6.3-0003	test_classify_strides_are_signed_elements	untested	
 KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	
 KISS-CLASSIFY-6.3-0005	test_classify_alignment_is_bytes	untested	
-KISS-CLASSIFY-6.3-0006	test_classify_operand_dtype_in_set	untested	
 KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested	
 KISS-CLASSIFY-6.3-0008	test_classify_op_family_is_cell_level	untested	
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
@@ -102,23 +98,16 @@ KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeCla
 KISS-CLASSIFY-6.6-0001	test_classify_structure_key_is_admissibility_predicate	untested	
 KISS-CLASSIFY-6.6-0002	test_classify_structure_key_is_not_op_identity	untested	
 KISS-CLASSIFY-6.6-0003	test_classify_structure_key_extent_free	untested	
-KISS-CLASSIFY-6.6-0004	test_classify_structure_key_field_layout	untested	
 KISS-CLASSIFY-6.6-0005	test_classify_structure_key_primary_dtype	untested	
-KISS-CLASSIFY-6.6-0006	test_classify_structure_key_rank_and_operand_count	untested	
 KISS-CLASSIFY-6.6-0007	test_classify_operand_sub_key_fields	untested	
 KISS-CLASSIFY-6.6-0008	test_classify_broadcast_axis_mask	untested	
 KISS-CLASSIFY-6.6-0011	test_classify_structure_key_derivation_canonical	untested	
 KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	untested	
-KISS-CLASSIFY-6.6-0013	test_classify_mixed_rank_axis_alignment	untested	
 KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested	
 KISS-CLASSIFY-6.6-0015	test_classify_secondary_dtype_unkeyed	untested	
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
-KISS-CLASSIFY-6.7-0007	test_classify_token_codec_additive	untested	
-KISS-CLASSIFY-6.7-0008	test_classify_token_roundtrip	untested	
-KISS-CLASSIFY-6.7-0010	test_classify_mask_hex_lowercase	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
 KISS-CLASSIFY-6.7-0012	test_classify_reduction_accumulator_coordinate	untested	
-KISS-CLASSIFY-6.8-0002	test_classify_target_byte_exact_match	untested	
 KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered	untested	
 KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace	untested	
 KISS-CLASSIFY-6.8-0005	test_classify_target_token_charset	untested	
