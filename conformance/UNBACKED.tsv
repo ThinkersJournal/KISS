@@ -135,8 +135,6 @@ KISS-CLASSIFY-8-0004	test_classify_freeze_gate_two_dissimilar_impls	untested
 KISS-CLASSIFY-8-0005	test_classify_freeze_gate_foreign_reader	untested	
 KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	untested	
 KISS-CLASSIFY-8-0007	test_classify_dtype_layout_version_handle	lint:kiss_tables	the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008
-KISS-CONFORM-6.0-0001	test_conform_determinism_enum_imported	untested	
-KISS-CONFORM-6.0-0002	test_conform_comparator_selected_by_class	untested	
 KISS-CONFORM-6.0-0003	test_conform_structural_artifacts_byte_exact	untested	
 KISS-CONFORM-6.1-0001	test_conform_traceability_matrix_exists	untested	
 KISS-CONFORM-6.1-0002	test_conform_every_clause_has_test	untested	
@@ -193,7 +191,6 @@ KISS-CONFORM-6.3-0004	test_conform_frozen_matrix_immutable	untested
 KISS-CONFORM-6.4-0001	test_conform_golden_byte_vectors	untested	
 KISS-CONFORM-6.4-0002	test_conform_golden_vectors_fully_pinned	untested	
 KISS-CONFORM-6.4-0003	test_conform_golden_vectors_hex_rows	untested	
-KISS-CONFORM-6.5-0001	test_conform_oracle_differential_harness	untested	
 KISS-CONFORM-6.5-0002	test_conform_oracle_independent	untested	
 KISS-CONFORM-6.5-0003	test_conform_reject_circular_vector	untested	
 KISS-CONFORM-6.5-0004	test_conform_oracle_resolves_to_floor	untested	
@@ -211,15 +208,9 @@ KISS-CONFORM-6.7-0002	test_conform_decline_code_pinned	untested
 KISS-CONFORM-6.7-0003	test_conform_never_panic_fuzz	untested	
 KISS-CONFORM-6.7-0004	test_conform_process_survives	untested	
 KISS-CONFORM-6.7-0005	test_conform_decline_vs_residue_taxonomy	untested	
-KISS-CONFORM-6.8-0001	test_conform_exact_byte_comparator	untested	
-KISS-CONFORM-6.8-0002	test_conform_ulp_comparator	untested	
 KISS-CONFORM-6.8-0003	test_conform_ulp_ceiling_enforced	untested	
-KISS-CONFORM-6.8-0004	test_conform_nondeterministic_comparator	untested	
-KISS-CONFORM-6.8-0005	test_conform_split_comparator	untested	
-KISS-CONFORM-6.8-0006	test_conform_comparator_selection_rule	untested	
 KISS-CONFORM-6.8-0007	test_conform_whole_kernel_downgrade	untested	
 KISS-CONFORM-6.8-0008	test_conform_comparator_precedence	untested	
-KISS-CONFORM-6.8-0009	test_conform_exact_byte_admissibility	untested	
 KISS-CONFORM-6.9-0001	test_conform_structural_dag_equality	untested	
 KISS-CONFORM-6.9-0002	test_conform_structural_not_source_bytes	untested	
 KISS-CONFORM-6.9-0003	test_conform_roundtrip_tier1	untested	
