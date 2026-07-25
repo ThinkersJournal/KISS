@@ -81,9 +81,7 @@ KISS-CLASSIFY-6.2-0001	test_classify_numeric_kind_set_closed	untested
 KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
 KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	
-KISS-CLASSIFY-6.3-0005	test_classify_alignment_is_bytes	untested	
 KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested	
-KISS-CLASSIFY-6.3-0008	test_classify_op_family_is_cell_level	untested	
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
@@ -95,22 +93,17 @@ KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	lint:kiss_vocab	the in
 KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	lint:kiss_vocab	the 24 op-family codes drift between Classify §6.5-0006 and the reference structure_key codec (OP_FAMILIES)
 KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	lint:kiss_vocab	the WorkClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
-KISS-CLASSIFY-6.6-0001	test_classify_structure_key_is_admissibility_predicate	untested	
 KISS-CLASSIFY-6.6-0002	test_classify_structure_key_is_not_op_identity	untested	
-KISS-CLASSIFY-6.6-0003	test_classify_structure_key_extent_free	untested	
 KISS-CLASSIFY-6.6-0005	test_classify_structure_key_primary_dtype	untested	
-KISS-CLASSIFY-6.6-0007	test_classify_operand_sub_key_fields	untested	
 KISS-CLASSIFY-6.6-0008	test_classify_broadcast_axis_mask	untested	
 KISS-CLASSIFY-6.6-0011	test_classify_structure_key_derivation_canonical	untested	
 KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	untested	
 KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested	
-KISS-CLASSIFY-6.6-0015	test_classify_secondary_dtype_unkeyed	untested	
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
 KISS-CLASSIFY-6.7-0012	test_classify_reduction_accumulator_coordinate	untested	
 KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered	untested	
 KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace	untested	
-KISS-CLASSIFY-6.8-0005	test_classify_target_token_charset	untested	
 KISS-CLASSIFY-6.9-0001	test_classify_no_upstream_dependency	untested	
 KISS-CLASSIFY-6.9-0002	test_classify_structure_key_opaque_carry	untested	
 KISS-CLASSIFY-6.9-0003	test_classify_zero_dependency	untested	
