@@ -475,7 +475,6 @@ KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	lint:kiss_ops	the adve
 KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	
 KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs	untested	
 KISS-OPS-6.19-0003	test_ops_opattrs_carrier_set_closed	untested	
-KISS-OPS-6.19-0011	test_ops_opattrs_version_binding	untested	
 KISS-OPS-6.19-0013	test_ops_opattrs_golden_vector_conformance	untested	
 KISS-OPS-6.19-0014	test_ops_opattrs_monoid_enum	lint:kiss_vocab	the Monoid OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0015	test_ops_opattrs_oob_policy_enum	lint:kiss_vocab	the OobPolicy OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
