@@ -4,6 +4,7 @@
 //! positional C-ABI — against the from-scratch [`crate::semantics`] oracle over a
 //! deterministic corpus. Increment 1: one elementwise binary op (`add`).
 
+pub mod abi;
 pub mod loader;
 pub mod msvc;
 
