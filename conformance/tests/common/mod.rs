@@ -15,7 +15,10 @@ pub fn compile_and_load(name: &str) -> Option<BinaryKernel> {
     let src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/harness_fixtures")
         .join(format!("{name}.c"));
-    let out = std::env::temp_dir().join(format!("kiss_harness_{name}"));
+    // Per-process dir: Cargo runs integration-test binaries in parallel, and more
+    // than one compiles the same fixture — a shared deterministic dir would race on
+    // the linker output / DLL file lock. `process::id()` separates the binaries.
+    let out = std::env::temp_dir().join(format!("kiss_harness_{}_{name}", std::process::id()));
     std::fs::create_dir_all(&out).unwrap();
     let dll = msvc::compile_c_to_dll(&m, &src, &out).expect("compile fixture");
     let art = Box::leak(Box::new(Artifact::load(&dll).expect("load fixture")));

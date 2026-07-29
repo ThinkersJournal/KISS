@@ -50,11 +50,20 @@ pub fn find_msvc() -> Option<Msvc> {
                 if !cl.exists() {
                     continue;
                 }
-                // Windows SDK (Include/Lib live under Windows Kits\10). A
-                // missing kit/subdir means this candidate can't be completed —
-                // try the next edition/root rather than aborting discovery.
-                let kit = Path::new(r"C:\Program Files (x86)\Windows Kits\10");
-                let Some(sdk) = newest_subdir(&kit.join("Include")) else { continue };
+                // Windows SDK (Include/Lib live under Windows Kits\10). Usually
+                // under Program Files (x86), but not on every host/image — probe
+                // both roots. A missing kit/subdir means this candidate can't be
+                // completed; try the next edition/root rather than aborting.
+                let kit_roots = [
+                    Path::new(r"C:\Program Files (x86)\Windows Kits\10"),
+                    Path::new(r"C:\Program Files\Windows Kits\10"),
+                ];
+                let Some((kit, sdk)) = kit_roots
+                    .iter()
+                    .find_map(|k| newest_subdir(&k.join("Include")).map(|sdk| (*k, sdk)))
+                else {
+                    continue;
+                };
                 let Some(sdk_name) = sdk.file_name() else { continue };
                 let sdk_name = sdk_name.to_string_lossy().into_owned();
                 let inc = ver.join("include");
