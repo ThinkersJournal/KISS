@@ -486,11 +486,12 @@ git commit  # message: "harness: §6.5 elementwise-binary marshaller (invoke_bin
 - Create: `conformance/tests/harness_fixtures/add_a.c`
 - Create: `conformance/tests/harness_fixtures/add_b.c`
 - Create: `conformance/tests/harness_fixtures/add_wrong.c`
+- Create: `conformance/tests/common/mod.rs` (shared test helper — Rust integration-test crates cannot share a plain fn, so `tests/common/mod.rs` is the idiomatic single home; reused by Task 6)
 - Create: `conformance/tests/harness_smoke.rs`
 
 **Interfaces:**
 - Consumes: `kiss_conformance::harness::msvc::{find_msvc, compile_c_to_dll}`, `harness::loader::Artifact`, `harness::abi::{BinaryKernel, invoke_binary}`.
-- Produces: (test-only) a reusable helper `compile_and_load(name) -> Option<(Artifact, BinaryKernel)>` local to the test crate.
+- Produces: `common::compile_and_load(name: &str) -> Option<BinaryKernel>` (in `tests/common/mod.rs`), consumed by both `harness_smoke.rs` (Task 4) and `harness_differential.rs` (Task 6).
 
 - [ ] **Step 1: Write the three fixtures**
 
@@ -521,13 +522,15 @@ __declspec(dllexport) void kiss_add(const float* in0, const float* in1, float* o
 }
 ```
 
-- [ ] **Step 2: Write the smoke test**
+- [ ] **Step 2: Create the shared test helper**
 
-Create `conformance/tests/harness_smoke.rs`:
+Create `conformance/tests/common/mod.rs`:
 ```rust
-//! Each C fixture compiles, loads, and computes on a trivial input.
+//! Shared integration-test helper: compile a C fixture to a DLL and resolve its
+//! `kiss_add` entry as a `BinaryKernel`. (Rust integration-test files are
+//! separate crates; `tests/common/mod.rs` is the idiomatic single home.)
 
-use kiss_conformance::harness::abi::{invoke_binary, BinaryKernel};
+use kiss_conformance::harness::abi::BinaryKernel;
 use kiss_conformance::harness::loader::Artifact;
 use kiss_conformance::harness::msvc;
 use std::path::PathBuf;
@@ -535,7 +538,7 @@ use std::path::PathBuf;
 /// Compile `tests/harness_fixtures/<name>.c` to a DLL and resolve `kiss_add`.
 /// Returns `None` (skip) if no toolchain. Leaks the `Artifact` so the resolved
 /// fn pointer stays valid for the test's lifetime.
-fn compile_and_load(name: &str) -> Option<BinaryKernel> {
+pub fn compile_and_load(name: &str) -> Option<BinaryKernel> {
     let m = msvc::find_msvc()?;
     let src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/harness_fixtures")
@@ -548,6 +551,17 @@ fn compile_and_load(name: &str) -> Option<BinaryKernel> {
     // SAFETY: every fixture exports exactly the BinaryKernel C signature.
     Some(unsafe { std::mem::transmute::<*const core::ffi::c_void, BinaryKernel>(sym) })
 }
+```
+
+- [ ] **Step 3: Write the smoke test**
+
+Create `conformance/tests/harness_smoke.rs`:
+```rust
+//! Each C fixture compiles, loads, and computes on a trivial input.
+
+mod common;
+use common::compile_and_load;
+use kiss_conformance::harness::abi::invoke_binary;
 
 #[test]
 fn all_three_fixtures_compile_load_and_run() {
@@ -562,16 +576,18 @@ fn all_three_fixtures_compile_load_and_run() {
 }
 ```
 
-- [ ] **Step 3: Run the smoke test, verify it passes**
+*Note:* Cargo compiles `tests/common/mod.rs` as a submodule of each test that does `mod common;`; it is NOT itself run as a test binary (no `#[test]` fns), so it produces no "0 tests" noise.
+
+- [ ] **Step 4: Run the smoke test, verify it passes**
 
 Run: `cargo test -p kiss-conformance --test harness_smoke 2>&1 | tail -12`
 Expected: PASS (or SKIP if no toolchain). Confirms fixtures + toolchain + loader + marshaller compose.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add conformance/tests/harness_fixtures conformance/tests/harness_smoke.rs
-git commit  # message: "harness: C add fixtures (2 correct + 1 wrong) + smoke test"
+git add conformance/tests/harness_fixtures conformance/tests/common/mod.rs conformance/tests/harness_smoke.rs
+git commit  # message: "harness: C add fixtures (2 correct + 1 wrong) + shared helper + smoke test"
 ```
 
 ---
@@ -780,26 +796,11 @@ Create `conformance/tests/harness_differential.rs`:
 //! decomposition-resolution obligation (a non-primitive op → floor) is a later
 //! increment and is NOT claimed here.
 
+mod common;
+use common::compile_and_load;
 use kiss_conformance::harness::abi::{invoke_binary, BinaryKernel};
 use kiss_conformance::harness::corpus::tagged_corpus;
 use kiss_conformance::harness::differ::run_binary;
-use kiss_conformance::harness::loader::Artifact;
-use kiss_conformance::harness::msvc;
-use std::path::PathBuf;
-
-fn compile_and_load(name: &str) -> Option<BinaryKernel> {
-    let m = msvc::find_msvc()?;
-    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/harness_fixtures")
-        .join(format!("{name}.c"));
-    let out = std::env::temp_dir().join(format!("kiss_harness_diff_{name}"));
-    std::fs::create_dir_all(&out).unwrap();
-    let dll = msvc::compile_c_to_dll(&m, &src, &out).expect("compile fixture");
-    let art = Box::leak(Box::new(Artifact::load(&dll).expect("load fixture")));
-    let sym = art.symbol("kiss_add").expect("kiss_add export");
-    // SAFETY: each fixture exports exactly the BinaryKernel C signature.
-    Some(unsafe { std::mem::transmute::<*const core::ffi::c_void, BinaryKernel>(sym) })
-}
 
 /// Run a kernel over the corpus and return its outputs (1:1 with the corpus).
 fn outputs_of(k: BinaryKernel, corpus: &[kiss_conformance::harness::corpus::Vector]) -> Vec<f32> {
