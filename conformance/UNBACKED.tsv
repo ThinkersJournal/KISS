@@ -321,7 +321,6 @@ KISS-EMIT-6.1-0001	test_emit_normative_input_is_opdef_plus_key	untested
 KISS-EMIT-6.1-0002	test_emit_rejects_schedule_plan_as_abi	untested	
 KISS-EMIT-6.1-0003	test_emit_opdef_resolves_to_floor	untested	
 KISS-EMIT-6.1-0004	test_emit_structure_key_carried_verbatim	untested	
-KISS-EMIT-6.1-0005	test_emit_defines_no_source_language	untested	
 KISS-EMIT-6.1-0006	test_emit_no_input_beyond_pair	untested	
 KISS-EMIT-6.1-0007	test_emit_other_input_not_conforming	untested	
 KISS-EMIT-6.1-0008	test_emit_no_scheduler_in_abi	untested	
@@ -347,17 +346,12 @@ KISS-EMIT-6.8-0002	test_emit_unsupported_dtype_declines	untested
 KISS-EMIT-6.8-0003	test_emit_build_on_miss_declines_cleanly	untested	
 KISS-EMIT-6.8-0004	test_emit_never_panic_on_adversarial_input	untested	
 KISS-EMIT-6.8-0005	test_emit_build_on_miss_no_null_artifact	untested	
-KISS-EMIT-7.1-0001	test_emit_mandatory_core	untested	
 KISS-EMIT-7.2-0001	test_emit_declared_subset_bounds_claim	untested	
 KISS-EMIT-7.3-0001	test_emit_tier2_is_optional	untested	
-KISS-EMIT-8.1-0001	test_emit_abi_version_bump_rule	untested	
-KISS-EMIT-8.1-0002	test_emit_no_abi_bump_on_compatible_change	untested	
 KISS-EMIT-8.2-0001	test_emit_freeze_precondition_audit	untested	
 KISS-EMIT-8.2-0002	test_emit_freeze_precondition_differing_spelling_emitter	untested	
 KISS-EMIT-8.2-0003	test_emit_freeze_precondition_second_consumer_roundtrip	untested	
 KISS-EMIT-8.2-0004	test_emit_freeze_signed_by_audit_role	untested	
-KISS-EMIT-9.1-0001	test_emit_claim_prerequisite_closed	untested	
-KISS-EMIT-9.2-0001	test_emit_traceability_complete	untested	
 KISS-GRAMMAR-6.1-0001	test_grammar_advertisable_op_field_schema	untested	
 KISS-GRAMMAR-6.1-0002	test_grammar_no_parallel_op_list	untested	
 KISS-GRAMMAR-6.1-0004	test_grammar_level_inherited_not_redeclared	untested	
