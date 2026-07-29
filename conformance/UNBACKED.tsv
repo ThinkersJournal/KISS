@@ -370,9 +370,12 @@ KISS-GRAMMAR-6.1-0002	test_grammar_no_parallel_op_list	untested
 KISS-GRAMMAR-6.1-0004	test_grammar_level_inherited_not_redeclared	untested	
 KISS-GRAMMAR-6.1-0006	test_grammar_defines_no_op_semantics	untested	
 KISS-GRAMMAR-6.2-0001	test_grammar_pattern_attrs_carry_opattrs	untested	
+KISS-GRAMMAR-6.2-0002	test_grammar_load_bearing_attr_guarded	untested	
 KISS-GRAMMAR-6.2-0003	test_grammar_recognition_is_structural	untested	
 KISS-GRAMMAR-6.2-0005	test_grammar_commutativity_is_canonicalization_only	untested	
 KISS-GRAMMAR-6.3-0001	test_grammar_synthesis_carries_decomposition_pointer	untested	
+KISS-GRAMMAR-6.3-0002	test_grammar_flavor_is_distinct_op_name	untested	
+KISS-GRAMMAR-6.3-0003	test_grammar_synthesis_scalar_param_extract	untested	
 KISS-GRAMMAR-6.3-0004	test_grammar_synthesis_emit_hints	untested	
 KISS-GRAMMAR-6.3-0005	test_grammar_channel_separation	untested	
 KISS-GRAMMAR-6.5-0001	test_grammar_add_op_by_rebasing	untested	

@@ -261,148 +261,21 @@ fn test_grammar_single_output_region() {
 }
 
 // ---------------------------------------------------------------------------
-// 6.2-0002 — a load-bearing pattern-attribute value is carried (guarded), never
-//            see-through.
+// INTENTIONALLY UNBACKED (dropped per adversarial review — honest 6 -> 3):
+//
+//   KISS-GRAMMAR-6.2-0002 (load-bearing attr MUST be matched with an explicit
+//     GUARD) — a matcher/recognition consumer obligation. No matcher/recognizer/
+//     guard exists in conformance/src; a wire test only proves the value is
+//     CARRIED + distinguishable (a precondition for guarding), not that any
+//     matcher guards. Backing it here over-credits the clause. Skipped until a
+//     recognizer surface exists.
+//   KISS-GRAMMAR-6.3-0003 (scalar param MUST route via the extract channel, NOT
+//     an op-graph node) — `extracts` and `nodes` are separate struct lists, so
+//     "appending an extract leaves node_count unchanged" is structural, not a
+//     routing/lowering behavior under test (near-tautological). No lowering logic
+//     decides extract-vs-node here. Skipped until a lowering surface exists.
+//   KISS-GRAMMAR-6.3-0002 (flavor MUST be a distinct op NAME, not a free-form
+//     flag) — the core assert is encode_tag injectivity (different name strings ->
+//     different bytes = tautological); the empty-tail assert shows name-flavor
+//     WORKS but does not prove flag-flavor is FORBIDDEN. Skipped as weak/tautological.
 // ---------------------------------------------------------------------------
-
-/// KISS-GRAMMAR-6.2-0002 — a pattern attribute whose VALUE is load-bearing for
-/// correctness (a `gather`'s axis) MUST be matched with an explicit guard; an impl
-/// MUST NOT skip it (no see-through), because a region that dropped the value would
-/// match a structurally-similar op with a different value — a wrong bind. Teeth:
-/// two `gather` regions identical except the load-bearing OpAttrs axis
-/// (`encode_gather(0,…)` vs `encode_gather(1,…)`) produce DIFFERENT region wire
-/// bytes AND different tag bytes, and each axis survives a round-trip verbatim — the
-/// value is carried, byte-distinguishable, so a guard can read it. Mutation: a codec
-/// that dropped or zeroed the per-node OpAttrs blob (see-through) would collapse the
-/// two axes to identical bytes and every `assert_ne!` here fails (the wrong bind:
-/// matching any gather regardless of axis).
-#[test]
-fn test_grammar_load_bearing_attr_guarded() {
-    let _clause = "KISS-GRAMMAR-6.2-0002";
-    let attrs0 = opattrs::encode_gather(0, opattrs::OobPolicy::Clamp, 1, opattrs::IndexDtype::U32);
-    let attrs1 = opattrs::encode_gather(1, opattrs::OobPolicy::Clamp, 1, opattrs::IndexDtype::U32);
-    let roles = vec![data_star(), index_u32()];
-
-    // Region wire: the axis is load-bearing on the wire — two axes -> different bytes.
-    let w0 = encode(&gather_region(attrs0.clone(), roles.clone())).unwrap();
-    let w1 = encode(&gather_region(attrs1.clone(), roles.clone())).unwrap();
-    assert_ne!(w0, w1, "{_clause}: the load-bearing axis reaches the region wire (not see-through)");
-
-    // Tag: the axis is identity-bearing — two axes -> different tag identity.
-    let t0 = encode_tag("gather", &attrs0, &roles, 2);
-    let t1 = encode_tag("gather", &attrs1, &roles, 2);
-    assert_ne!(t0, t1, "{_clause}: the load-bearing axis reaches the tag identity");
-
-    // Each axis survives a round-trip verbatim — the value is CARRIED, so a consumer
-    // can guard on it rather than see through it.
-    let carried0 = root_op(&decode(&w0).unwrap()).1;
-    let carried1 = root_op(&decode(&w1).unwrap()).1;
-    assert_eq!(carried0, attrs0, "axis-0 blob carried byte-for-byte");
-    assert_eq!(carried1, attrs1, "axis-1 blob carried byte-for-byte");
-    assert_ne!(carried0, carried1, "{_clause}: the two axes stay distinguishable after decode");
-    // The differing byte is the axis field itself (blob[0]): 0 vs 1.
-    assert_eq!((carried0[0], carried1[0]), (0, 1), "the axis value itself is on the wire, guardable");
-}
-
-// ---------------------------------------------------------------------------
-// 6.3-0003 — a scalar runtime param rides the extract channel, not an op-graph
-//            node (synthesis-channel routing, distinct from a graph node).
-// ---------------------------------------------------------------------------
-
-/// KISS-GRAMMAR-6.3-0003 — scalar-runtime-param routing carried on
-/// `synthesis_attrs` MUST use the root-anchored extract channel and MUST NOT be
-/// encoded as an additional op-graph node. Teeth: routing a scalar via an Extract
-/// record keeps the op-graph node table BYTE-INVARIANT (the whole region prefix up
-/// to `extract_count` is unchanged; node_count stays 5) while `extract_count` goes
-/// 0 -> 1, and the extract is root-anchored (path is canonical operand indices from
-/// the root). To show node_count is genuinely a signal (not always 5), a
-/// materialized-as-node variant reaches node_count 6. Mutation: an impl that lowered
-/// the scalar into a Bind/Op node bumps node_count 5 -> 6 and perturbs the node-table
-/// prefix — the invariance asserts fail. (Overlaps the backed 6.4-0007 headline
-/// no-extra-node property; distinct emphasis: the scalar is a synthesis-channel
-/// param that materializes NOTHING in the op graph — proven here by byte-invariance
-/// of the node-table prefix, not just the decoded node count. The shared-target
-/// lex-least-path derivation of §6.4-0007 is out of this codec's scope.)
-#[test]
-fn test_grammar_synthesis_scalar_param_extract() {
-    let _clause = "KISS-GRAMMAR-6.3-0003";
-
-    // Base G1: 5 nodes, 0 extracts.
-    let base = encode(&g1_region()).unwrap();
-    let pb = decode(&base).unwrap();
-    assert_eq!(pb.nodes.len(), 5, "G1 node_count is 5");
-    assert_eq!(pb.extracts.len(), 0, "G1 has no extracts");
-
-    // Route ONE scalar via a root-anchored extract (path [1] = root's operand-1 = mul).
-    let mut r = g1_region();
-    r.extracts = vec![Extract { path: vec![1], param_slot: 0 }];
-    let withx = encode(&r).unwrap();
-    let pw = decode(&withx).unwrap();
-
-    // The op-graph node table is BYTE-INVARIANT: the scalar materialized no node.
-    // (base = <node table> + extract_count 0x0000; withx = the SAME <node table> +
-    // extract_count 1 + the record. The whole node-table prefix must be identical.)
-    let node_table_prefix = &base[..base.len() - 2]; // strip the trailing 00 00 extract_count
-    assert_eq!(&withx[..node_table_prefix.len()], node_table_prefix,
-        "{_clause}: routing a scalar adds NO node — the op-graph byte prefix is unchanged");
-    assert_eq!(pw.nodes.len(), 5, "{_clause}: node_count stays 5 (scalar rides the extract channel)");
-    assert_eq!(pw.nodes, pb.nodes, "the decoded op-graph node table is invariant to the scalar param");
-    assert_eq!(pw.extracts.len(), 1, "the scalar added exactly one tail extract record (0 -> 1)");
-    // Root-anchored: the path is operand indices from the root.
-    assert_eq!(pw.extracts[0], Extract { path: vec![1], param_slot: 0 }, "the extract is root-anchored");
-
-    // node_count IS a signal: a region that materializes an extra op node reaches 6,
-    // so the invariance above is meaningful (not a constant).
-    let materialized = Region::new(3, "1", "1", Node::op("add", vec![
-        Node::op("mul", vec![Node::Bind(0), Node::op("add", vec![Node::Bind(1), Node::Bind(2)])]),
-        Node::Bind(0),
-    ]));
-    let pm = decode(&encode(&materialized).unwrap()).unwrap();
-    assert_eq!(pm.nodes.len(), 6, "a materialized extra op node bumps node_count to 6 (the drift the extract avoids)");
-}
-
-// ---------------------------------------------------------------------------
-// 6.3-0002 — an exact-vs-approx flavor is a DISTINCT op_name, not a free-form flag.
-// ---------------------------------------------------------------------------
-
-/// KISS-GRAMMAR-6.3-0002 — an exact-vs-approximate flavor distinction MUST be
-/// expressed as DISTINCT KISS-Ops op names (`gelu` exact-erf vs `gelu_tanh`;
-/// `relu` vs `fmax_ieee`; `rem_floor` vs `rem_trunc`) and MUST NOT be a free-form
-/// approximation/precision flag on `synthesis_attrs`. Teeth: each flavor pair has
-/// DIFFERENT tag bytes, and the difference is localized ENTIRELY to the `op_name`
-/// token — the two flavors carry byte-identical trailing (empty OpAttrs + empty
-/// operand-role) fields, so the tag/node schema has no separate flag field a flavor
-/// could hide in. Mutation: a codec that carried the flavor as a non-identity
-/// free-form flag OFF the tag (or an identity-preserving impl that folded
-/// `gelu`/`gelu_tanh` onto one name) would collapse a flavor pair to identical
-/// identity bytes — here they differ, so the `assert_ne!` fails on that drift.
-/// (Adjacent to the backed 6.6-0001 op-name-spelling; distinct: this is
-/// flavor-as-name semantics over `encode_tag`, not case/synonym spelling.)
-#[test]
-fn test_grammar_flavor_is_distinct_op_name() {
-    let _clause = "KISS-GRAMMAR-6.3-0002";
-    // Unary flavors: one operand, empty OpAttrs, all-default roles — so the ONLY
-    // possible carrier of the flavor is the op_name token itself.
-    let tag = |name: &str| encode_tag(name, &[], &[], 1);
-
-    // Each exact-vs-approx flavor pair is two DISTINCT op_names -> distinct tags.
-    for (exact, approx) in [("gelu", "gelu_tanh"), ("relu", "fmax_ieee"), ("rem_floor", "rem_trunc")] {
-        let te = tag(exact);
-        let ta = tag(approx);
-        assert_ne!(te, ta,
-            "{_clause}: flavor {exact:?} vs {approx:?} is a distinct op_name -> distinct tag identity");
-        // The flavor lives in the op_name ONLY: everything AFTER the op_name token is
-        // byte-identical (empty OpAttrs 00 00 + k=0 roles 00 00). There is no separate
-        // precision/approx flag field in the tag for a flavor to hide in.
-        let tail = |t: &[u8], name: &str| t[2 + name.len()..].to_vec();
-        assert_eq!(tail(&te, exact), tail(&ta, approx),
-            "{_clause}: the flavor pair differs ONLY in the op_name token (no hidden flag field)");
-        assert_eq!(tail(&te, exact), vec![0x00, 0x00, 0x00, 0x00],
-            "the non-name fields are exactly empty OpAttrs + k=0 roles (no flag slot)");
-    }
-
-    // Cross-check: `gelu` is also distinct from an unrelated op, and equal-name tags
-    // are equal — the tag is a pure function of the op_name (+ its empty attrs), so a
-    // flavor CANNOT be a free-form flag riding alongside an identical name.
-    assert_ne!(tag("gelu"), tag("relu"), "distinct op names are distinct tags");
-}
