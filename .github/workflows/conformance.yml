@@ -3,6 +3,12 @@ name: conformance
 # Runs the reference conformance harness (KISS-Conform §6.4/§6.7): the KISS-Ops
 # OpAttrs reference encoder must reproduce every Ops Appendix E golden vector
 # byte-for-byte, and must decline malformed blobs. ubuntu-latest ships Rust.
+#
+# The Windows leg additionally runs the §6.13-0006 differential slice: it compiles
+# foreign C `add` kernels with MSVC and differences them against the CPU oracle
+# through the KISS-Contract §6.5 C-ABI. That slice is #[cfg(windows)] and SKIPs
+# where no C toolchain is present (so the ubuntu leg is unaffected); windows-latest
+# ships MSVC + the Windows SDK, so there it actually executes.
 
 on:
   push:
@@ -15,5 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Reference conformance harness
+        working-directory: conformance
+        run: cargo test
+
+  windows-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reference conformance harness (Windows — runs the §6.13-0006 differential slice)
         working-directory: conformance
         run: cargo test

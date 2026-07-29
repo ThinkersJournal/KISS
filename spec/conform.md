@@ -983,11 +983,19 @@ atomic clause with its own append-only ID and dedicated test.
   comparator (KISS-OPS §6.0-0003), and nondeterministic ops without a byte-exact requirement
   (KISS-OPS §6.0-0004). *Test:* `test_conform_ops_per_class_comparators`.
 - **KISS-CONFORM-6.13-0006** — KISS-Conform MUST **own** the independent CPU-oracle differential
-  harness (§6.5) that resolves an op's decomposition to the primitive floor and compares under
-  its declared class sharing no lowering module with any reference impl, MUST provide the KISS-Ops
-  freeze-gate tests (≥2 dissimilar impls agree on floor semantics and decompositions, KISS-OPS
-  §8-0005 / §8-0006), and MUST use the advertised per-op class (KISS-OPS §7.4-0001) to select
-  the comparator. *Test:* `test_conform_ops_oracle_and_freeze_gate`.
+  harness (§6.5), sharing no lowering module with any reference implementation, and MUST provide a
+  KISS-Ops freeze-gate test (KISS-OPS §8-0005 / §8-0006) that differences a candidate against the
+  oracle and proves **≥2 dissimilar implementations agree on a primitive-floor op's semantics** — a
+  conformant implementation is accepted and a divergent one is caught. *Test:*
+  `test_conform_ops_oracle_and_freeze_gate`.
+- **KISS-CONFORM-6.13-0006a** — KISS-Conform's differential harness MUST **resolve a non-primitive
+  op** through its KISS-Ops reference decomposition down to the primitive floor and difference the
+  resolved form; the freeze-gate MUST prove ≥2 dissimilar implementations agree on **decompositions**
+  (KISS-OPS §8-0005 / §8-0006). *Test:* `test_conform_ops_decomposition_agreement`.
+- **KISS-CONFORM-6.13-0006b** — KISS-Conform MUST select the differential comparator from the op's
+  **advertised per-op determinism/fidelity class** (KISS-OPS §7.4-0001), never a hardcoded
+  comparator, so the comparator matches the class the implementation advertises. *Test:*
+  `test_conform_ops_class_comparator_selection`.
 - **KISS-CONFORM-6.13-0007** — KISS-Conform MUST evaluate each transcendental atom under the
   contract's declared per-target ULP and **reject** any declared ULP exceeding the KISS-Ops
   ceiling (§6.8-0003, KISS-OPS §6.8-0001), MUST NOT claim cross-language numeric identity for a
@@ -1317,6 +1325,8 @@ the traceability lint.
 | KISS-CONFORM-6.13-0004 | `test_conform_classify_freeze_gate` |
 | KISS-CONFORM-6.13-0005 | `test_conform_ops_per_class_comparators` |
 | KISS-CONFORM-6.13-0006 | `test_conform_ops_oracle_and_freeze_gate` |
+| KISS-CONFORM-6.13-0006a | `test_conform_ops_decomposition_agreement` |
+| KISS-CONFORM-6.13-0006b | `test_conform_ops_class_comparator_selection` |
 | KISS-CONFORM-6.13-0007 | `test_conform_ops_transcendental_and_split` |
 | KISS-CONFORM-6.13-0008 | `test_conform_ops_opattrs_golden_hex` |
 | KISS-CONFORM-6.13-0009 | `test_conform_grammar_region_exact_byte` |
