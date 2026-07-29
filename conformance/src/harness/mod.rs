@@ -5,6 +5,8 @@
 //! deterministic corpus. Increment 1: one elementwise binary op (`add`).
 
 pub mod abi;
+pub mod corpus;
+pub mod differ;
 pub mod loader;
 pub mod msvc;
 
