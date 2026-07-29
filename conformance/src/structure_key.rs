@@ -206,6 +206,11 @@ pub enum KeyDecline {
     TooManyOperands { got: usize },
     /// `target_capability` is not `<namespace>:<capability-set>` (§6.8-0001).
     BadTargetGrammar,
+    /// `target_capability` contains a byte outside the §6.8-0005 charset — a
+    /// `structure_key` field separator (`;` or `/`), a whitespace/control byte
+    /// (`0x00`–`0x20`, `0x7f`), or a non-ASCII byte (`>= 0x80`) — so it could not
+    /// embed in the token as one unambiguous field.
+    BadTargetCharset,
     /// The contraction field's presence does not match `op_family` (§6.6-0010):
     /// present IFF `op_family == gem`.
     ContractionPresenceMismatch,
@@ -423,6 +428,18 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         let parts: Vec<&str> = f[3].split(':').collect();
         if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
             return Err(KeyDecline::BadTargetGrammar);
+        }
+        // §6.8-0005: a target_capability MUST be case-sensitive ASCII and MUST NOT
+        // contain a structure_key field separator (`;` or `/`; `|` can never appear
+        // here — it is the field delimiter this token was split on), any whitespace
+        // or control byte (`0x00`–`0x20`, `0x7f`), or a non-ASCII byte, so it embeds
+        // as one unambiguous field. The colon (`0x3a`, required above) and `.`
+        // (`0x2e`, e.g. `spirv1.6`) stay legal — neither is in the forbidden set.
+        if f[3]
+            .bytes()
+            .any(|b| b == b';' || b == b'/' || b <= 0x20 || b == 0x7f || b >= 0x80)
+        {
+            return Err(KeyDecline::BadTargetCharset);
         }
     }
     let work_class = WorkClass::parse(f[5]).ok_or(KeyDecline::BadWorkClass)?;
