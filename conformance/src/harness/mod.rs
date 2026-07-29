@@ -7,6 +7,7 @@
 pub mod abi;
 pub mod corpus;
 pub mod differ;
+#[cfg(windows)]
 pub mod loader;
 pub mod msvc;
 

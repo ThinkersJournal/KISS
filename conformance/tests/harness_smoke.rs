@@ -1,3 +1,4 @@
+#![cfg(windows)]
 //! Each C fixture compiles, loads, and computes on a trivial input.
 
 mod common;

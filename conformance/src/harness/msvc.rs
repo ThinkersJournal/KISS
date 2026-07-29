@@ -8,6 +8,7 @@ use std::process::Command;
 
 /// A located MSVC toolchain: the `cl.exe` path and the semicolon-joined
 /// INCLUDE / LIB search paths a direct (no-`vcvars`) invocation needs.
+#[derive(Debug)]
 pub struct Msvc {
     pub cl: PathBuf,
     pub include: String,
@@ -41,7 +42,7 @@ pub fn find_msvc() -> Option<Msvc> {
             continue;
         }
         // <root>\<edition-year>\<Community|...>\VC\Tools\MSVC\<ver>\bin\Hostx64\x64\cl.exe
-        for year in std::fs::read_dir(root).ok()?.filter_map(|e| e.ok()).map(|e| e.path()) {
+        for year in std::fs::read_dir(root).ok().into_iter().flatten().filter_map(|e| e.ok()).map(|e| e.path()) {
             for edition in std::fs::read_dir(&year).ok().into_iter().flatten().filter_map(|e| e.ok()).map(|e| e.path()) {
                 let msvc_root = edition.join(r"VC\Tools\MSVC");
                 let Some(ver) = newest_subdir(&msvc_root) else { continue };
@@ -49,10 +50,13 @@ pub fn find_msvc() -> Option<Msvc> {
                 if !cl.exists() {
                     continue;
                 }
-                // Windows SDK (Include/Lib live under Windows Kits\10).
+                // Windows SDK (Include/Lib live under Windows Kits\10). A
+                // missing kit/subdir means this candidate can't be completed —
+                // try the next edition/root rather than aborting discovery.
                 let kit = Path::new(r"C:\Program Files (x86)\Windows Kits\10");
-                let sdk = newest_subdir(&kit.join("Include"))?;
-                let sdk_name = sdk.file_name()?.to_string_lossy().into_owned();
+                let Some(sdk) = newest_subdir(&kit.join("Include")) else { continue };
+                let Some(sdk_name) = sdk.file_name() else { continue };
+                let sdk_name = sdk_name.to_string_lossy().into_owned();
                 let inc = ver.join("include");
                 let s = |p: PathBuf| p.to_string_lossy().into_owned();
                 let include = format!(

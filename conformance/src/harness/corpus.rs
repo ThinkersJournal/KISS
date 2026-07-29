@@ -44,8 +44,10 @@ mod tests {
 
     #[test]
     fn every_vector_is_tagged_and_expected_matches_the_oracle() {
-        let c = tagged_corpus(0xC0FFEE, 64);
-        assert!(c.len() >= 64, "edge cases + 64 random");
+        let n = 64;
+        let c = tagged_corpus(0xC0FFEE, n);
+        let edge_len = edge_f32().len();
+        assert_eq!(c.len(), edge_len * edge_len + n, "edge×edge grid + n random");
         for v in &c {
             assert!(!v.provenance.is_empty(), "vector missing provenance tag (§6.5-0003)");
             // The expected value is the oracle's, bit-for-bit (NaN-relaxed).

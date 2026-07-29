@@ -1,3 +1,4 @@
+#![cfg(windows)]
 //! Differential-conformance harness — increment 1 (capability demonstration).
 //!
 //! Differences a foreign C `add` kernel — invoked through the KISS-Contract §6.5
