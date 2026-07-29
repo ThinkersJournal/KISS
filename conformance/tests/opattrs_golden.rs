@@ -509,3 +509,44 @@ fn test_ops_opattrs_reduce_axes_classify_reconciliation() {
     assert!(validate_reduce_axes(0x0000).is_err(), "0x0000 is unreachable on the Ops channel");
     assert_eq!(classify_reduce_field(Reduce::None), "-");
 }
+
+/// KISS-OPS-6.19-0011 (`test_ops_opattrs_version_binding`): the pinned `MAX_RANK` and
+/// `MAX_OPERANDS` constants (§6.19-0037) are SHARED anchors — defined once for the
+/// OpAttrs channel (`opattrs`) and once for the Classify `structure_key` schema — and
+/// §6.19-0011 requires them to be co-versioned, i.e. the two independently-authored
+/// constants MUST stay equal. A non-additive one-sided change (raise the Classify rank
+/// anchor to 16 without co-bumping the OpAttrs one, or vice versa) is a silent
+/// desync the clause forbids. Both constants are read live from their own module, so
+/// the equality is not a self-comparison: `opattrs::MAX_RANK` is `= 8` and
+/// `structure_key::MAX_RANK` is a separate `= 8`, and a drift in either alone fails.
+///
+/// SCOPE (reported honestly): this binds ONLY the concretely-testable co-versioned-
+/// CONSTANT sub-obligation of 0011. The broader "any non-additive layout change (field
+/// reorder / re-widen / ordinal reuse / reduce_axes remultiplex) MUST be a new byte
+/// form under a bumped schema version, never a silent in-place change" needs a
+/// cross-version fixture and is not harness-testable here. The concrete VALUE `== 8`
+/// is owned by §6.19-0037 (`test_ops_opattrs_max_rank_operands_pinned`), deliberately
+/// NOT re-asserted here so a legitimate coordinated co-bump would not spuriously fail
+/// this equality-of-anchors test.
+///
+/// MUTATION that fails: set `structure_key::MAX_RANK` to 16 (or `opattrs::MAX_RANK`
+/// alone) -> the cross-module equality diverges -> the assertion fires.
+#[test]
+fn test_ops_opattrs_version_binding() {
+    // §6.19-0011 co-versioning: the OpAttrs axis/subset-mask bound and the Classify
+    // `structure_key` rank anchor are ONE shared constant, defined independently in two
+    // modules; a conforming version keeps them equal. `MAX_RANK`/`MAX_OPERANDS` here
+    // resolve to the OpAttrs-side constants via the `opattrs::*` glob import; the
+    // Classify-side anchors are named by fully-qualified path so nothing is imported
+    // twice.
+    assert_eq!(
+        MAX_RANK as u32,
+        kiss_conformance::structure_key::MAX_RANK,
+        "OpAttrs MAX_RANK must be co-versioned with the Classify structure_key rank anchor"
+    );
+    assert_eq!(
+        MAX_OPERANDS as usize,
+        kiss_conformance::structure_key::MAX_OPERANDS,
+        "OpAttrs MAX_OPERANDS must be co-versioned with the Classify structure_key operand anchor"
+    );
+}
