@@ -369,7 +369,6 @@ KISS-GRAMMAR-6.1-0001	test_grammar_advertisable_op_field_schema	untested
 KISS-GRAMMAR-6.1-0002	test_grammar_no_parallel_op_list	untested	
 KISS-GRAMMAR-6.1-0004	test_grammar_level_inherited_not_redeclared	untested	
 KISS-GRAMMAR-6.1-0006	test_grammar_defines_no_op_semantics	untested	
-KISS-GRAMMAR-6.1-0007	test_grammar_canonical_tag_normal_form	untested	
 KISS-GRAMMAR-6.2-0001	test_grammar_pattern_attrs_carry_opattrs	untested	
 KISS-GRAMMAR-6.2-0002	test_grammar_load_bearing_attr_guarded	untested	
 KISS-GRAMMAR-6.2-0003	test_grammar_recognition_is_structural	untested	
@@ -379,7 +378,6 @@ KISS-GRAMMAR-6.3-0002	test_grammar_flavor_is_distinct_op_name	untested
 KISS-GRAMMAR-6.3-0003	test_grammar_synthesis_scalar_param_extract	untested	
 KISS-GRAMMAR-6.3-0004	test_grammar_synthesis_emit_hints	untested	
 KISS-GRAMMAR-6.3-0005	test_grammar_channel_separation	untested	
-KISS-GRAMMAR-6.4-0009	test_grammar_single_output_region	untested	
 KISS-GRAMMAR-6.5-0001	test_grammar_add_op_by_rebasing	untested	
 KISS-GRAMMAR-6.5-0002	test_grammar_rebasing_is_additive_no_bump	untested	
 KISS-GRAMMAR-6.5-0003	test_grammar_independent_cadence	untested	
@@ -394,7 +392,6 @@ KISS-GRAMMAR-6.7-0003	test_grammar_op_identity_distinct_from_structure_key	untes
 KISS-GRAMMAR-6.7-0004	test_grammar_single_op_vocabulary_seam	untested	
 KISS-GRAMMAR-6.7-0005	test_grammar_bare_ops_dag_needs_no_tag	untested	
 KISS-GRAMMAR-6.8-0009	test_grammar_wire_excludes_synthesis_attrs	untested	
-KISS-GRAMMAR-6.8-0012	test_grammar_tag_canonical_serialization	untested	
 KISS-GRAMMAR-6.8-0013	test_grammar_wire_magic_and_schema_version	lint:kiss_wire	the region magic `KGRM` drifts between §6.8-0013 and grammar.rs
 KISS-GRAMMAR-7.1-0001	test_grammar_mandatory_core_is_frozen_shape	untested	
 KISS-GRAMMAR-7.2-0001	test_grammar_extension_via_ops_or_frozen_shape	untested	
