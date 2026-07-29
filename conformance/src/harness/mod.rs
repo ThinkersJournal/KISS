@@ -4,6 +4,7 @@
 //! positional C-ABI — against the from-scratch [`crate::semantics`] oracle over a
 //! deterministic corpus. Increment 1: one elementwise binary op (`add`).
 
+pub mod loader;
 pub mod msvc;
 
 /// Every way the harness can fail *without* a divergence (a divergence is data,
