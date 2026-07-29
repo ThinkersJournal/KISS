@@ -12,6 +12,9 @@ type Hmodule = *mut c_void;
 #[link(name = "kernel32")]
 extern "system" {
     fn LoadLibraryW(lp_lib_file_name: *const u16) -> Hmodule;
+    // Modeled as `*const c_void` (a data pointer) rather than the real `FARPROC`
+    // function-pointer typedef — same representation on supported Windows
+    // targets; the call site transmutes this to the correct fn-pointer type.
     fn GetProcAddress(h_module: Hmodule, lp_proc_name: *const u8) -> *const c_void;
     fn FreeLibrary(h_module: Hmodule) -> i32;
     fn GetLastError() -> u32;
@@ -38,6 +41,11 @@ impl Artifact {
     }
 
     /// Resolve an exported symbol to an opaque pointer, or `Err(Symbol)` if absent.
+    ///
+    /// The returned pointer is valid only while `self` (this `Artifact`) is
+    /// alive — after `Artifact` is dropped its module is unloaded and the
+    /// pointer dangles. Callers must keep the `Artifact` alive for the
+    /// pointer's entire use.
     pub fn symbol(&self, name: &str) -> Result<*const c_void, HarnessError> {
         // GetProcAddress wants a NUL-terminated ANSI C string.
         let cname: Vec<u8> = name.bytes().chain(std::iter::once(0)).collect();
@@ -81,6 +89,8 @@ mod tests {
             unsafe { std::mem::transmute(sym) };
         let (a, b) = ([1.0f32, 2.0, 3.0], [10.0f32, 20.0, 30.0]);
         let mut o = [0.0f32; 3];
+        // SAFETY: k has the fixture's real (in,in,out,n) signature; a/b are
+        // readable and o writable for n=3.
         unsafe { k(a.as_ptr(), b.as_ptr(), o.as_mut_ptr(), 3) };
         assert_eq!(o, [11.0, 22.0, 33.0]);
     }
