@@ -38,6 +38,44 @@ pub fn tagged_corpus(seed: u64, n: usize) -> Vec<Vector> {
     v
 }
 
+/// One rank-2 axis-reduction input, provenance-tagged (§6.5-0003).
+#[derive(Debug, Clone)]
+pub struct AxisVector {
+    pub data: Vec<f32>,
+    pub extents: [usize; 2],
+    pub axis: usize,
+    pub provenance: &'static str,
+}
+
+/// The derivation source tag for the axis corpus: the reduce-axis §6.11-0002
+/// primitive, evaluated by the from-scratch `structural::reduce_axis2_f32`.
+const AXIS_PROVENANCE: &str = "oracle:KISS-OPS-6.11-0002/structural::reduce_axis2_f32";
+
+/// A deterministic trailing-axis (axis 1) corpus of rank-2 shapes that keep the
+/// two summation orders inside the band and a wrong axis / wrong value outside it:
+/// a wide row, a tall column, a small square, and a large-magnitude-spread row.
+pub fn tagged_axis_corpus(_seed: u64) -> Vec<AxisVector> {
+    let mk = |data: Vec<f32>, extents: [usize; 2]| AxisVector {
+        data,
+        extents,
+        axis: 1,
+        provenance: AXIS_PROVENANCE,
+    };
+    vec![
+        mk((1..=24).map(|i| i as f32).collect(), [4, 6]),
+        mk((1..=8).map(|i| i as f32).collect(), [8, 1]),
+        mk(vec![0.5; 100], [10, 10]),
+        mk(
+            {
+                let mut v = vec![1e6f32];
+                v.extend([1.0; 7]);
+                v
+            },
+            [2, 4],
+        ), // large-magnitude-spread rows
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,5 +100,16 @@ mod tests {
             tagged_corpus(7, 32).iter().map(|v| (v.a.to_bits(), v.b.to_bits())).collect::<Vec<_>>(),
             tagged_corpus(7, 32).iter().map(|v| (v.a.to_bits(), v.b.to_bits())).collect::<Vec<_>>(),
         );
+    }
+
+    #[test]
+    fn axis_corpus_is_tagged_and_shaped() {
+        let c = tagged_axis_corpus(0xA715);
+        assert!(c.len() >= 4);
+        for v in &c {
+            assert!(!v.provenance.is_empty(), "axis vector missing provenance (§6.5-0003)");
+            assert_eq!(v.data.len(), v.extents[0] * v.extents[1]);
+            assert_eq!(v.axis, 1, "3a corpus is trailing-axis");
+        }
     }
 }

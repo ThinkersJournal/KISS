@@ -4,6 +4,7 @@
 
 use crate::differential::agree;
 use crate::harness::corpus::Vector;
+use crate::structural::{compare_monoid_reduced_f32, Monoid};
 
 /// One caught divergence, reproducible by `index` into the corpus.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -23,6 +24,31 @@ pub fn run_binary(outputs: &[f32], corpus: &[Vector]) -> Vec<Divergence> {
     for (i, (v, &actual)) in corpus.iter().zip(outputs).enumerate() {
         if !agree(v.expected, actual) {
             out.push(Divergence { index: i, a: v.a, b: v.b, expected: v.expected, actual });
+        }
+    }
+    out
+}
+
+/// One caught divergence in an array-valued (axis) reduction, at output `cell`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AxisDivergence {
+    pub cell: usize,
+    pub expected: f32,
+    pub actual: f32,
+}
+
+/// Difference a candidate axis-reduction's `actual` cells against the oracle
+/// `expected`, dispatching the comparator BY MONOID (Sum → order-invariant band
+/// using `tol[i]`; Max → ±0-canon exact-byte, ignoring `tol`). This per-monoid
+/// dispatch is the structural comparator selection that 3b makes Contract-sourced
+/// (§6.13-0006b). Returns every divergence (empty ⇒ conformant).
+pub fn run_axis_reduce(actual: &[f32], expected: &[f32], monoid: Monoid, tol: &[f32]) -> Vec<AxisDivergence> {
+    assert_eq!(actual.len(), expected.len(), "one actual per expected cell");
+    assert_eq!(tol.len(), expected.len(), "one tolerance per cell");
+    let mut out = Vec::new();
+    for (i, (&a, &e)) in actual.iter().zip(expected).enumerate() {
+        if compare_monoid_reduced_f32(monoid, a, e, tol[i], 0.0).is_err() {
+            out.push(AxisDivergence { cell: i, expected: e, actual: a });
         }
     }
     out
@@ -48,5 +74,24 @@ mod tests {
         let d = run_binary(&outs, &c);
         assert_eq!(d.len(), 1);
         assert_eq!(d[0].index, 3);
+    }
+
+    #[test]
+    fn axis_reduce_catches_out_of_band_and_wrong_max() {
+        // Sum: within band accepted, outside caught.
+        let exp = [6.0f32, 15.0];
+        let tol = [1e-3f32, 1e-3];
+        assert!(run_axis_reduce(&[6.0, 15.0], &exp, Monoid::Sum, &tol).is_empty());
+        let d = run_axis_reduce(&[6.0, 15.5], &exp, Monoid::Sum, &tol);
+        assert_eq!(d.len(), 1);
+        assert_eq!(d[0].cell, 1);
+        // Max: exact-byte — a 1-ULP diff is caught even with a nonzero tol array.
+        let d2 = run_axis_reduce(
+            &[3.0, f32::from_bits(6.0f32.to_bits() + 1)],
+            &[3.0, 6.0],
+            Monoid::Max,
+            &tol,
+        );
+        assert_eq!(d2.len(), 1);
     }
 }
