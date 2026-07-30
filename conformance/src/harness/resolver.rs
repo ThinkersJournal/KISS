@@ -9,7 +9,7 @@ use crate::structural::{reassoc_bound_f32, reduce_f32, Monoid};
 /// of the `add` primitive) with a divide — it never terminates above the floor and
 /// is not a monolithic mean.
 pub fn reduce_mean_oracle(xs: &[f32]) -> f32 {
-    debug_assert!(!xs.is_empty(), "reduce_mean_oracle: empty slice has no defined mean");
+    assert!(!xs.is_empty(), "reduce_mean_oracle: empty slice has no defined mean");
     reduce_f32(xs, Monoid::Sum) / xs.len() as f32
 }
 
@@ -26,7 +26,7 @@ pub fn reduce_mean_oracle(xs: &[f32]) -> f32 {
 /// could reject a legitimately-reassociated candidate. An absolute band (§6.8-0004 /
 /// the #92 accumulator-tolerance model), not a ULP count.
 pub fn reduce_mean_abs_tol(xs: &[f32]) -> f32 {
-    debug_assert!(!xs.is_empty(), "reduce_mean_abs_tol: empty slice has no defined mean");
+    assert!(!xs.is_empty(), "reduce_mean_abs_tol: empty slice has no defined mean");
     let sum_abs = xs.iter().map(|x| x.abs()).sum::<f32>();
     2.0 * reassoc_bound_f32(xs.len(), sum_abs) / xs.len() as f32
 }
