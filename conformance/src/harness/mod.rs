@@ -10,6 +10,7 @@ pub mod differ;
 #[cfg(windows)]
 pub mod loader;
 pub mod msvc;
+pub mod resolver;
 
 /// Every way the harness can fail *without* a divergence (a divergence is data,
 /// not an error). A bad artifact is a typed error, never a panic.
