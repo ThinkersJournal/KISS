@@ -107,6 +107,24 @@ pub fn reduce_f32(xs: &[f32], monoid: Monoid) -> f32 {
     xs.iter().fold(monoid.identity_f32(), |acc, &x| monoid.combine_f32(acc, x))
 }
 
+/// Rank-2 axis reduction: fold `axis` (0 or 1) of a row-major `[rows, cols]`
+/// tensor with `monoid`, one output cell per surviving coordinate. Composes the
+/// existing floor `reduce_f32` per slice — no new fold algorithm (§6.11-0002).
+pub fn reduce_axis2_f32(data: &[f32], extents: [usize; 2], axis: usize, monoid: Monoid) -> Vec<f32> {
+    let [rows, cols] = extents;
+    assert_eq!(data.len(), rows * cols, "data length must equal rows*cols");
+    match axis {
+        1 => (0..rows).map(|r| reduce_f32(&data[r * cols..(r + 1) * cols], monoid)).collect(),
+        0 => (0..cols)
+            .map(|c| {
+                let col: Vec<f32> = (0..rows).map(|r| data[r * cols + c]).collect();
+                reduce_f32(&col, monoid)
+            })
+            .collect(),
+        _ => panic!("rank-2 axis must be 0 or 1"),
+    }
+}
+
 // =============================================================================
 // prefix_scan — inclusive / exclusive running fold (KISS-Ops §6.11-0003)
 // =============================================================================
@@ -704,6 +722,18 @@ mod structural_tests {
         assert!(compare_scattered_f32(Combine::AtomicMin, &a, &b, 0.0, 0.0).is_ok());
         // Assign keeps ±0 distinct (last-writer is bit-exact, §6.11-0006).
         assert!(compare_scattered_f32(Combine::Assign, &a, &b, 0.0, 0.0).is_err());
+    }
+
+    #[test]
+    fn reduce_axis2_folds_the_named_axis() {
+        // row-major [2,3]: rows [1,2,3],[4,5,6]
+        let d = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        // axis 1 (trailing) → per-row: [6, 15]
+        assert_eq!(reduce_axis2_f32(&d, [2, 3], 1, Monoid::Sum), vec![6.0, 15.0]);
+        // axis 0 → per-column: [5, 7, 9]
+        assert_eq!(reduce_axis2_f32(&d, [2, 3], 0, Monoid::Sum), vec![5.0, 7.0, 9.0]);
+        // Max axis 1 → [3, 6]; different monoid, different result (teeth vs a hardcoded Sum)
+        assert_eq!(reduce_axis2_f32(&d, [2, 3], 1, Monoid::Max), vec![3.0, 6.0]);
     }
 }
 
