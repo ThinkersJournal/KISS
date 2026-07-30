@@ -2,7 +2,7 @@
 //! decomposition down to the primitive floor (KISS-CONFORM-6.5-0004). Increment 2
 //! is focused on `reduce_mean = div(reduce(sum, x), reduced_count)` (ops.md §6.13).
 
-use crate::structural::{reassoc_bound_f32, reduce_f32, Monoid};
+use crate::structural::{reassoc_bound_f32, reduce_axis2_f32, reduce_f32, Monoid};
 
 /// The `reduce_mean` oracle as its reference decomposition, evaluated at the floor:
 /// `div(reduce(sum, x), count)`. It composes the floor `reduce_f32(_, Sum)` (a fold
@@ -29,6 +29,31 @@ pub fn reduce_mean_abs_tol(xs: &[f32]) -> f32 {
     assert!(!xs.is_empty(), "reduce_mean_abs_tol: empty slice has no defined mean");
     let sum_abs = xs.iter().map(|x| x.abs()).sum::<f32>();
     2.0 * reassoc_bound_f32(xs.len(), sum_abs) / xs.len() as f32
+}
+
+/// The `reduce(monoid, axis)` oracle for a rank-2 tensor — the §6.11-0002
+/// primitive, evaluated by the floor `reduce_axis2_f32`.
+pub fn reduce_axis_oracle(data: &[f32], extents: [usize; 2], axis: usize, monoid: Monoid) -> Vec<f32> {
+    reduce_axis2_f32(data, extents, axis, monoid)
+}
+
+/// Per-output-cell absolute tolerance for a Sum-monoid axis reduction: `2 ×`
+/// the reassociation band of THAT cell's own reduced slice (its own length +
+/// abs-sum bound its own reassociation, not the whole tensor's). The 2× is the
+/// two-order rule (candidate order vs oracle order — see reduce_mean_abs_tol).
+/// (Max/Min are exact-byte; this band is ignored on the exact-byte path.)
+pub fn reduce_axis_abs_tol(data: &[f32], extents: [usize; 2], axis: usize) -> Vec<f32> {
+    let [rows, cols] = extents;
+    let band = |slice_abs_sum: f32, len: usize| 2.0 * reassoc_bound_f32(len, slice_abs_sum);
+    match axis {
+        1 => (0..rows)
+            .map(|r| band(data[r * cols..(r + 1) * cols].iter().map(|x| x.abs()).sum(), cols))
+            .collect(),
+        0 => (0..cols)
+            .map(|c| band((0..rows).map(|r| data[r * cols + c].abs()).sum(), rows))
+            .collect(),
+        _ => panic!("rank-2 axis must be 0 or 1"),
+    }
 }
 
 #[cfg(test)]
@@ -81,5 +106,16 @@ mod tests {
         assert_eq!(reduce_mean_abs_tol(&xs), two_x);
         assert!(reduce_mean_abs_tol(&xs) > one_x,
             "the tolerance must be the 2x band, not the 1x single-order-vs-exact band");
+    }
+
+    #[test]
+    fn axis_oracle_and_per_row_band() {
+        let d = [1.0f32, -2.0, 3.0, 4.0, 5.0, 6.0]; // [2,3]
+        assert_eq!(reduce_axis_oracle(&d, [2, 3], 1, crate::structural::Monoid::Sum), vec![2.0, 15.0]);
+        // per-row band: row0 abs-sum=6 over 3 addends, row1 abs-sum=15 over 3.
+        let t = reduce_axis_abs_tol(&d, [2, 3], 1);
+        assert_eq!(t.len(), 2);
+        assert_eq!(t[0], 2.0 * crate::structural::reassoc_bound_f32(3, 6.0));
+        assert_eq!(t[1], 2.0 * crate::structural::reassoc_bound_f32(3, 15.0));
     }
 }
