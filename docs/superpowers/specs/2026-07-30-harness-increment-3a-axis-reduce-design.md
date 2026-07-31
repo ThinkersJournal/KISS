@@ -3,7 +3,8 @@
 - **Date:** 2026-07-30
 - **Status:** approved (design-panel-grounded)
 - **Branch:** `feat/harness-axis-reduce` (off `origin/main` @ 62dfe70 — has increments 1+2)
-- **Backs:** `KISS-OPS-6.11-0002` (axis form) + `KISS-OPS-6.11-0011` (3 of 4 reduce-axes categories) + `KISS-OPS-6.11-0008` (**partial** — see §8) ; materially strengthens 6.13-0006/0006a (rank-1 → axis).
+- **Backs (as implemented):** `KISS-OPS-6.11-0002` **only** — reverse-cited (the clause is already forward-backed by `test_ops_reduce_monoids`), a cross-implementation corroboration that leaves the genuinely-untested count unchanged. Materially strengthens 6.13-0006/0006a (rank-1 → axis).
+  - *Scope narrowed from the design.* This header originally also claimed `KISS-OPS-6.11-0011` and a **partial** `KISS-OPS-6.11-0008`; the implementation honestly declined both. 6.11-0008's teeth are the extent-1/**stride-0 keepdim broadcast** view (so `sub(x, reduce(max,x))` reads the reduced value at every original-axis position) — this dense rows×1 differential exercises only the extent-1 output *shape*, not the broadcast, so 6.11-0008 **stays untested**. 6.11-0011 was not separately bound. The test cites 6.11-0002 alone; see §8 and the PR description for the honest ledger.
 
 ## 0. Where 3a sits (sequenced increment 3)
 

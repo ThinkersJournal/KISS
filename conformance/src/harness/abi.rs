@@ -47,17 +47,29 @@ pub type AxisReduceKernel =
 /// Invoke an axis-reduction `kernel` over the packed rank-2 `data` (shape
 /// `extents_in`), producing `product(extents_out)` cells. The marshaller sizes the
 /// output from `extents_out`, passes both extent arrays (§6.5 class 1) and the
-/// input element count `n` (§6.5 class 3), and calls the entry point. Panics only
-/// on the caller's contract violation (`data` length ≠ `product(extents_in)`).
+/// input element count `n` (§6.5 class 3), and calls the entry point. Panics on a
+/// caller's contract violation: a negative extent, an i64-overflowing extent
+/// product, or `data` length ≠ `product(extents_in)`. The non-negativity and
+/// checked-multiply guards run *before* any sizing, so a bad extent can never
+/// wrap into a huge/underflowed allocation.
 pub fn invoke_axis_reduce(
     kernel: AxisReduceKernel,
     data: &[f32],
     extents_in: [i64; 2],
     extents_out: [i64; 2],
 ) -> Vec<f32> {
-    let n_in = extents_in[0] * extents_in[1];
+    assert!(
+        extents_in.iter().chain(extents_out.iter()).all(|&e| e >= 0),
+        "extents must be non-negative: in={extents_in:?} out={extents_out:?}"
+    );
+    let n_in = extents_in[0]
+        .checked_mul(extents_in[1])
+        .expect("product(extents_in) overflows i64");
     assert_eq!(data.len() as i64, n_in, "data length must equal product(extents_in)");
-    let n_out = (extents_out[0] * extents_out[1]) as usize;
+    // Non-negative × non-negative, overflow-checked ⇒ a valid `usize` size.
+    let n_out = extents_out[0]
+        .checked_mul(extents_out[1])
+        .expect("product(extents_out) overflows i64") as usize;
     let mut out = vec![0.0f32; n_out];
     // SAFETY: `data` exposes `n_in` readable f32; `out` exposes `n_out` writable
     // f32; `extents_in`/`extents_out` are stack arrays each exposing 2 readable i64
