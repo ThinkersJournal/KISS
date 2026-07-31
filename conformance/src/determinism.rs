@@ -85,6 +85,37 @@ pub fn op_true_class(
     atom_determinism_class(op)
 }
 
+/// The §6.0-0005 permissiveness order: `exact-byte < ULP/tolerance <
+/// order-invariant/nondeterministic`. A larger value admits a wider set of results.
+pub fn class_permissiveness(c: DeterminismClass) -> u8 {
+    match c {
+        DeterminismClass::ExactByte => 0,
+        DeterminismClass::UlpTolerance => 1,
+        DeterminismClass::OrderInvariant => 2,
+    }
+}
+
+/// The advertisement-honesty lint. Rejects an `advertised` class **strictly more
+/// permissive** than the op's `true_class` — that direction selects a comparator
+/// too loose to catch a real error (e.g. advertising a Max reduce as
+/// order-invariant to buy tolerance a wrong Max could hide behind). An advertisement
+/// no more permissive than the truth (equal, or an over-strict over-claim) passes:
+/// an over-claim is caught by the differential itself and forbidden by SYNTH
+/// §6.5-0004b, so it is not this lint's job (per the design ruling). Returns the
+/// advertised class on success so the caller feeds it straight to the comparator.
+pub fn check_advertisement(
+    advertised: DeterminismClass,
+    true_class: DeterminismClass,
+) -> Result<DeterminismClass, String> {
+    if class_permissiveness(advertised) > class_permissiveness(true_class) {
+        return Err(format!(
+            "dishonest advertisement: {advertised:?} is more permissive than the true \
+             class {true_class:?} (§6.0-0005) — its comparator could not catch a real error"
+        ));
+    }
+    Ok(advertised)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +142,20 @@ mod tests {
         assert_eq!(op_true_class("reduce", Some(Monoid::Min)), Some(DeterminismClass::ExactByte));
         // a fold op with no monoid is underspecified → None (not a guess)
         assert_eq!(op_true_class("reduce", None), None);
+    }
+
+    #[test]
+    fn honesty_rejects_only_too_permissive() {
+        use DeterminismClass::*;
+        // ordering
+        assert!(class_permissiveness(ExactByte) < class_permissiveness(UlpTolerance));
+        assert!(class_permissiveness(UlpTolerance) < class_permissiveness(OrderInvariant));
+        // honest (advertised == true) → Ok
+        assert_eq!(check_advertisement(OrderInvariant, OrderInvariant), Ok(OrderInvariant));
+        // too permissive: advertise order-invariant for an exact-byte (Max) op → Err
+        assert!(check_advertisement(OrderInvariant, ExactByte).is_err());
+        // over-claim (stricter than true): advertise exact-byte for a Sum fold → Ok here
+        // (caught by the differential + SYNTH §6.5-0004b, not this lint)
+        assert_eq!(check_advertisement(ExactByte, OrderInvariant), Ok(ExactByte));
     }
 }
