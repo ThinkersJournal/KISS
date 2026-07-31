@@ -464,7 +464,7 @@ pub fn compare_reduced_f32(
 /// the sign of a zero is the *only* bit a change of fold order can flip (see
 /// [`Monoid::class_f32`]); it is applied nowhere else, so no other bit difference is
 /// masked.
-fn canon_signed_zero(x: f32) -> f32 {
+pub(crate) fn canon_signed_zero(x: f32) -> f32 {
     if x == 0.0 {
         0.0
     } else {

@@ -5,6 +5,7 @@
 //! deterministic corpus. Increment 1: one elementwise binary op (`add`).
 
 pub mod abi;
+pub mod advertised;
 pub mod corpus;
 pub mod differ;
 #[cfg(windows)]

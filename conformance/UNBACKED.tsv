@@ -141,7 +141,6 @@ KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	untested
 KISS-CONFORM-6.13-0003	test_conform_classify_exact_byte_and_registry_bundle	untested	
 KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	untested	
 KISS-CONFORM-6.13-0005	test_conform_ops_per_class_comparators	untested	
-KISS-CONFORM-6.13-0006b	test_conform_ops_class_comparator_selection	untested	
 KISS-CONFORM-6.13-0007	test_conform_ops_transcendental_and_split	untested	
 KISS-CONFORM-6.13-0008	test_conform_ops_opattrs_golden_hex	untested	
 KISS-CONFORM-6.13-0009	test_conform_grammar_region_exact_byte	untested	
@@ -492,7 +491,6 @@ KISS-OPS-7.2-0002	test_ops_claim_includes_floor	untested
 KISS-OPS-7.3-0001	test_ops_add_high_level_additive	untested	
 KISS-OPS-7.3-0002	test_ops_add_primitive_is_axiom	untested	
 KISS-OPS-7.3-0003	test_ops_op_registry_pr_gated	untested	
-KISS-OPS-7.4-0001	test_ops_determinism_class_advertised	untested	
 KISS-OPS-8-0001	test_ops_two_version_axes_independent	untested	
 KISS-OPS-8-0002	test_ops_additive_high_level_no_floor_bump	untested	
 KISS-OPS-8-0003	test_ops_floor_or_semantics_change_bumps_version	untested	

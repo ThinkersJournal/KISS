@@ -44,17 +44,118 @@ pub const TRANSCENDENTAL_ATOMS: &[&str] =
     &["exp", "log", "sin", "cos", "sqrt", "erf", "atan", "lgamma", "atan2"];
 
 /// The determinism/fidelity class of a scalar atom, per §6.0-0002 (exact-byte) and
-/// §6.0-0003 (ULP/tolerance transcendentals). Panics on an op this atom-level model
-/// does not cover (a conditional/fold op, or an unknown token) so misuse is loud.
-pub fn atom_determinism_class(op: &str) -> DeterminismClass {
+/// §6.0-0003 (ULP/tolerance transcendentals). Returns `None` for an op this
+/// atom-level model does not cover (a conditional/fold op, or an unknown token) —
+/// a typed "not an unconditional scalar atom", never a panic (#64).
+pub fn atom_determinism_class(op: &str) -> Option<DeterminismClass> {
     if TRANSCENDENTAL_ATOMS.contains(&op) {
-        DeterminismClass::UlpTolerance
+        Some(DeterminismClass::UlpTolerance)
     } else if EXACT_BYTE_ATOMS.contains(&op) {
-        DeterminismClass::ExactByte
+        Some(DeterminismClass::ExactByte)
     } else {
-        panic!(
-            "atom_determinism_class: `{op}` is not an unconditional scalar atom \
-             (a fold/monoid/contraction op is classified by §6.0-0004/-0005, not here)"
-        )
+        None
+    }
+}
+
+/// The **true** determinism/fidelity class of an op per KISS-OPS §6.0, extending
+/// the unconditional-atom oracle with the conditional fold arm the atom model
+/// cannot carry (§6.0-0004/-0005). This is the truth an advertised class is
+/// checked against (the honesty lint, `check_advertisement`).
+///
+/// Coverage is the op set the harness differences — the unconditional atoms plus
+/// `reduce`/`prefix_scan` over the four monoids — not every §6.0 op. `None` means
+/// "this model does not determine the class" (an unknown op, or a fold op with no
+/// monoid supplied); callers treat `None` as "cannot honesty-check", never as a class.
+pub fn op_true_class(
+    op: &str,
+    monoid: Option<crate::structural::Monoid>,
+) -> Option<DeterminismClass> {
+    use crate::structural::Monoid;
+    // A float fold's class depends on the monoid (§6.0-0004): Sum/Prod accumulate
+    // rounding order-dependently → order-invariant/nondeterministic; Max/Min are
+    // selection, order-independent and exact-byte.
+    if matches!(op, "reduce" | "prefix_scan") {
+        return match monoid {
+            Some(Monoid::Sum) | Some(Monoid::Prod) => Some(DeterminismClass::OrderInvariant),
+            Some(Monoid::Max) | Some(Monoid::Min) => Some(DeterminismClass::ExactByte),
+            None => None,
+        };
+    }
+    // Otherwise it is (or is not) an unconditional scalar atom.
+    atom_determinism_class(op)
+}
+
+/// The §6.0-0005 permissiveness order: `exact-byte < ULP/tolerance <
+/// order-invariant/nondeterministic`. A larger value admits a wider set of results.
+pub fn class_permissiveness(c: DeterminismClass) -> u8 {
+    match c {
+        DeterminismClass::ExactByte => 0,
+        DeterminismClass::UlpTolerance => 1,
+        DeterminismClass::OrderInvariant => 2,
+    }
+}
+
+/// The advertisement-honesty lint. Rejects an `advertised` class **strictly more
+/// permissive** than the op's `true_class` — that direction selects a comparator
+/// too loose to catch a real error (e.g. advertising a Max reduce as
+/// order-invariant to buy tolerance a wrong Max could hide behind). An advertisement
+/// no more permissive than the truth (equal, or an over-strict over-claim) passes:
+/// an over-claim is caught by the differential itself and forbidden by SYNTH
+/// §6.5-0004b, so it is not this lint's job (per the design ruling). Returns the
+/// advertised class on success so the caller feeds it straight to the comparator.
+pub fn check_advertisement(
+    advertised: DeterminismClass,
+    true_class: DeterminismClass,
+) -> Result<DeterminismClass, String> {
+    if class_permissiveness(advertised) > class_permissiveness(true_class) {
+        return Err(format!(
+            "dishonest advertisement: {advertised:?} is more permissive than the true \
+             class {true_class:?} (§6.0-0005) — its comparator could not catch a real error"
+        ));
+    }
+    Ok(advertised)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atom_class_is_some_for_atoms_none_for_folds() {
+        assert_eq!(atom_determinism_class("add"), Some(DeterminismClass::ExactByte));
+        assert_eq!(atom_determinism_class("exp"), Some(DeterminismClass::UlpTolerance));
+        // a fold/conditional op is NOT an unconditional atom → None, never a panic (#64)
+        assert_eq!(atom_determinism_class("reduce"), None);
+        assert_eq!(atom_determinism_class("not_an_op"), None);
+    }
+
+    #[test]
+    fn op_true_class_covers_atoms_and_folds() {
+        use crate::structural::Monoid;
+        // unconditional atom → atom class
+        assert_eq!(op_true_class("add", None), Some(DeterminismClass::ExactByte));
+        // float Sum/Prod fold → order-invariant (§6.0-0004)
+        assert_eq!(op_true_class("reduce", Some(Monoid::Sum)), Some(DeterminismClass::OrderInvariant));
+        assert_eq!(op_true_class("reduce", Some(Monoid::Prod)), Some(DeterminismClass::OrderInvariant));
+        // Max/Min reduce → exact-byte (order-independent, no float fold error)
+        assert_eq!(op_true_class("reduce", Some(Monoid::Max)), Some(DeterminismClass::ExactByte));
+        assert_eq!(op_true_class("reduce", Some(Monoid::Min)), Some(DeterminismClass::ExactByte));
+        // a fold op with no monoid is underspecified → None (not a guess)
+        assert_eq!(op_true_class("reduce", None), None);
+    }
+
+    #[test]
+    fn honesty_rejects_only_too_permissive() {
+        use DeterminismClass::*;
+        // ordering
+        assert!(class_permissiveness(ExactByte) < class_permissiveness(UlpTolerance));
+        assert!(class_permissiveness(UlpTolerance) < class_permissiveness(OrderInvariant));
+        // honest (advertised == true) → Ok
+        assert_eq!(check_advertisement(OrderInvariant, OrderInvariant), Ok(OrderInvariant));
+        // too permissive: advertise order-invariant for an exact-byte (Max) op → Err
+        assert!(check_advertisement(OrderInvariant, ExactByte).is_err());
+        // over-claim (stricter than true): advertise exact-byte for a Sum fold → Ok here
+        // (caught by the differential + SYNTH §6.5-0004b, not this lint)
+        assert_eq!(check_advertisement(ExactByte, OrderInvariant), Ok(ExactByte));
     }
 }
