@@ -1130,6 +1130,49 @@ separating a registered namespace from that namespace's capability-set token.
   `structure_key` token as a single unambiguous field; matching (§6.8-0002) is
   byte-exact and therefore case-sensitive. *Test:*
   `test_classify_target_token_charset`.
+- **KISS-CLASSIFY-6.8-0006** — Where a namespace's capability-set encodes a set
+  of members by **concatenating their names without a separator**, that
+  namespace's member alphabet MUST be **fixed-width**. A namespace whose member
+  names vary in length MUST separate adjacent members with an explicit
+  delimiter. This binds every namespace, not only those registered today.
+  *Test:* `test_classify_target_fixed_width_juxtaposition`.
+
+  > *Informative.* Juxtaposition is safe exactly when the alphabet is uniquely
+  > decodable, and a fixed-width alphabet is uniquely decodable **by
+  > construction** — for every member the namespace will ever add, without
+  > anyone re-checking. A variable-length alphabet is uniquely decodable only
+  > *contingently*: the property holds until some future member breaks it, and
+  > it cannot be verified by eye, since distinctness is strictly weaker than
+  > unique decodability (`{a, ab, b}` are distinct, yet `ab` parses two ways).
+  > The rule is therefore not "never juxtapose" — it is that juxtaposition
+  > requires an alphabet that cannot stop being decodable. §6.1's own dtype
+  > tokens are the cautionary case: they are uniquely decodable today but not
+  > prefix-free (`e4m3fn` prefixes `e4m3fnuz`; `e5m2` prefixes `e5m2fnuz`), so
+  > the property holds by a margin no reviewer is checking. That is what the
+  > §6.1 decodability lint exists to hold.
+- **KISS-CLASSIFY-6.8-0007** — Where a namespace's capability-set replaces a
+  long enumeration with a **digest**, it MUST use FNV-1a 64-bit with offset
+  basis `0xcbf29ce484222325` and prime `0x100000001b3`, emitted as exactly 16
+  lowercase hexadecimal digits, computed over the UTF-8 bytes of the canonical
+  enumeration string it replaces; the digest MUST carry an algorithm marker
+  (`fnv1a64`) delimited from the hex by a byte other than `:`; and the choice
+  between enumerating and digesting MUST be a deterministic function of that
+  canonical string's byte length against a threshold the namespace pins, never
+  an implementation preference. *Test:*
+  `test_classify_target_digest_pinned`.
+
+  > *Informative.* Pinned once here rather than per namespace so a conformance
+  > implementation carries one digest primitive rather than N, and so the
+  > byte-order and width questions where determinism bugs hide are settled in a
+  > single place. FNV-1a is chosen because §6.9-0003 requires a token be
+  > producible with only a standard library, which rules out reaching for a
+  > cryptographic hash; producers here are not adversarial, so accidental
+  > collision resistance is the only requirement. Hashing *the same string that
+  > is measured* means two producers can disagree about whether to digest but
+  > never about what was digested. The algorithm marker keeps a future hash
+  > migration distinguishable rather than silently colliding, and it excludes
+  > `:` because §6.8-0001 permits exactly one colon in a token — the namespace
+  > separator.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
 > `cuda:sm80`, `cuda:sm89`, `cuda:sm90a`, `cuda:sm100a`, `rocm:gfx942`,
@@ -1149,7 +1192,20 @@ separating a registered namespace from that namespace's capability-set token.
 > admits more than one subgroup width, so a token that cannot distinguish them
 > would collide two kernels that are not interchangeable. Its concrete grammar is
 > defined by that namespace's maintainer under §6.8-0004 and is deliberately not
-> spelled here.
+> spelled here — see
+> [`spec/namespaces/vulkan.md`](namespaces/vulkan.md), which the registry points
+> at. A derived example, from a device whose pinnable subgroup range is 32..=64:
+> `vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32`.
+> Its `sg32` sibling is a **different** token and therefore a different cell,
+> which is exactly the separation `spirv1.6` could not express.
+>
+> **Registered namespaces** live in
+> [`conformance/registry/namespaces.json`](../conformance/registry/namespaces.json)
+> (§6.8-0003). A namespace listed there as `reserved` rather than `registered`
+> has no maintainer and no vocabulary: the name is held so it cannot be claimed
+> by an unrelated party, but a producer MUST NOT emit tokens under it. Note that
+> a namespace appearing in an *informative example* above is not thereby
+> registered — the registry is the authority, and the examples are prose.
 
 ### 6.9 Foundational independence and opaque carry
 
@@ -1375,6 +1431,8 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0003 | `test_classify_target_namespace_registered` |
 | KISS-CLASSIFY-6.8-0004 | `test_classify_target_capability_set_owned_by_namespace` |
 | KISS-CLASSIFY-6.8-0005 | `test_classify_target_token_charset` |
+| KISS-CLASSIFY-6.8-0006 | `test_classify_target_fixed_width_juxtaposition` |
+| KISS-CLASSIFY-6.8-0007 | `test_classify_target_digest_pinned` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |
@@ -1508,10 +1566,59 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
   = 16777216 > 1024` ⇒ `grid`; rank 2:
   `sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
-- **The same GEMM cell built for a ROCm target** — a **different** cell that does
+- **The same GEMM cell built for a Vulkan target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
-  `target = rocm:gfx942`:
-  `sk3|gem|f32|rocm:gfx942|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `target = vulkan:sg64.ops-abr.arith-f16.cm-none`:
+  `sk3|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+
+  > This is the re-mint anticipated when the vector was moved off
+  > `vulkan:spirv1.6`: it now carries a **registered** namespace with a published
+  > vocabulary, which the interim `rocm:gfx942` could not, since `rocm` is
+  > reserved rather than registered and §6.8-0003 forbids producing under an
+  > unregistered namespace. §A.1.1 expands the cross-namespace case.
+
+**A.1.1 `vulkan` namespace vectors.** These satisfy the §8-0004 requirement for
+interoperation with an implementation whose `target_capability` namespace differs
+from the reference implementation's `cuda`. Each is labelled by what it tests,
+because only one class is a shared obligation:
+
+- **codec-neutral** — the envelope, field order, separators, escaping, dedup and
+  sort order, and length discipline. **Both** implementations must encode these
+  byte-identically *regardless of namespace*; this is the actual interop surface.
+- **capability-specific** — the payload a namespace's vocabulary owns. Each
+  implementation owns its own and they are never cross-emitted.
+
+> **(a) `vulkan` GEMM cell, wave64-capable device — capability-specific.** The
+> same GEMM inputs as A.1, targeted at a device whose default subgroup width is
+> 64:
+> `sk3|gem|f32|vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+>
+> **(b) The same cell on a wave32-only device — capability-specific.** Differs
+> from (a) in exactly one field of the capability-set, and is therefore a
+> different cell:
+> `sk3|gem|f32|vulkan:sg32.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+>
+> (a) and (b) together are the point: they are two devices *and* two cells, and
+> no single encoding-envelope token could separate them. A measured consumer
+> laptop carries exactly this pair — an integrated AMD part at wave64 beside a
+> discrete NVIDIA part at wave32, differing additionally in ICD — so the
+> divergence appears on ordinary hardware rather than a constructed rig.
+>
+> **(c) Nonzero subgroup width — codec-neutral, and a deliberate loud failure.**
+> Every `vulkan` vector above pins a **nonzero** subgroup width. A deriver that
+> reads an untouched Vulkan 1.1+ `pNext` property struct — which happens when it
+> gates on the *device's* API version instead of `min(instance, device)` — emits
+> `sg0` and fails these vectors immediately, rather than shipping a
+> plausible-but-wrong token that no test catches. The trap is silent by nature;
+> the vector is what makes it loud.
+>
+> **(d) Width-agnostic cell — capability-specific.** A kernel that reads the
+> subgroup width at runtime is a distinct artifact from either pinned variant:
+> `sk3|gem|f32|vulkan:sgdyn.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+>
+> **(e) Minimal `vulkan` cell — codec-neutral.** Every field at its empty
+> spelling, exercising the "no omissible fields" rule:
+> `vulkan:sgdyn.ops-none.arith-none.cm-none`
 
 **A.2 Adversarial / negative vectors.** The negative battery for the §6.7 / §6.8
 reject tests and the foreign-reader freeze gate includes: a token with 8 fields
