@@ -1,0 +1,63 @@
+{
+  "$comment": [
+    "The KISS target_capability namespace registry (KISS-CLASSIFY-6.8-0003).",
+    "",
+    "6.8-0003 requires that a KISS-owned namespace assignment originate from a",
+    "merged change to this PR-gated file, and that the file be published as a",
+    "versioned, machine-readable registry bundled with the KISS-Conform suite so",
+    "an offline reader holds a complete copy. This is that file.",
+    "",
+    "Registration is enforced only when a party first PRODUCES (announces) a",
+    "kernel under a namespace. Byte-exact matching (6.8-0002) MUST NOT consult",
+    "this registry: a consumer matching two tokens compares bytes and nothing",
+    "else. The registry exists so that a producer cannot mint a namespace",
+    "unilaterally, not so that a matcher can be clever.",
+    "",
+    "Per 6.8-0004 the capability-set VOCABULARY of each namespace is owned by",
+    "that namespace's maintainer, and KISS clauses never pin it. This registry",
+    "therefore records a POINTER to each vocabulary, never its content."
+  ],
+  "registry_version": 1,
+  "schema": {
+    "namespace": "the registered left component of a target_capability token; ASCII, matched byte-exact and case-sensitively (6.8-0002, 6.8-0005)",
+    "maintainer": "who owns this namespace's capability-set vocabulary (6.8-0004)",
+    "vocabulary": "where that vocabulary is normatively defined, or null if not yet published",
+    "reference_implementation": "an implementation of the vocabulary, or null; informative",
+    "status": "registered | reserved",
+    "notes": "informative"
+  },
+  "namespaces": [
+    {
+      "namespace": "cuda",
+      "maintainer": "baracuda (https://github.com/ciresnave/baracuda), via baracuda-kernel-vocab",
+      "vocabulary": null,
+      "reference_implementation": "kiss-ref",
+      "status": "registered",
+      "notes": "Registered because 6.8-0003 forbids producing a kernel under an unregistered namespace and this repository's own conformance suite produces cuda: tokens through the real codec (conformance/tests/structure_key_codec.rs, structure_key_golden.rs, contract_golden.rs); without this row the suite is non-conformant to a clause it exists to demonstrate. Maintainer is baracuda by their own acceptance, with kiss-ref expressly declining: 6.8-0004 delegates the vocabulary to the party that maintains it, baracuda originated the sm89->cuda:sm89 namespacing and emits the tokens from baracuda-kernel-vocab, and kiss-ref is the differential reference rather than an authority. Note that 8-0004's `the reference implementation's namespace is cuda` and `baracuda owns the cuda vocabulary` are distinct compatible facts - the same reference-implements-maintainer's-vocabulary split that holds between kiss-vulkan-vocab and the vulkan: namespace. `vocabulary` is null pending spec/namespaces/cuda.md, which the maintainer is drafting; the pointer lands with the file rather than ahead of it."
+    },
+    {
+      "namespace": "vulkan",
+      "maintainer": "vulkane (https://github.com/ciresnave/vulkane)",
+      "vocabulary": "spec/namespaces/vulkan.md",
+      "reference_implementation": "kiss-vulkan-vocab",
+      "status": "registered",
+      "notes": "Capability-set is a deterministic four-field tuple rather than an opaque vendor-minted key, because Vulkan has no single authority minting per-part specialization names the way an sm-version is minted. See spec/namespaces/vulkan.md."
+    },
+    {
+      "namespace": "rocm",
+      "maintainer": null,
+      "vocabulary": null,
+      "reference_implementation": null,
+      "status": "reserved",
+      "notes": "Appears in the spec's informative examples (rocm:gfx942, rocm:gfx1100). Reserved so the name cannot be claimed by an unrelated party, but unregistered: no maintainer has adopted it and no vocabulary is defined. A producer MUST NOT emit rocm: tokens until this row becomes `registered`."
+    },
+    {
+      "namespace": "metal",
+      "maintainer": null,
+      "vocabulary": null,
+      "reference_implementation": null,
+      "status": "reserved",
+      "notes": "Appears in the spec's informative examples (metal:apple9). Reserved on the same basis as rocm."
+    }
+  ]
+}

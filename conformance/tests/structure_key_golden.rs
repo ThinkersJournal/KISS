@@ -135,14 +135,14 @@ fn a1_dense_contraction_cuda() {
 }
 
 #[test]
-fn a1_dense_contraction_rocm_target() {
+fn a1_dense_contraction_vulkan_target() {
     let c = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
         mp: MathPrecision::Stable,
     };
-    let k = key("gem", "f32", "rocm:gfx942", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
-    assert_token("KISS-CLASSIFY-6.8", &k, "sk3|gem|f32|rocm:gfx942|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
+    let k = key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
+    assert_token("KISS-CLASSIFY-6.8", &k, "sk3|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
 }
 
 // ---- sk3 gem precision-coordinate goldens (D1/D4/D5) -------------------------

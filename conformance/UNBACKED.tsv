@@ -102,8 +102,6 @@ KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
 KISS-CLASSIFY-6.7-0012	test_classify_reduction_accumulator_coordinate	untested	
-KISS-CLASSIFY-6.8-0003	test_classify_target_namespace_registered	untested	
-KISS-CLASSIFY-6.8-0004	test_classify_target_capability_set_owned_by_namespace	untested	
 KISS-CLASSIFY-6.9-0001	test_classify_no_upstream_dependency	untested	
 KISS-CLASSIFY-6.9-0002	test_classify_structure_key_opaque_carry	untested	
 KISS-CLASSIFY-6.9-0003	test_classify_zero_dependency	untested	
