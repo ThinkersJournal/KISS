@@ -51,9 +51,26 @@ pub struct AxisVector {
 /// primitive, evaluated by the from-scratch `structural::reduce_axis2_f32`.
 const AXIS_PROVENANCE: &str = "oracle:KISS-OPS-6.11-0002/structural::reduce_axis2_f32";
 
-/// A deterministic trailing-axis (axis 1) corpus of rank-2 shapes that keep the
-/// two summation orders inside the band and a wrong axis / wrong value outside it:
-/// a wide row, a tall column, a small square, and a large-magnitude-spread row.
+/// A deterministic trailing-axis (axis 1) corpus of rank-2 shapes chosen so the
+/// harness's teeth actually bite:
+/// - `[4, 6]` — a wide non-square: a wrong-axis reduction (axis 0) writes a
+///   different NUMBER of cells, caught by output length.
+/// - `[8, 1]` — a tall single column: axis-1 reduce is a per-row no-op; the
+///   wrong axis collapses to one cell (length-caught). (Its rows are 1-element,
+///   so a max-vs-min swap is invisible here — the max wrong-op is tested on the
+///   wider shapes.)
+/// - `[3, 3]` — a NON-degenerate square with distinct, ASYMMETRIC row/col sums
+///   (row sums 6,15,24 vs col sums 12,15,18): on a square a length check can't
+///   fire, so this is the shape that catches a wrong axis BY VALUE.
+/// - `[2, 16]` — large-magnitude-spread rows (`1e8` then fifteen `1.0`s): the
+///   `1.0`s fall below `1e8`'s f32 ULP when added one-by-one (sequential) but
+///   survive once a pairwise subtree groups them, so `sum_b` (pairwise) differs
+///   from the sequential oracle by a NONZERO amount that the band absorbs — this
+///   is what makes the Sum reassociation band load-bearing rather than a vacuous
+///   zero-difference agreement.
+///
+/// Together they keep the two conforming summation orders inside the band while
+/// putting a wrong axis / wrong value outside it.
 pub fn tagged_axis_corpus(_seed: u64) -> Vec<AxisVector> {
     let mk = |data: Vec<f32>, extents: [usize; 2]| AxisVector {
         data,
@@ -64,15 +81,18 @@ pub fn tagged_axis_corpus(_seed: u64) -> Vec<AxisVector> {
     vec![
         mk((1..=24).map(|i| i as f32).collect(), [4, 6]),
         mk((1..=8).map(|i| i as f32).collect(), [8, 1]),
-        mk(vec![0.5; 100], [10, 10]),
+        mk((1..=9).map(|i| i as f32).collect(), [3, 3]),
         mk(
             {
-                let mut v = vec![1e6f32];
-                v.extend([1.0; 7]);
+                let mut v = Vec::new();
+                for _ in 0..2 {
+                    v.push(1e8f32);
+                    v.extend([1.0f32; 15]);
+                }
                 v
             },
-            [2, 4],
-        ), // large-magnitude-spread rows
+            [2, 16],
+        ),
     ]
 }
 

@@ -53,3 +53,22 @@ pub fn compile_and_load_reduce(name: &str) -> Option<ReduceKernel> {
     // SAFETY: every reduce fixture exports exactly the ReduceKernel C signature.
     Some(unsafe { std::mem::transmute::<*const core::ffi::c_void, ReduceKernel>(sym) })
 }
+
+use kiss_conformance::harness::abi::AxisReduceKernel;
+
+/// Compile `tests/harness_fixtures/<name>.c` and resolve `kiss_reduce_axis1` as an
+/// `AxisReduceKernel`. `None` (skip) if no toolchain; leaks the `Artifact` so the
+/// fn pointer stays valid.
+pub fn compile_and_load_axis_reduce(name: &str) -> Option<AxisReduceKernel> {
+    let m = msvc::find_msvc()?;
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/harness_fixtures")
+        .join(format!("{name}.c"));
+    let out = std::env::temp_dir().join(format!("kiss_harness_{}_{name}", std::process::id()));
+    std::fs::create_dir_all(&out).unwrap();
+    let dll = msvc::compile_c_to_dll(&m, &src, &out).expect("compile fixture");
+    let art = Box::leak(Box::new(Artifact::load(&dll).expect("load fixture")));
+    let sym = art.symbol("kiss_reduce_axis1").expect("kiss_reduce_axis1 export");
+    // SAFETY: every axis fixture exports exactly the AxisReduceKernel C signature.
+    Some(unsafe { std::mem::transmute::<*const core::ffi::c_void, AxisReduceKernel>(sym) })
+}
