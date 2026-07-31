@@ -56,3 +56,20 @@ fn test_ops_determinism_class_advertised() {
         Err(ContractDecline::MissingGuaranteesClass)
     );
 }
+
+// The Capabilities block (§6.7-0004) also carries a `determinism_class` field;
+// parse_guarantees_class must read the GUARANTEES value, not the earlier
+// Capabilities one. Regression-guards the block-scoping against a refactor back
+// to an unscoped whole-body scan.
+#[test]
+fn guarantees_class_not_confused_with_capabilities() {
+    let mut body = b"[section:1:identity]\n".to_vec();
+    body.extend_from_slice(b"[section:5:capabilities]\n");
+    body.extend_from_slice(b"determinism_class = exact-byte\n");
+    body.extend_from_slice(b"[section:6:guarantees]\n");
+    body.extend_from_slice(b"determinism_class = order-invariant/nondeterministic\n");
+    assert_eq!(
+        parse_guarantees_class(&body),
+        Ok(DeterminismClass::OrderInvariant)
+    );
+}
