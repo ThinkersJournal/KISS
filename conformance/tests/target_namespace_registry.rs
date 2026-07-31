@@ -27,15 +27,92 @@
 
 const REGISTRY: &str = include_str!("../registry/namespaces.json");
 
-/// Namespaces this repository actually PRODUCES tokens under — verified against
-/// the suite's own producers, not against prose. §6.8-0003 enforces registration
-/// at production time, so this is the set that must be registered; a name
-/// appearing only in an informative example is not thereby produced under.
+/// Namespaces this repository PRODUCES tokens under, in the §6.8-0003 sense of
+/// *announcing a kernel*: they appear in normative golden vectors that
+/// implementations reproduce byte-for-byte.
 ///
-/// `cuda` is here because `structure_key_codec.rs`, `structure_key_golden.rs`,
-/// and `contract_golden.rs` all build real tokens through `to_token()`;
-/// `vulkan` because Appendix A.1/A.1.1 do the same.
+/// `cuda` from spec Appendix A.1, `vulkan` from A.1.1.
 const PRODUCED_NAMESPACES: &[&str] = &["cuda", "vulkan"];
+
+/// Namespaces that appear in the suite as **fixtures** rather than productions,
+/// each with the reason it is not a §6.8-0003 production.
+///
+/// The distinction is the same orthogonal split §6.8 already draws between
+/// well-formedness (§6.8-0001/-0005) and capability validity (§6.8-0004): a
+/// codec round-trip or a charset probe uses a token as an arbitrary
+/// well-formed *string*, and asserts nothing about what any device could run.
+/// §6.8-0003 binds a party that *announces a kernel*, and §6.8-0002 matching
+/// never consults the registry, so exercising the codec is not producing.
+///
+/// Listing them explicitly, with reasons, is the point: the alternative is a
+/// silent omission that looks identical to an oversight.
+const FIXTURE_NAMESPACES: &[(&str, &str)] = &[
+    (
+        "rocm",
+        "codec round-trip battery and charset/byte-exact-match probes only \
+         (structure_key_codec.rs, structure_key_grammar.rs); no golden vector \
+         and no announced kernel. `rocm` is reserved, not registered.",
+    ),
+    (
+        "cpu",
+        "a helper in opattrs_golden.rs builds a key solely to read its reduce \
+         field back through to_token(); the target is incidental to that probe.",
+    ),
+];
+
+/// Every namespace-shaped literal the suite contains, swept from source.
+///
+/// This exists because the two lists above are *claims about this repository*,
+/// and a hand-maintained claim that nothing checks is the failure mode this
+/// whole clause-set is about. Without the sweep, a golden added tomorrow under
+/// an unregistered namespace would sail past a list that still looks correct.
+fn namespaces_appearing_in_suite() -> Vec<(String, String)> {
+    fn scan(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                scan(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                let Ok(text) = std::fs::read_to_string(&p) else {
+                    continue;
+                };
+                let file = p
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or("?")
+                    .to_string();
+                // A namespace-shaped literal: "<lowercase>:<non-empty>".
+                for (i, _) in text.match_indices('"') {
+                    let rest = &text[i + 1..];
+                    let Some(end) = rest.find('"') else { continue };
+                    let lit = &rest[..end];
+                    let Some((ns, cap)) = lit.split_once(':') else {
+                        continue;
+                    };
+                    if !ns.is_empty()
+                        && !cap.is_empty()
+                        && ns.bytes().all(|b| b.is_ascii_lowercase())
+                        && cap
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+                    {
+                        out.push((ns.to_string(), file.clone()));
+                    }
+                }
+            }
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut out = Vec::new();
+    scan(&root.join("tests"), &mut out);
+    scan(&root.join("src"), &mut out);
+    out.sort();
+    out.dedup();
+    out
+}
 
 /// Minimal structural reader for the registry.
 ///
@@ -99,14 +176,48 @@ fn test_classify_target_namespace_registered() {
         );
     }
 
-    // A `reserved` row holds a name without granting production rights. The
-    // distinction is the point of having a status field at all, so at least
-    // one of each must be representable.
-    assert!(
-        rows.iter().any(|(_, _, _, s)| s == "reserved"),
-        "KISS-CLASSIFY-6.8-0003: no `reserved` row present; the registry cannot \
-         distinguish a held name from a produceable one"
-    );
+    // Completeness. The list above is a claim about this repository; this is
+    // what makes it a checked one. Every namespace-shaped literal in the suite
+    // must be either registered or explicitly accounted for as a fixture — so
+    // a golden added later under an unregistered namespace fails here rather
+    // than slipping past a list that still looks correct.
+    //
+    // A `reserved` row is deliberately NOT required to exist: §6.8-0003 obliges
+    // producers to be registered and the registry to be bundled, and says
+    // nothing about holding unclaimed names. A registry listing only registered
+    // namespaces is perfectly valid, and asserting otherwise would test this
+    // file's present contents rather than the clause.
+    for (ns, file) in namespaces_appearing_in_suite() {
+        if PRODUCED_NAMESPACES.contains(&ns.as_str()) {
+            continue;
+        }
+        if FIXTURE_NAMESPACES.iter().any(|(f, _)| *f == ns) {
+            continue;
+        }
+        panic!(
+            "KISS-CLASSIFY-6.8-0003: namespace `{ns}` appears in `{file}` but is \
+             neither listed as produced-under (and registered) nor accounted for \
+             in FIXTURE_NAMESPACES. If it announces a kernel it must be \
+             registered; if it is only a codec or charset fixture, say so there \
+             with a reason."
+        );
+    }
+
+    // The fixture exemptions must stay honest too: an entry that no longer
+    // appears anywhere is stale cover for nothing, and would silently excuse a
+    // future reintroduction.
+    let seen: Vec<String> = namespaces_appearing_in_suite()
+        .into_iter()
+        .map(|(ns, _)| ns)
+        .collect();
+    for (ns, _) in FIXTURE_NAMESPACES {
+        assert!(
+            seen.iter().any(|s| s == ns),
+            "KISS-CLASSIFY-6.8-0003: `{ns}` is exempted as a fixture but appears \
+             nowhere in the suite; remove the stale exemption rather than leave \
+             it standing"
+        );
+    }
 }
 
 /// KISS-CLASSIFY-6.8-0004 — each namespace's capability-set vocabulary is owned
