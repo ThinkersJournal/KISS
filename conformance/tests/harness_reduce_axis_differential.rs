@@ -35,6 +35,7 @@ fn test_ops_reduce_axis_differential() {
     };
     let sum_b = compile_and_load_axis_reduce("reduce_axis1_sum_b").unwrap();
     let sum_wrong = compile_and_load_axis_reduce("reduce_axis1_sum_wrong").unwrap();
+    let sum_offband = compile_and_load_axis_reduce("reduce_axis1_sum_offband").unwrap();
     let max_a = compile_and_load_axis_reduce("reduce_axis1_max_a").unwrap();
     let max_b = compile_and_load_axis_reduce("reduce_axis1_max_b").unwrap();
     let max_wrong = compile_and_load_axis_reduce("reduce_axis1_max_wrong").unwrap();
@@ -76,10 +77,29 @@ fn test_ops_reduce_axis_differential() {
         // makes at least one value differ. ----
         let w = invoke_axis_reduce(sum_wrong, &v.data, ein, [1, cols as i64]);
         let m = sum_oracle.len().min(w.len());
+        // NB: `sum_tol` is the per-ROW tolerance; here it's applied to the wrong
+        // kernel's per-COLUMN output. That's deliberate and harmless — a wrong-axis
+        // divergence is O(magnitude) (>= 1 on this corpus) while every row tolerance
+        // is ~1e-6, so which axis's tolerance we use cannot change the verdict; the
+        // slice just keeps lengths aligned when rows == cols (the square).
         assert!(
             w.len() != sum_oracle.len()
                 || !run_axis_reduce(&w[..m], &sum_oracle[..m], Monoid::Sum, &sum_tol[..m]).is_empty(),
             "the band wrongly ABSORBED a wrong-axis (axis-0) reduction: {:?}",
+            v.extents
+        );
+
+        // ---- Sum wrong-VALUE, right shape: a magnitude error the band must REJECT.
+        // sum_offband double-counts each row's first element, so the output is the
+        // same rows-shaped buffer (length/axis checks are blind to it) but every row
+        // is off by its first element (>= 1), which exceeds that row's band on every
+        // corpus vector — including the 1e8 exerciser (error 1e8 vs band ~179). This
+        // is the band's REJECTION edge; sum_a/sum_b only prove acceptance. ----
+        let ob = invoke_axis_reduce(sum_offband, &v.data, ein, eout);
+        assert_eq!(ob.len(), sum_oracle.len(), "offband must keep the oracle's shape");
+        assert!(
+            !run_axis_reduce(&ob, &sum_oracle, Monoid::Sum, &sum_tol).is_empty(),
+            "the band wrongly ABSORBED a wrong-VALUE (double-counted) sum: {:?}",
             v.extents
         );
 
