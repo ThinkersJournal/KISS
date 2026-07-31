@@ -434,7 +434,9 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         // here — it is the field delimiter this token was split on), any whitespace
         // or control byte (`0x00`–`0x20`, `0x7f`), or a non-ASCII byte, so it embeds
         // as one unambiguous field. The colon (`0x3a`, required above) and `.`
-        // (`0x2e`, e.g. `spirv1.6`) stay legal — neither is in the forbidden set.
+        // (`0x2e`, e.g. `spirv1.6` — cited here only as a dot-bearing string, not
+        // as a capability recommendation) stay legal — neither is in the forbidden
+        // set.
         if f[3]
             .bytes()
             .any(|b| b == b';' || b == b'/' || b <= 0x20 || b == 0x7f || b >= 0x80)
