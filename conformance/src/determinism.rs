@@ -57,6 +57,34 @@ pub fn atom_determinism_class(op: &str) -> Option<DeterminismClass> {
     }
 }
 
+/// The **true** determinism/fidelity class of an op per KISS-OPS §6.0, extending
+/// the unconditional-atom oracle with the conditional fold arm the atom model
+/// cannot carry (§6.0-0004/-0005). This is the truth an advertised class is
+/// checked against (the honesty lint, `check_advertisement`).
+///
+/// Coverage is the op set the harness differences — the unconditional atoms plus
+/// `reduce`/`prefix_scan` over the four monoids — not every §6.0 op. `None` means
+/// "this model does not determine the class" (an unknown op, or a fold op with no
+/// monoid supplied); callers treat `None` as "cannot honesty-check", never as a class.
+pub fn op_true_class(
+    op: &str,
+    monoid: Option<crate::structural::Monoid>,
+) -> Option<DeterminismClass> {
+    use crate::structural::Monoid;
+    // A float fold's class depends on the monoid (§6.0-0004): Sum/Prod accumulate
+    // rounding order-dependently → order-invariant/nondeterministic; Max/Min are
+    // selection, order-independent and exact-byte.
+    if matches!(op, "reduce" | "prefix_scan") {
+        return match monoid {
+            Some(Monoid::Sum) | Some(Monoid::Prod) => Some(DeterminismClass::OrderInvariant),
+            Some(Monoid::Max) | Some(Monoid::Min) => Some(DeterminismClass::ExactByte),
+            None => None,
+        };
+    }
+    // Otherwise it is (or is not) an unconditional scalar atom.
+    atom_determinism_class(op)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,5 +96,20 @@ mod tests {
         // a fold/conditional op is NOT an unconditional atom → None, never a panic (#64)
         assert_eq!(atom_determinism_class("reduce"), None);
         assert_eq!(atom_determinism_class("not_an_op"), None);
+    }
+
+    #[test]
+    fn op_true_class_covers_atoms_and_folds() {
+        use crate::structural::Monoid;
+        // unconditional atom → atom class
+        assert_eq!(op_true_class("add", None), Some(DeterminismClass::ExactByte));
+        // float Sum/Prod fold → order-invariant (§6.0-0004)
+        assert_eq!(op_true_class("reduce", Some(Monoid::Sum)), Some(DeterminismClass::OrderInvariant));
+        assert_eq!(op_true_class("reduce", Some(Monoid::Prod)), Some(DeterminismClass::OrderInvariant));
+        // Max/Min reduce → exact-byte (order-independent, no float fold error)
+        assert_eq!(op_true_class("reduce", Some(Monoid::Max)), Some(DeterminismClass::ExactByte));
+        assert_eq!(op_true_class("reduce", Some(Monoid::Min)), Some(DeterminismClass::ExactByte));
+        // a fold op with no monoid is underspecified → None (not a guess)
+        assert_eq!(op_true_class("reduce", None), None);
     }
 }
