@@ -23,19 +23,19 @@ use kiss_conformance::DeterminismClass;
 fn test_ops_atan2_class_is_ulp() {
     assert_eq!(
         atom_determinism_class("atan2"),
-        DeterminismClass::UlpTolerance,
+        Some(DeterminismClass::UlpTolerance),
         "atan2 is a declared-ULP transcendental atom (§6.8-0005), so its determinism \
          class is ULP/tolerance"
     );
     assert_ne!(
         atom_determinism_class("atan2"),
-        DeterminismClass::ExactByte,
+        Some(DeterminismClass::ExactByte),
         "atan2 MUST NOT be assigned the exact-byte class — no atan2 is byte-identical \
          across targets"
     );
     // Its exact-byte binary-math siblings are unaffected (they carry no ULP ceiling).
-    assert_eq!(atom_determinism_class("copysign"), DeterminismClass::ExactByte);
-    assert_eq!(atom_determinism_class("nextafter"), DeterminismClass::ExactByte);
+    assert_eq!(atom_determinism_class("copysign"), Some(DeterminismClass::ExactByte));
+    assert_eq!(atom_determinism_class("nextafter"), Some(DeterminismClass::ExactByte));
 }
 
 /// KISS-OPS-6.0-0002: every atom in the exact-byte set is class exact-byte, and no
@@ -45,7 +45,7 @@ fn test_ops_exact_byte_ops() {
     for op in EXACT_BYTE_ATOMS {
         assert_eq!(
             atom_determinism_class(op),
-            DeterminismClass::ExactByte,
+            Some(DeterminismClass::ExactByte),
             "§6.0-0002 lists `{op}` in the exact-byte class"
         );
     }
@@ -53,7 +53,7 @@ fn test_ops_exact_byte_ops() {
     for op in TRANSCENDENTAL_ATOMS {
         assert_ne!(
             atom_determinism_class(op),
-            DeterminismClass::ExactByte,
+            Some(DeterminismClass::ExactByte),
             "`{op}` is a §6.8 transcendental atom and MUST NOT be exact-byte"
         );
     }
@@ -65,7 +65,7 @@ fn test_ops_ulp_class_ops() {
     for op in TRANSCENDENTAL_ATOMS {
         assert_eq!(
             atom_determinism_class(op),
-            DeterminismClass::UlpTolerance,
+            Some(DeterminismClass::UlpTolerance),
             "§6.0-0003: transcendental atom `{op}` is class ULP/tolerance"
         );
     }

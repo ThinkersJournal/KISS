@@ -44,17 +44,29 @@ pub const TRANSCENDENTAL_ATOMS: &[&str] =
     &["exp", "log", "sin", "cos", "sqrt", "erf", "atan", "lgamma", "atan2"];
 
 /// The determinism/fidelity class of a scalar atom, per §6.0-0002 (exact-byte) and
-/// §6.0-0003 (ULP/tolerance transcendentals). Panics on an op this atom-level model
-/// does not cover (a conditional/fold op, or an unknown token) so misuse is loud.
-pub fn atom_determinism_class(op: &str) -> DeterminismClass {
+/// §6.0-0003 (ULP/tolerance transcendentals). Returns `None` for an op this
+/// atom-level model does not cover (a conditional/fold op, or an unknown token) —
+/// a typed "not an unconditional scalar atom", never a panic (#64).
+pub fn atom_determinism_class(op: &str) -> Option<DeterminismClass> {
     if TRANSCENDENTAL_ATOMS.contains(&op) {
-        DeterminismClass::UlpTolerance
+        Some(DeterminismClass::UlpTolerance)
     } else if EXACT_BYTE_ATOMS.contains(&op) {
-        DeterminismClass::ExactByte
+        Some(DeterminismClass::ExactByte)
     } else {
-        panic!(
-            "atom_determinism_class: `{op}` is not an unconditional scalar atom \
-             (a fold/monoid/contraction op is classified by §6.0-0004/-0005, not here)"
-        )
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atom_class_is_some_for_atoms_none_for_folds() {
+        assert_eq!(atom_determinism_class("add"), Some(DeterminismClass::ExactByte));
+        assert_eq!(atom_determinism_class("exp"), Some(DeterminismClass::UlpTolerance));
+        // a fold/conditional op is NOT an unconditional atom → None, never a panic (#64)
+        assert_eq!(atom_determinism_class("reduce"), None);
+        assert_eq!(atom_determinism_class("not_an_op"), None);
     }
 }

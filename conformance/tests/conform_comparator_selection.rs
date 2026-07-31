@@ -126,17 +126,17 @@ fn test_conform_ulp_comparator() {
     for &atom in TRANSCENDENTAL_ATOMS {
         assert_eq!(
             atom_determinism_class(atom),
-            DeterminismClass::UlpTolerance,
+            Some(DeterminismClass::UlpTolerance),
             "transcendental atom `{atom}` MUST be ULP/tolerance, never exact-byte"
         );
     }
     // The named ULP atoms of the plan, explicitly.
     for &atom in &["exp", "log", "sin", "sqrt", "atan2"] {
-        assert_eq!(atom_determinism_class(atom), DeterminismClass::UlpTolerance);
+        assert_eq!(atom_determinism_class(atom), Some(DeterminismClass::UlpTolerance));
     }
     // Contrast so the classifier is not a constant returning UlpTolerance: an
     // arithmetic atom is exact-byte.
-    assert_eq!(atom_determinism_class("add"), DeterminismClass::ExactByte);
+    assert_eq!(atom_determinism_class("add"), Some(DeterminismClass::ExactByte));
     // MUTATION: making the ULP arm a bits-equal compare fails the within-bound case;
     // reclassifying a transcendental (e.g. `sqrt`) to exact-byte fails the loop.
 }
