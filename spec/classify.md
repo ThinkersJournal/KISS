@@ -1508,18 +1508,10 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
   = 16777216 > 1024` ⇒ `grid`; rank 2:
   `sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
-- **The same GEMM cell built for a Vulkan target** — a **different** cell that does
+- **The same GEMM cell built for a ROCm target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
-  `target = vulkan:spirv1.6`:
-  `sk3|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
-
-  > **The `vulkan:` capability-set spelling in this vector is provisional.** This
-  > vector demonstrates the byte-exact non-match rule, for which *any* distinct
-  > target token serves — the specific capability-set is incidental to the point
-  > being made. `spirv1.6` names an encoding envelope rather than a hardware
-  > capability (see the note under §6.8) and will not survive registration of the
-  > `vulkan:` vocabulary under §6.8-0004. Do not hard-code it; this vector is
-  > re-minted with the registered spelling when that lands.
+  `target = rocm:gfx942`:
+  `sk3|gem|f32|rocm:gfx942|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 
 **A.2 Adversarial / negative vectors.** The negative battery for the §6.7 / §6.8
 reject tests and the foreign-reader freeze gate includes: a token with 8 fields
