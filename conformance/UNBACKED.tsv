@@ -492,7 +492,6 @@ KISS-OPS-7.2-0002	test_ops_claim_includes_floor	untested
 KISS-OPS-7.3-0001	test_ops_add_high_level_additive	untested	
 KISS-OPS-7.3-0002	test_ops_add_primitive_is_axiom	untested	
 KISS-OPS-7.3-0003	test_ops_op_registry_pr_gated	untested	
-KISS-OPS-7.4-0001	test_ops_determinism_class_advertised	untested	
 KISS-OPS-8-0001	test_ops_two_version_axes_independent	untested	
 KISS-OPS-8-0002	test_ops_additive_high_level_no_floor_bump	untested	
 KISS-OPS-8-0003	test_ops_floor_or_semantics_change_bumps_version	untested	

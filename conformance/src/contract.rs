@@ -233,6 +233,11 @@ pub enum ContractDecline {
     /// `[section:1:identity]` — a headingless block MUST NOT be imported
     /// (§6.11-0004, §6.1-0002).
     Headingless,
+    /// The Guarantees block has no `determinism_class` field (§6.8-0003).
+    MissingGuaranteesClass,
+    /// The `determinism_class` token is not a member of the canonical KISS-Ops
+    /// §6.0-0001 enum — a re-forked/unknown class (§6.8-0003, KISS-OPS §7.4-0001).
+    UnknownDeterminismClass { got: String },
 }
 
 /// The header-line essentials a successful read yields (§6.11-0002/-0003).
@@ -324,6 +329,41 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
         body_len: body.len(),
         crc32: declared_crc,
     })
+}
+
+// ---------------------------------------------------------------------------
+// §6.8-0003 / KISS-OPS §7.4-0001 — Guarantees `determinism_class` advertisement.
+// ---------------------------------------------------------------------------
+
+/// Read the Guarantees block's `determinism_class` from a contract `body` and map
+/// the canonical KISS-Ops §6.0-0001 token to [`crate::DeterminismClass`]. Locates
+/// the `[section:6:guarantees]` heading (§6.11-0004) and reads *that block's*
+/// `determinism_class = <token>` field line (§6.8-0003) — scoped to the
+/// Guarantees block specifically, since a full seven-section document also
+/// carries a same-named field in Capabilities (§6.7-0004) earlier in the body.
+/// An absent block/field or an off-enum token is a typed [`ContractDecline`] —
+/// never a panic, never a re-forked class (KISS-OPS §7.4-0001).
+pub fn parse_guarantees_class(body: &[u8]) -> Result<crate::DeterminismClass, ContractDecline> {
+    let text = std::str::from_utf8(body).map_err(|_| ContractDecline::MalformedHeader)?;
+    // Find the Guarantees heading; everything up to the NEXT `[section:` heading
+    // (or EOF) is this block's field lines.
+    const HEADING: &str = "[section:6:guarantees]";
+    let start = text.find(HEADING).ok_or(ContractDecline::MissingGuaranteesClass)? + HEADING.len();
+    let rest = &text[start..];
+    let block_end = rest.find("\n[section:").map(|i| i + 1).unwrap_or(rest.len());
+    let block = &rest[..block_end];
+    let token = block
+        .lines()
+        .find_map(|l| l.strip_prefix("determinism_class = "))
+        .ok_or(ContractDecline::MissingGuaranteesClass)?;
+    // The canonical KISS-Ops §6.0-0001 enum, spelled verbatim (KISS-CONTRACT
+    // §6.8-0003): `exact-byte`, `ULP/tolerance`, `order-invariant/nondeterministic`.
+    match token {
+        "exact-byte" => Ok(crate::DeterminismClass::ExactByte),
+        "ULP/tolerance" => Ok(crate::DeterminismClass::UlpTolerance),
+        "order-invariant/nondeterministic" => Ok(crate::DeterminismClass::OrderInvariant),
+        other => Err(ContractDecline::UnknownDeterminismClass { got: other.to_string() }),
+    }
 }
 
 /// Parse exactly 8 lowercase-hex digits into a `u32` (the `crc32=` field form).
