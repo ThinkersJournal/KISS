@@ -166,7 +166,7 @@ in-memory representation only.
 The old reference impl carried a CUDA-only `ArchSku` enum (`Sm80`/`Sm89`/`Sm90a`).
 That contradicts a suite meant to be shared across all hardware. KISS-Classify
 replaces it with a **namespaced, all-hardware** descriptor
-`<namespace>:<capability-set>` — `cuda:sm89`, `vulkan:spirv1.6`, `rocm:gfx942`,
+`<namespace>:<capability-set>` — `cuda:sm89`, `rocm:gfx942`,
 `metal:apple9`, and so on. The steward registers **namespaces**; each namespace's
 maintainer owns that namespace's **capability-set** vocabulary. Matching is
 **byte-exact on the full string**: no ordering rules, no subset logic, no
@@ -267,7 +267,7 @@ Non-contraction tokens omit that field entirely and stay byte-identical to the b
 codec.
 
 **(e) Byte-exact target matching.** A kernel with target `cuda:sm89` does **not**
-serve an invocation classified for `cuda:sm90a`, nor for `vulkan:spirv1.6`. The
+serve an invocation classified for `cuda:sm90a`, nor for `rocm:gfx942`. The
 full string differs by at least one byte, so the keys do not match; the consumer
 sees a miss and asks the provider to provision the right cell.
 
@@ -322,7 +322,7 @@ Classify defines no op meaning.
 - **namespace** — the registered left component of a `target_capability` token
   (e.g. `cuda`, `vulkan`, `rocm`, `metal`); registered by the steward.
 - **capability-set** — the right component of a `target_capability` token (e.g.
-  `sm89`, `spirv1.6`, `gfx942`, `apple9`); owned by the namespace's maintainer.
+  `sm89`, `gfx942`, `apple9`); owned by the namespace's maintainer.
 - **MAX_RANK / MAX_OPERANDS** — the pinned constants bounding operand rank and the
   per-cell operand count (reference values `8` and `8`).
 - **token** — the stable string serialization of a `structure_key` (§6.7); the sole
@@ -1132,10 +1132,24 @@ separating a registered namespace from that namespace's capability-set token.
   `test_classify_target_token_charset`.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
-> `cuda:sm80`, `cuda:sm89`, `cuda:sm90a`, `cuda:sm100a`, `vulkan:spirv1.6`,
-> `rocm:gfx942`, `rocm:gfx1100`, and `metal:apple9`. These are illustrative; the
-> per-namespace capability-set vocabulary is owned by each namespace's maintainer
-> and is not pinned normatively here.
+> `cuda:sm80`, `cuda:sm89`, `cuda:sm90a`, `cuda:sm100a`, `rocm:gfx942`,
+> `rocm:gfx1100`, and `metal:apple9`. These are illustrative; the per-namespace
+> capability-set vocabulary is owned by each namespace's maintainer and is not
+> pinned normatively here.
+>
+> Note that each of these keys on a **hardware capability**, not on an encoding
+> or IR version — `sm89` names what a kernel is compiled *for*, not the PTX ISA
+> version it happens to be expressed in. A capability-set that named an encoding
+> envelope instead would be non-injective over the cells it must separate: two
+> devices consuming the same IR version routinely require different kernels, and
+> because §6.8-0002 matching is byte-exact with subset and implication logic
+> forbidden, such a token would silently merge those cells rather than degrade.
+> The `vulkan:` capability-set, for instance, must separate cells by subgroup
+> width and by cooperative-matrix support — a single Vulkan device commonly
+> admits more than one subgroup width, so a token that cannot distinguish them
+> would collide two kernels that are not interchangeable. Its concrete grammar is
+> defined by that namespace's maintainer under §6.8-0004 and is deliberately not
+> spelled here.
 
 ### 6.9 Foundational independence and opaque carry
 
@@ -1494,10 +1508,10 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
   = 16777216 > 1024` ⇒ `grid`; rank 2:
   `sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
-- **The same GEMM cell built for a Vulkan target** — a **different** cell that does
+- **The same GEMM cell built for a ROCm target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
-  `target = vulkan:spirv1.6`:
-  `sk3|gem|f32|vulkan:spirv1.6|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `target = rocm:gfx942`:
+  `sk3|gem|f32|rocm:gfx942|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 
 **A.2 Adversarial / negative vectors.** The negative battery for the §6.7 / §6.8
 reject tests and the foreign-reader freeze gate includes: a token with 8 fields
@@ -1545,7 +1559,7 @@ provenance and examples only; no normative clause names any project.
   `structure_key`; a kernel admits an invocation iff the derived key byte-matches
   (§6.6-0001).
 - **capability-set** — the right component of `<namespace>:<capability-set>`; owned
-  by the namespace maintainer (e.g. `sm89`, `spirv1.6`, `gfx942`, `apple9`).
+  by the namespace maintainer (e.g. `sm89`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
 - **dtype** — a scalar element type from the twenty-two-token set of §6.1; pure

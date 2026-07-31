@@ -422,7 +422,8 @@ fn test_classify_token_roundtrip() {
         ));
     }
     // varied operand sub-keys: ic/st/br contig, v1..v8, d16..da, a flipped operand, a
-    // non-zero broadcast mask.
+    // non-zero broadcast mask. The target is an arbitrary well-formed token —
+    // capability semantics are irrelevant to a codec round-trip.
     battery.push(key(
         "bin", "s8", "vulkan:spirv1.6", WorkClass::Grid, 4,
         vec![
@@ -535,6 +536,9 @@ fn test_classify_target_byte_exact_match() {
     };
     // the target is embedded byte-for-byte (no lowercasing / truncation / normalization),
     // and survives parse unchanged.
+    //
+    // Arbitrary well-formed tokens; capability semantics are irrelevant here — this
+    // asserts byte-exact carriage (§6.8-0002), not vocabulary quality (§6.8-0004).
     for tgt in ["cuda:sm89", "cuda:sm90a", "Cuda:sm89", "cuda:sm89x", "rocm:gfx942", "vulkan:spirv1.6"] {
         let tok = mk(tgt);
         assert_eq!(

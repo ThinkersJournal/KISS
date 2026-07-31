@@ -493,6 +493,13 @@ fn test_classify_target_token_charset() {
 
     // legal targets still parse: `.` (e.g. spirv1.6) and uppercase letters (ASCII,
     // case-sensitive) are permitted.
+    //
+    // These are arbitrary WELL-FORMED tokens; capability semantics are irrelevant
+    // here. §6.8 has two orthogonal layers — well-formedness (§6.8-0001/-0005,
+    // grammar and charset) and capability validity (§6.8-0004, a vocabulary owned
+    // by each namespace's maintainer). This fixture asserts only the first, so a
+    // token may be well-formed and still a poor capability choice; `spirv1.6`
+    // appears purely as a dot-bearing string. See the §6.8 informative note.
     for good in ["cuda:sm89", "vulkan:spirv1.6", "rocm:gfx942", "cuda:sm90a", "Cuda:sm89"] {
         let t = base.replacen("cuda:sm89", good, 1);
         assert!(
