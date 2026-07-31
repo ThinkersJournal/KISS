@@ -345,25 +345,40 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
 /// never a panic, never a re-forked class (KISS-OPS §7.4-0001).
 pub fn parse_guarantees_class(body: &[u8]) -> Result<crate::DeterminismClass, ContractDecline> {
     let text = std::str::from_utf8(body).map_err(|_| ContractDecline::MalformedHeader)?;
-    // Find the Guarantees heading; everything up to the NEXT `[section:` heading
-    // (or EOF) is this block's field lines.
+    // Line-anchored scan of a line-structured format: the heading is matched as a
+    // FULL LINE (`line == HEADING`), never a substring — so a heading string that
+    // appeared inside a field value cannot false-open the block. Read this block's
+    // field lines from the heading line up to the next `[section:` heading line
+    // (or EOF); a same-named field in an earlier section (e.g. Capabilities
+    // §6.7-0004) is outside the block and never seen.
     const HEADING: &str = "[section:6:guarantees]";
-    let start = text.find(HEADING).ok_or(ContractDecline::MissingGuaranteesClass)? + HEADING.len();
-    let rest = &text[start..];
-    let block_end = rest.find("\n[section:").map(|i| i + 1).unwrap_or(rest.len());
-    let block = &rest[..block_end];
-    let token = block
-        .lines()
-        .find_map(|l| l.strip_prefix("determinism_class = "))
-        .ok_or(ContractDecline::MissingGuaranteesClass)?;
-    // The canonical KISS-Ops §6.0-0001 enum, spelled verbatim (KISS-CONTRACT
-    // §6.8-0003): `exact-byte`, `ULP/tolerance`, `order-invariant/nondeterministic`.
-    match token {
-        "exact-byte" => Ok(crate::DeterminismClass::ExactByte),
-        "ULP/tolerance" => Ok(crate::DeterminismClass::UlpTolerance),
-        "order-invariant/nondeterministic" => Ok(crate::DeterminismClass::OrderInvariant),
-        other => Err(ContractDecline::UnknownDeterminismClass { got: other.to_string() }),
+    let mut in_block = false;
+    for line in text.lines() {
+        if line == HEADING {
+            in_block = true;
+            continue;
+        }
+        if line.starts_with("[section:") {
+            if in_block {
+                break; // reached the next section; the Guarantees block ended
+            }
+            continue;
+        }
+        if in_block {
+            if let Some(token) = line.strip_prefix("determinism_class = ") {
+                // The canonical KISS-Ops §6.0-0001 enum, spelled verbatim
+                // (KISS-CONTRACT §6.8-0003): `exact-byte`, `ULP/tolerance`,
+                // `order-invariant/nondeterministic`.
+                return match token {
+                    "exact-byte" => Ok(crate::DeterminismClass::ExactByte),
+                    "ULP/tolerance" => Ok(crate::DeterminismClass::UlpTolerance),
+                    "order-invariant/nondeterministic" => Ok(crate::DeterminismClass::OrderInvariant),
+                    other => Err(ContractDecline::UnknownDeterminismClass { got: other.to_string() }),
+                };
+            }
+        }
     }
+    Err(ContractDecline::MissingGuaranteesClass)
 }
 
 /// Parse exactly 8 lowercase-hex digits into a `u32` (the `crc32=` field form).

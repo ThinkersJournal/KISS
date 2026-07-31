@@ -37,3 +37,27 @@ fn test_conform_ops_class_comparator_selection() {
         1.0, 1.0, 0.0, 0.0,
     ).is_err());
 }
+
+// Regression guard: a Max reduce advertised exact-byte can legitimately return -0.0 in
+// one fold order and +0.0 in another (the ±0-across-order exception). Sourcing the class
+// from the advertisement must NOT lose the monoid's ±0 canonicalization that the
+// class-blind comparator drops — else an honest signed-zero tie false-diverges. The
+// canon masks ONLY the sign of a zero, nothing else.
+#[test]
+fn max_advertised_exact_byte_accepts_signed_zero_tie() {
+    // -0.0 vs +0.0 (either direction) for a zero max result → accepted.
+    assert!(select_and_compare_reduced(
+        "reduce", Some(Monoid::Max), DeterminismClass::ExactByte, -0.0, 0.0, 0.0, 0.0,
+    ).is_ok());
+    assert!(select_and_compare_reduced(
+        "reduce", Some(Monoid::Max), DeterminismClass::ExactByte, 0.0, -0.0, 0.0, 0.0,
+    ).is_ok());
+    // A genuinely wrong max (different magnitude) is still caught.
+    assert!(select_and_compare_reduced(
+        "reduce", Some(Monoid::Max), DeterminismClass::ExactByte, 1.0, 2.0, 0.0, 0.0,
+    ).is_err());
+    // A NONZERO sign difference is NOT masked — canon touches zeros only.
+    assert!(select_and_compare_reduced(
+        "reduce", Some(Monoid::Max), DeterminismClass::ExactByte, -1.0, 1.0, 0.0, 0.0,
+    ).is_err());
+}

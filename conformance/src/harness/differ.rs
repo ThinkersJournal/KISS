@@ -3,8 +3,10 @@
 //! NaN-relaxed exact-byte `agree` from `differential`. Each divergence is data.
 
 use crate::differential::agree;
+use crate::harness::advertised::select_and_compare_reduced;
 use crate::harness::corpus::Vector;
 use crate::structural::{compare_monoid_reduced_f32, Monoid};
+use crate::DeterminismClass;
 
 /// One caught divergence, reproducible by `index` into the corpus.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,15 +41,44 @@ pub struct AxisDivergence {
 
 /// Difference a candidate axis-reduction's `actual` cells against the oracle
 /// `expected`, dispatching the comparator BY MONOID (Sum → order-invariant band
-/// using `tol[i]`; Max → ±0-canon exact-byte, ignoring `tol`). This per-monoid
-/// dispatch is the structural comparator selection that 3b makes Contract-sourced
-/// (§6.13-0006b). Returns every divergence (empty ⇒ conformant).
+/// using `tol[i]`; Max → ±0-canon exact-byte, ignoring `tol`) — the STRUCTURAL
+/// selection (3a). Its Contract-sourced sibling is [`run_axis_reduce_advertised`],
+/// which the freeze-gate differential actually uses; this variant remains the
+/// structural witness. Returns every divergence (empty ⇒ conformant).
 pub fn run_axis_reduce(actual: &[f32], expected: &[f32], monoid: Monoid, tol: &[f32]) -> Vec<AxisDivergence> {
     assert_eq!(actual.len(), expected.len(), "one actual per expected cell");
     assert_eq!(tol.len(), expected.len(), "one tolerance per cell");
     let mut out = Vec::new();
     for (i, (&a, &e)) in actual.iter().zip(expected).enumerate() {
         if compare_monoid_reduced_f32(monoid, a, e, tol[i], 0.0).is_err() {
+            out.push(AxisDivergence { cell: i, expected: e, actual: a });
+        }
+    }
+    out
+}
+
+/// Difference an axis reduction with a **Contract-sourced** comparator: each cell is
+/// compared via [`select_and_compare_reduced`], whose comparator is selected from the
+/// `advertised` determinism class (honesty-checked against the op's true class),
+/// **never** the monoid. This is the wired KISS-CONFORM-6.13-0006b path — the array
+/// companion the freeze-gate differential runs, so the advertised class actually
+/// drives the shipped comparison rather than only a self-contained test. `op`/`monoid`
+/// identify the fold for the honesty check and the ±0 exception; `tol` is the per-cell
+/// band (used only when the selected class is order-invariant). Returns every
+/// divergence (empty ⇒ conformant); a too-permissive advertisement diverges every cell.
+pub fn run_axis_reduce_advertised(
+    actual: &[f32],
+    expected: &[f32],
+    op: &str,
+    monoid: Monoid,
+    advertised: DeterminismClass,
+    tol: &[f32],
+) -> Vec<AxisDivergence> {
+    assert_eq!(actual.len(), expected.len(), "one actual per expected cell");
+    assert_eq!(tol.len(), expected.len(), "one tolerance per cell");
+    let mut out = Vec::new();
+    for (i, (&a, &e)) in actual.iter().zip(expected).enumerate() {
+        if select_and_compare_reduced(op, Some(monoid), advertised, a, e, tol[i], 0.0).is_err() {
             out.push(AxisDivergence { cell: i, expected: e, actual: a });
         }
     }
