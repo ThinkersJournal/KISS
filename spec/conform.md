@@ -846,6 +846,14 @@ enum (§6.0). See umbrella §3 for the full statement.
   propagating op yields (`max_prop` vs `fmax_ieee`) — remain pinned by the KISS-Ops §6.13
   decompositions and are unaffected by this comparison rule. *Test:*
   `test_conform_nan_result_compares_by_nanness`.
+- **KISS-CONFORM-6.8-0011** — For an op with **more than one output**, KISS-Conform MUST
+  select the comparator for **each output independently** from that output's **per-output**
+  determinism/fidelity class (KISS-OPS §6.0-0007), never a single whole-op comparator. In
+  particular a byte-exact comparator MUST NOT be applied to an output whose per-output class
+  is not exact-byte — e.g. a `sort`/`argmax` **index** over an order-invariant/nondeterministic
+  or ULP/tolerance value, which is itself order-invariant/nondeterministic (§6.0-0007) — and a
+  tolerance comparator MUST NOT be applied to an output whose per-output class is exact-byte.
+  *Test:* `test_conform_per_output_comparator_selection`.
 
 ### 6.9 The structural op-DAG equality comparator (tier-1 round-trip)
 
@@ -1304,6 +1312,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0008 | `test_conform_comparator_precedence` |
 | KISS-CONFORM-6.8-0009 | `test_conform_exact_byte_admissibility` |
 | KISS-CONFORM-6.8-0010 | `test_conform_nan_result_compares_by_nanness` |
+| KISS-CONFORM-6.8-0011 | `test_conform_per_output_comparator_selection` |
 | KISS-CONFORM-6.9-0001 | `test_conform_structural_dag_equality` |
 | KISS-CONFORM-6.9-0002 | `test_conform_structural_not_source_bytes` |
 | KISS-CONFORM-6.9-0003 | `test_conform_roundtrip_tier1` |

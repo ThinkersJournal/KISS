@@ -592,6 +592,36 @@ verbatim, everywhere).
   permitted only for ops in the order-invariant/nondeterministic class (§6.0-0004),
   whose result is already not required to reproduce byte-for-byte. *Test:*
   `test_ops_no_fma_contraction_exact_byte`.
+- **KISS-OPS-6.0-0007** — An op that produces **more than one output** carries a
+  determinism/fidelity class **per output**, not a single whole-op class; §6.0-0001's
+  single class is the single-output case. Each output's class MUST be determined by
+  applying §6.0-0002 through §6.0-0005 to the **producing sub-DAG** of that output —
+  the output node together with the transitive closure of the nodes it consumes in the
+  op's reference decomposition. A **value** output MUST take the **most permissive**
+  class (§6.0-0005) present anywhere in its producing sub-DAG — class **exact-byte**
+  only if that whole sub-DAG is exact-byte. A **selection** output — one that reports
+  *which* value(s) won a comparison (e.g. an `argmax`/`argmin` index, a `sort`
+  permutation, a `top_k` index, a comparison mask, a one-hot, a tie count, or a
+  bucket/threshold index) — consumes the compared values in its producing sub-DAG **by
+  construction**, and MUST be class **exact-byte** if that sub-DAG is entirely
+  exact-byte and **order-invariant/nondeterministic** otherwise; a selection output is
+  **never ULP/tolerance**, because a bounded perturbation of a non-exact compared value
+  can relocate the selection without bound — a permutation over ULP-boundable keys is
+  not itself ULP-boundable. A selection over an order-invariant/nondeterministic *or* a
+  ULP/tolerance value is therefore order-invariant/nondeterministic. The rule
+  characterizes a selection **structurally** (it reports which value won, so the
+  compared values are its inputs) and requires no enumeration of selection ops.
+  KISS-Conform selects the differential comparator per output from that output's class
+  (KISS-CONFORM §6.8-0011). *Test:* `test_ops_per_output_determinism_class`.
+  > *Informative.* A pinned tie-break rule does not rescue a selection output over a
+  > non-exact value: a tie-break resolves only an exact equality, whereas ULP or
+  > order-variance perturbs the compared values themselves, so the winner changes
+  > without ever landing on an exact tie. The single case in which a selection over a
+  > non-exact value is stably pinned — compared values guaranteed separated by more
+  > than the perturbation bound — is a **caller precondition** (the determinism-side
+  > analogue of the extent/stride-agreement precondition tier), out of band and never
+  > plan-validated; it MUST NOT weaken the op's declared per-output class, which stays
+  > order-invariant/nondeterministic.
 
 ### 6.1 The op-set registry
 
@@ -2433,6 +2463,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.0-0004 | `test_ops_nondeterministic_class_ops` |
 | KISS-OPS-6.0-0005 | `test_ops_determinism_class_precedence` |
 | KISS-OPS-6.0-0006 | `test_ops_no_fma_contraction_exact_byte` |
+| KISS-OPS-6.0-0007 | `test_ops_per_output_determinism_class` |
 | KISS-OPS-6.1-0001 | `test_ops_op_set_closed` |
 | KISS-OPS-6.1-0002 | `test_ops_op_token_spelling` |
 | KISS-OPS-6.1-0003 | `test_ops_op_family_tags` |
