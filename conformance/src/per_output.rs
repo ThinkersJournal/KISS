@@ -24,7 +24,7 @@
 //! evaluator — it propagates classes over a decomposition DAG, which is what
 //! 6.0-0007 and its Conform §6.8 mirror need.
 
-use crate::determinism::class_permissiveness;
+use crate::determinism::{atom_determinism_class, class_permissiveness, is_selection_producer};
 use crate::DeterminismClass;
 
 /// A node in an op's reference-decomposition DAG. `local_class` is the node's own
@@ -50,6 +50,29 @@ impl RecipeNode {
     /// consumes, not from this local class.
     pub fn selection(inputs: &[usize]) -> RecipeNode {
         RecipeNode { local_class: DeterminismClass::ExactByte, inputs: inputs.to_vec(), is_selection: true }
+    }
+
+    /// Build a node from a KISS-Ops **scalar-atom** op token (KISS-OPS-6.0-0008), deriving
+    /// `is_selection` from the token via the **semantic** hook [`is_selection_producer`] — so
+    /// the value/selection split comes from op semantics, never a hand-set flag: a comparison
+    /// op built here is a selection whose OUTPUT class [`output_class`] escalates over a
+    /// non-exact operand, even though the comparison atom's own class is exact-byte.
+    ///
+    /// `op` MUST be a scalar atom (the set [`atom_determinism_class`] covers — arithmetic,
+    /// comparison, rounding, bitwise, transcendental, …). A **fold** op
+    /// (`reduce`/`prefix_scan`/`matmul`/`scatter`), whose class needs a monoid (`op_true_class`),
+    /// and a **leaf** (`Bind`/`Const`) are NOT scalar atoms and MUST be built with
+    /// [`RecipeNode::value`]. Passing one here is misuse — its class cannot be inferred from
+    /// the token alone — so it panics rather than silently defaulting to exact-byte.
+    pub fn from_op(op: &str, inputs: &[usize]) -> RecipeNode {
+        let local_class = match atom_determinism_class(op) {
+            Some(c) => c,
+            None => panic!(
+                "RecipeNode::from_op: `{op}` is not a scalar atom — build a fold node with \
+                 RecipeNode::value(op_true_class(..)) and a leaf with RecipeNode::value(..)"
+            ),
+        };
+        RecipeNode { local_class, inputs: inputs.to_vec(), is_selection: is_selection_producer(op) }
     }
 }
 
@@ -80,12 +103,19 @@ fn join_over_subdag(nodes: &[RecipeNode], root: usize) -> DeterminismClass {
 /// value output is the [`join_over_subdag`]; a selection output is exact-byte iff
 /// that join is exact-byte, else order-invariant/nondeterministic — never ULP.
 ///
-/// Scope: the selection escalation is resolved at the queried `root` only, matching
-/// kiss-ref's per-root `eval_recipe` model. An intermediate selection that feeds a
-/// downstream VALUE output contributes only its local class to that output's join and
-/// is not re-escalated here — a value output whose sub-DAG routes through a selection
-/// is a shared per-root scope boundary (outside 6.0-0007's per-output rule, and not
-/// exercised), not a divergence from kiss-ref.
+/// Scope: the selection escalation is resolved at the queried `root` only. An intermediate
+/// selection that feeds a downstream VALUE output contributes only its LOCAL class to that
+/// output's join and is NOT re-escalated here — so a value output whose sub-DAG routes
+/// through a comparison mask (e.g. `bit_and(cmp, cmp)` over a non-exact operand)
+/// **under-reports** here (its join sees the comparison atoms' local exact-byte, landing
+/// ULP from the non-exact operand). This per-**root** model DIVERGES from kiss-ref's
+/// per-**node** `eval_recipe`, which escalates each selection at its node so downstream
+/// combinators join the already-escalated order-invariant class (empirically confirmed:
+/// `bit_and`/`Mul`(cmp_over_ulp, cmp_over_ulp) → OIN there). Per-node is the correct, safe
+/// direction — per-root's ULP is an unsafe under-report (a comparator would demand a
+/// tolerance a bit-flipping output cannot honor). Making this join per-node is a tracked
+/// follow-up; KISS-OPS-6.0-0008 covers the mask-as-OUTPUT case (`root` is the comparison),
+/// which is correct here.
 pub fn output_class(nodes: &[RecipeNode], root: usize) -> DeterminismClass {
     let join = join_over_subdag(nodes, root);
     if nodes[root].is_selection && join != DeterminismClass::ExactByte {
@@ -181,5 +211,58 @@ mod tests {
         // the band; the exact-byte (max) output REJECTS it byte-exactly.
         assert!(compare_reduced_f32(sum_class, actual, expected, tol, 0.0).is_ok());
         assert!(compare_reduced_f32(max_class, actual, expected, tol, 0.0).is_err());
+    }
+
+    // Enforces KISS-OPS-6.0-0008: the value-vs-selection classification of an output is
+    // fixed by op SEMANTICS (the comparison op-family, via RecipeNode::from_op /
+    // is_selection_producer), NOT by the lane an implementation computes it in. Nothing
+    // here hand-tags a selection — from_op derives it from the op token. The witness is
+    // kiss-ref's exposing DAG, which both oracles first got wrong by classing the mask
+    // through the value lane.
+    #[test]
+    fn test_ops_comparison_mask_is_selection() {
+        // kiss-ref's exposing recipe: n0 Bind (exact leaf), n1 Exp(n0) (ULP key),
+        // n2 Const (exact), n3 cmp_lt(n1, n2) (b1 mask). from_op derives n3's selection
+        // tag from the comparison op-family — it is not hand-set.
+        let dag = vec![
+            RecipeNode::value(ExactByte, &[]),      // n0 Bind
+            RecipeNode::from_op("exp", &[0]),       // n1 Exp -> ULP
+            RecipeNode::value(ExactByte, &[]),      // n2 Const
+            RecipeNode::from_op("cmp_lt", &[1, 2]), // n3 cmp_lt mask -> selection
+        ];
+        // The mask is a selection over a ULP operand -> OIN, never ULP.
+        assert_eq!(output_class(&dag, 3), OrderInvariant);
+        assert_ne!(output_class(&dag, 3), UlpTolerance);
+
+        // The deviation made executable: had n3 been classed as a plain VALUE (the
+        // value-lane most-permissive join both oracles took), it would land ULP — the
+        // exact bug 6.0-0008 forbids. This contrast is what gives "never ULP" teeth.
+        let mut value_lane = dag.clone();
+        value_lane[3] = RecipeNode::value(ExactByte, &[1, 2]); // same operands, no selection tag
+        assert_eq!(output_class(&value_lane, 3), UlpTolerance);
+
+        // Companion (a): a comparison over two exact-byte operands is a no-op escalation —
+        // a selection over an all-exact sub-DAG stays exact-byte.
+        let exact = vec![
+            RecipeNode::value(ExactByte, &[]),      // Bind
+            RecipeNode::value(ExactByte, &[]),      // Const
+            RecipeNode::from_op("cmp_lt", &[0, 1]), // cmp_lt over exact -> selection, EB
+        ];
+        assert_eq!(output_class(&exact, 2), ExactByte);
+
+        // Companion (b): the relu = max(a, 0) two-output crystallization over a ULP `a`.
+        // Same op-graph, two output classes: the VALUE output max(a,0) stays ULP (differs
+        // by <=ULP near a=0), the MASK output (a > 0) escalates to OIN (the sign bit flips
+        // across backends near 0). Exactly what the per-output split (6.0-0007) buys.
+        let relu = vec![
+            RecipeNode::value(ExactByte, &[]),      // 0 Bind
+            RecipeNode::from_op("exp", &[0]),       // 1 a = Exp -> ULP
+            RecipeNode::value(ExactByte, &[]),      // 2 Const 0
+            RecipeNode::value(ExactByte, &[1, 2]),  // 3 VALUE max(a,0): local EB, join -> ULP
+            RecipeNode::from_op("cmp_gt", &[1, 2]), // 4 MASK a>0: selection -> OIN
+        ];
+        assert_eq!(output_class(&relu, 3), UlpTolerance); // value stays ULP
+        assert_eq!(output_class(&relu, 4), OrderInvariant); // mask escalates
+        assert_ne!(output_class(&relu, 4), UlpTolerance);
     }
 }

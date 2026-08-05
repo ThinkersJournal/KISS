@@ -43,6 +43,15 @@ pub const EXACT_BYTE_ATOMS: &[&str] = &[
 pub const TRANSCENDENTAL_ATOMS: &[&str] =
     &["exp", "log", "sin", "cos", "sqrt", "erf", "atan", "lgamma", "atan2"];
 
+/// The comparison op-family (KISS-OPS-6.0-0008): ops whose OUTPUT reports *which*
+/// value(s) won a comparison. These are also §6.0-0002 exact-byte *atoms* — the
+/// comparison arithmetic itself is byte-exact — but their output is a **selection**, so
+/// over a non-exact producing sub-DAG it escalates by the §6.0-0007 selection rule
+/// (order-invariant/nondeterministic, never ULP). Kept as an op-family so the selection
+/// test is keyed on op **semantics**, not a hand-maintained allowlist of selection ops.
+pub const COMPARISON_ATOMS: &[&str] =
+    &["cmp_eq", "cmp_ne", "cmp_lt", "cmp_le", "cmp_gt", "cmp_ge"];
+
 /// The determinism/fidelity class of a scalar atom, per §6.0-0002 (exact-byte) and
 /// §6.0-0003 (ULP/tolerance transcendentals). Returns `None` for an op this
 /// atom-level model does not cover (a conditional/fold op, or an unknown token) —
@@ -55,6 +64,21 @@ pub fn atom_determinism_class(op: &str) -> Option<DeterminismClass> {
     } else {
         None
     }
+}
+
+/// Whether an op's OUTPUT is a **selection** (KISS-OPS-6.0-0008) — it reports *which*
+/// value(s) won a comparison — determined by op **semantics** (the comparison op-family,
+/// [`COMPARISON_ATOMS`]), not by a hand-maintained allowlist of selection ops. This is
+/// orthogonal to the op's own atom class: a comparison is an exact-byte *atom*
+/// ([`atom_determinism_class`] returns `ExactByte`) whose *output* is nonetheless a
+/// selection. A selection output MUST be classified by the §6.0-0007 selection rule
+/// (exact-byte iff its producing sub-DAG is entirely exact-byte, else
+/// order-invariant/nondeterministic) — NOT by the value-lane most-permissive join of its
+/// operands, which would carry ULP/tolerance up from a non-exact operand. So a comparison
+/// mask over a non-exact value is order-invariant/nondeterministic, never ULP, regardless
+/// of which internal lane an implementation computes the mask in.
+pub fn is_selection_producer(op: &str) -> bool {
+    COMPARISON_ATOMS.contains(&op)
 }
 
 /// The **true** determinism/fidelity class of an op per KISS-OPS §6.0, extending
@@ -157,5 +181,29 @@ mod tests {
         // over-claim (stricter than true): advertise exact-byte for a Sum fold → Ok here
         // (caught by the differential + SYNTH §6.5-0004b, not this lint)
         assert_eq!(check_advertisement(ExactByte, OrderInvariant), Ok(ExactByte));
+    }
+
+    #[test]
+    fn is_selection_producer_keys_on_comparison_family() {
+        // §6.0-0008: "selection" is keyed on the comparison op-family (semantics), not a
+        // hand-maintained list. Check the WHOLE family (not just one member), and guard the
+        // two lists against drift: every comparison atom must be a selection producer AND an
+        // exact-byte atom — its OWN class stays exact-byte (it is the OUTPUT that is a
+        // selection, escalated by §6.0-0007 over non-exact operands). Adding a cmp token to
+        // one list but not the other would silently desync selection-detection from classing.
+        for &op in COMPARISON_ATOMS {
+            assert!(is_selection_producer(op), "{op} must be a selection producer");
+            assert_eq!(
+                atom_determinism_class(op),
+                Some(DeterminismClass::ExactByte),
+                "{op} must be an exact-byte atom (COMPARISON_ATOMS ⊆ EXACT_BYTE_ATOMS)"
+            );
+        }
+        // Non-comparison ops are not selections — including a bitwise combinator that could
+        // form a COMPOUND predicate mask (bit_and(cmp, cmp)); such a mask inherits the
+        // selection class by propagation from its comparison inputs, not by tagging bit_and.
+        assert!(!is_selection_producer("add"));
+        assert!(!is_selection_producer("exp"));
+        assert!(!is_selection_producer("bit_and"));
     }
 }
