@@ -622,6 +622,29 @@ verbatim, everywhere).
   > analogue of the extent/stride-agreement precondition tier), out of band and never
   > plan-validated; it MUST NOT weaken the op's declared per-output class, which stays
   > order-invariant/nondeterministic.
+- **KISS-OPS-6.0-0008** — The **value-vs-selection** classification of an output
+  (§6.0-0007) is fixed by the output's **semantics** — whether it reports *which*
+  value(s) won a comparison — and MUST NOT depend on which internal lane or
+  representation an implementation uses to compute it. In particular, a
+  **comparison/predicate mask** — a boolean (or `{0, 1}`, §6.2-0005) result of a
+  comparison op — is a **selection** output even when an implementation realizes it as
+  an ordinary elementwise value; over a producing sub-DAG that is not entirely
+  exact-byte it is **order-invariant/nondeterministic, never ULP/tolerance**. A
+  ULP/tolerance class on such a mask is a category error: the output is a discrete bit,
+  so a `≤ k`-ULP perturbation of a near-boundary compared value flips it, and two
+  conformant backends within their operands' tolerance can produce different mask bits
+  near the boundary — a difference no ULP bound captures. An implementation therefore
+  MUST NOT classify a comparison/predicate output by the **most-permissive value join**
+  of its operands (which would carry ULP/tolerance up from a non-exact operand); it MUST
+  apply the §6.0-0007 selection rule. A comparison op's own atom class stays exact-byte
+  (§6.0-0002) — it is the *output* that is a selection — so the rule is characterized by
+  op **semantics** (the comparison op-family) and requires no allowlist of selection
+  ops. KISS-Conform selects the differential comparator from the resulting per-output
+  class (KISS-CONFORM §6.8-0011). *Informative:* the §6.0-0007 caller-precondition
+  carve-out applies unchanged — well-separated operands (gap greater than the
+  perturbation bound) make the bit stable, but that is a data-dependent caller
+  precondition and MUST NOT weaken the declared per-output class. *Test:*
+  `test_ops_comparison_mask_is_selection`.
 
 ### 6.1 The op-set registry
 
@@ -2464,6 +2487,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.0-0005 | `test_ops_determinism_class_precedence` |
 | KISS-OPS-6.0-0006 | `test_ops_no_fma_contraction_exact_byte` |
 | KISS-OPS-6.0-0007 | `test_ops_per_output_determinism_class` |
+| KISS-OPS-6.0-0008 | `test_ops_comparison_mask_is_selection` |
 | KISS-OPS-6.1-0001 | `test_ops_op_set_closed` |
 | KISS-OPS-6.1-0002 | `test_ops_op_token_spelling` |
 | KISS-OPS-6.1-0003 | `test_ops_op_family_tags` |
