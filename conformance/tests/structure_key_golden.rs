@@ -288,6 +288,13 @@ fn test_classify_vec_width_derivation() {
     assert_eq!(derive_vec_width(1, 7, f32, 256, false), VecWidth::V1);
     // alignment = 0 (unspecified) cannot honor a packed load -> v1.
     assert_eq!(derive_vec_width(1, 256, f32, 0, false), VecWidth::V1);
+    // exact-modulo alignment gate, the discriminating case (§6.5-0009): f16,
+    // alignment 24. 24 % (4*2)=0 -> v4 passes; 24 % (8*2)=8 != 0 -> v8 fails, even
+    // though v8 is within the f16 byte cap (8*2=16<=16). So the divisor test yields
+    // v4, NOT the naive floor(24/2)=12->8 shortcut's v8 -- this is the case the
+    // clause's (now-corrected) example must demonstrate, which the old f32/48 one
+    // could not (v8 is capped out for f32, and floor(48)=16=v4 anyway).
+    assert_eq!(derive_vec_width(1, 256, Some(2u32), 24, false), VecWidth::V4);
     // sub-byte dtype (storage under one byte, encoded None) -> v1.
     assert_eq!(derive_vec_width(1, 256, None, 256, false), VecWidth::V1);
 

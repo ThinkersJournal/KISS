@@ -762,9 +762,15 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the
   vector-access byte cap), `L` divides the innermost active axis extent, and
   `alignment mod (L · dtype storage bytes) = 0` — an **exact-modulo** alignment
-  gate: a divisor test, **not** a power-of-two floor (the two disagree on a
-  non-power-of-two `alignment`; e.g. `alignment = 48`, `f32` derives `v4`, not the
-  floor's `v8`). An operand with `alignment = 0` (unspecified base-pointer
+  gate that tests whether the base address is genuinely `L · bytes`-aligned, **not** a
+  `floor(alignment / dtype storage bytes)`-to-a-power-of-two shortcut (which over-selects,
+  because it ignores whether the address actually admits the wider load). The two disagree
+  when the address is not `L · bytes`-aligned: e.g. `alignment = 24`, `f16` derives `v4`
+  (`24 mod (4·2) = 0`, but `24 mod (8·2) = 8 ≠ 0`, so an 8-wide load would be misaligned),
+  whereas the shortcut `floor(24 / 2) = 12 → 8` would wrongly pick `v8`. (The earlier
+  `alignment = 48`, `f32` example was wrong: for `f32` the byte cap already excludes `v8`,
+  and the power-of-two floor of 48 is 16 bytes = `v4`, so the two never diverged there.)
+  An operand with `alignment = 0` (unspecified base-pointer
   alignment) cannot honor a packed load and MUST derive `v1`. A sub-byte dtype
   (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. An
   innermost active axis of extent `E = 0` MUST derive `v1`: the divisibility test
