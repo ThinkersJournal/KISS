@@ -662,3 +662,36 @@ pub fn derive_layout_tag(extents: &[i64], strides: &[i64]) -> Contig {
     // (4) strided.
     Contig::Strided
 }
+
+/// §6.6-0008 + §6.6-0013: the **broadcast-axis mask** of a single operand — a bitmask
+/// over iteration-frame axes (§6.6-0013), bit `i` set iff iteration-frame axis `i`
+/// has extent `> 1` **and** this operand's stride along it is `0` (the operand
+/// broadcasts along that axis). Bit `i` denotes frame axis `i` outermost-first
+/// (§6.3-0011), LSB = axis `0`; the mask is bounded by `MAX_RANK` (8) so a single
+/// byte suffices (a rank beyond `MAX_RANK` is a separate §6.4-0001 violation and its
+/// overflow axes never set a bit). `extents`/`strides` are this operand's per-axis
+/// vectors, outermost-first.
+///
+/// The `extent > 1` guard is load-bearing and NOT interchangeable with "any stride
+/// `0` sets the bit": a **size-1 axis legitimately carries stride `0`** in nearly
+/// every framework (there is nothing to walk), yet it is not a broadcast and MUST NOT
+/// set a bit. Only a genuine broadcast — a real (`extent > 1`) axis the operand
+/// refuses to walk (`stride == 0`) — sets one. This is the identical predicate
+/// [`derive_layout_tag`] uses for its part-(1) `broadcast` classification, applied
+/// per-axis to yield the mask; so a non-empty mask iff `derive_layout_tag` is
+/// `Broadcast`.
+#[must_use]
+pub fn derive_bcast_mask(extents: &[i64], strides: &[i64]) -> u8 {
+    let mut mask: u8 = 0;
+    for (i, (&e, &s)) in extents.iter().zip(strides.iter()).enumerate() {
+        if i >= MAX_RANK as usize {
+            break; // bounded by MAX_RANK so the mask fits one byte.
+        }
+        // broadcast iff a REAL (extent > 1) axis is walked with stride 0; a size-1
+        // axis (e == 1) carries stride 0 legitimately and MUST NOT set the bit.
+        if e > 1 && s == 0 {
+            mask |= 1u8 << i;
+        }
+    }
+    mask
+}

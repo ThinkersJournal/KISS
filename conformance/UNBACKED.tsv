@@ -95,7 +95,6 @@ KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	lint:kiss_vocab	the WorkCla
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.6-0002	test_classify_structure_key_is_not_op_identity	untested	
 KISS-CLASSIFY-6.6-0005	test_classify_structure_key_primary_dtype	untested	
-KISS-CLASSIFY-6.6-0008	test_classify_broadcast_axis_mask	untested	
 KISS-CLASSIFY-6.6-0011	test_classify_structure_key_derivation_canonical	untested	
 KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	untested	
 KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested	
