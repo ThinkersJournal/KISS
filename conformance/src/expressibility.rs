@@ -69,17 +69,13 @@ pub struct SignatureSet {
     pub signatures: Vec<Signature>,
 }
 
-/// KISS-Ops-declared **commutative** ops at the primitive floor. A real
-/// implementation MUST read commutativity from KISS-Ops by name
-/// (KISS-GRAMMAR-6.4-0005 forbids a Grammar-owned hardcoded list); this
-/// reference slice only exercises the primitive-floor `add`/`sub` goldens, so
-/// the small set is hardcoded here per the task brief.
-// TODO: read KISS-Ops commutativity (§6.2-0005) instead of hardcoding.
-const COMMUTATIVE_OPS: [&str; 2] = ["add", "mul"];
-
-fn is_commutative(op_name: &str) -> bool {
-    COMMUTATIVE_OPS.contains(&op_name)
-}
+// Commutativity is read from the single canonical KISS-Ops oracle,
+// `crate::grammar::is_commutative` — the by-name, KISS-GRAMMAR-6.4-0005-conformant
+// source (that clause forbids a per-module hardcoded identity list). This Appendix-F
+// enumerator DELEGATES to it rather than keeping its own copy, so the expressibility
+// canonicalization and the Grammar canonicalization agree by construction and any
+// future change to the op-set's declared commutativity lands in exactly one place.
+use crate::grammar::is_commutative;
 
 /// The operand-index/subtree-bytes pairs of node `idx`, in **canonical**
 /// operand order (§6.4-0010): for a commutative op, sorted ascending by
