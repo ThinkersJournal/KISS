@@ -476,13 +476,21 @@ projects' mirrors of KISS-Conform.
 | §6.5-0013 | backed | `harness/loader.rs` typed missing-symbol path |
 | §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
 | §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
-| §6.5-0016 | **pending** | `test_conform_sweep_incompleteness_is_surfaced` — **PR #143, open, not merged** |
+| §6.5-0016 | backed | `test_conform_sweep_incompleteness_is_surfaced` — landed in #143 (merged `e30de36`) |
 | **§6.1-0009** | **unbacked — and see §9.5** | **Not implemented, and not implementable by the current instrument.** PR #141 makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` computes `backed` **with no gate consideration at all** — `gated` is a separate dict used only for reporting. More fundamentally: **`kiss_trace` is a static analyser and never executes the harness, so it cannot know whether a gate was satisfied in a given run.** Per-run crediting is out of its reach by construction. #141 makes the tool stop *overstating* — the unqualified figure no longer stands alone, and an `EXCLUDING GATE-ONLY` figure is printed beside it — which is an honest static approximation, not a discharge. |
 | **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
 | **§6.1-0011** | **unbacked** | requires a claim-format check |
 
-**So: five backed, one pending an unmerged PR, three unbacked** — not the "seven land green" this
-section claimed in its first revision, and not the "one partial" of its second.
+**So: six backed, three unbacked** — not the "seven land green" this section claimed in its first
+revision, and not the "one partial" of its second.
+
+> **This table states repo state, which moves.** It is accurate **as of `52aa5f9`** (2026-08-08),
+> with #132, #135, #143, #145 and #146 merged and #141 still open. **A document that embeds
+> mutable state and does not date it is a claim nothing checks** — Pattern A, and this table has
+> already gone stale once, within minutes of the RFC merging, when #143 landed and the row still
+> read *"open, not merged."* Since the state cannot be derived here, it is **dated** instead, so a
+> reader can tell staleness from error. Anyone editing this table should re-date it or delete it
+> in favour of a generated one.
 
 **How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
 read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
