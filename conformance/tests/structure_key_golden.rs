@@ -288,6 +288,14 @@ fn test_classify_vec_width_derivation() {
     assert_eq!(derive_vec_width(1, 7, f32, 256, false), VecWidth::V1);
     // alignment = 0 (unspecified) cannot honor a packed load -> v1.
     assert_eq!(derive_vec_width(1, 256, f32, 0, false), VecWidth::V1);
+    // exact-modulo alignment gate, the discriminating case (§6.5-0009): f16,
+    // alignment 24. 24 % (4*2)=0 -> v4 passes; 24 % (8*2)=8 != 0 -> v8 fails, even
+    // though v8 is within the f16 byte cap (8*2=16<=16). So the divisor test yields
+    // v4, NOT the naive floor(24/2)=12->8 shortcut's v8 -- this is the case the
+    // clause's (now-corrected) example must demonstrate, which the old f32/48 one
+    // could not (for f32 the 16-byte load cap already limits the result to v4, so the
+    // shortcut is capped back to v4 and never diverges).
+    assert_eq!(derive_vec_width(1, 256, Some(2u32), 24, false), VecWidth::V4);
     // sub-byte dtype (storage under one byte, encoded None) -> v1.
     assert_eq!(derive_vec_width(1, 256, None, 256, false), VecWidth::V1);
 
@@ -494,6 +502,66 @@ fn test_classify_work_class_element_count() {
     // (contributes extent 1), so [4,8] vs [8] => axis0 max(4,1)=4, axis1 max(8,8)=8 => 32.
     assert_eq!(work_class_element_count(&[&[4i64, 8], &[8i64]]), 32);
     assert_eq!(derive_work_class(&[&[4i64, 8], &[8i64]]), WorkClass::Warp);
+}
+
+#[test]
+fn test_classify_broadcast_axis_mask() {
+    // KISS-CLASSIFY-6.6-0008: the broadcast-axis mask is a bitmask over iteration-frame
+    // axes (§6.6-0013), bit `i` (LSB = axis 0, outermost-first §6.3-0011) set iff frame
+    // axis `i` has extent > 1 AND this operand's stride there is 0. The load-bearing
+    // guard is `extent > 1` — the mask is NOT "any zero stride sets the bit".
+
+    // THE disambiguating cell the clause names. A size-1 leading axis carries stride
+    // 0 legitimately (there is nothing to walk), so extents [1,256] strides [0,1]
+    // MUST yield mask 0 — NOT 0b01. The naive "any zero stride" impl sets bit 0 here
+    // and is caught: axis0 has extent 1 (not > 1), axis1 has stride 1 (not 0), so
+    // neither axis broadcasts.
+    assert_eq!(
+        derive_bcast_mask(&[1, 256], &[0, 1]),
+        0b00,
+        "KISS-CLASSIFY-6.6-0008: size-1 axis with stride 0 is NOT a broadcast — the naive any-zero-stride impl wrongly returns 0b01"
+    );
+
+    // The genuine broadcast: same layout but the leading axis is REAL (extent 256)
+    // and the operand refuses to walk it (stride 0) — bit 0 set.
+    assert_eq!(
+        derive_bcast_mask(&[256, 256], &[0, 1]),
+        0b01,
+        "a real (extent>1) axis with stride 0 IS a broadcast — bit 0 set"
+    );
+
+    // Bit position tracks the axis index (LSB = axis 0). A broadcast on the inner
+    // axis (axis 1) sets bit 1, not bit 0 — catches a reversed bit order.
+    assert_eq!(derive_bcast_mask(&[256, 256], &[1, 0]), 0b10, "inner-axis broadcast sets bit 1");
+    // Both real axes broadcasting sets both bits.
+    assert_eq!(derive_bcast_mask(&[256, 256], &[0, 0]), 0b11, "both real axes broadcast");
+    // A fully-walked operand (no zero stride) has an empty mask.
+    assert_eq!(derive_bcast_mask(&[256, 256], &[256, 1]), 0b00, "no broadcast axis => empty mask");
+    // Every axis size-1: no bit is ever set even though every stride is 0.
+    assert_eq!(derive_bcast_mask(&[1, 1], &[0, 0]), 0b00, "all size-1 axes never set a bit even at stride 0");
+
+    // MAX_RANK bound (§6.6-0008: a single byte suffices). Axis 0 at full rank 8 sets
+    // the LSB; axis 7 (the highest representable) sets the MSB — the whole mask still
+    // fits one byte.
+    assert_eq!(
+        derive_bcast_mask(&[2, 2, 2, 2, 2, 2, 2, 2], &[0, 1, 2, 4, 8, 16, 32, 64]),
+        0b0000_0001,
+        "axis-0 broadcast at full rank 8 sets bit 0"
+    );
+    assert_eq!(
+        derive_bcast_mask(&[2, 2, 2, 2, 2, 2, 2, 2], &[1, 2, 4, 8, 16, 32, 64, 0]),
+        0b1000_0000,
+        "axis-7 (highest representable) broadcast sets the MSB (bit 7)"
+    );
+
+    // Consistency with derive_layout_tag part (1): a non-empty mask iff the layout tag
+    // is Broadcast — the two use the identical extent>1 && stride==0 predicate
+    // (§6.5-0002 vs §6.6-0008), so they can never disagree on whether ANY axis
+    // broadcasts.
+    assert_ne!(derive_bcast_mask(&[256, 256], &[0, 1]), 0);
+    assert_eq!(derive_layout_tag(&[256, 256], &[0, 1]), Contig::Broadcast);
+    assert_eq!(derive_bcast_mask(&[1, 256], &[0, 1]), 0);
+    assert_ne!(derive_layout_tag(&[1, 256], &[0, 1]), Contig::Broadcast);
 }
 
 #[test]
