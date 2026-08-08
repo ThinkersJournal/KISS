@@ -194,7 +194,7 @@ a canonical-order change, or a change to the 512 threshold all qualify.
 Adding a *name* — a component type, an op-class letter, an arith name — is
 additive **only when no prior token could have been affected by its absence.**
 That is narrower than it sounds, and the two ways it fails are the reason this
-clause is spelled out rather than left to judgement:
+clause is spelled out rather than left to judgment:
 
 - **Component types have the `x<n>` escape (V-7).** A device exposing a
   component type this vocabulary does not name derives `x<n>` for it *today*.
@@ -219,9 +219,11 @@ version (below).
 > If it was assigned only **after** that baseline, no prior token could have
 > contained or omitted it → **additive, no bump.**
 
-Mechanically checkable, and it preserves V-7's forward-compatibility intent —
-`x<n>` still absorbs a genuinely new component type without a decline — while
-closing the case where naming something silently invalidates tokens in the wild.
+Mechanically checkable, and it preserves V-7's forward-compatibility intent: a
+driver reporting a component type this vocabulary does not name still derives a
+token for it, spelled `x<n>`, rather than the deriver refusing to produce one.
+What the test closes is the separate case where *naming* such a type later
+silently invalidates tokens already in the wild.
 
 Over-bumping is the safe direction: a version bump on an addition nobody was
 affected by costs a cache flush, whereas a missed bump costs silent
