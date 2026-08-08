@@ -185,11 +185,67 @@ fragments cells that could otherwise be shared.
 ## 4. Versioning
 
 This vocabulary versions independently of `STRUCTURE_KEY_VERSION` and of
-KISS-Classify's crate semver (§8). Adding a component-type name, an op-class
-letter, or an arith name is **additive** and does not bump the vocabulary
-version. Any change that alters the bytes of a previously-derivable token — a
-field reorder, a respelling, a canonical-order change, or a change to the 512
-threshold — bumps it.
+KISS-Classify's crate semver (§8).
+
+**The rule is one sentence: any change that alters the bytes of a
+previously-derivable token bumps the version.** A field reorder, a respelling,
+a canonical-order change, or a change to the 512 threshold all qualify.
+
+Adding a *name* — a component type, an op-class letter, an arith name — is
+additive **only when no prior token could have been affected by its absence.**
+That is narrower than it sounds, and the two ways it fails are the reason this
+clause is spelled out rather than left to judgement:
+
+- **Component types have the `x<n>` escape (V-7).** A device exposing a
+  component type this vocabulary does not name derives `x<n>` for it *today*.
+  Naming it later changes that device's token from `x1000491002` to
+  `f8e4m3fn` — different bytes, **unchanged hardware, unchanged kernel**.
+- **Op-class letters and arith names have no escape at all.** An unrecognized
+  capability is simply absent from the field, so the token under-claims what
+  the device offers. Adding the name later *adds a character* to the token of
+  every device that already had the capability. Same byte change, and with no
+  `x<n>` to hint that something was elided.
+
+### The additive test
+
+Compare against the **registry baseline** recorded for the previous vocabulary
+version (below).
+
+> If the underlying Vulkan enumerant or feature bit was **already assigned in
+> the Vulkan registry at that baseline**, some conformant device could have
+> reported it, so some derivable token could already have been affected by its
+> absence → **naming it bumps the version.**
+>
+> If it was assigned only **after** that baseline, no prior token could have
+> contained or omitted it → **additive, no bump.**
+
+Mechanically checkable, and it preserves V-7's forward-compatibility intent —
+`x<n>` still absorbs a genuinely new component type without a decline — while
+closing the case where naming something silently invalidates tokens in the wild.
+
+Over-bumping is the safe direction: a version bump on an addition nobody was
+affected by costs a cache flush, whereas a missed bump costs silent
+non-matching that no consumer can attribute.
+
+### Registry baselines
+
+Each vocabulary version records the `VK_HEADER_VERSION` it was authored
+against, so the test above has a fixed thing to compare with rather than
+"whatever the registry looked like at the time".
+
+| Vocabulary version | `VK_HEADER_VERSION` baseline |
+|---|---|
+| 1 | 348 — reconstructed, see below |
+| 2 | 348 |
+
+Version 1 pinned no baseline, so its entry is a reconstruction rather than a
+record: 348 is the header version the reference implementation shipped against,
+which is **at or later than** v1's true baseline. That errs toward *over*-bumping
+— a value assigned between v1's real baseline and 348 is classified "already
+assigned", so naming it bumps when it might strictly have been additive. That
+is the safe direction, and the cost is a cache flush nobody needed rather than a
+silent non-match nobody can attribute. From v2 onward the baseline is recorded
+at authoring time and no reconstruction is required.
 
 ### Version 2 — signed-integer component types are `i`-prefixed
 
