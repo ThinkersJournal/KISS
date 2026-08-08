@@ -183,8 +183,8 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `bf16` | float | 16 | bfloat16 (1s+8e+7m); f32 exponent range, reduced mantissa |
 | `f32` | float | 32 | IEEE-754 binary32 storage (compute precision is a KISS-Ops fidelity attribute, not a dtype) |
 | `f64` | float | 64 | IEEE-754 binary64 |
-| `s8` | int | 8 | signed 8-bit two's-complement |
-| `s16` | int | 16 | signed 16-bit two's-complement |
+| `i8` | int | 8 | signed 8-bit two's-complement (sk3 `s8`) |
+| `i16` | int | 16 | signed 16-bit two's-complement (sk3 `s16`) |
 | `u8` | uint | 8 | unsigned 8-bit; also the physical storage of `bool` |
 | `u16` | uint | 16 | unsigned 16-bit |
 | `i32` | int | 32 | signed 32-bit two's-complement |
@@ -192,18 +192,21 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width matches `i32`; the index/address *role* is carried by KISS-Ops on the gather/scatter operand, not a dtype class |
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; `0` = false, any non-zero byte = true; ops normalize to 0/1; storage width equals `u8` |
-| `e4m3fn` | float | 8 | FP8 E4M3 OCP (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN |
-| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; reserved (recognized on parse; use typed-declines at this schema version) |
-| `e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN |
-| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; reserved (recognized on parse; use typed-declines at this schema version) |
-| `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read |
-| `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `s4`; zero-extended on read |
+| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP (1s+4e+3m, bias 7); max finite ±448, no infinities, single NaN (sk3 `e4m3fn`) |
+| `f8e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `f8e4m3fn`; reserved (recognized on parse; use typed-declines at this schema version) |
+| `f8e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN (sk3 `e5m2`) |
+| `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; reserved (recognized on parse; use typed-declines at this schema version) |
+| `f8e8m0` | float | 8 | MX shared-exponent scale (unsigned; 8 exp, 0 mantissa); OCP Microscaling; a sibling-operand scale type, not an element value dtype (new at sk4) |
+| `f8e6m2` | float | 8 | MX scale (unsigned; 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0`; a scale type, not an element value dtype (new at sk4) |
+| `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
+| `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
-| `c32` | complex | 64 | single-precision complex: interleaved (re,im) pair of `f32`, 64 bits total; complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
-| `c64` | complex | 128 | double-precision complex: interleaved (re,im) pair of `f64`, 128 bits total |
+| `c64` | complex | 64 | complex: interleaved (re,im) pair of `f32`, 64 bits total (named by total width; sk3 `c32`); complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
+| `c128` | complex | 128 | complex: interleaved (re,im) pair of `f64`, 128 bits total (named by total width; sk3 `c64`) |
 
-Twenty-two dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
-no "etc.".
+Twenty-four dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
+no "etc.". (sk4: the two 8-bit MX scales `f8e8m0`/`f8e6m2` are additive; the FP8/complex
+respellings and the `s`→`i` integer renames are covered by §3.1.)
 
 ### 2.7 Readable catalog — the operand descriptor
 
@@ -436,8 +439,8 @@ where it fixes storage bytes.
 | `bf16` | float | 16 | bfloat16 (sign 1, exp 8, mantissa 7) |
 | `f32` | float | 32 | IEEE-754 binary32 storage; compute precision is **not** pinned here — it is a KISS-Ops fidelity attribute (see §6.1-0005) |
 | `f64` | float | 64 | IEEE-754 binary64 |
-| `s8` | int | 8 | signed 8-bit two's-complement |
-| `s16` | int | 16 | signed 16-bit two's-complement |
+| `i8` | int | 8 | signed 8-bit two's-complement (sk3 `s8`) |
+| `i16` | int | 16 | signed 16-bit two's-complement (sk3 `s16`) |
 | `u8` | uint | 8 | unsigned 8-bit; physical storage of `bool` |
 | `u16` | uint | 16 | unsigned 16-bit |
 | `i32` | int | 32 | signed 32-bit two's-complement |
@@ -445,26 +448,33 @@ where it fixes storage bytes.
 | `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width 4 bytes (matches `i32`); index/address is an operand role owned by KISS-Ops, not a dtype class |
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
-| `e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding |
-| `e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `e4m3fn`; **reserved** (recognized on parse; use typed-declines at this schema version) |
-| `e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN |
-| `e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version) |
-| `s4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read |
-| `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `s4`; zero-extended on read |
+| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding (OCP OFP8, §6.16). sk3 `e4m3fn` + the `f8` width prefix (§3.1.2) |
+| `f8e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `f8e4m3fn`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e4m3fnuz` + `f8` prefix |
+| `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.16). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, §3.1.5) |
+| `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e5m2fnuz` + `f8` prefix |
+| `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.16. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (§3.2). New at sk4 (additive) |
+| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.16. A scale type, not an element value dtype (§3.2). New at sk4 (additive) |
+| `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
+| `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
-| `c32` | complex | 64 | interleaved (re,im) pair of `f32`; 64 bits total |
-| `c64` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits total |
+| `c64` | complex | 64 | interleaved (re,im) pair of `f32`; 64 bits **total** (named by total width, §3.1.4). **sk4 meaning-flip:** this is the sk3 `c32`; the token `c64` denoted pair-of-`f64` at sk3 — the version prefix (§3.4) makes the reinterpretation loud, never silent |
+| `c128` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits **total** (named by total width, §3.1.4). This is the sk3 `c64` |
 
 - **KISS-CLASSIFY-6.1-0001** — The scalar dtype set MUST be **exactly** the
-  twenty-two tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `s8`, `s16`, `u8`,
-  `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `e4m3fn`, `e4m3fnuz`, `e5m2`, `e5m2fnuz`,
-  `s4`, `u4`, `b1`, `c32`, `c64`); an implementation MUST NOT recognize a twenty-third
-  dtype token at this schema version and MUST NOT omit any of the twenty-two. The FP8
-  spellings are **variant-explicit** (sk3): the ambiguous bare `e4m3` is gone, replaced
-  by `e4m3fn` (OCP) with `e4m3fnuz` reserved, and `e5m2` (IEEE) with `e5m2fnuz` reserved
-  — byte-incompatible hardware variants MUST NOT share a token. In particular, no
+  twenty-four tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `i8`, `i16`, `u8`,
+  `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`, `f8e5m2fnuz`,
+  `f8e8m0`, `f8e6m2`, `i4`, `u4`, `b1`, `c64`, `c128`); an implementation MUST NOT recognize a
+  twenty-fifth dtype token at this schema version and MUST NOT omit any of the twenty-four. The FP8
+  spellings are **width-prefixed and variant-explicit** (sk4): the `f8` width prefix (§3.1.2) plus,
+  where a layout admits multiple variants, a mandatory variant suffix (§3.1.5) — `f8e4m3fn` (OCP)
+  with `f8e4m3fnuz` reserved, and `f8e5m2` (IEEE, no suffix) with `f8e5m2fnuz` reserved
+  — byte-incompatible hardware variants MUST NOT share a token. The `f8e8m0`/`f8e6m2` **scale**
+  types are new at sk4 (additive; MX shared-exponent scales, §3.2), carried as sibling operands,
+  not element value dtypes. The complex tokens are named by **total** width (§3.1.4): `c64` =
+  pair-of-`f32` (the sk3 `c32`), `c128` = pair-of-`f64` (the sk3 `c64`); the version prefix (§3.4)
+  makes this reinterpretation loud, never silent. In particular, no
   strict-precision float variant is a dtype: the dtype set is **pure storage**
-  (§6.1-0005). A **reserved** spelling (`e4m3fnuz`, `e5m2fnuz`) is part of the
+  (§6.1-0005). A **reserved** spelling (`f8e4m3fnuz`, `f8e5m2fnuz`) is part of the
   closed vocabulary — a reader MUST recognize it and distinguish it from an
   unknown token — but has **no computation semantics at this schema version**: a
   `structure_key` using a reserved dtype in **any** dtype position MUST be
