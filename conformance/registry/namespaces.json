@@ -29,11 +29,11 @@
   "namespaces": [
     {
       "namespace": "cuda",
-      "maintainer": "baracuda (https://github.com/ciresnave/baracuda), via baracuda-kernel-vocab",
-      "vocabulary": null,
-      "reference_implementation": "kiss-ref",
+      "maintainer": "baracuda (https://github.com/ciresnave/baracuda), via unpopped-vocab",
+      "vocabulary": "spec/namespaces/cuda.md",
+      "reference_implementation": "unpopped-vocab",
       "status": "registered",
-      "notes": "Registered because 6.8-0003 forbids producing a kernel under an unregistered namespace and this repository's own conformance suite produces cuda: tokens through the real codec (conformance/tests/structure_key_codec.rs, structure_key_golden.rs, contract_golden.rs); without this row the suite is non-conformant to a clause it exists to demonstrate. Maintainer is baracuda by their own acceptance, with kiss-ref expressly declining: 6.8-0004 delegates the vocabulary to the party that maintains it, baracuda originated the sm89->cuda:sm89 namespacing and emits the tokens from baracuda-kernel-vocab, and kiss-ref is the differential reference rather than an authority. Note that 8-0004's `the reference implementation's namespace is cuda` and `baracuda owns the cuda vocabulary` are distinct compatible facts - the same reference-implements-maintainer's-vocabulary split that holds between kiss-vulkan-vocab and the vulkan: namespace. `vocabulary` is null pending spec/namespaces/cuda.md, which the maintainer is drafting; the pointer lands with the file rather than ahead of it."
+      "notes": "Registered because 6.8-0003 forbids producing a kernel under an unregistered namespace and this repository's own conformance suite produces cuda: tokens through the real codec (conformance/tests/structure_key_codec.rs, structure_key_golden.rs, contract_golden.rs); without this row the suite is non-conformant to a clause it exists to demonstrate. Maintainer is baracuda by their own acceptance, with kiss-ref expressly declining: 6.8-0004 delegates the vocabulary to the party that maintains it, baracuda originated the sm89->cuda:sm89 namespacing and emits the tokens from unpopped-vocab (formerly baracuda-kernel-vocab; the CUDA emitter that consumes them is unpopped-cuda), and kiss-ref is the differential reference rather than an authority. Note that 8-0004's `the reference implementation's namespace is cuda` and `baracuda owns the cuda vocabulary` are distinct compatible facts - the same reference-implements-maintainer's-vocabulary split that holds between kiss-vulkan-vocab and the vulkan: namespace. `vocabulary` now points at spec/namespaces/cuda.md, authored by the maintainer; the pointer landed with the file."
     },
     {
       "namespace": "vulkan",
