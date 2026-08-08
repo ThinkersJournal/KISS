@@ -218,7 +218,7 @@ hand-written prose *around* the tables. Generating them would not have caught it
 item that over-promises is itself a Pattern B failure** — an instrument trusted past its scope,
 whose insufficiency is indistinguishable from sufficiency.
 
-**Five instances of the meta-failure were committed by this document's authors, in its own
+**Seven instances of the meta-failure were committed by this document's authors, in its own
 subject matter, within six hours of articulating the principle. They are the closing argument,
 not a footnote.**
 
@@ -250,7 +250,7 @@ not a footnote.**
    automated reviewer, not by either author** — the only one of the five found by review rather
    than by the people who wrote the principle, and the only one already published when found.
 
-**The counter-measure to three of those five is one practice, and only one project volunteered
+**The counter-measure to three of those seven is one practice, and only one project volunteered
 it: Baracuda stated the axes its audit did NOT cover** — tautological asserts, timing. In every
 one of the three, the defect was not the audit's scope but that **the scope went unstated**, so
 the reassurance did not know its own limits.
@@ -284,6 +284,22 @@ recreated silent skips, and over-broad ceremony that would recreate unenforced p
    whether the PRs had comments and whether they had been addressed — by a question, not by any
    process.
 
+7. **KISS Lane B — writing the clause, fixing three violations, then writing a fourth.** Named at
+   the author's own request, because *"an anonymous instance reads as a hypothetical; a named one
+   is the data point."* Their account, in their words: *"I wrote §6.5-0016. I found the defect in
+   `target_namespace_registry.rs`, proved it exploitable with a planted fixture, fixed three
+   instances of it, wrote a clause forbidding it, wrote a test backing that clause, and then — in
+   the next file I authored, within the hour — wrote a fourth instance."* The fourth was
+   `clause_definitions` silently `continue`-ing on a read error, in the test file backing the
+   clause. **Not fatigue and not carelessness:** `let Ok(x) = read_to_string(p) else { continue }`
+   is what Rust invites, the silent form is the **shorter** form, and nothing in the language or
+   the review path resists it. **Knowing the rule, having authored the rule, and having just fixed
+   three violations of it did not stop the author's hand reaching for it.** This is the argument
+   for mechanization stated as strongly as it can honestly be stated. It also names the mechanism:
+   **a lint for `else { continue }` / `else { return }` on an I/O result in a discovery context
+   would have caught all four instances at authoring time** — the natural enforcement of
+   §6.5-0016, rather than a rule people are asked to remember.
+
 **Positive evidence, for balance.** This document is otherwise entirely failures. Two data points
 show mechanisms working. First: while building §6.5-0016's backing test, the author's first
 fixture wrote the namespace as a **source literal** — and the suite's own completeness check
@@ -310,9 +326,9 @@ harness, *then* arm the gate. **Fixing "the obvious half" leaves a worse state t
 a gate firing on a rule nobody finished.
 
 **A closing note.** The obvious objection is *"this is a competence problem — write better
-tests."* **Five instances from the people who articulated the principle, inside the window in
+tests."* **Seven instances from the people who articulated the principle, inside the window in
 which they articulated it, is the only refutation that cannot be dismissed as special pleading.**
-A document about instruments that cannot fail, whose own authors produced five such instruments in
+A document about instruments that cannot fail, whose own authors produced seven such instruments in
 six hours — the fifth **inside this document, caught by a reviewer after publication** — is not
 evidence the thesis is wrong. It is the strongest available evidence that it is right.
 
@@ -508,3 +524,10 @@ It also sharpens A2's shape: *a doc comment asserting behaviour the code does no
    the reason it was wrong both times is that nobody had asked whether the property is reachable
    by the tool that would have to enforce it. **A clause whose enforcement mechanism cannot
    exist is a claim nothing checks**, which is Pattern A, in this document, about itself.
+
+   **The missing check, and it is cheap enough to be routine:** *name the enforcing instrument,
+   then ask whether that instrument can observe the property at all.* §6.1-0009 slipped past two
+   readings because **the clause is true and desirable, and nothing about reading it tells you it
+   is unreachable by a static analyser.** Desirability and enforceability are independent, and only
+   the first is visible in the prose. This check belongs in whatever process ratifies clauses, not
+   only in this RFC.
