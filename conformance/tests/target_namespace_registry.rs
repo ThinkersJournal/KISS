@@ -60,25 +60,32 @@ const FIXTURE_NAMESPACES: &[(&str, &str)] = &[
     ),
 ];
 
-/// Every namespace-shaped literal the suite contains, swept from source.
+/// Sweep `roots` for namespace-shaped literals, surfacing incompleteness.
 ///
-/// This exists because the two lists above are *claims about this repository*,
-/// and a hand-maintained claim that nothing checks is the failure mode this
-/// whole clause-set is about. Without the sweep, a golden added tomorrow under
-/// an unregistered namespace would sail past a list that still looks correct.
-fn namespaces_appearing_in_suite() -> Vec<(String, String)> {
-    fn scan(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
-        let Ok(entries) = std::fs::read_dir(dir) else {
-            return;
-        };
-        for e in entries.flatten() {
+/// A sweep that could not complete is NOT a sweep that found nothing. Every I/O
+/// failure here is returned as `Err` rather than swallowed: the previous version
+/// returned silently on an unreadable directory, `continue`d past an unreadable
+/// file, and dropped failed directory entries, so a truncated sweep was
+/// indistinguishable from a complete one. The consumers below only fail on what
+/// the sweep *found*, so they passed vacuously over whatever went unswept —
+/// reproducing, inside the mechanism, the exact unchecked-claim failure the
+/// mechanism exists to prevent.
+fn sweep_namespaces(roots: &[std::path::PathBuf]) -> std::io::Result<Vec<(String, String)>> {
+    fn scan(dir: &std::path::Path, out: &mut Vec<(String, String)>) -> std::io::Result<()> {
+        let entries = std::fs::read_dir(dir).map_err(|e| {
+            std::io::Error::new(e.kind(), format!("read_dir({}): {e}", dir.display()))
+        })?;
+        for e in entries {
+            let e = e.map_err(|e| {
+                std::io::Error::new(e.kind(), format!("dir entry under {}: {e}", dir.display()))
+            })?;
             let p = e.path();
             if p.is_dir() {
-                scan(&p, out);
+                scan(&p, out)?;
             } else if p.extension().is_some_and(|x| x == "rs") {
-                let Ok(text) = std::fs::read_to_string(&p) else {
-                    continue;
-                };
+                let text = std::fs::read_to_string(&p).map_err(|e| {
+                    std::io::Error::new(e.kind(), format!("read_to_string({}): {e}", p.display()))
+                })?;
                 let file = p
                     .file_name()
                     .and_then(|f| f.to_str())
@@ -104,14 +111,40 @@ fn namespaces_appearing_in_suite() -> Vec<(String, String)> {
                 }
             }
         }
+        Ok(())
     }
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut out = Vec::new();
-    scan(&root.join("tests"), &mut out);
-    scan(&root.join("src"), &mut out);
+    for r in roots {
+        scan(r, &mut out)?;
+    }
     out.sort();
     out.dedup();
-    out
+    Ok(out)
+}
+
+/// The suite's own source roots.
+fn suite_roots() -> Vec<std::path::PathBuf> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    vec![root.join("tests"), root.join("src")]
+}
+
+/// Every namespace-shaped literal the suite contains, swept from source.
+///
+/// This exists because the two lists above are *claims about this repository*,
+/// and a hand-maintained claim that nothing checks is the failure mode this
+/// whole clause-set is about. Without the sweep, a golden added tomorrow under
+/// an unregistered namespace would sail past a list that still looks correct.
+///
+/// An incomplete sweep is a FAILURE of that check, not its satisfaction, so an
+/// I/O error panics here rather than silently shrinking the result.
+fn namespaces_appearing_in_suite() -> Vec<(String, String)> {
+    sweep_namespaces(&suite_roots()).unwrap_or_else(|e| {
+        panic!(
+            "namespace sweep could not complete: {e}. An incomplete sweep MUST NOT be \
+             treated as a sweep that found nothing — every check below would pass \
+             vacuously over whatever went unswept."
+        )
+    })
 }
 
 /// Minimal structural reader for the registry.
@@ -353,4 +386,75 @@ fn test_classify_target_digest_pinned() {
         "KISS-CLASSIFY-6.8-0007: digest hex must be lowercase; uppercase would \
          be a second spelling of one digest"
     );
+}
+
+// ---- KISS-CONFORM-6.5-0016 — an instrument's negative MUST be distinguishable
+//      from its non-execution ------------------------------------------------
+//
+// The negative control for the sweep itself. `namespaces_appearing_in_suite` is
+// the mechanism that turns a hand-maintained claim into a checked one; if it can
+// truncate silently, it becomes the unchecked claim it exists to prevent.
+//
+// Provenance: this test is the productionized form of the experiment that first
+// demonstrated the defect — a namespace literal planted in a swept subdirectory
+// was caught by the intact sweep (FAILED 3 passed; 1 failed) and MISSED once one
+// subdirectory's read_dir was made to fail (ok. 4 passed; 0 failed), with the
+// planted file untouched.
+
+/// Build a throwaway tree: `<tmp>/<tag>/nested/planted.rs` holding `lit`.
+fn plant_tree(tag: &str, cap: &str) -> std::path::PathBuf {
+    // Assembled at run time on purpose: a literal "<ns>:<cap>" written here
+    // would itself be swept out of this file and flagged by the completeness
+    // check below — which is that check working correctly.
+    let lit = format!("{}{}{}", "zzfake", ':', cap);
+    let root = std::env::temp_dir().join(format!("kiss_sweep_{tag}"));
+    let _ = std::fs::remove_dir_all(&root);
+    let nested = root.join("nested");
+    std::fs::create_dir_all(&nested).expect("create nested fixture dir");
+    std::fs::write(nested.join("planted.rs"), format!("pub const P: &str = \"{lit}\";\n"))
+        .expect("write planted fixture");
+    root
+}
+
+#[test]
+fn test_conform_sweep_incompleteness_is_surfaced() {
+    // (a) CAPABILITY (§6.5-0011): the sweep must actually reach a nested
+    //     subdirectory and find a planted literal. Without this the attribute
+    //     test below would be vacuous — an instrument that finds nothing anywhere
+    //     trivially "surfaces" nothing.
+    let root = plant_tree("capability", "cap1");
+    let found = sweep_namespaces(&[root.clone()]).expect("intact sweep must succeed");
+    assert!(
+        found.iter().any(|(ns, f)| ns == "zzfake" && f == "planted.rs"),
+        "the intact sweep MUST find a namespace literal planted in a nested \
+         subdirectory; it found {found:?}"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+
+    // (b) ATTRIBUTION (§6.5-0016): a root that cannot be enumerated MUST be an
+    //     error, NOT an empty success. This is the whole distinction the clause
+    //     pins — "looked and found nothing" vs "could not look".
+    let missing = std::env::temp_dir().join("kiss_sweep_does_not_exist_9f3a1c");
+    let _ = std::fs::remove_dir_all(&missing);
+    let r = sweep_namespaces(&[missing.clone()]);
+    assert!(
+        r.is_err(),
+        "an unreadable root MUST surface as Err; returning Ok({:?}) is the defect — \
+         an empty result is indistinguishable from a complete sweep that found nothing",
+        r.ok()
+    );
+
+    // (c) PARTIAL truncation, the case that made this exploitable: one good root
+    //     and one unreadable root. The good root's contents MUST NOT launder the
+    //     failure into a success — a partial answer is not an answer.
+    let good = plant_tree("partial", "cap2");
+    let r = sweep_namespaces(&[good.clone(), missing]);
+    assert!(
+        r.is_err(),
+        "a sweep MUST fail when ANY part of it could not be enumerated; returning \
+         the readable portion as Ok({:?}) is precisely the silent truncation that \
+         let an unregistered namespace sit in the tree with the suite green",
+        r.ok()
+    );
+    let _ = std::fs::remove_dir_all(&good);
 }
