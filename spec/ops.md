@@ -1493,7 +1493,13 @@ surfaces it in a kernel's guarantees section.
   attribute drawn from the two-member enum `{bit-stable, reduced-mantissa-permitted}`,
   defined once here and imported (not re-forked) by KISS-Contract as a kernel guarantee;
   this attribute MUST be distinct from and orthogonal to the §6.0 determinism/fidelity
-  class. *Test:* `test_ops_math_precision_enum`.
+  class. **The default value of the attribute is `bit-stable`**: a computation is
+  bit-stable unless a reduced-mantissa variant is **explicitly requested**, so a cell
+  (op or kernel) that names no MathPrecision value MUST be treated as bit-stable. This
+  default is a property of the **cell's compute semantics**, not of any wire spelling —
+  KISS-Classify spells the two values `st`/`rm` (§6.7-0006) and its non-contraction
+  precision field is emitted only against this default (§6.7-0013), but the default
+  itself is owned here. *Test:* `test_ops_math_precision_enum`.
 - **KISS-OPS-6.17-0002** — Under the **bit-stable** value, every floating-point arithmetic
   atom in an op's evaluation MUST round independently at the storage dtype's full
   IEEE 754-2019 precision, and an implementation MUST NOT use a reduced-mantissa multiply,

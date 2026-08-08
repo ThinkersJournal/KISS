@@ -1142,7 +1142,9 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   **never coexist**, so `from_token`'s nine-or-ten-field dispatch is resolved unambiguously by
   the op-family code. The field:
   (a) is **emitted iff at least one** of {accumulator dtype ≠ compute dtype, `<mp>` ≠ the
-  cell's default math-precision} holds;
+  cell's default math-precision (**`bit-stable`**, the KISS-Ops-owned default of
+  KISS-OPS-6.17-0001 — a computation is bit-stable unless a reduced-mantissa variant is
+  explicitly requested)} holds;
   (b) when emitted, spells **both** slots explicitly (`<acc>/<mp>`), including a slot equal to
   its default;
   (c) when **neither** coordinate deviates, is **omitted entirely** — not `-`, not empty;
