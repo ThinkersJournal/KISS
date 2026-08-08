@@ -45,10 +45,7 @@ fn advertised_class(token: &str) -> DeterminismClass {
 // shipped C-kernel differential rather than leaving it a self-contained mechanism.
 #[test]
 fn test_ops_reduce_axis_differential() {
-    let Some(sum_a) = compile_and_load_axis_reduce("reduce_axis1_sum_a") else {
-        eprintln!("SKIP: no MSVC toolchain — the C axis-reduce slice needs cl.exe");
-        return;
-    };
+    let sum_a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load_axis_reduce("reduce_axis1_sum_a"));
     let sum_b = compile_and_load_axis_reduce("reduce_axis1_sum_b").unwrap();
     let sum_wrong = compile_and_load_axis_reduce("reduce_axis1_sum_wrong").unwrap();
     let sum_offband = compile_and_load_axis_reduce("reduce_axis1_sum_offband").unwrap();
