@@ -37,6 +37,12 @@ jobs:
         run: python tools/kiss_ops.py
       - name: Wire-format spec<->binding consistency (magics, limits, decline codes)
         run: python tools/kiss_wire.py
+      - name: KISS-Classify §6.1 dtype within-document consistency
+        run: python tools/kiss_dtypes.py
+      - name: dtype manifest (SSOT) is not stale
+        run: |
+          python tools/kiss_dtypes.py --emit-manifest
+          git diff --exit-code conformance/corpus/dtype_manifest.json
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,

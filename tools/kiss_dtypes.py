@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""
+kiss_dtypes.py — the KISS-Classify §6.1 dtype-set SSOT manifest + within-doc lint.
+
+A sibling of tools/kiss_ops.py. KISS-Classify §6.1 pins the scalar dtype set as a
+closed normative table, and RESTATES it as the §2.6 readable catalog and again inside
+the §6.1-0001 clause token list. Four token-deriving projects each transcribe that
+22-row table by hand into their vocabulary crates, which is a drift generator — one
+party silently shipped 17 of the 22 (dropping s16/u16/u64/e4m3fnuz/e5m2fnuz, and
+parsing the two reserved `fnuz` tokens as *unknown*, which §6.1-0001 forbids). A
+machine-readable manifest lets a party GENERATE its dtype vocabulary from KISS rather
+than copy it: a generated 22-row enum cannot be missing a row.
+
+This tool:
+
+  1. --emit-manifest  writes conformance/corpus/dtype_manifest.json — the SSOT the
+     token-deriving parties generate from (per row: token, kind, storage_bits,
+     reserved). KISS owns §6.1 outright, so KISS is the unambiguous source (no
+     §6.8-0004 maintainer-ownership question, unlike a namespace vocabulary).
+
+  2. default (no args) is a within-document lint: the §6.1 normative table, the §2.6
+     readable catalog, and the §6.1-0001 clause token list MUST name the same 22
+     tokens with the same kind and width. Exit 1 on drift (a CI gate), so an amendment
+     that edits one copy and misses another fails at the PR — the same self-contained,
+     nothing-to-run discipline as kiss_ops.py.
+
+Scope: the manifest carries the CLOSED SET + storage metadata ONLY — never a party's
+Rust variant names, C type spellings, or which dtypes a backend can lower, all of
+which are legitimately local. Generating the vocabulary fixes the axis where drift
+happens; lowering coverage stays per-implementation.
+
+Stdlib only; no harness coupling.
+
+Usage:
+  python tools/kiss_dtypes.py                    # within-doc lint (CI gate)
+  python tools/kiss_dtypes.py --emit-manifest    # write dtype_manifest.json
+  python tools/kiss_dtypes.py --emit-manifest --stdout
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import sys
+
+# Dtype tokens are lowercase alphanumeric, >=2 chars, with NO underscore: f16, bf16,
+# s8, u8, b1, s4, c32, e4m3fnuz. (kiss_ops.py's op-token regex requires >=3 chars,
+# which would wrongly exclude the 2-char dtypes s8/u8/s4/u4/b1 — dtypes need their
+# own shape.)
+DTYPE_TOKEN = re.compile(r"[a-z][a-z0-9]+")
+
+
+def between(text, start, end):
+    """The slice strictly between the first `start` and the next `end` after it;
+    end=None runs to EOF; "" if `start` is absent."""
+    i = text.find(start)
+    if i < 0:
+        return ""
+    i += len(start)
+    if end is None:
+        return text[i:]
+    j = text.find(end, i)
+    return text[i:] if j < 0 else text[i:j]
+
+
+def table_rows(region):
+    """Yield each markdown table row of `region` as trimmed cells; drop separator
+    rows (all dashes)."""
+    for line in region.splitlines():
+        s = line.strip()
+        if not (s.startswith("|") and s.endswith("|")):
+            continue
+        cells = [c.strip() for c in s[1:-1].split("|")]
+        if all(re.fullmatch(r"-*:?-*", c or "") for c in cells):
+            continue
+        yield cells
+
+
+def _token(cell):
+    """The dtype token a cell names, or None: strips backticks/space and returns it
+    iff it is exactly one dtype-shaped token. The header cell 'Token' is capitalized,
+    so it is rejected here — no explicit header skip needed."""
+    c = cell.strip().strip("`").strip()
+    return c if re.fullmatch(DTYPE_TOKEN, c) else None
+
+
+def parse_table(region):
+    """Parse a dtype table region (columns: Token, Kind, bits, Notes) into a list of
+    {token, kind, storage_bits, reserved}, in table order. Non-dtype rows (header,
+    prose) are skipped."""
+    rows = []
+    for cells in table_rows(region):
+        if len(cells) < 3:
+            continue
+        tok = _token(cells[0])
+        if not tok:
+            continue
+        try:
+            bits = int(cells[2].strip())
+        except ValueError:
+            continue
+        note = cells[3] if len(cells) > 3 else ""
+        rows.append({
+            "token": tok,
+            "kind": cells[1].strip().strip("`"),
+            "storage_bits": bits,
+            "reserved": "reserved" in note.lower(),
+        })
+    return rows
+
+
+def clause_tokens(text):
+    """The dtype tokens in the §6.1-0001 parenthetical
+    ('...twenty-two tokens in the table above ( `f16`, `bf16`, ... )')."""
+    body = between(text, "twenty-two tokens in the table above (", ")")
+    return [t for span in re.findall(r"`([^`]*)`", body)
+            if (t := span.strip()) and re.fullmatch(DTYPE_TOKEN, t)]
+
+
+def _region_61(text):
+    return between(text, "### 6.1 The pinned scalar dtype set",
+                  "\n- **KISS-CLASSIFY-6.1-0001**")
+
+
+def _region_26(text):
+    return between(text, "### 2.6 Readable catalog", "Twenty-two dtypes")
+
+
+def build_manifest(spec_dir):
+    """Derive the dtype manifest from the §6.1 normative table (the authoritative
+    copy)."""
+    text = open(os.path.join(spec_dir, "classify.md"), encoding="utf-8").read()
+    dtypes = parse_table(_region_61(text))
+    return {
+        "schema": "kiss-dtype-manifest-v1",
+        "generated_from": "spec/classify.md",
+        "clause": "KISS-CLASSIFY-6.1-0001",
+        "dtypes": dtypes,
+        "all_dtypes": sorted(d["token"] for d in dtypes),
+        "kinds": sorted({d["kind"] for d in dtypes}),
+    }
+
+
+def check(spec_dir):
+    path = os.path.join(spec_dir, "classify.md")
+    if not os.path.exists(path):
+        return [f"missing {path}"]
+    text = open(path, encoding="utf-8").read()
+    v = []
+    t61 = parse_table(_region_61(text))
+    t26 = parse_table(_region_26(text))
+    cl = clause_tokens(text)
+
+    s61 = {d["token"] for d in t61}
+    s26 = {d["token"] for d in t26}
+    scl = set(cl)
+
+    if not t61:
+        v.append("§6.1 normative dtype table not found or empty")
+    if not t26:
+        v.append("§2.6 readable catalog not found or empty")
+    if not cl:
+        v.append("§6.1-0001 clause token list not found or empty")
+
+    def diff(where, got, want):
+        if got != want:
+            miss = sorted(want - got)
+            extra = sorted(got - want)
+            parts = []
+            if miss:
+                parts.append(f"missing {miss}")
+            if extra:
+                parts.append(f"unexpected {extra}")
+            v.append(f"{where}: {'; '.join(parts)}")
+
+    # the three copies of the closed set must name the same tokens
+    diff("§2.6 readable catalog vs §6.1 normative table", s26, s61)
+    diff("§6.1-0001 clause list vs §6.1 normative table", scl, s61)
+
+    # the clause pins the count at exactly twenty-two
+    if s61 and len(s61) != 22:
+        v.append(f"§6.1 table has {len(s61)} tokens, expected 22")
+
+    # kind and width must agree between the two tables, per shared token
+    m26 = {d["token"]: d for d in t26}
+    for d in t61:
+        o = m26.get(d["token"])
+        if not o:
+            continue
+        if o["kind"] != d["kind"]:
+            v.append(f"kind drift for `{d['token']}`: §2.6 '{o['kind']}' vs §6.1 '{d['kind']}'")
+        if o["storage_bits"] != d["storage_bits"]:
+            v.append(f"width drift for `{d['token']}`: §2.6 {o['storage_bits']} vs §6.1 {d['storage_bits']}")
+
+    return v
+
+
+# The clause this lint guards. §6.1-0001 already has a harness test
+# (test_classify_dtype_set_is_closed), so the within-doc lint STRENGTHENS it and adds
+# no ledger coverage; the manifest is the new SSOT artifact, the deliverable.
+COVERS = [
+    ("KISS-CLASSIFY-6.1-0001",
+     "the closed 22-dtype set / kind / width drifts between the §6.1 table, the §2.6 "
+     "readable catalog, and the §6.1-0001 clause list"),
+]
+
+
+def main():
+    ap = argparse.ArgumentParser(description="KISS-Classify §6.1 dtype manifest + within-doc lint")
+    ap.add_argument("--spec-dir", default=None)
+    ap.add_argument("--emit-manifest", action="store_true",
+                    help="write conformance/corpus/dtype_manifest.json (the §6.1 SSOT)")
+    ap.add_argument("--stdout", action="store_true",
+                    help="with --emit-manifest, print instead of writing the file")
+    ap.add_argument("--emit-coverage", action="store_true",
+                    help="print the clause IDs this lint guards (clause<TAB>note)")
+    args = ap.parse_args()
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec_dir = args.spec_dir or os.path.join(os.path.dirname(here), "spec")
+
+    if args.emit_manifest:
+        import json as _json
+        text = _json.dumps(build_manifest(spec_dir), indent=2) + "\n"
+        if args.stdout:
+            sys.stdout.write(text)
+        else:
+            out = os.path.join(os.path.dirname(spec_dir), "conformance", "corpus", "dtype_manifest.json")
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            open(out, "w", encoding="utf-8", newline="\n").write(text)
+            print(f"wrote {out}")
+        return 0
+
+    if args.emit_coverage:
+        for cid, note in COVERS:
+            print(f"{cid}\t{note}")
+        return 0
+
+    violations = check(spec_dir)
+    print("KISS-Classify §6.1 dtype within-document consistency lint")
+    print("=" * 68)
+    if violations:
+        print(f"  DRIFT — {len(violations)} disagreement(s):")
+        for x in violations:
+            print(f"      - {x}")
+        print("  RESULT: DRIFT FOUND")
+        return 1
+    print("  §6.1 table, §2.6 catalog, and §6.1-0001 clause list agree (22 dtypes).")
+    print("  RESULT: CLEAN")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
