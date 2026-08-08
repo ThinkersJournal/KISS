@@ -25,10 +25,16 @@
 /// `eprintln!(...); return;`. The macro *is* the declaration: declaring the gate and
 /// performing the skip are the same act, so a test cannot decline invisibly.
 ///
-/// `tools/kiss_trace.py` discovers these textually and treats such a test exactly as it
-/// treats a `#[cfg(feature = "...")]`-gated one — recorded, but not counted as backing a
-/// clause in a run where it did not execute. An open-coded skip is invisible to the
-/// matrix and silently inflates recorded coverage; that is the defect this closes.
+/// `tools/kiss_trace.py` discovers these textually and records such a test exactly as it
+/// records a `#[cfg(feature = "...")]`-gated one. A clause whose backing tests are ALL
+/// gated is reported as **GATE-ONLY**, and the report prints a second coverage figure
+/// excluding those clauses, so a qualified number sits beside the headline.
+///
+/// It does NOT decide whether a gate was satisfied in a particular run: `kiss_trace` is
+/// a static analyser and never executes the harness, so it cannot know. Per-run
+/// crediting is out of its reach by construction. What this closes is the
+/// **invisibility** — an open-coded skip was indistinguishable from an unconditional
+/// test, so a gate-only clause could not be told apart from a genuinely verified one.
 ///
 /// ```ignore
 /// let msvc = runtime_gate_some!("msvc", find_msvc());

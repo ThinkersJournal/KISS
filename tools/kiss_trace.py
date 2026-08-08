@@ -238,9 +238,14 @@ def discover_tests(conf_dir):
             for m in RE_RUST_TEST.finditer(src):
                 name = m.group(1)
                 brace = src.find("{", m.end() - 1)
-                scope = src[m.start():_body_span(src, brace)] if brace != -1 else m.group(0)
-                scope += "\n" + _leading_comment(src, m.start())
-                rt = RE_RUNTIME_GATE.search(scope)
+                body = src[m.start():_body_span(src, brace)] if brace != -1 else m.group(0)
+                scope = body + "\n" + _leading_comment(src, m.start())
+                # Gate discovery reads the BODY ONLY. A declared gate is an executed
+                # statement; prose mentioning `runtime_gate!` — this file's own
+                # docs, or a comment explaining the convention — must not mark an
+                # ungated test as gated. Citations still scan the wider `scope`,
+                # because a citation legitimately lives in the doc comment.
+                rt = RE_RUNTIME_GATE.search(body)
                 found[name] = {
                     "file": rel,
                     # A compile-time `cfg` gate and a declared runtime gate are the
@@ -691,6 +696,16 @@ def main():
     print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
           f"{enforced}/{n_map} ({100.0*enforced/n_map:.1f}%). "
           f"Genuinely untested: {len(by_category.get('untested', []))}.")
+    if gated:
+        # The QUALIFIED figure. The headline above credits a clause whose only
+        # backing test may not have executed; this one does not. kiss_trace never
+        # runs the harness, so it cannot know whether a gate was satisfied in a
+        # given run — it can only decline to count what it cannot vouch for.
+        # Report both, and never let the unqualified number stand alone.
+        unq = enforced - len(gated)
+        print(f"  ENFORCED, EXCLUDING GATE-ONLY = {unq}/{n_map} "
+              f"({100.0*unq/n_map:.1f}%) — the figure that credits no clause whose "
+              f"backing may not have run.")
 
     if lint_label_unbacked:
         any_fail = True

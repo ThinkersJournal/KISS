@@ -30,8 +30,11 @@ mod tests {
 
     #[test]
     fn declares_a_runtime_gate_some() {
+        // The macro UNWRAPS the Option and yields the inner value, so `m` is the
+        // toolchain itself, not a Result. This fixture is scanned and never
+        // compiled, but a type-incorrect example is a trap for the next reader.
         let m = crate::runtime_gate_some!("msvc", find_msvc());
-        assert!(m.is_ok());
+        assert!(!m.path.as_os_str().is_empty());
     }
 
     #[test]
@@ -43,6 +46,13 @@ mod tests {
     #[test]
     fn open_coded_skip_is_the_defect_and_must_not_be_seen_as_declared() {
         let Some(_m) = find_msvc() else { eprintln!("SKIP: no MSVC"); return; };
+        assert!(true);
+    }
+
+    /// Prose about runtime_gate!("msvc", ..) — this test declares no gate; the
+    /// macro name appears only in this doc comment.
+    #[test]
+    fn comment_mentioning_the_macro_is_not_a_declaration() {
         assert!(true);
     }
 
@@ -91,11 +101,18 @@ def main():
                     {}).get("gate") is None,
           "an OPEN-CODED skip is not mistaken for a declared gate")
 
+    # Gate discovery reads the test BODY, never the doc comment. Prose naming the
+    # macro — this project's own docs do exactly that — must not mark a test gated,
+    # or the instrument that detects instrument dishonesty is itself dishonest.
+    check(found.get("comment_mentioning_the_macro_is_not_a_declaration",
+                    {}).get("gate") is None,
+          "a COMMENT naming runtime_gate! does not falsely mark a test as gated")
+
     print()
     if failures:
         print(f"FAILED: {len(failures)} check(s)")
         return 1
-    print(f"PASS: {6} checks")
+    print(f"PASS: {7} checks")
     return 0
 
 
