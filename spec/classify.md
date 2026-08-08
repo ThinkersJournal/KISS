@@ -448,12 +448,12 @@ where it fixes storage bytes.
 | `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width 4 bytes (matches `i32`); index/address is an operand role owned by KISS-Ops, not a dtype class |
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
-| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding (OCP OFP8, §6.16). sk3 `e4m3fn` + the `f8` width prefix (§3.1.2) |
+| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding (OCP OFP8, §6.1-0010). sk3 `e4m3fn` + the `f8` width prefix (§3.1.2) |
 | `f8e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `f8e4m3fn`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e4m3fnuz` + `f8` prefix |
-| `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.16). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, §3.1.5) |
+| `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.1-0011). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, §3.1.5) |
 | `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e5m2fnuz` + `f8` prefix |
-| `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.16. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (§3.2). New at sk4 (additive) |
-| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.16. A scale type, not an element value dtype (§3.2). New at sk4 (additive) |
+| `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.1-0013. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (§3.2). New at sk4 (additive) |
+| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.1-0013. A scale type, not an element value dtype (§3.2). New at sk4 (additive) |
 | `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
@@ -483,16 +483,17 @@ where it fixes storage bytes.
   reserved spelling is a future additive schema event.
   *Test:* `test_classify_dtype_set_is_closed`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
-  the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `s8` = 8;
-  `s16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;
-  `u64` = 64; `bool` = 8; `e4m3fn`/`e4m3fnuz`/`e5m2`/`e5m2fnuz` = 8;
-  `s4`/`u4` = 4; `b1` = 1; `c32` = 64; `c64` = 128). *Test:*
+  the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `i8` = 8;
+  `i16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;
+  `u64` = 64; `bool` = 8; `f8e4m3fn`/`f8e4m3fnuz`/`f8e5m2`/`f8e5m2fnuz` = 8;
+  `f8e8m0`/`f8e6m2` = 8; `i4`/`u4` = 4; `b1` = 1; `c64` = 64; `c128` = 128). *Test:*
   `test_classify_dtype_bit_widths`.
 - **KISS-CLASSIFY-6.1-0003** — Each dtype MUST have the exact numeric kind in the
-  table above (`float`: `f16`, `bf16`, `f32`, `f64`, `e4m3fn`, `e4m3fnuz`, `e5m2`,
-  `e5m2fnuz`; `int`: `s8`, `s16`, `i32`, `i64`, `s4`; `uint`: `u8`, `u16`, `u32`, `u64`, `u4`, `b1`;
-  `bool`: `bool`; `complex`: `c32`, `c64`). *Test:*
-  `test_classify_dtype_numeric_kinds`.
+  table above (`float`: `f16`, `bf16`, `f32`, `f64`, `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`,
+  `f8e5m2fnuz`, `f8e8m0`, `f8e6m2`; `int`: `i8`, `i16`, `i32`, `i64`, `i4`; `uint`: `u8`, `u16`, `u32`, `u64`, `u4`, `b1`;
+  `bool`: `bool`; `complex`: `c64`, `c128`). The MX scales `f8e8m0`/`f8e6m2` are kind `float`
+  (unsigned exponent-scales; the unsigned property is a packing fact of §6.1-0013, not a
+  distinct kind). *Test:* `test_classify_dtype_numeric_kinds`.
 - **KISS-CLASSIFY-6.1-0004** — Each dtype MUST be spelled by exactly its stable
   lowercase token in the table above wherever it appears in a `structure_key` token
   or an operand descriptor; an implementation MUST NOT substitute a synonym or an
@@ -524,32 +525,50 @@ where it fixes storage bytes.
   equal `u8` (8 bits). (The obligation that an operation normalizes its produced
   `bool` byte to `0x00`/`0x01` is owned by KISS-Ops, not tested here.) *Test:*
   `test_classify_bool_encoding`.
-- **KISS-CLASSIFY-6.1-0008** — `s4` and `u4` MUST use the packed-pair byte layout:
+- **KISS-CLASSIFY-6.1-0008** — `i4` and `u4` MUST use the packed-pair byte layout:
   the low nibble holds the even logical index and the high nibble holds the odd
-  logical index; `s4` MUST be sign-extended on read and `u4` MUST be zero-extended
+  logical index; `i4` MUST be sign-extended on read and `u4` MUST be zero-extended
   on read. *Test:* `test_classify_sub_byte_nibble_packing`.
 - **KISS-CLASSIFY-6.1-0009** — `b1` MUST use the packed-byte layout of 8 bits per
   byte with the least-significant bit holding the lowest logical index. *Test:*
   `test_classify_b1_bit_packing`.
-- **KISS-CLASSIFY-6.1-0010** — `e4m3fn` MUST use the FP8 E4M3 OCP encoding (sign 1,
+- **KISS-CLASSIFY-6.1-0010** — `f8e4m3fn` (sk3 `e4m3fn`) MUST use the FP8 E4M3 OCP encoding (sign 1,
   exp 4, mantissa 3, bias 7) with maximum finite magnitude 448, no infinity encodings,
-  and a single NaN encoding; the reserved `e4m3fnuz` variant uses bias 8, defines no
-  `−0`, and defines no infinities (byte-incompatible with `e4m3fn`) and MUST NOT be
+  and a single NaN encoding; the reserved `f8e4m3fnuz` variant uses bias 8, defines no
+  `−0`, and defines no infinities (byte-incompatible with `f8e4m3fn`) and MUST NOT be
   conflated with it. These are pinned format constants; the saturating
-  round-half-to-even conversion *into* `e4m3fn` is owned by KISS-Ops / KISS-Emit and
-  is not a Classify obligation. *Test:* `test_classify_e4m3_format`.
-- **KISS-CLASSIFY-6.1-0011** — `e5m2` MUST use the FP8 E5M2 IEEE-style encoding (sign
+  round-half-to-even conversion *into* `f8e4m3fn` is owned by KISS-Ops / KISS-Emit and
+  is not a Classify obligation. A platform component type naming OCP E4M3 (e.g. Vulkan
+  `VK_COMPONENT_TYPE_FLOAT8_E4M3_EXT`) denotes `f8e4m3fn`, **not** the reserved
+  `f8e4m3fnuz`: `f8e4m3fnuz` carries no computation semantics at this schema version and
+  MUST receive a typed decline (§6.1-0001), so a live device reporting the OCP-E4M3
+  component type could not denote it without becoming undispatchable — OCP-finite
+  `f8e4m3fn` is the only coherent denotation. *Test:* `test_classify_e4m3_format`.
+- **KISS-CLASSIFY-6.1-0011** — `f8e5m2` (sk3 `e5m2`) MUST use the FP8 E5M2 IEEE-style encoding (sign
   1, exp 5, mantissa 2, bias 15) with maximum finite magnitude 57344 and IEEE-style
-  infinity/NaN encodings; the reserved `e5m2fnuz` variant uses bias 16, defines no `−0`,
-  and defines no infinities (byte-incompatible with `e5m2`) and MUST NOT be conflated
+  infinity/NaN encodings; the reserved `f8e5m2fnuz` variant uses bias 16, defines no `−0`,
+  and defines no infinities (byte-incompatible with `f8e5m2`) and MUST NOT be conflated
   with it. These are pinned format constants; the saturating round-half-to-even
-  conversion *into* `e5m2` is owned by KISS-Ops / KISS-Emit and is not a Classify
+  conversion *into* `f8e5m2` is owned by KISS-Ops / KISS-Emit and is not a Classify
   obligation. *Test:* `test_classify_e5m2_format`.
-- **KISS-CLASSIFY-6.1-0012** — `c32` MUST be stored as an interleaved
-  `(real, imag)` pair of `f32` occupying 64 storage bits, and `c64` as an
+- **KISS-CLASSIFY-6.1-0012** — `c64` (sk3 `c32`) MUST be stored as an interleaved
+  `(real, imag)` pair of `f32` occupying 64 storage bits, and `c128` (sk3 `c64`) as an
   interleaved `(real, imag)` pair of `f64` occupying 128 storage bits; the real
-  component MUST occupy the lower-addressed half. *Test:*
-  `test_classify_complex_interleaved_layout`.
+  component MUST occupy the lower-addressed half. Complex tokens are named by **total**
+  width at sk4 (§3.1.4): the token `c64` denotes the 64-bit pair-of-`f32` (the sk3 `c32`),
+  and `c128` the 128-bit pair-of-`f64` (the sk3 `c64`); the version prefix (§3.4) makes
+  this reinterpretation loud. *Test:* `test_classify_complex_interleaved_layout`.
+- **KISS-CLASSIFY-6.1-0013** — The MX scale dtypes `f8e8m0` and `f8e6m2` (both new at
+  sk4, additive) MUST use the OCP Microscaling (MX) scale encodings: `f8e8m0` is an
+  **unsigned** 8-bit all-exponent scale (0 sign, 8 exp, 0 mantissa); `f8e6m2` is an
+  **unsigned** 8-bit scale (0 sign, 6 exp, 2 mantissa), a finer-granularity sibling of
+  `f8e8m0`. A scale carries **no sign bit**, so the width self-check is `exp + mantissa`
+  (8+0 and 6+2, both 8). Both are **scale types** — the per-block shared scale of an
+  MX-encoded value operand, carried as a **sibling operand** (§3.2), never an element
+  value dtype. These are pinned format constants citing OCP-MX; their special values
+  follow the OCP-MX definitions (not restated here), and the MX **block** structure
+  (block size, scale placement) is an encoding-axis concern **outside** §6.1. *Test:*
+  `test_classify_mx_scale_format`.
 
 ### 6.2 Numeric-kind and special-value pinning
 
@@ -558,13 +577,14 @@ where it fixes storage bytes.
   an implementation MUST NOT introduce a sixth kind at this schema version. *Test:*
   `test_classify_numeric_kind_set_closed`.
 - **KISS-CLASSIFY-6.2-0002** — For each float dtype (`f16`, `bf16`, `f32`, `f64`,
-  `e4m3fn`, `e4m3fnuz`, `e5m2`, `e5m2fnuz`) the special values the format defines MUST be
+  `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`, `f8e5m2fnuz`) the special values the format defines MUST be
   identified by their pinned bit patterns: `±0` for every float dtype **except** the
   `fnuz` variants (which define no `−0`), and subnormals for every float dtype; positive
-  and negative infinity for `f16`/`bf16`/`f32`/`f64`/`e5m2` (but **not** `e4m3fn`,
-  `e4m3fnuz`, or `e5m2fnuz`, which define none); quiet and signaling NaN for every float
+  and negative infinity for `f16`/`bf16`/`f32`/`f64`/`f8e5m2` (but **not** `f8e4m3fn`,
+  `f8e4m3fnuz`, or `f8e5m2fnuz`, which define none); quiet and signaling NaN for every float
   dtype that defines both (all except the FP8 variants); and the single NaN encoding for
-  the FP8 variants (§6.1-0010/-0011). An implementation MUST distinguish `-0` from `+0`
+  the FP8 variants (§6.1-0010/-0011). The MX scale floats `f8e8m0`/`f8e6m2` follow the
+  OCP-MX special-value definitions (§6.1-0013) and are not restated here. An implementation MUST distinguish `-0` from `+0`
   by bit pattern where the format defines `−0`, and MUST NOT conflate distinct NaN
   encodings when identifying a dtype's special values. *Test:*
   `test_classify_float_special_values_pinned`.
