@@ -185,6 +185,30 @@ project with **no glob-corpus harness** has nowhere for *degradation* to live.
 makes four mechanisms a *scope* rather than an accusation, and lets an implementer rule mechanisms
 out on **structure** instead of on faith.
 
+### 5.1 The four are a decomposition, not a catalogue — demonstrated on the review layer
+
+The mechanisms were derived entirely from **test harnesses**. If they are a real decomposition of
+the failure rather than an artefact of where the authors happened to look, they should apply to an
+unrelated instrument. They do — **all four, to code review**, discovered while this RFC was open:
+
+> *"A review comment that nothing routes is a finding nobody acts on, which looks identical to 'no
+> findings.' That is the review-layer version of the silent skip."* — Baracuda
+
+- **vacuity** — a review that ran and raised nothing because nothing in it could.
+- **absence** — a PR never reviewed, reported alongside reviewed ones.
+- **degradation** — a review run against a stale diff, reporting a defect already fixed at head
+  (observed: a finding on PR #132 was already resolved at its own head commit).
+- **skip** — findings that exist and that nothing routes to anyone. **Observed: twelve inline
+  findings across six PRs, eleven unaddressed, while `gh pr list` reported `reviews=1` on each.**
+
+**`reviews=1` is the whole document in one field of one CLI output: a count that reads as a
+state.** A green-looking review count and an actually-read review are the same bytes.
+
+**The general form, which covers every instance in this RFC:** *a state derived from an artefact's
+**existence** is not a state derived from its **content**.* That is `reviews=1`; it is `E0004: 0`
+from an aborted enumeration (B4); it is `running 0 tests … ok` (B4); and it is a registry row
+marked `FIXED` with live residuals.
+
 ---
 
 ## 6. Stated limits — including four the authors committed while writing this
@@ -236,7 +260,13 @@ examine"* is **unfalsifiable as written** — you cannot enumerate what you did 
 reviewer cannot check that you did. **What is mechanically checkable is presence**, which is why
 §6.1-0011 below is worded as it is. **The act of writing the exclusion is what surfaces it:** none
 of the three would have written *"searched dtype spellings only; did not examine version
-prefixes"* and then reported *clean*. This is **Pattern B applied to claims rather than
+prefixes"* and then reported *clean*.
+
+**A related and cheaper practice, learned the same day.** The §8 falsity was found because a
+reviewer asked **"what produced this?"** rather than **"is this true?"** Asking whether a claim is
+true invites checking it against the same understanding that accepted it. **Asking what produced
+it forces you to the instrument — and an instrument's limits are visible in a way a claim's are
+not.** Neither author asked that question about their own sweep; both sweeps were wrong. This is **Pattern B applied to claims rather than
 instruments** — a claim without stated scope is a measurement whose limits are indistinguishable
 from absent.
 
@@ -246,11 +276,27 @@ nothing; and then it is a doc comment — **which is B2, one level up.** Two rem
 threatened to recreate their own disease within one day: a blanket-panic proposal that would have
 recreated silent skips, and over-broad ceremony that would recreate unenforced prose.
 
-**Positive evidence, for balance.** This document is otherwise entirely failures. One data point
-shows the mechanism working: while building §6.5-0016's backing test, the author's first fixture
-wrote the namespace as a **source literal** — and the suite's own completeness check caught it,
-because the literal was swept out of the test file. **The check caught the test.** Obtained by
-accident while fixing the truncation, which is the most credible provenance available.
+6. **KISS architect — reporting a merge-ready state without checking it.** Five PRs were reported
+   to the maintainer as *queued for merge*. `gh pr list` showed `reviews=1` on each, which reads
+   as **reviewed**, and it was taken as such. **Twelve inline findings sat underneath; eleven were
+   unaddressed** — including the false §6.1-0009 claim above, in this document. **A green-looking
+   review count and an actually-read review are the same bytes.** Caught by the maintainer asking
+   whether the PRs had comments and whether they had been addressed — by a question, not by any
+   process.
+
+**Positive evidence, for balance.** This document is otherwise entirely failures. Two data points
+show mechanisms working. First: while building §6.5-0016's backing test, the author's first
+fixture wrote the namespace as a **source literal** — and the suite's own completeness check
+caught it, because the literal was swept out of the test file. **The check caught the test.**
+Obtained by accident while fixing the truncation, which is the most credible provenance available.
+
+Second, and it is the better argument: **of the twelve review findings, the two that mattered were
+both a claim outrunning its code** — a doc comment asserting a property the tool never had, and a
+stated limit that a reviewer showed was narrower than claimed. **Neither was caught by any check
+the author wrote. Both were caught by a reviewer reading carefully.** Every mechanism in this
+document is an attempt to make a machine notice what a machine can notice; **the two findings that
+most needed noticing were found by a reader.** That is the argument for the review step existing
+at all, and it bounds the whole document: mechanization is the floor, not the ceiling.
 
 **Sample bias.** Six projects, one day, people already looking for related things. Strong evidence
 the shapes are real; **weak evidence about frequency.** Nothing here establishes how common
@@ -415,12 +461,12 @@ projects' mirrors of KISS-Conform.
 | §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
 | §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
 | §6.5-0016 | **pending** | `test_conform_sweep_incompleteness_is_surfaced` — **PR #143, open, not merged** |
-| **§6.1-0009** | **PARTIAL** | **The crediting half is NOT implemented.** PR #141 (open) makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` **still counts a gate-only clause as backed** — its own diff says so: *"the matrix still counts it backed. This is the honest qualifier on the number."* The clause requires coverage **not credit** unexecuted backing. Declaring and reporting are done; **excluding is not.** |
+| **§6.1-0009** | **unbacked — and see §9.5** | **Not implemented, and not implementable by the current instrument.** PR #141 makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` computes `backed` **with no gate consideration at all** — `gated` is a separate dict used only for reporting. More fundamentally: **`kiss_trace` is a static analyser and never executes the harness, so it cannot know whether a gate was satisfied in a given run.** Per-run crediting is out of its reach by construction. #141 makes the tool stop *overstating* — the unqualified figure no longer stands alone, and an `EXCLUDING GATE-ONLY` figure is printed beside it — which is an honest static approximation, not a discharge. |
 | **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
 | **§6.1-0011** | **unbacked** | requires a claim-format check |
 
-**So: five backed, one pending an unmerged PR, one partial, two unbacked** — not the "seven land
-green" this section claimed in its first revision.
+**So: five backed, one pending an unmerged PR, three unbacked** — not the "seven land green" this
+section claimed in its first revision, and not the "one partial" of its second.
 
 **How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
 read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
@@ -449,3 +495,16 @@ It also sharpens A2's shape: *a doc comment asserting behaviour the code does no
    be an authoritative clause source.**
 4. **Scope of §6.1-0011** — whether "claims that gate a decision" is drawn tightly enough to avoid
    the boilerplate failure described in §6.
+5. **Is §6.1-0009 implementable as written?** It requires that coverage not credit a clause whose
+   backing *"did not execute in the run being reported."* KISS's traceability instrument is a
+   **static analyser that never executes the harness**, so it cannot know what ran. Three
+   resolutions, and the choice is the maintainer's:
+   **(a)** the instrument consumes test-run output as well as source, so per-run crediting becomes
+   possible; **(b)** the clause is scoped to what static analysis can guarantee — *declare the
+   condition, report the gated figure separately, never let the unqualified number stand alone* —
+   which is what #141 implements; **(c)** both, with (b) as the floor and (a) as the freeze
+   requirement.
+   **This is the clause the RFC got wrong twice** — first claiming it backed, then partial — and
+   the reason it was wrong both times is that nobody had asked whether the property is reachable
+   by the tool that would have to enforce it. **A clause whose enforcement mechanism cannot
+   exist is a claim nothing checks**, which is Pattern A, in this document, about itself.
