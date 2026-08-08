@@ -233,7 +233,7 @@ offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; iteration-frame element c
 `128·256 = 32768 > 1024` ⇒ `grid`; iteration rank 2. The token:
 
 ```
-sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
+sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
 ```
 
 **(b) A broadcast operand.** If operand 1 is `strides=[0,1]` (axis 0 broadcasts
@@ -655,15 +655,17 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   emit and a reader MUST reject a key declaring more than `MAX_OPERANDS`. *Test:*
   `test_classify_max_operands_is_8`.
 - **KISS-CLASSIFY-6.4-0003** — The `structure_key` schema version
-  (`STRUCTURE_KEY_VERSION`) MUST be the integer `3` at this maturity, encoded as the
-  token prefix `sk3` (§6.7-0002); a bump of this integer is required only when a
-  predicate axis is added or altered in a non-additive way. (Version `3` supersedes
-  version `2`: the `gem` contraction field's non-additive growth to carry the
-  precision/compute coordinate set — weight/accumulator/output dtypes, the
-  conditionally-present batch size-class, and the math-precision code `<mp>` (§6.7-0006) —
-  together with the variant-explicit FP8 dtype spellings (§6.1), forced this bump while
-  the sub-standard is UNFROZEN. Version `2` had itself superseded version `1` for the
-  reduce field's non-additive split, §6.6-0009.) *Test:*
+  (`STRUCTURE_KEY_VERSION`) MUST be the integer `4` at this maturity, encoded as the
+  token prefix `sk4` (§6.7-0002); a bump of this integer is required only when a
+  predicate axis is added or altered in a non-additive way. (Version `4` supersedes
+  version `3`: the sk4 dtype respellings — integer `i`-prefix, FP8 `f8`-prefix + mandatory
+  variant suffix, and the complex total-width meaning-flip (§6.1, §3.1) — together with the
+  new non-contraction precision coordinate `(acc + mp)` (§6.7-0012, §3.3), forced this
+  non-additive bump while the sub-standard is UNFROZEN. Version `3` had superseded version
+  `2` for the `gem` contraction field's non-additive growth to carry the precision/compute
+  coordinate set — weight/accumulator/output dtypes, the conditionally-present batch
+  size-class, and the math-precision code `<mp>` (§6.7-0006); version `2` had superseded
+  version `1` for the reduce field's non-additive split, §6.6-0009.) *Test:*
   `test_classify_structure_key_version_is_3`.
 - **KISS-CLASSIFY-6.4-0004** — The `structure_key` token maximum length MUST be
   `4096` bytes (`MAX_STRUCTURE_KEY_LEN = 4096`); a producer MUST NOT emit a token
@@ -831,7 +833,7 @@ form (§6.7-0011).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `version` | u16 (`= 3`) | schema version; extra fields append so old tokens stay byte-identical |
+| `version` | u16 (`= 4`) | schema version; extra fields append so old tokens stay byte-identical |
 | `op_family` | op category (§6.5-0006) | the coarse op category — **NOT** the semantic op name |
 | `dtype` | dtype token | operand-0 / primary element dtype |
 | `target` | target_capability (§6.8) | the namespaced compilation-target descriptor |
@@ -861,7 +863,7 @@ form (§6.7-0011).
   `test_classify_structure_key_extent_free`.
 - **KISS-CLASSIFY-6.6-0004** — The `structure_key` fields MUST appear in exactly
   the order and with exactly the types of the table above; `version` MUST be the
-  first field and MUST equal `3` (§6.4-0003, §6.7-0002). *Test:*
+  first field and MUST equal `4` (§6.4-0003, §6.7-0002). *Test:*
   `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
@@ -1025,7 +1027,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   token with any other field count with a typed decline. *Test:*
   `test_classify_token_field_count`.
 - **KISS-CLASSIFY-6.7-0002** — Field 0 MUST be `sk` immediately followed by the
-  canonical decimal schema version (`sk3` at this maturity); a reader MUST reject a
+  canonical decimal schema version (`sk4` at this maturity); a reader MUST reject a
   token whose field 0 is not `sk` followed by a supported version, including a
   non-canonical leading-zero spelling (e.g. `sk03`). *Test:*
   `test_classify_token_version_prefix`.
@@ -1524,7 +1526,7 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   cap, `16 ≤ A = 256`), inner extent 256 divisible by 16 (`d16`), unflipped (`f`).
   Max touched offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; frame element count
   `128·256 = 32768 > 1024` ⇒ `grid`; rank 2; reduce field `-` (not a reduction):
-  `sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
+  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
   This vector is the **canonical derivation golden vector** for
   `test_classify_structure_key_derivation_canonical` — the full input tuple above maps
   to exactly these bytes.
