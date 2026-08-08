@@ -63,7 +63,7 @@ const FIXTURE_NAMESPACES: &[(&str, &str)] = &[
 /// Sweep `roots` for namespace-shaped literals, surfacing incompleteness.
 ///
 /// A sweep that could not complete is NOT a sweep that found nothing. Every I/O
-/// failure here is returned as `Err` rather than swallowed: the previous version
+/// failure here is returned as `Err` rather than swallowed. The previous version
 /// returned silently on an unreadable directory, `continue`d past an unreadable
 /// file, and dropped failed directory entries, so a truncated sweep was
 /// indistinguishable from a complete one. The consumers below only fail on what
@@ -80,7 +80,15 @@ fn sweep_namespaces(roots: &[std::path::PathBuf]) -> std::io::Result<Vec<(String
                 std::io::Error::new(e.kind(), format!("dir entry under {}: {e}", dir.display()))
             })?;
             let p = e.path();
-            if p.is_dir() {
+            // `Path::is_dir()` returns FALSE on a metadata error, so an entry whose
+            // type cannot be determined — an unreadable directory — would be taken
+            // for a non-`.rs` file and skipped in silence, reintroducing the exact
+            // degradation this function was rewritten to eliminate. `DirEntry`
+            // already carries the type, so ask it and propagate the failure.
+            let ft = e.file_type().map_err(|err| {
+                std::io::Error::new(err.kind(), format!("file_type({}): {err}", p.display()))
+            })?;
+            if ft.is_dir() {
                 scan(&p, out)?;
             } else if p.extension().is_some_and(|x| x == "rs") {
                 let text = std::fs::read_to_string(&p).map_err(|e| {
