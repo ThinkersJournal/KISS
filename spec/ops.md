@@ -2034,8 +2034,8 @@ by the embedding layer) selects the schema and the reader replays it positionall
 
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
-| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) |
-| `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) |
+| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_precision`:`mp` enum `u8`:resolved default (§6.7-0006; sk4) |
+| `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_precision`:`mp` enum `u8`:resolved default (§6.7-0006; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
 | `sort_network` | `axis`:`u8`:trailing axis `r-1` (§6.11-0014) — `direction`:enum `u8`:`1` (ascending) — `stability`:bool `u8`:`1` (fixed, §6.11-0007) |
@@ -2054,16 +2054,28 @@ by the embedding layer) selects the schema and the reader replays it positionall
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
-  `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, fixed `1`), in
-  that order. *Test:* `test_ops_opattrs_reduce_schema`.
+  `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, fixed `1`) then
+  — **(sk4)** — `accumulator` (`u8`) then `math_precision` (`u8`), in that order. **`accumulator`**
+  is `0x00` when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal, its
+  resolved default), otherwise the **1-based §6.1-table dtype ordinal** of the accumulator, which
+  MUST be a float (§6.7-0012); it is meaningful only for a float `sum`/`prod` reduction and MUST be
+  `0x00` for `max`/`min` or a non-float element type. **`math_precision`** is the `<mp>` enum ordinal
+  of §6.7-0006 extended to the non-contraction key, at the op's resolved compute-precision default.
+  Both are emitted explicitly (§6.19-0005); the Classify structure_key **omits** the `(acc + mp)`
+  field when both are at their default — a separate concern of §6.7-0013, not this blob. This is the
+  ops-side that makes the accumulator/precision **requestable**, realizing KISS-CLASSIFY-6.7-0012.
+  *Test:* `test_ops_opattrs_reduce_schema`.
 - **KISS-OPS-6.19-0026** — The `prefix_scan` OpAttrs blob MUST be exactly `monoid`
   (`u8`, mandatory) then `reduce_axes` (`u16` LE, selecting exactly one axis per the
   scan precedence of §6.19-0020: `0xFFFE` when that axis is the trailing axis of a
   rank-`>1` operand, otherwise the single-bit subset mask; `0xFFFF` and `0x0000` MUST NOT
   be emitted) then `exclusivity` (`scan_exclusivity` enum `u8`, default `1` inclusive;
   the field draws from the `scan_exclusivity` sub-vocabulary and MUST emit the enum
-  ordinal — `1`=inclusive, `2`=exclusive — not a boolean truth value), in that order.
-  *Test:* `test_ops_opattrs_prefix_scan_schema`.
+  ordinal — `1`=inclusive, `2`=exclusive — not a boolean truth value) then — **(sk4)** —
+  `accumulator` (`u8`, encoded exactly as for `reduce` in §6.19-0025: `0x00` = compute-dtype
+  diagonal, else the 1-based §6.1-table dtype ordinal of a float accumulator, meaningful only for a
+  float `sum`/`prod` scan) then `math_precision` (`u8`, the `<mp>` ordinal of §6.7-0006), in that
+  order. *Test:* `test_ops_opattrs_prefix_scan_schema`.
 - **KISS-OPS-6.19-0027** — The `gather` OpAttrs blob MUST be exactly `axis` (`u8`, the
   indexed axis of §6.11-0013, range `0..MAX_RANK-1`) then `oob_policy` (enum `u8`, default
   `1` skip) then `index_operand` (`u8`, range `0..MAX_OPERANDS-1`) then `index_dtype`
