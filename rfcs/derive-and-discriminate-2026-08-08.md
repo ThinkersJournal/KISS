@@ -66,7 +66,7 @@ becomes *unrepresentable*.
 | # | Where | The duplication | What went wrong |
 |---|---|---|---|
 | A1 | KISS `spec/` | `dtype_manifest.json` (SSOT), `classify.md` §6.1, `ops.md` §6.16 — **the lint validates one** | An `sk4` schema event respelled §6.1's table; §6.16 and eight clauses kept `sk3` spellings. §6.16 carries an **explicit written invariant** that tokens are *"spelled identically in both foundational vocabularies"* — and nothing checks it. **A stated invariant with no checker is this pattern's purest form.** |
-| A2 | KISS `tools/kiss_trace.py` | §6.1-0003's prose vs the checker | `dangling` sets `any_fail = True`; `orphans` prints *"N executable tests cite no clause"* and **never does** — while §6.1-0003 calls an uncited test *"an orphan and a build-fail."* **The document asserts a rule the checker declines to enforce.** *(Recorded as an ambiguity, not a proven under-enforcement — see §6.)* |
+| A2 | KISS `tools/kiss_trace.py` | §6.1-0003's prose vs the checker | `dangling` sets `any_fail = True`. `orphans` **does** print *"N executable tests cite no clause"* — but **never sets `any_fail`**, so the count is reported and the build passes, while §6.1-0003 calls an uncited test *"an orphan and a build-fail."* **The document asserts a rule the checker declines to enforce.** *(Recorded as an ambiguity, not a proven under-enforcement — see §6.)* |
 | A3 | KISS `spec/conform.md` §6.1-0007 | prose vs a machine-readable sidecar | The clause states the sidecar **MUST be the sole authoritative clause source** and *"prose MUST NOT be treated as an independent clause source."* **No sidecar exists.** `kiss_trace` derives its entire clause set by regexing prose. Six clauses depend on machinery never built. |
 | A4 | Fuel `fuel-dispatch` | a CI gate vs its registry rule | The gate enforced **14** patterns while the registry rule named **5**. Closed by a hand-coordinated companion commit, with a window in which they disagreed. |
 | A5 | Fuel `docs/kernel-contracts/**` | `audited: true` vs the verification ledger | **794** contract sections declared `audited: true` with **no ledger entry**. The ledger covered 21 of 804 kernel names — **2.6%**. The claim existed; nothing made it true. |
@@ -194,7 +194,7 @@ hand-written prose *around* the tables. Generating them would not have caught it
 item that over-promises is itself a Pattern B failure** — an instrument trusted past its scope,
 whose insufficiency is indistinguishable from sufficiency.
 
-**Four instances of the meta-failure were committed by this document's authors, in its own
+**Five instances of the meta-failure were committed by this document's authors, in its own
 subject matter, within six hours of articulating the principle. They are the closing argument,
 not a footnote.**
 
@@ -220,8 +220,13 @@ not a footnote.**
    bounded"* as mandating that every implementation carry such an arm, and propagated it to a
    deriver as a ruling. The MUST attaches to *bounded*, not to *exists*. Corrected within ninety
    minutes, after a worker asked a scoping question rather than complying.
+5. **KISS architect — an overstated backing claim, in the table added to prevent overstated
+   backing claims.** §8's first revision recorded §6.1-0009 as *backed*. It is not: the crediting
+   half is unimplemented, and the implementing PR's own diff says so in a comment. **Caught by an
+   automated reviewer, not by either author** — the only one of the five found by review rather
+   than by the people who wrote the principle, and the only one already published when found.
 
-**The counter-measure to three of those four is one practice, and only one project volunteered
+**The counter-measure to three of those five is one practice, and only one project volunteered
 it: Baracuda stated the axes its audit did NOT cover** — tautological asserts, timing. In every
 one of the three, the defect was not the audit's scope but that **the scope went unstated**, so
 the reassurance did not know its own limits.
@@ -259,11 +264,11 @@ harness, *then* arm the gate. **Fixing "the obvious half" leaves a worse state t
 a gate firing on a rule nobody finished.
 
 **A closing note.** The obvious objection is *"this is a competence problem — write better
-tests."* **Four instances from the people who articulated the principle, inside the window in
+tests."* **Five instances from the people who articulated the principle, inside the window in
 which they articulated it, is the only refutation that cannot be dismissed as special pleading.**
-A document about instruments that cannot fail, whose own authors produced four such instruments in
-six hours, is not evidence the thesis is wrong. It is the strongest available evidence that it is
-right.
+A document about instruments that cannot fail, whose own authors produced five such instruments in
+six hours — the fifth **inside this document, caught by a reviewer after publication** — is not
+evidence the thesis is wrong. It is the strongest available evidence that it is right.
 
 ---
 
@@ -283,7 +288,18 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
   A **stated invariant that two artifacts agree is not a control** unless something checks it.
   *Test:* `test_conform_normative_duplicates_are_derived`.
 
-### 7.2 Pattern B — capability and attribution
+### 7.2 Pattern B — the instrument's obligations
+
+> **§6.5-0011 (capability) and §6.5-0016 (attribution) are the two halves of Pattern B, and
+> neither implies the other.** An instrument lacking §6.5-0011 is not failing to produce a result
+> — it is producing a confident negative, correctly, forever. An instrument lacking §6.5-0016 may
+> discriminate perfectly and still lie, because a run that never happened is indistinguishable
+> from a run that found nothing. **The predicted failure is an implementor satisfying one and
+> believing both are done**, so each clause carries an explicit pointer to the other.
+>
+> They are presented below in **ascending numeric order** rather than adjacently. Renumbering to
+> make them neighbours would churn an open PR that already cites §6.5-0016 by ordinal; the
+> cross-references carry the same intent without that cost.
 
 - **KISS-CONFORM-6.5-0011** — The oracle-differential harness of §6.5-0001 MUST be accompanied by
   **executable negative controls** proving it discriminates: for each determinism-class comparator
@@ -294,25 +310,8 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
   on the inputs where that pinned behaviour is violated — a control that diverges on unrelated
   inputs demonstrates noise, not discrimination. A harness that has never been shown to reject a
   wrong implementation supplies no evidence of conformance, and MUST NOT be presented as satisfying
-  §6.5-0001. *Test:* `test_conform_harness_negative_controls`.
-
-- **KISS-CONFORM-6.5-0016** — Where KISS-Conform relies on the result of a **discovery,
-  enumeration, or sweep** step — over source files, vectors, registry entries, or artifacts — that
-  step MUST distinguish a **genuine negative** ("looked, and found nothing") from a **failure to
-  look** ("could not enumerate, wholly or in part"). An enumeration that cannot complete MUST
-  surface that fact to its consumer as an error or an explicit incompleteness signal, and MUST NOT
-  return a **silently empty or silently truncated** result. A consumer MUST NOT treat a result of
-  unknown completeness as authoritative. Where the sweep's purpose is to mechanize a claim that
-  would otherwise be hand-maintained, a truncated sweep MUST be treated as a **failure** of that
-  check, not as its satisfaction. *Test:* `test_conform_sweep_incompleteness_is_surfaced`.
-
-> **These two are the halves of Pattern B and neither implies the other.** An instrument lacking
-> §6.5-0011 is not failing to produce a result — it is producing a confident negative, correctly,
-> forever. An instrument lacking §6.5-0016 may discriminate perfectly and still lie, because a run
-> that never happened is indistinguishable from a run that found nothing. They are placed adjacently
-> so that no implementor satisfies one believing both are done.
-
-### 7.3 Pattern B — the harness's own obligations
+  §6.5-0001. **See §6.5-0016, the attribution half of Pattern B; satisfying this clause does not
+  satisfy that one.** *Test:* `test_conform_harness_negative_controls`.
 
 - **KISS-CONFORM-6.5-0012** — When the harness detects a divergence it MUST report it as
   **structured, reproducible data**, carrying at minimum (a) the **corpus index** of the diverging
@@ -351,6 +350,27 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
 > `const_lit` C-ism is the cautionary proof that incidental impl choices leak."* §2.7 frames the
 > conformance-relevant property as structural **dissimilarity**, never compiler identity.
 
+- **KISS-CONFORM-6.5-0016** — Where KISS-Conform relies on the result of a **discovery,
+  enumeration, or sweep** step — over source files, vectors, registry entries, or artifacts — that
+  step MUST distinguish a **genuine negative** ("looked, and found nothing") from a **failure to
+  look** ("could not enumerate, wholly or in part"). An enumeration that cannot complete MUST
+  surface that fact to its consumer as an error or an explicit incompleteness signal, and MUST NOT
+  return a **silently empty or silently truncated** result. A consumer MUST NOT treat a result of
+  unknown completeness as authoritative. Where the sweep's purpose is to mechanize a claim that
+  would otherwise be hand-maintained, a truncated sweep MUST be treated as a **failure** of that
+  check, not as its satisfaction. **See §6.5-0011, the capability half of Pattern B; satisfying
+  this clause does not satisfy that one.** *Test:*
+  `test_conform_sweep_incompleteness_is_surfaced`.
+
+> **An authoring hazard, recorded because it has now bitten three times in one day.** A test
+> fixture that embeds the identifiers its own tooling scans for **will be picked up by that
+> tooling**. A planted namespace literal was swept out of the test file that planted it; a
+> fixture reusing real clause IDs came back lint-enforced and passed while proving nothing; a
+> fixture's clause IDs were reported as dangling citations against the real suite. **Assemble
+> fixture identifiers at run time**, not as source literals. The second of those is the dangerous
+> one: it produced a green test that verified nothing, which is the very defect §6.5-0016 exists
+> to prevent, inside the test written to back it.
+
 ### 7.4 Crediting and claims
 
 - **KISS-CONFORM-6.1-0009** — Coverage MUST NOT credit a clause whose backing tests did **not
@@ -379,25 +399,39 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
 
 ## 8. Backing status on landing
 
-Seven of the nine clauses codify discipline that **already exists** in the KISS harness and is
-**already backed** — they land green rather than adding `untested` rows. That is deliberate: a
-clause set about instruments that cannot prove they work would be self-refuting as the one
-instrument that had not.
+**Method, per §6.1-0011.** The five "already backed" rows below were established by the clause
+author naming the existing test for each and spot-checking, **not** by this document's author
+re-running each named test. Coverage figures cited anywhere in this RFC were produced by
+`tools/kiss_trace.py` — **the instrument A3 reports as non-conformant to §6.1-0007**, because no
+other instrument exists. That provenance is stated rather than elided; a reader should weight
+these rows accordingly. **Not examined:** whether these clause ordinals are unclaimed in sibling
+projects' mirrors of KISS-Conform.
 
-| clause | backing on landing |
-|---|---|
-| §6.5-0011 | `integer_differential.rs` seeded-bug controls |
-| §6.5-0012 | `harness/differ.rs` `Divergence` carries index + operands |
-| §6.5-0013 | `harness/loader.rs` typed missing-symbol path |
-| §6.5-0014 | `corpus_is_deterministic`, `corpus_is_reproducible` |
-| §6.5-0015 | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
-| §6.5-0016 | `test_conform_sweep_incompleteness_is_surfaced` (PR #143) |
-| §6.1-0009 | `test_kiss_trace_gates.py` (PR #141) |
-| **§6.1-0010** | **unbacked — requires the dtype-table generator (follow-up)** |
-| **§6.1-0011** | **unbacked — requires a claim-format check** |
+| clause | backing status | notes |
+|---|---|---|
+| §6.5-0011 | backed | `integer_differential.rs` seeded-bug controls |
+| §6.5-0012 | backed | `harness/differ.rs` `Divergence` carries index + operands |
+| §6.5-0013 | backed | `harness/loader.rs` typed missing-symbol path |
+| §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
+| §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
+| §6.5-0016 | **pending** | `test_conform_sweep_incompleteness_is_surfaced` — **PR #143, open, not merged** |
+| **§6.1-0009** | **PARTIAL** | **The crediting half is NOT implemented.** PR #141 (open) makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` **still counts a gate-only clause as backed** — its own diff says so: *"the matrix still counts it backed. This is the honest qualifier on the number."* The clause requires coverage **not credit** unexecuted backing. Declaring and reporting are done; **excluding is not.** |
+| **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
+| **§6.1-0011** | **unbacked** | requires a claim-format check |
 
-The two unbacked clauses are the two authored here rather than lifted from practice. Stated
-explicitly rather than allowed to pass with the others.
+**So: five backed, one pending an unmerged PR, one partial, two unbacked** — not the "seven land
+green" this section claimed in its first revision.
+
+**How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
+read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
+automated reviewer on PR #141 noticing that a doc comment in `conformance/src/lib.rs` claimed
+behaviour the tool does not have. **A backing claim was overstated in the table added specifically
+to be honest about backing, in the RFC about claims that overstate their backing** — and it was
+caught by a reviewer, not by either author. That is the fifth author-committed instance of §6's
+meta-failure, and the only one caught by review rather than by the authors themselves.
+
+It also sharpens A2's shape: *a doc comment asserting behaviour the code does not have*, appearing
+**inside the PR that fixes Pattern B**. The pattern reproduced itself inside its own remedy.
 
 ---
 
