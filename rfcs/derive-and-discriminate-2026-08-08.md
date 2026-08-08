@@ -484,13 +484,23 @@ projects' mirrors of KISS-Conform.
 **So: six backed, three unbacked** — not the "seven land green" this section claimed in its first
 revision, and not the "one partial" of its second.
 
-> **This table states repo state, which moves.** It is accurate **as of `52aa5f9`** (2026-08-08),
-> with #132, #135, #143, #145 and #146 merged and #141 still open. **A document that embeds
-> mutable state and does not date it is a claim nothing checks** — Pattern A, and this table has
-> already gone stale once, within minutes of the RFC merging, when #143 landed and the row still
-> read *"open, not merged."* Since the state cannot be derived here, it is **dated** instead, so a
-> reader can tell staleness from error. Anyone editing this table should re-date it or delete it
-> in favour of a generated one.
+> **This table deliberately names no pull requests, and that is the fix.** Its first revision
+> recorded rows as *"PR #143, open, not merged"*. #143 merged minutes after this RFC landed, so the
+> document shipped a claim the repository had already moved past — **Pattern A, in the document
+> about Pattern A, about its own table.**
+>
+> The first attempt at a fix was to **date** the table. That failed too: the dated note said
+> *"#141 still open"*, and #141 merged **while the correcting PR was itself in review.** Three
+> staleness events in under two hours.
+>
+> **The durable fix was not a better timestamp — it was removing the mutable dependency.** Whether
+> a clause is backed is a fact about the **repository**, answerable by looking; *which PR carried
+> the backing* is provenance, and provenance that names an in-flight artifact ages the moment the
+> artifact lands. The rows below name **tests**, which are stable, and not **PRs**, which are not.
+>
+> The general lesson, and it is stronger than the one §6.1-0010 states: where a duplicate can be
+> neither derived nor verified, **the best available move is often to stop stating the volatile
+> part at all.**
 
 **How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
 read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
