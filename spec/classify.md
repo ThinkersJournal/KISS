@@ -1106,13 +1106,38 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   is **absent**, the accumulator dtype MUST default to the compute dtype
   (accumulator-dtype == compute-dtype, the §6.17-0005 diagonal), so every existing token is
   unchanged in meaning and every kernel that never opts in behaves exactly as at this
-  version. The **wire/codec realization** — the §6.7-0001 non-contraction field-count change
-  and the token codec that serializes the new coordinate (whether a new field or an
-  `<acc>`-bearing extension of the field-8 `<reduce>` code) — is **schema-affecting** and is
-  DEFERRED to the next coordinated `structure_key` schema-version bump (a 3-way
-  KISS/Fuel/Baracuda regen, the sk3 pattern). This clause does **not** modify the §6.7-0001
-  field grammar or the token codec at this version; it pins the requirement the coordinated
-  bump will realize. *Test:* `test_classify_reduction_accumulator_coordinate`.
+  version. The **wire/codec realization** — the non-contraction optional-trailing precision
+  field `<acc>/<mp>` and its byte-exact spelling — is **realized at sk4** by §6.7-0013 (the
+  coordinated schema-version bump this clause anticipated). *Test:*
+  `test_classify_reduction_accumulator_coordinate`.
+- **KISS-CLASSIFY-6.7-0013** — The non-contraction precision field `(acc + mp)` (sk4,
+  realizing §6.7-0012) is the **optional-trailing** precision field of a non-contraction cell,
+  spelled **gem-symmetrically** as `<acc>/<mp>` — a §6.1 accumulator dtype and the
+  math-precision code `<mp>` (the same codes as the `gem` contraction group's `<mp>`,
+  §6.7-0006), `/`-delimited. It occupies the **same optional-trailing token slot** the
+  contraction group occupies for `gem`; a cell carries **at most one** precision field — a
+  `gem` cell the contraction group, a non-contraction cell the `(acc + mp)` field — and the two
+  **never coexist**, so `from_token`'s nine-or-ten-field dispatch is resolved unambiguously by
+  the op-family code. The field:
+  (a) is **emitted iff at least one** of {accumulator dtype ≠ compute dtype, `<mp>` ≠ the
+  cell's default math-precision} holds;
+  (b) when emitted, spells **both** slots explicitly (`<acc>/<mp>`), including a slot equal to
+  its default;
+  (c) when **neither** coordinate deviates, is **omitted entirely** — not `-`, not empty;
+  (d) MUST NOT be emitted in the all-default form (redundant emission is forbidden — a token
+  carrying the field with both slots at default is invalid and MUST be rejected);
+  (e) is **omitted-when-absent**, in deliberate contrast to the **mandatory** reduce field
+  (§6.6-0009) which emits `-` when inapplicable: applying the reduce field's `-` convention to
+  `(acc + mp)` would emit a spurious trailing `|-` and fail the byte-match, and is forbidden.
+  The `<mp>` coordinate extends the strict-vs-TF32 math-precision axis (§6.7-0006) to the
+  non-contraction key, so it stops collapsing for reductions/scans. This field **declares** the
+  accumulator/precision coordinate for identity; it does **not** pin bit-level determinism
+  (§6.17-0007 — float accumulation may remain order-invariant-nondeterministic). **Byte-stability:**
+  every non-contraction token whose accumulator equals its compute dtype and whose `<mp>` is
+  default is **byte-identical to the pre-sk4 codec** modulo the §6.1 dtype renames, so the sk4
+  regen diff is exactly the cells whose accumulator/precision actually deviates. The rule is
+  assented byte-for-byte by the four token-deriving parties (KISS, Fuel, kiss-ref,
+  `unpopped-vocab`). *Test:* `test_classify_noncontraction_acc_mp_field`.
 
 ### 6.8 The target-capability descriptor
 
