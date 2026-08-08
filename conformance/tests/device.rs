@@ -103,10 +103,7 @@ fn run_ondevice(src: &str, extra_nvcc_args: &[&str]) -> (i32, String) {
 /// of ordered pairs, bit-exactly (KISS-Ops §6.15 `fmax_ieee`; Conform §6.5/§6.6).
 #[test]
 fn fmax_ieee_matches_oracle_on_device() {
-    if !nvcc_present() {
-        eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
-        return;
-    }
+    kiss_conformance::runtime_gate!("cuda", nvcc_present());
     let (code, log) = run_ondevice("fmax_ieee.cu", &[]);
     assert_ne!(
         code, EXIT_ENV_ERROR,
@@ -124,10 +121,7 @@ fn fmax_ieee_matches_oracle_on_device() {
 /// happens to pass.
 #[test]
 fn fmaxf_intrinsic_is_caught_on_device() {
-    if !nvcc_present() {
-        eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
-        return;
-    }
+    kiss_conformance::runtime_gate!("cuda", nvcc_present());
     let (code, log) = run_ondevice("fmax_ieee.cu", &["-DUSE_FMAXF_INTRINSIC"]);
     assert_ne!(
         code, EXIT_ENV_ERROR,
@@ -150,10 +144,7 @@ fn fmaxf_intrinsic_is_caught_on_device() {
 /// is testable" becomes "the reference generator is conformant."
 #[test]
 fn generated_relu_add_matches_kiss_on_device() {
-    if !nvcc_present() {
-        eprintln!("SKIP: nvcc not on PATH — the on-device §6.6 slice needs a CUDA toolkit");
-        return;
-    }
+    kiss_conformance::runtime_gate!("cuda", nvcc_present());
     let (code, log) = run_ondevice("generated_relu_add_diff.cu", &[]);
     assert_ne!(
         code, EXIT_ENV_ERROR,

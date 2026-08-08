@@ -34,10 +34,7 @@ fn outputs_of(k: BinaryKernel, corpus: &[kiss_conformance::harness::corpus::Vect
 #[test]
 fn test_conform_ops_oracle_and_freeze_gate() {
     // KISS-CONFORM-6.13-0006 — the differential harness + ≥2-dissimilar-impls gate (atom).
-    let Some(add_a) = compile_and_load("add_a") else {
-        eprintln!("SKIP: no MSVC toolchain — the C differential slice needs cl.exe");
-        return;
-    };
+    let add_a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load("add_a"));
     let add_b = compile_and_load("add_b").unwrap();
     let add_wrong = compile_and_load("add_wrong").unwrap();
 

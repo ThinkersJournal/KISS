@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn loads_a_dll_and_calls_its_export() {
-        let Some(m) = msvc::find_msvc() else { eprintln!("SKIP: no MSVC"); return; };
+        let m = crate::runtime_gate_some!("msvc", msvc::find_msvc());
         let dir = std::env::temp_dir().join("kiss_harness_loader_test");
         std::fs::create_dir_all(&dir).unwrap();
         let src = dir.join("addk.c");
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn missing_symbol_is_a_typed_error_not_a_panic() {
-        let Some(m) = msvc::find_msvc() else { eprintln!("SKIP: no MSVC"); return; };
+        let m = crate::runtime_gate_some!("msvc", msvc::find_msvc());
         let dir = std::env::temp_dir().join("kiss_harness_loader_test2");
         std::fs::create_dir_all(&dir).unwrap();
         let src = dir.join("empty.c");

@@ -18,6 +18,64 @@
 //! KISS-Classify `structure_key` token codec ([`structure_key`], Classify §6.7),
 //! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
+/// Declare a **runtime gate** on a test, binding the `Some` value or declining the run.
+///
+/// A test whose execution depends on something discovered at run time — a toolchain, a
+/// device — MUST decline through this macro rather than by an open-coded
+/// `eprintln!(...); return;`. The macro *is* the declaration: declaring the gate and
+/// performing the skip are the same act, so a test cannot decline invisibly.
+///
+/// `tools/kiss_trace.py` discovers these textually and records such a test exactly as it
+/// records a `#[cfg(feature = "...")]`-gated one. A clause whose backing tests are ALL
+/// gated is reported as **GATE-ONLY**, and the report prints a second coverage figure
+/// excluding those clauses, so a qualified number sits beside the headline.
+///
+/// It does NOT decide whether a gate was satisfied in a particular run: `kiss_trace` is
+/// a static analyser and never executes the harness, so it cannot know. Per-run
+/// crediting is out of its reach by construction. What this closes is the
+/// **invisibility** — an open-coded skip was indistinguishable from an unconditional
+/// test, so a gate-only clause could not be told apart from a genuinely verified one.
+///
+/// ```ignore
+/// let msvc = runtime_gate_some!("msvc", find_msvc());
+/// ```
+#[macro_export]
+macro_rules! runtime_gate_some {
+    ($gate:literal, $opt:expr) => {
+        match $opt {
+            Some(v) => v,
+            None => {
+                eprintln!(
+                    "KISS-SKIP[{}]: declared runtime gate unsatisfied — this test did NOT execute",
+                    $gate
+                );
+                return;
+            }
+        }
+    };
+}
+
+/// Declare a **runtime gate** on a test from a predicate; declines the run if false.
+///
+/// The predicate form of [`runtime_gate_some!`]. Same contract: declaring the gate and
+/// performing the skip are one act, so the decline is always discoverable.
+///
+/// ```ignore
+/// runtime_gate!("cuda", nvcc_present());
+/// ```
+#[macro_export]
+macro_rules! runtime_gate {
+    ($gate:literal, $cond:expr) => {
+        if !$cond {
+            eprintln!(
+                "KISS-SKIP[{}]: declared runtime gate unsatisfied — this test did NOT execute",
+                $gate
+            );
+            return;
+        }
+    };
+}
+
 pub mod accuracy;
 pub mod announce;
 pub mod bundle_envelope;

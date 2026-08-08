@@ -124,10 +124,7 @@ mod tests {
 
     #[test]
     fn compiles_a_trivial_c_kernel_to_a_dll() {
-        let Some(msvc) = find_msvc() else {
-            eprintln!("SKIP: no MSVC toolchain found");
-            return; // graceful skip, like the cuda feature
-        };
+        let msvc = crate::runtime_gate_some!("msvc", find_msvc());
         let dir = std::env::temp_dir().join("kiss_harness_msvc_test");
         std::fs::create_dir_all(&dir).unwrap();
         let src = dir.join("t.c");

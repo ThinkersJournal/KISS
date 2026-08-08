@@ -106,6 +106,12 @@ RE_RUST_TEST = re.compile(
 RE_RUST_TEST_CFG = re.compile(
     r"#\[cfg\(feature\s*=\s*\"([a-z0-9_-]+)\"\)\]\s*(?:#\[[^\]]*\]\s*)*"
     r"#\[test\]\s*(?:#\[[^\]]*\]\s*)*fn\s+([a-z_][a-z0-9_]*)\s*\(", re.M)
+# A DECLARED RUNTIME GATE inside a test body: `runtime_gate!("cuda", ...)` or
+# `runtime_gate_some!("msvc", ...)`. A test that can decline to run at run time
+# (absent toolchain, absent device) declares it this way, because a bare
+# `eprintln!("SKIP"); return;` is invisible here — such a test reports `ok`
+# while asserting nothing, and the clause it backs is credited anyway.
+RE_RUNTIME_GATE = re.compile(r"runtime_gate(?:_some)?!\(\s*\"([a-z0-9_-]+)\"")
 
 # spec order: umbrella first (must define no clauses), then the nine sub-standards.
 SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
@@ -232,11 +238,19 @@ def discover_tests(conf_dir):
             for m in RE_RUST_TEST.finditer(src):
                 name = m.group(1)
                 brace = src.find("{", m.end() - 1)
-                scope = src[m.start():_body_span(src, brace)] if brace != -1 else m.group(0)
-                scope += "\n" + _leading_comment(src, m.start())
+                body = src[m.start():_body_span(src, brace)] if brace != -1 else m.group(0)
+                scope = body + "\n" + _leading_comment(src, m.start())
+                # Gate discovery reads the BODY ONLY. A declared gate is an executed
+                # statement; prose mentioning `runtime_gate!` — this file's own
+                # docs, or a comment explaining the convention — must not mark an
+                # ungated test as gated. Citations still scan the wider `scope`,
+                # because a citation legitimately lives in the doc comment.
+                rt = RE_RUNTIME_GATE.search(body)
                 found[name] = {
                     "file": rel,
-                    "gate": gated.get(name),
+                    # A compile-time `cfg` gate and a declared runtime gate are the
+                    # same fact for coverage purposes: this test may not have run.
+                    "gate": gated.get(name) or (f"runtime:{rt.group(1)}" if rt else None),
                     "clauses": set(cid_re.findall(scope)),
                 }
     return found
@@ -518,7 +532,18 @@ def main():
             by_citation[c] = backed[c]
         else:
             unbacked[c] = t
-    gated = {c: t for c, t in backed.items() if harness.get(t, {}).get("gate")}
+    # Every executable test backing a clause, by either direction — not just the one
+    # `backed` happened to pick. A clause is only honestly gate-free if at least one
+    # of its backing tests runs unconditionally.
+    def backing_tests(c):
+        ts = {t for t in (clause_test.get(c),) if t in harness}
+        return ts | {t for t in cited.get(c, ()) if t in harness}
+
+    # GATE-ONLY: every test backing this clause is cfg-gated or declares a runtime
+    # gate, so in a run where those gates are unsatisfied NOTHING verified it — yet
+    # the matrix still counts it backed. This is the honest qualifier on the number.
+    gated = {c: sorted(backing_tests(c))[0] for c in backed
+             if backing_tests(c) and all(harness[t].get("gate") for t in backing_tests(c))}
 
     # A citation naming a clause that does not exist is a dangling reference —
     # §3.3 burns retired IDs, so this catches a test pinned to a dead clause.
@@ -629,8 +654,21 @@ def main():
     print(f"          {len(by_citation):>4} via a test citing the clause (reverse)")
     print(f"      {len(unbacked)} clauses have NO executable test.")
     if gated:
-        print(f"      ({len(gated)} of the backed are feature-gated and do not "
-              f"run in the default build.)")
+        cfg_only = {c: t for c, t in gated.items()
+                    if not str(harness[t].get("gate", "")).startswith("runtime:")}
+        rt_only = {c: t for c, t in gated.items()
+                   if str(harness[t].get("gate", "")).startswith("runtime:")}
+        print(f"      {len(gated)} of the backed are GATE-ONLY — every test backing them "
+              f"is gated,")
+        print(f"          so in a run where the gate is unsatisfied nothing verified them:")
+        if cfg_only:
+            print(f"          {len(cfg_only):>4} cfg-feature gated (do not run in the default build)")
+        if rt_only:
+            by_gate = defaultdict(int)
+            for c, t in rt_only.items():
+                by_gate[harness[t]["gate"]] += 1
+            detail = ", ".join(f"{g.split(':', 1)[1]}={n}" for g, n in sorted(by_gate.items()))
+            print(f"          {len(rt_only):>4} runtime gated ({detail}) — declared via runtime_gate!")
     if orphans:
         print(f"      {len(orphans)} executable tests cite no clause — real work the "
               f"matrix cannot see.")
@@ -658,6 +696,16 @@ def main():
     print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
           f"{enforced}/{n_map} ({100.0*enforced/n_map:.1f}%). "
           f"Genuinely untested: {len(by_category.get('untested', []))}.")
+    if gated:
+        # The QUALIFIED figure. The headline above credits a clause whose only
+        # backing test may not have executed; this one does not. kiss_trace never
+        # runs the harness, so it cannot know whether a gate was satisfied in a
+        # given run — it can only decline to count what it cannot vouch for.
+        # Report both, and never let the unqualified number stand alone.
+        unq = enforced - len(gated)
+        print(f"  ENFORCED, EXCLUDING GATE-ONLY = {unq}/{n_map} "
+              f"({100.0*unq/n_map:.1f}%) — the figure that credits no clause whose "
+              f"backing may not have run.")
 
     if lint_label_unbacked:
         any_fail = True

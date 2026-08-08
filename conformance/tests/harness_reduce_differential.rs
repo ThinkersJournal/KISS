@@ -26,10 +26,7 @@ fn inputs() -> Vec<Vec<f32>> {
 
 #[test]
 fn test_conform_ops_decomposition_agreement() {
-    let Some(mean_a) = compile_and_load_reduce("mean_a") else {
-        eprintln!("SKIP: no MSVC toolchain — the C reduction slice needs cl.exe");
-        return;
-    };
+    let mean_a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load_reduce("mean_a"));
     let mean_b = compile_and_load_reduce("mean_b").unwrap();
     let mean_wrong = compile_and_load_reduce("mean_wrong").unwrap();
 
