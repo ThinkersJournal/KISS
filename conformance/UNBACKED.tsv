@@ -116,13 +116,11 @@ KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	untested
 KISS-CLASSIFY-8-0007	test_classify_dtype_layout_version_handle	lint:kiss_tables	the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008
 KISS-CONFORM-6.0-0003	test_conform_structural_artifacts_byte_exact	untested	
 KISS-CONFORM-6.1-0001	test_conform_traceability_matrix_exists	untested	
-KISS-CONFORM-6.1-0002	test_conform_every_clause_has_test	untested	
 KISS-CONFORM-6.1-0003	test_conform_every_test_cites_clause	untested	
-KISS-CONFORM-6.1-0004	test_conform_matrix_derived_from_sidecar	untested	
-KISS-CONFORM-6.1-0005	test_conform_coverage_normative_only	untested	
-KISS-CONFORM-6.1-0006	test_conform_pod_sidecar_generated	untested	
-KISS-CONFORM-6.1-0007	test_conform_sidecar_sole_authority	untested	
-KISS-CONFORM-6.1-0008	test_conform_declared_coverage_set	untested	
+KISS-CONFORM-6.1-0004	test_conform_matrix_derived_from_sidecar	blocked	#144 no clause sidecar exists; matrix is derived from prose + hand-authored section-9 tables
+KISS-CONFORM-6.1-0006	test_conform_pod_sidecar_generated	blocked	#144 no POD-tier sidecar generated from a canonical schema exists
+KISS-CONFORM-6.1-0007	test_conform_sidecar_sole_authority	blocked	#144 no machine-readable sidecar exists; prose is currently the clause source
+KISS-CONFORM-6.1-0008	test_conform_declared_coverage_set	blocked	#144 no suite declares a coverage set
 KISS-CONFORM-6.10-0001	test_conform_expressibility_oracle	untested	
 KISS-CONFORM-6.10-0002	test_conform_expressibility_split	untested	
 KISS-CONFORM-6.10-0003	test_conform_mislabeled_kernel_structural	untested	
@@ -156,10 +154,8 @@ KISS-CONFORM-6.13-0021	test_conform_contract_audited_status	untested
 KISS-CONFORM-6.13-0022	test_conform_contract_semantics_to_floor	untested	
 KISS-CONFORM-6.13-0023	test_conform_contract_malformed_decline	untested	
 KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	untested	
-KISS-CONFORM-6.2-0001	test_conform_build_fails_untested_must	untested	
-KISS-CONFORM-6.2-0002	test_conform_build_fails_dangling_cite	untested	
-KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	untested	
-KISS-CONFORM-6.2-0004	test_conform_build_fails_drift	untested	
+KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	blocked	#144 no retired/burned clause-ID registry exists to check a cite against
+KISS-CONFORM-6.2-0004	test_conform_build_fails_drift	blocked	#144 drift = prose<->sidecar token match; no sidecar exists to compare against
 KISS-CONFORM-6.2-0005	test_conform_gate_is_generate_time	untested	
 KISS-CONFORM-6.2-0006	test_conform_mapped_tests_pass_runtime	untested	
 KISS-CONFORM-6.3-0001	test_conform_matrix_composite_key	untested	
