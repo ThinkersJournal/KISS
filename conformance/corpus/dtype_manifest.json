@@ -2,8 +2,8 @@
   "schema": "kiss-dtype-manifest-v1",
   "generated_from": "spec/classify.md",
   "clause": "KISS-CLASSIFY-6.1-0001",
-  "structure_key_schema_version": 3,
-  "token_prefix": "sk3",
+  "structure_key_schema_version": 4,
+  "token_prefix": "sk4",
   "dtypes": [
     {
       "token": "f16",
@@ -30,13 +30,13 @@
       "reserved": false
     },
     {
-      "token": "s8",
+      "token": "i8",
       "kind": "int",
       "storage_bits": 8,
       "reserved": false
     },
     {
-      "token": "s16",
+      "token": "i16",
       "kind": "int",
       "storage_bits": 16,
       "reserved": false
@@ -84,31 +84,43 @@
       "reserved": false
     },
     {
-      "token": "e4m3fn",
+      "token": "f8e4m3fn",
       "kind": "float",
       "storage_bits": 8,
       "reserved": false
     },
     {
-      "token": "e4m3fnuz",
+      "token": "f8e4m3fnuz",
       "kind": "float",
       "storage_bits": 8,
       "reserved": true
     },
     {
-      "token": "e5m2",
+      "token": "f8e5m2",
       "kind": "float",
       "storage_bits": 8,
       "reserved": false
     },
     {
-      "token": "e5m2fnuz",
+      "token": "f8e5m2fnuz",
       "kind": "float",
       "storage_bits": 8,
       "reserved": true
     },
     {
-      "token": "s4",
+      "token": "f8e8m0",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "f8e6m2",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "i4",
       "kind": "int",
       "storage_bits": 4,
       "reserved": false
@@ -126,13 +138,13 @@
       "reserved": false
     },
     {
-      "token": "c32",
+      "token": "c64",
       "kind": "complex",
       "storage_bits": 64,
       "reserved": false
     },
     {
-      "token": "c64",
+      "token": "c128",
       "kind": "complex",
       "storage_bits": 128,
       "reserved": false
@@ -142,20 +154,22 @@
     "b1",
     "bf16",
     "bool",
-    "c32",
+    "c128",
     "c64",
-    "e4m3fn",
-    "e4m3fnuz",
-    "e5m2",
-    "e5m2fnuz",
     "f16",
     "f32",
     "f64",
+    "f8e4m3fn",
+    "f8e4m3fnuz",
+    "f8e5m2",
+    "f8e5m2fnuz",
+    "f8e6m2",
+    "f8e8m0",
+    "i16",
     "i32",
+    "i4",
     "i64",
-    "s16",
-    "s4",
-    "s8",
+    "i8",
     "u16",
     "u32",
     "u4",

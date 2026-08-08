@@ -111,8 +111,10 @@ def parse_table(region):
 
 def clause_tokens(text):
     """The dtype tokens in the §6.1-0001 parenthetical
-    ('...twenty-two tokens in the table above ( `f16`, `bf16`, ... )')."""
-    body = between(text, "twenty-two tokens in the table above (", ")")
+    ('...twenty-<N> tokens in the table above ( `f16`, `bf16`, ... )'). Version-agnostic:
+    anchors on 'tokens in the table above (' so the count word (twenty-two at sk3,
+    twenty-four at sk4) is not baked in."""
+    body = between(text, "tokens in the table above (", ")")
     return [t for span in re.findall(r"`([^`]*)`", body)
             if (t := span.strip()) and re.fullmatch(DTYPE_TOKEN, t)]
 
@@ -206,9 +208,10 @@ def check(spec_dir):
     diff("§2.6 readable catalog vs §6.1 normative table", s26, s61)
     diff("§6.1-0001 clause list vs §6.1 normative table", scl, s61)
 
-    # the clause pins the count at exactly twenty-two
-    if s61 and len(s61) != 22:
-        v.append(f"§6.1 table has {len(s61)} tokens, expected 22")
+    # §6.1-0001 pins the closed set; the three-way clause-vs-table-vs-catalog equality
+    # above is the guard. No hardcoded absolute count — it is version-specific (22 at
+    # sk3, 24 at sk4) and would need editing every schema bump, and the set-agreement is
+    # what actually enforces "exactly the N tokens listed".
 
     # kind and width must agree between the two tables, per shared token
     m26 = {d["token"]: d for d in t26}
@@ -273,7 +276,7 @@ def main():
             print(f"      - {x}")
         print("  RESULT: DRIFT FOUND")
         return 1
-    print("  §6.1 table, §2.6 catalog, and §6.1-0001 clause list agree (22 dtypes).")
+    print("  §6.1 table, §2.6 catalog, and §6.1-0001 clause list agree.")
     print("  RESULT: CLEAN")
     return 0
 
