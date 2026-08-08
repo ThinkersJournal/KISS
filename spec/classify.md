@@ -686,7 +686,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   coordinate set — weight/accumulator/output dtypes, the conditionally-present batch
   size-class, and the math-precision code `<mp>` (§6.7-0006); version `2` had superseded
   version `1` for the reduce field's non-additive split, §6.6-0009.) *Test:*
-  `test_classify_structure_key_version_is_3`.
+  `test_classify_structure_key_version_matches_codec`.
 - **KISS-CLASSIFY-6.4-0004** — The `structure_key` token maximum length MUST be
   `4096` bytes (`MAX_STRUCTURE_KEY_LEN = 4096`); a producer MUST NOT emit a token
   longer than 4096 bytes and a reader MUST reject a token whose length is `0` or
@@ -1175,7 +1175,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   event named but left open (an unbounded `MUST be bounded` is a permanent arm by
   default — the outcome the boundedness requirement exists to prevent). The arm's
   soundness **depends on** the exact version-prefix matching of §6.7-0002/§6.7-0015:
-  `c64` decodes as pair-`f32` under sk3 and pair-`f64` under sk4 (§6.1-0012), so a
+  `c64` decodes as pair-`f64` under sk3 and pair-`f32` under sk4 (§6.1-0012), so a
   reader that loosened the version match would silently decode a cross-vocabulary
   token under the wrong dtype semantics. The KISS **reference** codec ships **no**
   `sk3` arm; it therefore declines every non-`sk4` version, naming the cause per
@@ -1485,7 +1485,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0011 | `test_classify_axis_ordering_convention` |
 | KISS-CLASSIFY-6.4-0001 | `test_classify_max_rank_is_8` |
 | KISS-CLASSIFY-6.4-0002 | `test_classify_max_operands_is_8` |
-| KISS-CLASSIFY-6.4-0003 | `test_classify_structure_key_version_is_3` |
+| KISS-CLASSIFY-6.4-0003 | `test_classify_structure_key_version_matches_codec` |
 | KISS-CLASSIFY-6.4-0004 | `test_classify_structure_key_token_length_bound` |
 | KISS-CLASSIFY-6.5-0001 | `test_classify_layout_tag_enum` |
 | KISS-CLASSIFY-6.5-0002 | `test_classify_layout_tag_derivation` |

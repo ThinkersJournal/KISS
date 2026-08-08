@@ -295,7 +295,7 @@ mechanical rename.
   the version (the "re-derive" signpost), distinct from the malformed-field decline. Normalized to
   clause text as **KISS-CLASSIFY-6.7-0014** (retirement policy) and **KISS-CLASSIFY-6.7-0015** (the
   signpost-vs-wall decline split). The arm's soundness **depends on** exact version-prefix matching
-  (§6.7-0002/-0015): `c64` decodes as pair-`f32` under `sk3` and pair-`f64` under `sk4`, so a reader
+  (§6.7-0002/-0015): `c64` decodes as pair-`f64` under `sk3` and pair-`f32` under `sk4`, so a reader
   that loosened the version match would silently decode a cross-vocabulary token under the wrong
   dtype semantics.
 - **The one systemic hazard** is a consumer that detaches the sub-token from its prefix (§3.4) —

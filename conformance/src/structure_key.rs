@@ -522,8 +522,8 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     //
     // LOAD-BEARING — do NOT loosen this to a bare `parse::<u32>()` (§6.7-0015): the
     // version prefix carries dtype SEMANTICS, not just a format tag. `c64` decodes
-    // under the sk3 vocabulary as pair-of-`f32` (64-bit total) and under sk4 as
-    // pair-of-`f64` (128-bit) — the §6.1-0012 meaning-flip — so a token's prefix is
+    // under the sk3 vocabulary as pair-of-`f64` (128-bit total) and under sk4 as
+    // pair-of-`f32` (64-bit) — the §6.1-0012 meaning-flip — so a token's prefix is
     // the only thing that disambiguates which vocabulary its dtype tokens speak. A
     // reader that accepted a leading-zero `sk04` as 4 (what a bare `parse::<u32>()`
     // does) would also, one loosening later, accept a cross-vocabulary token under

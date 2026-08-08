@@ -83,7 +83,7 @@ COVERS += [
     ("KISS-CLASSIFY-6.5-0005",
      "the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width"),
     ("KISS-CLASSIFY-6.4-0003",
-     "the structure_key schema version drifts between §6.4-0003 (sk3) and SCHEMA_VERSION"),
+     "the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION"),
 ]
 
 

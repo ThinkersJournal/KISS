@@ -85,7 +85,7 @@ KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
-KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_3	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk3) and SCHEMA_VERSION
+KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!

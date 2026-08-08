@@ -125,7 +125,14 @@ def _region_61(text):
 
 
 def _region_26(text):
-    return between(text, "### 2.6 Readable catalog", "Twenty-two dtypes")
+    # Terminate on the NEXT section header (§2.7), not the count word: the count is
+    # version-specific ("Twenty-two" at sk3, "Twenty-four" at sk4), and baking it in
+    # made between() run to EOF once the word changed at sk4 — swallowing §6.1 and
+    # parsing the closed set TWICE, which a set comparison accepts as equal (the
+    # §2.6-omits-a-dtype drift then hides behind §6.1's copy). Version-agnostic, the
+    # way clause_tokens() already is. The row-count / duplicate guard in check() is the
+    # loud backstop for any future terminator break.
+    return between(text, "### 2.6 Readable catalog", "\n### 2.7")
 
 
 def schema_version(text):
@@ -208,6 +215,24 @@ def check(spec_dir):
     diff("§2.6 readable catalog vs §6.1 normative table", s26, s61)
     diff("§6.1-0001 clause list vs §6.1 normative table", scl, s61)
 
+    # ROW-COUNT / DUPLICATE guard (version-agnostic). A set comparison alone is
+    # vacuous against a doubled region: if _region_26 loses its terminator and runs to
+    # EOF it swallows §6.1, so §2.6 parses the closed set TWICE — 48 rows whose SET is
+    # still the 24 tokens, so the diff above passes while the §2.6-omits-a-dtype drift
+    # (the very drift this lint exists to catch) hides behind §6.1's copy. Guard the
+    # COUNT (the two tables must be equal length) and reject duplicate tokens in either
+    # table (the direct signature of a doubled region). No absolute count is baked in.
+    if t26 and t61 and len(t26) != len(t61):
+        v.append(f"§2.6 catalog has {len(t26)} rows but §6.1 table has {len(t61)} — "
+                 f"row-count mismatch (a broken §2.6 region terminator doubles it by "
+                 f"swallowing §6.1)")
+    for where, rows in (("§2.6 readable catalog", t26), ("§6.1 normative table", t61)):
+        toks = [d["token"] for d in rows]
+        dups = sorted({t for t in toks if toks.count(t) > 1})
+        if dups:
+            v.append(f"{where}: duplicate dtype rows {dups} (a doubled region or a "
+                     f"copy-paste — a set comparison cannot see this)")
+
     # §6.1-0001 pins the closed set; the three-way clause-vs-table-vs-catalog equality
     # above is the guard. No hardcoded absolute count — it is version-specific (22 at
     # sk3, 24 at sk4) and would need editing every schema bump, and the set-agreement is
@@ -232,7 +257,7 @@ def check(spec_dir):
 # no ledger coverage; the manifest is the new SSOT artifact, the deliverable.
 COVERS = [
     ("KISS-CLASSIFY-6.1-0001",
-     "the closed 22-dtype set / kind / width drifts between the §6.1 table, the §2.6 "
+     "the closed dtype set / kind / width drifts between the §6.1 table, the §2.6 "
      "readable catalog, and the §6.1-0001 clause list"),
 ]
 

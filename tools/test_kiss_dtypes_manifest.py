@@ -27,8 +27,10 @@ class DtypeManifestTest(unittest.TestCase):
         for t in ("i8", "i16", "i4", "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz",
                   "f8e8m0", "f8e6m2", "c64", "c128"):
             self.assertIn(t, toks)
-        # the pre-sk4 spellings are renamed away, not retained
-        for gone in ("s8", "s16", "s4", "e4m3fn", "e5m2", "c32"):
+        # the pre-sk4 spellings are renamed away, not retained — including the OLD
+        # reserved FP8 spellings (`e4m3fnuz`/`e5m2fnuz` → `f8e4m3fnuz`/`f8e5m2fnuz`),
+        # without which the assertion could not fail on a deprecated token surviving.
+        for gone in ("s8", "s16", "s4", "e4m3fn", "e4m3fnuz", "e5m2", "e5m2fnuz", "c32"):
             self.assertNotIn(gone, toks)
         by = {d["token"]: d for d in m["dtypes"]}
         # the AMD fnuz variants are reserved (recognized on parse, distinct from unknown)
