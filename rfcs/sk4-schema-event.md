@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft (2026-08-06).** Ratified inputs: the **#2 canonical dtype spelling scheme** is maintainer-ratified (Eric, 2026-08-06) and four-way-converged (Fuel/kiss-ref/Baracuda/Vulkane inputs folded, Unpopped cosigning); a **single coordinated schema event** is maintainer-authorized. **Six parties cosign. Four independently derive `structure_key` and byte-match** — KISS, Fuel, kiss-ref, and Unpopped's `unpopped-vocab`; **Baracuda's leg is the physical emit corpus** (its CUDA `.cu` + emitted contract, keyed by the `sk4` key), because `baracuda-kernels-types` re-exports `unpopped-vocab`'s derivation (`pub use unpopped_vocab::*`, no own `structure_key`) — a Baracuda↔Unpopped token match would be code-identity, not convergence (Baracuda's own catch, folded here). **Vulkane cosigns the §3.1/§3.2 vocabulary and clause D and derives no `structure_key`** (a vocabulary cosigner). All six sign before any regeneration. |
+| **Status** | **Accepted — maintainer-ratified (Eric, 2026-08-08).** Ratified inputs: the **#2 canonical dtype spelling scheme** is maintainer-ratified (Eric, 2026-08-06) and four-way-converged (Fuel/kiss-ref/Baracuda/Vulkane inputs folded, Unpopped cosigning); a **single coordinated schema event** is maintainer-authorized. **Six parties cosign. Four independently derive `structure_key` and byte-match** — KISS, Fuel, kiss-ref, and Unpopped's `unpopped-vocab`; **Baracuda's leg is the physical emit corpus** (its CUDA `.cu` + emitted contract, keyed by the `sk4` key), because `baracuda-kernels-types` re-exports `unpopped-vocab`'s derivation (`pub use unpopped_vocab::*`, no own `structure_key`) — a Baracuda↔Unpopped token match would be code-identity, not convergence (Baracuda's own catch, folded here). **Vulkane cosigns the §3.1/§3.2 vocabulary and clause D and derives no `structure_key`** (a vocabulary cosigner). All six cosigns are recorded and verified (§7); **maintainer-ratified (Eric, 2026-08-08)** — regeneration is unblocked: parties regenerate and byte-match per §6. |
 | **Date** | 2026-08-06 |
 | **Affects** | KISS-Classify (§6.1, §6.5, §6.6, §6.7), KISS-Ops (§6.17, §6.19 reduce OpAttrs), KISS-Contract (§6.8) |
 | **Filing** | umbrella §7.2, to the KISS-Classify / KISS-Ops / KISS-Contract editors-of-record |
@@ -346,10 +346,14 @@ separate pre-`sk4` `0.2.0` would be **two** breaking releases for downstream ins
 payoff of the annotation is forward: it lets a *future* additive bump (e.g. `sk5`'s MX-style codes)
 land without forcing another major.
 
+**Scope of the cut — token-deriving / schema-surface crates only** (maintainer-ratified, Eric 2026-08-08). The coordinated major binds the crates that carry the schema breaking change: those that derive `structure_key` tokens or hold the affected vocabulary (the `s8`→`i8` rename, the enum-hardening). A party's *downstream* crates whose breaking changes are unrelated to the schema — a generator or emitter that consumes the vocabulary but derives no tokens — are **not** gated on this cut and MAY release on their own schedule; gating them would add a break for their downstream with none of the one-coordinated-major benefit. (Where a party's several crates are all schema-surface — e.g. kiss-ref's three — they move together for *that* reason, not because co-ownership implies lockstep.)
+
 **Per-impl regen deltas differ; the byte-match target is uniform.** Illustratively: Fuel is already
 `i`-prefixed (no `s`→`i` change) but adds the FP8 `fn` suffix (it emits `f8e4m3` today); the
-`c32`/`c64` complex meaning-flip is a **no-op** for any impl without complex dtypes (kiss-ref =
-`NotApplicable`, Fuel = none), so those parties plan **no** codec work on the complex axis; `bf16`
+`c32`/`c64` complex meaning-flip is a **no-op** only for an impl without complex dtypes (Fuel =
+none), which plans **no** codec work on the complex axis; kiss-ref implemented the §6.18
+complex-arithmetic family after this RFC's initial draft (v0.2.4, op corpus 106→121), so the flip
+**applies** to kiss-ref at the coordinated regen — its complex-axis leg is real, not a no-op; `bf16`
 tokenization aligns to §3.1.3. Each party's delta is its own; only the emitted `sk4` tokens must
 agree.
 
@@ -372,10 +376,10 @@ derives no `structure_key`** — its obligation is `kiss-vulkan-vocab`'s dtype s
 supplies the final codec wording (§3.4) and the rename delta (`docs/dtype-spelling-delta.md`).
 
 Cosigns received (each verified against its own code, not the relay): **Unpopped, Fuel, kiss-ref**.
-**Vulkane** — yes on substance, the §7/§9-2/§10 cleanups folded. **Baracuda** — yes on substance
+**Vulkane** — yes on substance, the §7/§9-2/§10 cleanups folded; bf16 spelling confirmation discharged and verified against its own code (`kiss-vulkan-vocab/src/lib.rs:536` and `kiss-vulkan-vocab/src/lib.rs:554` round-trip under the Option C class model, no spelling change — §3.1.3's one open cosign-confirmation, now closed; scope: token *spelling*, not end-to-end device derivation — a separate, non-blocking Vulkane-side item where `component()` has no BF16 arm so `VK_COMPONENT_TYPE_BFLOAT16_KHR` → `Other(n)`, the token unchanged under Option C). **Baracuda** — yes on substance
 (verified against its own code), contributing the §6/§7 party-model refinement folded into this
 revision: Baracuda re-exports `unpopped-vocab`, so its leg is the physical emit corpus, not a fifth
-independent token derivation. All six cosigners aligned; the token byte-match is four-way.
+independent token derivation. All six cosigns are recorded and verified against each party's own code (Vulkane's via the bf16 spelling confirmation above; KISS as hub/steward); the token byte-match is four-way. **Event ratified 2026-08-08** (see Status).
 
 ## 8. Out of scope / separate workstreams
 
