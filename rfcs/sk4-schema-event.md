@@ -350,8 +350,10 @@ land without forcing another major.
 
 **Per-impl regen deltas differ; the byte-match target is uniform.** Illustratively: Fuel is already
 `i`-prefixed (no `s`→`i` change) but adds the FP8 `fn` suffix (it emits `f8e4m3` today); the
-`c32`/`c64` complex meaning-flip is a **no-op** for any impl without complex dtypes (kiss-ref =
-`NotApplicable`, Fuel = none), so those parties plan **no** codec work on the complex axis; `bf16`
+`c32`/`c64` complex meaning-flip is a **no-op** only for an impl without complex dtypes (Fuel =
+none), which plans **no** codec work on the complex axis; kiss-ref implemented the §6.18
+complex-arithmetic family after this RFC's initial draft (v0.2.4, op corpus 106→121), so the flip
+**applies** to kiss-ref at the coordinated regen — its complex-axis leg is real, not a no-op; `bf16`
 tokenization aligns to §3.1.3. Each party's delta is its own; only the emitted `sk4` tokens must
 agree.
 
