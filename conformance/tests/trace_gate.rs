@@ -41,7 +41,10 @@ fn repo_root() -> PathBuf {
 /// Build a fixture suite: `spec/` with `ops_body` written into `ops.md` (all
 /// other stems empty), and `conformance/` containing `harness` as Rust source.
 fn fixture(tag: &str, ops_body: &str, harness: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!("kiss_tracegate_{tag}"));
+    // Unique per process: two concurrent `cargo test` runs would otherwise share
+    // one fixture root and clobber each other mid-run.
+    let root = std::env::temp_dir()
+        .join(format!("kiss_tracegate_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let spec = root.join("spec");
     let conf = root.join("conformance");
@@ -94,15 +97,29 @@ fn clean_harness() -> &'static str {
     "#[test]\nfn test_ops_fixture_probe() { assert!(true); }\n"
 }
 
-// ---- the control: a well-formed suite MUST be accepted ----------------------
+// ---- the discrimination control ---------------------------------------------
 
-#[test]
-fn trace_gate_accepts_a_wellformed_suite() {
-    // Discrimination control. Without it, every negative assertion below is
-    // satisfiable by a gate that rejects unconditionally.
-    let root = fixture("clean", &clean_spec(), clean_harness());
+/// Assert the gate ACCEPTS a well-formed suite. A helper, deliberately not a
+/// `#[test]`.
+///
+/// It is not evidence for any clause — it is what makes the negative assertions
+/// mean anything, since a gate that rejects unconditionally satisfies every one
+/// of them. Standing alone as a test it would cite no clause and count as an
+/// orphan; citing one would credit coverage to a test whose entire content is
+/// "a valid suite passes", which is the tautology refused for §6.1-0001.
+///
+/// Each clause-bound test calls this FIRST, so every negative assertion is paired
+/// with its positive control in the same test — stronger than a standalone
+/// control, because the pairing cannot drift apart.
+fn assert_gate_accepts_a_wellformed_suite(tag: &str) {
+    let root = fixture(tag, &clean_spec(), clean_harness());
     let (ok, out) = run_gate(&root);
-    assert!(ok, "the gate MUST accept a well-formed suite; it rejected:\n{out}");
+    assert!(
+        ok,
+        "control: the gate MUST accept a well-formed suite, otherwise the negative \
+         assertion in this test proves nothing — a gate that rejects everything \
+         satisfies it trivially. The gate rejected:\n{out}"
+    );
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -114,6 +131,7 @@ fn trace_gate_accepts_a_wellformed_suite() {
 /// a one-directional gate reports the suite clean.
 #[test]
 fn test_conform_build_fails_dangling_cite() {
+    assert_gate_accepts_a_wellformed_suite("ctl_dangling");
     let harness = format!(
         "// this fixture test cites {}, which is defined nowhere\n#[test]\nfn \
          test_ops_fixture_probe() {{ assert!(true); }}\n",
@@ -142,6 +160,7 @@ fn test_conform_build_fails_dangling_cite() {
 /// well-formed and its named test simply does not exist in the harness.
 #[test]
 fn test_conform_build_fails_untested_must() {
+    assert_gate_accepts_a_wellformed_suite("ctl_untested");
     // The harness contains a test, but NOT the one the clause names.
     let harness = "#[test]\nfn test_ops_something_else() { assert!(true); }\n";
     let root = fixture("untested", &clean_spec(), harness);
@@ -164,6 +183,7 @@ fn test_conform_build_fails_untested_must() {
 /// so a gate harvesting only the matrix never sees it.
 #[test]
 fn test_conform_every_clause_has_test() {
+    assert_gate_accepts_a_wellformed_suite("ctl_totality");
     let mut spec = String::new();
     spec.push_str("## 6.0 Fixture\n\n");
     spec.push_str(&format!("- **{}** — A fixture clause. An implementation MUST do ", fid("0042")));
@@ -200,7 +220,8 @@ fn test_conform_every_clause_has_test() {
 /// build-gating and inflate the denominator with a non-normative row.
 #[test]
 fn test_conform_coverage_normative_only() {
-    let defs = clause_definitions(&repo_root().join("spec"));
+    let defs = clause_definitions(&repo_root().join("spec"))
+        .expect("the clause scan MUST complete; an unreadable spec file is an \n                error, not a silently smaller scan");
     assert!(
         !defs.is_empty(),
         "KISS-CONFORM-6.1-0005: the clause scan found nothing — an empty scan \
@@ -225,12 +246,20 @@ fn test_conform_coverage_normative_only() {
 
 /// Scan clause definitions: `- **<ID>** — <body>`, up to the next definition or
 /// heading. Stdlib only, per the harness's no-dependency rule.
-fn clause_definitions(spec_dir: &Path) -> Vec<(String, String)> {
+///
+/// An unreadable stem is an ERROR, never a skip. A `continue` here would produce a
+/// truncated scan indistinguishable from a complete one, and the caller asserts on
+/// what the scan FOUND — so a spec file that could not be read would silently
+/// remove its clauses from examination and the assertion would pass over them.
+/// That is exactly the degradation §6.5-0016 forbids, and it is the fourth
+/// instance of this idiom in this repository; see #142.
+fn clause_definitions(spec_dir: &Path) -> std::io::Result<Vec<(String, String)>> {
     let mut out = Vec::new();
     for s in STEMS {
-        let Ok(text) = std::fs::read_to_string(spec_dir.join(format!("{s}.md"))) else {
-            continue;
-        };
+        let p = spec_dir.join(format!("{s}.md"));
+        let text = std::fs::read_to_string(&p).map_err(|e| {
+            std::io::Error::new(e.kind(), format!("read_to_string({}): {e}", p.display()))
+        })?;
         let lines: Vec<&str> = text.lines().collect();
         let mut i = 0;
         while i < lines.len() {
@@ -264,7 +293,7 @@ fn clause_definitions(spec_dir: &Path) -> Vec<(String, String)> {
             i = j;
         }
     }
-    out
+    Ok(out)
 }
 
 /// Does `cid` match the clause-ID grammar `KISS-<SUB>-<sec>-<nnnn>[a]`?
