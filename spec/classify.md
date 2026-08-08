@@ -805,7 +805,7 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   and never diverged from the exact-modulo gate there.)
   An operand with `alignment = 0` (unspecified base-pointer
   alignment) cannot honor a packed load and MUST derive `v1`. A sub-byte dtype
-  (`s4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. An
+  (`i4`, `u4`, `b1`), whose storage is under one byte, MUST derive `v1`. An
   innermost active axis of extent `E = 0` MUST derive `v1`: the divisibility test
   is **vacuously** satisfied at `E = 0` (every `L` divides `0`), which would
   otherwise elect the largest `L` the byte cap and alignment allow — but a
@@ -1211,7 +1211,7 @@ separating a registered namespace from that namespace's capability-set token.
   > The rule is therefore not "never juxtapose" — it is that juxtaposition
   > requires an alphabet that cannot stop being decodable. §6.1's own dtype
   > tokens are the cautionary case: they are uniquely decodable today but not
-  > prefix-free (`e4m3fn` prefixes `e4m3fnuz`; `e5m2` prefixes `e5m2fnuz`), so
+  > prefix-free (`f8e4m3fn` prefixes `f8e4m3fnuz`; `f8e5m2` prefixes `f8e5m2fnuz`), so
   > the property holds by a margin no reviewer is checking. That is what the
   > §6.1 decodability lint exists to hold.
 - **KISS-CLASSIFY-6.8-0007** — Where a namespace's capability-set replaces a
@@ -1381,7 +1381,7 @@ reference-crate *semver*. They move independently. A third, Classify-local handl
 > role (`index_operand` + `index_dtype`) is carried by KISS-Ops on the
 > gather/scatter operand. Non-primary operand dtypes still do **not** enter the
 > admissibility key at this schema version (§6.6-0015 keys only the primary dtype).
-> **(8.3 — CONFIRMED)** The sub-byte/packed packing conventions (`s4`/`u4` nibble
+> **(8.3 — CONFIRMED)** The sub-byte/packed packing conventions (`i4`/`u4` nibble
 > order, `b1` LSB-first) are owned **here** in Classify as byte layout
 > (§6.1-0008/0009); KISS-Ops references them for popcount/MMA semantics. **(8.4)**
 > Whether the `target_capability` namespace axis is keyed on ecosystem/compilation
@@ -1707,8 +1707,8 @@ separator (`cuda:sm|89`). Each yields a typed decline, never a panic (§6.7-0009
 **A.3 Golden dtype table vector.** The twenty-two-row dtype table of §6.1 (token,
 kind, bit width, packing) is itself a golden vector: per the §8-0005 freeze gate a
 foreign reader reproduces every token spelling, bit width, and numeric kind
-byte-for-byte, and reproduces the `s4`/`u4` nibble order, the `b1` LSB-first bit
-order, and the `c32`/`c64` interleaved (re,im) layout with the real component in the
+byte-for-byte, and reproduces the `i4`/`u4` nibble order, the `b1` LSB-first bit
+order, and the `c64`/`c128` interleaved (re,im) layout with the real component in the
 lower-addressed half.
 
 **A.4 Provenance / acknowledgments.** The dtype set, operand descriptor, and
