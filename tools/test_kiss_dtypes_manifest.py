@@ -14,6 +14,12 @@ class DtypeManifestTest(unittest.TestCase):
     def test_emit_manifest_has_all_22_dtypes_with_metadata(self):
         m = json.loads(_emit())
         self.assertEqual(m["schema"], "kiss-dtype-manifest-v1")
+        # clause D (§3.4): the manifest is a persisted, indexed list of dtype sub-tokens,
+        # so it MUST carry the structure_key schema version it belongs to (sourced from
+        # KISS-CLASSIFY-6.4-0003). c64 changes meaning at sk4, so a version-less list
+        # would be silently ambiguous once vendored.
+        self.assertEqual(m["structure_key_schema_version"], 3)
+        self.assertEqual(m["token_prefix"], "sk3")
         toks = set(m["all_dtypes"])
         # exactly the twenty-two §6.1-0001 tokens, including the five most commonly
         # dropped by hand-transcription (a token-deriving party shipped 17/22 without
