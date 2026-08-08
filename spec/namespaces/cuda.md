@@ -33,16 +33,18 @@ range.
 ## 2. Grammar
 
 ```text
-cuda:sm<NN>[<letter>]
+cuda:sm<N>[<letter>]
 ```
 
 - **C-1** The token is exactly the namespace `cuda`, a single `:`, and one
   capability-set field. There are **no `.`-separated fields** (unlike the `vulkan:`
   grammar) — see §4.
 - **C-2** The capability-set is `sm` followed by the CUDA **compute-capability
-  integer** `<NN>` (decimal, no leading zeros: `80`, `89`, `90`, `100`), optionally
-  followed by a **single lowercase ASCII letter** `<letter>` denoting an
-  architecture-specific / accelerated target (e.g. the `a` in `sm90a`).
+  integer** `<N>` — the full decimal value, **two or more digits**, no leading zeros
+  (`80`, `89`, `90`, `100`) — optionally followed by a **single lowercase ASCII
+  letter** `<letter>` denoting an architecture-specific / accelerated target (e.g.
+  the `a` in `sm90a`, or the `100a` in `sm100a`). `<N>` is not fixed-width: three-
+  digit capabilities such as `sm100` are admitted.
 - **C-3** Every character is lowercase ASCII drawn from `[a-z0-9]` plus the one `:`
   separator. A token MUST NOT contain the `structure_key` field separators `|`,
   `;`, `/`, any whitespace, or any control byte (§6.8-0005). Matching is byte-exact
@@ -77,7 +79,7 @@ field (`cuda:sm90a`) and is therefore a different cell.
 
 ## 4. The capability-set is a single scalar
 
-A `cuda:` capability-set is a **single atomic scalar** — one `sm<NN>[<letter>]`
+A `cuda:` capability-set is a **single atomic scalar** — one `sm<N>[<letter>]`
 token. It is **not** a `.`-separated multi-field grammar (as `vulkan:` is), and it
 carries **no concatenated member list and no range**. Two consequences follow
 directly:
@@ -96,7 +98,7 @@ backed by a test rather than left to prose (`unpopped-vocab`'s
 
 This vocabulary versions **independently** of `STRUCTURE_KEY_VERSION` and of the
 `unpopped-vocab` crate's semver (§8 of `classify.md`). Adding a new SKU that §2's
-grammar already admits (a new `sm<NN>[<letter>]` spelling) is **additive** and does
+grammar already admits (a new `sm<N>[<letter>]` spelling) is **additive** and does
 not bump the vocabulary version — an existing token's bytes are unchanged. Changing
 the grammar itself (the token shape, the charset) is **byte-altering** and bumps
 the vocabulary version.
