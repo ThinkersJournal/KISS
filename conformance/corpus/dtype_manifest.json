@@ -1,0 +1,170 @@
+{
+  "schema": "kiss-dtype-manifest-v1",
+  "generated_from": "spec/classify.md",
+  "clause": "KISS-CLASSIFY-6.1-0001",
+  "dtypes": [
+    {
+      "token": "f16",
+      "kind": "float",
+      "storage_bits": 16,
+      "reserved": false
+    },
+    {
+      "token": "bf16",
+      "kind": "float",
+      "storage_bits": 16,
+      "reserved": false
+    },
+    {
+      "token": "f32",
+      "kind": "float",
+      "storage_bits": 32,
+      "reserved": false
+    },
+    {
+      "token": "f64",
+      "kind": "float",
+      "storage_bits": 64,
+      "reserved": false
+    },
+    {
+      "token": "s8",
+      "kind": "int",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "s16",
+      "kind": "int",
+      "storage_bits": 16,
+      "reserved": false
+    },
+    {
+      "token": "u8",
+      "kind": "uint",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "u16",
+      "kind": "uint",
+      "storage_bits": 16,
+      "reserved": false
+    },
+    {
+      "token": "i32",
+      "kind": "int",
+      "storage_bits": 32,
+      "reserved": false
+    },
+    {
+      "token": "i64",
+      "kind": "int",
+      "storage_bits": 64,
+      "reserved": false
+    },
+    {
+      "token": "u32",
+      "kind": "uint",
+      "storage_bits": 32,
+      "reserved": false
+    },
+    {
+      "token": "u64",
+      "kind": "uint",
+      "storage_bits": 64,
+      "reserved": false
+    },
+    {
+      "token": "bool",
+      "kind": "bool",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "e4m3fn",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "e4m3fnuz",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": true
+    },
+    {
+      "token": "e5m2",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "e5m2fnuz",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": true
+    },
+    {
+      "token": "s4",
+      "kind": "int",
+      "storage_bits": 4,
+      "reserved": false
+    },
+    {
+      "token": "u4",
+      "kind": "uint",
+      "storage_bits": 4,
+      "reserved": false
+    },
+    {
+      "token": "b1",
+      "kind": "uint",
+      "storage_bits": 1,
+      "reserved": false
+    },
+    {
+      "token": "c32",
+      "kind": "complex",
+      "storage_bits": 64,
+      "reserved": false
+    },
+    {
+      "token": "c64",
+      "kind": "complex",
+      "storage_bits": 128,
+      "reserved": false
+    }
+  ],
+  "all_dtypes": [
+    "b1",
+    "bf16",
+    "bool",
+    "c32",
+    "c64",
+    "e4m3fn",
+    "e4m3fnuz",
+    "e5m2",
+    "e5m2fnuz",
+    "f16",
+    "f32",
+    "f64",
+    "i32",
+    "i64",
+    "s16",
+    "s4",
+    "s8",
+    "u16",
+    "u32",
+    "u4",
+    "u64",
+    "u8"
+  ],
+  "kinds": [
+    "bool",
+    "complex",
+    "float",
+    "int",
+    "uint"
+  ]
+}
