@@ -1049,8 +1049,10 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
 - **KISS-CLASSIFY-6.7-0002** — Field 0 MUST be `sk` immediately followed by the
   canonical decimal schema version (`sk4` at this maturity); a reader MUST reject a
   token whose field 0 is not `sk` followed by a supported version, including a
-  non-canonical leading-zero spelling (e.g. `sk03`). *Test:*
-  `test_classify_token_version_prefix`.
+  non-canonical leading-zero spelling (e.g. `sk04`) — the malformed-field wall. The
+  canonical-form check MUST precede any numeric parse (a bare `parse::<u32>()` accepts
+  `sk04` as `4`); the recognized-but-unaccepted-version case is the distinct
+  §6.7-0015 signpost. *Test:* `test_classify_token_version_prefix`.
 - **KISS-CLASSIFY-6.7-0003** — Fields 1–6 MUST be, in order, the op-family code
   (§6.5-0006), the dtype token (§6.1), the target_capability string (§6.8), the
   index-width code (`ix32`/`ix64`, §6.5-0005 — distinct from the `i32`/`i64` dtype
@@ -1158,6 +1160,41 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   regen diff is exactly the cells whose accumulator/precision actually deviates. The rule is
   assented byte-for-byte by the four token-deriving parties (KISS, Fuel, kiss-ref,
   `unpopped-vocab`). *Test:* `test_classify_noncontraction_acc_mp_field`.
+- **KISS-CLASSIFY-6.7-0014** — **Old-version decoder-arm retention is bounded, not
+  indefinite.** An implementation **MAY** retain a bounded `sk3` decoder arm through
+  the `sk4` series — decoding a persisted `sk3`-prefixed token under the sk3
+  vocabulary — but it **MUST NOT** accept an `sk3`-prefixed token at `sk5` or later:
+  the arm's retirement is **scheduled** to the `sk5` event, an event every party
+  already tracks, not merely permitted at some unfixed future point. A consumer
+  **MUST NOT** rely on cross-implementation `sk3` acceptance — because the arm is a
+  MAY, whether any given build decodes a persisted `sk3` token is
+  implementation-dependent, so a persisted `sk3` token **MUST** be re-derived, not
+  assumed decodable. This clause fixes the migration-window policy the sk4 schema
+  event named but left open (an unbounded `MUST be bounded` is a permanent arm by
+  default — the outcome the boundedness requirement exists to prevent). The arm's
+  soundness **depends on** the exact version-prefix matching of §6.7-0002/§6.7-0015:
+  `c64` decodes as pair-`f32` under sk3 and pair-`f64` under sk4 (§6.1-0012), so a
+  reader that loosened the version match would silently decode a cross-vocabulary
+  token under the wrong dtype semantics. The KISS **reference** codec ships **no**
+  `sk3` arm; it therefore declines every non-`sk4` version, naming the cause per
+  §6.7-0015. *Test:* `test_classify_no_sk3_decoder_arm`.
+- **KISS-CLASSIFY-6.7-0015** — **A well-formed token at an unaccepted schema version
+  is a distinct, recognized decline — not a malformed-token decline.** On the
+  §6.1-0001 recognized-vs-unknown model (a reserved dtype is *recognized but not
+  usable here*, distinct from an *unknown* token), a reader MUST distinguish two
+  version-field verdicts: (a) a **canonical** decimal version (`0` or `[1-9][0-9]*`)
+  that is not one this build accepts is a **recognized token from another schema** —
+  it MUST decline with a typed *unsupported-schema-version* verdict that **names the
+  version**, the "re-derive" signpost; (b) a **malformed** version field — no `sk`
+  prefix, a non-numeric remainder, or a **non-canonical leading-zero** spelling
+  (`sk04`) — MUST decline with the distinct *bad-version-prefix* verdict, the "not a
+  token" wall. The canonical-form check (the leading-zero guard of §6.7-0002) MUST
+  run **before** any numeric parse: a bare `parse::<u32>()` would accept `sk04` as
+  `4` and, one loosening later, a cross-vocabulary token under the wrong dtype
+  meaning (§6.1-0012, §6.7-0014). This split is what makes the §6.7-0014 MAY-arm safe
+  in both directions — whichever an implementation chooses, a consumer that hits a
+  persisted older-schema token gets a diagnosable answer rather than an opaque
+  refusal. *Test:* `test_classify_unsupported_schema_version`.
 
 ### 6.8 The target-capability descriptor
 
@@ -1430,6 +1467,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.1-0010 | `test_classify_e4m3_format` |
 | KISS-CLASSIFY-6.1-0011 | `test_classify_e5m2_format` |
 | KISS-CLASSIFY-6.1-0012 | `test_classify_complex_interleaved_layout` |
+| KISS-CLASSIFY-6.1-0013 | `test_classify_mx_scale_format` |
 | KISS-CLASSIFY-6.2-0001 | `test_classify_numeric_kind_set_closed` |
 | KISS-CLASSIFY-6.2-0002 | `test_classify_float_special_values_pinned` |
 | KISS-CLASSIFY-6.3-0001 | `test_classify_operand_rank_bounds` |
@@ -1490,6 +1528,9 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.7-0010 | `test_classify_mask_hex_lowercase` |
 | KISS-CLASSIFY-6.7-0011 | `test_classify_token_is_only_wire_form` |
 | KISS-CLASSIFY-6.7-0012 | `test_classify_reduction_accumulator_coordinate` |
+| KISS-CLASSIFY-6.7-0013 | `test_classify_noncontraction_acc_mp_field` |
+| KISS-CLASSIFY-6.7-0014 | `test_classify_no_sk3_decoder_arm` |
+| KISS-CLASSIFY-6.7-0015 | `test_classify_unsupported_schema_version` |
 | KISS-CLASSIFY-6.8-0001 | `test_classify_target_token_grammar` |
 | KISS-CLASSIFY-6.8-0002 | `test_classify_target_byte_exact_match` |
 | KISS-CLASSIFY-6.8-0003 | `test_classify_target_namespace_registered` |
@@ -1579,31 +1620,31 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   `([128,256]; [0,1]; f32; 256)` (stride 0 on axis 0), all else unchanged. Operand 1
   becomes layout `broadcast` (`br`), broadcast mask bit 0 set (`01`), scalar width
   (`v1`, §6.5-0009(a)); its inner extent 256 still buckets `d16`:
-  `sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
+  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
 - **Unary elementwise** — `op_family = une`; two operands (`in`, `out`), each
   `([64,128]; [128,1]; f16; 256)`; no role hints. `v8` (`8·2 = 16 ≤ 16` byte cap,
   `16 ≤ A = 256`, 8 divides inner 128); inner 128 buckets `d16`. Max offset
   `128·63 + 1·127 = 8191 < 2³¹` ⇒ `ix32`; `64·128 = 8192 > 1024` ⇒ `grid`; rank 2:
-  `sk3|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
+  `sk4|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
 - **Reduction, keepdim, `[4,8] → [4,1]`** (trailing-axis reduce ⇒ reserved `rlast`,
   not a bitmask) — `op_family = red`, caller op category `reduction`; two operands,
   `in = ([4,8]; [8,1]; f32; 256)` and `out = ([4,1]; [1,1]; f32; 256)`. The input's
   innermost axis (extent 8) is reduced ⇒ `v1` (§6.5-0009(b)) while its own inner
   extent 8 still buckets `d8`; the output's size-1 inner axis buckets `da`. Max offset
   `31 < 2³¹` ⇒ `ix32`; frame `4·8 = 32 ≤ 32` ⇒ `warp`; rank 2:
-  `sk3|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
+  `sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
 - **Reduction, keepdim, `[4,8] → [1,1]`** (all-axes reduce ⇒ reserved `rall`) — same
   inputs as above but `out = ([1,1]; [1,1]; f32; 256)` and **every** axis reduced.
   Operand-0 (the input) keeps its own inner extent 8 ⇒ bucket `d8` (reduction changes
   only vector width, §6.5-0009, never the divisibility bucket); the `[1,1]` output
   buckets `da`:
-  `sk3|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
 - **Rank-1 reduction, keepdim, `[8] → [1]`** (the single axis is simultaneously
   all-axes and the trailing axis; by the §6.6-0009 tiebreak `rall` takes precedence) —
   `op_family = red`; `in = ([8]; [1]; f32; 256)`, `out = ([1]; [1]; f32; 256)`. Inner
   extent 8 ⇒ `d8`; reduced innermost ⇒ `v1`; frame `8 ≤ 32` ⇒ `warp`; rank 1;
   reduce field `rall` (never `rlast`):
-  `sk3|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
 - **Reduction, keepdim, rank-4 reducing axes 1 and 3** (neither all-axes nor
   trailing ⇒ explicit keepdim bitmask `0x0a`, exercising a two-digit lowercase hex ≥
   `0x0a`) — `op_family = red`; `in = ([2,4,3,5]; [60,15,5,1]; f32; 256)`,
@@ -1611,29 +1652,40 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   `da` and is reduced ⇒ `v1`. Max offset `60·1 + 15·3 + 5·2 + 1·4 = 119 < 2³¹` ⇒
   `ix32`; frame `2·4·3·5 = 120` (`32 < 120 ≤ 1024`) ⇒ `block`; rank 4; reduce mask
   `x0a` (bits 1 and 3):
-  `sk3|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
+  `sk4|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
+- **Reduction with a deviating accumulator (sk4, §6.7-0013)** — a trailing-axis `f16`
+  reduction `[4,8] → [4,1]` that accumulates in `f32`. `op_family = red`, dtype `f16`;
+  `in = ([4,8]; [8,1]; f16; 256)`, `out = ([4,1]; [1,1]; f16; 256)`. Innermost axis
+  reduced ⇒ `v1`; input inner extent 8 ⇒ `d8`, output inner extent 1 ⇒ `da`; frame
+  `4·8 = 32` ⇒ `warp`; rank 2; reduce `rlast`. The accumulator dtype (`f32`) **differs**
+  from the compute dtype (`f16`), so the optional-trailing non-contraction precision
+  field is emitted — `<acc>/<mp>` = `f32/st` (mp at its `st` default, but rule (b)
+  spells both slots). The same cell accumulating in `f16` (accumulator == compute) omits
+  the field entirely (rule c), yielding the nine-field token without the trailing
+  `|f32/st`; a redundant `|f16/st` on that cell is rejected (rule d):
+  `sk4|red|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st`
 - **In-place binary accumulate** (`op_family = bin`) — an operand that is both read
   and written appears **exactly once**, classified as an input (§6.6-0014). The
   accumulator `acc = ([128,256]; [256,1]; f32; 256)` (in-place) and addend
   `b = ([128,256]; [256,1]; f32; 256)` yield two operands (`acc` is **not** repeated
   as an output), `n_operands = 2`, operand-0 = `acc`:
-  `sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
+  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
 - **Dense GEMM skinny-decode cell** `[8,4096]·[4096,4096]→[8,4096]` — `op_family =
   gem`; three operands `lhs = ([8,4096]; [4096,1]; f32; 256)`,
   `rhs = ([4096,4096]; [4096,1]; f32; 256)`, `out = ([8,4096]; [4096,1]; f32; 256)`;
   role hints `lhs = [M,K]`, `rhs = [K,N]`, `out = [M,N]` (§6.6-0016). M = 8 (tiny
   `t`), N = K = 4096 (large `l`), K divisible by 16 (`d16`). This f32 GEMM is
-  non-batched with f32 weight/accumulator/output and bit-stable compute, so the sk3
+  non-batched with f32 weight/accumulator/output and bit-stable compute, so the sk4
   precision group is `/f32/f32/f32/st` and the contraction field is
   `ctll/d16/f32/f32/f32/st`. Max offset (rhs) `4096·4095 + 1·4095 = 16777215 < 2³¹` ⇒
   `ix32`; work-class **frame-max** (§6.5-0010, the §6.6-0013 per-axis maximum across
   operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
   = 16777216 > 1024` ⇒ `grid`; rank 2:
-  `sk3|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 - **The same GEMM cell built for a Vulkan target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
   `target = vulkan:sg64.ops-abr.arith-f16.cm-none`:
-  `sk3|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 
   > This is the re-mint anticipated when the vector was moved off
   > `vulkan:spirv1.6`: it now carries a **registered** namespace with a published
@@ -1655,12 +1707,12 @@ because only one class is a shared obligation:
 > **(a) `vulkan` GEMM cell, wave64-capable device — capability-specific.** The
 > same GEMM inputs as A.1, targeted at a device whose default subgroup width is
 > 64:
-> `sk3|gem|f32|vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk4|gem|f32|vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > **(b) The same cell on a wave32-only device — capability-specific.** Differs
 > from (a) in exactly one field of the capability-set, and is therefore a
 > different cell:
-> `sk3|gem|f32|vulkan:sg32.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk4|gem|f32|vulkan:sg32.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > (a) and (b) together are the point: they are two devices *and* two cells, and
 > no single encoding-envelope token could separate them. A measured consumer
@@ -1678,7 +1730,7 @@ because only one class is a shared obligation:
 >
 > **(d) Width-agnostic cell — capability-specific.** A kernel that reads the
 > subgroup width at runtime is a distinct artifact from either pinned variant:
-> `sk3|gem|f32|vulkan:sgdyn.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk4|gem|f32|vulkan:sgdyn.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > **(e) Minimal `vulkan` cell — codec-neutral.** Every field at its empty
 > spelling, exercising the "no omissible fields" rule:
@@ -1686,25 +1738,33 @@ because only one class is a shared obligation:
 
 **A.2 Adversarial / negative vectors.** The negative battery for the §6.7 / §6.8
 reject tests and the foreign-reader freeze gate includes: a token with 8 fields
-(too few) and one with 11 (too many); a token whose field 0 is `sk9` (unsupported
-version) or the non-canonical leading-zero `sk03` — `sk3` is the current supported
+(too few) and one with 11 (too many); a token whose field 0 is a well-formed but
+unaccepted schema version — `sk9`, or a real persisted `sk3` — which is the
+**recognized-other-schema signpost** (`UnsupportedSchemaVersion`, naming the version,
+§6.7-0015), *distinct* from the non-canonical leading-zero `sk04`, which is the
+**malformed-field wall** (`BadVersionPrefix`); `sk4` is the current supported
 version; an unknown dtype code
-(`sk3|bin|f99|cuda:sm89|…`); an unknown op-family code (`sk3|zzz|f32|…`); an
+(`sk4|bin|f99|cuda:sm89|…`); an unknown op-family code (`sk4|zzz|f32|…`); an
 over-`MAX_OPERANDS` operand field (9 sub-keys); a token exceeding
 `MAX_STRUCTURE_KEY_LEN` (4096 bytes); an uppercase-hex mask (`…|x0A`, forbidden by
 §6.7-0010); an unrecognized reduce-field spelling (`…|rmid`, `…|x` with no digits,
 or an all-axes set spelled as a bitmask instead of the required `rall`, forbidden by
 §6.6-0009 / §6.7-0005); a rank-1 reduction spelled `rlast` instead of the required
 `rall` (the tiebreak of §6.6-0009); a non-`red` cell carrying a non-`-` reduce field
-(forbidden by §6.6-0017); a non-`gem` cell carrying the contraction field, or a `gem`
-cell omitting it (forbidden by §6.6-0010); a collapsed (rank-reduced) reduction cell
+(forbidden by §6.6-0017); a `gem` cell omitting its mandatory contraction field
+(forbidden by §6.6-0010) — under sk4 a **non**-`gem` cell's optional-trailing field is
+the `(acc+mp)` field (§6.7-0013), so a contraction-shaped payload there is simply a
+malformed `(acc+mp)` field, not a mis-placed contraction; a non-contraction `(acc+mp)`
+field spelled in the forbidden **all-default** form (accumulator == compute dtype AND
+`<mp>` default — redundant, §6.7-0013(d)) or malformed (not two `/`-parts, a bad
+`<mp>`, or an out-of-set / reserved accumulator dtype); a collapsed (rank-reduced) reduction cell
 (forbidden by §6.6-0009); and a `target_capability` with no colon (`cudasm89`), with
 two colons
 (`cuda:sm:89`), with an empty namespace (`:sm89`), and with an embedded field
 separator (`cuda:sm|89`). Each yields a typed decline, never a panic (§6.7-0009,
 §6.8-0001, §7.1-0002).
 
-**A.3 Golden dtype table vector.** The twenty-two-row dtype table of §6.1 (token,
+**A.3 Golden dtype table vector.** The twenty-four-row dtype table of §6.1 (token,
 kind, bit width, packing) is itself a golden vector: per the §8-0005 freeze gate a
 foreign reader reproduces every token spelling, bit width, and numeric kind
 byte-for-byte, and reproduces the `i4`/`u4` nibble order, the `b1` LSB-first bit

@@ -300,7 +300,7 @@ fn sk4_contraction_precision_group_declines() {
 /// the default-valued mp slot. This is the non-contraction analogue of the gem
 /// `<acc>`, realizing the §6.7-0012 forward requirement on the wire.
 #[test]
-fn sk4_noncontraction_acc_mp_deviating_accumulator() {
+fn test_classify_noncontraction_acc_mp_field() {
     let k = key_acc_mp(
         "red", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing,
         Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::Stable }),
@@ -501,21 +501,43 @@ fn reject_bad_version_prefix() {
     assert_eq!(from_token(&t2), Err(KeyDecline::BadVersionPrefix));
 }
 
+/// KISS-CLASSIFY-6.7-0015: the version-field decline splits, on the §6.1-0001
+/// recognized-vs-unknown model, into a SIGNPOST and a WALL. A well-formed CANONICAL
+/// version that isn't this build's is UnsupportedSchemaVersion{got} — a recognized
+/// token from another schema, so a consumer re-derives rather than treating it as
+/// garbage. A malformed field (no `sk`, non-numeric, or a non-canonical leading zero)
+/// is BadVersionPrefix — not a token. The split is what makes the §6.7-0014 MAY-arm
+/// safe in both directions.
 #[test]
-fn reject_unsupported_schema_version() {
-    // §6.7-0015 the "signpost": a well-formed CANONICAL version that isn't this build's
-    // is UnsupportedSchemaVersion{got}, NOT BadVersionPrefix — a recognized token from
-    // another schema, so a consumer knows to re-derive rather than that it's garbage.
+fn test_classify_unsupported_schema_version() {
+    // signpost: a well-formed CANONICAL other version → UnsupportedSchemaVersion{got}.
     assert_eq!(
         from_token(&A_GOLDEN.replacen("sk4", "sk9", 1)),
         Err(KeyDecline::UnsupportedSchemaVersion { got: 9 })
     );
-    // a real persisted older token (sk3) is the motivating case: this build ships no
-    // sk3 decoder arm (§6.7-0014 is a MAY), so it declines — but names the schema.
     assert_eq!(
         from_token(&A_GOLDEN.replacen("sk4", "sk3", 1)),
         Err(KeyDecline::UnsupportedSchemaVersion { got: 3 })
     );
+    // wall: a malformed version field stays BadVersionPrefix, NOT the signpost —
+    // no `sk` prefix, a non-numeric remainder, or the non-canonical leading zero.
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk4", "vv4", 1)), Err(KeyDecline::BadVersionPrefix));
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk4", "skx", 1)), Err(KeyDecline::BadVersionPrefix));
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk4|", "sk04|", 1)), Err(KeyDecline::BadVersionPrefix));
+}
+
+/// KISS-CLASSIFY-6.7-0014: a build MAY retain a bounded `sk3` decoder arm through the
+/// `sk4` series but MUST retire it by `sk5`; a consumer MUST NOT rely on
+/// cross-implementation `sk3` acceptance. This REFERENCE build ships NO `sk3` arm, so
+/// it declines a well-formed `sk3` token — the conformant no-arm choice — and does so
+/// with the signpost (UnsupportedSchemaVersion), telling a consumer to re-derive.
+#[test]
+fn test_classify_no_sk3_decoder_arm() {
+    let sk3 = A_GOLDEN.replacen("sk4", "sk3", 1);
+    // ships no accept-both arm: the sk3 token is NOT decoded, it is declined …
+    assert_eq!(from_token(&sk3), Err(KeyDecline::UnsupportedSchemaVersion { got: 3 }));
+    // … and specifically NOT accepted as if it were sk4 (no silent cross-vocab decode).
+    assert!(from_token(&sk3).is_err(), "reference build must not accept a persisted sk3 token");
 }
 
 #[test]

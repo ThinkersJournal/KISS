@@ -269,7 +269,7 @@ statements semantically identical via an enumerated clause-correspondence table.
 
 Input: the KISS-Ops `OpDef` for `add` (a primitive-floor arithmetic atom, determinism
 class `exact-byte`, MathPrecision `bit-stable`) paired with the KISS-Classify
-`structure_key` for the cell `sk3|bin|f32|cuda:sm89|ix32|grid|r2|…` (three `f32`
+`structure_key` for the cell `sk4|bin|f32|cuda:sm89|ix32|grid|r2|…` (three `f32`
 operands, strided). The emitter produces:
 
 - **Driver-may-spell** — the one-node op DAG `{ op: add }`; operand binding
@@ -1104,7 +1104,7 @@ Project and crate names appear here as non-normative provenance only.
 
 ### A.2 Worked emit — strided binary `add` on `f32` (partition trace)
 
-Input `(OpDef=add, structure_key=sk3|bin|f32|cuda:sm89|ix32|grid|r2|…)`. The complete
+Input `(OpDef=add, structure_key=sk4|bin|f32|cuda:sm89|ix32|grid|r2|…)`. The complete
 partition of this emission's lowering decisions:
 
 | Lowering decision | Set | Surface? | Clause |

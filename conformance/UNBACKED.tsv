@@ -593,3 +593,4 @@ KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	untested
 KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	untested	
 KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	untested	
 KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	
+KISS-CLASSIFY-6.1-0013	test_classify_mx_scale_format	untested	MX scale bit-layout (f8e8m0/f8e6m2 = 8-bit unsigned, exp+mantissa=8) lives in the §6.1 table + dtype_manifest.json, enforced by the kiss_dtypes table lint; the stdlib-only Rust harness holds only token strings, so a harness test would bind vocabulary membership but not the OCP-MX encoding widths. Candidate upgrade to lint:kiss_tables once kiss_dtypes declares this clause (Lane B).
