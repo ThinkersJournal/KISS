@@ -2,6 +2,8 @@
   "schema": "kiss-dtype-manifest-v1",
   "generated_from": "spec/classify.md",
   "clause": "KISS-CLASSIFY-6.1-0001",
+  "structure_key_schema_version": 3,
+  "token_prefix": "sk3",
   "dtypes": [
     {
       "token": "f16",

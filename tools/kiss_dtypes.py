@@ -126,15 +126,44 @@ def _region_26(text):
     return between(text, "### 2.6 Readable catalog", "Twenty-two dtypes")
 
 
+def schema_version(text):
+    """The structure_key schema version and token prefix, from KISS-CLASSIFY-6.4-0003
+    ('...token prefix `sk3`', §6.7-0002). Clause D (§3.4) forbids persisting, indexing,
+    or comparing dtype sub-tokens detached from this version; a manifest IS a persisted,
+    indexed list of them, so it MUST carry the version to be self-describing under the
+    same rule it distributes. Version and prefix are one axis (`sk<N>`), parsed from the
+    single clause that pins them. Anchored to the clause BULLET and scoped to the clause
+    body (not a first-substring match + fixed window, which a TOC or cross-reference
+    could shadow)."""
+    m = re.search(
+        r"-\s+\*\*KISS-CLASSIFY-6\.4-0003\*\*(.*?)(?=\n\s*-\s+\*\*KISS-CLASSIFY|\n#)",
+        text, re.S)
+    if not m:
+        raise ValueError("KISS-CLASSIFY-6.4-0003 clause bullet not found")
+    mv = re.search(r"`sk(\d+)`", m.group(1))
+    if not mv:
+        raise ValueError("structure_key token prefix `sk<N>` not found in KISS-CLASSIFY-6.4-0003")
+    return int(mv.group(1)), "sk" + mv.group(1)
+
+
 def build_manifest(spec_dir):
     """Derive the dtype manifest from the §6.1 normative table (the authoritative
     copy)."""
     text = open(os.path.join(spec_dir, "classify.md"), encoding="utf-8").read()
     dtypes = parse_table(_region_61(text))
+    version, prefix = schema_version(text)
     return {
         "schema": "kiss-dtype-manifest-v1",
         "generated_from": "spec/classify.md",
         "clause": "KISS-CLASSIFY-6.1-0001",
+        # Clause D (§3.4): a dtype sub-token has no meaning detached from the
+        # structure_key schema version that produced it, and MUST NOT be persisted or
+        # indexed independently of it. These two fields make this persisted list
+        # self-describing — and they flip in the same diff as the spellings at the sk4
+        # cut (e.g. c64 goes pair-of-f64 -> pair-of-f32), so a vendored copy always
+        # knows which vocabulary it pinned.
+        "structure_key_schema_version": version,
+        "token_prefix": prefix,
         "dtypes": dtypes,
         "all_dtypes": sorted(d["token"] for d in dtypes),
         "kinds": sorted({d["kind"] for d in dtypes}),
