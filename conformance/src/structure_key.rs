@@ -678,8 +678,10 @@ pub fn derive_layout_tag(extents: &[i64], strides: &[i64]) -> Contig {
 /// set a bit. Only a genuine broadcast — a real (`extent > 1`) axis the operand
 /// refuses to walk (`stride == 0`) — sets one. This is the identical predicate
 /// [`derive_layout_tag`] uses for its part-(1) `broadcast` classification, applied
-/// per-axis to yield the mask; so a non-empty mask iff `derive_layout_tag` is
-/// `Broadcast`.
+/// per-axis to yield the mask; so **for ranks ≤ `MAX_RANK`** a non-empty mask iff
+/// `derive_layout_tag` is `Broadcast`. Beyond `MAX_RANK` this mask saturates at the
+/// low `MAX_RANK` bits while `derive_layout_tag` still considers the overflow axes, so
+/// the equivalence is stated only up to `MAX_RANK`.
 #[must_use]
 pub fn derive_bcast_mask(extents: &[i64], strides: &[i64]) -> u8 {
     let mut mask: u8 = 0;

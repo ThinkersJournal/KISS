@@ -293,7 +293,8 @@ fn test_classify_vec_width_derivation() {
     // though v8 is within the f16 byte cap (8*2=16<=16). So the divisor test yields
     // v4, NOT the naive floor(24/2)=12->8 shortcut's v8 -- this is the case the
     // clause's (now-corrected) example must demonstrate, which the old f32/48 one
-    // could not (v8 is capped out for f32, and floor(48)=16=v4 anyway).
+    // could not (for f32 the 16-byte load cap already limits the result to v4, so the
+    // shortcut is capped back to v4 and never diverges).
     assert_eq!(derive_vec_width(1, 256, Some(2u32), 24, false), VecWidth::V4);
     // sub-byte dtype (storage under one byte, encoded None) -> v1.
     assert_eq!(derive_vec_width(1, 256, None, 256, false), VecWidth::V1);
@@ -505,8 +506,8 @@ fn test_classify_work_class_element_count() {
 
 #[test]
 fn test_classify_broadcast_axis_mask() {
-    // §6.6-0008: the broadcast-axis mask is a bitmask over iteration-frame axes
-    // (§6.6-0013), bit `i` (LSB = axis 0, outermost-first §6.3-0011) set iff frame
+    // KISS-CLASSIFY-6.6-0008: the broadcast-axis mask is a bitmask over iteration-frame
+    // axes (§6.6-0013), bit `i` (LSB = axis 0, outermost-first §6.3-0011) set iff frame
     // axis `i` has extent > 1 AND this operand's stride there is 0. The load-bearing
     // guard is `extent > 1` — the mask is NOT "any zero stride sets the bit".
 
@@ -518,7 +519,7 @@ fn test_classify_broadcast_axis_mask() {
     assert_eq!(
         derive_bcast_mask(&[1, 256], &[0, 1]),
         0b00,
-        "size-1 axis with stride 0 is NOT a broadcast — the naive any-zero-stride impl wrongly returns 0b01"
+        "KISS-CLASSIFY-6.6-0008: size-1 axis with stride 0 is NOT a broadcast — the naive any-zero-stride impl wrongly returns 0b01"
     );
 
     // The genuine broadcast: same layout but the leading axis is REAL (extent 256)
