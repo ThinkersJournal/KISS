@@ -476,13 +476,31 @@ projects' mirrors of KISS-Conform.
 | §6.5-0013 | backed | `harness/loader.rs` typed missing-symbol path |
 | §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
 | §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
-| §6.5-0016 | **pending** | `test_conform_sweep_incompleteness_is_surfaced` — **PR #143, open, not merged** |
+| §6.5-0016 | backed | `test_conform_sweep_incompleteness_is_surfaced` — landed in #143 (merged `e30de36`) |
 | **§6.1-0009** | **unbacked — and see §9.5** | **Not implemented, and not implementable by the current instrument.** PR #141 makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` computes `backed` **with no gate consideration at all** — `gated` is a separate dict used only for reporting. More fundamentally: **`kiss_trace` is a static analyser and never executes the harness, so it cannot know whether a gate was satisfied in a given run.** Per-run crediting is out of its reach by construction. #141 makes the tool stop *overstating* — the unqualified figure no longer stands alone, and an `EXCLUDING GATE-ONLY` figure is printed beside it — which is an honest static approximation, not a discharge. |
 | **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
 | **§6.1-0011** | **unbacked** | requires a claim-format check |
 
-**So: five backed, one pending an unmerged PR, three unbacked** — not the "seven land green" this
-section claimed in its first revision, and not the "one partial" of its second.
+**So: six backed, three unbacked** — not the "seven land green" this section claimed in its first
+revision, and not the "one partial" of its second.
+
+> **This table deliberately names no pull requests, and that is the fix.** Its first revision
+> recorded rows as *"PR #143, open, not merged"*. #143 merged minutes after this RFC landed, so the
+> document shipped a claim the repository had already moved past — **Pattern A, in the document
+> about Pattern A, about its own table.**
+>
+> The first attempt at a fix was to **date** the table. That failed too: the dated note said
+> *"#141 still open"*, and #141 merged **while the correcting PR was itself in review.** Three
+> staleness events in under two hours.
+>
+> **The durable fix was not a better timestamp — it was removing the mutable dependency.** Whether
+> a clause is backed is a fact about the **repository**, answerable by looking; *which PR carried
+> the backing* is provenance, and provenance that names an in-flight artifact ages the moment the
+> artifact lands. The rows below name **tests**, which are stable, and not **PRs**, which are not.
+>
+> The general lesson, and it is stronger than the one §6.1-0010 states: where a duplicate can be
+> neither derived nor verified, **the best available move is often to stop stating the volatile
+> part at all.**
 
 **How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
 read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
