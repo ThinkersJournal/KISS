@@ -481,6 +481,7 @@ fn classify_reduce_field(r: Reduce) -> String {
         operands: Vec::new(),
         reduce: r,
         contraction: None,
+        acc_mp: None,
     };
     key.to_token().rsplit('|').next().unwrap().to_string()
 }

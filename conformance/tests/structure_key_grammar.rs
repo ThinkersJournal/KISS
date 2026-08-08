@@ -54,6 +54,7 @@ fn key(
         operands,
         reduce,
         contraction,
+        acc_mp: None,
     }
 }
 
@@ -314,7 +315,7 @@ fn test_classify_operand_sub_key_fields() {
     );
 
     // arity is exactly five: a 4-field and a 6-field sub-key are typed declines.
-    let base = "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
+    let base = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.6-0007: base token invalid");
     assert_eq!(
         from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16", 1)),
@@ -388,7 +389,7 @@ fn test_classify_op_family_is_cell_level() {
 
 /// KISS-CLASSIFY-6.6-0015: outside a dense-contraction (`gem`) cell a
 /// `structure_key` keys only the primary (operand-0) dtype; per-operand sub-keys
-/// carry **no** dtype. For a `gem` cell this is superseded — the sk3 contraction
+/// carry **no** dtype. For a `gem` cell this is superseded — the sk4 contraction
 /// field carries the weight/accumulator/output dtypes explicitly (still not via a
 /// sub-key).
 #[test]
@@ -447,7 +448,7 @@ fn test_classify_secondary_dtype_unkeyed() {
             k: SizeClass::Large,
             k_div: DivBucket::D16,
             batch: None,
-            wdt: "e5m2".to_string(),
+            wdt: "f8e5m2".to_string(),
             acc: "f32".to_string(),
             out: "f16".to_string(),
             mp: MathPrecision::Stable,
@@ -457,7 +458,7 @@ fn test_classify_secondary_dtype_unkeyed() {
     let gf: Vec<&str> = gt.split('|').collect();
     assert_eq!(gf.len(), 10, "KISS-CLASSIFY-6.6-0015: gem token missing the contraction field");
     assert!(
-        gf[9].split('/').any(|c| c == "e5m2"),
+        gf[9].split('/').any(|c| c == "f8e5m2"),
         "KISS-CLASSIFY-6.6-0015: gem weight dtype not carried in the contraction field"
     );
     assert!(
@@ -488,7 +489,7 @@ fn test_classify_secondary_dtype_unkeyed() {
 /// decline.
 #[test]
 fn test_classify_target_token_charset() {
-    let base = "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
+    let base = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.8-0005: baseline token invalid");
 
     // legal targets still parse: `.` (e.g. spirv1.6) and uppercase letters (ASCII,
