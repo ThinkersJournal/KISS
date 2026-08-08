@@ -67,7 +67,7 @@ fn reduce_class_is_selected_per_spec() {
 
 #[test]
 fn scan_is_length_preserving() {
-    // §6.11-0003: one output element per input position, distinct from reduce.
+    // KISS-OPS-6.11-0003: one output element per input position, distinct from reduce.
     let xs = [5.0, 6.0, 7.0];
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Inclusive).len(), 3);
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Exclusive).len(), 3);
@@ -121,7 +121,7 @@ fn gather_in_bounds_reads_datum() {
 
 #[test]
 fn gather_oob_policies() {
-    // §6.11-0004: {skip -> unwritten, clamp -> nearest in-range, zero-fill -> 0}.
+    // KISS-OPS-6.11-0004: {skip -> unwritten, clamp -> nearest in-range, zero-fill -> 0}.
     let d = [10.0, 20.0, 30.0];
     assert_eq!(gather_f32(&d, &[9], OobRead::Skip), vec![None]);
     assert_eq!(gather_f32(&d, &[9], OobRead::ZeroFill), vec![Some(0.0)]);
@@ -131,7 +131,7 @@ fn gather_oob_policies() {
 
 #[test]
 fn gather_negative_index_never_wraps() {
-    // §6.11-0004: a negative index (signed dtype) is ALWAYS OOB, no from-end wrap.
+    // KISS-OPS-6.11-0004: a negative index (signed dtype) is ALWAYS OOB, no from-end wrap.
     let d = [10.0, 20.0, 30.0];
     assert_eq!(gather_f32(&d, &[-1], OobRead::Skip), vec![None]);
     assert_eq!(gather_f32(&d, &[-3], OobRead::ZeroFill), vec![Some(0.0)]);
@@ -152,7 +152,7 @@ fn gather_preserves_read_datum_bits() {
 
 #[test]
 fn scatter_assign_last_writer_in_iteration_order_wins() {
-    // §6.11-0006: pinned tie-break — the highest source (row-major) index wins.
+    // KISS-OPS-6.11-0006: pinned tie-break — the highest source (row-major) index wins.
     let mut dest = [0.0, 0.0];
     scatter_f32(&mut dest, &[1, 1, 1], &[7.0, 8.0, 9.0], Combine::Assign);
     assert_eq!(dest, [0.0, 9.0]);
@@ -160,7 +160,7 @@ fn scatter_assign_last_writer_in_iteration_order_wins() {
 
 #[test]
 fn scatter_oob_writes_are_skipped() {
-    // §6.11-0005: OOB write skipped; a negative index is OOB (§6.11-0004).
+    // KISS-OPS-6.11-0005: OOB write skipped; a negative index is OOB (KISS-OPS-6.11-0004).
     let mut dest = [1.0, 2.0, 3.0];
     scatter_f32(&mut dest, &[-1, 5, 1], &[10.0, 20.0, 30.0], Combine::Assign);
     assert_eq!(dest, [1.0, 30.0, 3.0]); // only the in-bounds idx 1 wrote
@@ -168,7 +168,7 @@ fn scatter_oob_writes_are_skipped() {
 
 #[test]
 fn scatter_atomic_max_min_nan_propagating() {
-    // §6.11-0010: fp atomic-max/min NaN-propagating — NaN scattered OR already
+    // KISS-OPS-6.11-0010: fp atomic-max/min NaN-propagating — NaN scattered OR already
     // present yields NaN.
     let mut a = [1.0];
     scatter_f32(&mut a, &[0], &[f32::NAN], Combine::AtomicMax);
@@ -184,7 +184,7 @@ fn scatter_atomic_max_min_nan_propagating() {
 
 #[test]
 fn scatter_deterministic_combines_are_exact_byte() {
-    // §6.11-0006: assign / atomic-max / atomic-min are deterministic (exact-byte).
+    // KISS-OPS-6.11-0006: assign / atomic-max / atomic-min are deterministic (exact-byte).
     assert_eq!(Combine::Assign.class_f32(), DeterminismClass::ExactByte);
     assert_eq!(Combine::AtomicMax.class_f32(), DeterminismClass::ExactByte);
     assert_eq!(Combine::AtomicMin.class_f32(), DeterminismClass::ExactByte);
