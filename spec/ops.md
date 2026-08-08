@@ -335,8 +335,8 @@ golden vectors are in Appendix E.
 
 ### 2.8 Terms are joined, not restated
 
-KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 s8 s16 u8 u16 i32 i64
-u32 u64 bool e4m3fn e4m3fnuz e5m2 e5m2fnuz s4 u4 b1 c32 c64`), the **operand descriptor** field names (`rank`,
+KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 i8 i16 u8 u16 i32 i64
+u32 u64 bool f8e4m3fn f8e4m3fnuz f8e5m2 f8e5m2fnuz f8e8m0 f8e6m2 i4 u4 b1 c64 c128`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
@@ -1412,6 +1412,8 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `f8e4m3fnuz` | 8 | float | FP8 E4M3 AMD `fnuz` variant (1 sign, 4 exp, 3 mantissa), bias 8; no −0; **no infinities**; byte-incompatible with `f8e4m3fn`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
 | `f8e5m2` | 8 | float | FP8 E5M2 (1 sign, 5 exp, 2 mantissa), bias 15; max finite ±57344; IEEE-style inf/NaN; conversion saturates to max-finite, round-half-to-even (OCP OFP8) |
 | `f8e5m2fnuz` | 8 | float | FP8 E5M2 AMD `fnuz` variant (1 sign, 5 exp, 2 mantissa), bias 16; no −0; **no infinities**; byte-incompatible with `f8e5m2`; **reserved** (recognized on parse; no op assigns it computation semantics at this schema version) |
+| `f8e8m0` | 8 | float | OCP Microscaling (MX) shared-exponent **scale**, **unsigned** (0 sign, 8 exp, 0 mantissa); width self-check exp+mantissa = 8; a per-block scale carried as a sibling operand, never an element value dtype; encodings per OCP-MX (**owned normatively by the data-vocabulary sub-standard §6.1-0013**; restated here informatively) |
+| `f8e6m2` | 8 | float | OCP Microscaling (MX) shared-exponent **scale**, **unsigned** (0 sign, 6 exp, 2 mantissa), finer-granularity sibling of `f8e8m0`; width self-check exp+mantissa = 8; a per-block scale sibling operand, never an element value dtype (**owned normatively by §6.1-0013**; restated here informatively) |
 | `i4` | 4 | int | signed 4-bit, range [−8,+7]; packed pair per byte, low nibble = even logical index, sign-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `u4` | 4 | uint | unsigned 4-bit, range [0,15]; packed pair per byte, low nibble = even index, zero-extended on read (**storage packing owned normatively by the data-vocabulary sub-standard §6.1-0008/0009**; restated here informatively) |
 | `b1` | 1 | uint | 1-bit binary-GEMM operand; storage packing (8 bits/byte, LSB = lowest logical index) **owned normatively by the data-vocabulary sub-standard §6.1-0008/0009** and restated here informatively; the **xor+popcount accumulation to raw `s32` output** is the Ops-owned computation semantics |
@@ -1596,7 +1598,7 @@ surfaces it in a kernel's guarantees section.
   thus preserved transitively, not discarded. *Test:*
   `test_ops_accumulator_reference_value`.
 
-### 6.18 Complex-arithmetic op family (c32 / c64)
+### 6.18 Complex-arithmetic op family (c64 / c128)
 
 This version defines a **complex-arithmetic op family** over the interleaved-storage
 complex dtypes `c64` (a (re,im) pair of `f32`) and `c128` (a (re,im) pair of `f64`). Every
