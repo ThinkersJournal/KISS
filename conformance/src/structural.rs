@@ -578,7 +578,7 @@ mod structural_tests {
 
     #[test]
     fn exclusive_scan_starts_at_identity_and_is_length_preserving() {
-        // §6.11-0003: length-preserving; exclusive out[0] = identity.
+        // KISS-OPS-6.11-0003: length-preserving; exclusive out[0] = identity.
         let inc = prefix_scan_f32(&[1.0, 2.0, 3.0], Monoid::Sum, ScanKind::Inclusive);
         let exc = prefix_scan_f32(&[1.0, 2.0, 3.0], Monoid::Sum, ScanKind::Exclusive);
         assert_eq!(inc, vec![1.0, 3.0, 6.0]);
@@ -589,7 +589,7 @@ mod structural_tests {
 
     #[test]
     fn gather_negative_index_is_oob_never_wraps() {
-        // §6.11-0004: negative index always OOB, no from-end wrap.
+        // KISS-OPS-6.11-0004: negative index always OOB, no from-end wrap.
         let d = [10.0, 20.0, 30.0];
         assert_eq!(gather_f32(&d, &[-1], OobRead::Skip), vec![None]);
         assert_eq!(gather_f32(&d, &[-1], OobRead::ZeroFill), vec![Some(0.0)]);
@@ -599,7 +599,7 @@ mod structural_tests {
 
     #[test]
     fn scatter_assign_highest_source_index_wins() {
-        // §6.11-0006: last-writer-in-iteration-order tie-break.
+        // KISS-OPS-6.11-0006: last-writer-in-iteration-order tie-break.
         let mut dest = [0.0; 2];
         scatter_f32(&mut dest, &[0, 0, 0], &[1.0, 2.0, 3.0], Combine::Assign);
         assert_eq!(dest[0], 3.0);
@@ -607,7 +607,7 @@ mod structural_tests {
 
     #[test]
     fn scatter_oob_write_is_skipped() {
-        // §6.11-0005: OOB writes skipped, dest unchanged there.
+        // KISS-OPS-6.11-0005: OOB writes skipped, dest unchanged there.
         let mut dest = [7.0, 8.0];
         scatter_f32(&mut dest, &[-1, 9], &[1.0, 2.0], Combine::AtomicAdd);
         assert_eq!(dest, [7.0, 8.0]);
@@ -615,7 +615,7 @@ mod structural_tests {
 
     #[test]
     fn scatter_atomic_max_propagates_nan() {
-        // §6.11-0010: fp atomic-max/min are NaN-propagating.
+        // KISS-OPS-6.11-0010: fp atomic-max/min are NaN-propagating.
         let mut dest = [1.0];
         scatter_f32(&mut dest, &[0], &[f32::NAN], Combine::AtomicMax);
         assert!(dest[0].is_nan());
@@ -680,7 +680,7 @@ mod structural_tests {
 
     #[test]
     fn empty_prefix_scan_is_empty() {
-        // §6.11-0003: prefix_scan is length-preserving, so an empty input yields an
+        // KISS-OPS-6.11-0003: prefix_scan is length-preserving, so an empty input yields an
         // empty output — no spurious identity element is seeded into the result.
         assert_eq!(prefix_scan_f32(&[], Monoid::Sum, ScanKind::Exclusive), Vec::<f32>::new());
         assert_eq!(prefix_scan_f32(&[], Monoid::Sum, ScanKind::Inclusive), Vec::<f32>::new());

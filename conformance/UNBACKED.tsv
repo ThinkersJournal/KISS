@@ -394,13 +394,8 @@ KISS-OPS-6.1-0003	test_ops_op_family_tags	untested
 KISS-OPS-6.1-0004	test_ops_primitive_flags	lint:kiss_ops	the primitive/non-primitive membership partition drifts between §2.7, §6.3 and §6.13
 KISS-OPS-6.10-0001	test_ops_bitwise_integer_only	untested	
 KISS-OPS-6.11-0001	test_ops_element_map_base_access	untested	
-KISS-OPS-6.11-0003	test_ops_prefix_scan_length_preserving	untested	
-KISS-OPS-6.11-0004	test_ops_gather_oob_policy	untested	
-KISS-OPS-6.11-0005	test_ops_scatter_combine_and_oob	untested	
-KISS-OPS-6.11-0006	test_ops_scatter_fp_atomic_add_nondeterministic	untested	
 KISS-OPS-6.11-0008	test_ops_reduce_keepdim_broadcast	untested	
 KISS-OPS-6.11-0009	test_ops_index_dtype_set	untested	
-KISS-OPS-6.11-0010	test_ops_scatter_atomic_minmax_nan	untested	
 KISS-OPS-6.11-0011	test_ops_reduce_axes_four_categories	lint:kiss_tables	the reduce_axes four-category set drifts between Ops §6.11-0011 and Classify §6.7-0005
 KISS-OPS-6.11-0012	test_ops_index_operand_role	untested	
 KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	
