@@ -71,7 +71,7 @@ distinction that changes the kernel — and none hypothetical:**
    accumulator silently serves every later requester on that key, with no way to request the other.
    Evidence: kiss-ref's 128-vs-192 divergence (reference side); Fuel's `BitStablePreferenceFilter`
    routing decode off-GPU (consumer side); Baracuda's emitter shipping `accumulation_type: f64` for
-   an sk3-un-discriminable non-contraction `f32` reduction (provider side, Baracuda repo — `contract.rs:1822`).
+   an sk3-un-discriminable non-contraction `f32` reduction (provider side, Baracuda repo — `baracuda-cuda-emit/tests/contract.rs:171`).
 2. **Math precision (numeric).** `<mp>` exists exactly once in the key — inside `ContractionKey`.
    For a non-contraction op there is no math-precision coordinate, and `canonical_dtype` folds the
    strict-vs-TF32 axis unconditionally, so a strict-SIMT `f32` reduction and a TF32 `f32` reduction
@@ -259,7 +259,7 @@ wire-invisible). Per-impl FP8 deltas to the uniform target **`f8e4m3fn`/`f8e5m2`
 token is `e4m3fn`): a crate already at `e4m3fn` (`unpopped-vocab`) adds the `f8` **prefix only**;
 `kiss-classify-vocab`, **drifted** to a bare `e4m3` (kiss-ref's catch — since §6.1 is `e4m3fn`, a
 pre-existing spec-vs-crate drift folded into the regen), adds **prefix + suffix**; Fuel, at `f8e4m3`
-(Fuel repo, `fuel-ir` crate — `dtype.rs:102`), adds the `fn` **suffix only**. The target is `f8e4m3fn`/`f8e5m2` regardless
+(Fuel repo, `fuel-ir` crate — `src/dtype.rs:106`), adds the `fn` **suffix only**. The target is `f8e4m3fn`/`f8e5m2` regardless
 of a party's starting spelling.
 Schema-visible changes overall: `s8`→`i8`, `s4`→`i4`, the `f8` float prefix, the mandatory FP8 variant
 suffix where a crate lacks it, and the complex meaning-flip.
@@ -318,7 +318,7 @@ contract, keyed by the `sk4` structure_key, regenerated at the cut. This witness
 proposition** than the token byte-match, and the distinction is load-bearing (Unpopped's
 source-verified sharpening, 2026-08-07): the corpus is **not** independent evidence of token
 *spelling*, because the tokens stamped into the `.cu`/contract front matter are `unpopped-vocab`'s
-`to_token()` output (Unpopped repo, `unpopped-vocab` crate — `src/contract.rs:746`) — so on spelling the corpus is **downstream of
+`to_token()` output (Unpopped repo, `unpopped` crate — `src/contract.rs:746`, calling `unpopped-vocab`'s `to_token()` at `src/structure_key.rs:1150`) — so on spelling the corpus is **downstream of
 `unpopped-vocab`**, not a fifth independent derivation. What it *does* witness is **semantic
 assignment + coverage**: that each shipped physical CUDA kernel is classified into the cell it
 actually implements, and that the `(acc + mp)` field flows key → `baracuda-cuda-emit` →
