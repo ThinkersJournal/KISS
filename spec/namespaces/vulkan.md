@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 1 · **Status:** draft
+· **Vocabulary version:** 2 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -131,9 +131,14 @@ One of:
 
 A tuple is `<M>-<N>-<K>-<A>-<B>-<C>-<R>` optionally suffixed `-sat` for
 saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
-and each component type is one of `f16`, `f32`, `f64`, `bf16`, `s8`, `s16`,
-`s32`, `s64`, `u8`, `u16`, `u32`, `u64`, or `x<n>` for a `VkComponentTypeKHR`
+and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
+`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, or `x<n>` for a `VkComponentTypeKHR`
 this vocabulary version does not name.
+
+> **Signed integers are `i`-prefixed as of vocabulary version 2** (was `s8`,
+> `s16`, `s32`, `s64`). See §4. Note that the `i8` in the **arith** field is a
+> different thing that has always been spelled `i8`: it names the `shaderInt8`
+> *capability*, not a component type.
 
 - **V-7.** `x<n>` exists so that a driver exposing a component type newer than
   this vocabulary yields an honest, round-trippable token rather than a decline
@@ -169,7 +174,7 @@ cooperative-matrix shapes) admits three specializations, and therefore three
 tokens. At `sg64`, with every capability the device offers:
 
 ```text
-vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f16-f16,16-16-16-f16-f16-f16-f16-sat,16-16-16-f16-f16-f32-f32,16-16-16-s8-s8-s32-s32,16-16-16-s8-s8-s32-s32-sat,16-16-16-s8-u8-s32-s32,16-16-16-s8-u8-s32-s32-sat,16-16-16-u8-s8-s32-s32,16-16-16-u8-s8-s32-s32-sat,16-16-16-u8-u8-s32-s32,16-16-16-u8-u8-s32-s32-sat
+vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f16-f16,16-16-16-f16-f16-f16-f16-sat,16-16-16-f16-f16-f32-f32,16-16-16-i8-i8-i32-i32,16-16-16-i8-i8-i32-i32-sat,16-16-16-i8-u8-i32-i32,16-16-16-i8-u8-i32-i32-sat,16-16-16-u8-i8-i32-i32,16-16-16-u8-i8-i32-i32-sat,16-16-16-u8-u8-i32-i32,16-16-16-u8-u8-i32-i32-sat
 ```
 
 335 bytes, 8.2% of `MAX_STRUCTURE_KEY_LEN`. The `sg32` and `sgdyn` tokens differ
@@ -185,3 +190,36 @@ letter, or an arith name is **additive** and does not bump the vocabulary
 version. Any change that alters the bytes of a previously-derivable token — a
 field reorder, a respelling, a canonical-order change, or a change to the 512
 threshold — bumps it.
+
+### Version 2 — signed-integer component types are `i`-prefixed
+
+`s8`, `s16`, `s32`, `s64` become `i8`, `i16`, `i32`, `i64`. This is a
+**respelling**, so it bumps the vocabulary version by the rule above, and every
+previously-derivable token naming a signed-integer component type changes
+bytes. Under §6.8-0002 matching is byte-exact, so a version-1 token and its
+version-2 equivalent **do not match**: any cache keyed on a version-1 token is
+stale and must be invalidated, not migrated. Token *length* is unchanged, since
+each name keeps its width.
+
+Adopted to align with the KISS-Classify §6.1 `structure_key` dtype set, which
+uses the `i` prefix, as part of the coordinated `sk4` schema event
+(maintainer-ratified, 2026-08-08). §6.1's set and this vocabulary remain
+**distinct axes** — a decoder never resolves a `target_capability` token
+against the dtype set — so this is an alignment of convention, not a merge of
+vocabularies.
+
+Two things this change deliberately does **not** touch, recorded because both
+look like oversights and are not:
+
+- **The `arith` field keeps `i8`.** It has always been `i8`, and it names the
+  `shaderInt8` *capability*, not a component type. It is unrelated to this
+  rename and must not be "made consistent" with anything.
+- **Unsigned types keep `u`.** `u8`/`u16`/`u32`/`u64` already match §6.1.
+
+For the record, since it will otherwise read as an inconsistency worth
+"fixing": version 1 spelled component types `s8`/`s32` because they transcribe
+Vulkan's own `VK_COMPONENT_TYPE_SINT8_KHR`/`SINT32`, exactly as `arith`'s `i8`
+transcribes `shaderInt8`. Each name tracked its Vulkan source. Version 2 trades
+that correspondence for one prefix convention across both KISS vocabularies.
+That was a deliberate maintainer decision, not a correction — do not revert it
+on the grounds that `SINT8` says "s".
