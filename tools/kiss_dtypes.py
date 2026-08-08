@@ -132,12 +132,18 @@ def schema_version(text):
     or comparing dtype sub-tokens detached from this version; a manifest IS a persisted,
     indexed list of them, so it MUST carry the version to be self-describing under the
     same rule it distributes. Version and prefix are one axis (`sk<N>`), parsed from the
-    single clause that pins them."""
-    i = text.find("KISS-CLASSIFY-6.4-0003")
-    m = re.search(r"`sk(\d+)`", text[i:i + 800]) if i >= 0 else None
+    single clause that pins them. Anchored to the clause BULLET and scoped to the clause
+    body (not a first-substring match + fixed window, which a TOC or cross-reference
+    could shadow)."""
+    m = re.search(
+        r"-\s+\*\*KISS-CLASSIFY-6\.4-0003\*\*(.*?)(?=\n\s*-\s+\*\*KISS-CLASSIFY|\n#)",
+        text, re.S)
     if not m:
+        raise ValueError("KISS-CLASSIFY-6.4-0003 clause bullet not found")
+    mv = re.search(r"`sk(\d+)`", m.group(1))
+    if not mv:
         raise ValueError("structure_key token prefix `sk<N>` not found in KISS-CLASSIFY-6.4-0003")
-    return int(m.group(1)), "sk" + m.group(1)
+    return int(mv.group(1)), "sk" + mv.group(1)
 
 
 def build_manifest(spec_dir):
