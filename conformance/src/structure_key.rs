@@ -13,7 +13,7 @@
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// The closed op-family-tag set at this schema version — exactly the 24 codes of
 /// Classify §6.5-0006. A token whose op-family field is outside this set is
@@ -23,14 +23,17 @@ pub const OP_FAMILIES: [&str; 24] = [
     "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
 ];
 
-/// The closed dtype-token set — the 22 tokens of Classify §6.1. sk3 makes the FP8
-/// spellings variant-explicit: `e4m3fn` = OCP finite/no-inf (max 448); `e4m3fnuz` =
-/// AMD reserved (distinct bias, no −0); `e5m2` = IEEE inf/NaN (max 57344); `e5m2fnuz`
-/// = AMD reserved. The ambiguous bare `e4m3` is gone; an inf-carrying `e4m3`, if ever
-/// needed, is added additively with its own explicit spelling, never the bare token.
-pub const DTYPES: [&str; 22] = [
-    "f16", "bf16", "f32", "f64", "s8", "s16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
-    "e4m3fn", "e4m3fnuz", "e5m2", "e5m2fnuz", "s4", "u4", "b1", "c32", "c64",
+/// The closed dtype-token set — the 24 tokens of Classify §6.1 at sk4, in §6.1-table
+/// order (the index is the 1-based ordinal §6.19-0025's accumulator field references).
+/// Integers are uniform `i`-prefixed (`i8`/`i16`/`i4`); FP8 carries the `f8` width prefix
+/// + mandatory variant suffix (`f8e4m3fn` OCP finite/no-inf max 448; `f8e4m3fnuz` AMD
+/// reserved; `f8e5m2` IEEE inf/NaN max 57344; `f8e5m2fnuz` AMD reserved); the MX
+/// shared-exponent scales `f8e8m0`/`f8e6m2` are additive (§6.1-0013); complex is named by
+/// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
+/// §6.1-0012, made loud by the version prefix).
+pub const DTYPES: [&str; 24] = [
+    "f16", "bf16", "f32", "f64", "i8", "i16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
+    "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
 ];
 
 /// The two **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
@@ -38,7 +41,7 @@ pub const DTYPES: [&str; 22] = [
 /// semantics at this schema version** — a `structure_key` using one in any dtype
 /// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
 /// from the unknown-token decline. Activation is a future additive schema event.
-pub const RESERVED_DTYPES: [&str; 2] = ["e4m3fnuz", "e5m2fnuz"];
+pub const RESERVED_DTYPES: [&str; 2] = ["f8e4m3fnuz", "f8e5m2fnuz"];
 
 // ---- small enum codecs -------------------------------------------------------
 
