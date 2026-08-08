@@ -6,7 +6,7 @@ use kiss_conformance::harness::abi::invoke_reduce;
 
 #[test]
 fn reduce_fixtures_compile_load_and_run() {
-    let Some(a) = compile_and_load_reduce("mean_a") else { eprintln!("SKIP: no MSVC"); return; };
+    let a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load_reduce("mean_a"));
     let b = compile_and_load_reduce("mean_b").unwrap();
     let w = compile_and_load_reduce("mean_wrong").unwrap();
     let xs = [2.0f32, 4.0, 6.0, 8.0]; // mean 5.0; wrong (÷3) = 6.666...

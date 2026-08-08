@@ -18,6 +18,58 @@
 //! KISS-Classify `structure_key` token codec ([`structure_key`], Classify §6.7),
 //! and the KISS-Announce 56-byte handshake envelope ([`announce`], Announce §6.1).
 
+/// Declare a **runtime gate** on a test, binding the `Some` value or declining the run.
+///
+/// A test whose execution depends on something discovered at run time — a toolchain, a
+/// device — MUST decline through this macro rather than by an open-coded
+/// `eprintln!(...); return;`. The macro *is* the declaration: declaring the gate and
+/// performing the skip are the same act, so a test cannot decline invisibly.
+///
+/// `tools/kiss_trace.py` discovers these textually and treats such a test exactly as it
+/// treats a `#[cfg(feature = "...")]`-gated one — recorded, but not counted as backing a
+/// clause in a run where it did not execute. An open-coded skip is invisible to the
+/// matrix and silently inflates recorded coverage; that is the defect this closes.
+///
+/// ```ignore
+/// let msvc = runtime_gate_some!("msvc", find_msvc());
+/// ```
+#[macro_export]
+macro_rules! runtime_gate_some {
+    ($gate:literal, $opt:expr) => {
+        match $opt {
+            Some(v) => v,
+            None => {
+                eprintln!(
+                    "KISS-SKIP[{}]: declared runtime gate unsatisfied — this test did NOT execute",
+                    $gate
+                );
+                return;
+            }
+        }
+    };
+}
+
+/// Declare a **runtime gate** on a test from a predicate; declines the run if false.
+///
+/// The predicate form of [`runtime_gate_some!`]. Same contract: declaring the gate and
+/// performing the skip are one act, so the decline is always discoverable.
+///
+/// ```ignore
+/// runtime_gate!("cuda", nvcc_present());
+/// ```
+#[macro_export]
+macro_rules! runtime_gate {
+    ($gate:literal, $cond:expr) => {
+        if !$cond {
+            eprintln!(
+                "KISS-SKIP[{}]: declared runtime gate unsatisfied — this test did NOT execute",
+                $gate
+            );
+            return;
+        }
+    };
+}
+
 pub mod accuracy;
 pub mod announce;
 pub mod bundle_envelope;

@@ -7,7 +7,7 @@ use kiss_conformance::harness::abi::invoke_binary;
 
 #[test]
 fn all_three_fixtures_compile_load_and_run() {
-    let Some(add_a) = compile_and_load("add_a") else { eprintln!("SKIP: no MSVC"); return; };
+    let add_a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load("add_a"));
     let add_b = compile_and_load("add_b").unwrap();
     let add_wrong = compile_and_load("add_wrong").unwrap();
 
