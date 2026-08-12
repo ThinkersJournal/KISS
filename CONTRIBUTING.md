@@ -128,6 +128,18 @@ enforcer structurally cannot observe will be recorded wrong repeatedly, each tim
 reader acting in good faith. When the answer is no, the fix is a second instrument of the right
 class, not a weaker clause fitted to the instrument on hand.
 
+**8. A round-trip proves internal consistency, not external agreement.** Encode-then-decode, or
+emit-then-parse, tells you an implementation agrees with *itself*. It cannot detect that the whole
+vocabulary moved. *Why:* a crate-side-only rename of an emitted vocabulary passed **20 of 21**
+existing tests, because every one of them round-tripped through the same renamed table; the
+disagreement with the published document was invisible from inside. The same blindness is why the
+suite cross-verifies tokens between independently derived implementations rather than trusting any
+one implementation's self-consistency — **a systematic rename is exactly the error a round-trip is
+constitutionally unable to see.** Pin emitted spellings against the external artifact that defines
+them, and compare the *token image*, not the variant count: an implementation may legitimately hold
+more internal variants than there are tokens (one folding to another's canonical spelling), so
+comparing counts manufactures a divergence that isn't there while missing the one that is.
+
 ## Normative writing conventions (summary of umbrella §3–§4)
 
 If you propose normative text, follow the house style so it stays testable:
