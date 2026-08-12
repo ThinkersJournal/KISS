@@ -69,6 +69,65 @@ Each sub-standard is versioned independently and moves through maturity stages. 
 A frozen clause does not change incompatibly; growth happens through additive versions and
 the extension registry, never by silently redefining frozen text.
 
+## Evidence conventions
+
+These are process rules, not normative clauses. Each was adopted after a real failure, and the
+motivating incident is named so the rule reads as a lesson rather than as ceremony. They share
+one general form: **a state derived from an artifact's *existence* is not a state derived from
+its *content*.**
+
+**1. A claim that gates a decision states its method, and what that method did not examine.**
+Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:* two separate
+sweeps were reported as complete when each had searched one axis — one for dtype spellings but
+not version prefixes, another for an uppercase `SKIP` marker but not the lowercase idiom the
+project actually used. The second was wrong by 6.6×. **Composing the exclusion sentence is what
+surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0.
+See `KISS-CONFORM-6.1-0011`.
+
+**2. A verification report names the exact command and flags that produced it, and reads the
+ran-count rather than the colour.** *Why:* `cargo`'s `--all-targets` does not imply
+`--all-features`, and one project's wire codec sat behind a non-default feature — a six-crate
+sweep would have reported green having compiled none of the code under test. It surfaced only
+because someone saw `running 0 tests; 737 filtered out` and refused to read it as a pass. For
+device- or toolchain-gated suites, `0 filtered out` is the discriminator.
+
+**3. "It has a review" is not "the review was read."** Before reporting a PR merge-ready, fetch
+its review state and address or explicitly disposition every finding — fixed, stale, out of
+scope, or declined with a reason. *Why:* six PRs were reported merge-ready on the strength of
+`reviews=1`; twelve inline findings sat underneath, eleven unaddressed, including a false claim
+in a document that had already merged. **A green-looking review count and an actually-read
+review are the same bytes.** Note also that a **draft** PR receives no automated review and
+sends no notifications: work being finished and a PR being reviewable are different states.
+
+**4. Verify against the merge tree with the full gate — not the branch with a subset.** CI tests
+`refs/pull/<N>/merge`; fetch that ref. *Why:* a lint comparing two spec tables passes on `main`
+(where both are one vocabulary), passes on the branch in isolation, and fails only on the
+integrated tree. A four-of-seven-step local run reported "all gates green" while the three unrun
+steps held real drift.
+
+**5. A stated zero is a result; silence is not.** When asked for a count, report it — including
+zero — with the structural reason. *Why:* two projects audited to zero and both were *findings*:
+their components take no environment input, so the defect class has nowhere to live. **Immune is
+not the same as lucky**, and only the reason distinguishes them.
+
+**6. Independence of runs is not independence of instruments.** Two people running the same check
+and agreeing have tested the check once. *Why:* a dtype lint reported CLEAN to its author and
+CLEAN to an independent reviewer while parsing one table concatenated with another and comparing
+the result against itself. This is the freeze gate's own problem at small scale — the gate counts
+≥2 dissimilar implementations, but implementations sharing one comprehension lineage overstate
+the weight of their agreement in exactly the same way.
+
+**7. Name the enforcing instrument, then ask whether it can observe the property at all — before
+asking whether it currently does.** *Why:* a clause requiring per-run crediting was recorded backed,
+then corrected to unbacked, before anyone asked the prior question: its sole enforcing instrument is
+a *static* reader that parses specification markdown and Rust source and never executes the harness,
+so "did this test run in this run, or decline at the gate?" is outside what it can see in principle.
+A declaration that a test *may* skip is not an observation that it *did*. "Which tool enforces this?"
+gets asked routinely; **"can that tool, in principle, see this?" does not** — and a clause its only
+enforcer structurally cannot observe will be recorded wrong repeatedly, each time by a different
+reader acting in good faith. When the answer is no, the fix is a second instrument of the right
+class, not a weaker clause fitted to the instrument on hand.
+
 ## Normative writing conventions (summary of umbrella §3–§4)
 
 If you propose normative text, follow the house style so it stays testable:
