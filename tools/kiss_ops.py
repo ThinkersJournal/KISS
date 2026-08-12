@@ -99,7 +99,17 @@ def between(text, start, end, *, where=""):
         accepts as equal.
 
     Anchors are prose, and prose gets reworded. **The drift is not preventable;
-    the silence is.**"""
+    the silence is.**
+
+    CHOOSING AN `end` ANCHOR — the trap that has now been hit twice, so it is
+    recorded here rather than left for a third person to rediscover. A clause ID
+    is NOT a safe end anchor on its own: KISS documents mention a clause ID in
+    section-intro prose ABOVE the table the clause governs, so `end="KISS-OPS-
+    6.8-0001"` terminates the region BEFORE the table and yields nothing — the
+    same empty-region failure, with a brand-new anchor that looks specific.
+    Anchor on the BOLDED CLAUSE LINE instead: `"\\n- **KISS-OPS-6.8-0001**"`.
+    `sec613_rows()` carries the same warning for §6.13; `transcendental_atoms()`
+    was where it bit."""
     i = text.find(start)
     if i < 0:
         raise AnchorError(
