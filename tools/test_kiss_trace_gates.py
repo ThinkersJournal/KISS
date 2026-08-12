@@ -95,8 +95,10 @@ def check(cond, msg):
 
 # ---- section 2 fixtures: a whole suite, run through the real gate -------------
 
-STEMS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
-         "synth", "consume", "emit", "conform"]
+# DERIVED, not restated. `kiss_trace` owns the spec-stem list; a second copy here
+# would drift the moment a document is added, and the fixture would quietly build
+# an incomplete suite — Pattern A, in the fixture for the RFC about Pattern A.
+STEMS = kt.SPECS
 
 RE_RAW = re.compile(r"ENFORCED \(harness \d+ \+ lint \d+\) = (\d+)/(\d+)")
 RE_QUAL = re.compile(r"ENFORCED, EXCLUDING GATE-ONLY = (\d+)/(\d+)")
@@ -139,9 +141,17 @@ def run_report(tmp, rows, harness_src):
     with open(os.path.join(conf, "fixture_tests.rs"), "w", encoding="utf-8") as f:
         f.write(harness_src)
     tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_trace.py")
-    out = subprocess.run(
-        [sys.executable, tool, "--spec-dir", spec, "--conformance-dir", conf],
-        capture_output=True, text=True)
+    try:
+        # An explicit ceiling, because `kiss_trace` itself spawns subprocesses
+        # (lint coverage discovery). Without one, a regression that hangs turns a
+        # RED into a STALL — and a stalled job reads as "still running", not as
+        # "broken". That is this file's own subject matter: a failure mode
+        # indistinguishable from a benign state.
+        out = subprocess.run(
+            [sys.executable, tool, "--spec-dir", spec, "--conformance-dir", conf],
+            capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        return False, "TIMEOUT: the gate did not finish within 300s (treated as failure)"
     return out.returncode == 0, out.stdout + out.stderr
 
 
@@ -252,6 +262,16 @@ def main():
     # check is added, which is this file's own subject matter.
     print(f"PASS: {passed} checks")
     return 0
+
+
+def test_kiss_trace_gate_controls():
+    """Collected by pytest; CI runs the file in script mode.
+
+    Without this, `pytest tools/` collects ZERO tests from a file named
+    `test_*.py` and reports success having executed none of the checks below —
+    the vacuity mechanism, in the file whose job is to prove vacuity gets caught.
+    """
+    assert main() == 0, f"{len(failures)} check(s) failed: {failures}"
 
 
 if __name__ == "__main__":
