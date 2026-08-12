@@ -211,16 +211,18 @@ marked `FIXED` with live residuals.
 
 ---
 
-## 6. Stated limits — including four the authors committed while writing this
+## 6. Stated limits — including the instances the authors committed while writing this
 
 **Generation prevents the next class, not this one.** The drift that prompted A1 was entirely in
 hand-written prose *around* the tables. Generating them would not have caught it. **A hardening
 item that over-promises is itself a Pattern B failure** — an instrument trusted past its scope,
 whose insufficiency is indistinguishable from sufficiency.
 
-**Seven instances of the meta-failure were committed by this document's authors, in its own
-subject matter, within six hours of articulating the principle. They are the closing argument,
-not a footnote.**
+**The instances enumerated below were all committed by this document's authors, in its own
+subject matter, within a day of articulating the principle. They are the closing argument, not a
+footnote.** The count is stated once, in the closing note where it carries the argument — three
+hand-maintained copies of a number that grows every few hours is the duplication §6.1-0010 exists
+to stop, and this document had already let one of them go stale.
 
 1. **KISS architect — "verified clean", reported upward.** An `sk4` spec respell was verified and
    reported to Fuel, to the maintainer, and to three other projects. **The sweep searched retired
@@ -355,11 +357,19 @@ a gate firing on a rule nobody finished.
 
 **A closing note.** The obvious objection is *"this is a competence problem — write better
 tests."* **Nine instances from the people who articulated the principle, inside the window in
-which they articulated it, is the only refutation that cannot be dismissed as special pleading.**
-A document about instruments that cannot fail, whose own authors produced nine such instruments in
-one day — the fifth **inside this document, caught by a reviewer after publication**, and the
-ninth a ruling about the very row the fifth got wrong — is not
-evidence the thesis is wrong. It is the strongest available evidence that it is right.
+which they articulated it, is the only refutation that cannot be dismissed as special pleading** —
+a document about instruments that cannot fail, whose own authors produced that many in a single
+day, the fifth **inside this document, caught by a reviewer after publication**, and the ninth a
+ruling about the very row the fifth got wrong. That is not evidence the thesis is wrong. It is the
+strongest available evidence that it is right.
+
+> **This paragraph is the one place the count appears, and that is deliberate.** It was in three
+> places until the sweep that added instances 8 and 9: the §6 heading (*"four"*, stale since the
+> fourth), the §6 lead-in (*"seven"*), and here. The updating commit fixed two and missed the
+> heading — **one fact, three copies, the checked one updated and an unchecked one left behind, in
+> the document that names that pattern, in the commit adding two instances of it.** Not logged as
+> a tenth instance; the argument does not need it. It is fixed the way §6.1-0010 prescribes —
+> the prose upstream no longer carries the number at all, so there is nothing left to drift.
 
 ---
 
