@@ -7,7 +7,7 @@
 | **Affects** | KISS-Conform §6.1 (traceability matrix), §6.5 (oracle-differential harness) |
 | **Normative text** | KISS architect |
 | **Motivation & instance inventory** | Fuel architect |
-| **Clause drafts §6.5-0011..0016, §6.1-0009** | KISS Lane B |
+| **Clause drafts §6.5-0011..0016, §6.1-0009a/0009b** | KISS Lane B |
 | **Instances contributed by** | Fuel, KISS, Baracuda, Vulkane, kiss-ref, Unpopped |
 
 ---
@@ -245,10 +245,12 @@ not a footnote.**
    deriver as a ruling. The MUST attaches to *bounded*, not to *exists*. Corrected within ninety
    minutes, after a worker asked a scoping question rather than complying.
 5. **KISS architect — an overstated backing claim, in the table added to prevent overstated
-   backing claims.** §8's first revision recorded §6.1-0009 as *backed*. It is not: the crediting
-   half is unimplemented, and the implementing PR's own diff says so in a comment. **Caught by an
+   backing claims.** §8's first revision recorded KISS-CONFORM-6.1-0009 as *backed*. It was not: the crediting
+   half was unimplemented, and the implementing PR's own diff said so in a comment. **Caught by an
    automated reviewer, not by either author** — the only one of the five found by review rather
-   than by the people who wrote the principle, and the only one already published when found.
+   than by the people who wrote the principle, and the only one already published when found. The
+   clause has since been atomized (§7.4, §9.5) and the row corrected twice more; see §8, which
+   records how close the corrected row came to being wrong a third time.
 
 **The counter-measure to three of those seven is one practice, and only one project volunteered
 it: Baracuda stated the axes its audit did NOT cover** — tautological asserts, timing. In every
@@ -279,7 +281,7 @@ recreated silent skips, and over-broad ceremony that would recreate unenforced p
 6. **KISS architect — reporting a merge-ready state without checking it.** Five PRs were reported
    to the maintainer as *queued for merge*. `gh pr list` showed `reviews=1` on each, which reads
    as **reviewed**, and it was taken as such. **Twelve inline findings sat underneath; eleven were
-   unaddressed** — including the false §6.1-0009 claim above, in this document. **A green-looking
+   unaddressed** — including the false KISS-CONFORM-6.1-0009 claim above, in this document. **A green-looking
    review count and an actually-read review are the same bytes.** Caught by the maintainer asking
    whether the PRs had comments and whether they had been addressed — by a question, not by any
    process.
@@ -435,15 +437,42 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
 
 ### 7.4 Crediting and claims
 
-- **KISS-CONFORM-6.1-0009** — Coverage MUST NOT credit a clause whose backing tests did **not
-  execute** in the run being reported. A conformance test whose execution is conditional — on a
-  compile-time feature, or on a run-time precondition such as an absent toolchain or device — MUST
-  **declare** that condition in a form the traceability lint can discover; a test that can decline
-  to run without declaring it MUST be treated as a defect in the suite. Where **every** test backing
-  a clause is so conditioned, the matrix MUST record that clause as **gate-only** and MUST report it
-  distinctly from a clause backed by an unconditionally-executing test, because in a run where the
-  gate is unsatisfied nothing verified it. A suite MUST NOT report a coverage figure that conflates
-  the two. *Test:* `test_conform_coverage_excludes_unexecuted_backing`.
+- **KISS-CONFORM-6.1-0009a** *(static half)* — A conformance test whose execution is conditional —
+  on a compile-time feature, or on a run-time precondition such as an absent toolchain or device —
+  MUST **declare** that condition in a form the traceability lint can discover; a test that can
+  decline to run without declaring it MUST be treated as a defect in the suite. Where **every** test
+  backing a clause is so conditioned, the matrix MUST record that clause as **gate-only** and MUST
+  report it distinctly from a clause backed by an unconditionally-executing test. A suite MUST NOT
+  report a coverage figure that conflates the two: the qualified figure — the one crediting no
+  clause whose backing may not have run — MUST be reported alongside the raw one.
+  *Test:* `test_kiss_trace_gates.py` §2 (gate-only reporting).
+
+- **KISS-CONFORM-6.1-0009b** *(dynamic half)* — Coverage MUST NOT credit a clause whose backing
+  tests did **not execute** in the run being reported. The determination MUST be derived from a
+  **run artifact** — the harness's own machine-readable test output (`libtest --format json`) and/or
+  the `KISS-SKIP[<gate>]` lines a declining test emits — joined to the clause matrix. A coverage
+  figure derived from the *existence* of a backing test rather than its *execution* MUST NOT be
+  presented as a per-run figure. *Test:* `test_conform_coverage_excludes_unexecuted_backing`.
+
+> **Why this is two clauses and not one.** The single KISS-CONFORM-6.1-0009 was unenforceable as written, and
+> its enforcement gap was invisible in its prose: `kiss_trace` is a **static analyser that never
+> executes the harness**, so "did this backing actually run?" is not a property it can observe at
+> any level of effort. The tempting fix was to scope the clause down to what the instrument can
+> do — which is *fitting the claim to the instrument on hand*, the exact failure this RFC exists to
+> name, committed inside it. The other tempting fix was to leave a MUST with no test, which house
+> style fails the build for.
+>
+> **Atomizing keeps the full claim and makes the shortfall a number.** 0009a is observable by a
+> static reader and is backed today. 0009b is unbacked, and says why: the joining instrument does
+> not exist. Their two figures differ by **exactly the gated backing**, so the gap is reported on
+> every run instead of described once in a document. Where a sub-standard's gate-only set is empty
+> the two figures coincide, 0009a computes that emptiness, and **a stated zero discharges 0009b for
+> free** — which is why this is a freeze precondition only for sub-standards whose gate-only set is
+> non-empty, rather than a blanket one.
+>
+> **The general rule, and it is the one worth carrying off this page:** when the enforcing
+> instrument cannot observe the property, the fix is **a second instrument of the right class**, not
+> a weaker clause fitted to the instrument on hand.
 
 - **KISS-CONFORM-6.1-0011** — A coverage or conformance claim that **gates a decision** — a freeze
   gate, a published coverage figure, a byte-match leg report, or a conformance assertion — MUST
@@ -477,12 +506,33 @@ projects' mirrors of KISS-Conform.
 | §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
 | §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
 | §6.5-0016 | backed | `test_conform_sweep_incompleteness_is_surfaced` — landed in #143 (merged `e30de36`) |
-| **§6.1-0009** | **unbacked — and see §9.5** | **Not implemented, and not implementable by the current instrument.** PR #141 makes gates *declarable* and reports GATE-ONLY, but `kiss_trace` computes `backed` **with no gate consideration at all** — `gated` is a separate dict used only for reporting. More fundamentally: **`kiss_trace` is a static analyser and never executes the harness, so it cannot know whether a gate was satisfied in a given run.** Per-run crediting is out of its reach by construction. #141 makes the tool stop *overstating* — the unqualified figure no longer stands alone, and an `EXCLUDING GATE-ONLY` figure is printed beside it — which is an honest static approximation, not a discharge. |
+| **§6.1-0009a** | **backed** | `test_kiss_trace_gates.py` §2 — fixture suite with one cfg-gated, one runtime-gated and one unconditional backing test; asserts the report names the 2-clause GATE-ONLY set, breaks it out by gate kind, and prints a qualified figure lower than the raw one by exactly that count. Paired with a control asserting an ungated suite reports **no** GATE-ONLY set and **no** qualified figure. Verified by seeded mutation: reverting the report to ignore gate labels fails 5 of the checks. |
+| **§6.1-0009b** | **unbacked — structurally, not for want of effort** | `kiss_trace` is a static analyser that **never executes the harness**, so per-run execution is out of its reach by construction — no change to it can back this. It needs a **second instrument**: a joiner consuming `libtest --format json` and the `KISS-SKIP[<gate>]` lines #141's macros emit, matched against the clause matrix. That tool does not exist. |
 | **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
 | **§6.1-0011** | **unbacked** | requires a claim-format check |
 
-**So: six backed, three unbacked** — not the "seven land green" this section claimed in its first
-revision, and not the "one partial" of its second.
+**So: seven backed, three unbacked.** Not the "seven land green" this section claimed in its first
+revision, not the "one partial" of its second, and not the "six backed, three unbacked" of its
+third — KISS-CONFORM-6.1-0009 became two clauses, one of which was then backed for real.
+
+> **The backing for §6.1-0009a was written to make this row true, and the row was nearly wrong
+> again.** The ruling that split the clause recorded 0009a as *"backed today by #141"*. It was not.
+> #141 landed the reporting **code**, and `test_kiss_trace_gates.py` as it stood asserted only that
+> `discover_tests` **labels** a gate correctly — nothing anywhere asserted that the report **acts**
+> on the label. The report could have ignored gate labels entirely and every existing check would
+> still have passed. **Implemented is not backed**, and the distinction is invisible from the PR
+> description that landed both. The checks in §2 of that file were added here to close it.
+>
+> That makes **three** consecutive revisions in which this one row overstated its backing — backed,
+> then partial, then backed-by-#141 — each time by an author who had just written the rule against
+> it. The row is now the most-checked line in the document and it is still the one to distrust.
+>
+> **A second thing that check surfaced:** `test_kiss_trace_gates.py` ran **nowhere**. It was not in
+> `traceability.yml` or `conformance.yml`, so from #141's merge until this PR, the suite's only
+> demonstration that its traceability instrument can fail was itself never executed — **an unrun
+> test and an absent test are the same evidence.** It is now a CI step. Note what this means for the
+> rows above: a backing claim naming a test says nothing until you also ask **whether anything runs
+> it**, which no row in this table had been asked.
 
 > **This table deliberately names no pull requests, and that is the fix.** Its first revision
 > recorded rows as *"PR #143, open, not merged"*. #143 merged minutes after this RFC landed, so the
@@ -502,7 +552,7 @@ revision, and not the "one partial" of its second.
 > neither derived nor verified, **the best available move is often to stop stating the volatile
 > part at all.**
 
-**How that error was found, and why it belongs in this document.** The §6.1-0009 row originally
+**How that error was found, and why it belongs in this document.** The KISS-CONFORM-6.1-0009 row originally
 read *"backed by `test_kiss_trace_gates.py` (PR #141)"*. It was **wrong**, and it was caught by an
 automated reviewer on PR #141 noticing that a doc comment in `conformance/src/lib.rs` claimed
 behaviour the tool does not have. **A backing claim was overstated in the table added specifically
@@ -529,22 +579,51 @@ It also sharpens A2's shape: *a doc comment asserting behaviour the code does no
    be an authoritative clause source.**
 4. **Scope of §6.1-0011** — whether "claims that gate a decision" is drawn tightly enough to avoid
    the boilerplate failure described in §6.
-5. **Is §6.1-0009 implementable as written?** It requires that coverage not credit a clause whose
-   backing *"did not execute in the run being reported."* KISS's traceability instrument is a
-   **static analyser that never executes the harness**, so it cannot know what ran. Three
-   resolutions, and the choice is the maintainer's:
-   **(a)** the instrument consumes test-run output as well as source, so per-run crediting becomes
-   possible; **(b)** the clause is scoped to what static analysis can guarantee — *declare the
-   condition, report the gated figure separately, never let the unqualified number stand alone* —
-   which is what #141 implements; **(c)** both, with (b) as the floor and (a) as the freeze
-   requirement.
-   **This is the clause the RFC got wrong twice** — first claiming it backed, then partial — and
-   the reason it was wrong both times is that nobody had asked whether the property is reachable
-   by the tool that would have to enforce it. **A clause whose enforcement mechanism cannot
-   exist is a claim nothing checks**, which is Pattern A, in this document, about itself.
+5. **~~Is KISS-CONFORM-6.1-0009 implementable as written?~~ RESOLVED — atomized into 0009a/0009b.** It required
+   that coverage not credit a clause whose backing *"did not execute in the run being reported."*
+   KISS's traceability instrument is a **static analyser that never executes the harness**, so it
+   cannot know what ran. Three resolutions were on the table: **(a)** the instrument also consumes
+   test-run output; **(b)** the clause is scoped down to what static analysis can guarantee, which
+   is what #141 implements; **(c)** both.
+
+   **The ruling took none of them: the clause was split** (§7.4), on the ground that (b) is *fitting
+   the claim to the instrument on hand* — the failure this RFC exists to name — and (a) alone leaves
+   a MUST with no test, which house style fails the build for. 0009a is the static half and is
+   backed; 0009b is the dynamic half, is unbacked, and names the missing instrument as the reason.
+   The split is preferred to either because the two figures **differ by exactly the gated backing**,
+   so the gap is a number on every run rather than a caveat in a document.
+
+   **Freeze consequence, scoped rather than blanket.** 0009b is a freeze precondition **for any
+   sub-standard whose gate-only set is non-empty**, because a figure the AUDIT role signs at
+   KISS-Conform §2.7 would otherwise rest on a test's existence rather than its execution — Pattern
+   B sitting on the freeze gate itself. Where the set is empty the two figures coincide, 0009a
+   computes that emptiness, and a **stated zero discharges it**. Most sub-standards will discharge
+   it for free; the value is that it names which do not.
+
+   **Measured, not predicted — and the answer is worse than the abstraction suggested.** Running
+   0009a over the live suite: `ENFORCED = 387/909 (42.6%)`, `ENFORCED, EXCLUDING GATE-ONLY =
+   386/909 (42.5%)`. The gate-only set is **one clause**, so eight of the nine sub-standards
+   discharge 0009b today with a stated zero. The one that does not is **KISS-Conform**, and the
+   single clause in the set is:
+
+   > **KISS-CONFORM-6.13-0006** — backed solely by `test_conform_ops_oracle_and_freeze_gate`,
+   > which is `runtime_gate!("msvc", …)`.
+
+   **The one clause in the suite whose backing may not have run is the freeze gate.** On any
+   machine without MSVC that test declines, reports `ok`, and — before #141 — the freeze-gate clause
+   was credited as backed by a test that did not execute. This is the same clause already flagged
+   for **circularity** (its backing test requires the toolchain diversity the gate exists to
+   certify). Two independent defects on one clause, and it is the clause that authorizes the freeze.
+   The scoped precondition therefore costs almost nothing and lands exactly where it matters: the
+   1-clause delta between those two percentages **is** the freeze gate.
+
+   **This is the clause the RFC got wrong three times** — backed, then partial, then
+   backed-by-#141 — and the reason is the same each time: nobody asked whether the property was
+   reachable by the tool that would have to enforce it. **A clause whose enforcement mechanism
+   cannot exist is a claim nothing checks**, which is Pattern A, in this document, about itself.
 
    **The missing check, and it is cheap enough to be routine:** *name the enforcing instrument,
-   then ask whether that instrument can observe the property at all.* §6.1-0009 slipped past two
+   then ask whether that instrument can observe the property at all.* KISS-CONFORM-6.1-0009 slipped past two
    readings because **the clause is true and desirable, and nothing about reading it tells you it
    is unreachable by a static analyser.** Desirability and enforceability are independent, and only
    the first is visible in the prose. This check belongs in whatever process ratifies clauses, not

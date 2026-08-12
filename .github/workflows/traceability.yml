@@ -29,6 +29,12 @@ jobs:
           python-version: "3.x"
       - name: Clause↔test traceability + binding (ratcheted)
         run: python tools/kiss_trace.py --report
+      # The gate's own discrimination controls: that it labels declared gates,
+      # refuses to label an undeclared skip, and reports GATE-ONLY clauses with a
+      # qualified figure. These landed in #141 and ran NOWHERE until now — the one
+      # test proving the instrument can fail was itself never executed.
+      - name: kiss_trace gate discovery + gate-only reporting (negative controls)
+        run: python tools/test_kiss_trace_gates.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       - name: Spec<->binding enumeration consistency (op-family set)
