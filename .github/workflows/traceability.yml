@@ -43,6 +43,21 @@ jobs:
         run: |
           python tools/kiss_dtypes.py --emit-manifest
           git diff --exit-code conformance/corpus/dtype_manifest.json
+      # The op manifest had NO freshness gate, and that is how #154 hid: the §6.8
+      # anchor drifted, the generator started returning `transcendental_atoms: []`,
+      # and the committed file stayed correct only because nobody regenerated it.
+      # Generator and artifact disagreed and nothing compared them.
+      - name: op manifest (SSOT) is not stale
+        run: |
+          python tools/kiss_ops.py --emit-manifest
+          git diff --exit-code conformance/corpus/op_manifest.json
+      # The lints' OWN tests. Six test_*.py files sat in tools/ with no CI path;
+      # one of them (test_kiss_ops_manifest.py) was RED on main, catching #154 in
+      # silence. A test nobody runs is not coverage.
+      - name: Lint self-tests (tools/)
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest tools/ -q
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
