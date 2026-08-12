@@ -81,8 +81,8 @@ Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:*
 sweeps were reported as complete when each had searched one axis — one for dtype spellings but
 not version prefixes, another for an uppercase `SKIP` marker but not the lowercase idiom the
 project actually used. The second was wrong by 6.6×. **Composing the exclusion sentence is what
-surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0. See KISS-CONFORM
-§6.1-0011.
+surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0.
+See `KISS-CONFORM-6.1-0011`.
 
 **2. A verification report names the exact command and flags that produced it, and reads the
 ran-count rather than the colour.** *Why:* `cargo`'s `--all-targets` does not imply
