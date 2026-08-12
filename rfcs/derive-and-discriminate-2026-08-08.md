@@ -252,7 +252,7 @@ not a footnote.**
    clause has since been atomized (§7.4, §9.5) and the row corrected twice more; see §8, which
    records how close the corrected row came to being wrong a third time.
 
-**The counter-measure to three of those seven is one practice, and only one project volunteered
+**The counter-measure to three of those nine is one practice, and only one project volunteered
 it: Baracuda stated the axes its audit did NOT cover** — tautological asserts, timing. In every
 one of the three, the defect was not the audit's scope but that **the scope went unstated**, so
 the reassurance did not know its own limits.
@@ -302,6 +302,32 @@ recreated silent skips, and over-broad ceremony that would recreate unenforced p
    would have caught all four instances at authoring time** — the natural enforcement of
    §6.5-0016, rather than a rule people are asked to remember.
 
+8. **KISS Lane B — an audit that almost reported a false absence.** While auditing whether each
+   backing test is actually *executed* by CI, a first pass reported `corpus_is_deterministic` as
+   **missing from the `cargo test` list** — which would have meant §6.5-0014 cites a test that never
+   runs. It was wrong. `cargo test -- --list` emits fully-qualified paths, and the test is
+   `harness::corpus::tests::corpus_is_deterministic`; the audit *script* compared bare names
+   correctly, and an **ad-hoc shell check written beside it** compared the bare name against the
+   full-path list and found nothing. Caught by re-checking before reporting, which is the only
+   reason this is an instance and not an incident. **The lesson is about the cost asymmetry: a
+   tooling audit that reports a false absence discredits the true findings beside it.** An audit's
+   output is believed in proportion to its instrument's reputation, so a single fabricated finding
+   is expensive out of all proportion to its size — which makes *verify before reporting* worth more
+   here than in ordinary work, not less. Note also the shape: **the careful instrument was right and
+   the convenient one beside it was wrong**, which is A7 (a second copy existed and was believed) in
+   the auditor's own hands.
+
+9. **KISS architect — ruling a clause backed because a PR implemented it.** The ruling that split
+   §6.1-0009 (§9.5) recorded 0009a as *"backed today by #141."* It was not. #141 landed the
+   reporting **code**; the only assertion anywhere was that gate *discovery* labels a gate — nothing
+   asserted that the **report acts on the label**, so the report could have ignored gate labels
+   entirely and every existing check would still have passed. **Implemented is not backed**, and the
+   difference is invisible from the PR description that landed both. Caught by the worker
+   implementing the ruling, who checked before writing the row and backed the clause for real
+   instead. That is the **third consecutive revision** in which this one row overstated its
+   backing — *backed*, then *partial*, then *backed-by-#141* — each time by a different person
+   reading the same PR, and each time by someone who had just written the rule against it.
+
 **Positive evidence, for balance.** This document is otherwise entirely failures. Two data points
 show mechanisms working. First: while building §6.5-0016's backing test, the author's first
 fixture wrote the namespace as a **source literal** — and the suite's own completeness check
@@ -328,10 +354,11 @@ harness, *then* arm the gate. **Fixing "the obvious half" leaves a worse state t
 a gate firing on a rule nobody finished.
 
 **A closing note.** The obvious objection is *"this is a competence problem — write better
-tests."* **Seven instances from the people who articulated the principle, inside the window in
+tests."* **Nine instances from the people who articulated the principle, inside the window in
 which they articulated it, is the only refutation that cannot be dismissed as special pleading.**
-A document about instruments that cannot fail, whose own authors produced seven such instruments in
-six hours — the fifth **inside this document, caught by a reviewer after publication** — is not
+A document about instruments that cannot fail, whose own authors produced nine such instruments in
+one day — the fifth **inside this document, caught by a reviewer after publication**, and the
+ninth a ruling about the very row the fifth got wrong — is not
 evidence the thesis is wrong. It is the strongest available evidence that it is right.
 
 ---
@@ -502,7 +529,7 @@ projects' mirrors of KISS-Conform.
 |---|---|---|
 | §6.5-0011 | backed | `integer_differential.rs` seeded-bug controls |
 | §6.5-0012 | backed | `harness/differ.rs` `Divergence` carries index + operands |
-| §6.5-0013 | backed | `harness/loader.rs` typed missing-symbol path |
+| §6.5-0013 | **backed — windows-leg-only AND runtime-gated** | `harness/loader.rs` typed missing-symbol path. Two conditions stacked, stated in the row rather than footnoted: the module is `#[cfg(windows)]` (`harness/mod.rs:11`) so it **does not compile on the ubuntu leg at all**, and on windows-latest its tests still `runtime_gate_some!("msvc", …)` and decline if MSVC is absent. **The typed-*decline* clause is evidenced only where the decline path is exercised — which is exactly where the evidence is weakest.** |
 | §6.5-0014 | backed | `corpus_is_deterministic`, `corpus_is_reproducible` |
 | §6.5-0015 | backed | `harness/abi.rs` marshals rustc-produced `extern "C"` kernels, no toolchain guard |
 | §6.5-0016 | backed | `test_conform_sweep_incompleteness_is_surfaced` — landed in #143 (merged `e30de36`) |
@@ -510,6 +537,20 @@ projects' mirrors of KISS-Conform.
 | **§6.1-0009b** | **unbacked — structurally, not for want of effort** | `kiss_trace` is a static analyser that **never executes the harness**, so per-run execution is out of its reach by construction — no change to it can back this. It needs a **second instrument**: a joiner consuming `libtest --format json` and the `KISS-SKIP[<gate>]` lines #141's macros emit, matched against the clause matrix. That tool does not exist. |
 | **§6.1-0010** | **unbacked** | requires the dtype-table generator (follow-up) |
 | **§6.1-0011** | **unbacked** | requires a claim-format check |
+
+**Every row above was then asked a question no row had been asked: *does anything run it?*** The
+answers, from `cargo test -- --list` per leg rather than from source inspection: six of the seven
+run unconditionally on both CI legs; **one — §6.5-0013 — does not**, as its row now records. The
+§6.1-0009a row's test ran **nowhere** until the PR that wrote the row. Related counts from the same
+sweep: of 494 discovered harness tests, **483** run unconditionally, **7** are windows-leg-only
+*and* runtime-gated, **1** compiles on both legs and declines on ubuntu **every time** by
+construction, and **3** never run anywhere — they are `#![cfg(feature = "cuda")]` and no CI leg
+passes `--features cuda`. **Those three back no clause: zero, and the structural reason is that no
+clause names them and no test cites them** — they are orphans as well as unrun. That zero is worth
+stating because a compile-time-gated test is invisible in a way a runtime-gated one is not: it does
+not decline, it does not exist, and a `--list` on a leg without the feature cannot report an absence
+it never compiled. **Were the count ever non-zero, the report has no annotation that would warn
+anyone.**
 
 **So: seven backed, three unbacked.** Not the "seven land green" this section claimed in its first
 revision, not the "one partial" of its second, and not the "six backed, three unbacked" of its
