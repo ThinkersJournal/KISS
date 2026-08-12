@@ -85,7 +85,7 @@ KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
-KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_is_3	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk3) and SCHEMA_VERSION
+KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
@@ -584,3 +584,4 @@ KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	untested
 KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	untested	
 KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	untested	
 KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	
+KISS-CLASSIFY-6.1-0013	test_classify_mx_scale_format	untested	MX scale bit-layout (f8e8m0/f8e6m2 = 8-bit unsigned, exp+mantissa=8) lives in the §6.1 table + dtype_manifest.json, enforced by the kiss_dtypes table lint; the stdlib-only Rust harness holds only token strings, so a harness test would bind vocabulary membership but not the OCP-MX encoding widths. Candidate upgrade to lint:kiss_tables once kiss_dtypes declares this clause (Lane B).

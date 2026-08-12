@@ -269,7 +269,7 @@ statements semantically identical via an enumerated clause-correspondence table.
 
 Input: the KISS-Ops `OpDef` for `add` (a primitive-floor arithmetic atom, determinism
 class `exact-byte`, MathPrecision `bit-stable`) paired with the KISS-Classify
-`structure_key` for the cell `sk3|bin|f32|cuda:sm89|ix32|grid|r2|…` (three `f32`
+`structure_key` for the cell `sk4|bin|f32|cuda:sm89|ix32|grid|r2|…` (three `f32`
 operands, strided). The emitter produces:
 
 - **Driver-may-spell** — the one-node op DAG `{ op: add }`; operand binding
@@ -702,8 +702,8 @@ selects the correct comparator. See umbrella §3 for the full statement.
   polynomial or a fixed language intrinsic. *Test:*
   `test_emit_transcendental_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0004** — **Target-specific type spelling**, and the surface form of
-  any dtype that differs by target language (`f16`, `bf16`, the FP8 formats `e4m3fn` /
-  `e5m2`, and the components of the complex dtypes `c32` / `c64`), MUST be an emitter-
+  any dtype that differs by target language (`f16`, `bf16`, the FP8 formats `f8e4m3fn` /
+  `f8e5m2`, and the components of the complex dtypes `c64` / `c128`), MUST be an emitter-
   must-supply decision; the neutral driver MUST NOT spell a dtype's target-language
   surface. *Test:* `test_emit_type_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0005** — Any operator or construct the neutrality audit (§6.5) did
@@ -1104,7 +1104,7 @@ Project and crate names appear here as non-normative provenance only.
 
 ### A.2 Worked emit — strided binary `add` on `f32` (partition trace)
 
-Input `(OpDef=add, structure_key=sk3|bin|f32|cuda:sm89|ix32|grid|r2|…)`. The complete
+Input `(OpDef=add, structure_key=sk4|bin|f32|cuda:sm89|ix32|grid|r2|…)`. The complete
 partition of this emission's lowering decisions:
 
 | Lowering decision | Set | Surface? | Clause |

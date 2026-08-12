@@ -5,15 +5,20 @@
 //! ```text
 //!   sk<ver> | <op_family> | <dtype> | <target> | <index_width> | <work_class>
 //!           | r<rank> | <op0>;<op1>;… | <reduce>
-//!           [ | c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp> ]  (gem only, sk3)
+//!           [ | <precision-field> ]                       (optional-trailing, sk4)
 //! ```
-//! where each `<opI>` is `<contig>/<bcasthex>/<vec>/<div>/<flip>`. `to_token`
+//! where `<precision-field>` is **either** the dense-contraction group
+//! `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>` (gem cells only, §6.7-0006)
+//! **or** the non-contraction precision field `<acc>/<mp>` (non-gem cells,
+//! §6.7-0013): the two occupy the same optional-trailing slot and never coexist, so
+//! the nine-or-ten-field parse is dispatched by the op-family code. Each `<opI>` is
+//! `<contig>/<bcasthex>/<vec>/<div>/<flip>`. `to_token`
 //! and `from_token` round-trip byte-identically (§6.7-0008); every hex mask is
 //! lowercase, zero-padded to two digits (§6.7-0010); a producer emits `rall` /
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// The closed op-family-tag set at this schema version — exactly the 24 codes of
 /// Classify §6.5-0006. A token whose op-family field is outside this set is
@@ -23,14 +28,17 @@ pub const OP_FAMILIES: [&str; 24] = [
     "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
 ];
 
-/// The closed dtype-token set — the 22 tokens of Classify §6.1. sk3 makes the FP8
-/// spellings variant-explicit: `e4m3fn` = OCP finite/no-inf (max 448); `e4m3fnuz` =
-/// AMD reserved (distinct bias, no −0); `e5m2` = IEEE inf/NaN (max 57344); `e5m2fnuz`
-/// = AMD reserved. The ambiguous bare `e4m3` is gone; an inf-carrying `e4m3`, if ever
-/// needed, is added additively with its own explicit spelling, never the bare token.
-pub const DTYPES: [&str; 22] = [
-    "f16", "bf16", "f32", "f64", "s8", "s16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
-    "e4m3fn", "e4m3fnuz", "e5m2", "e5m2fnuz", "s4", "u4", "b1", "c32", "c64",
+/// The closed dtype-token set — the 24 tokens of Classify §6.1 at sk4, in §6.1-table
+/// order (the index is the 1-based ordinal §6.19-0025's accumulator field references).
+/// Integers are uniform `i`-prefixed (`i8`/`i16`/`i4`); FP8 carries the `f8` width prefix
+/// + mandatory variant suffix (`f8e4m3fn` OCP finite/no-inf max 448; `f8e4m3fnuz` AMD
+/// reserved; `f8e5m2` IEEE inf/NaN max 57344; `f8e5m2fnuz` AMD reserved); the MX
+/// shared-exponent scales `f8e8m0`/`f8e6m2` are additive (§6.1-0013); complex is named by
+/// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
+/// §6.1-0012, made loud by the version prefix).
+pub const DTYPES: [&str; 24] = [
+    "f16", "bf16", "f32", "f64", "i8", "i16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
+    "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
 ];
 
 /// The two **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
@@ -38,7 +46,7 @@ pub const DTYPES: [&str; 22] = [
 /// semantics at this schema version** — a `structure_key` using one in any dtype
 /// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
 /// from the unknown-token decline. Activation is a future additive schema event.
-pub const RESERVED_DTYPES: [&str; 2] = ["e4m3fnuz", "e5m2fnuz"];
+pub const RESERVED_DTYPES: [&str; 2] = ["f8e4m3fnuz", "f8e5m2fnuz"];
 
 // ---- small enum codecs -------------------------------------------------------
 
@@ -167,6 +175,35 @@ pub struct Contraction {
     pub mp: MathPrecision,
 }
 
+/// The **default** math-precision of a non-contraction cell (§6.7-0013): the value
+/// the pre-sk4 non-contraction key collapsed to. `<mp>` deviates from it only for
+/// `rm` (reduced-mantissa), so an absent `(acc+mp)` field means bit-stable `st`.
+pub const ACC_MP_DEFAULT_MP: MathPrecision = MathPrecision::Stable;
+
+/// The optional **non-contraction** precision field (§6.7-0013, sk4), realizing the
+/// §6.7-0012 forward requirement. Present at most for a **non-`gem`** cell whose
+/// accumulator dtype or math-precision deviates from the cell default; spelled
+/// gem-symmetrically as `<acc>/<mp>`. It occupies the same optional-trailing token
+/// slot the [`Contraction`] group occupies for `gem`, and the two **never coexist**
+/// (a cell carries at most one precision field). Rules a–e:
+/// (a) emitted IFF at least one of {accumulator ≠ compute dtype, `<mp>` ≠ default}
+///     holds; (b) when emitted, **both** slots are spelled explicitly, including a
+///     slot equal to its default; (c) when neither deviates it is **omitted
+///     entirely** — never `-`, never empty; (d) the all-default form is a forbidden
+///     redundant emission and MUST be rejected on read; (e) omitted-when-absent, in
+///     deliberate contrast to the mandatory reduce field's `-` (§6.6-0009).
+/// This field **declares** the accumulator/precision coordinate for identity; it
+/// does not pin bit-level determinism (§6.17-0007).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccMp {
+    /// Accumulator dtype token, from the closed §6.1 set. Its default (field absent)
+    /// is the cell **compute dtype** (§6.17-0005 accumulator == compute diagonal).
+    pub acc: String,
+    /// Math-precision code, extending the §6.7-0006 strict-vs-TF32 axis to the
+    /// non-contraction key. Its default is [`ACC_MP_DEFAULT_MP`] (`st`).
+    pub mp: MathPrecision,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructureKey {
     pub op_family: String,
@@ -178,13 +215,28 @@ pub struct StructureKey {
     pub operands: Vec<OperandSubKey>,
     pub reduce: Reduce,
     pub contraction: Option<Contraction>,
+    /// The non-contraction `(acc+mp)` precision field (§6.7-0013): present at most
+    /// for a non-`gem` cell that deviates from default, mutually exclusive with
+    /// `contraction` (they share the one optional-trailing slot).
+    pub acc_mp: Option<AccMp>,
 }
 
 /// A typed decline from `from_token` (§6.7-0009): never a panic or OOB read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyDecline {
     WrongFieldCount { got: usize },
+    /// The version field is **malformed** — no `sk` prefix, a non-numeric remainder,
+    /// or a non-canonical leading-zero spelling (`sk04`): the "not a token" wall,
+    /// distinct from [`KeyDecline::UnsupportedSchemaVersion`] (§6.7-0015).
     BadVersionPrefix,
+    /// The version field is a **well-formed canonical** version that this build does
+    /// not accept — a *recognized token from another schema* (§6.7-0015). The
+    /// "re-derive" signpost: distinct from `BadVersionPrefix` on the §6.1-0001
+    /// reserved-vs-unknown model, so a consumer can tell "real token, wrong schema —
+    /// re-derive it" from "this isn't a token". A build MAY ship a bounded decoder
+    /// arm for an older version through the `sk4` series (§6.7-0014); this reference
+    /// build ships none and so declines every non-`sk4` version here.
+    UnsupportedSchemaVersion { got: u32 },
     BadRank,
     BadWorkClass,
     BadOperandSubKey,
@@ -216,6 +268,14 @@ pub enum KeyDecline {
     ContractionPresenceMismatch,
     /// The reduce field is non-`-` for an `op_family` other than `red` (§6.6-0017).
     ReduceNotGatedToRed,
+    /// The non-contraction `(acc+mp)` field (§6.7-0013) is malformed — not exactly
+    /// two `/`-parts, or an unrecognized math-precision code.
+    BadAccMpField,
+    /// The non-contraction `(acc+mp)` field (§6.7-0013) was spelled in its forbidden
+    /// **all-default** form (accumulator == compute dtype **and** `<mp>` == the
+    /// default `st`): a redundant emission, invalid per rule (d) — a canonical
+    /// producer omits the field entirely, so a reader rejects the redundant spelling.
+    RedundantAccMpField,
 }
 
 /// The pinned closed-set bounds (§6.4). Named so a reader can reject an
@@ -292,6 +352,16 @@ impl StructureKey {
             parts.push(c.mp.code().to_string());
             token.push('|');
             token.push_str(&parts.join("/"));
+        } else if let Some(am) = &self.acc_mp {
+            // §6.7-0013: the non-contraction precision field takes the *same*
+            // optional-trailing slot as the gem contraction group (`else if`: the
+            // two never coexist), spelled `<acc>/<mp>`. A canonical producer sets
+            // `Some` only when a coordinate deviates (rules a/c); the all-default
+            // form round-trips to a token `from_token` rejects (rule d).
+            token.push('|');
+            token.push_str(&am.acc);
+            token.push('/');
+            token.push_str(am.mp.code());
         }
         token
     }
@@ -393,6 +463,49 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
     })
 }
 
+/// Parse the non-contraction `(acc+mp)` precision field `<acc>/<mp>` (§6.7-0013).
+/// `compute_dtype` is the cell dtype (field 2), the accumulator's default. The
+/// **all-default** spelling (accumulator == compute dtype AND `<mp>` == the default
+/// `st`) is a forbidden redundant emission (rule d) and is rejected, so a redundant
+/// field can never round-trip. Reserved-before-unknown, matching the contraction
+/// precision group.
+fn parse_acc_mp(field: &str, compute_dtype: &str) -> Result<AccMp, KeyDecline> {
+    let parts: Vec<&str> = field.split('/').collect();
+    if parts.len() != 2 {
+        return Err(KeyDecline::BadAccMpField);
+    }
+    let acc = parts[0];
+    if RESERVED_DTYPES.contains(&acc) {
+        return Err(KeyDecline::ReservedDtype);
+    }
+    if !DTYPES.contains(&acc) {
+        return Err(KeyDecline::UnknownDtype);
+    }
+    let mp = MathPrecision::parse(parts[1]).ok_or(KeyDecline::BadAccMpField)?;
+    // rule (d): reject the all-default form — a canonical producer omits the field
+    // entirely (rule c), so its presence with both slots at default is invalid.
+    if acc == compute_dtype && mp == ACC_MP_DEFAULT_MP {
+        return Err(KeyDecline::RedundantAccMpField);
+    }
+    Ok(AccMp { acc: acc.to_string(), mp })
+}
+
+/// Parse the version field's numeric part as a **canonical** decimal (§6.7-0002):
+/// `0` or `[1-9][0-9]*`, within `u32`. Returns `None` for a non-canonical spelling —
+/// a leading zero (`04`), an empty string, a non-digit byte, or an over-`u32` value
+/// — so a caller distinguishes a well-formed-but-other version from a malformed one.
+/// The leading-zero guard runs BEFORE the parse (a bare `parse::<u32>()` would accept
+/// `04` as 4); this is load-bearing for version-prefix exactness — see `from_token`.
+fn parse_canonical_version(s: &str) -> Option<u32> {
+    if s.is_empty() || (s.len() > 1 && s.starts_with('0')) {
+        return None;
+    }
+    if !s.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    s.parse::<u32>().ok()
+}
+
 /// Parse a token into a `StructureKey`, rejecting a malformed one with a typed
 /// decline (§6.7-0009). Round-trips with `to_token` byte-for-byte (§6.7-0008).
 pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
@@ -405,12 +518,31 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     if f.len() != 9 && f.len() != 10 {
         return Err(KeyDecline::WrongFieldCount { got: f.len() });
     }
-    // field 0: `sk` + the canonical decimal version. `parse::<u32>()` would accept
-    // a non-canonical "sk02" (parses to 2); compare the exact decimal instead so a
-    // leading-zero token is refused (§6.7-0002).
+    // field 0: `sk` + the canonical decimal version (§6.7-0002).
+    //
+    // LOAD-BEARING — do NOT loosen this to a bare `parse::<u32>()` (§6.7-0015): the
+    // version prefix carries dtype SEMANTICS, not just a format tag. `c64` decodes
+    // under the sk3 vocabulary as pair-of-`f64` (128-bit total) and under sk4 as
+    // pair-of-`f32` (64-bit) — the §6.1-0012 meaning-flip — so a token's prefix is
+    // the only thing that disambiguates which vocabulary its dtype tokens speak. A
+    // reader that accepted a leading-zero `sk04` as 4 (what a bare `parse::<u32>()`
+    // does) would also, one loosening later, accept a cross-vocabulary token under
+    // the wrong dtype meaning. The leading-zero guard below therefore runs BEFORE the
+    // parse and MUST stay there.
+    //
+    // The decline splits, on the §6.1-0001 reserved-vs-unknown model (§6.7-0015):
+    //   * a CANONICAL decimal version that simply isn't this build's (e.g. a real
+    //     persisted `sk3` token) is a *recognized token from another schema* —
+    //     `UnsupportedSchemaVersion` (the "re-derive" signpost). This build ships no
+    //     `sk3` decoder arm (the §6.7-0014 arm is a MAY, not a mandate), so it
+    //     declines — but names the cause rather than pretending the bytes are garbage.
+    //   * a malformed field — no `sk`, non-numeric, or a non-canonical leading zero —
+    //     is `BadVersionPrefix` (the "not a token" wall).
     let ver = f[0].strip_prefix("sk").ok_or(KeyDecline::BadVersionPrefix)?;
-    if ver != SCHEMA_VERSION.to_string() {
-        return Err(KeyDecline::BadVersionPrefix);
+    match parse_canonical_version(ver) {
+        Some(v) if v == SCHEMA_VERSION => {}
+        Some(v) => return Err(KeyDecline::UnsupportedSchemaVersion { got: v }),
+        None => return Err(KeyDecline::BadVersionPrefix),
     }
     // field 1/2: op-family and dtype must be in their closed sets (§6.5-0006, §6.1)
     if !OP_FAMILIES.contains(&f[1]) {
@@ -468,9 +600,22 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     if f[1] != "red" && reduce != Reduce::None {
         return Err(KeyDecline::ReduceNotGatedToRed);
     }
-    let contraction = if f.len() == 10 { Some(parse_contraction(f[9])?) } else { None };
+    // The optional-trailing field 9 (present iff 10 fields) is dispatched by the
+    // op-family (§6.7-0013): a `gem` cell spells the dense-contraction group, any
+    // other cell the non-contraction `(acc+mp)` precision field. The two never
+    // coexist, so the nine-or-ten-field count is resolved unambiguously by f[1].
+    let mut contraction = None;
+    let mut acc_mp = None;
+    if f.len() == 10 {
+        if f[1] == "gem" {
+            contraction = Some(parse_contraction(f[9])?);
+        } else {
+            acc_mp = Some(parse_acc_mp(f[9], f[2])?);
+        }
+    }
     // §6.6-0010: the contraction field is present IFF the cell is a dense-contraction
-    // cell (`op_family == gem`).
+    // cell (`op_family == gem`). A `gem` cell missing field 9 is caught here (the
+    // dispatch above left `contraction == None`); a non-`gem` cell never sets it.
     if (f[1] == "gem") != contraction.is_some() {
         return Err(KeyDecline::ContractionPresenceMismatch);
     }
@@ -484,6 +629,7 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         operands,
         reduce,
         contraction,
+        acc_mp,
     })
 }
 

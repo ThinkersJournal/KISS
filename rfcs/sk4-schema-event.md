@@ -284,8 +284,20 @@ mechanical rename.
   `sk3` denotes what `c128` denotes under `sk4`, and a consumer holding the new `Complex64` must know
   it now denotes what `Complex32` denoted. This is the one token that cannot be silently migrated.
 - **The `sk3` decoder arm MUST be bounded**, not indefinite (Unpopped): a permanently-retained
-  old-version arm is its own maintenance hazard. The RFC fixes a migration-window policy (e.g. one
-  minor cycle) rather than leaving it open-ended.
+  old-version arm is its own maintenance hazard. **Concrete pin (ratified value):** an
+  implementation **MAY** retain a bounded `sk3` decoder arm **through the `sk4` series**, but it
+  **MUST NOT** accept `sk3`-prefixed tokens at **`sk5`** or later — retirement is *scheduled* to the
+  `sk5` event (which every party already tracks), not left to a calendar nobody shares. A consumer
+  **MUST NOT** rely on cross-implementation `sk3` acceptance (the arm is a MAY, so acceptance is
+  implementation-dependent): a persisted `sk3` token **MUST** be re-derived, not assumed decodable.
+  Because the arm is a permission, not a mandate, the KISS **reference** codec ships **no** `sk3` arm
+  and declines every non-`sk4` version with a typed *recognized-but-unaccepted* decline that names
+  the version (the "re-derive" signpost), distinct from the malformed-field decline. Normalized to
+  clause text as **KISS-CLASSIFY-6.7-0014** (retirement policy) and **KISS-CLASSIFY-6.7-0015** (the
+  signpost-vs-wall decline split). The arm's soundness **depends on** exact version-prefix matching
+  (§6.7-0002/-0015): `c64` decodes as pair-`f64` under `sk3` and pair-`f32` under `sk4`, so a reader
+  that loosened the version match would silently decode a cross-vocabulary token under the wrong
+  dtype semantics.
 - **The one systemic hazard** is a consumer that detaches the sub-token from its prefix (§3.4) —
   exactly what clause D forbids.
 

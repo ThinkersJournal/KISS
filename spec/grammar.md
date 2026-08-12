@@ -323,7 +323,7 @@ reads per-op commutativity, positionality, and operand roles from KISS-Ops **by 
 (never from a frozen literal list), a newly-added KISS-Ops op becomes advertisable
 simply by **re-basing** — naming it — with no change to the grammar's frozen structural
 schema and **no parallel op list to fork**. When KISS-Ops adds a commutative op (say
-`hypot` or complex `mul` over `c32`), Grammar canonicalizes it because KISS-Ops
+`hypot` or complex `mul` over `c64`), Grammar canonicalizes it because KISS-Ops
 declares it commutative — the commutativity is discovered by name, so no frozen set is
 edited and no frozen-shape version bumps. KISS-Grammar and KISS-Ops therefore version
 on **independent cadences**: KISS-Ops can add `mish`, `cbrt`, or a new fusion-worthy op
