@@ -117,6 +117,17 @@ the result against itself. This is the freeze gate's own problem at small scale 
 ≥2 dissimilar implementations, but implementations sharing one comprehension lineage overstate
 the weight of their agreement in exactly the same way.
 
+**7. Name the enforcing instrument, then ask whether it can observe the property at all — before
+asking whether it currently does.** *Why:* a clause requiring per-run crediting was recorded backed,
+then corrected to unbacked, before anyone asked the prior question: its sole enforcing instrument is
+a *static* reader that parses specification markdown and Rust source and never executes the harness,
+so "did this test run in this run, or decline at the gate?" is outside what it can see in principle.
+A declaration that a test *may* skip is not an observation that it *did*. "Which tool enforces this?"
+gets asked routinely; **"can that tool, in principle, see this?" does not** — and a clause its only
+enforcer structurally cannot observe will be recorded wrong repeatedly, each time by a different
+reader acting in good faith. When the answer is no, the fix is a second instrument of the right
+class, not a weaker clause fitted to the instrument on hand.
+
 ## Normative writing conventions (summary of umbrella §3–§4)
 
 If you propose normative text, follow the house style so it stays testable:
