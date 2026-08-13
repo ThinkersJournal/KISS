@@ -1,0 +1,307 @@
+{
+  "schema": "kiss-structure-key-vectors-v1",
+  "generated_from": "spec/classify.md",
+  "source_commit": "19c3ad7",
+  "clause": "KISS-CLASSIFY-6.7",
+  "structure_key_schema_version": 4,
+  "token_prefix": "sk4",
+  "dtype_axis_note": "recognition_set is all 24 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 22 a byte-match runs over. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
+  "recognition_count": 24,
+  "usable_count": 22,
+  "dtype_recognition_set": [
+    "f16",
+    "bf16",
+    "f32",
+    "f64",
+    "i8",
+    "i16",
+    "u8",
+    "u16",
+    "i32",
+    "i64",
+    "u32",
+    "u64",
+    "bool",
+    "f8e4m3fn",
+    "f8e4m3fnuz",
+    "f8e5m2",
+    "f8e5m2fnuz",
+    "f8e8m0",
+    "f8e6m2",
+    "i4",
+    "u4",
+    "b1",
+    "c64",
+    "c128"
+  ],
+  "dtype_usable_set": [
+    "f16",
+    "bf16",
+    "f32",
+    "f64",
+    "i8",
+    "i16",
+    "u8",
+    "u16",
+    "i32",
+    "i64",
+    "u32",
+    "u64",
+    "bool",
+    "f8e4m3fn",
+    "f8e5m2",
+    "f8e8m0",
+    "f8e6m2",
+    "i4",
+    "u4",
+    "b1",
+    "c64",
+    "c128"
+  ],
+  "reserved_dtypes": [
+    "f8e4m3fnuz",
+    "f8e5m2fnuz"
+  ],
+  "target_axis_note": "Each positive vector names the `target` capability token it requires and its `target_namespace`. A consumer implementing only some namespaces/architectures scopes the rest as capability EXCLUSIONS (conformant, KISS-CLASSIFY-6.8), never mismatches — on BOTH sub-axes: namespace (cuda vs vulkan) and capability/arch (sm89 vs sm90). With these tags a consumer reports N/N on the vectors it claims plus an explicit skip list, instead of N-1/N with a paragraph — the number stops depending on prose.",
+  "target_namespaces": [
+    "cuda",
+    "vulkan"
+  ],
+  "mapping_guard_note": "The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.",
+  "positive_vectors": [
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "elementwise_binary_canonical",
+      "note": "elementwise binary, three contiguous v4 operands, no reduce",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0004",
+      "name": "elementwise_broadcast_operand",
+      "note": "middle operand broadcasts on axis 0 (br/01/v1)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0003",
+      "name": "unary_f16_v8",
+      "note": "unary f16, two v8 operands",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0005",
+      "name": "reduction_trailing_axis",
+      "note": "reduction over the trailing axis serializes rlast",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0005",
+      "name": "reduction_all_axes",
+      "note": "reduction over all axes serializes rall",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0009",
+      "name": "reduction_rank1_all_axes",
+      "note": "rank-1 all-axes reduction",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0005",
+      "name": "reduction_subset_mask",
+      "note": "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "binary_two_operands",
+      "note": "binary with two operands (no third)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "relu_add_generated_r1",
+      "note": "the freeze-gate relu_add cell (#60): rank-1 flat grid-stride, three v4 operands",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0006",
+      "name": "dense_contraction_cuda",
+      "note": "dense gem, f32 weight/acc/out, bit-stable (ctll/.../st)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.8",
+      "name": "dense_contraction_vulkan_target",
+      "note": "same gem cell on a vulkan capability-set target",
+      "target": "vulkan:sg64.ops-abr.arith-f16.cm-none",
+      "target_namespace": "vulkan",
+      "token": "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0006",
+      "name": "gem_batched_cell",
+      "note": "batched gem carries the b<class> coordinate (cmll/.../bm/...)",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0006",
+      "name": "simt_f32",
+      "note": "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0006",
+      "name": "tf32",
+      "note": "TF32, reduced-mantissa mp=rm (same shape as simt_f32, distinct token)",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0018",
+      "name": "mixed_fp8_e4m3_x_e5m2_f32",
+      "note": "mixed-precision FP8: e4m3 x e5m2 -> f32, f32 acc",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0018",
+      "name": "mixed_fp8_e4m3_x_e4m3_f16",
+      "note": "mixed-precision FP8: e4m3 x e4m3 -> f16, f32 acc (distinct token from the e5m2 cell)",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "noncontraction_acc_mp_field",
+      "note": "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "noncontraction_scan_mp_only",
+      "note": "scan cell, accumulator == compute (f32) but mp deviates (rm): |-|f32/rm",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|scn|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "noncontraction_acc_deviating_f64",
+      "note": "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "noncontraction_reduction_mp_only",
+      "note": "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm"
+    }
+  ],
+  "decline_vectors": [
+    {
+      "clause": "KISS-CLASSIFY-6.1-0001",
+      "name": "unknown_dtype",
+      "note": "dtype outside the closed 24-token set",
+      "token": "sk4|bin|f99|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnknownDtype"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0001",
+      "name": "reserved_dtype",
+      "note": "reserved fnuz dtype: recognized on parse, distinct from unknown",
+      "token": "sk4|bin|f8e4m3fnuz|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "ReservedDtype"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.5-0006",
+      "name": "unknown_op_family",
+      "note": "op-family outside the closed 24-code set",
+      "token": "sk4|zzz|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnknownOpFamily"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0015",
+      "name": "version_signpost_sk9",
+      "note": "well-formed canonical OTHER version -> re-derive signpost, not a wall",
+      "token": "sk9|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnsupportedSchemaVersion",
+      "got": 9
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0014",
+      "name": "version_signpost_sk3",
+      "note": "this reference build ships no sk3 decoder arm: a persisted sk3 token is the signpost, never a silent cross-vocab decode",
+      "token": "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnsupportedSchemaVersion",
+      "got": 3
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0015",
+      "name": "version_wall_leading_zero",
+      "note": "non-canonical leading-zero sk04 is the malformed wall, not the signpost",
+      "token": "sk04|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "BadVersionPrefix"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "redundant_acc_mp_all_default",
+      "note": "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st",
+      "decline": "RedundantAccMpField"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0013",
+      "name": "acc_mp_bad_precision_code",
+      "note": "the (acc+mp) field with an unrecognized math-precision code (zz)",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/zz",
+      "decline": "BadAccMpField"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0009",
+      "name": "contraction_reserved_weight_dtype",
+      "note": "a reserved fnuz dtype inside the gem precision group declines as reserved",
+      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st",
+      "decline": "ReservedDtype"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0009",
+      "name": "contraction_bad_precision_code",
+      "note": "the gem precision group with an unrecognized math-precision code (zz)",
+      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz",
+      "decline": "BadContractionField"
+    }
+  ]
+}

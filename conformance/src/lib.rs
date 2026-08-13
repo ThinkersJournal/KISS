@@ -99,6 +99,7 @@ pub mod dtype;
 pub mod integer;
 pub mod json;
 pub mod opattrs;
+pub mod reference_vectors;
 pub mod semantics;
 pub mod shape_expr;
 pub mod structural;

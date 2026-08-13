@@ -1,0 +1,9 @@
+# Force LF on the generated structure_key reference-vectors artifact so its bytes are
+# platform-stable for every consumer that byte-hashes it. With core.autocrlf=true and
+# no .gitattributes, checkout re-materializes CRLF and a raw hash reports a difference
+# that isn't one (Unpopped's git-hash-object note). The freshness gate is a BYTE compare,
+# so the file must be LF on disk on every platform.
+#
+# Scoped to this one file deliberately: a corpus-wide *.json renormalization is filed
+# separately so its one-time diff does not collide with an open freshness-gate PR.
+conformance/corpus/structure_key_vectors.json text eol=lf
