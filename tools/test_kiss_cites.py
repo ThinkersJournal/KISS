@@ -159,5 +159,17 @@ def main():
     return 0
 
 
+def test_kiss_cites_discrimination():
+    """Collected by pytest; CI also runs the file in script mode.
+
+    Without this, `pytest tools/` collects ZERO tests from a file named
+    `test_*.py` and reports success having executed none of the controls above —
+    the vacuity mechanism, in the file whose job is to prove the citation audit
+    is not vacuous. CI gates on this explicitly (#158's shape), and it caught the
+    omission here.
+    """
+    assert main() == 0, "the citation audit failed its discrimination controls"
+
+
 if __name__ == "__main__":
     sys.exit(main())
