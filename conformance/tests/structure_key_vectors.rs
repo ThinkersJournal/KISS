@@ -309,3 +309,24 @@ fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
         usable.len()
     );
 }
+
+/// (8) `coverage_note` claims rule (d) — rejecting the all-default redundant `(acc+mp)` —
+/// is covered by a DECLINE vector, because the POSITIVE byte-match is structurally blind to
+/// it (a decline-side rule; Fuel found this by seeded sabotage: removing the enforcement left
+/// the positive byte-match green because every published `(acc+mp)` positive genuinely
+/// deviates). Make the "covered here" half of the note executable: if the redundant decline
+/// vector were removed, the note would be a lie and this test names why.
+#[test]
+fn rule_d_is_covered_by_a_redundant_decline_vector() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
+    let declines = doc.get("decline_vectors").and_then(|j| j.as_arr()).expect("decline_vectors array");
+    let has_rule_d = declines
+        .iter()
+        .any(|d| d.get("decline").and_then(|j| j.as_str()) == Some("RedundantAccMpField"));
+    assert!(
+        has_rule_d,
+        "coverage_note claims rule (d) is covered by a RedundantAccMpField decline vector \
+         (redundant_acc_mp_all_default) — that vector is gone, so the note is now false. The positive \
+         byte-match is blind to rule (d); restore the decline vector, do NOT weaken the note."
+    );
+}
