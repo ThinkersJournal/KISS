@@ -1,0 +1,44 @@
+# KISS-Conform — the coverage RATCHET floor.
+#
+# `python tools/kiss_trace.py --ratchet` compares the live figures against these
+# three and fails on ANY deviation. It is a second mode, not a replacement for
+# `--strict`: --strict is §6.2 as literally written (913/913 or red) and stays
+# available under its own flag. This mode exists because a check that has always
+# been red teaches everyone to ignore it, and would not be noticed when it started
+# failing for a NEW reason.
+#
+#   harness    clauses backed by executable code           MUST NOT decrease
+#   lint       clauses enforced by a document lint         MUST NOT decrease
+#   untested   genuinely untested MUSTs — the real gap     MUST NOT increase
+#
+# THREE NUMBERS, NOT ONE, and that is the whole design:
+#
+#   * A ratchet on `untested` alone is gameable by RECLASSIFICATION. PR #177 moved
+#     untested 515 -> 502 while ENFORCED stayed at exactly 390/913: thirteen rows
+#     changed their EXPLANATION and nothing was tested. A one-number ratchet would
+#     have called that progress. Requiring `harness` to hold at the same time makes
+#     a reclassification neutral rather than green.
+#
+#   * `ENFORCED = harness + lint` is a sum of unequal parts, so the pair must be
+#     stored SEPARATELY. #187 records the case: an incidental citation credited a
+#     lint-enforced clause to the harness — harness +1, lint -1, ENFORCED
+#     unchanged. A ratchet on the sum cannot see a document lint being replaced by
+#     a string match inside one test.
+#
+# A DEVIATION IN EITHER DIRECTION FAILS.
+#   worse  -> regression: coverage went backwards.
+#   better -> the floor is STALE: lower it, in the same PR that earned it. That is
+#             what makes this a ratchet rather than slack — green means AT the
+#             floor, never somewhere under it.
+#
+# This file is COMMITTED and edited by hand. The tool never rewrites it: a floor
+# the tool maintains is a state derived from the run rather than from a decision,
+# and it would silently absorb a regression that happened to coincide with an
+# improvement elsewhere.
+#
+# Set from main @ dedde77.
+#
+# key	value
+harness	362
+lint	35
+untested	495

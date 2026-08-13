@@ -39,6 +39,15 @@ jobs:
       # OWN discrimination is what must run: the controls prove it does not simply
       # flag every reverse citation. The audit itself is non-gating by design — it
       # produces candidates to adjudicate, and a candidate is not a defect.
+      # The coverage RATCHET. Unlike --strict (§6.2 verbatim, non-blocking because
+      # it can never go green), this one CAN be green and therefore BLOCKS: it
+      # compares harness/lint/untested against the committed floor and fails on any
+      # deviation in either direction. Its own discrimination controls run first —
+      # a ratchet that cannot go red is the same defect as one that is always red.
+      - name: Coverage ratchet discrimination controls
+        run: python tools/test_kiss_ratchet.py
+      - name: Coverage ratchet (blocking)
+        run: python tools/kiss_trace.py --ratchet
       - name: Citation audit discrimination controls
         run: python tools/test_kiss_cites.py
       - name: Citation audit (reports; does not gate)
