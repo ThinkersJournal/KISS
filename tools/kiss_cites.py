@@ -153,9 +153,12 @@ def audit(spec_dir, conf_dir):
         for c in info["clauses"]:
             cited.setdefault(c, set()).add(tname)
 
-    all_ids = set()
-    for res in results:
-        all_ids |= res.clause_ids
+    # The population kiss_trace actually measures for coverage: the clauses with a
+    # §9 matrix row. Iterating every ID found in the prose would report reverse
+    # citations for clauses that have no matrix row at all — inflating
+    # `reverse_only` and putting out-of-scope rows in the candidate list. Caught in
+    # review of #190; the first published run overstated the count.
+    all_ids = set(clause_test)
 
     rows, stats = [], {"forward": 0, "reverse_only": 0, "assertion": 0,
                        "code_no_assertion": 0, "comment_contrastive": 0,
@@ -212,8 +215,10 @@ def main():
     ap.add_argument("--spec-dir", default=None)
     ap.add_argument("--conformance-dir", default=None)
     ap.add_argument("--strict", action="store_true",
-                    help="exit 1 if any candidate is found (off by default: this "
-                         "audit reports, it does not gate)")
+                    help="exit 1 if any ACTIONABLE candidate is found — the "
+                         "code-as-data and contrastive-comment buckets, never the "
+                         "sanctioned one (off by default: this audit reports, it "
+                         "does not gate)")
     a = ap.parse_args()
     root = os.path.dirname(HERE)
     spec_dir = a.spec_dir or os.path.join(root, "spec")
@@ -261,7 +266,11 @@ def main():
     print(f"  NOT listed: the {st['comment_affirmative']} affirmative comment-only citations.")
     print("  A comment citation is the form kiss_trace documents ('the comment block")
     print("  above a test'), so flagging them all would flag the convention itself.")
-    return 1 if (a.strict and rows) else 0
+    # `--strict` gates on ACTIONABLE candidates only. Keying it off every
+    # reverse-only row would make it fail while reporting zero candidates, because
+    # the sanctioned affirmative-comment bucket is in `rows` too — a strict flag
+    # that cannot report success is one nobody leaves enabled.
+    return 1 if (a.strict and actionable) else 0
 
 
 if __name__ == "__main__":

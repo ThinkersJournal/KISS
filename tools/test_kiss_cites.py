@@ -99,8 +99,13 @@ def run_audit():
         conf_dir = os.path.join(td, "conformance", "tests")
         os.makedirs(spec_dir)
         os.makedirs(conf_dir)
-        open(os.path.join(spec_dir, "probe.md"), "w", encoding="utf-8").write(SPEC)
-        open(os.path.join(conf_dir, "probe.rs"), "w", encoding="utf-8").write(HARNESS)
+        # Context managers, not refcount-driven close: the audit reads these files
+        # back immediately, so the write must be flushed before it runs rather
+        # than whenever CPython happens to drop the handle.
+        with open(os.path.join(spec_dir, "probe.md"), "w", encoding="utf-8") as f:
+            f.write(SPEC)
+        with open(os.path.join(conf_dir, "probe.rs"), "w", encoding="utf-8") as f:
+            f.write(HARNESS)
         saved = kc.kt.SPECS
         try:
             kc.kt.SPECS = ["probe"]
@@ -147,6 +152,17 @@ def main():
         fails.append(f"  forward count is {st['forward']}, expected 1")
     if st["reverse_only"] != 5:
         fails.append(f"  reverse_only count is {st['reverse_only']}, expected 5")
+
+    # --strict must key off ACTIONABLE candidates only. The fixture has one
+    # sanctioned affirmative-comment citation, so a --strict that counted every
+    # reverse-only row would fail here while reporting zero candidates.
+    sanctioned = [r for r in rows if r["bucket"] == "comment_affirmative"]
+    actionable = [r for r in rows if r["bucket"] != "comment_affirmative"]
+    if not sanctioned:
+        fails.append("  fixture no longer contains a sanctioned citation - the "
+                     "--strict control below would be vacuous")
+    if not actionable:
+        fails.append("  fixture no longer contains an actionable candidate")
 
     if fails:
         print("FAIL - the citation audit does not discriminate:")
