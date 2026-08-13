@@ -59,6 +59,15 @@ jobs:
       # named pytest"), and collecting ZERO tests exits 5 — so a rename that
       # empties the sweep goes red instead of reporting a silent success. Both
       # verified locally before wiring it.
+      #
+      # THE SWEEP DOES NOT COVER EVERY FILE IT APPEARS TO. `test_kiss_trace_gates.py`
+      # is a SCRIPT (`check()`/`main()`, not `test_*`), so `pytest tools/` collects
+      # ZERO from it and reports the other files' total — a step named "Lint
+      # self-tests" silently skipping the one suite that proves the traceability
+      # instrument can fail. `pytest tools/ -q` exiting 0 says the sweep RAN; it
+      # says nothing about what it COVERED. Hence the explicit invocation below.
+      - name: kiss_trace gate controls (script mode — pytest collects none of these)
+        run: python tools/test_kiss_trace_gates.py
       - name: Lint self-tests (tools/)
         run: |
           python -m pip install --quiet pytest
