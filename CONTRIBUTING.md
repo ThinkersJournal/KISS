@@ -146,8 +146,8 @@ missing the one that is. Both halves collapse to one instruction: **compare what
 something you did not write** — and if the thing you did not write is a document a human retypes
 into a test, you have moved the transcription, not removed it.
 
-**9. A seeded mutation must assert that it applied — an unapplied mutation is indistinguishable
-from a guard that does not fire.** Proving a test can fail means breaking the thing it checks and
+**9. A seeded mutation must assert that it applied.**
+An unapplied mutation is indistinguishable from a guard that does not fire. Proving a test can fail means breaking the thing it checks and
 watching it go red. If the edit silently matched nothing, the "mutation" runs against unmodified
 source and the test passes **because there was no defect to catch**, which reads exactly like a test
 with a hole in it. *Why:* a mutation vector reported green twice, and the honest reading — *"my test
@@ -165,8 +165,9 @@ And for a test credited to more than one clause, per-vector proofs are necessary
 publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
 together is the only thing distinguishing N properties from one property credited N times.
 
-**10. Close the class, not the instance — a class guard covers cases its author never imagined,
-including ones that did not exist yet.** Fixing the instance in front of you leaves the next one to
+**10. Close the class, not the instance.**
+A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
+the instance in front of you leaves the next one to
 be found by whoever trips over it. *Why:* a reviewer found one `tools/test_*.py` that pytest
 collected zero tests from. The instance fix was one file; the class fix was a CI guard failing **any**
 `test_*.py` that collects nothing. Two days later a **new** tool — the citation audit, written to
