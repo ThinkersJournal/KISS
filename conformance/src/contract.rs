@@ -445,3 +445,114 @@ fn parse_crc_hex(s: &str) -> Option<u32> {
         None
     }
 }
+// ---------------------------------------------------------------------------
+// §6.8-0008/-0009/-0010 — the `audited_status` DERIVATION.
+// ---------------------------------------------------------------------------
+
+/// A per-backend **accuracy tier** (§6.8-0002): a tagged quantity carrying at
+/// least one of `{max_ulp, max_relative, max_absolute}` against a named
+/// reference. A tier carrying none of the three declares no bound.
+///
+/// The `correctly-rounded` and `bit-reproducible` precision classes are carried
+/// here as `max_ulp = 0`, which is the §6.7-0007 precision-class↔tier
+/// correspondence ("MUST map to tier 0"), not a separate representation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DeclaredAccuracyTier {
+    pub max_ulp: Option<u32>,
+    /// Bit pattern of the declared relative bound, if any (§6.11-0010 real form).
+    pub max_relative: Option<Real>,
+    /// Bit pattern of the declared absolute bound, if any.
+    pub max_absolute: Option<Real>,
+}
+
+impl DeclaredAccuracyTier {
+    /// A tier declares a bound iff it carries at least one of the three tagged
+    /// quantities (§6.8-0002).
+    pub fn is_bounded(&self) -> bool {
+        self.max_ulp.is_some() || self.max_relative.is_some() || self.max_absolute.is_some()
+    }
+}
+
+/// The `audited_status` value set. §6.8-0010 forbids producing a value neither
+/// §6.8-0009 nor §6.8-0010 yields, so the derivation is TOTAL over exactly these
+/// two — there is no third variant and no "unknown".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuditedStatus {
+    Audited,
+    Unaudited,
+}
+
+/// The Guarantees fields the derivation reads, plus the one field it MUST NOT
+/// read. `bit_stability` is present deliberately: §6.8-0009 forbids the rule
+/// setting it (that field is owned by §6.8-0005), and a rule that cannot see the
+/// field cannot be shown not to use it.
+#[derive(Debug, Clone)]
+pub struct Guarantees {
+    /// The NAMED KISS-Ops function precision is measured against (§6.8-0002).
+    /// `None` — or a name that is empty/whitespace — is "no reference named".
+    pub reference_function: Option<String>,
+    /// Per target backend, the declared accuracy tier (§6.8-0002). Empty means
+    /// no tier is declared for any backend.
+    pub per_backend_ulp_tiers: Vec<(String, DeclaredAccuracyTier)>,
+    pub determinism_class: crate::DeterminismClass,
+    /// Owned by §6.8-0005. The derivation MAY read it — §6.8-0005 says it does —
+    /// but MUST NOT set it, which the shared borrow below makes structural.
+    pub bit_stability: bool,
+}
+
+impl Guarantees {
+    /// Whether the Guarantees declare a **bounded precision against a named
+    /// reference function** — the single predicate §6.8-0009 and §6.8-0010
+    /// partition on.
+    fn declares_bounded_precision(&self) -> bool {
+        let named = self
+            .reference_function
+            .as_deref()
+            .is_some_and(|r| !r.trim().is_empty());
+        named && self.per_backend_ulp_tiers.iter().any(|(_, t)| t.is_bounded())
+    }
+}
+
+/// Derive `audited_status` from the Guarantees (§6.8-0008): `audited` when the
+/// Guarantees declare a bounded precision against a named `reference_function`
+/// (§6.8-0009), `unaudited` when they do not (§6.8-0010).
+///
+/// The determinism class does **not** gate the result. §6.8-0009 says the
+/// `audited` arm **includes** an `order-invariant/nondeterministic` kernel whose
+/// nondeterminism is declared against a named reference under a stated tolerance
+/// — so "nondeterministic therefore unaudited" is the wrong rule, not a
+/// conservative one.
+///
+/// `bit_stability` is owned by §6.8-0005, which states that this derivation
+/// **reads** that field and MUST NOT **set** it. Taking `&Guarantees` makes the
+/// prohibition structural; nothing here needs to assert it.
+pub fn derive_audited_status(g: &Guarantees) -> AuditedStatus {
+    if g.declares_bounded_precision() {
+        AuditedStatus::Audited
+    } else {
+        AuditedStatus::Unaudited
+    }
+}
+
+/// A declared `audited_status` that disagrees with the value the rule derives —
+/// i.e. an authored constant (§6.8-0008).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AuditedStatusMismatch {
+    pub declared: AuditedStatus,
+    pub derived: AuditedStatus,
+}
+
+/// The KISS-Conform check (§6.13-0021): a contract's **declared**
+/// `audited_status` MUST equal the value derived from its own Guarantees.
+/// A mismatch is the observable signature of a hardcoded field.
+pub fn verify_audited_status(
+    declared: AuditedStatus,
+    g: &Guarantees,
+) -> Result<(), AuditedStatusMismatch> {
+    let derived = derive_audited_status(g);
+    if declared == derived {
+        Ok(())
+    } else {
+        Err(AuditedStatusMismatch { declared, derived })
+    }
+}
