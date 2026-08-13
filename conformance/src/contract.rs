@@ -556,3 +556,180 @@ pub fn verify_audited_status(
         Err(AuditedStatusMismatch { declared, derived })
     }
 }
+// ---------------------------------------------------------------------------
+// §6.2-0005 / §6.1-0004 — the malformed-contract NEGATIVE VECTOR set.
+// ---------------------------------------------------------------------------
+
+/// One negative vector: a document malformed in exactly **one** way, paired with
+/// the **exact** typed decline a reader must return for it.
+///
+/// The pairing is the point. A vector that only demands "some error" cannot tell
+/// a reader that classified the fault correctly from one that declined for an
+/// unrelated reason, so a decline taxonomy checked that way is untested — the
+/// codes are free to drift into each other and every assertion still passes.
+pub struct NegativeVector {
+    /// What is wrong with this document.
+    pub name: &'static str,
+    /// The malformed bytes, as they would arrive over the transport.
+    pub doc: Vec<u8>,
+    /// The one decline a conforming reader MUST return. Not "an error".
+    pub expect: ContractDecline,
+}
+
+/// The body of the positive control: one well-formed Identity block.
+fn well_formed_body() -> Vec<u8> {
+    render_block(
+        1,
+        "identity",
+        &[
+            ("contract_kind", Value::Str("kiss-contract".into())),
+            ("contract_version", Value::Str("1".into())),
+        ],
+    )
+}
+
+/// A well-formed minimal contract document — the **positive control** the
+/// negative vectors are corruptions of. A corpus in which everything declines
+/// proves nothing, so this must read cleanly.
+pub fn well_formed_document() -> Vec<u8> {
+    let body = well_formed_body();
+    Document {
+        contract_kind: "kiss-contract".into(),
+        contract_version: "1".into(),
+        body,
+    }
+    .encode()
+}
+
+/// The KISS-Conform negative/decline vector set for malformed contracts
+/// (§6.13-0023): each entry corrupts [`well_formed_document`] in exactly one way
+/// and pins the exact typed decline the §6.1 hard-reject reader must return.
+///
+/// Every entry is a **single-fault** corruption. A document broken two ways can
+/// be declined for either reason, so it cannot pin one code and would silently
+/// admit a reader that checks in the wrong order.
+pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
+    // The control's header fields are CONSTRUCTED here, not re-parsed out of its
+    // own header. Re-parsing meant `split(' ')` plus unchecked `f[1]..f[4]`, so a
+    // change to the header encoding — an extra separator, a field added — would
+    // panic while BUILDING the corpus, surfacing as a harness crash rather than as
+    // the framing change it is.
+    let owned_body = well_formed_body();
+    let body = &owned_body[..];
+    let kind = "kiss-contract";
+    let version = "1";
+    let len_owned = format!("len={}", body.len());
+    let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
+    let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
+    let header = format!("KISC {kind} {version} {len_f} {crc_f}");
+
+    // Rebuild a document from a (possibly corrupted) header line + body.
+    let with_header = |h: &str| -> Vec<u8> {
+        let mut v = h.as_bytes().to_vec();
+        v.push(b'\n');
+        v.extend_from_slice(body);
+        v
+    };
+
+    let mut out = vec![
+        NegativeVector {
+            name: "magic replaced",
+            doc: with_header(&header.replacen("KISC", "XXXX", 1)),
+            expect: ContractDecline::NoMagic,
+        },
+        NegativeVector {
+            name: "input shorter than the magic",
+            doc: b"KIS".to_vec(),
+            expect: ContractDecline::NoMagic,
+        },
+        NegativeVector {
+            name: "header line never terminated (no LF anywhere)",
+            doc: header.as_bytes().to_vec(),
+            expect: ContractDecline::MalformedHeader,
+        },
+        NegativeVector {
+            name: "CRLF header (LF-only is pinned)",
+            doc: with_header(&format!("{header}\r")),
+            expect: ContractDecline::MalformedHeader,
+        },
+        NegativeVector {
+            name: "header field dropped",
+            doc: with_header(&format!("KISC {kind} {version} {len_f}")),
+            expect: ContractDecline::MalformedHeader,
+        },
+        NegativeVector {
+            name: "len= is not decimal",
+            doc: with_header(&format!("KISC {kind} {version} len=abc {crc_f}")),
+            expect: ContractDecline::MalformedHeader,
+        },
+        NegativeVector {
+            name: "crc32= is uppercase hex",
+            doc: with_header(&format!("KISC {kind} {version} {len_f} crc32=DEADBEEF")),
+            expect: ContractDecline::MalformedHeader,
+        },
+        NegativeVector {
+            name: "unrecognized contract_kind",
+            doc: with_header(&format!("KISC kiss-kontract {version} {len_f} {crc_f}")),
+            expect: ContractDecline::UnknownKind { got: "kiss-kontract".into() },
+        },
+        NegativeVector {
+            name: "unsupported contract_version",
+            doc: with_header(&format!("KISC {kind} 2 {len_f} {crc_f}")),
+            expect: ContractDecline::UnknownVersion { got: "2".into() },
+        },
+        NegativeVector {
+            name: "declared length overstates the body",
+            doc: with_header(&format!(
+                "KISC {kind} {version} len={} {crc_f}",
+                body.len() as u64 + 1
+            )),
+            expect: ContractDecline::BadLength {
+                declared: body.len() as u64 + 1,
+                actual: body.len(),
+            },
+        },
+    ];
+
+    // A hostile length: declared far beyond any real buffer. §6.1-0004 forbids
+    // allocating on it, so this must decline on the comparison, not on memory.
+    out.push(NegativeVector {
+        name: "declared length is hostile (u64 near-max)",
+        doc: with_header(&format!(
+            "KISC {kind} {version} len=18446744073709551615 {crc_f}"
+        )),
+        expect: ContractDecline::BadLength {
+            declared: u64::MAX,
+            actual: body.len(),
+        },
+    });
+
+    // Body byte flipped, length untouched: the CRC is what must catch it.
+    let mut flipped_body = body.to_vec();
+    flipped_body[0] ^= 0x20;
+    let mut flipped = header.as_bytes().to_vec();
+    flipped.push(b'\n');
+    flipped.extend_from_slice(&flipped_body);
+    out.push(NegativeVector {
+        name: "body byte flipped, declared length still correct",
+        doc: flipped,
+        expect: ContractDecline::BadChecksum {
+            declared: crc32_ieee(body),
+            computed: crc32_ieee(&flipped_body),
+        },
+    });
+
+    // A headingless body: well-framed, correct length and CRC, no first heading.
+    let headless_body = b"contract_kind = kiss-contract\n".to_vec();
+    out.push(NegativeVector {
+        name: "headingless body (framing valid, no first section heading)",
+        doc: Document {
+            contract_kind: "kiss-contract".into(),
+            contract_version: "1".into(),
+            body: headless_body,
+        }
+        .encode(),
+        expect: ContractDecline::Headingless,
+    });
+
+    out
+}

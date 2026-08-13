@@ -150,7 +150,6 @@ KISS-CONFORM-6.13-0017	test_conform_emit_structural_and_tier2	blocked	§6.9 op-D
 KISS-CONFORM-6.13-0018	test_conform_all_build_gate_and_keying	blocked	#144 no sidecars and no declared coverage set; the gate exists but runs over prose
 KISS-CONFORM-6.13-0019	test_conform_announce_golden_vectors	untestable	#174 — "version-negotiation frames" name no KISS-Announce artifact
 KISS-CONFORM-6.13-0022	test_conform_contract_semantics_to_floor	untested	
-KISS-CONFORM-6.13-0023	test_conform_contract_malformed_decline	untested	
 KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	blocked	freeze governance (§8-0006): ≥2 dissimilar impls from the text alone; §5.3 external implementor
 KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	blocked	#144 no retired/burned clause-ID registry exists to check a cite against
 KISS-CONFORM-6.2-0004	test_conform_build_fails_drift	blocked	#144 drift = prose<->sidecar token match; no sidecar exists to compare against
