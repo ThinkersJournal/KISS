@@ -35,6 +35,14 @@ jobs:
       # test proving the instrument can fail was itself never executed.
       - name: kiss_trace gate discovery + gate-only reporting (negative controls)
         run: python tools/test_kiss_trace_gates.py
+      # The citation audit reports on the integrity of the coverage numbers, so its
+      # OWN discrimination is what must run: the controls prove it does not simply
+      # flag every reverse citation. The audit itself is non-gating by design — it
+      # produces candidates to adjudicate, and a candidate is not a defect.
+      - name: Citation audit discrimination controls
+        run: python tools/test_kiss_cites.py
+      - name: Citation audit (reports; does not gate)
+        run: python tools/kiss_cites.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       - name: Spec<->binding enumeration consistency (op-family set)
