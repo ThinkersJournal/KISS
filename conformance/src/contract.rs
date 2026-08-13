@@ -5,8 +5,14 @@
 //! body length its header line declares and integrity-checked by that line's
 //! CRC-32 (§6.11-0002/-0003). It is **not** a length-prefixed binary envelope.
 //!
-//! Every field of the framing is determinism-class exact-byte (§6.0-0001), so the
-//! exact-byte comparator (Conform §6.8) applies throughout. The golden document
+//! Every field of the framing is determinism-class exact-byte (§6.0-0001) **with
+//! one exception**: the optional, non-normative Semantics `human_annotation`
+//! (§6.4-0001) sits **outside** that scope and MUST NOT be byte-compared. So the
+//! exact-byte comparator (Conform §6.8) applies to the framing throughout, but to
+//! a contract only after the projection in [`exact_byte_scoped`] — which removes
+//! that one field, and must be applied to the BODY before the header's `len=` /
+//! `crc32=` are derived, or the excluded field leaks back in through the
+//! checksum. The golden document
 //! bytes are transcribed from Contract Appendix C (the §2.5 strided `add`
 //! contract: header line + Identity block + Semantics block).
 //!
@@ -204,6 +210,56 @@ impl Document {
         out.extend_from_slice(&self.body);
         out
     }
+}
+
+// ---------------------------------------------------------------------------
+// §6.0-0001 — the exact-byte-scoped projection (the `human_annotation` exclusion).
+// ---------------------------------------------------------------------------
+
+/// The pinned Semantics section heading line (§6.11-0004; section id 2).
+const SEMANTICS_HEADING: &[u8] = b"[section:2:semantics]\n";
+
+/// The pinned field-line prefix of the one field outside the exact-byte scope.
+/// `<key>`, one space, `=`, one space (§6.11-0001) — matched at a line start, so
+/// a *value* that merely mentions the key is never mistaken for the field.
+const BLURB_LINE_PREFIX: &[u8] = b"human_annotation = ";
+
+/// Project a contract **body** onto the bytes KISS-Conform may byte-compare: the
+/// body verbatim, minus the Semantics `human_annotation` field line.
+///
+/// `human_annotation` is the sole optional Semantics field (§6.4-0001) and the
+/// sole field the contract text places **outside** the exact-byte determinism
+/// scope (§6.0-0001). A comparator that includes it calls two contracts with
+/// identical machine-checkable content different because a human edited a
+/// comment.
+///
+/// The projection is deliberately narrow in two ways, both load-bearing:
+///
+/// * It strips the field **only inside the Semantics block**. `human_annotation`
+///   is defined only there; the same key in any other block is an *unknown
+///   field*, which a reader MUST decline (§6.11-0005). Stripping it document-wide
+///   would hide that decline behind this exclusion.
+/// * It matches the pinned line form anchored at a line start, never a substring,
+///   so an `op_dag` or blurb value containing the text `human_annotation` is
+///   untouched.
+///
+/// Note this operates on the **body**, before the header line is derived. The
+/// §6.11-0002 header carries `len=` and `crc32=` computed over the body, so a
+/// blurb edit changes them; projecting first and deriving the header from the
+/// projection is what keeps the excluded field from leaking back in through the
+/// checksum.
+pub fn exact_byte_scoped(body: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(body.len());
+    let mut in_semantics = false;
+    for line in body.split_inclusive(|&b| b == b'\n') {
+        if line.starts_with(b"[section:") {
+            in_semantics = line == SEMANTICS_HEADING;
+        } else if in_semantics && line.starts_with(BLURB_LINE_PREFIX) {
+            continue; // outside the exact-byte scope (§6.0-0001, §6.4-0001)
+        }
+        out.extend_from_slice(line);
+    }
+    out
 }
 
 // ---------------------------------------------------------------------------
