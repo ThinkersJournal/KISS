@@ -520,6 +520,7 @@ pub fn emit_reference_vectors_json() -> String {
     }
     s.push_str("  ],\n");
     s.push_str("  \"mapping_guard_note\": \"The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.\",\n");
+    s.push_str("  \"coverage_note\": \"The positive vectors exercise the structure_key token GRAMMAR — field order, optional-field presence, sentinel spellings, work-class/dispatch, and decline verdicts — NOT the dtype vocabulary: they place only a few of the 22 usable dtypes in the dtype position, so a dtype-spelling divergence on a token that never appears is invisible to a byte-match against this set. Vocabulary agreement is a DIFFERENT instrument's job and IS closed there: kiss_dtype_manifest compares the full token image against conformance/corpus/dtype_manifest.json in BOTH directions and fails a spelling divergence by name (e.g. c128 vs c127). So 'the byte-match passed' means the grammar agrees; the vocabulary is confirmed by the manifest, not by this set.\",\n");
 
     // positive vectors: token emitted by the codec (to_token).
     s.push_str("  \"positive_vectors\": [\n");

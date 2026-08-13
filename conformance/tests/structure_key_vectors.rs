@@ -258,3 +258,54 @@ fn decline_wire_kinds_are_injective() {
         "decline wire kinds MUST be pairwise distinct (injectivity) — two variants share a string: {kinds:?}"
     );
 }
+
+/// (7) BOUNDARY of the byte-match's dtype coverage — makes `coverage_note` EXECUTABLE so its
+/// claim cannot quietly stop being true. The positive vectors place only a few of the 22
+/// usable dtypes in the dtype position, so a byte-match against this set cannot see a
+/// dtype-spelling divergence on a token that never appears (Unpopped's c128→c127 survived
+/// their leg green; the dtype MANIFEST is the vocabulary instrument and catches it by name).
+/// Counts are PINNED so a future reader sees "3 → 7", not a bare boolean flip.
+///
+/// IF THIS FAILS: the positive vectors now exercise MORE dtype vocabulary than `coverage_note`
+/// claims. THAT IS AN IMPROVEMENT, not a regression. The fix is to update `coverage_note` in
+/// `src/reference_vectors.rs` AND the pinned counts in THIS test to the new numbers. Do NOT
+/// delete vectors to make this green — that reverts the very improvement the guard detects.
+#[test]
+fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
+    let positives = doc.get("positive_vectors").and_then(|j| j.as_arr()).expect("positive_vectors array");
+    let usable = str_array(&doc, "dtype_usable_set");
+    let usable_set: HashSet<&str> = usable.iter().map(|s| s.as_str()).collect();
+
+    // distinct dtypes in the DTYPE POSITION (token field 2).
+    let in_dtype_pos: HashSet<&str> = positives
+        .iter()
+        .map(|v| v.get("token").and_then(|j| j.as_str()).unwrap().split('|').nth(2).unwrap())
+        .collect();
+    // distinct USABLE dtypes appearing ANYWHERE (dtype pos + contraction/acc-mp subfields),
+    // tokenising on the field/subfield delimiters.
+    let anywhere: HashSet<&str> = positives
+        .iter()
+        .flat_map(|v| {
+            v.get("token")
+                .and_then(|j| j.as_str())
+                .unwrap()
+                .split(|c| c == '|' || c == '/' || c == ';')
+                .filter(|f| usable_set.contains(f))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    let msg = "coverage moved — the positive vectors now exercise MORE dtype vocabulary than \
+        coverage_note claims. This is an IMPROVEMENT: update `coverage_note` in \
+        src/reference_vectors.rs AND the pinned counts in this test. NEVER delete vectors to make \
+        this green — that reverts the improvement the guard exists to detect.";
+    assert_eq!(in_dtype_pos.len(), 3, "{msg} — dtypes in the dtype position (was 3): {in_dtype_pos:?}");
+    assert_eq!(anywhere.len(), 5, "{msg} — usable dtypes appearing anywhere (was 5): {anywhere:?}");
+    // the boundary the note states: strictly fewer than the 22 usable tokens are exercised.
+    assert!(
+        in_dtype_pos.len() < usable.len(),
+        "dtype-position coverage must be a strict subset of the {} usable tokens",
+        usable.len()
+    );
+}
