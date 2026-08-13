@@ -146,7 +146,41 @@ missing the one that is. Both halves collapse to one instruction: **compare what
 something you did not write** — and if the thing you did not write is a document a human retypes
 into a test, you have moved the transcription, not removed it.
 
-## Normative writing conventions (summary of umbrella §3–§4)
+**9. A seeded mutation must assert that it applied.**
+An unapplied mutation is indistinguishable from a guard that does not fire. Proving a test can fail means breaking the thing it checks and
+watching it go red. If the edit silently matched nothing, the "mutation" runs against unmodified
+source and the test passes **because there was no defect to catch**, which reads exactly like a test
+with a hole in it. *Why:* a mutation vector reported green twice, and the honest reading — *"my test
+does not catch a silent accept"* — was wrong about the **instrument**, not the test: a `\n` in the
+search string was mangled before it reached the replacer, so nothing matched. **The error points the
+investigation at the code, which is fine, and away from the tooling, which is where the fault was.**
+Assert the pattern matched exactly once before replacing.
+
+Note the asymmetry, because it bounds how much older proofs are worth: **a red result is
+self-validating** — the test could not have failed unless the patch applied — **while a green result
+proves nothing until the application is checked.** Proofs run before this convention are trustworthy
+exactly insofar as every vector came back red.
+
+And for a test credited to more than one clause, per-vector proofs are necessary but not sufficient:
+publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
+together is the only thing distinguishing N properties from one property credited N times.
+
+**10. Close the class, not the instance.**
+A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
+the instance in front of you leaves the next one to
+be found by whoever trips over it. *Why:* a reviewer found one `tools/test_*.py` that pytest
+collected zero tests from. The instance fix was one file; the class fix was a CI guard failing **any**
+`test_*.py` that collects nothing. Two days later a **new** tool — the citation audit, written to
+check the integrity of every coverage figure the project quotes — shipped with the same defect in
+**its own controls**, and the guard caught it. **The guard knew nothing about citation audits. It
+knew that a `test_*.py` collecting nothing is a lie regardless of what it tests.**
+
+That is the return a class guard pays and an instance fix cannot: **it catches a defect in the
+controls of an instrument that did not exist when the guard was written** — the instrument that
+proves an instrument. Note also what it cost to learn: the instance was found by a **reviewer**, not
+by any check the project owned. Closing the class is what converts one reviewer's catch into a
+standing property.
+
 
 If you propose normative text, follow the house style so it stays testable:
 
