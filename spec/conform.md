@@ -68,7 +68,8 @@ It owns, and closes, **every conformance obligation the other eight sub-standard
 forward-reference to it**: the build-fails-on-untested-MUST mechanism each one cites in
 its §0 header and §8 freeze gate; the exact-byte comparator mandate for POD wire fields
 (KISS-Announce, KISS-Classify, KISS-Grammar); the oracle-differential harness and the
-transcendental ULP ceiling and the complex-arithmetic split comparator (KISS-Ops); the
+transcendental declared-accuracy-tier evaluation and the complex-arithmetic split comparator
+(KISS-Ops); the
 OpAttrs golden-vector freeze gate (KISS-Ops §6.19); the never-panic decline fuzzing
 (KISS-Synth §6.6, KISS-Consume, KISS-Grammar, KISS-Announce); the four-category refusal
 taxonomy and the expressibility oracle and the mislabeled-kernel structural lift
@@ -236,7 +237,7 @@ non-C-family emitter exercise the wire.
 ### 2.8 Terms are joined, not restated
 
 KISS-Conform imports the determinism/fidelity enum, the primitive floor, the reference
-decompositions, the OpAttrs channel, the transcendental ULP ceiling, and the complex-arith
+decompositions, the OpAttrs channel, the transcendental declared accuracy tier, and the complex-arith
 family from KISS-Ops by name; the `structure_key`, dtype tokens, and `target_capability`
 from KISS-Classify; the region grammar and wire form from KISS-Grammar; the seven-section
 contract, the Semantics DAG, and the determinism class it carries from KISS-Contract; the
@@ -392,7 +393,7 @@ manifest from KISS-Emit. It re-defines none of them: Conform tests them.
   ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001) verbatim as the
   comparator selector (§6.0), and evaluates numeric clauses against the KISS-Ops §6
   op-semantics tables, reference decompositions, the **primitive floor** (the termination
-  guarantee for the oracle-differential harness), the **transcendental ULP ceiling**
+  guarantee for the oracle-differential harness), the **transcendental declared accuracy tier**
   (KISS-OPS §6.8-0001), the **per-op class advertisement** (KISS-OPS §7.4-0001), the
   **OpAttrs canonical little-endian encoding** (KISS-OPS §6.19-0013), the **complex-arith
   family** (carg/clog/csqrt/cexp), and the **enumerated expressible-signature set** (owned
@@ -619,8 +620,8 @@ enum (§6.0). See umbrella §3 for the full statement.
   (§6.8). *Test:* `test_conform_oracle_differential_harness`.
 - **KISS-CONFORM-6.5-0002** — The CPU oracle MUST be derived **solely** from the KISS-Ops §6
   op-semantics tables and reference decompositions (NaN propagation, signed zero, IEEE-fmax vs
-  NaN-propagating max, wrapping-int, raw-bit select, complex-arith Annex G, transcendental ULP
-  ceilings) and MUST share **no lowering module** with any reference implementation, where
+  NaN-propagating max, wrapping-int, raw-bit select, complex-arith Annex G, transcendental
+  accuracy tiers) and MUST share **no lowering module** with any reference implementation, where
   "shares none" is a **machine-checkable set-intersection** of the oracle's declared
   lowering-module manifest and each reference implementation's declared lowering-module
   manifest that MUST be empty; a non-empty intersection MUST fail the independence check.
@@ -659,8 +660,8 @@ enum (§6.0). See umbrella §3 for the full statement.
   under (§6.8-0002 / §6.8-0003): the oracle MUST evaluate the atom at a precision **wider than the
   op's compute dtype** and round once to that dtype, bounding the oracle's own error at ≤ 0.5 ULP
   of the compute dtype while any admissible declared tolerance is ≥ 1 ULP. This is an
-  oracle-accuracy **floor** the oracle MUST meet, distinct from and complementary to the ULP
-  **ceiling** §6.8-0003 caps on the *declared* tolerance; an oracle whose own transcendental error
+  oracle-accuracy **floor** the oracle MUST meet, distinct from and complementary to the
+  *declared* tolerance §6.8-0003 evaluates against; an oracle whose own transcendental error
   is not strictly tighter than the tolerance it enforces (e.g. a reference computed at the same
   compute-dtype precision as the implementation under test) MUST NOT be admitted, because it
   measures the oracle's error rather than the implementation's and yields false passes. *Test:*
@@ -784,10 +785,15 @@ enum (§6.0). See umbrella §3 for the full statement.
   languages; it MUST apply to any op whose decomposition transitively contains a transcendental
   atom, and KISS-Conform MUST NOT claim cross-language numeric identity for such an op. *Test:*
   `test_conform_ulp_comparator`.
-- **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the ULP
-  the contract declares, and MUST **reject** a declared ULP that exceeds the KISS-Ops maximum
-  ULP ceiling (KISS-OPS §6.8-0001); a declared ULP looser than the ceiling MUST NOT be accepted.
-  *Test:* `test_conform_ulp_ceiling_enforced`.
+- **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
+  **per-target accuracy tier its kernel's contract declares** for that target, and that declared
+  tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier is a tagged
+  quantity carrying at least one of `{max_ulp, max_relative, max_absolute}` (KISS-CONTRACT
+  §6.8-0002). KISS-Conform MUST NOT impose a fixed suite-wide ULP cap and MUST NOT reject a
+  declared tier for exceeding the KISS-Ops §6.8 advisory-floor table: that table is
+  **informative** — a reasonableness reference, not a normative threshold — so a truthful
+  provider whose atom exceeds a table value MUST NOT be rejected for it. *Test:*
+  `test_conform_ulp_declared_tier_is_gate`.
 - **KISS-CONFORM-6.8-0004** — The **order-invariant/nondeterministic** comparator MUST NOT
   require byte-exact reproduction across implementations or runs; it applies to ops whose
   **declared class** is order-invariant/nondeterministic — floating-point atomic-combine
@@ -1005,10 +1011,12 @@ atomic clause with its own append-only ID and dedicated test.
   comparator, so the comparator matches the class the implementation advertises. *Test:*
   `test_conform_ops_class_comparator_selection`.
 - **KISS-CONFORM-6.13-0007** — KISS-Conform MUST evaluate each transcendental atom under the
-  contract's declared per-target ULP and **reject** any declared ULP exceeding the KISS-Ops
-  ceiling (§6.8-0003, KISS-OPS §6.8-0001), MUST NOT claim cross-language numeric identity for a
-  transcendental (KISS-OPS §6.8), and MUST implement the **split comparator** (§6.8-0005) for
-  `carg` / `clog` / `csqrt` / `cexp`. *Test:* `test_conform_ops_transcendental_and_split`.
+  contract's **declared per-target accuracy tier** as the sole gate for that atom, and MUST NOT
+  reject a declared tier for exceeding the KISS-Ops §6.8 advisory-floor table, which is
+  informative (§6.8-0003, KISS-OPS §6.8-0001); MUST NOT claim cross-language numeric identity
+  for a transcendental (KISS-OPS §6.8-0002); and MUST implement the **split comparator**
+  (§6.8-0005) for `carg` / `clog` / `csqrt` / `cexp`. *Test:*
+  `test_conform_ops_transcendental_and_split`.
 - **KISS-CONFORM-6.13-0008** — KISS-Conform MUST supply **golden byte-vectors** mapping each
   KISS-Ops OpAttrs record to its exact canonical little-endian hex, covering **every field at its
   resolved default value with no elision** (KISS-OPS §6.19-0013), and MUST verify that KISS-Grammar
@@ -1304,7 +1312,7 @@ the traceability lint.
 | KISS-CONFORM-6.7-0005 | `test_conform_decline_vs_residue_taxonomy` |
 | KISS-CONFORM-6.8-0001 | `test_conform_exact_byte_comparator` |
 | KISS-CONFORM-6.8-0002 | `test_conform_ulp_comparator` |
-| KISS-CONFORM-6.8-0003 | `test_conform_ulp_ceiling_enforced` |
+| KISS-CONFORM-6.8-0003 | `test_conform_ulp_declared_tier_is_gate` |
 | KISS-CONFORM-6.8-0004 | `test_conform_nondeterministic_comparator` |
 | KISS-CONFORM-6.8-0005 | `test_conform_split_comparator` |
 | KISS-CONFORM-6.8-0006 | `test_conform_comparator_selection_rule` |
@@ -1430,7 +1438,7 @@ provision/decline frames and decline-code values.
 **A.2 Oracle-differential families.** The CPU oracle (§6.5), derived solely from the KISS-Ops §6
 semantics tables and reference decompositions and sharing no lowering module with any reference
 impl (declared-manifest set-intersection, §6.5-0002), covers: KISS-Ops per-op pinned semantics,
-the primitive floor, reference decompositions, transcendental atoms under the declared ULP ceiling,
+the primitive floor, reference decompositions, transcendental atoms under their declared accuracy tier,
 and the complex-arith split comparator; KISS-Contract Semantics-DAG resolution to the floor and
 `audited_status` derivation; KISS-Consume lifted-Semantics-DAG resolution and mislabeled-kernel
 structural correctness; KISS-Emit emitted-kernel-Semantics-DAG-as-oracle and the tier-1 structural
@@ -1534,7 +1542,7 @@ Conform clause that closes it. This is the informative rendering of §6.13; on a
 | KISS-Classify | Freeze gate; stays UNFROZEN until usage exercises a target outside the initial reference-hardware namespace | §6.13-0004 (via §8-0006) |
 | KISS-Ops | Canonical determinism enum + three per-class comparators | §6.13-0005 (via §6.0-0001, §6.8) |
 | KISS-Ops | Oracle-differential harness + freeze gates §8-0005/0006 + per-op class advertisement | §6.13-0006 (via §6.5, §6.8-0006) |
-| KISS-Ops | Transcendental ULP ceiling + no cross-language identity + complex split comparator | §6.13-0007 (via §6.8-0002/0003/0005) |
+| KISS-Ops | Transcendental declared accuracy tier as the sole gate + no cross-language identity + complex split comparator | §6.13-0007 (via §6.8-0002/0003/0005) |
 | KISS-Ops | OpAttrs golden hex (every field, no elision) + opaque-embedding byte-compare | §6.13-0008 (via §6.4) |
 | KISS-Grammar | Exact-byte region wire form + `grammar_version` keying | §6.13-0009 (via §6.8-0001, §8-0001) |
 | KISS-Grammar | Typed-decline/never-panic + fuzzer/differential + freeze gate + golden tokens | §6.13-0010 (via §6.6, §6.7, §8-0006) |
