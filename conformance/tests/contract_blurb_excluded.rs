@@ -7,7 +7,8 @@
 //! reported different because a human edited a comment, which is exactly the
 //! outcome §6.0-0001 places the field outside the exact-byte scope to prevent.
 //!
-//! TEETH — four wrong implementations this catches, each asserted below:
+//! TEETH — five wrong implementations this catches. Assertions are labelled
+//! (A)-(F) in the body; each entry names the one that catches it.
 //!   1. **The whole-document memcmp.** Compares the blurb. Caught by (A).
 //!   2. **The tautology** (`fn compare(_, _) -> Equal`). Passes any exclusion test
 //!      that only ever asserts equality. Caught by (C), which differs in `op_dag` —
@@ -18,11 +19,14 @@
 //!   4. **The document-wide stripper** that removes `human_annotation` from any
 //!      block. Hides an *unknown-field* decline (§6.11-0005) behind this exclusion.
 //!      Caught by (D).
+//!   5. **The substring stripper** that removes any line CONTAINING the field's
+//!      text rather than the field itself, silently dropping an `op_dag` that
+//!      mentions it. Caught by (F).
 //!
-//! And (E) pins the leak that makes the exclusion defeatable if done in the wrong
-//! order: the §6.11-0002 header carries `len=` and `crc32=` over the body, so a
-//! blurb edit changes the header even when the scoped body is identical. The
-//! projection must therefore precede header derivation.
+//! The remaining assertion, (E), is not a wrong implementation but the ordering
+//! trap that makes the exclusion defeatable: the §6.11-0002 header carries `len=`
+//! and `crc32=` over the body, so a blurb edit moves them even when the scoped
+//! body is identical. The projection must precede header derivation.
 //!
 //! CITATION DISCIPLINE: this test cites ONLY `KISS-CONFORM-6.13-0020`.
 //! Cross-references to KISS-Contract use the `§<sec>-<nnnn>` short form, which

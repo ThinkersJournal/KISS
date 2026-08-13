@@ -5,8 +5,14 @@
 //! body length its header line declares and integrity-checked by that line's
 //! CRC-32 (§6.11-0002/-0003). It is **not** a length-prefixed binary envelope.
 //!
-//! Every field of the framing is determinism-class exact-byte (§6.0-0001), so the
-//! exact-byte comparator (Conform §6.8) applies throughout. The golden document
+//! Every field of the framing is determinism-class exact-byte (§6.0-0001) **with
+//! one exception**: the optional, non-normative Semantics `human_annotation`
+//! (§6.4-0001) sits **outside** that scope and MUST NOT be byte-compared. So the
+//! exact-byte comparator (Conform §6.8) applies to the framing throughout, but to
+//! a contract only after the projection in [`exact_byte_scoped`] — which removes
+//! that one field, and must be applied to the BODY before the header's `len=` /
+//! `crc32=` are derived, or the excluded field leaks back in through the
+//! checksum. The golden document
 //! bytes are transcribed from Contract Appendix C (the §2.5 strided `add`
 //! contract: header line + Identity block + Semantics block).
 //!
