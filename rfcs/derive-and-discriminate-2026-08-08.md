@@ -329,6 +329,32 @@ recreated silent skips, and over-broad ceremony that would recreate unenforced p
    instead. That is the **third consecutive revision** in which this one row overstated its
    backing — *backed*, then *partial*, then *backed-by-#141* — each time by a different person
    reading the same PR, and each time by someone who had just written the rule against it.
+10. **KISS architect and KISS Lane B — four layers of the same miss, each one the honest version of
+    the layer beneath it.** The instance is a single PR, and it is worth reading as one incident
+    rather than four:
+    **(i)** `between()` returned a **wrong region** rather than an error when its anchor drifted —
+    the original defect, and the reason the PR exists.
+    **(ii)** The PR added a `pytest tools/` step to demonstrate the lints work. That step ran **none**
+    of `test_kiss_trace_gates.py`, whose functions are `check`/`main` rather than `test_*`, so pytest
+    collected zero from it. A step named *Lint self-tests (tools/)* silently skipped **the one suite
+    whose job is to prove the traceability instrument can fail** — and from the outside, a step that
+    runs a file and a step that skips it are the same green tick.
+    **(iii)** The PR carried an honest stated exclusion — *"not examined: whether `pytest tools/`
+    passes on ubuntu-latest"* — and it was closed with real evidence from the right instrument:
+    `Lint self-tests (tools/) — 44 passed`. The number is true. It answers **whether the step ran**.
+    The question that mattered was **whether the 44 included the file that most needed running**, and
+    nothing in the exclusion could have surfaced it, because that question was never asked.
+    **(iv)** The architect recommended this PR merge **first**, which is what would have put the
+    silently-empty step on `main` ahead of its fix; then ran `pytest tools/` on the merge tree, read
+    `44 passed`, and reported the PR verified.
+    **Layer (iv) is the sharpest of the four: the data that would have exposed it was on screen, in
+    the right number, produced by the right instrument.** The miss was not a failure to look. It was
+    a failure to ask a second question of something that already looked correct.
+    Found by **the maintainer**, not by any of the four layers — the second time in this document that
+    the finding which most needed noticing was noticed by a reader (see the balance note below).
+    Fixed at the class rather than the instance once the dependency landed: any `tools/test_*.py`
+    collecting zero tests now fails, using pytest's own exit-5. **The instance was reported by a human;
+    the next one will not be.**
 
 **Positive evidence, for balance.** This document is otherwise entirely failures. Two data points
 show mechanisms working. First: while building §6.5-0016's backing test, the author's first
@@ -356,12 +382,13 @@ harness, *then* arm the gate. **Fixing "the obvious half" leaves a worse state t
 a gate firing on a rule nobody finished.
 
 **A closing note.** The obvious objection is *"this is a competence problem — write better
-tests."* **Nine instances from the people who articulated the principle, inside the window in
+tests."* **Ten instances from the people who articulated the principle, inside the window in
 which they articulated it, is the only refutation that cannot be dismissed as special pleading** —
 a document about instruments that cannot fail, whose own authors produced that many in a single
-day, the fifth **inside this document, caught by a reviewer after publication**, and the ninth a
-ruling about the very row the fifth got wrong. That is not evidence the thesis is wrong. It is the
-strongest available evidence that it is right.
+day, the fifth **inside this document, caught by a reviewer after publication**, the ninth a
+ruling about the very row the fifth got wrong, and the tenth **four nested layers of one miss,
+each layer authored by someone applying the lesson from the layer beneath it**. That is not
+evidence the thesis is wrong. It is the strongest available evidence that it is right.
 
 > **This paragraph is the one place the count appears, and that is deliberate.** It was in three
 > places until the sweep that added instances 8 and 9: the §6 heading (*"four"*, stale since the
