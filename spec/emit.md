@@ -481,9 +481,10 @@ named language family; this note records only *why* the criterion exists.
   dependency: the normative lowering source is a KISS-Ops **OpDef** (op name, OpAttrs
   channel, per-op semantics, reference decomposition), resolvable to the KISS-Ops
   **primitive floor** (the termination guarantee); the emitted kernel's declared-ULP
-  transcendental atoms are bounded by their own **declared per-target accuracy tier**, the
-  sole accuracy gate (KISS-OPS §6.8-0001), the §6.8 table being an informative advisory
-  floor rather than a normative cap; the constant and
+  transcendental atoms are gated by their own **declared per-target accuracy tier**, which
+  KISS-Ops makes the sole accuracy gate (KISS-OPS §6.8-0001). The KISS-Ops §6.8 table is an
+  informative advisory floor, not a cap on that tier.
+  The constant and
   special-float-value bit pinning is KISS-OPS §6.2-0008; the KISS-Ops **canonical
   op-DAG ordering and commutativity/associativity canonicalization** used by the
   tier-1 comparator (§6.7-0007) are owned by KISS-Ops; and the single canonical
@@ -699,12 +700,12 @@ selects the correct comparator. See umbrella §3 for the full statement.
   `test_emit_special_float_value_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0003** — **Transcendental / declared-ULP atom and hardware-intrinsic
   spelling** (`exp`, `log`, `sin`, `cos`, `sqrt`, `erf`, and the other KISS-Ops
-  transcendental / special-function atoms) MUST be an emitter-must-supply decision:
-  each is a per-target atom implemented to a **declared per-target accuracy
-  tier**, which is the sole accuracy gate (KISS-OPS §6.8-0001) — the KISS-Ops §6.8 table is
-  an informative advisory floor, not a normative cap, so a truthful tier looser than a table
-  value MUST NOT be rejected — and the neutral driver MUST NOT spell it as a mandated
-  polynomial or a fixed language intrinsic. *Test:*
+  transcendental / special-function atoms) MUST be an emitter-must-supply decision, and the
+  neutral driver MUST NOT spell it as a mandated polynomial or a fixed language intrinsic.
+  Each is a per-target atom implemented to a **declared per-target accuracy tier**, which
+  KISS-Ops makes the sole accuracy gate (KISS-OPS §6.8-0001). The KISS-Ops §6.8 table is an
+  informative advisory floor, not a cap: a truthful tier looser than a table value MUST NOT
+  be rejected. *Test:*
   `test_emit_transcendental_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0004** — **Target-specific type spelling**, and the surface form of
   any dtype that differs by target language (`f16`, `bf16`, the FP8 formats `f8e4m3fn` /
