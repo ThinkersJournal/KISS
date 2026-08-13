@@ -180,7 +180,7 @@ KISS-CONFORM-6.7-0002	test_conform_decline_code_pinned	untested
 KISS-CONFORM-6.7-0003	test_conform_never_panic_fuzz	untested	
 KISS-CONFORM-6.7-0004	test_conform_process_survives	untested	
 KISS-CONFORM-6.7-0005	test_conform_decline_vs_residue_taxonomy	untested	
-KISS-CONFORM-6.8-0003	test_conform_ulp_ceiling_enforced	untested	
+KISS-CONFORM-6.8-0003	test_conform_ulp_declared_tier_is_gate	untested	
 KISS-CONFORM-6.8-0007	test_conform_whole_kernel_downgrade	untested	
 KISS-CONFORM-6.8-0008	test_conform_comparator_precedence	untested	
 KISS-CONFORM-6.9-0001	test_conform_structural_dag_equality	untested	
