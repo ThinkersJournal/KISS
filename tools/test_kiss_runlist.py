@@ -35,6 +35,19 @@ TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_runlist.py
 # which is the defect class this suite exists to catch. Pinning it means a
 # control that stops executing FAILS here rather than quietly lowering a number
 # nobody reads. Changing the suite means changing this line deliberately.
+#
+# THE RULE, because this looks like a contradiction of its own sibling and is not:
+# `tools/test_kiss_trace_gates.py` had a hardcoded `PASS: 7` replaced by a live
+# counter, while this file pins a constant instead. Both are right, and the
+# discriminator is what the number is FOR:
+#
+#     printed counts should be COMPUTED;  asserted counts should be PINNED.
+#
+# A printed constant drifts silently the moment a check is added — it understates
+# and nothing notices. A compared constant fails loudly until someone updates it
+# on purpose, and that update is the deliberate act recording that the suite
+# changed. Getting the pair backwards gives you a number that is always wrong and
+# never complains.
 EXPECTED_CONTROLS = 12
 
 
