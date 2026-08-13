@@ -35,6 +35,36 @@ branch switches, and uncommitted edits cannot disturb any other session.
 may stay in the shared directory without a worktree. The convention is scoped to
 sessions that mutate the repo, not to every session.
 
+## The anchor is stale, by design — do not measure `main` in it
+
+The shared checkout stays where it is. That is the point, and it is also a trap:
+**every read from it answers with the state at its `HEAD`, confidently, with no
+marker that the answer is old.** Nothing prints a warning. A lint says CLEAN, a
+grep finds nothing, a coverage figure comes back — all correct about a tree
+nobody is working on.
+
+**To measure `main`, read `main`:** `git show origin/main:<path>`, or a detached
+worktree at `origin/main` (`git worktree add --detach <tmp> origin/main`). If you
+measure in the shared tree anyway, **state its `HEAD` alongside every number** —
+a figure without the commit it was taken at is not a measurement of anything.
+
+This is not hypothetical. Four instances in one day, across three people:
+
+- A cross-project dtype divergence computed off the anchor — wrong in **both**
+  directions (`c32`/`c64` vs `c64`/`c128`, `s4` vs `i4`, wrong surplus count).
+- A feature/cfg audit reporting **zero** `cfg(windows)` gates and no `harness/`
+  module — clean, plausible, and describing a tree twelve commits behind.
+- A `cargo test -- --list` capture taken from a pre-merge worktree, producing
+  **eleven false absences**, all from one PR.
+- Coverage read in the anchor at 38 commits behind: `330/902 (36.6%)`,
+  `RESULT: VIOLATIONS FOUND`, and a red test that had already been fixed.
+
+**Three of the four produced a clean-looking answer**, which is the direction
+that does not get questioned — a false positive gets investigated, a false
+negative gets filed. The fourth was caught *because it contradicted a result
+someone had already verified*, not because it looked wrong. **Contradiction with
+an independent finding is the only signal that reliably fires on a stale read.**
+
 ## Discipline
 
 - **Base off `main`** (or the correct integration branch) so branches start clean.
