@@ -50,17 +50,40 @@ import sys
 DTYPE_TOKEN = re.compile(r"[a-z][a-z0-9]+")
 
 
-def between(text, start, end):
+class AnchorError(LookupError):
+    """A literal anchor this lint navigates by no longer occurs in the spec."""
+
+
+def between(text, start, end, *, where=""):
     """The slice strictly between the first `start` and the next `end` after it;
-    end=None runs to EOF; "" if `start` is absent."""
+    `end=None` runs to EOF deliberately.
+
+    RAISES `AnchorError` on an absent anchor. The silent forms — `""` for a missing
+    start, run-to-EOF for a missing end — both returned a WRONG REGION rather than
+    an error, and both have already bitten this suite: `_region_26` below records
+    the run-to-EOF instance (it swallowed §6.1 and parsed the closed dtype set
+    twice, which a set comparison accepts as equal), and `kiss_ops.py`'s
+    `transcendental_atoms()` records the empty-region one (it returned `[]` for
+    however long after §6.8 was reworded).
+
+    Kept deliberately identical to `kiss_ops.between` — same defect, same fix, and
+    a divergence between the two would be its own Pattern A."""
     i = text.find(start)
     if i < 0:
-        return ""
+        raise AnchorError(
+            f"anchor not found: start={start!r}{f' [{where}]' if where else ''} — the "
+            f"spec text moved. Update the anchor: a region parsed from a missing "
+            f"anchor is empty, and an empty region passes every check over it.")
     i += len(start)
     if end is None:
         return text[i:]
     j = text.find(end, i)
-    return text[i:] if j < 0 else text[i:j]
+    if j < 0:
+        raise AnchorError(
+            f"anchor not found: end={end!r} after start={start!r}"
+            f"{f' [{where}]' if where else ''} — the region would run to EOF and "
+            f"swallow every following section.")
+    return text[i:j]
 
 
 def table_rows(region):

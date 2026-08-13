@@ -77,18 +77,55 @@ def list_ops(text):
     return out
 
 
-def between(text, start, end):
+class AnchorError(LookupError):
+    """A literal anchor this lint navigates by no longer occurs in the spec."""
+
+
+def between(text, start, end, *, where=""):
     """The slice of `text` strictly between the first occurrence of `start` and the
-    next occurrence of `end` after it. `start`/`end` are literal substrings; end=None
-    runs to EOF. Returns "" if `start` is absent."""
+    next occurrence of `end` after it. `start`/`end` are literal substrings;
+    `end=None` runs to EOF deliberately.
+
+    RAISES `AnchorError` when an anchor is absent. It used to return `""` for a
+    missing `start` and run to EOF for a missing `end`, and both silently produced
+    a WRONG REGION rather than an error:
+
+      * a missing `start` gave an empty region, so the lint checked nothing and
+        reported clean — `transcendental_atoms()` returned `[]` for however long
+        after §6.8's table was reworded from "Maximum ULP ceiling" to an advisory
+        floor;
+      * a missing `end` ran to EOF, so `_region_26` in `kiss_dtypes.py` swallowed
+        §6.1 and parsed the closed dtype set twice — which a set comparison
+        accepts as equal.
+
+    Anchors are prose, and prose gets reworded. **The drift is not preventable;
+    the silence is.**
+
+    CHOOSING AN `end` ANCHOR — the trap that has now been hit twice, so it is
+    recorded here rather than left for a third person to rediscover. A clause ID
+    is NOT a safe end anchor on its own: KISS documents mention a clause ID in
+    section-intro prose ABOVE the table the clause governs, so `end="KISS-OPS-
+    6.8-0001"` terminates the region BEFORE the table and yields nothing — the
+    same empty-region failure, with a brand-new anchor that looks specific.
+    Anchor on the BOLDED CLAUSE LINE instead: `"\\n- **KISS-OPS-6.8-0001**"`.
+    `sec613_rows()` carries the same warning for §6.13; `transcendental_atoms()`
+    was where it bit."""
     i = text.find(start)
     if i < 0:
-        return ""
+        raise AnchorError(
+            f"anchor not found: start={start!r}{f' [{where}]' if where else ''} — the "
+            f"spec text moved. Update the anchor: a region parsed from a missing "
+            f"anchor is empty, and an empty region passes every check over it.")
     i += len(start)
     if end is None:
         return text[i:]
     j = text.find(end, i)
-    return text[i:] if j < 0 else text[i:j]
+    if j < 0:
+        raise AnchorError(
+            f"anchor not found: end={end!r} after start={start!r}"
+            f"{f' [{where}]' if where else ''} — the region would run to EOF and "
+            f"swallow every following section.")
+    return text[i:j]
 
 
 def table_cells(region):
@@ -188,11 +225,22 @@ def brace_set(text):
 
 
 def transcendental_atoms(ops):
-    """The atoms with a declared ULP ceiling — ops.md §6.8 table. §6.5-0008 cites §6.8
-    for 'every transcendental atom'. Those atoms (exp/log/sin/cos/atan/atan2/erf/
-    lgamma/sqrt) live in the PRIMITIVE FLOOR, so they come from the ULP-ceiling table,
-    NOT the non-primitive family column (verified against spec/ops.md)."""
-    region = between(ops, "Maximum ULP ceiling", "KISS-OPS-6.8-0001")
+    """The declared-ULP transcendental atoms — the ops.md §6.8 table. §6.5-0008 cites
+    §6.8 for 'every transcendental atom'. Those atoms (exp/log/sin/cos/atan/atan2/erf/
+    lgamma/sqrt) live in the PRIMITIVE FLOOR, so they come from the §6.8 table, NOT the
+    non-primitive family column (verified against spec/ops.md).
+
+    Anchored on the §6.8 HEADING, not on the table's column header. The previous anchor
+    was the column header "Maximum ULP ceiling", which vanished when the table was
+    reworded to an *informative advisory floor* — `between()` returned "" and this
+    function returned `[]` while its own docstring named nine atoms.
+
+    The end anchor is the BOLDED clause line, not the bare ID: `KISS-OPS-6.8-0001` is
+    also mentioned in the section-intro prose ABOVE the table, so ending on the bare ID
+    would cut the region before the table and return `[]` again — the same failure with
+    a fresh anchor. (`sec613_rows` documents the identical trap.)"""
+    region = between(ops, "### 6.8 Transcendental atoms", "\n- **KISS-OPS-6.8-0001**",
+                     where="transcendental_atoms")
     atoms = []
     for cells in table_cells(region):
         if cells:
