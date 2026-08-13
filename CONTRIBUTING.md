@@ -128,6 +128,24 @@ enforcer structurally cannot observe will be recorded wrong repeatedly, each tim
 reader acting in good faith. When the answer is no, the fix is a second instrument of the right
 class, not a weaker clause fitted to the instrument on hand.
 
+**8. A round-trip proves internal consistency, not external agreement.** Encode-then-decode, or
+emit-then-parse, tells you an implementation agrees with *itself*. It cannot detect that the whole
+vocabulary moved. *Why:* a crate-side-only rename of an emitted vocabulary passed **20 of 21**
+existing tests, because every one of them round-tripped through the same renamed table; the
+disagreement with the published document was invisible from inside. **The twenty-first is the part
+that matters:** it failed for an unrelated reason — a sort-order expectation that broke only because
+the old and new spellings sort differently — so a maintainer would have corrected the sort and never
+learned the vocabulary had moved. Partial coverage that fails for the wrong reason is worse than
+uniform silence, because it routes the reader confidently away from the defect. The same blindness
+is why the suite cross-verifies tokens between independently derived implementations rather than
+trusting any one implementation's self-consistency — **a systematic rename is exactly the error a
+round-trip is constitutionally unable to see.** Compare the *token image*, not the variant count: an
+implementation may legitimately hold more internal variants than there are tokens (one folding to
+another's canonical spelling), so comparing counts manufactures a divergence that isn't there while
+missing the one that is. Both halves collapse to one instruction: **compare what you emit against
+something you did not write** — and if the thing you did not write is a document a human retypes
+into a test, you have moved the transcription, not removed it.
+
 ## Normative writing conventions (summary of umbrella §3–§4)
 
 If you propose normative text, follow the house style so it stays testable:
