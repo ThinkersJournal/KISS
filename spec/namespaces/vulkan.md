@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 2 · **Status:** draft
+· **Vocabulary version:** 3 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -132,13 +132,19 @@ One of:
 A tuple is `<M>-<N>-<K>-<A>-<B>-<C>-<R>` optionally suffixed `-sat` for
 saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
 and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
-`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, or `x<n>` for a `VkComponentTypeKHR`
-this vocabulary version does not name.
+`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, or `x<n>` for a
+`VkComponentTypeKHR` this vocabulary version does not name.
 
 > **Signed integers are `i`-prefixed as of vocabulary version 2** (was `s8`,
 > `s16`, `s32`, `s64`). See §4. Note that the `i8` in the **arith** field is a
 > different thing that has always been spelled `i8`: it names the `shaderInt8`
 > *capability*, not a component type.
+
+> **FP8 is named as of vocabulary version 3.** `f8e4m3fn` spells
+> `VK_COMPONENT_TYPE_FLOAT8_E4M3_EXT` and `f8e5m2` spells
+> `VK_COMPONENT_TYPE_FLOAT8_E5M2_EXT`. Both previously derived `x1000491002` /
+> `x1000491003` under V-7, which is why naming them bumps the version — see §4,
+> where this is the worked example.
 
 - **V-7.** `x<n>` exists so that a driver exposing a component type newer than
   this vocabulary yields an honest, round-trippable token rather than a decline
@@ -166,6 +172,32 @@ this vocabulary version does not name.
   measured AMD RDNA part reports 11, encoding to 281 bytes. The specific number
   is a policy choice — what matters is that it is pinned and identical
   everywhere.
+
+- **V-10.** The `fn` suffix on `f8e4m3fn` is **mandatory and load-bearing**,
+  not decoration. `e4m3` alone does not identify a format: the OCP OFP8 variant
+  is finite-only (no infinities, one NaN encoding, max magnitude 448), while the
+  `fnuz` variant differs in both NaN handling and exponent bias. The layouts
+  are pinned normatively by KISS-OPS-6.16-0004 and -0005; this vocabulary only
+  spells them.
+
+  A deriver **MUST NOT** emit `f8e4m3fnuz` or `f8e5m2fnuz` for any
+  `VkComponentTypeKHR`. KISS reserves those two spellings with *no computation
+  semantics at all* (KISS-CLASSIFY-6.1-0001: recognized on parse, answered with
+  a typed decline), and Vulkan exposes no enumerant for either — so a token
+  carrying one would claim a device computes in a format the spec says has no
+  semantics at this schema version.
+
+  This is what makes the mapping determinable rather than a guess. `vk.xml`
+  itself says nothing about which FP8 variant its enumerants denote; the
+  determination is that the two reserved spellings cannot name a type a device
+  actually computes with, which leaves exactly one coherent target for each of
+  Vulkan's two FP8 values.
+
+- **V-11.** `VK_COMPONENT_TYPE_FLOAT_E4M3_NV` and `..._FLOAT_E5M2_NV` are
+  registry **aliases** of the two EXT enumerants, not distinct values, so they
+  spell identically and need no separate names. Recorded because a future
+  registry that split them would silently make an NV-only driver derive `x<n>`
+  again.
 
 ## 3. Worked example
 
@@ -239,6 +271,27 @@ against, so the test above has a fixed thing to compare with rather than
 |---|---|
 | 1 | 348 — reconstructed, see below |
 | 2 | 348 |
+| 3 | 348 |
+
+**Worked example — how version 3 was decided.** Version 3 names `f8e4m3fn` and
+`f8e5m2`. Applying the additive test to them is the first time it has been run
+on a real change, so the result is recorded here rather than left to be
+re-derived:
+
+> v2's recorded baseline is `VK_HEADER_VERSION` **348**. In the registry at 348,
+> `VK_COMPONENT_TYPE_FLOAT8_E4M3_EXT` is already assigned — value `1000491002`,
+> allocated from extension 492's block, required by `VK_KHR_cooperative_matrix`.
+> A conformant device could therefore already have reported it, and any token
+> derived from such a device already spelled `x1000491002`. **Already assigned
+> at the baseline → naming it bumps the version.**
+
+Note that this is the same case §4 uses to *illustrate* why naming is not
+automatically additive, which is a coincidence worth flagging rather than
+hiding: the illustration was written before the change it describes was made,
+and the test then returned the answer the illustration predicted. That is
+weak evidence the test is well-formed and no evidence at all that it is
+correctly applied — the number `1000491002` was checked against a vendored
+`vk.xml` at header 348, not taken from the prose.
 
 Version 1 pinned no baseline, so its entry is a reconstruction rather than a
 record: 348 is the header version the reference implementation shipped against,
