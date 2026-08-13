@@ -409,18 +409,23 @@ pub struct NegativeVector {
     pub expect: ContractDecline,
 }
 
-/// A well-formed minimal contract document — the **positive control** the
-/// negative vectors are corruptions of. A corpus in which everything declines
-/// proves nothing, so this must read cleanly.
-pub fn well_formed_document() -> Vec<u8> {
-    let body = render_block(
+/// The body of the positive control: one well-formed Identity block.
+fn well_formed_body() -> Vec<u8> {
+    render_block(
         1,
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
             ("contract_version", Value::Str("1".into())),
         ],
-    );
+    )
+}
+
+/// A well-formed minimal contract document — the **positive control** the
+/// negative vectors are corruptions of. A corpus in which everything declines
+/// proves nothing, so this must read cleanly.
+pub fn well_formed_document() -> Vec<u8> {
+    let body = well_formed_body();
     Document {
         contract_kind: "kiss-contract".into(),
         contract_version: "1".into(),
@@ -437,10 +442,19 @@ pub fn well_formed_document() -> Vec<u8> {
 /// be declined for either reason, so it cannot pin one code and would silently
 /// admit a reader that checks in the wrong order.
 pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
-    let good = well_formed_document();
-    let lf = good.iter().position(|&b| b == b'\n').expect("control has a header line");
-    let header = String::from_utf8(good[..lf].to_vec()).expect("control header is UTF-8");
-    let body = &good[lf + 1..];
+    // The control's header fields are CONSTRUCTED here, not re-parsed out of its
+    // own header. Re-parsing meant `split(' ')` plus unchecked `f[1]..f[4]`, so a
+    // change to the header encoding — an extra separator, a field added — would
+    // panic while BUILDING the corpus, surfacing as a harness crash rather than as
+    // the framing change it is.
+    let owned_body = well_formed_body();
+    let body = &owned_body[..];
+    let kind = "kiss-contract";
+    let version = "1";
+    let len_owned = format!("len={}", body.len());
+    let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
+    let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
+    let header = format!("KISC {kind} {version} {len_f} {crc_f}");
 
     // Rebuild a document from a (possibly corrupted) header line + body.
     let with_header = |h: &str| -> Vec<u8> {
@@ -449,8 +463,6 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         v.extend_from_slice(body);
         v
     };
-    let f: Vec<&str> = header.split(' ').collect();
-    let (kind, version, len_f, crc_f) = (f[1], f[2], f[3], f[4]);
 
     let mut out = vec![
         NegativeVector {

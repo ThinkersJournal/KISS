@@ -21,7 +21,7 @@
 //!   2. **The decline-everything reader.** Caught by (B), the positive control.
 //!   3. **The silent-empty / partial reader** — returns `Ok`, or a partial
 //!      contract, in place of a decline (§6.2-0005 names this exactly). Caught by
-//!      (A) and restated by (D).
+//!      (A)'s `Ok(_)` arm.
 //!   4. **The one-vector corpus** that satisfies "supply negative vectors"
 //!      trivially. Caught by (C), which pins both the vector count and the number
 //!      of DISTINCT decline variants exercised.
@@ -105,13 +105,12 @@ fn test_conform_contract_malformed_decline() {
             ),
         }
 
-        // (D) §6.2-0005 restated as its own assertion: a decline, never a partial
-        // or internally-inconsistent contract handed back in its place.
-        assert!(
-            read_document(&v.doc).is_err(),
-            "KISS-CONFORM-6.13-0023: vector `{}` yielded a contract in place of a decline",
-            v.name
-        );
+        // §6.2-0005's "never a partial or internally-inconsistent contract in
+        // place of a decline" needs no separate assertion: the `Ok(_)` arm above
+        // already fails on any accept, and the `Err` arm pins the whole value. A
+        // follow-up `is_err()` here would re-read the document to restate, more
+        // weakly, what the match has already established — the same redundancy
+        // removed from `contract_framing.rs` in the is_err tightening.
     }
 
     // (E) Never-panic as a campaign, not a claim: every truncation prefix of every
