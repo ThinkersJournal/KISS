@@ -293,6 +293,27 @@ def read_ledger(path):
     return out
 
 
+def read_floor(path):
+    """The committed ratchet floor: {key: int} from a `key<TAB>value` TSV.
+
+    Hand-edited and never written by this tool. A floor the tool maintains is a
+    state derived from the run rather than from a decision, and it would silently
+    absorb a regression that coincided with an improvement elsewhere.
+    """
+    floor = {}
+    if not os.path.exists(path):
+        return floor
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("	")
+            if len(parts) >= 2 and parts[1].strip().isdigit():
+                floor[parts[0].strip()] = int(parts[1].strip())
+    return floor
+
+
 def write_ledger(path, unbacked, prior=None):
     """Write the ledger, PRESERVING the category/note of any clause still unbacked
     (so --update-ledger never silently drops a curated categorization). A clause
@@ -448,6 +469,11 @@ def main():
     ap.add_argument("--spec-dir", default=None, help="path to the spec/ directory")
     ap.add_argument("--conformance-dir", default=None,
                     help="path to the conformance/ harness")
+    ap.add_argument("--ratchet", action="store_true",
+                    help="gate on the committed floor in conformance/COVERAGE_FLOOR.tsv: "
+                         "harness and lint MUST NOT fall, untested MUST NOT rise, and a "
+                         "figure BETTER than the floor fails as a stale floor. A second "
+                         "mode, not a replacement for --strict.")
     ap.add_argument("--strict", action="store_true",
                     help="fail on ANY unbacked clause, ignoring the ledger (§6.2 verbatim)")
     ap.add_argument("--freeze-ready", nargs="?", const="ALL", default=None,
@@ -787,7 +813,51 @@ def main():
             print("      §8.1 conformance claim to it is unbacked for its untested clauses.")
         return 1 if any_fail else 0
 
-    if args.strict:
+    if args.ratchet:
+        floor_path = os.path.join(conf_dir, "COVERAGE_FLOOR.tsv")
+        floor = read_floor(floor_path)
+        live = {
+            "harness": len(backed),
+            "lint": len(lint_backed),
+            "untested": len(by_category.get("untested", [])),
+        }
+        # `untested` may only FALL; the other two may only RISE. Stored and compared
+        # SEPARATELY because ENFORCED = harness + lint conserves under a lint->harness
+        # substitution (#187), and a one-number ratchet on `untested` alone reports a
+        # pure reclassification as progress (#177: 515 -> 502, ENFORCED unmoved).
+        worse, better, missing = [], [], []
+        for key, direction in (("harness", +1), ("lint", +1), ("untested", -1)):
+            if key not in floor:
+                missing.append(key)
+                continue
+            delta = (live[key] - floor[key]) * direction
+            if delta < 0:
+                worse.append((key, floor[key], live[key]))
+            elif delta > 0:
+                better.append((key, floor[key], live[key]))
+        print("-" * 68)
+        if missing:
+            any_fail = True
+            print(f"  RATCHET: floor file is incomplete - missing {', '.join(missing)}")
+            print(f"          expected `key<TAB>value` rows in {floor_path}")
+        elif worse:
+            any_fail = True
+            print("  RATCHET REGRESSION: coverage moved backwards.")
+            for key, f, l in worse:
+                print(f"          {key}: floor {f}, now {l}")
+            print("          Restore the coverage, or state why the floor should move")
+            print("          in the PR that lowers it.")
+        elif better:
+            any_fail = True
+            print("  RATCHET: the floor is STALE - coverage improved past it.")
+            for key, f, l in better:
+                print(f"          {key}: floor {f}, now {l}  ->  set the floor to {l}")
+            print(f"          Edit {floor_path} in the PR that earned it. Green means AT")
+            print("          the floor, never somewhere under it.")
+        else:
+            print(f"  RATCHET: at the floor - harness {live['harness']}, "
+                  f"lint {live['lint']}, untested {live['untested']}.")
+    elif args.strict:
         # §6.2 verbatim gates on a normative MUST with no test. A lint-enforced
         # document clause HAS a test (the lint), so strict gates on the rest.
         strict_miss = sorted(c for c in unbacked if not accounted(c))
