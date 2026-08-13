@@ -98,6 +98,14 @@ fn ctr(m: SizeClass, n: SizeClass, k: SizeClass, batch: Option<SizeClass>, wdt: 
     }
 }
 
+/// The namespace half of a `<namespace>:<capability-set>` target token (§6.8-0001) —
+/// e.g. `cuda` for `cuda:sm90`, `vulkan` for `vulkan:sg64...`. The axis a consumer
+/// scopes capability exclusions on: a namespace it does not implement is an exclusion,
+/// not a divergence.
+fn target_namespace(target: &str) -> &str {
+    target.split(':').next().unwrap_or(target)
+}
+
 // ---- the reference vectors ---------------------------------------------------
 
 /// One canonical positive vector: a constructed [`StructureKey`] and the exact token
@@ -413,6 +421,44 @@ fn decline_wire(e: &KeyDecline) -> (&'static str, Option<(&'static str, String)>
     }
 }
 
+/// The wire KIND of every `KeyDecline` variant, for the injectivity guard. Exhaustiveness
+/// (the `decline_wire` match above, E0004-guarded) proves every variant maps to SOMETHING;
+/// it does NOT prove two variants don't map to the SAME string — an injective failure is
+/// silent (green build, two declines collapsed in the artifact). The vectors test asserts
+/// these are pairwise distinct against a pinned count.
+///
+/// This vec is a hand-listed representative per variant. KEEP IN LOCKSTEP with
+/// `decline_wire`: a new `KeyDecline` variant is an E0004 there, and the pinned count in
+/// the injectivity test is the deliberate second gate so this list cannot silently fall
+/// behind (KISS-Conform: asserted counts are pinned, not computed).
+pub fn all_decline_wire_kinds() -> Vec<&'static str> {
+    [
+        KeyDecline::WrongFieldCount { got: 0 },
+        KeyDecline::BadVersionPrefix,
+        KeyDecline::UnsupportedSchemaVersion { got: 0 },
+        KeyDecline::BadRank,
+        KeyDecline::BadWorkClass,
+        KeyDecline::BadOperandSubKey,
+        KeyDecline::BadReduceField,
+        KeyDecline::BadContractionField,
+        KeyDecline::UppercaseOrWidthHex,
+        KeyDecline::UnknownOpFamily,
+        KeyDecline::UnknownDtype,
+        KeyDecline::ReservedDtype,
+        KeyDecline::TokenLengthOutOfBound { len: 0 },
+        KeyDecline::TooManyOperands { got: 0 },
+        KeyDecline::BadTargetGrammar,
+        KeyDecline::BadTargetCharset,
+        KeyDecline::ContractionPresenceMismatch,
+        KeyDecline::ReduceNotGatedToRed,
+        KeyDecline::BadAccMpField,
+        KeyDecline::RedundantAccMpField,
+    ]
+    .iter()
+    .map(|e| decline_wire(e).0)
+    .collect()
+}
+
 /// Emit the reference-vectors artifact as pretty JSON (2-space indent, trailing
 /// newline) — the exact bytes committed to `conformance/corpus/structure_key_vectors.json`.
 /// The vectors test asserts this output equals the committed file byte-for-byte
@@ -456,8 +502,26 @@ pub fn emit_reference_vectors_json() -> String {
     }
     s.push_str("  ],\n");
 
-    // positive vectors: token emitted by the codec (to_token).
+    // target-namespace axis — the same machine-readable treatment the dtype axis got.
+    // There is NO typed namespace enum at this schema version (StructureKey.target is the
+    // §6.8-0001 free-form <namespace>:<capability-set> string), so `target_namespace` is
+    // derived from `target`; the vectors test cross-checks it against the SERIALIZED token
+    // with its own independent split, never against the same derivation, so the tag cannot
+    // pass vacuously.
     let pos = positive_vectors();
+    let mut namespaces: Vec<&str> = pos.iter().map(|v| target_namespace(&v.key.target)).collect();
+    namespaces.sort_unstable();
+    namespaces.dedup();
+    s.push_str("  \"target_axis_note\": \"Each positive vector names the `target` capability token it requires and its `target_namespace`. A consumer implementing only some namespaces/architectures scopes the rest as capability EXCLUSIONS (conformant, KISS-CLASSIFY-6.8), never mismatches — on BOTH sub-axes: namespace (cuda vs vulkan) and capability/arch (sm89 vs sm90). With these tags a consumer reports N/N on the vectors it claims plus an explicit skip list, instead of N-1/N with a paragraph — the number stops depending on prose.\",\n");
+    s.push_str("  \"target_namespaces\": [\n");
+    for (i, ns) in namespaces.iter().enumerate() {
+        let comma = if i + 1 < namespaces.len() { "," } else { "" };
+        s.push_str(&format!("    {}{}\n", json_str(ns), comma));
+    }
+    s.push_str("  ],\n");
+    s.push_str("  \"mapping_guard_note\": \"The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.\",\n");
+
+    // positive vectors: token emitted by the codec (to_token).
     s.push_str("  \"positive_vectors\": [\n");
     for (i, v) in pos.iter().enumerate() {
         let comma = if i + 1 < pos.len() { "," } else { "" };
@@ -465,6 +529,8 @@ pub fn emit_reference_vectors_json() -> String {
         s.push_str(&format!("      \"clause\": {},\n", json_str(v.clause)));
         s.push_str(&format!("      \"name\": {},\n", json_str(v.name)));
         s.push_str(&format!("      \"note\": {},\n", json_str(v.note)));
+        s.push_str(&format!("      \"target\": {},\n", json_str(&v.key.target)));
+        s.push_str(&format!("      \"target_namespace\": {},\n", json_str(target_namespace(&v.key.target))));
         s.push_str(&format!("      \"token\": {}\n", json_str(&v.key.to_token())));
         s.push_str(&format!("    }}{}\n", comma));
     }

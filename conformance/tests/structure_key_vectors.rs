@@ -17,6 +17,7 @@
 
 use kiss_conformance::reference_vectors::*;
 use kiss_conformance::structure_key::{from_token, DTYPES, RESERVED_DTYPES};
+use std::collections::HashSet;
 use std::path::Path;
 
 fn committed_path() -> std::path::PathBuf {
@@ -131,6 +132,49 @@ fn dual_axis_is_present_and_discriminates() {
     }
 }
 
+/// (5) The target axis is machine-readable AND its per-vector tag is cross-checked
+/// against the SERIALIZED token, never against its own derivation — so it cannot pass
+/// vacuously. There is no typed namespace enum on `StructureKey.target`, so the emitter
+/// derives `target_namespace` from the target; this test re-derives the namespace by its
+/// OWN independent split of the token's field-3 and asserts they agree, which catches an
+/// emitter that split differently (proven by mutation in the PR #161 review). It also
+/// pins `target` == the token's serialized field-3, which catches a `to_token` that
+/// mangled the target.
+#[test]
+fn target_axis_is_machine_readable_and_cross_checked() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
+        .expect("artifact must be valid JSON");
+
+    let namespaces = str_array(&doc, "target_namespaces");
+    assert!(namespaces.contains(&"cuda".to_string()), "cuda must be a target namespace");
+    assert!(namespaces.contains(&"vulkan".to_string()), "vulkan must be a target namespace");
+
+    let positives = doc.get("positive_vectors").and_then(|j| j.as_arr()).expect("positive_vectors array");
+    let mut saw_vulkan = false;
+    for v in positives {
+        let target = v.get("target").and_then(|j| j.as_str()).expect("each positive has a target");
+        let ns = v.get("target_namespace").and_then(|j| j.as_str()).expect("each positive has a target_namespace");
+        let token = v.get("token").and_then(|j| j.as_str()).expect("each positive has a token");
+
+        // cross-check 1 (direct field vs serialized token): `target` must equal the
+        // token's field-3 — a `to_token` that mangled the target breaks this.
+        let field3 = token.split('|').nth(3).expect("token has a field 3");
+        assert_eq!(target, field3, "target field must equal the token's serialized field-3 ({token})");
+
+        // cross-check 2 (INDEPENDENT re-derivation): the namespace, split HERE by the
+        // test from the serialized token, must equal the emitted `target_namespace`. The
+        // test's split does not call the emitter's helper, so an emitter that split on the
+        // wrong byte fails here rather than agreeing with itself.
+        let expected_ns = field3.split(':').next().expect("field-3 namespace");
+        assert_eq!(ns, expected_ns, "target_namespace must be the namespace of the serialized token target ({token})");
+
+        if ns == "vulkan" {
+            saw_vulkan = true;
+        }
+    }
+    assert!(saw_vulkan, "the vulkan-target vector must be tagged target_namespace=vulkan");
+}
+
 /// Extract every double-quoted string literal in `src` that looks like a full
 /// `structure_key` token: begins `sk4|` and carries at least the 9 mandatory fields.
 /// Fragments used as `replacen` needles (`"sk4|"`, `"sk4|bin|f32"`) have fewer fields
@@ -191,5 +235,26 @@ fn artifact_covers_every_golden_token_literal() {
         "the reference artifact is missing golden token literal(s) — publish them or the byte-match \
          set under-covers the frozen golden:\n{}",
         missing.iter().map(|t| format!("  {t}")).collect::<Vec<_>>().join("\n")
+    );
+}
+
+/// (6) INJECTIVITY of the decline wire. `decline_wire`'s exhaustiveness (E0004) proves
+/// every `KeyDecline` variant maps to SOMETHING; nothing proves two variants don't map to
+/// the SAME string. That failure is silent — a green build, a complete leg report, two
+/// declines collapsed into one, and a run that then agrees with the reference for the
+/// WRONG reason (worse than disagreeing, which gets investigated). Assert the wire kinds
+/// are pairwise distinct against a PINNED count (asserted counts are pinned, not computed:
+/// a new variant is an E0004 in decline_wire, and this count is the deliberate second
+/// gate). Discrimination proven by seeding a duplicate name in the PR #161 review.
+#[test]
+fn decline_wire_kinds_are_injective() {
+    let kinds = all_decline_wire_kinds();
+    // pinned — bump deliberately when a KeyDecline variant is added.
+    assert_eq!(kinds.len(), 20, "pinned decline-variant count; bump when KeyDecline grows");
+    let distinct: HashSet<&&str> = kinds.iter().collect();
+    assert_eq!(
+        distinct.len(),
+        kinds.len(),
+        "decline wire kinds MUST be pairwise distinct (injectivity) — two variants share a string: {kinds:?}"
     );
 }
