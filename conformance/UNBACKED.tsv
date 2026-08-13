@@ -131,29 +131,29 @@ KISS-CONFORM-6.11-0003	test_conform_determinism_import_site_lint	untested
 KISS-CONFORM-6.12-0001	test_conform_consumer_verify_check	untested	
 KISS-CONFORM-6.12-0002	test_conform_consumer_verify_reuses_oracle	untested	
 KISS-CONFORM-6.12-0003	test_conform_consumer_verify_not_gating	untested	
-KISS-CONFORM-6.13-0001	test_conform_announce_exact_byte_pod	untested	
-KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	untested	
+KISS-CONFORM-6.13-0001	test_conform_announce_exact_byte_pod	blocked	#144 no sidecar: "every Announce POD clause" has no machine-readable enumeration; becomes a lint once one exists
+KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	blocked	#173 seam-hello undefined; plus no foreign envelope reader and freeze governance (§8-0006)
 KISS-CONFORM-6.13-0003	test_conform_classify_exact_byte_and_registry_bundle	untested	
-KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	untested	
+KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	blocked	freeze governance (§8-0006); no out-of-namespace usage evidence artifact exists
 KISS-CONFORM-6.13-0005	test_conform_ops_per_class_comparators	untested	
-KISS-CONFORM-6.13-0007	test_conform_ops_transcendental_and_split	untested	
+KISS-CONFORM-6.13-0007	test_conform_ops_transcendental_and_split	untestable	#172 — rejects a declared ULP over a KISS-Ops ceiling that KISS-OPS-6.8-0001 abolished (#39)
 KISS-CONFORM-6.13-0008	test_conform_ops_opattrs_golden_hex	untested	
 KISS-CONFORM-6.13-0009	test_conform_grammar_region_exact_byte	untested	
-KISS-CONFORM-6.13-0010	test_conform_grammar_fuzz_and_freeze_gate	untested	
+KISS-CONFORM-6.13-0010	test_conform_grammar_fuzz_and_freeze_gate	blocked	no §6.6 IR-DAG fuzzer exists (0/7, no module); plus foreign reader + freeze governance
 KISS-CONFORM-6.13-0011	test_conform_contract_consumer_verify	untested	
 KISS-CONFORM-6.13-0012	test_conform_contract_schema_byte_compare	untested	
-KISS-CONFORM-6.13-0013	test_conform_synth_fuzz_decline_and_comparator	untested	
-KISS-CONFORM-6.13-0014	test_conform_consume_lift_oracle_and_refusals	untested	
-KISS-CONFORM-6.13-0015	test_conform_consume_expressibility_and_join	untested	
-KISS-CONFORM-6.13-0016	test_conform_emit_cross_standard_lint_and_freeze	untested	
-KISS-CONFORM-6.13-0017	test_conform_emit_structural_and_tier2	untested	
-KISS-CONFORM-6.13-0018	test_conform_all_build_gate_and_keying	untested	
-KISS-CONFORM-6.13-0019	test_conform_announce_golden_vectors	untested	
+KISS-CONFORM-6.13-0013	test_conform_synth_fuzz_decline_and_comparator	blocked	no §6.6 IR-DAG fuzzer exists; comparator-selection slice is executable (mirrors §6.13-0006b)
+KISS-CONFORM-6.13-0014	test_conform_consume_lift_oracle_and_refusals	blocked	no lifter/consumer in-tree; consume_refusal_taxonomy.rs is a doc-lint, not behavioral
+KISS-CONFORM-6.13-0015	test_conform_consume_expressibility_and_join	blocked	§6.10-0005 bundled signature-set artifact absent; mislabeled-kernel vector needs a lifter
+KISS-CONFORM-6.13-0016	test_conform_emit_cross_standard_lint_and_freeze	blocked	§6.11-0002 AUDIT manifest absent; no non-C-family emitter; freeze governance
+KISS-CONFORM-6.13-0017	test_conform_emit_structural_and_tier2	blocked	§6.9 op-DAG equality comparator absent (src/structural.rs is the §6.11 access-atom oracle); plus §6.6 fuzzer
+KISS-CONFORM-6.13-0018	test_conform_all_build_gate_and_keying	blocked	#144 no sidecars and no declared coverage set; the gate exists but runs over prose
+KISS-CONFORM-6.13-0019	test_conform_announce_golden_vectors	untestable	#174 — "version-negotiation frames" name no KISS-Announce artifact
 KISS-CONFORM-6.13-0020	test_conform_contract_blurb_excluded	untested	
 KISS-CONFORM-6.13-0021	test_conform_contract_audited_status	untested	
 KISS-CONFORM-6.13-0022	test_conform_contract_semantics_to_floor	untested	
 KISS-CONFORM-6.13-0023	test_conform_contract_malformed_decline	untested	
-KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	untested	
+KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	blocked	freeze governance (§8-0006): ≥2 dissimilar impls from the text alone; §5.3 external implementor
 KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	blocked	#144 no retired/burned clause-ID registry exists to check a cite against
 KISS-CONFORM-6.2-0004	test_conform_build_fails_drift	blocked	#144 drift = prose<->sidecar token match; no sidecar exists to compare against
 KISS-CONFORM-6.2-0005	test_conform_gate_is_generate_time	untested	
