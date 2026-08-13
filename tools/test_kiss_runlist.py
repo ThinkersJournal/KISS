@@ -4,13 +4,19 @@ The gate's claim is that a clause backed by code no CI leg compiles is a FAILURE
 A gate that only ever says CLEAN would satisfy that claim vacuously, so every
 positive assertion here is paired with the defect it is supposed to reject.
 
-Four shapes are checked, and the last two are the ones that matter most, because
-they are the gate's own ways of passing while measuring nothing:
+Shapes checked, and the LAST GROUP matters most, because those are the gate's own
+ways of passing while measuring nothing:
 
-  * a clause-backing test present on a leg          -> CLEAN
-  * a clause-backing test present on NO leg         -> FAIL   (the defect)
-  * a test present on only SOME legs                -> CLEAN, and NAMED
-  * NO leg supplied, or a leg whose capture is empty -> FAIL, not "0 missing"
+  * a clause-backing test present on a leg           -> CLEAN
+  * a clause-backing test present on NO leg          -> FAIL   (the defect)
+  * a test present on only SOME legs                 -> CLEAN, and NAMED
+  * a leg that is missing / empty / unreadable /
+    unnamed / given TWICE                            -> FAIL, not "0 missing"
+
+The duplicate-leg case is the sharpest of them: `--leg a=X --leg a=Y` would
+overwrite the first leg, and `on EVERY leg` would then mean "on the one leg
+left" — the gate printing CLEAN having read one leg is the exact verdict it
+exists to prevent, produced by its own argument handling.
 
 Run: python tools/test_kiss_runlist.py   (also collected by pytest)
 """
@@ -24,18 +30,35 @@ import kiss_trace as kt
 
 TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_runlist.py")
 
-failures = []
-passed = 0
+# The number of controls this file must run. ASSERTED, not printed — a count
+# that is printed and never compared is capability-present/enforcement-absent,
+# which is the defect class this suite exists to catch. Pinning it means a
+# control that stops executing FAILS here rather than quietly lowering a number
+# nobody reads. Changing the suite means changing this line deliberately.
+EXPECTED_CONTROLS = 12
 
 
-def check(cond, msg):
-    global passed
-    if cond:
-        passed += 1
-        print(f"  ok   {msg}")
-    else:
-        print(f"  FAIL {msg}")
-        failures.append(msg)
+class Checks:
+    """Per-run accumulator. Deliberately NOT module-level state.
+
+    Module globals would survive a second call to `main()` in one process —
+    which is exactly what a pytest wrapper does — inflating `passed` and carrying
+    earlier failures forward. In a suite whose printed count IS the evidence that
+    the gate can fail, leaked state means **a run where a control never executed
+    can still print the expected number**: wrong in the direction of looking fine.
+    """
+
+    def __init__(self):
+        self.failures = []
+        self.passed = 0
+
+    def __call__(self, cond, msg):
+        if cond:
+            self.passed += 1
+            print(f"  ok   {msg}")
+        else:
+            print(f"  FAIL {msg}")
+            self.failures.append(msg)
 
 
 def fid(ordinal):
@@ -99,6 +122,7 @@ fn test_ops_beta() { assert!(true); }
 
 
 def main():
+    check = Checks()
     print("does-anything-run-it gate:")
 
     # CONTROL FIRST: a well-formed suite whose backing is compiled must pass.
@@ -157,17 +181,57 @@ def main():
     check(rc != 0 and "not found" in out,
           "a MISSING capture file FAILS — a lost artifact is not a clean run")
 
+    # ARGUMENT-HANDLING vacuity. A leg named twice would silently overwrite the
+    # first, and every "on EVERY leg" verdict below would then be computed over
+    # one leg. The workflow passes two near-identical adjacent lines, so a
+    # copy-paste updating the path and not the name is the ordinary way in.
+    with tempfile.TemporaryDirectory() as tmp:
+        spec, conf = fixture(tmp, ROWS, HARNESS)
+        l1 = listing(tmp, "a", ["test_ops_alpha", "test_ops_beta"])
+        l2 = listing(tmp, "b", ["test_ops_alpha", "test_ops_beta"])
+        rc, out = run(spec, conf, [("ubuntu", l1), ("ubuntu", l2)])
+    check(rc != 0 and "given twice" in out,
+          "a leg name given TWICE FAILS — it would collapse two legs into one")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        spec, conf = fixture(tmp, ROWS, HARNESS)
+        l1 = listing(tmp, "u", ["test_ops_alpha", "test_ops_beta"])
+        rc, out = run(spec, conf, [("", l1)])
+    check(rc != 0 and "empty NAME" in out,
+          "an EMPTY leg name FAILS — it passes the NAME=PATH shape check")
+
+    # An unreadable capture must be a TYPED failure, not a traceback: a stack
+    # trace reads as a broken tool, when what broke is the artifact.
+    with tempfile.TemporaryDirectory() as tmp:
+        spec, conf = fixture(tmp, ROWS, HARNESS)
+        adir = os.path.join(tmp, "a_directory")
+        os.makedirs(adir, exist_ok=True)
+        rc, out = run(spec, conf, [("ubuntu", adir)])
+    check(rc != 0 and "unreadable" in out and "Traceback" not in out,
+          "an UNREADABLE capture FAILS as a typed error, not a traceback")
+
     print()
-    if failures:
-        print(f"FAILED: {len(failures)} check(s), {passed} passed")
+    if check.failures:
+        print(f"FAILED: {len(check.failures)} check(s), {check.passed} passed")
         return 1
-    print(f"PASS: {passed} checks")
+    # The count is COMPARED, not just reported. A control that silently stopped
+    # running would otherwise lower this number with nothing to notice.
+    if check.passed != EXPECTED_CONTROLS:
+        print(f"FAILED: expected {EXPECTED_CONTROLS} controls, ran {check.passed}. "
+              f"A control that no longer executes is not a smaller suite, it is an "
+              f"unproven gate.")
+        return 1
+    print(f"PASS: {check.passed} checks")
     return 0
 
 
 def test_kiss_runlist_controls():
-    """Collected by pytest; CI also runs this file in script mode."""
-    assert main() == 0, f"{len(failures)} check(s) failed: {failures}"
+    """Collected by pytest; CI also runs this file in script mode.
+
+    Safe to call repeatedly: `main()` builds its own accumulator, so a second
+    invocation in the same process starts from zero.
+    """
+    assert main() == 0
 
 
 if __name__ == "__main__":

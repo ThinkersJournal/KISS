@@ -100,7 +100,10 @@ def main():
 
     # A run with no legs must FAIL, not report a clean zero. If an artifact
     # download silently produced nothing, "0 tests missing" is the exact shape of
-    # success-indistinguishable-from-failure this check exists to detect.
+    # success-indistinguishable-from-failure this check exists to detect. The same
+    # applies to every degenerate --leg below: a missing, unreadable, empty,
+    # unnamed or DUPLICATED leg all exit non-zero rather than measuring less and
+    # reporting the same verdict.
     if not args.leg:
         print("FAIL: no --leg given. A run with no build artifact cannot report "
               "coverage; it can only report that it has nothing to report.")
@@ -112,10 +115,33 @@ def main():
             print(f"FAIL: --leg expects NAME=PATH, got {spec!r}")
             return 2
         name, _, path = spec.partition("=")
+        name = name.strip()
+        # An empty name passes the `"=" in spec` shape check, and a REPEATED name
+        # would silently overwrite the earlier leg — collapsing two legs into one
+        # while `on EVERY leg` is then computed over a single entry. The gate
+        # would print CLEAN having read one leg: the verdict it exists to
+        # prevent, produced by its own argument handling. The workflow passes two
+        # near-identical adjacent lines, so a copy-paste updating the path and
+        # not the name is the ordinary way this happens.
+        if not name:
+            print(f"FAIL: --leg has an empty NAME in {spec!r}; a leg must be named "
+                  f"so the report can say WHICH leg carries a test.")
+            return 2
+        if name in legs:
+            print(f"FAIL: --leg {name!r} given twice. The second would overwrite the "
+                  f"first and 'on EVERY leg' would then mean 'on the one leg left'.")
+            return 2
         if not os.path.exists(path):
             print(f"FAIL: leg {name!r} capture not found: {path}")
             return 2
-        legs[name] = parse_list_file(path)
+        try:
+            legs[name] = parse_list_file(path)
+        except OSError as e:
+            # Typed, not a traceback: an unreadable capture is a broken artifact,
+            # and it must be reported as one rather than crashing the step with a
+            # stack trace that reads as a tool bug.
+            print(f"FAIL: leg {name!r} capture unreadable ({path}): {e}")
+            return 2
         if not legs[name]:
             print(f"FAIL: leg {name!r} listed ZERO tests ({path}). An empty capture "
                   f"is a broken build step, not a suite with no tests.")
