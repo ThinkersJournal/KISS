@@ -146,6 +146,25 @@ missing the one that is. Both halves collapse to one instruction: **compare what
 something you did not write** — and if the thing you did not write is a document a human retypes
 into a test, you have moved the transcription, not removed it.
 
+**9. A seeded mutation must assert that it applied — an unapplied mutation is indistinguishable
+from a guard that does not fire.** Proving a test can fail means breaking the thing it checks and
+watching it go red. If the edit silently matched nothing, the "mutation" runs against unmodified
+source and the test passes **because there was no defect to catch**, which reads exactly like a test
+with a hole in it. *Why:* a mutation vector reported green twice, and the honest reading — *"my test
+does not catch a silent accept"* — was wrong about the **instrument**, not the test: a `\n` in the
+search string was mangled before it reached the replacer, so nothing matched. **The error points the
+investigation at the code, which is fine, and away from the tooling, which is where the fault was.**
+Assert the pattern matched exactly once before replacing.
+
+Note the asymmetry, because it bounds how much older proofs are worth: **a red result is
+self-validating** — the test could not have failed unless the patch applied — **while a green result
+proves nothing until the application is checked.** Proofs run before this convention are trustworthy
+exactly insofar as every vector came back red.
+
+And for a test credited to more than one clause, per-vector proofs are necessary but not sufficient:
+publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
+together is the only thing distinguishing N properties from one property credited N times.
+
 ## Normative writing conventions (summary of umbrella §3–§4)
 
 If you propose normative text, follow the house style so it stays testable:
