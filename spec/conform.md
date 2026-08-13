@@ -787,9 +787,9 @@ enum (§6.0). See umbrella §3 for the full statement.
   `test_conform_ulp_comparator`.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
-  tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier is a tagged
-  quantity carrying at least one of `{max_ulp, max_relative, max_absolute}` (KISS-CONTRACT
-  §6.8-0002). KISS-Conform MUST NOT impose a fixed suite-wide ULP cap and MUST NOT reject a
+  tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
+  **tagged accuracy tier** KISS-Contract defines (KISS-CONTRACT §6.8-0002) and KISS-Conform does
+  not restate it. KISS-Conform MUST NOT impose a fixed suite-wide ULP cap and MUST NOT reject a
   declared tier for exceeding the KISS-Ops §6.8 advisory-floor table: that table is
   **informative** — a reasonableness reference, not a normative threshold — so a truthful
   provider whose atom exceeds a table value MUST NOT be rejected for it. *Test:*
