@@ -68,26 +68,66 @@ fn decline_vectors_answer_the_pinned_decline() {
     }
 }
 
-/// (4) The dual axis is machine-readable and correct: 24 recognized, 22 usable, 2
-/// reserved — and the emitted artifact declares both numbers explicitly. Two
-/// different obligations (§6.1-0001): a byte-match runs over the 22 usable, while the
-/// recognition surface covers all 24.
+/// Extract a JSON string-array field from the parsed artifact. Panics if the key is
+/// ABSENT — so a deleted `reserved_dtypes` array (the exact vacuous-guard failure this
+/// file defends against) makes the dual-axis test go red, where a whole-document
+/// substring search would still find the token in some other array.
+fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
+    doc.get(key)
+        .unwrap_or_else(|| panic!("artifact is missing the `{key}` array"))
+        .as_arr()
+        .unwrap_or_else(|| panic!("artifact `{key}` is not an array"))
+        .iter()
+        .map(|j| j.as_str().expect("array element must be a string").to_string())
+        .collect()
+}
+
+/// (4) The dual axis is machine-readable, correct, AND its guard DISCRIMINATES the two
+/// axes — the defect this whole file defends against, previously present inside its own
+/// test. Every assertion is against the PARSED per-key arrays, not a whole-document
+/// substring: a reserved token being present "somewhere" (it is always in the
+/// recognition set) can no longer make a reserved/usable assertion pass vacuously.
+/// Deleting `reserved_dtypes` panics in `str_array`; emptying or mis-filling it fails
+/// the membership/length assertions — verified by scratch deletion in the PR #161 review.
 #[test]
-fn dual_axis_is_present_and_correct() {
+fn dual_axis_is_present_and_discriminates() {
     assert_eq!(DTYPES.len(), 24, "recognition set must be 24 tokens");
     assert_eq!(RESERVED_DTYPES.len(), 2, "two reserved tokens");
-    let usable = DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count();
-    assert_eq!(usable, 22, "usable set must be 22 tokens");
+    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 22, "usable const = 22");
 
-    let json = emit_reference_vectors_json();
-    assert!(json.contains("\"recognition_count\": 24"), "artifact must declare recognition_count 24");
-    assert!(json.contains("\"usable_count\": 22"), "artifact must declare usable_count 22");
-    assert!(json.contains("\"structure_key_schema_version\": 4"), "artifact must name schema version 4");
-    assert!(json.contains("\"token_prefix\": \"sk4\""), "artifact must name token prefix sk4");
-    assert!(json.contains(&format!("\"source_commit\": \"{SOURCE_COMMIT}\"")), "artifact must name its source commit");
-    // both reserved tokens are recognized-but-reserved, present in recognition, absent from usable.
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
+        .expect("the emitted artifact must be valid JSON");
+
+    let recognition = str_array(&doc, "dtype_recognition_set");
+    let usable = str_array(&doc, "dtype_usable_set");
+    let reserved = str_array(&doc, "reserved_dtypes");
+
+    // counts equal the ACTUAL array lengths — a declared count that lies about its
+    // array is caught here, not assumed equal to 24/22.
+    assert_eq!(doc.get("recognition_count").and_then(|j| j.as_u64()), Some(recognition.len() as u64), "recognition_count must equal its array length");
+    assert_eq!(doc.get("usable_count").and_then(|j| j.as_u64()), Some(usable.len() as u64), "usable_count must equal its array length");
+    assert_eq!(recognition.len(), 24);
+    assert_eq!(usable.len(), 22);
+    assert_eq!(reserved.len(), 2);
+    assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(4));
+    assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk4"));
+    assert_eq!(doc.get("source_commit").and_then(|j| j.as_str()), Some(SOURCE_COMMIT));
+
+    // the discriminating per-axis assertions: each reserved token is in the reserved
+    // ARRAY, present in recognition, and ABSENT from usable — the three a whole-document
+    // substring search could not tell apart.
     for r in RESERVED_DTYPES {
-        assert!(json.contains(&format!("\"{r}\"")), "reserved {r} must appear (recognition set + reserved list)");
+        let r = r.to_string();
+        assert!(reserved.contains(&r), "{r} must be in the reserved_dtypes array");
+        assert!(recognition.contains(&r), "{r} must be recognized (recognition surface)");
+        assert!(!usable.contains(&r), "{r} must NOT be usable (byte-match surface)");
+    }
+    // a KNOWN-usable token must NOT be in the reserved array (so `reserved` is not just
+    // "everything") — the counterexample a whole-document search would wrongly pass.
+    assert!(!reserved.contains(&"f32".to_string()), "a usable dtype must not appear in reserved_dtypes");
+    // usable is exactly recognition minus reserved.
+    for d in &recognition {
+        assert_eq!(usable.contains(d), !reserved.contains(d), "usable = recognition minus reserved (failed for {d})");
     }
 }
 

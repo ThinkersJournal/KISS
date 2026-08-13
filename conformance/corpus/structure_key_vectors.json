@@ -211,14 +211,16 @@
       "name": "version_signpost_sk9",
       "note": "well-formed canonical OTHER version -> re-derive signpost, not a wall",
       "token": "sk9|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "decline": "UnsupportedSchemaVersion { got: 9 }"
+      "decline": "UnsupportedSchemaVersion",
+      "got": 9
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0014",
       "name": "version_signpost_sk3",
       "note": "this reference build ships no sk3 decoder arm: a persisted sk3 token is the signpost, never a silent cross-vocab decode",
       "token": "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "decline": "UnsupportedSchemaVersion { got: 3 }"
+      "decline": "UnsupportedSchemaVersion",
+      "got": 3
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0015",

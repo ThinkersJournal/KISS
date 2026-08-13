@@ -376,6 +376,43 @@ fn json_str(s: &str) -> String {
     out
 }
 
+/// The STABLE published spelling of a [`KeyDecline`] for the artifact — the decline
+/// contract, decoupled from Rust's `Debug` (documented as NOT a stable format, so
+/// `format!("{e:?}")` would let a field rename or a struct-variant reshape silently
+/// re-spell a value three implementations byte-compare against). Returns the decline
+/// KIND and an optional structured numeric payload `(key, value)`, so a consumer
+/// matches on the kind and reads the payload as a JSON number rather than parsing Rust
+/// struct syntax (`"UnsupportedSchemaVersion { got: 3 }"`) out of a string.
+///
+/// WILDCARD-FREE and compiled on both CI legs (no `#[cfg]`): a new `KeyDecline` variant
+/// is a generation-time build failure (E0004) here, not a new spelling that appears in
+/// the artifact unannounced. Payload-free variants keep their pre-existing spellings, so
+/// this is a hardening of the two payloaded variants, not a wire change for the rest.
+fn decline_wire(e: &KeyDecline) -> (&'static str, Option<(&'static str, String)>) {
+    match e {
+        KeyDecline::WrongFieldCount { got } => ("WrongFieldCount", Some(("got", got.to_string()))),
+        KeyDecline::BadVersionPrefix => ("BadVersionPrefix", None),
+        KeyDecline::UnsupportedSchemaVersion { got } => ("UnsupportedSchemaVersion", Some(("got", got.to_string()))),
+        KeyDecline::BadRank => ("BadRank", None),
+        KeyDecline::BadWorkClass => ("BadWorkClass", None),
+        KeyDecline::BadOperandSubKey => ("BadOperandSubKey", None),
+        KeyDecline::BadReduceField => ("BadReduceField", None),
+        KeyDecline::BadContractionField => ("BadContractionField", None),
+        KeyDecline::UppercaseOrWidthHex => ("UppercaseOrWidthHex", None),
+        KeyDecline::UnknownOpFamily => ("UnknownOpFamily", None),
+        KeyDecline::UnknownDtype => ("UnknownDtype", None),
+        KeyDecline::ReservedDtype => ("ReservedDtype", None),
+        KeyDecline::TokenLengthOutOfBound { len } => ("TokenLengthOutOfBound", Some(("len", len.to_string()))),
+        KeyDecline::TooManyOperands { got } => ("TooManyOperands", Some(("got", got.to_string()))),
+        KeyDecline::BadTargetGrammar => ("BadTargetGrammar", None),
+        KeyDecline::BadTargetCharset => ("BadTargetCharset", None),
+        KeyDecline::ContractionPresenceMismatch => ("ContractionPresenceMismatch", None),
+        KeyDecline::ReduceNotGatedToRed => ("ReduceNotGatedToRed", None),
+        KeyDecline::BadAccMpField => ("BadAccMpField", None),
+        KeyDecline::RedundantAccMpField => ("RedundantAccMpField", None),
+    }
+}
+
 /// Emit the reference-vectors artifact as pretty JSON (2-space indent, trailing
 /// newline) — the exact bytes committed to `conformance/corpus/structure_key_vectors.json`.
 /// The vectors test asserts this output equals the committed file byte-for-byte
@@ -438,19 +475,29 @@ pub fn emit_reference_vectors_json() -> String {
     s.push_str("  \"decline_vectors\": [\n");
     for (i, d) in dec.iter().enumerate() {
         let comma = if i + 1 < dec.len() { "," } else { "" };
-        let decline = match from_token(&d.token) {
-            Err(e) => format!("{e:?}"),
+        // the decline is codec-emitted (from_token, live) but PUBLISHED through the
+        // stable wildcard-free mapping, never through Debug.
+        let e = match from_token(&d.token) {
+            Err(e) => e,
             Ok(_) => panic!(
                 "decline vector `{}` unexpectedly parsed as a valid token: {}",
                 d.name, d.token
             ),
         };
+        let (kind, payload) = decline_wire(&e);
         s.push_str("    {\n");
         s.push_str(&format!("      \"clause\": {},\n", json_str(d.clause)));
         s.push_str(&format!("      \"name\": {},\n", json_str(d.name)));
         s.push_str(&format!("      \"note\": {},\n", json_str(d.note)));
         s.push_str(&format!("      \"token\": {},\n", json_str(&d.token)));
-        s.push_str(&format!("      \"decline\": {}\n", json_str(&decline)));
+        match payload {
+            // structured payload: a JSON number, not Rust struct syntax in a string.
+            Some((k, v)) => {
+                s.push_str(&format!("      \"decline\": {},\n", json_str(kind)));
+                s.push_str(&format!("      {}: {}\n", json_str(k), v));
+            }
+            None => s.push_str(&format!("      \"decline\": {}\n", json_str(kind))),
+        }
         s.push_str(&format!("    }}{}\n", comma));
     }
     s.push_str("  ]\n");
