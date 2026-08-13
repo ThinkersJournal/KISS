@@ -103,14 +103,14 @@ implementer can answer it about code they have never read.
 > **Why it is not degradation.** Degradation covers fewer **inputs**; abstention covers fewer
 > **judgements over an input it did examine**. The fix classes differ, which is the practical test
 > for whether a row earns its place: degradation is fixed by making the *miss* an error, abstention
-> by making the *unrecognised value* a violation. Contrast it with the nearest-looking failure,
+> by making the *unrecognized value* a violation. Contrast it with the nearest-looking failure,
 > which is not this one:
 >
 > | | anchor-miss (a *degradation* shape) | **abstention** |
 > |---|---|---|
 > | what happens | the pattern does not match; there is no value to compare | the pattern **matches**; a value is extracted, then found outside the tool's lookup |
 > | what the tool concludes | "nothing here" | "**not applicable to me**" |
-> | fix | make the miss an error | make the unrecognised value a **violation**, not a skip |
+> | fix | make the miss an error | make the unrecognized value a **violation**, not a skip |
 
 ### 3.2 Instances
 
@@ -154,7 +154,8 @@ implementer can answer it about code they have never read.
   deriver lives. A six-crate sweep would have reported green having exercised nothing. Caught only
   because a worker saw *"running 0 tests; 737 filtered out"* and refused to read it as a pass.
 
-- **B9 — abstention (KISS).** `kiss_tables.py:329` checks that KISS-Consume's prose count word
+- **B9 — abstention (KISS).** In `tools/kiss_tables.py`, the `words = {"four": 4}` count-word
+  check (read at `19c3ad7`) verifies that KISS-Consume's prose count word
   matches the taxonomy's actual size:
 
   ```python
@@ -166,8 +167,18 @@ implementer can answer it about code they have never read.
   The regex **matches**; the count word is **read**; and then `words.get("five")` returns `None`,
   `None not in (None, 4)` is `False`, and **no violation is raised**. The `None` arm, written to
   mean *"a word I don't know — skip"*, disables the comparison on the one edit it exists to
-  notice: **the taxonomy growing from four to five.** `kiss_tables.py:290` is the same for the
-  `MathPrecision` `two-member` enum. **The instrument succeeded at every step and judged nothing.**
+  notice: **the taxonomy growing from four to five.** The `words = {"two": 2, "three": 3}` check in
+  the same file is the same shape for the `MathPrecision` `two-member` enum. **The instrument
+  succeeded at every step and judged nothing.**
+
+  > **On the citation form.** This names the **construct and the commit**, not a line number. The
+  > defect spans three lines — the search, the lookup table, the comparison — so any single line
+  > number is wrong for two of the three, and drifts on the next edit above it. The first draft of
+  > this instance cited `:329` and `:290`; the true lines at `19c3ad7` are 330 and 291, and the
+  > wrong ones were carried from a ruling into an issue into this document before a reviewer caught
+  > them. **A citation without a commit is unfalsifiable in exactly the way a stale grep is** — and
+  > three stale-tree readings were produced tonight, by three people, every one of them
+  > clean-looking.
 
 ### 3.3 What B6 proves about the obvious fix
 
