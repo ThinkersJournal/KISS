@@ -258,3 +258,132 @@ fn decline_wire_kinds_are_injective() {
         "decline wire kinds MUST be pairwise distinct (injectivity) — two variants share a string: {kinds:?}"
     );
 }
+
+/// (7) BOUNDARY of the byte-match's dtype coverage — makes `coverage_note` EXECUTABLE so its
+/// claim cannot quietly stop being true. The positive vectors place only a few of the 22
+/// usable dtypes in the dtype position, so a byte-match against this set cannot see a
+/// dtype-spelling divergence on a token that never appears (Unpopped's c128→c127 survived
+/// their leg green; the dtype MANIFEST is the vocabulary instrument and catches it by name).
+/// Counts are PINNED so a future reader sees "3 → 7", not a bare boolean flip.
+///
+/// IF THIS FAILS: the positive vectors now exercise MORE dtype vocabulary than `coverage_note`
+/// claims. THAT IS AN IMPROVEMENT, not a regression. The fix is to update `coverage_note` in
+/// `src/reference_vectors.rs` AND the pinned counts in THIS test to the new numbers. Do NOT
+/// delete vectors to make this green — that reverts the very improvement the guard detects.
+#[test]
+fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
+    let positives = doc.get("positive_vectors").and_then(|j| j.as_arr()).expect("positive_vectors array");
+    let usable = str_array(&doc, "dtype_usable_set");
+    let usable_set: HashSet<&str> = usable.iter().map(|s| s.as_str()).collect();
+
+    // distinct dtypes in the DTYPE POSITION (token field 2). `unwrap_or_else` names the
+    // token+field so a format drift reports the format, not `Option::unwrap()`.
+    let in_dtype_pos: HashSet<&str> = positives
+        .iter()
+        .map(|v| {
+            let token = v
+                .get("token")
+                .and_then(|j| j.as_str())
+                .unwrap_or_else(|| panic!("positive vector has no string `token`"));
+            token
+                .split('|')
+                .nth(2)
+                .unwrap_or_else(|| panic!("token has no field-2 (dtype position): {token}"))
+        })
+        .collect();
+    // distinct USABLE dtypes appearing ANYWHERE (dtype pos + contraction/acc-mp subfields).
+    let anywhere: HashSet<&str> = positives
+        .iter()
+        .flat_map(|v| {
+            let token = v
+                .get("token")
+                .and_then(|j| j.as_str())
+                .unwrap_or_else(|| panic!("positive vector has no string `token`"));
+            token
+                .split(|c| c == '|' || c == '/' || c == ';')
+                .filter(|f| usable_set.contains(f))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // direction-NEUTRAL pinned guard (see `check_pinned_coverage`): it states what it OBSERVED
+    // before prescribing, so an equality miss on a DECREASE isn't reported as an improvement.
+    check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 3, format!("{in_dtype_pos:?}"));
+    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 5, format!("{anywhere:?}"));
+    // the boundary the note states: strictly fewer than the 22 usable tokens are exercised.
+    assert!(
+        in_dtype_pos.len() < usable.len(),
+        "dtype-position coverage must be a strict subset of the {} usable tokens",
+        usable.len()
+    );
+}
+
+/// Direction-neutral pinned-count check for the coverage boundary. Reports observed vs pinned,
+/// says WHICH WAY it moved, and prescribes per direction: an INCREASE is a coverage improvement
+/// (update `coverage_note` + the pin); a DECREASE is a regression (a vector was lost or changed —
+/// RESTORE it, do NOT lower the pin). A guard that prescribes a response must first state what it
+/// observed, or an equality miss on a decrease is reported as the improvement it is not.
+fn check_pinned_coverage(what: &str, observed: usize, pinned: usize, detail: String) {
+    if observed == pinned {
+        return;
+    }
+    let (dir, prescribe) = if observed > pinned {
+        (
+            "INCREASED — coverage improved",
+            "update `coverage_note` in src/reference_vectors.rs AND this pinned count to the new number",
+        )
+    } else {
+        (
+            "DECREASED — coverage regressed",
+            "a vector was lost or changed; RESTORE it — do NOT lower the pin to match",
+        )
+    };
+    panic!("{what}: observed {observed} vs pinned {pinned} — {dir}. {prescribe}. Never silently re-baseline. Saw: {detail}");
+}
+
+/// (8) `coverage_note` claims rule (d) — rejecting the all-default redundant `(acc+mp)` —
+/// is covered by a DECLINE vector, because the POSITIVE byte-match is structurally blind to
+/// it (a decline-side rule; Fuel found this by seeded sabotage: removing the enforcement left
+/// the positive byte-match green because every published `(acc+mp)` positive genuinely
+/// deviates). Make the "covered here" half of the note executable: if the redundant decline
+/// vector were removed, the note would be a lie and this test names why.
+#[test]
+fn rule_d_is_covered_by_a_redundant_decline_vector() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
+    let declines = doc.get("decline_vectors").and_then(|j| j.as_arr()).expect("decline_vectors array");
+    let has_rule_d = declines
+        .iter()
+        .any(|d| d.get("decline").and_then(|j| j.as_str()) == Some("RedundantAccMpField"));
+    assert!(
+        has_rule_d,
+        "coverage_note claims rule (d) is covered by a RedundantAccMpField decline vector \
+         (redundant_acc_mp_all_default) — that vector is gone, so the note is now false. The positive \
+         byte-match is blind to rule (d); restore the decline vector, do NOT weaken the note."
+    );
+}
+
+/// (9) Every repo path cited in `coverage_note` must EXIST. The note's job is to tell a reader
+/// WHICH instrument closes the gap; a citation to a path that does not resolve fails in exactly
+/// the "gap unclosed" direction — the reader searches, finds nothing, concludes coverage is
+/// missing. This catches the rotted/wrong-citation class that put `kiss_dtype_manifest` (a
+/// nonexistent tool) into the note before this guard existed.
+#[test]
+fn coverage_note_cited_paths_exist() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
+    let note = doc.get("coverage_note").and_then(|j| j.as_str()).expect("coverage_note is a string");
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().expect("crate dir has a parent (repo root)");
+    // repo-relative path-like tokens: contain a '/' and end in a source/data extension.
+    let cited: Vec<&str> = note
+        .split(|c: char| c.is_whitespace() || matches!(c, '(' | ')' | ',' | ';'))
+        .filter(|t| t.contains('/') && (t.ends_with(".py") || t.ends_with(".json") || t.ends_with(".rs")))
+        .collect();
+    assert!(!cited.is_empty(), "coverage_note should cite at least one instrument path so the gap is attributable");
+    for p in cited {
+        assert!(
+            repo_root.join(p).exists(),
+            "coverage_note cites `{p}`, which does not exist in the repo — a dead citation reads as \
+             'coverage missing'. Point at the real path (fix in src/reference_vectors.rs)."
+        );
+    }
+}
