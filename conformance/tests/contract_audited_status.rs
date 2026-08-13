@@ -26,19 +26,19 @@
 //! use the `§<sec>-<nnnn>` short form, which does not match the citation grammar.
 
 use kiss_conformance::contract::{
-    derive_audited_status, verify_audited_status, AccuracyTier, AuditedStatus, Guarantees,
+    derive_audited_status, verify_audited_status, AuditedStatus, DeclaredAccuracyTier, Guarantees,
 };
 use kiss_conformance::DeterminismClass;
 
 /// A tier declaring 4 ULP against the named reference.
-fn bounded_tier() -> AccuracyTier {
-    AccuracyTier { max_ulp: Some(4), ..AccuracyTier::default() }
+fn bounded_tier() -> DeclaredAccuracyTier {
+    DeclaredAccuracyTier { max_ulp: Some(4), ..DeclaredAccuracyTier::default() }
 }
 
 /// A tier carrying none of `{max_ulp, max_relative, max_absolute}` — a tier that
 /// declares no bound (§6.8-0002).
-fn unbounded_tier() -> AccuracyTier {
-    AccuracyTier::default()
+fn unbounded_tier() -> DeclaredAccuracyTier {
+    DeclaredAccuracyTier::default()
 }
 
 /// Guarantees declaring a bounded precision against a named reference.
@@ -112,9 +112,11 @@ fn test_contract_audited_status_derived() {
 /// TEETH: a rule that gates `audited` on the determinism class — "exact-byte only",
 /// or "anything but nondeterministic". Both read as conservative and both are
 /// wrong. All three classes are asserted with identical bounded precision, so a
-/// class-gated rule fails on whichever class it excludes. Also asserts the
-/// clause's second prohibition: the rule MUST NOT set `bit_stability` from itself
-/// (§6.8-0005 owns that field), checked by flipping it and demanding no change.
+/// class-gated rule fails on whichever class it excludes.
+///
+/// The clause's second prohibition — the rule MUST NOT **set** `bit_stability`
+/// (§6.8-0005 owns it) — is carried by the signature rather than an assertion;
+/// see the note at the end of the test body.
 #[test]
 fn test_contract_audited_derivation_rule() {
     for class in [
@@ -134,10 +136,10 @@ fn test_contract_audited_derivation_rule() {
     // A bound expressed as a relative or absolute tolerance is a bound too — the
     // tier is "at least one of {max_ulp, max_relative, max_absolute}".
     for tier in [
-        AccuracyTier { max_relative: Some(kiss_conformance::contract::Real::f32(1e-6)), ..AccuracyTier::default() },
-        AccuracyTier { max_absolute: Some(kiss_conformance::contract::Real::f32(1e-9)), ..AccuracyTier::default() },
+        DeclaredAccuracyTier { max_relative: Some(kiss_conformance::contract::Real::f32(1e-6)), ..DeclaredAccuracyTier::default() },
+        DeclaredAccuracyTier { max_absolute: Some(kiss_conformance::contract::Real::f32(1e-9)), ..DeclaredAccuracyTier::default() },
         // `correctly-rounded` / `bit-reproducible` ride in as tier 0.
-        AccuracyTier { max_ulp: Some(0), ..AccuracyTier::default() },
+        DeclaredAccuracyTier { max_ulp: Some(0), ..DeclaredAccuracyTier::default() },
     ] {
         let g = Guarantees {
             per_backend_ulp_tiers: vec![("cpu".into(), tier)],
@@ -151,16 +153,18 @@ fn test_contract_audited_derivation_rule() {
         );
     }
 
-    // The rule MUST NOT read `bit_stability` (§6.8-0005 owns it): flipping it
-    // moves nothing.
-    let stable = Guarantees { bit_stability: true, ..audited_guarantees() };
-    let unstable = Guarantees { bit_stability: false, ..audited_guarantees() };
-    assert_eq!(
-        derive_audited_status(&stable),
-        derive_audited_status(&unstable),
-        "KISS-CONTRACT-6.8-0009: `bit_stability` changed the derived `audited_status` — the \
-         derivation must not read a field §6.8-0005 owns"
-    );
+    // NOT ASSERTED, deliberately: `bit_stability`.
+    //
+    // §6.8-0009's prohibition is on SETTING that field, and §6.8-0005 says in
+    // terms that the derivation "reads this field and MUST NOT set it". Reading
+    // is permitted. An earlier version of this test asserted the opposite — that
+    // the derivation must not READ it — which would have failed any
+    // implementation following the clause. Caught in review.
+    //
+    // The must-not-set half needs no assertion: `derive_audited_status` takes
+    // `&Guarantees` and returns a value, so it cannot write the field at all. A
+    // compile-time impossibility is a stronger guarantee than a runtime check,
+    // and a runtime check for it would be a tautology.
 }
 
 // ---------------------------------------------------------------------------

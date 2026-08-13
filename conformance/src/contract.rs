@@ -457,7 +457,7 @@ fn parse_crc_hex(s: &str) -> Option<u32> {
 /// here as `max_ulp = 0`, which is the §6.7-0007 precision-class↔tier
 /// correspondence ("MUST map to tier 0"), not a separate representation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct AccuracyTier {
+pub struct DeclaredAccuracyTier {
     pub max_ulp: Option<u32>,
     /// Bit pattern of the declared relative bound, if any (§6.11-0010 real form).
     pub max_relative: Option<Real>,
@@ -465,7 +465,7 @@ pub struct AccuracyTier {
     pub max_absolute: Option<Real>,
 }
 
-impl AccuracyTier {
+impl DeclaredAccuracyTier {
     /// A tier declares a bound iff it carries at least one of the three tagged
     /// quantities (§6.8-0002).
     pub fn is_bounded(&self) -> bool {
@@ -493,9 +493,10 @@ pub struct Guarantees {
     pub reference_function: Option<String>,
     /// Per target backend, the declared accuracy tier (§6.8-0002). Empty means
     /// no tier is declared for any backend.
-    pub per_backend_ulp_tiers: Vec<(String, AccuracyTier)>,
+    pub per_backend_ulp_tiers: Vec<(String, DeclaredAccuracyTier)>,
     pub determinism_class: crate::DeterminismClass,
-    /// Read by NO branch of the derivation (§6.8-0009, §6.8-0005 owns it).
+    /// Owned by §6.8-0005. The derivation MAY read it — §6.8-0005 says it does —
+    /// but MUST NOT set it, which the shared borrow below makes structural.
     pub bit_stability: bool,
 }
 
@@ -520,7 +521,11 @@ impl Guarantees {
 /// `audited` arm **includes** an `order-invariant/nondeterministic` kernel whose
 /// nondeterminism is declared against a named reference under a stated tolerance
 /// — so "nondeterministic therefore unaudited" is the wrong rule, not a
-/// conservative one. `bit_stability` is likewise never read (§6.8-0005 owns it).
+/// conservative one.
+///
+/// `bit_stability` is owned by §6.8-0005, which states that this derivation
+/// **reads** that field and MUST NOT **set** it. Taking `&Guarantees` makes the
+/// prohibition structural; nothing here needs to assert it.
 pub fn derive_audited_status(g: &Guarantees) -> AuditedStatus {
     if g.declares_bounded_precision() {
         AuditedStatus::Audited
