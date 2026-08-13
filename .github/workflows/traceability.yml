@@ -66,18 +66,28 @@ jobs:
       # empties the sweep goes red instead of reporting a silent success. Both
       # verified locally before wiring it.
       #
-      # THE SWEEP DOES NOT COVER EVERY FILE IT APPEARS TO. `test_kiss_trace_gates.py`
-      # is a SCRIPT (`check()`/`main()`, not `test_*`), so `pytest tools/` collects
-      # ZERO from it and reports the other files' total — a step named "Lint
-      # self-tests" silently skipping the one suite that proves the traceability
-      # instrument can fail. `pytest tools/ -q` exiting 0 says the sweep RAN; it
-      # says nothing about what it COVERED. Hence the explicit invocation below.
-      - name: kiss_trace gate controls (script mode — pytest collects none of these)
-        run: python tools/test_kiss_trace_gates.py
-      - name: Lint self-tests (tools/)
+      # `pytest tools/ -q` exiting 0 says the sweep RAN. It says nothing about what
+      # it COVERED, and those are two questions. `test_kiss_trace_gates.py` was a
+      # pure script (`check()`/`main()`, no `test_*`), so pytest collected ZERO from
+      # it and reported the other files' total: a step named "Lint self-tests"
+      # silently skipping the one suite that proves the traceability instrument can
+      # fail. #151 added a collectable wrapper AND the explicit script-mode step
+      # above, which is why this is no longer live — but nothing stopped it
+      # recurring for the next file, so the guard below closes the class.
+      - name: Every tools/test_*.py contributes a collected test
+        shell: bash
         run: |
           python -m pip install --quiet pytest
-          python -m pytest tools/ -q
+          for f in tools/test_*.py; do
+            if ! python -m pytest "$f" --collect-only -q >/dev/null 2>&1; then
+              echo "::error::$f collects ZERO tests — 'pytest tools/' would report"\
+                   "success having never run it. Add a test_* wrapper, or invoke"\
+                   "the file explicitly as a step."
+              exit 1
+            fi
+          done
+      - name: Lint self-tests (tools/)
+        run: python -m pytest tools/ -q
 
   strict:
     # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
