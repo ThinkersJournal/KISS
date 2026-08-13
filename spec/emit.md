@@ -397,8 +397,9 @@ named language family; this note records only *why* the criterion exists.
   *finite*; the term groups them with the non-finite values because, like them, they
   carry no portable decimal spelling.
 - **Declared-ULP atom** — a KISS-Ops transcendental / special-function atom (`exp`,
-  `log`, `sin`, `cos`, `sqrt`, `erf`, …) implemented per-target to a declared ULP
-  bound no looser than the KISS-Ops §6.8 ceiling; its spelling is emitter-supplied
+  `log`, `sin`, `cos`, `sqrt`, `erf`, …) implemented per-target to a **declared
+  per-target accuracy tier**, which is the sole accuracy gate (KISS-OPS §6.8-0001); its
+  spelling is emitter-supplied
   (§6.4-0003), never a mandated polynomial on the driver side.
 - **Neutrality audit** — the blocking pre-freeze audit (§6.5) that proves, per target,
   the universality of every **surface-bearing** operator placed on the driver side,
@@ -480,7 +481,10 @@ named language family; this note records only *why* the criterion exists.
   dependency: the normative lowering source is a KISS-Ops **OpDef** (op name, OpAttrs
   channel, per-op semantics, reference decomposition), resolvable to the KISS-Ops
   **primitive floor** (the termination guarantee); the emitted kernel's declared-ULP
-  transcendental atoms are bounded by the KISS-Ops §6.8 ceiling; the constant and
+  transcendental atoms are gated by their own **declared per-target accuracy tier**, which
+  KISS-Ops makes the sole accuracy gate (KISS-OPS §6.8-0001). The KISS-Ops §6.8 table is an
+  informative advisory floor, not a cap on that tier.
+  The constant and
   special-float-value bit pinning is KISS-OPS §6.2-0008; the KISS-Ops **canonical
   op-DAG ordering and commutativity/associativity canonicalization** used by the
   tier-1 comparator (§6.7-0007) are owned by KISS-Ops; and the single canonical
@@ -696,10 +700,12 @@ selects the correct comparator. See umbrella §3 for the full statement.
   `test_emit_special_float_value_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0003** — **Transcendental / declared-ULP atom and hardware-intrinsic
   spelling** (`exp`, `log`, `sin`, `cos`, `sqrt`, `erf`, and the other KISS-Ops
-  transcendental / special-function atoms) MUST be an emitter-must-supply decision:
-  each is a per-target atom implemented to a **declared ULP** no looser than the
-  KISS-Ops §6.8 ceiling, and the neutral driver MUST NOT spell it as a mandated
-  polynomial or a fixed language intrinsic. *Test:*
+  transcendental / special-function atoms) MUST be an emitter-must-supply decision, and the
+  neutral driver MUST NOT spell it as a mandated polynomial or a fixed language intrinsic.
+  Each is a per-target atom implemented to a **declared per-target accuracy tier**, which
+  KISS-Ops makes the sole accuracy gate (KISS-OPS §6.8-0001). The KISS-Ops §6.8 table is an
+  informative advisory floor, not a cap: a truthful tier looser than a table value MUST NOT
+  be rejected. *Test:*
   `test_emit_transcendental_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0004** — **Target-specific type spelling**, and the surface form of
   any dtype that differs by target language (`f16`, `bf16`, the FP8 formats `f8e4m3fn` /
