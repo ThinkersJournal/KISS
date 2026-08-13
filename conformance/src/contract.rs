@@ -5,8 +5,14 @@
 //! body length its header line declares and integrity-checked by that line's
 //! CRC-32 (§6.11-0002/-0003). It is **not** a length-prefixed binary envelope.
 //!
-//! Every field of the framing is determinism-class exact-byte (§6.0-0001), so the
-//! exact-byte comparator (Conform §6.8) applies throughout. The golden document
+//! Every field of the framing is determinism-class exact-byte (§6.0-0001) **with
+//! one exception**: the optional, non-normative Semantics `human_annotation`
+//! (§6.4-0001) sits **outside** that scope and MUST NOT be byte-compared. So the
+//! exact-byte comparator (Conform §6.8) applies to the framing throughout, but to
+//! a contract only after the projection in [`exact_byte_scoped`] — which removes
+//! that one field, and must be applied to the BODY before the header's `len=` /
+//! `crc32=` are derived, or the excluded field leaks back in through the
+//! checksum. The golden document
 //! bytes are transcribed from Contract Appendix C (the §2.5 strided `add`
 //! contract: header line + Identity block + Semantics block).
 //!
@@ -207,6 +213,56 @@ impl Document {
 }
 
 // ---------------------------------------------------------------------------
+// §6.0-0001 — the exact-byte-scoped projection (the `human_annotation` exclusion).
+// ---------------------------------------------------------------------------
+
+/// The pinned Semantics section heading line (§6.11-0004; section id 2).
+const SEMANTICS_HEADING: &[u8] = b"[section:2:semantics]\n";
+
+/// The pinned field-line prefix of the one field outside the exact-byte scope.
+/// `<key>`, one space, `=`, one space (§6.11-0001) — matched at a line start, so
+/// a *value* that merely mentions the key is never mistaken for the field.
+const BLURB_LINE_PREFIX: &[u8] = b"human_annotation = ";
+
+/// Project a contract **body** onto the bytes KISS-Conform may byte-compare: the
+/// body verbatim, minus the Semantics `human_annotation` field line.
+///
+/// `human_annotation` is the sole optional Semantics field (§6.4-0001) and the
+/// sole field the contract text places **outside** the exact-byte determinism
+/// scope (§6.0-0001). A comparator that includes it calls two contracts with
+/// identical machine-checkable content different because a human edited a
+/// comment.
+///
+/// The projection is deliberately narrow in two ways, both load-bearing:
+///
+/// * It strips the field **only inside the Semantics block**. `human_annotation`
+///   is defined only there; the same key in any other block is an *unknown
+///   field*, which a reader MUST decline (§6.11-0005). Stripping it document-wide
+///   would hide that decline behind this exclusion.
+/// * It matches the pinned line form anchored at a line start, never a substring,
+///   so an `op_dag` or blurb value containing the text `human_annotation` is
+///   untouched.
+///
+/// Note this operates on the **body**, before the header line is derived. The
+/// §6.11-0002 header carries `len=` and `crc32=` computed over the body, so a
+/// blurb edit changes them; projecting first and deriving the header from the
+/// projection is what keeps the excluded field from leaking back in through the
+/// checksum.
+pub fn exact_byte_scoped(body: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(body.len());
+    let mut in_semantics = false;
+    for line in body.split_inclusive(|&b| b == b'\n') {
+        if line.starts_with(b"[section:") {
+            in_semantics = line == SEMANTICS_HEADING;
+        } else if in_semantics && line.starts_with(BLURB_LINE_PREFIX) {
+            continue; // outside the exact-byte scope (§6.0-0001, §6.4-0001)
+        }
+        out.extend_from_slice(line);
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------
 // §6.1 — transport reader, hard-reject discipline (typed decline, never panic).
 // ---------------------------------------------------------------------------
 
@@ -387,6 +443,117 @@ fn parse_crc_hex(s: &str) -> Option<u32> {
         u32::from_str_radix(s, 16).ok()
     } else {
         None
+    }
+}
+// ---------------------------------------------------------------------------
+// §6.8-0008/-0009/-0010 — the `audited_status` DERIVATION.
+// ---------------------------------------------------------------------------
+
+/// A per-backend **accuracy tier** (§6.8-0002): a tagged quantity carrying at
+/// least one of `{max_ulp, max_relative, max_absolute}` against a named
+/// reference. A tier carrying none of the three declares no bound.
+///
+/// The `correctly-rounded` and `bit-reproducible` precision classes are carried
+/// here as `max_ulp = 0`, which is the §6.7-0007 precision-class↔tier
+/// correspondence ("MUST map to tier 0"), not a separate representation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DeclaredAccuracyTier {
+    pub max_ulp: Option<u32>,
+    /// Bit pattern of the declared relative bound, if any (§6.11-0010 real form).
+    pub max_relative: Option<Real>,
+    /// Bit pattern of the declared absolute bound, if any.
+    pub max_absolute: Option<Real>,
+}
+
+impl DeclaredAccuracyTier {
+    /// A tier declares a bound iff it carries at least one of the three tagged
+    /// quantities (§6.8-0002).
+    pub fn is_bounded(&self) -> bool {
+        self.max_ulp.is_some() || self.max_relative.is_some() || self.max_absolute.is_some()
+    }
+}
+
+/// The `audited_status` value set. §6.8-0010 forbids producing a value neither
+/// §6.8-0009 nor §6.8-0010 yields, so the derivation is TOTAL over exactly these
+/// two — there is no third variant and no "unknown".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuditedStatus {
+    Audited,
+    Unaudited,
+}
+
+/// The Guarantees fields the derivation reads, plus the one field it MUST NOT
+/// read. `bit_stability` is present deliberately: §6.8-0009 forbids the rule
+/// setting it (that field is owned by §6.8-0005), and a rule that cannot see the
+/// field cannot be shown not to use it.
+#[derive(Debug, Clone)]
+pub struct Guarantees {
+    /// The NAMED KISS-Ops function precision is measured against (§6.8-0002).
+    /// `None` — or a name that is empty/whitespace — is "no reference named".
+    pub reference_function: Option<String>,
+    /// Per target backend, the declared accuracy tier (§6.8-0002). Empty means
+    /// no tier is declared for any backend.
+    pub per_backend_ulp_tiers: Vec<(String, DeclaredAccuracyTier)>,
+    pub determinism_class: crate::DeterminismClass,
+    /// Owned by §6.8-0005. The derivation MAY read it — §6.8-0005 says it does —
+    /// but MUST NOT set it, which the shared borrow below makes structural.
+    pub bit_stability: bool,
+}
+
+impl Guarantees {
+    /// Whether the Guarantees declare a **bounded precision against a named
+    /// reference function** — the single predicate §6.8-0009 and §6.8-0010
+    /// partition on.
+    fn declares_bounded_precision(&self) -> bool {
+        let named = self
+            .reference_function
+            .as_deref()
+            .is_some_and(|r| !r.trim().is_empty());
+        named && self.per_backend_ulp_tiers.iter().any(|(_, t)| t.is_bounded())
+    }
+}
+
+/// Derive `audited_status` from the Guarantees (§6.8-0008): `audited` when the
+/// Guarantees declare a bounded precision against a named `reference_function`
+/// (§6.8-0009), `unaudited` when they do not (§6.8-0010).
+///
+/// The determinism class does **not** gate the result. §6.8-0009 says the
+/// `audited` arm **includes** an `order-invariant/nondeterministic` kernel whose
+/// nondeterminism is declared against a named reference under a stated tolerance
+/// — so "nondeterministic therefore unaudited" is the wrong rule, not a
+/// conservative one.
+///
+/// `bit_stability` is owned by §6.8-0005, which states that this derivation
+/// **reads** that field and MUST NOT **set** it. Taking `&Guarantees` makes the
+/// prohibition structural; nothing here needs to assert it.
+pub fn derive_audited_status(g: &Guarantees) -> AuditedStatus {
+    if g.declares_bounded_precision() {
+        AuditedStatus::Audited
+    } else {
+        AuditedStatus::Unaudited
+    }
+}
+
+/// A declared `audited_status` that disagrees with the value the rule derives —
+/// i.e. an authored constant (§6.8-0008).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AuditedStatusMismatch {
+    pub declared: AuditedStatus,
+    pub derived: AuditedStatus,
+}
+
+/// The KISS-Conform check (§6.13-0021): a contract's **declared**
+/// `audited_status` MUST equal the value derived from its own Guarantees.
+/// A mismatch is the observable signature of a hardcoded field.
+pub fn verify_audited_status(
+    declared: AuditedStatus,
+    g: &Guarantees,
+) -> Result<(), AuditedStatusMismatch> {
+    let derived = derive_audited_status(g);
+    if declared == derived {
+        Ok(())
+    } else {
+        Err(AuditedStatusMismatch { declared, derived })
     }
 }
 // ---------------------------------------------------------------------------

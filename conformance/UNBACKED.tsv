@@ -149,8 +149,6 @@ KISS-CONFORM-6.13-0016	test_conform_emit_cross_standard_lint_and_freeze	blocked	
 KISS-CONFORM-6.13-0017	test_conform_emit_structural_and_tier2	blocked	§6.9 op-DAG equality comparator absent (src/structural.rs is the §6.11 access-atom oracle); plus §6.6 fuzzer
 KISS-CONFORM-6.13-0018	test_conform_all_build_gate_and_keying	blocked	#144 no sidecars and no declared coverage set; the gate exists but runs over prose
 KISS-CONFORM-6.13-0019	test_conform_announce_golden_vectors	untestable	#174 — "version-negotiation frames" name no KISS-Announce artifact
-KISS-CONFORM-6.13-0020	test_conform_contract_blurb_excluded	untested	
-KISS-CONFORM-6.13-0021	test_conform_contract_audited_status	untested	
 KISS-CONFORM-6.13-0022	test_conform_contract_semantics_to_floor	untested	
 KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	blocked	freeze governance (§8-0006): ≥2 dissimilar impls from the text alone; §5.3 external implementor
 KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	blocked	#144 no retired/burned clause-ID registry exists to check a cite against
@@ -180,7 +178,7 @@ KISS-CONFORM-6.7-0002	test_conform_decline_code_pinned	untested
 KISS-CONFORM-6.7-0003	test_conform_never_panic_fuzz	untested	
 KISS-CONFORM-6.7-0004	test_conform_process_survives	untested	
 KISS-CONFORM-6.7-0005	test_conform_decline_vs_residue_taxonomy	untested	
-KISS-CONFORM-6.8-0003	test_conform_ulp_ceiling_enforced	untested	
+KISS-CONFORM-6.8-0003	test_conform_ulp_declared_tier_is_gate	untested	
 KISS-CONFORM-6.8-0007	test_conform_whole_kernel_downgrade	untested	
 KISS-CONFORM-6.8-0008	test_conform_comparator_precedence	untested	
 KISS-CONFORM-6.9-0001	test_conform_structural_dag_equality	untested	
@@ -286,9 +284,6 @@ KISS-CONTRACT-6.7-0005	test_contract_precision_class_consistent	untested
 KISS-CONTRACT-6.7-0006	test_contract_cost_expressions	untestable	#44 — cost has no byte layout / cost_class vocab
 KISS-CONTRACT-6.8-0002	test_contract_precision_names_reference	untestable	#44 — per_backend_ulp_tiers: no layout, no float encoding
 KISS-CONTRACT-6.8-0005	test_contract_bit_stability_consistent	untested	
-KISS-CONTRACT-6.8-0008	test_contract_audited_status_derived	untested	
-KISS-CONTRACT-6.8-0009	test_contract_audited_derivation_rule	untested	
-KISS-CONTRACT-6.8-0010	test_contract_unaudited_derivation_rule	untested	
 KISS-CONTRACT-6.8-0011	test_contract_accumulation_type_matches_key_acc	untested	
 KISS-CONTRACT-6.8-0012	test_contract_accumulator_tolerance_band	untested	
 KISS-CONTRACT-6.9-0002	test_contract_provenance_source	untested	
