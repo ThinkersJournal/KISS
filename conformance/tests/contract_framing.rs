@@ -298,11 +298,9 @@ fn test_contract_reject_unknown_version() {
             Err(ContractDecline::UnknownVersion { got: v.to_string() }),
             "KISS-CONTRACT-6.1-0003: unsupported version `{v}` must decline UnknownVersion, never Ok/partial-import"
         );
-        // No partial import: the result is an Err, not a best-effort Ok.
-        assert!(
-            read_document(&doc).is_err(),
-            "KISS-CONTRACT-6.1-0003: an unsupported version must not be partially imported"
-        );
+        // The no-partial-import half needs no separate assertion: the `assert_eq!`
+        // above pins the whole `Result`, so an `Ok` with a best-effort header fails
+        // it. A follow-up `is_err()` here restated the same fact in a weaker form.
     }
 }
 
@@ -372,11 +370,23 @@ fn test_contract_version_value_pinned() {
             "KISS-CONTRACT-6.1-0008: `{near}` must decline (byte-exact, never integer-parsed)"
         );
     }
-    // A whitespace-padded version breaks the single-space header field split, so it
-    // is an even harder reject — but never an accept.
-    assert!(
-        read_document(&document("kiss-contract", " 1")).is_err(),
-        "KISS-CONTRACT-6.1-0008: a whitespace-padded version must never be accepted"
+    // A whitespace-padded version breaks the single-space header field split
+    // (§6.11-0002 pins single-space separators), so the fault is in the FRAMING and
+    // the required decline is MalformedHeader — not UnknownVersion, which would mean
+    // the reader had successfully split the fields and merely disliked the value.
+    //
+    // Pinning the exact code rather than `is_err()` is what gives this teeth: a
+    // reader with a lenient field-count check (`parts.len() < 5`) splits
+    // `KISC kiss-contract  1 …` into six, reads the empty string between the two
+    // spaces as the version, and declines `UnknownVersion { got: "" }`. That reader
+    // has silently accepted a non-single-space separator — a real framing defect —
+    // and `is_err()` cannot see it, because a wrong-code decline is still a decline.
+    assert_eq!(
+        read_document(&document("kiss-contract", " 1")),
+        Err(ContractDecline::MalformedHeader),
+        "KISS-CONTRACT-6.1-0008: a whitespace-padded version must decline as a FRAMING \
+         fault — a decline naming the version instead means the reader tolerated a \
+         double separator and split the fields anyway"
     );
 }
 
