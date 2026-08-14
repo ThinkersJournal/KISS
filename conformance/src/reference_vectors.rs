@@ -358,6 +358,45 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             token: "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz".to_string(),
             expected: KeyDecline::BadContractionField,
         },
+        // §6.6-0009 / §6.7-0005 (#160): a reduce `x<hh>` whose reduced set has a canonical
+        // `-`/`rall`/`rlast` encoding for its rank overloads a sentinel — decline distinctly.
+        DeclineVector {
+            name: "noncanonical_reduce_all_axes_r2",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "x03 at rank 2 is the all-axes set — MUST be rall, never a bitmask",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        DeclineVector {
+            name: "noncanonical_reduce_trailing_r2",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "x02 at rank 2 is the lone innermost axis — MUST be rlast, never a bitmask",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        DeclineVector {
+            name: "noncanonical_reduce_rank1",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "x01 at rank 1 is both all-axes and lone-trailing (they coincide) — MUST be rall (§6.6-0009 tie-break)",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        DeclineVector {
+            name: "noncanonical_reduce_empty",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "x00 is the empty reduced set — that is not a reduction, spelled `-`, never a bitmask",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        // §6.7-0009: a bit set for a non-existent axis (index >= rank) is a DIFFERENT producer
+        // bug — kept visibly separate so a consumer can see both declines and tell them apart.
+        DeclineVector {
+            name: "out_of_range_reduce_mask_r2",
+            clause: "KISS-CLASSIFY-6.7-0009",
+            note: "x04 at rank 2 sets bit 2, an axis that does not exist — out-of-range mask, not a sentinel overload",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04".to_string(),
+            expected: KeyDecline::BadReduceField,
+        },
     ]
 }
 
@@ -418,6 +457,7 @@ fn decline_wire(e: &KeyDecline) -> (&'static str, Option<(&'static str, String)>
         KeyDecline::ReduceNotGatedToRed => ("ReduceNotGatedToRed", None),
         KeyDecline::BadAccMpField => ("BadAccMpField", None),
         KeyDecline::RedundantAccMpField => ("RedundantAccMpField", None),
+        KeyDecline::NonCanonicalReduceField => ("NonCanonicalReduceField", None),
     }
 }
 
@@ -453,6 +493,7 @@ pub fn all_decline_wire_kinds() -> Vec<&'static str> {
         KeyDecline::ReduceNotGatedToRed,
         KeyDecline::BadAccMpField,
         KeyDecline::RedundantAccMpField,
+        KeyDecline::NonCanonicalReduceField,
     ]
     .iter()
     .map(|e| decline_wire(e).0)

@@ -250,7 +250,7 @@ fn artifact_covers_every_golden_token_literal() {
 fn decline_wire_kinds_are_injective() {
     let kinds = all_decline_wire_kinds();
     // pinned — bump deliberately when a KeyDecline variant is added.
-    assert_eq!(kinds.len(), 20, "pinned decline-variant count; bump when KeyDecline grows");
+    assert_eq!(kinds.len(), 21, "pinned decline-variant count; bump when KeyDecline grows");
     let distinct: HashSet<&&str> = kinds.iter().collect();
     assert_eq!(
         distinct.len(),

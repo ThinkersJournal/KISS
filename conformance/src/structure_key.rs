@@ -276,6 +276,15 @@ pub enum KeyDecline {
     /// default `st`): a redundant emission, invalid per rule (d) — a canonical
     /// producer omits the field entirely, so a reader rejects the redundant spelling.
     RedundantAccMpField,
+    /// Field 8 is an `x<hh>` bitmask (§6.7-0005) whose reduced-axis set has a **canonical
+    /// non-bitmask encoding** for the cell's rank — the empty set (spelled `-`), all axes
+    /// (`rall`), or the lone innermost axis (`rlast`) — so the `x<hh>` spelling overloads a
+    /// sentinel case, which §6.6-0009 forbids. Distinct from a garbage field so a reader can
+    /// tell "you used the bitmask for a sentinel case" (a fixable producer bug in an otherwise
+    /// conforming impl) from "your field is malformed". Mirrors [`KeyDecline::RedundantAccMpField`]
+    /// for §6.7-0013(d): one question, one answer. (An `x<hh>` bit set for a non-existent axis
+    /// — index ≥ `rank` — is an out-of-range mask and declines with `BadReduceField`, §6.7-0009.)
+    NonCanonicalReduceField,
 }
 
 /// The pinned closed-set bounds (§6.4). Named so a reader can reject an
@@ -404,6 +413,38 @@ fn parse_reduce(s: &str) -> Result<Reduce, KeyDecline> {
             Ok(Reduce::Subset(parse_hex2(rest).map_err(|_| KeyDecline::BadReduceField)?))
         }
     }
+}
+
+/// §6.6-0009 / §6.7-0005: a reduce field's `x<hh>` bitmask MUST be a valid value-(4) subset
+/// for the cell's `rank` — a non-empty reduced-axis set that is **neither all axes nor the
+/// lone innermost axis**, and sets no bit for a non-existent axis. The canonical encoding of a
+/// reduced set is a pure function of `(rank, mask)`: the empty set is `-`, the full set is
+/// `rall`, the singleton innermost axis is `rlast`, and any other non-empty proper subset is
+/// `x<hh>`. So a bitmask whose canonical form is `-`/`rall`/`rlast` **overloads a sentinel
+/// case** and declines with [`KeyDecline::NonCanonicalReduceField`]; a bit at index ≥ `rank`
+/// reduces a non-existent axis and is the out-of-range malformed reject
+/// ([`KeyDecline::BadReduceField`], §6.7-0009). `-`/`rall`/`rlast` are not bitmasks and are not
+/// checked here (this is only called for `Reduce::Subset`). At rank 1 the full set and the lone
+/// innermost axis coincide (`x01`), which §6.6-0009 pins as `rall`, so `x01` declines; at rank 0
+/// the full and empty sets coincide (the empty mask), so no `x<hh>` is valid.
+fn validate_reduce_mask(reduce: &Reduce, rank: u32) -> Result<(), KeyDecline> {
+    let Reduce::Subset(mask) = reduce else {
+        return Ok(());
+    };
+    let mask = u32::from(*mask);
+    // §6.7-0009: a bit set for an axis index ≥ rank reduces a non-existent axis.
+    let in_range: u32 = if rank >= 32 { u32::MAX } else { (1u32 << rank) - 1 };
+    if mask & !in_range != 0 {
+        return Err(KeyDecline::BadReduceField);
+    }
+    // §6.6-0009: the three sentinel cases MUST use `-`/`rall`/`rlast`, never a bitmask.
+    let empty = mask == 0;
+    let all_axes = rank >= 1 && mask == in_range;
+    let lone_trailing = rank >= 1 && mask == (1u32 << (rank - 1));
+    if empty || all_axes || lone_trailing {
+        return Err(KeyDecline::NonCanonicalReduceField);
+    }
+    Ok(())
 }
 
 fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
@@ -596,10 +637,19 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     }
     let reduce = parse_reduce(f[8])?;
     // §6.6-0017: a non-`-` reduce field is valid ONLY for a reduction cell
-    // (`op_family == red`); reject any other family carrying one.
+    // (`op_family == red`); reject any other family carrying one. This op-family GATE
+    // precedes mask validation below: a non-red cell that carries ANY non-`-` value is
+    // a gating violation regardless of whether that value would be a well-formed mask,
+    // so it reports ReduceNotGatedToRed, not a mask-shape decline.
     if f[1] != "red" && reduce != Reduce::None {
         return Err(KeyDecline::ReduceNotGatedToRed);
     }
+    // §6.6-0009 / §6.7-0005: for a cell that legitimately reduces, an `x<hh>` bitmask
+    // whose reduced set has a canonical `-`/`rall`/`rlast` encoding for this `rank`
+    // overloads a sentinel and MUST decline (NonCanonicalReduceField); a bit ≥ rank is
+    // out-of-range (BadReduceField, §6.7-0009). Runs AFTER the gate so a non-red cell
+    // reports the gating decline rather than a mask-shape decline.
+    validate_reduce_mask(&reduce, rank)?;
     // The optional-trailing field 9 (present iff 10 fields) is dispatched by the
     // op-family (§6.7-0013): a `gem` cell spells the dense-contraction group, any
     // other cell the non-contraction `(acc+mp)` precision field. The two never

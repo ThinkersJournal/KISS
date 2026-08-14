@@ -926,7 +926,16 @@ form (§6.7-0011).
   axis, which occurs for every rank-1 reduction (reducing the single axis of a 1-D
   iteration frame) — the reduce spec MUST be encoded as `rall`; `rall` takes
   precedence over `rlast` whenever the reduced set is both, so two conforming
-  implementations never disagree on the rank-1 encoding.** A collapsed (rank-reduced)
+  implementations never disagree on the rank-1 encoding.** **The empty reduced set is
+  the not-a-reduction case and MUST be spelled `-`, never the all-zero bitmask `x00`;
+  consequently a rank-0 (scalar) cell, having no iteration-frame axis to reduce, admits
+  only `-`. The canonicalization is thus a total function of `(rank, reduced-set)`:
+  the empty set → `-`; the full set `(1<<rank)-1` → `rall`; the lone innermost axis
+  `1<<(rank-1)` → `rlast` (with `rall` winning where they coincide, at rank 1); and
+  every other in-range set → its `x<hh>` bitmask. A reduced-axis bit at index ≥ `rank`
+  names a non-existent axis and is out of range (rejected under §6.7-0005 / §6.7-0009),
+  not a reduced-set spelling at all — so the `x<hh>` sentinel-overload decline and the
+  out-of-range decline are kept distinct.** A collapsed (rank-reduced)
   reduction output MUST be rejected with a typed decline (§7.1-0002) rather than
   keyed, so that reductions over different axis sets never collide. *Test:*
   `test_classify_reduce_axes_encoding`.
@@ -1069,8 +1078,20 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   the 2-lowercase-hex-digit reduced-axis keepdim mask (§6.7-0010) for any other
   reduced-axis set. A reader MUST reject any other field-8 spelling with a typed
   decline; a producer MUST emit `rall` / `rlast` (never the equivalent `x<hh>`
-  bitmask) for the all-axes and trailing-axis cases. *Test:*
-  `test_classify_token_reduce_field`.
+  bitmask) for the all-axes and trailing-axis cases. The reader MUST additionally
+  enforce the §6.6-0009 canonicalization **on the `x<hh>` form itself**: an `x<hh>`
+  whose reduced-axis set has a shorter canonical spelling for the cell's `rank` — the
+  empty set (spelled `-`), the all-axes set (`rall`), or the lone innermost axis
+  (`rlast`), including the rank-1 case where all-axes and trailing coincide and
+  §6.6-0009 ties to `rall` — is a **sentinel overload** and MUST be rejected with a
+  typed decline (the reference reader names it `NonCanonicalReduceField`), so a given
+  reduced set has exactly one accepted spelling and two conforming parties never key it
+  two ways. This is **distinct** from an `x<hh>` bit set for a non-existent axis (index
+  ≥ `rank`), which is an **out-of-range mask** rejected under §6.7-0009 (the reference
+  reader names it `BadReduceField`): a wrong spelling of a real set versus a set that
+  cannot exist for the rank are separable producer bugs, and a reader MUST keep the two
+  declines discriminable (the `noncanonical_reduce_*` and `out_of_range_reduce_mask_r2`
+  decline vectors). *Test:* `test_classify_token_reduce_field`.
 - **KISS-CLASSIFY-6.7-0006** — When present (dense-contraction `gem` cells only,
   §6.7-0001), field 9 MUST be `c` followed by the three M/N/K size-class codes (each ∈
   `{t, s, m, l}`), then `/`-separated: the K-divisibility code (∈ `{d16, d8, d4, d2,
