@@ -604,17 +604,13 @@ pub fn emit_reference_vectors_json() -> String {
             .collect();
         seen.sort_unstable();
         seen.dedup();
-        s.push_str("  \"namespace_vocabulary_note\": \"Each <namespace>: token is spelled in a vocabulary owned by that namespace's maintainer (KISS-CLASSIFY-6.8-0004), versioned independently of this artifact. These are the versions the tokens below were GENERATED AGAINST; a consumer asserting a vocabulary version (KISS-CLASSIFY-6.8-0009) asserts against these. The generator FAILS rather than emit a token whose vocabulary version it cannot state.\",
-");
-        s.push_str("  \"namespace_vocabulary_versions\": {
-");
+        s.push_str("  \"namespace_vocabulary_note\": \"Each <namespace>: token is spelled in a vocabulary owned by that namespace's maintainer (KISS-CLASSIFY-6.8-0004), versioned independently of this artifact. These are the versions the tokens below were GENERATED AGAINST; a consumer asserting a vocabulary version (KISS-CLASSIFY-6.8-0009) asserts against these. The generator FAILS rather than emit a token whose vocabulary version it cannot state.\",\n");
+        s.push_str("  \"namespace_vocabulary_versions\": {\n");
         for (i, ns) in seen.iter().enumerate() {
             let comma = if i + 1 < seen.len() { "," } else { "" };
-            s.push_str(&format!("    {}: {}{}
-", json_str(ns), namespace_vocab_version(ns), comma));
+            s.push_str(&format!("    {}: {}{}\n", json_str(ns), namespace_vocab_version(ns), comma));
         }
-        s.push_str("  },
-");
+        s.push_str("  },\n");
     }
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
     s.push_str("  \"token_prefix\": \"sk4\",\n");

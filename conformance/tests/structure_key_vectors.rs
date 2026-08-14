@@ -470,7 +470,9 @@ fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
     let json = emit_reference_vectors_json();
     assert!(json.contains("\"namespace_vocabulary_versions\""), "#200: the artifact states none");
     for v in positive_vectors() {
-        let ns = v.key.target.split(':').next().unwrap();
+        let (ns, _) = v.key.target.split_once(':').unwrap_or_else(|| {
+            panic!("#200: vector `{}` has target `{}` with no `<namespace>:` prefix (§6.8-0001)", v.name, v.key.target)
+        });
         assert!(
             json.contains(&format!("\"{ns}\": {}", namespace_vocab_version(ns))),
             "#200: vector `{}` embeds namespace `{ns}:` but the artifact states no version for it",
