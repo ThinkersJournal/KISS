@@ -13,13 +13,21 @@ population by the strength of the evidence that a test asserts some clause's
 actual obligation — the standard ruled on #191: **reading a clause's text as
 data does not back it; asserting its requirement does.**
 
-  declared   the test already names a clause in `§<sec>-<nnnn>` SHORT form, in
-             its body or doc comment. The short form is deliberate — it does not
-             match the citation grammar — so an author who wrote it was saying
-             "this enforces that clause" without claiming the credit. This is
-             the strongest available signal and still NOT a citation, because
-             the short form omits the SUB-STANDARD: `§6.11-0002` resolves by the
-             file's context, and resolving it is a judgement per row.
+  declared   an author names a clause in `§<sec>-<nnnn>` SHORT form anywhere from
+             the previous test up to and including this one — body, doc comment,
+             or a GROUP-HEADER comment covering several tests. The short form is
+             deliberate: it does not match the citation grammar, so the author
+             said "this enforces that clause" without claiming the credit.
+             Strongest available signal, and still NOT a citation — the short form
+             omits the SUB-STANDARD, so `§6.11-0002` resolves only by the file's
+             context, per row, by a reader.
+
+             THE SCOPE HERE IS WIDER THAN `kiss_trace`'S, ON PURPOSE. The gate
+             reads the CONTIGUOUS `//` run above `#[test]`, because that is what
+             grants credit, and this sweep must never widen THAT. But a group
+             header separated by a blank line is invisible to a contiguous run,
+             and 27 of the 85 rows first bucketed "needs a human" carried exactly
+             that — the first cut understated DECLARED by a third.
 
   plumbing   the test exercises the harness's own machinery — the JSON parser,
              hex helpers, the FFI loader and marshalling, corpus generation, the
@@ -78,7 +86,7 @@ def sweep(spec_dir, conf_dir):
     harness = kt.discover_tests(conf_dir)
     named = set(clause_test.values())
 
-    scopes = {}
+    scopes, decl_scopes = {}, {}
     for root, dirs, files in os.walk(conf_dir):
         dirs[:] = [d for d in dirs if d != "target"]
         for fn in sorted(files):
@@ -88,17 +96,34 @@ def sweep(spec_dir, conf_dir):
                 src = open(os.path.join(root, fn), encoding="utf-8").read()
             except OSError:
                 continue
+            # TWO SCOPES, deliberately different, because they answer different
+            # questions. `kiss_trace`'s CITATION scope is the body plus the
+            # CONTIGUOUS `//` run directly above the `#[test]` — that is what
+            # credits a clause, and this sweep must not widen it, or it would
+            # report coverage the gate does not grant.
+            #
+            # The DECLARATION scope is wider: everything since the previous test
+            # in the file. An author who writes `// ---- declines (§6.10-0006 …)`
+            # as a GROUP HEADER above several tests has declared the clause for
+            # all of them, and a blank line makes that invisible to the contiguous
+            # run. Measured: 27 of the 85 rows first bucketed "needs a human"
+            # carry exactly that, so the first cut of this sweep understated
+            # DECLARED by a third and overstated UNCLEAR by the same.
+            prev_end = 0
             for m in kt.RE_RUST_TEST.finditer(src):
                 brace = src.find("{", m.end() - 1)
-                body = src[m.start():kt._body_span(src, brace)] if brace != -1 else m.group(0)
+                end = kt._body_span(src, brace) if brace != -1 else m.end()
+                body = src[m.start():end] if brace != -1 else m.group(0)
                 scopes[m.group(1)] = body + "\n" + kt._leading_comment(src, m.start())
+                decl_scopes[m.group(1)] = src[prev_end:m.start()] + "\n" + body
+                prev_end = end
 
     rows = []
     for t in sorted(harness):
         info = harness[t]
         if info["clauses"] or t in named:
             continue  # cited, or backed forward by name — not this sweep's subject
-        refs = sorted({f"§{a}-{b}" for a, b in RE_SHORT.findall(scopes.get(t, ""))})
+        refs = sorted({f"§{a}-{b}" for a, b in RE_SHORT.findall(decl_scopes.get(t, ""))})
         if refs:
             bucket = "declared"
         elif info["file"] in PLUMBING_FILES:
