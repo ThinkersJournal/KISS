@@ -219,7 +219,7 @@ respellings and the `s`→`i` integer renames are covered by §3.1.)
 | `alignment` | u32 | base-pointer alignment in bytes; drives achievable vector width |
 | `layout_tag` | derived enum | per-operand memory-layout class (contiguous / inner-contiguous / strided / broadcast); a projection of extents+strides, part of the per-operand sub-key, not a stored raw field |
 | `op_family_tag` | enum (cell-level) | the coarse op category the cell participates in; drives canonicalization legality; carried at the cell level, not per raw operand |
-| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement); carried for binding, **not** folded into the admissibility key in v1 |
+| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement, dequant form); carried for binding, **not** folded into the admissibility key at this schema version. `dequant_form` **becomes keyed at the next schema version** (§6.3-0009a) — linear and codebook are not inter-substitutable; every other field stays out at every version |
 | `symbolic_extent` | optional | live-vs-capacity dynamic-extent fact (axis + kind: scalar bound / range / affine); flags a dynamic live length even though capacity keys the strides |
 
 ### 2.8 Worked examples (informative)
@@ -606,7 +606,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
-| `quant` | optional record | `{family, sub_byte_bits: u8, block_elems: u16, scale_placement}` |
+| `quant` | optional record | `{family, sub_byte_bits: u8, block_elems: u16, scale_placement, dequant_form}` |
 | `symbolic_extent` | optional record | `{axis: u8 (< rank), kind ∈ {scalar, range, affine}}`; `kind` is an uninterpreted tag at this schema version (no bounds payload) |
 
 - **KISS-CLASSIFY-6.3-0001** — An operand descriptor's `rank` MUST be in the
@@ -640,13 +640,37 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   caller (it is part of the derivation input, §6.6-0012). *Test:*
   `test_classify_op_family_is_cell_level`.
 - **KISS-CLASSIFY-6.3-0009** — When present, the `quant` record MUST carry
-  `{family, sub_byte_bits (u8), block_elems (u16), scale_placement}`; `sub_byte_bits`
-  and `block_elems` are pinned integer fields, while `family` and `scale_placement`
+  `{family, sub_byte_bits (u8), block_elems (u16), scale_placement, dequant_form}`;
+  `sub_byte_bits` and `block_elems` are pinned integer fields, `dequant_form` is the
+  closed Classify-owned enumerant of §6.3-0009a, while `family` and `scale_placement`
   are opaque tokens **uninterpreted by Classify** at this schema version (their
-  vocabularies are owned by the external quantization-token registry, §4). The
-  `quant` record MUST be carried for binding and MUST NOT be folded into the
-  `structure_key` admissibility key at this schema version. *Test:*
+  vocabularies are owned by the external quantization-token registry, §4). Every field
+  of the `quant` record MUST be carried for binding and MUST NOT
+  be folded into the `structure_key` admissibility key at this schema version. *Test:*
   `test_classify_quant_carried_not_keyed`.
+- **KISS-CLASSIFY-6.3-0009a** — `dequant_form` MUST be one of the closed set
+  `{linear, codebook}`, owned and interpreted by KISS-Classify. `linear` means the stored
+  value is recovered by an affine map of the stored integer and its block scale (and
+  zero-point, if any); `codebook` means it is recovered by **indexing a table of values
+  the stored bits select**. An implementation MUST NOT infer `dequant_form` from
+  `family`, which Classify does not interpret, and MUST NOT omit it from a `quant`
+  record.
+  **Effective at the next `structure_key` schema version**, `dequant_form` — and, of the
+  `quant` record, only `dequant_form` — MUST be folded into the `structure_key`
+  admissibility key. **At the current schema version the §6.7 token grammar defines no
+  slot for it**, so an implementation MUST NOT invent one, and MUST NOT emit a key
+  claiming to distinguish dequant form at this version. The exclusion of §6.3-0009 is
+  thereby **narrowed, not reversed**: every other `quant` field stays out of the key at
+  every version.
+  *Rationale — this is the one quant distinction that is not a performance choice.*
+  Two symmetric 4-bit schemes over the same storage dtype (e.g. a GPTQ-derived linear
+  int4 and a 16-entry non-uniform codebook) agree on shapes, dtypes, layout and
+  `sub_byte_bits`, so without this field they produce **one key for two kernels** — and
+  **no scale reproduces a codebook with a linear dequant**, so a cache serving one for
+  the other returns a **numerically wrong** result rather than a slower one. Quant
+  distinctions that ARE inter-substitutable stay out of the key, per §6.3-0009: this
+  clause prices only the distinction where a wrong choice is wrong rather than slow.
+  *Test:* `test_classify_dequant_form_keyed`.
 - **KISS-CLASSIFY-6.3-0010** — When present, the `symbolic_extent` record MUST
   carry `{axis (u8, `< rank`), kind ∈ {scalar, range, affine}}`. At this schema
   version `kind` is an **uninterpreted tag** carrying no bounds payload: the record
@@ -1567,6 +1591,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0007 | `test_classify_layout_tag_is_derived` |
 | KISS-CLASSIFY-6.3-0008 | `test_classify_op_family_is_cell_level` |
 | KISS-CLASSIFY-6.3-0009 | `test_classify_quant_carried_not_keyed` |
+| KISS-CLASSIFY-6.3-0009a | `test_classify_dequant_form_keyed` |
 | KISS-CLASSIFY-6.3-0010 | `test_classify_symbolic_extent_flags_live_length` |
 | KISS-CLASSIFY-6.3-0011 | `test_classify_axis_ordering_convention` |
 | KISS-CLASSIFY-6.4-0001 | `test_classify_max_rank_is_8` |
