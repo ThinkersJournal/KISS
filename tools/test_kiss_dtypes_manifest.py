@@ -3,6 +3,15 @@ import json, subprocess, sys, pathlib, unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
+def _emit_bytes():
+    """The generator's RAW output. `text=True` decodes and newline-translates, which is
+    the blindness the byte gate exists to remove (#162)."""
+    return subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "kiss_dtypes.py"), "--emit-manifest", "--stdout"],
+        capture_output=True, check=True,
+    ).stdout
+
+
 def _emit():
     return subprocess.run(
         [sys.executable, str(ROOT / "tools" / "kiss_dtypes.py"), "--emit-manifest", "--stdout"],
@@ -46,14 +55,27 @@ class DtypeManifestTest(unittest.TestCase):
         self.assertEqual(by["f8e8m0"]["kind"], "float")    # unsigned MX scale, float kind
         self.assertEqual(set(m["kinds"]), {"float", "int", "uint", "bool", "complex"})
 
-    def test_committed_manifest_matches_spec(self):
-        """The committed dtype_manifest.json MUST equal a fresh generation — the CI
-        drift gate. If this fails, run `python tools/kiss_dtypes.py --emit-manifest`."""
-        committed = (ROOT / "conformance" / "corpus" / "dtype_manifest.json").read_text(encoding="utf-8")
+    def test_committed_manifest_matches_spec_byte_for_byte(self):
+        """The committed dtype_manifest.json MUST equal a fresh generation BYTE FOR
+        BYTE — not merely parse-equal.
+
+        This compared `json.loads(committed) == json.loads(emit)` until #162. A parsed
+        comparison checks a PROJECTION of the artifact, and is blind to exactly the
+        class of difference a consumer hits on the artifact ITSELF: line endings, key
+        order, whitespace, trailing newline. The gate could be green while every
+        consumer byte-hashing the same file computed a different digest — the test
+        surface and the consumer surface were different surfaces.
+
+        Bytes, in binary, with no decoding: `read_text` would re-introduce on any
+        newline-translating platform the exact blindness this replaces.
+        """
+        committed = (ROOT / "conformance" / "corpus" / "dtype_manifest.json").read_bytes()
         self.assertEqual(
-            json.loads(committed), json.loads(_emit()),
-            "conformance/corpus/dtype_manifest.json is stale — regenerate with "
-            "`python tools/kiss_dtypes.py --emit-manifest`",
+            committed, _emit_bytes(),
+            "conformance/corpus/dtype_manifest.json is stale or has drifted in bytes "
+            "(line endings, ordering, whitespace) — regenerate with "
+            "`python tools/kiss_dtypes.py --emit-manifest`. A consumer byte-hashing "
+            "this file sees what this test sees.",
         )
 
 
