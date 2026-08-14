@@ -254,6 +254,21 @@ def main():
     check(RE_QUAL.search(out2) is None,
           "and prints no qualified figure — there is nothing to qualify")
 
+    # THE BUILD CAVEAT (#195). Wherever an ENFORCED figure is printed, the
+    # statement that it is unverified against a build MUST be printed with it.
+    # Not a style rule: this tool reads source and never compiles, so it will
+    # report coverage for a crate that does not build — it did, on a
+    # non-compiling `contract.rs`, in the same format and with the same exit code
+    # as a true figure. A number carrying no evidence a build was attempted is
+    # unfalsifiable with respect to buildability, so the caveat travels WITH the
+    # number rather than living in documentation someone has to have read. Both
+    # fixtures are checked: the caveat must not be conditional on what a
+    # particular run happened to find.
+    for label, text in (("gated fixture", out), ("clean fixture", out2)):
+        if "ENFORCED" in text:
+            check("UNVERIFIED AGAINST A" in text,
+                  f"the {label} report states its build caveat beside the ENFORCED figure")
+
     print()
     if failures:
         print(f"FAILED: {len(failures)} check(s), {passed} passed")

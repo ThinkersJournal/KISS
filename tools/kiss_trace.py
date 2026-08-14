@@ -722,6 +722,19 @@ def main():
     print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
           f"{enforced}/{n_map} ({100.0*enforced/n_map:.1f}%). "
           f"Genuinely untested: {len(by_category.get('untested', []))}.")
+    # THE CAVEAT (#195). Every figure above is a CLAUSE<->TEST MAPPING measured by
+    # reading spec markdown and Rust source. This tool never compiles or runs
+    # anything, so nothing it prints is conditioned on the code being buildable —
+    # it will report a coverage figure for a crate that does not compile, in the
+    # same format and with the same exit code as a true one. That happened: a
+    # non-compiling `contract.rs` produced `361/913 backed, ENFORCED 396/913`.
+    # A number that carries no evidence a build was attempted is unfalsifiable
+    # with respect to buildability, so the claim is stated with its own limit.
+    print("  CAVEAT: these are clause<->test MAPPING figures, UNVERIFIED AGAINST A")
+    print("          BUILD. `kiss_trace` reads spec markdown and Rust source; it")
+    print("          never compiles or runs anything. A named test EXISTS in the")
+    print("          source — it is not known to compile, run, or pass. Run")
+    print("          `cargo build && cargo test` for that; this figure cannot.")
     if gated:
         # The QUALIFIED figure. The headline above credits a clause whose only
         # backing test may not have executed; this one does not. kiss_trace never
