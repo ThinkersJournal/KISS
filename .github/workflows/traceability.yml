@@ -47,7 +47,18 @@ jobs:
       - name: Coverage ratchet discrimination controls
         run: python tools/test_kiss_ratchet.py
       - name: Coverage ratchet (blocking)
-        run: python tools/kiss_trace.py --ratchet
+        # On a PR, pass the base ref so a lint->harness SUBSTITUTION can be told from a
+        # laundered regression with identical counts (#213): the check reads UNBACKED.tsv at
+        # the base, so we fetch that ref first. `github.base_ref` is empty on push-to-main,
+        # where nothing has moved and the run stays git-free. A defaulted base is deliberately
+        # NOT used — it would silently compare against a stale tree.
+        run: |
+          if [ -n "${{ github.base_ref }}" ]; then
+            git fetch --quiet origin "${{ github.base_ref }}"
+            python tools/kiss_trace.py --ratchet --base-ref "origin/${{ github.base_ref }}"
+          else
+            python tools/kiss_trace.py --ratchet
+          fi
       - name: Citation audit discrimination controls
         run: python tools/test_kiss_cites.py
       - name: Citation audit (reports; does not gate)

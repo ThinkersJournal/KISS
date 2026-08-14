@@ -25,6 +25,19 @@
 #     unchanged. A ratchet on the sum cannot see a document lint being replaced by
 #     a string match inside one test.
 #
+#   * But the THREE COUNTS still cannot tell a lint->harness UPGRADE (a documentary
+#     clause gaining a stronger behavioral test) from a laundered regression with the
+#     identical signature — X: lint->untested plus an unrelated Y: untested->harness
+#     nets harness +1 / lint -1 / untested flat, exactly a substitution (#213). So the
+#     lint dimension is also compared as a SET: the tool reads UNBACKED.tsv at the PR
+#     BASE (`--ratchet --base-ref <ref>`; the ledger is the only committed artifact
+#     holding a PREVIOUS state, so the floor stays three human-reviewable numbers) and
+#     requires that the IDs which LEFT lint are exactly the ones that ARRIVED in
+#     harness. A move that passes is reported as a SUBSTITUTION — update the floor
+#     harness +N / lint -N deliberately — not a regression. `--base-ref` is required
+#     only when the lint count moves; the base is read by ref, never from the on-disk
+#     ledger (a regenerated ledger is already the new state — the currency hazard).
+#
 # A DEVIATION IN EITHER DIRECTION FAILS.
 #   worse  -> regression: coverage went backwards.
 #   better -> the floor is STALE: lower it, in the same PR that earned it. That is

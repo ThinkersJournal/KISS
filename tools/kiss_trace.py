@@ -314,6 +314,148 @@ def read_floor(path):
     return floor
 
 
+def _ledger_lint_ids(text):
+    """The `lint`-category clause IDs from an UNBACKED.tsv body (any `lint...` in the
+    category column). The ledger is the only committed artifact that holds a PREVIOUS
+    state, which the count-only floor cannot."""
+    ids = set()
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("	")
+        if len(parts) >= 3 and parts[2].strip().startswith("lint"):
+            ids.add(parts[0].strip())
+    return ids
+
+
+def base_ledger_lint(root, ledger_path, base_ref):
+    """The `lint`-category clause IDs in the ledger AT `base_ref` — the PRE-change state.
+
+    Read by REF via `git show`, NEVER from disk. An on-disk ledger regenerated before
+    `--ratchet` is already the POST-change state, so comparing to it reports a real
+    lint<->harness movement as 'no movement' and passes silently — the currency hazard,
+    convention 11 arriving inside the fix for convention 11 (#213).
+
+    Returns the ID set, or None when the base cannot be read (not a git repo, ref unknown,
+    git absent). The caller MUST fail loud on None, never degrade to an empty diff — a
+    degraded diff is the same silent pass, reached through the environment instead of order.
+    """
+    rel = os.path.relpath(ledger_path, root).replace(os.sep, "/")
+    try:
+        out = subprocess.run(["git", "-C", root, "show", f"{base_ref}:{rel}"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    return _ledger_lint_ids(out.stdout)
+
+
+def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
+    """Classify a `--ratchet` comparison. Returns (verdict, lines); verdict is one of
+    incomplete | regression | substitution | lint_drift | stale | at_floor. Only
+    `at_floor` is green; every other verdict is a deliberate floor move, so all set
+    `any_fail` in the caller.
+
+    When `prev_lint` (the base ledger's lint set) is given, the lint dimension is compared
+    as a SET — the identity check that tells a lint->harness SUBSTITUTION (a strengthening
+    ENFORCED conserves and so cannot show, #187/#213) apart from a laundered regression
+    whose three COUNTS are byte-identical to it (X: lint->untested plus Y: untested->harness
+    nets harness +1 / lint -1 / untested flat, exactly a substitution's signature). When
+    `prev_lint` is None — permitted ONLY when the lint COUNT is unchanged, which the caller
+    enforces — the lint dimension is compared by count alone: no substitution is possible,
+    so a git-free at-the-floor run stays git-free.
+    """
+    missing = [k for k in ("harness", "lint", "untested") if k not in floor]
+    if missing:
+        return ("incomplete", [f"floor is missing key(s): {', '.join(missing)} — a dimension "
+                               "silently absent is that dimension switched off."])
+
+    untested_delta = live["untested"] - floor["untested"]   # +ve worse
+    harness_delta = live["harness"] - floor["harness"]       # -ve worse
+
+    if prev_lint is None:
+        # The caller only omits prev_lint when the lint count is unchanged, so no
+        # substitution is in play — characterize by counts alone.
+        reg = []
+        if untested_delta > 0:
+            reg.append(f"untested rose {floor['untested']} -> {live['untested']}: a clause lost "
+                       "its only backing.")
+        if harness_delta < 0:
+            reg.append(f"harness fell {floor['harness']} -> {live['harness']}: a behavioral "
+                       "backing disappeared.")
+        if reg:
+            return ("regression", reg)
+        if harness_delta > 0 or untested_delta < 0:
+            b = ([f"harness {floor['harness']} -> {live['harness']}"] if harness_delta > 0 else []) \
+                + ([f"untested {floor['untested']} -> {live['untested']}"] if untested_delta < 0 else [])
+            return ("stale", [f"coverage improved past the floor: {', '.join(b)}.",
+                              f"Set the floor to harness {live['harness']}, untested "
+                              f"{live['untested']}. Green means AT the floor, never under it."])
+        return ("at_floor", [f"harness {live['harness']}, lint {live['lint']}, "
+                             f"untested {live['untested']}."])
+
+    # --- SET-based lint dimension (prev_lint given) ---
+    left_lint = prev_lint - live_lint                              # were lint, no longer
+    arrived_lint = live_lint - prev_lint                           # lint now, were not
+    left_to_harness = {c for c in left_lint if c in live_harness}  # lint -> harness (upgrade)
+    left_lost = left_lint - left_to_harness                        # documentary coverage gone
+    # Behavioral backings that vanished — directly, OR masked by a compensating lint->harness
+    # arrival that held the harness count flat. Count conservation recovers the masked case
+    # (`|left_to_harness| - Δharness`), so the floor need NOT carry a previous HARNESS set —
+    # only the lint set, which the ledger already holds. It reads like an omission; it is not.
+    harness_lost = len(left_to_harness) - harness_delta
+
+    reg = []
+    if untested_delta > 0:
+        reg.append(f"untested rose {floor['untested']} -> {live['untested']}: a clause lost its "
+                   "only backing.")
+    if left_lost:
+        reg.append(f"{len(left_lost)} clause(s) left the lint set without gaining a harness test "
+                   f"— documentary coverage lost: {', '.join(sorted(left_lost))}.")
+    if harness_lost > 0:
+        if arrived_lint:
+            m = " (masked by an offsetting substitution)" if left_to_harness else ""
+            reg.append(f"{harness_lost} behavioral backing(s) replaced by documentary — a "
+                       f"harness->lint downgrade{m}. Restore the BEHAVIORAL test for: "
+                       f"{', '.join(sorted(arrived_lint))}.")
+        else:
+            reg.append(f"{harness_lost} behavioral backing(s) disappeared "
+                       f"(harness {floor['harness']} -> {live['harness']}).")
+    if reg:
+        return ("regression", reg)
+
+    if left_to_harness and not arrived_lint:
+        return ("substitution", [
+            f"{len(left_to_harness)} clause(s) moved from documentary (lint) to behavioral "
+            f"(harness) backing: {', '.join(sorted(left_to_harness))}.",
+            "A behavioral test is stronger evidence than a doc lint, but ENFORCED is conserved so "
+            "the aggregate cannot show the gain — the count-only ratchet called this a regression "
+            "and told you to undo it (#213).",
+            f"Update the floor to harness {live['harness']}, lint {live['lint']}, untested "
+            f"{live['untested']}, and remove the moved ID(s) from the ledger. This is a "
+            "SUBSTITUTION, not a regression."])
+
+    if arrived_lint:
+        return ("lint_drift", [
+            f"{len(arrived_lint)} clause(s) newly appear in the lint set: "
+            f"{', '.join(sorted(arrived_lint))}.",
+            "Verify each was previously UNTESTED (a new documentary enforcement, fine) and NOT "
+            "previously HARNESS (a behavioral->documentary downgrade, an evidence loss), then "
+            "update the ledger deliberately."])
+
+    if harness_delta > 0 or untested_delta < 0:
+        b = ([f"harness {floor['harness']} -> {live['harness']}"] if harness_delta > 0 else []) \
+            + ([f"untested {floor['untested']} -> {live['untested']}"] if untested_delta < 0 else [])
+        return ("stale", [f"coverage improved past the floor: {', '.join(b)}.",
+                          f"Set the floor to harness {live['harness']}, lint {live['lint']}, "
+                          f"untested {live['untested']}. Green means AT the floor, never under it."])
+
+    return ("at_floor", [f"harness {live['harness']}, lint {live['lint']}, "
+                         f"untested {live['untested']}."])
+
+
 def write_ledger(path, unbacked, prior=None):
     """Write the ledger, PRESERVING the category/note of any clause still unbacked
     (so --update-ledger never silently drops a curated categorization). A clause
@@ -486,6 +628,13 @@ def main():
                     help="rewrite the unbacked ledger to the current truth")
     ap.add_argument("--report", action="store_true",
                     help="print the per-sub-standard executable-coverage breakdown")
+    ap.add_argument("--base-ref", default=None, metavar="REF",
+                    help="git ref of the PRE-change state (e.g. origin/main; in CI, "
+                         "origin/$base_ref, since HEAD is the PR merge commit). REQUIRED by "
+                         "--ratchet whenever the lint dimension moves: the substitution check "
+                         "reads UNBACKED.tsv at this ref to tell a lint->harness upgrade from a "
+                         "laundered regression, and a defaulted ref would silently compare "
+                         "against a stale tree. Not consulted when the lint count is unchanged.")
     args = ap.parse_args()
 
     here = os.path.dirname(os.path.abspath(__file__))
@@ -835,42 +984,49 @@ def main():
             "lint": len(lint_backed),
             "untested": len(by_category.get("untested", [])),
         }
-        # `untested` may only FALL; the other two may only RISE. Stored and compared
-        # SEPARATELY because ENFORCED = harness + lint conserves under a lint->harness
-        # substitution (#187), and a one-number ratchet on `untested` alone reports a
-        # pure reclassification as progress (#177: 515 -> 502, ENFORCED unmoved).
-        worse, better, missing = [], [], []
-        for key, direction in (("harness", +1), ("lint", +1), ("untested", -1)):
-            if key not in floor:
-                missing.append(key)
-                continue
-            delta = (live[key] - floor[key]) * direction
-            if delta < 0:
-                worse.append((key, floor[key], live[key]))
-            elif delta > 0:
-                better.append((key, floor[key], live[key]))
+        # The three numbers are stored and compared SEPARATELY because ENFORCED = harness +
+        # lint conserves under a lint->harness substitution (#187), and a one-number ratchet
+        # reports a reclassification as progress (#177: untested 515 -> 502, ENFORCED unmoved).
+        # But counts alone cannot tell a lint->harness UPGRADE from a laundered regression with
+        # the identical signature (#213), so the lint dimension is compared as a SET against the
+        # PRE-change ledger read at --base-ref. Scoped: the base is read ONLY when the lint count
+        # moved, so a normal at-the-floor run stays git-free.
         print("-" * 68)
-        if missing:
+        lint_moved = ("lint" in floor) and (live["lint"] != floor["lint"])
+        prev_lint, base_error = None, None
+        if args.base_ref:
+            prev_lint = base_ledger_lint(root, os.path.join(conf_dir, "UNBACKED.tsv"),
+                                         args.base_ref)
+            if prev_lint is None:
+                base_error = (f"cannot read the base ledger at `{args.base_ref}` "
+                              "(not a git repo / ref unknown / git absent)")
+        elif lint_moved:
+            base_error = (f"the lint dimension moved ({floor['lint']} -> {live['lint']}) but "
+                          "--base-ref was not given")
+        if base_error:
             any_fail = True
-            print(f"  RATCHET: floor file is incomplete - missing {', '.join(missing)}")
-            print(f"          expected `key<TAB>value` rows in {floor_path}")
-        elif worse:
-            any_fail = True
-            print("  RATCHET REGRESSION: coverage moved backwards.")
-            for key, f, l in worse:
-                print(f"          {key}: floor {f}, now {l}")
-            print("          Restore the coverage, or state why the floor should move")
-            print("          in the PR that lowers it.")
-        elif better:
-            any_fail = True
-            print("  RATCHET: the floor is STALE - coverage improved past it.")
-            for key, f, l in better:
-                print(f"          {key}: floor {f}, now {l}  ->  set the floor to {l}")
-            print(f"          Edit {floor_path} in the PR that earned it. Green means AT")
-            print("          the floor, never somewhere under it.")
+            print(f"  RATCHET: {base_error} — refusing to characterize the lint dimension rather")
+            print("          than degrade to 'no movement' (the currency hazard, #213). Re-run")
+            print("          with --base-ref <PR base>, e.g. origin/main (CI: origin/$base_ref); a")
+            print("          defaulted base would silently compare against a stale tree.")
         else:
-            print(f"  RATCHET: at the floor - harness {live['harness']}, "
-                  f"lint {live['lint']}, untested {live['untested']}.")
+            verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
+                                              set(backed.keys()), prev_lint)
+            headers = {
+                "incomplete": "RATCHET: floor file is incomplete.",
+                "regression": "RATCHET REGRESSION: coverage moved backwards.",
+                "substitution": "RATCHET SUBSTITUTION: documentary -> behavioral backing "
+                                "(a strengthening the aggregate cannot show, #213).",
+                "lint_drift": "RATCHET: the lint SET changed under a flat count.",
+                "stale": "RATCHET: the floor is STALE - coverage improved past it.",
+            }
+            if verdict == "at_floor":
+                print(f"  RATCHET: at the floor - {lines[0]}")
+            else:
+                any_fail = True
+                print(f"  {headers[verdict]}")
+                for ln in lines:
+                    print(f"          {ln}")
     elif args.strict:
         # §6.2 verbatim gates on a normative MUST with no test. A lint-enforced
         # document clause HAS a test (the lint), so strict gates on the rest.

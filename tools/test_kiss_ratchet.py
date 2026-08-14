@@ -37,6 +37,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kiss_trace  # noqa: E402 — on sys.path above; classify_ratchet + base_ledger_lint
 
 STEMS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
          "synth", "consume", "emit", "conform"]
@@ -125,7 +126,7 @@ def main():
                               ledger_rows=[])
         check("stale floor detected", (not ok) and "STALE" in out,
               f"coverage past the floor did not fail: ok={ok}\n{out[-400:]}")
-        check("stale floor names the new value", "set the floor to 3" in out,
+        check("stale floor names the new value", "harness 3" in out,
               f"the stale message must say what to set: {out[-400:]}")
 
         # 4. UNTESTED RISES — same lost test, watched from the other side. The
@@ -154,12 +155,83 @@ def main():
         check("incomplete floor detected", (not ok) and "incomplete" in out,
               f"a floor missing `lint` did not fail: ok={ok}\n{out[-400:]}")
 
+    # ---- SUBSTITUTION vs LAUNDERING (classify_ratchet, the identity check #213) ----
+    # These call the classifier directly so a real lint↔harness movement can be staged —
+    # fixture clauses can never be lint-covered (lint coverage is discovered from the real
+    # tools/), which is the STATED LIMIT the count-only test above could not get past.
+    def cr(floor, live, live_lint, live_harness, prev_lint):
+        return kiss_trace.classify_ratchet(
+            floor, live, set(live_lint), set(live_harness),
+            None if prev_lint is None else set(prev_lint))
+
+    # clean lint→harness substitution: X leaves lint, arrives in harness. h+1 / l−1 / u flat.
+    v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
+              [], ["X", "A", "B"], ["X"])
+    check("substitution recognized", v == "substitution", f"a lint→harness upgrade was not "
+          f"recognized as a substitution: got {v}")
+
+    # THE LAUNDERING FLIP (as important as any control here): X: lint→untested and, unrelated,
+    # Y: untested→harness. Counts are BYTE-IDENTICAL to the substitution above (h+1 / l−1 / u
+    # flat) but it is a regression plus a win. Identity separates them; counts cannot.
+    v, lines = cr({"harness": 2, "lint": 1, "untested": 1}, {"harness": 3, "lint": 0, "untested": 1},
+                  [], ["Y", "A", "B"], ["X"])
+    check("laundering is NOT a substitution", v == "regression",
+          f"a regression was laundered as a substitution — the detector swallowed it: got {v}")
+
+    # MASKED DOWNGRADE under a flat count: X: lint→harness AND Z: harness→lint. Every count is
+    # flat; Z silently lost its behavioral backing. harness_lost = |{X}| − Δharness(0) = 1.
+    v, lines = cr({"harness": 3, "lint": 1, "untested": 0}, {"harness": 3, "lint": 1, "untested": 0},
+                  ["Z"], ["X", "A", "B"], ["X"])
+    check("masked harness→lint downgrade caught under a flat count", v == "regression",
+          f"a downgrade hidden by an equal-count swap passed as clean: got {v}")
+
+    # set-based at-floor: lint set unchanged, counts at floor.
+    v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+              ["X"], ["A", "B"], ["X"])
+    check("set-based at-floor", v == "at_floor", f"got {v}")
+
+    # git-free path (prev_lint=None, lint count unchanged) still discriminates on counts.
+    v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 2, "lint": 0, "untested": 0},
+              [], ["A", "B"], None)
+    check("git-free regression still fires", v == "regression", f"got {v}")
+
+    # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
+    with tempfile.TemporaryDirectory() as g:
+        conf = os.path.join(g, "conformance")
+        os.makedirs(conf)
+        ledger = os.path.join(conf, "UNBACKED.tsv")
+
+        def git(*a):
+            subprocess.run(["git", "-C", g, *a], check=True, capture_output=True, text=True)
+        git("init", "-q")
+        git("config", "user.email", "t@t")
+        git("config", "user.name", "t")
+        # BASE (committed) state: X is lint.
+        with open(ledger, "w", encoding="utf-8") as f:
+            f.write("# ledger\nKISS-OPS-6.0-0042\ttest_x\tlint:kiss_ops\tnote\n")
+        git("add", "-A")
+        git("commit", "-q", "-m", "base")
+        # NEW state ON DISK: X removed (moved to harness). NOT committed — precisely the
+        # regenerate-the-ledger-then-run order that silences a disk-reading check.
+        with open(ledger, "w", encoding="utf-8") as f:
+            f.write("# ledger\n")
+        base = kiss_trace.base_ledger_lint(g, ledger, "HEAD")
+        check("base ledger is read from the REF, not the regenerated disk file",
+              base == {"KISS-OPS-6.0-0042"},
+              f"read the on-disk (already-new) ledger instead of the base ref: got {base}")
+        # An indeterminable base MUST be None so the caller fails loud — never an empty diff,
+        # which is the same silent pass reached through the environment.
+        bad = kiss_trace.base_ledger_lint(g, ledger, "no-such-ref-xyz")
+        check("indeterminable base returns None (fail-loud, not an empty diff)", bad is None,
+              f"a missing ref degraded to a set instead of None: got {bad}")
+
     if failures:
         print("FAIL - the coverage ratchet does not discriminate:")
         print("\n".join(failures))
         return 1
-    print("ok - ratchet is green at the floor and red in BOTH directions")
-    print("     (control, regression, stale-floor, untested-rise, incomplete-floor)")
+    print("ok - ratchet is green at the floor and red in BOTH directions, tells a")
+    print("     substitution from a laundered regression by IDENTITY, catches a masked")
+    print("     downgrade under a flat count, and reads the base ledger by ref not disk")
     return 0
 
 
