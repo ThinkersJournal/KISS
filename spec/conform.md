@@ -1003,6 +1003,14 @@ atomic clause with its own append-only ID and dedicated test.
   property of the harness. The **≥2-dissimilar-implementations** condition of that same gate is a
   separate obligation with separate evidence — §6.13-0006c — and MUST NOT be treated as
   demonstrated by this one. *Test:* `test_conform_ops_oracle_and_freeze_gate`.
+- **KISS-CONFORM-6.13-0006a** — KISS-Conform's differential harness MUST **resolve a non-primitive
+  op** through its KISS-Ops reference decomposition down to the primitive floor and difference the
+  resolved form; the freeze-gate MUST prove ≥2 dissimilar implementations agree on **decompositions**
+  (KISS-OPS §8-0005 / §8-0006). *Test:* `test_conform_ops_decomposition_agreement`.
+- **KISS-CONFORM-6.13-0006b** — KISS-Conform MUST select the differential comparator from the op's
+  **advertised per-op determinism/fidelity class** (KISS-OPS §7.4-0001), never a hardcoded
+  comparator, so the comparator matches the class the implementation advertises. *Test:*
+  `test_conform_ops_class_comparator_selection`.
 - **KISS-CONFORM-6.13-0006c** — The KISS-Ops freeze-gate (KISS-OPS §8-0005 / §8-0006) MUST prove
   that **≥2 structurally dissimilar implementations agree** on a primitive-floor op's semantics,
   in the Appendix-B item-1 sense: **distinct codebases with disjoint declared lowering-module
@@ -1012,14 +1020,6 @@ atomic clause with its own append-only ID and dedicated test.
   that declares **no** lowering-module manifest MUST NOT be counted either, because §6.5-0002's
   disjointness test then has nothing to evaluate and dissimilarity is asserted rather than
   checked. *Test:* `test_conform_ops_dissimilar_impls_agree`.
-- **KISS-CONFORM-6.13-0006a** — KISS-Conform's differential harness MUST **resolve a non-primitive
-  op** through its KISS-Ops reference decomposition down to the primitive floor and difference the
-  resolved form; the freeze-gate MUST prove ≥2 dissimilar implementations agree on **decompositions**
-  (KISS-OPS §8-0005 / §8-0006). *Test:* `test_conform_ops_decomposition_agreement`.
-- **KISS-CONFORM-6.13-0006b** — KISS-Conform MUST select the differential comparator from the op's
-  **advertised per-op determinism/fidelity class** (KISS-OPS §7.4-0001), never a hardcoded
-  comparator, so the comparator matches the class the implementation advertises. *Test:*
-  `test_conform_ops_class_comparator_selection`.
 - **KISS-CONFORM-6.13-0007** — KISS-Conform MUST evaluate each transcendental atom under the
   contract's **declared per-target accuracy tier** as the sole gate for that atom, and MUST NOT
   reject a declared tier for exceeding the KISS-Ops §6.8 advisory-floor table, which is
@@ -1352,9 +1352,9 @@ the traceability lint.
 | KISS-CONFORM-6.13-0004 | `test_conform_classify_freeze_gate` |
 | KISS-CONFORM-6.13-0005 | `test_conform_ops_per_class_comparators` |
 | KISS-CONFORM-6.13-0006 | `test_conform_ops_oracle_and_freeze_gate` |
-| KISS-CONFORM-6.13-0006c | `test_conform_ops_dissimilar_impls_agree` |
 | KISS-CONFORM-6.13-0006a | `test_conform_ops_decomposition_agreement` |
 | KISS-CONFORM-6.13-0006b | `test_conform_ops_class_comparator_selection` |
+| KISS-CONFORM-6.13-0006c | `test_conform_ops_dissimilar_impls_agree` |
 | KISS-CONFORM-6.13-0007 | `test_conform_ops_transcendental_and_split` |
 | KISS-CONFORM-6.13-0008 | `test_conform_ops_opattrs_golden_hex` |
 | KISS-CONFORM-6.13-0009 | `test_conform_grammar_region_exact_byte` |
