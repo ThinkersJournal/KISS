@@ -134,7 +134,10 @@ saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
 and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
 `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, `i8packed`,
 `u8packed`, or `x<n>` for a `VkComponentTypeKHR` this vocabulary version does
-not name.
+not name. **`i8packed` and `u8packed` are the shared component-type vocabulary's
+cooperative-VECTOR members and MUST NOT appear in a `cm-` tuple** — V-14 makes them
+reachable only through the cooperative-vector query, so a cooperative-matrix tuple
+naming one is malformed rather than merely unsupported.
 
 > **Signed integers are `i`-prefixed as of vocabulary version 2** (was `s8`,
 > `s16`, `s32`, `s64`). See §4. Note that the `i8` in the **arith** field is a
@@ -212,8 +215,9 @@ One of:
 
 A tuple is `<input>-<inputInterp>-<matrixInterp>-<biasInterp>-<result>`,
 optionally suffixed `-t` when the combination transposes the matrix operand.
-Each of the five positions is a component type from the same set §2.4 lists,
-including the `x<n>` escape.
+Each of the five positions is a component type from the same set §2.4 lists —
+including the `x<n>` escape, and including `i8packed` / `u8packed`, which are
+reachable **here and only here** (V-14).
 
 - **V-12.** Cooperative vector is a **separate capability from cooperative
   matrix**, and this is a separate field rather than a corner of `<coop>` for a
