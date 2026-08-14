@@ -219,7 +219,7 @@ respellings and the `s`→`i` integer renames are covered by §3.1.)
 | `alignment` | u32 | base-pointer alignment in bytes; drives achievable vector width |
 | `layout_tag` | derived enum | per-operand memory-layout class (contiguous / inner-contiguous / strided / broadcast); a projection of extents+strides, part of the per-operand sub-key, not a stored raw field |
 | `op_family_tag` | enum (cell-level) | the coarse op category the cell participates in; drives canonicalization legality; carried at the cell level, not per raw operand |
-| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement, dequant form); carried for binding and **not** folded into the admissibility key — **except `dequant_form`**, which is keyed (§6.3-0009a): linear and codebook are not inter-substitutable |
+| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement, dequant form); carried for binding, **not** folded into the admissibility key at this schema version. `dequant_form` **becomes keyed at the next schema version** (§6.3-0009a) — linear and codebook are not inter-substitutable; every other field stays out at every version |
 | `symbolic_extent` | optional | live-vs-capacity dynamic-extent fact (axis + kind: scalar bound / range / affine); flags a dynamic live length even though capacity keys the strides |
 
 ### 2.8 Worked examples (informative)
@@ -645,16 +645,23 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   closed Classify-owned enumerant of §6.3-0009a, while `family` and `scale_placement`
   are opaque tokens **uninterpreted by Classify** at this schema version (their
   vocabularies are owned by the external quantization-token registry, §4). Every field
-  of the `quant` record except `dequant_form` MUST be carried for binding and MUST NOT
+  of the `quant` record MUST be carried for binding and MUST NOT
   be folded into the `structure_key` admissibility key at this schema version. *Test:*
   `test_classify_quant_carried_not_keyed`.
 - **KISS-CLASSIFY-6.3-0009a** — `dequant_form` MUST be one of the closed set
-  `{linear, codebook}`, owned and interpreted by KISS-Classify, and MUST be folded into
-  the `structure_key` admissibility key. `linear` means the stored value is recovered by
-  an affine map of the stored integer and its block scale (and zero-point, if any);
-  `codebook` means it is recovered by **indexing a table of values the stored bits
-  select**. An implementation MUST NOT infer `dequant_form` from `family`, which
-  Classify does not interpret, and MUST NOT omit it from a `quant` record.
+  `{linear, codebook}`, owned and interpreted by KISS-Classify. `linear` means the stored
+  value is recovered by an affine map of the stored integer and its block scale (and
+  zero-point, if any); `codebook` means it is recovered by **indexing a table of values
+  the stored bits select**. An implementation MUST NOT infer `dequant_form` from
+  `family`, which Classify does not interpret, and MUST NOT omit it from a `quant`
+  record.
+  **Effective at the next `structure_key` schema version**, `dequant_form` — and, of the
+  `quant` record, only `dequant_form` — MUST be folded into the `structure_key`
+  admissibility key. **At the current schema version the §6.7 token grammar defines no
+  slot for it**, so an implementation MUST NOT invent one, and MUST NOT emit a key
+  claiming to distinguish dequant form at this version. The exclusion of §6.3-0009 is
+  thereby **narrowed, not reversed**: every other `quant` field stays out of the key at
+  every version.
   *Rationale — this is the one quant distinction that is not a performance choice.*
   Two symmetric 4-bit schemes over the same storage dtype (e.g. a GPTQ-derived linear
   int4 and a 16-entry non-uniform codebook) agree on shapes, dtypes, layout and
