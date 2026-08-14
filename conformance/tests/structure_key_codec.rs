@@ -412,9 +412,12 @@ fn test_classify_token_roundtrip() {
         Reduce::None, None,
     ));
     // every reduce variant on a `red` cell (the None/All/Trailing/Subset spellings).
+    // Rank 4, not 3: the `Subset(0x0a)` mask sets bit 3 (axis 3), which exists only at
+    // rank >= 4 — at rank 3 it is an out-of-range mask (§6.7-0009) a validating reader
+    // rightly declines, so a round-trip corpus of VALID keys must give it a rank 4 cell.
     for red in [Reduce::All, Reduce::Trailing, Reduce::Subset(0x0a), Reduce::None] {
         battery.push(key(
-            "red", "f32", "cuda:sm89", WorkClass::Warp, 3,
+            "red", "f32", "cuda:sm89", WorkClass::Warp, 4,
             vec![
                 op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::D8, false),
                 op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false),

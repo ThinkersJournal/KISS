@@ -872,12 +872,71 @@ fn test_classify_reduce_field_op_family_gated() {
     }
     // a non-red cell with `-` is the base form, accepted.
     assert!(from_token(A_GOLDEN).is_ok());
-    // a red cell carries the same reduce values legitimately.
+    // a red cell carries the same reduce values legitimately. `x01` (not the out-of-range
+    // `x0a`) is a well-formed canonical subset at A_GOLDEN's rank 2: it reduces axis 0
+    // only — neither all-axes (rall), the lone trailing axis (rlast), nor empty (`-`) —
+    // so it is the one bitmask spelling that survives §6.6-0009 canonicalization here.
     let red_stem = stem.replacen("|bin|", "|red|", 1);
-    for r in ["rall", "rlast", "x0a", "-"] {
+    for r in ["rall", "rlast", "x01", "-"] {
         let t = format!("{red_stem}{r}");
         assert!(from_token(&t).is_ok(), "red cell rejected reduce `{r}`");
     }
+}
+
+/// KISS-CLASSIFY-6.7-0005 / -6.6-0009 (#160): field 8 MUST be one of the four canonical
+/// spellings `-` / `rall` / `rlast` / `x<hh>`, and an `x<hh>` bitmask is legal ONLY when its
+/// reduced-axis set has no shorter canonical spelling for the cell's rank. A reader MUST
+/// reject an `x<hh>` that re-encodes the empty set (`-`), the all-axes set (`rall`), or the
+/// lone innermost axis (`rlast`) with a typed decline (`NonCanonicalReduceField`) — kept
+/// DISTINCT from an out-of-range bit (index ≥ rank), which is `BadReduceField` (§6.7-0009).
+///
+/// These are the paired flips for `validate_reduce_mask`: delete that guard and every `Err`
+/// below becomes `Ok` (a sentinel-overloading token would round-trip silently). The five
+/// declining tokens are the exact literals published as decline vectors in
+/// `structure_key_vectors.json`, so this test and the artifact move together.
+#[test]
+fn test_classify_noncanonical_reduce_mask_declines() {
+    // all-axes at rank 2 (bits 0,1) — MUST be rall, never x03.
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    // lone innermost axis at rank 2 (bit 1) — MUST be rlast, never x02.
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    // empty set — that is not a reduction; MUST be `-`, never x00.
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    // rank 1: all-axes and the lone trailing axis coincide (both are bit 0). §6.6-0009 ties
+    // that to `rall`, so `x01` at rank 1 is non-canonical — the tie has one winner, not x<hh>.
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    // out-of-range: bit 2 set at rank 2 (only axes 0,1 exist). A DIFFERENT producer bug from a
+    // sentinel overload — kept discriminable so a consumer can tell "wrong spelling of a real
+    // set" from "a set that cannot exist for this rank." §6.7-0009.
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04"),
+        Err(KeyDecline::BadReduceField)
+    );
+    // the two declines are genuinely distinct enum values (not one Err reached two ways).
+    assert_ne!(KeyDecline::NonCanonicalReduceField, KeyDecline::BadReduceField);
+    // BOUNDARY (guard discriminates, does not over-reject): a genuine partial reduction that
+    // has NO shorter canonical spelling survives. At rank 2, reducing axis 0 only (bit 0) is
+    // neither all-axes (x03), the lone trailing axis (x02), nor empty — so `x01` is the correct
+    // accepted x<hh> spelling. Built at runtime so it is not a source literal the artifact-
+    // superset scanner would require as a vector.
+    let survives =
+        "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03".replace("|x03", "|x01");
+    assert!(
+        from_token(&survives).is_ok(),
+        "a partial reduction with no shorter canonical spelling must parse as x<hh>"
+    );
 }
 
 /// KISS-CLASSIFY-7.1-0002 (`test_classify_unclaimed_input_typed_decline`): every
