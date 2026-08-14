@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 3 · **Status:** draft
+· **Vocabulary version:** 4 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -49,10 +49,10 @@ Two consequences:
 ## 2. Grammar
 
 ```text
-vulkan:<subgroup>.<ops>.<arith>.<coop>
+vulkan:<subgroup>.<ops>.<arith>.<coop>.<coopvec>
 ```
 
-- **V-1.** A `vulkan:` capability-set MUST consist of exactly four fields
+- **V-1.** A `vulkan:` capability-set MUST consist of exactly five fields
   separated by `.`, in the order above. No field may contain a `.`. Every field
   is always present; there are no optional or omissible fields, because an
   omission would be a second spelling of some target.
@@ -132,8 +132,9 @@ One of:
 A tuple is `<M>-<N>-<K>-<A>-<B>-<C>-<R>` optionally suffixed `-sat` for
 saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
 and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
-`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, or `x<n>` for a
-`VkComponentTypeKHR` this vocabulary version does not name.
+`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, `i8packed`,
+`u8packed`, or `x<n>` for a `VkComponentTypeKHR` this vocabulary version does
+not name.
 
 > **Signed integers are `i`-prefixed as of vocabulary version 2** (was `s8`,
 > `s16`, `s32`, `s64`). See §4. Note that the `i8` in the **arith** field is a
@@ -199,6 +200,59 @@ and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
   registry that split them would silently make an NV-only driver derive `x<n>`
   again.
 
+### 2.5 `<coopvec>` — cooperative-vector combinations used
+
+One of:
+
+| Spelling | Meaning |
+|---|---|
+| `cv-none` | the kernel uses no cooperative-vector operations |
+| `cv-<tuple>[,<tuple>…]` | the exact combinations it uses, canonically ordered |
+| `cv-fnv1a64-<hex16>` | a digest, when the enumeration is too long |
+
+A tuple is `<input>-<inputInterp>-<matrixInterp>-<biasInterp>-<result>`,
+optionally suffixed `-t` when the combination transposes the matrix operand.
+Each of the five positions is a component type from the same set §2.4 lists,
+including the `x<n>` escape.
+
+- **V-12.** Cooperative vector is a **separate capability from cooperative
+  matrix**, and this is a separate field rather than a corner of `<coop>` for a
+  structural reason, not a stylistic one. A cooperative-matrix tuple is
+  `M-N-K` plus four component types; a cooperative-vector tuple is five
+  component types and a flag, with no dimensions at all. A field whose parts are
+  separated by `-` cannot carry both arities without becoming ambiguous, and an
+  ambiguous field is one two producers can spell differently.
+
+  They are also reported by different queries —
+  `vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR` and
+  `vkGetPhysicalDeviceCooperativeVectorPropertiesNV` — so a deriver that read
+  only the first could never observe the second at all.
+
+- **V-13.** Tuples are ordered by
+  `(input, inputInterp, matrixInterp, biasInterp, result, transpose)` ascending
+  and deduplicated, and the length-triggered digest rule of V-9 applies
+  unchanged: the threshold is measured over this field's own canonical
+  enumeration string, and the digest runs over that same string. The two
+  cooperative fields switch independently — each is measured on its own bytes —
+  because a shared threshold would make one field's length change the other
+  field's spelling.
+
+- **V-14.** `i8packed` and `u8packed` spell
+  `VK_COMPONENT_TYPE_SINT8_PACKED_NV` and `VK_COMPONENT_TYPE_UINT8_PACKED_NV`.
+  They **MUST NOT** be folded onto `i8` / `u8`: the packed layout is a
+  different shader-side contract, and collapsing them would let a packed-only
+  device satisfy a target asking for the unpacked type.
+
+  These are reachable **only** through the cooperative-vector query. The
+  enumerants are defined by `VK_NV_cooperative_vector` with no dependency on
+  `VK_KHR_cooperative_matrix`, which is why naming them had to wait for a
+  deriver that reads it — before that they were spellable and underivable, and
+  a name nothing can emit is worse than an honest `x<n>`.
+
+  Verified rather than assumed: an NVIDIA RTX 4070 reports 16 cooperative-vector
+  combinations whose component values include `1000491000` and `1000491001`,
+  while the same device's cooperative-matrix properties contain neither.
+
 ## 3. Worked example
 
 An AMD Radeon 610M (RDNA, default width 64, pinnable 32..=64, 11
@@ -206,13 +260,34 @@ cooperative-matrix shapes) admits three specializations, and therefore three
 tokens. At `sg64`, with every capability the device offers:
 
 ```text
-vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f16-f16,16-16-16-f16-f16-f16-f16-sat,16-16-16-f16-f16-f32-f32,16-16-16-i8-i8-i32-i32,16-16-16-i8-i8-i32-i32-sat,16-16-16-i8-u8-i32-i32,16-16-16-i8-u8-i32-i32-sat,16-16-16-u8-i8-i32-i32,16-16-16-u8-i8-i32-i32-sat,16-16-16-u8-u8-i32-i32,16-16-16-u8-u8-i32-i32-sat
+vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f16-f16,16-16-16-f16-f16-f16-f16-sat,16-16-16-f16-f16-f32-f32,16-16-16-i8-i8-i32-i32,16-16-16-i8-i8-i32-i32-sat,16-16-16-i8-u8-i32-i32,16-16-16-i8-u8-i32-i32-sat,16-16-16-u8-i8-i32-i32,16-16-16-u8-i8-i32-i32-sat,16-16-16-u8-u8-i32-i32,16-16-16-u8-u8-i32-i32-sat.cv-none
 ```
 
-335 bytes, 8.2% of `MAX_STRUCTURE_KEY_LEN`. The `sg32` and `sgdyn` tokens differ
-only in the first field. A kernel using less than all of this spells its own
-narrower token — the token names what the **kernel** requires, and over-claiming
-fragments cells that could otherwise be shared.
+343 bytes, 8.4% of `MAX_STRUCTURE_KEY_LEN`. The `sg32` and
+`sgdyn` tokens differ only in the first field. A kernel using less than all of
+this spells its own narrower token — the token names what the **kernel**
+requires, and over-claiming fragments cells that could otherwise be shared.
+
+This part has **no** cooperative-vector support, which is why its fifth field is
+`cv-none` — measured, not assumed: the same machine's RTX 4070 reports 16
+combinations while this 610M reports zero. The eight bytes `cv-none` adds to a
+device that gains nothing from the field are the cost of V-1 being a fixed arity
+with no omissible fields, and are why version 4 invalidates every cached token
+rather than only those of cooperative-vector devices.
+
+A device that *does* support it spells the field out. The 4070's 16 combinations,
+canonically ordered, are 331 bytes — comfortably inline, and the packed types
+appear exactly where V-14 says they can:
+
+```text
+cv-f16-f16-f16-f16-f16-t,f16-f8e4m3fn-f8e4m3fn-f16-f16,f16-f8e5m2-f8e5m2-f16-f16,f32-i8-i8-i32-i32,i32-i8-i8-i32-i32,i32-i8-u8-i32-i32,i32-u8-i8-i32-i32,i32-u8-u8-i32-i32,i8-i8-i8-i32-i32,i8-i8-u8-i32-i32,u32-i8packed-i8-i32-i32,u32-i8packed-u8-i32-i32,u32-u8packed-i8-i32-i32,u32-u8packed-u8-i32-i32,u8-u8-i8-i32-i32,u8-u8-u8-i32-i32
+```
+
+Worth reading closely, because it is not what one would guess: the packed types
+occur in **`inputInterpretation`** against a `u32` *input* — packed data arrives
+as 32-bit words and is *interpreted* as four 8-bit values — never in the input
+or result position. A vocabulary that had assumed packed types behave like
+element types would have put them where they never appear.
 
 ## 4. Versioning
 
@@ -272,6 +347,20 @@ against, so the test above has a fixed thing to compare with rather than
 | 1 | 348 — reconstructed, see below |
 | 2 | 348 |
 | 3 | 348 |
+| 4 | 348 |
+
+**Version 4 is a grammar change, not only an addition**, and it is the most
+expensive kind this vocabulary can make: adding the fifth field changes the
+bytes of **every** token, including those of devices with no cooperative-vector
+support — they gain `cv-none`. That is a full cache invalidation for every
+consumer, not the partial one FP8 caused.
+
+It is bundled here deliberately. Vocabulary versions 2 and 3 are **unpublished**
+at the time of writing, so their invalidation has not been paid yet; folding the
+grammar change in makes it one event rather than a second one after v3 ships.
+The packed component types are included for the same reason — their enumerants
+were already assigned at baseline 348, so naming them at any later point would
+force a further bump of its own.
 
 **Worked example — how version 3 was decided.** Version 3 names `f8e4m3fn` and
 `f8e5m2`. Applying the additive test to them is the first time it has been run
