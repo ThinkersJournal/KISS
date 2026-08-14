@@ -3,6 +3,11 @@
   "generated_from": "spec/classify.md",
   "source_commit": "19c3ad7",
   "clause": "KISS-CLASSIFY-6.7",
+  "namespace_vocabulary_note": "Each <namespace>: token is spelled in a vocabulary owned by that namespace's maintainer (KISS-CLASSIFY-6.8-0004), versioned independently of this artifact. These are the versions the tokens below were GENERATED AGAINST; a consumer asserting a vocabulary version (KISS-CLASSIFY-6.8-0009) asserts against these. The generator FAILS rather than emit a token whose vocabulary version it cannot state.",
+  "namespace_vocabulary_versions": {
+    "cuda": 1,
+    "vulkan": 4
+  },
   "structure_key_schema_version": 4,
   "token_prefix": "sk4",
   "dtype_axis_note": "recognition_set is all 24 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 22 a byte-match runs over. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
@@ -154,9 +159,9 @@
       "clause": "KISS-CLASSIFY-6.8",
       "name": "dense_contraction_vulkan_target",
       "note": "same gem cell on a vulkan capability-set target",
-      "target": "vulkan:sg64.ops-abr.arith-f16.cm-none",
+      "target": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "target_namespace": "vulkan",
-      "token": "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",

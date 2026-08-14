@@ -387,3 +387,94 @@ fn coverage_note_cited_paths_exist() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// #200 — vocabulary provenance for maintainer-owned namespaces.
+// ---------------------------------------------------------------------------
+
+/// The `**Vocabulary version:** N` header of a namespace document.
+///
+/// A missing document, or a header this cannot parse, is a HARD FAILURE — never a
+/// skip. A checker that passes when it could not find the thing it checks is
+/// strictly worse than no checker: it now reports on a property it did not
+/// examine, which is the exact shape #200 exists to close.
+fn doc_vocab_version(ns: &str) -> u32 {
+    let path = format!("{}/../spec/namespaces/{}.md", env!("CARGO_MANIFEST_DIR"), ns);
+    let md = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+        panic!("#200: no vocabulary document for namespace `{ns}:` at {path} ({e}). \
+                The artifact embeds a token in this namespace, so its grammar MUST be \
+                locatable; a validator that cannot find it must fail, not pass.")
+    });
+    let marker = "**Vocabulary version:**";
+    let i = md.find(marker).unwrap_or_else(|| {
+        panic!("#200: {path} carries no `{marker} N` header — the version this \
+                artifact's tokens are generated against is unstateable.")
+    });
+    md[i + marker.len()..]
+        .split_whitespace()
+        .next()
+        .and_then(|t| t.trim_matches(|c: char| !c.is_ascii_digit()).parse().ok())
+        .unwrap_or_else(|| panic!("#200: {path}'s `{marker}` header is unparseable"))
+}
+
+/// The capability-set field arity the document's grammar line declares, counted
+/// from the fenced `\u{3c}namespace\u{3e}:` template. Same hard-failure discipline.
+fn doc_field_arity(ns: &str) -> usize {
+    let path = format!("{}/../spec/namespaces/{}.md", env!("CARGO_MANIFEST_DIR"), ns);
+    let md = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("#200: no vocabulary document for `{ns}:` at {path} ({e})"));
+    let line = md
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with(&format!("{ns}:")))
+        .unwrap_or_else(|| panic!("#200: {path} declares no `{ns}:` grammar line to count fields from"));
+    line[ns.len() + 1..].split('.').count()
+}
+
+/// #200 — every namespace the artifact embeds states a vocabulary version and a
+/// field arity, and BOTH agree with the maintainer's document.
+///
+/// This is the tie that makes the pinned table falsifiable. Without it the table is
+/// a second copy of a fact owned elsewhere, and a vocabulary bump moves the document
+/// while the artifact keeps publishing the old spelling — which is exactly what
+/// happened: `vulkan.md` reached v4 (five fields) while this artifact published a
+/// four-field token, and three consumers byte-matched it because every one of them
+/// copied the token from here rather than deriving it.
+#[test]
+fn reference_vectors_match_the_namespace_documents() {
+    use kiss_conformance::reference_vectors::*;
+    assert!(!NAMESPACE_VOCAB_VERSIONS.is_empty(), "#200: the version table is empty");
+    for (ns, version, arity) in NAMESPACE_VOCAB_VERSIONS {
+        assert_eq!(
+            *version, doc_vocab_version(ns),
+            "#200: `{ns}` pinned at vocabulary version {version}, but spec/namespaces/{ns}.md \
+             declares a different one. The artifact's tokens were generated against the pinned \
+             version; the document has moved. Regenerate, then update the pin."
+        );
+        assert_eq!(
+            *arity, doc_field_arity(ns),
+            "#200: `{ns}` pinned at {arity} capability-set field(s), but its grammar line \
+             declares a different count."
+        );
+    }
+}
+
+/// #200 req 1/2 — the artifact states a version for EVERY namespace it embeds, and
+/// states it unconditionally.
+///
+/// Unconditional is the point: a field that appears only when something moves is
+/// indistinguishable from a field nobody remembered to write.
+#[test]
+fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
+    use kiss_conformance::reference_vectors::*;
+    let json = emit_reference_vectors_json();
+    assert!(json.contains("\"namespace_vocabulary_versions\""), "#200: the artifact states none");
+    for v in positive_vectors() {
+        let ns = v.key.target.split(':').next().unwrap();
+        assert!(
+            json.contains(&format!("\"{ns}\": {}", namespace_vocab_version(ns))),
+            "#200: vector `{}` embeds namespace `{ns}:` but the artifact states no version for it",
+            v.name
+        );
+    }
+}
