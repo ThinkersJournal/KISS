@@ -135,6 +135,7 @@ KISS-CONFORM-6.13-0001	test_conform_announce_exact_byte_pod	blocked	#144 no side
 KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	blocked	#173 seam-hello undefined; plus no foreign envelope reader and freeze governance (§8-0006)
 KISS-CONFORM-6.13-0003	test_conform_classify_exact_byte_and_registry_bundle	untested	
 KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	blocked	freeze governance (§8-0006); no out-of-namespace usage evidence artifact exists
+KISS-CONFORM-6.13-0006c	test_conform_ops_dissimilar_impls_agree	blocked	#176 no external implementor: both differential fixtures are in-suite, and neither declares a lowering-module manifest for the §6.5-0002 disjointness test — freeze-blocking
 KISS-CONFORM-6.13-0007	test_conform_ops_transcendental_and_split	untestable	#172 — rejects a declared ULP over a KISS-Ops ceiling that KISS-OPS-6.8-0001 abolished (#39)
 KISS-CONFORM-6.13-0008	test_conform_ops_opattrs_golden_hex	untested	
 KISS-CONFORM-6.13-0009	test_conform_grammar_region_exact_byte	untested	
