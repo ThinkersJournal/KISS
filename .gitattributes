@@ -1,9 +1,14 @@
-# Force LF on the generated structure_key reference-vectors artifact so its bytes are
-# platform-stable for every consumer that byte-hashes it. With core.autocrlf=true and
-# no .gitattributes, checkout re-materializes CRLF and a raw hash reports a difference
-# that isn't one (Unpopped's git-hash-object note). The freshness gate is a BYTE compare,
-# so the file must be LF on disk on every platform.
+# Force LF on every generated corpus artifact, so their bytes are platform-stable for
+# each consumer that byte-hashes them. With core.autocrlf=true and no .gitattributes,
+# checkout re-materializes CRLF and a raw hash reports a difference that isn't one
+# (Unpopped's git-hash-object note). The freshness gates are BYTE compares, so these
+# files must be LF on disk on every platform.
 #
-# Scoped to this one file deliberately: a corpus-wide *.json renormalization is filed
-# separately so its one-time diff does not collide with an open freshness-gate PR.
-conformance/corpus/structure_key_vectors.json text eol=lf
+# The scope was one file — the structure_key byte-match reference — because a
+# corpus-wide renormalization was expected to carry a large one-time diff that would
+# collide with an open freshness-gate PR. Measured under #162, that diff DOES NOT
+# EXIST: the committed blobs are already LF, so the CRLF is a working-tree
+# materialization only, and `git add --renormalize conformance/corpus` stages nothing.
+# The narrow scope was avoiding a cost that was never going to be paid, so the rule now
+# covers what it always should have — the whole generated corpus, not one file of it.
+conformance/corpus/*.json text eol=lf

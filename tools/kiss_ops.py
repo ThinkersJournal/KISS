@@ -397,7 +397,12 @@ def main():
         manifest = build_manifest(spec_dir)
         text = _json.dumps(manifest, indent=2) + "\n"
         if args.stdout:
-            sys.stdout.write(text)
+            # Bytes, not text: `sys.stdout.write` newline-translates on Windows, so
+            # the stdout path emitted CRLF while the file path below (which pins the
+            # newline explicitly) emitted LF — the SAME generator producing two
+            # different artifacts by platform and by output path. A byte-compare gate
+            # against either one then fails on the other (#162).
+            sys.stdout.buffer.write(text.encode("utf-8"))
         else:
             out_path = os.path.join(os.path.dirname(spec_dir), "conformance", "corpus", "op_manifest.json")
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
