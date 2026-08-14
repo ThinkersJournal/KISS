@@ -36,9 +36,12 @@
 # and it would silently absorb a regression that happened to coincide with an
 # improvement elsewhere.
 #
-# Set from main @ dedde77.
+# Set from main @ dedde77; harness raised 362 -> 368 by #199 (Refs #171): the six
+# KISS-CLASSIFY-6.8-0008..-0013 namespace-vocabulary-manifest clauses are each
+# harness-backed (conformance/tests/namespace_vocabulary.rs). lint and untested are
+# unchanged — the six clauses are tested, not reclassified.
 #
 # key	value
-harness	362
+harness	368
 lint	35
 untested	495

@@ -98,6 +98,7 @@ pub mod fp;
 pub mod dtype;
 pub mod integer;
 pub mod json;
+pub mod namespace_vocabulary;
 pub mod opattrs;
 pub mod reference_vectors;
 pub mod semantics;

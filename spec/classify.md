@@ -1276,6 +1276,71 @@ separating a registered namespace from that namespace's capability-set token.
   > migration distinguishable rather than silently colliding, and it excludes
   > `:` because §6.8-0001 permits exactly one colon in a token — the namespace
   > separator.
+- **KISS-CLASSIFY-6.8-0008** — A namespace's capability-set vocabulary (§6.8-0004)
+  MAY be published as a machine-readable **vocabulary manifest** whose `schema` is
+  `kiss-namespace-vocabulary-v1`. Such a manifest MUST carry `schema`, `namespace` (a
+  namespace whose registry status is `registered`, §6.8-0003), `vocabulary_version` (an
+  **integer** — a gate that truncates a fractional value is not a gate), `generated_from`,
+  `kind`, `grammar`, and `coverage_note`. `grammar` is required because §6.8-0012 places it in
+  the declarative half, which MUST be sufficient for a parse-only consumer. A reader MUST
+  reject with a typed decline a manifest missing any of these or bearing an unrecognized
+  `schema`. KISS pins this **envelope** only — the manifest's vocabulary content remains
+  owned by the namespace maintainer (§6.8-0004) and is never pinned here. *Test:*
+  `test_namespace_vocabulary_envelope_shape`.
+
+  > *Informative.* The manifest is the machine-readable form of the annex the
+  > namespace registry (§6.8-0003) already points at, standing to a capability
+  > vocabulary as `dtype_manifest.json` stands to §6.1's dtype set: one artifact a
+  > consumer binds against instead of hand-transcribing an annex or hand-parsing its
+  > prose. The two registered namespaces differ **in kind** — `cuda` is a closed
+  > enumeration, `vulkan` a generated grammar over an open product space — so a single
+  > format that assumed either would exclude the other; the shared thing is the
+  > envelope, not the shape.
+- **KISS-CLASSIFY-6.8-0009** — A consumer that reads a vocabulary manifest MUST
+  **assert** that its `vocabulary_version` equals the version the consumer was built
+  against, and MUST reject a mismatch with a typed decline; it MUST NOT proceed against
+  a `vocabulary_version` it does not recognize. Reading the field without gating on it
+  does not satisfy this clause — a vocabulary freezes independently of the schema
+  version (§6.8-0004, §8), so a consumer that handles a version skew *gracefully* has
+  defeated the freeze rather than honored it. *Test:*
+  `test_namespace_vocabulary_version_is_asserted`.
+- **KISS-CLASSIFY-6.8-0010** — `kind` discriminates a manifest's vocabulary shape and
+  is an **open set**. A reader encountering a `kind` it does not recognize MUST reject
+  with a typed decline and MUST NOT guess a shape. The kinds defined at this schema
+  version are `enumerated` (a closed `members` list) and `generated` (an open product
+  space validated by vectors, §6.8-0013); a further kind is admitted additively. *Test:*
+  `test_namespace_vocabulary_kind_open_set`.
+
+  > *Informative.* A discriminated union whose cases were read off exactly two examples
+  > is a closed list built from `n = 2`. The unrecognized-`kind` decline is the
+  > abstention rule: a reader that cannot recognize a shape refuses rather than assuming
+  > the nearer of the two it knows.
+- **KISS-CLASSIFY-6.8-0011** — A vocabulary manifest MUST name its source annex in
+  `generated_from` and MUST be reproducible from that annex under an
+  emit-and-`git diff --exit-code` freshness gate, so the machine-readable form cannot
+  drift from the annex it derives from (as `dtype_manifest.json` and
+  `structure_key_vectors.json` are gated). *Test:*
+  `test_namespace_vocabulary_freshness_provenance`.
+- **KISS-CLASSIFY-6.8-0012** — A vocabulary manifest has a **declarative** half
+  (grammar, alphabets, orderings, and — for `enumerated` — `members`) and a
+  **production** half (canonicalization algorithms and, for `generated`, `vectors`).
+  The declarative half MUST be sufficient for a consumer that only **parses** foreign
+  tokens; the production half is required only for a consumer that also **produces**
+  tokens. A conformance profile for a parse-only consumer MUST NOT require the
+  production half. *Test:* `test_namespace_vocabulary_declarative_production_split`.
+- **KISS-CLASSIFY-6.8-0013** — For `kind: generated`, the `field_spec` is documentation
+  — canonicalization cannot be validated from a grammar — and the normative contract is
+  the `vectors` array, whose entries a conformant producer's output MUST reproduce
+  byte-exact. The vector set MUST cover, each vector tagged by what it `pins`: **`order`**
+  (a non-canonically-ordered input and its canonical output), **`dedup`** (a
+  duplicate-bearing input and its deduped output), each length-conditional **`threshold`**
+  (presented *at* and *immediately across* its boundary, so both forms are pinned at the
+  exact byte count that flips them), and the **`digest_input`** fed to any §6.8-0007
+  digest (the *same* byte string measured against the threshold, so a producer may
+  disagree about *whether* to digest but never about *what* is digested). A namespace with
+  no length-conditional field omits `threshold`/`digest_input` and states so in its
+  `coverage_note`. *Test:*
+  `test_namespace_vocabulary_generated_vectors_cover_canonicalization`.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
 > `cuda:sm80`, `cuda:sm89`, `cuda:sm90a`, `cuda:sm100a`, `rocm:gfx942`,
@@ -1540,6 +1605,12 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0005 | `test_classify_target_token_charset` |
 | KISS-CLASSIFY-6.8-0006 | `test_classify_target_fixed_width_juxtaposition` |
 | KISS-CLASSIFY-6.8-0007 | `test_classify_target_digest_pinned` |
+| KISS-CLASSIFY-6.8-0008 | `test_namespace_vocabulary_envelope_shape` |
+| KISS-CLASSIFY-6.8-0009 | `test_namespace_vocabulary_version_is_asserted` |
+| KISS-CLASSIFY-6.8-0010 | `test_namespace_vocabulary_kind_open_set` |
+| KISS-CLASSIFY-6.8-0011 | `test_namespace_vocabulary_freshness_provenance` |
+| KISS-CLASSIFY-6.8-0012 | `test_namespace_vocabulary_declarative_production_split` |
+| KISS-CLASSIFY-6.8-0013 | `test_namespace_vocabulary_generated_vectors_cover_canonicalization` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |
@@ -1837,3 +1908,7 @@ KISS-Ops. Every binding requirement lives in an identified §6+ clause with a ma
 KISS-Conform test. Project and product names appear only in non-normative examples,
 provenance, and reference-implementation pointers; normative clauses use only the
 generic roles provider, consumer, implementation, kernel, contract, and target.*
+
+
+
+
