@@ -181,6 +181,36 @@ proves an instrument. Note also what it cost to learn: the instance was found by
 by any check the project owned. Closing the class is what converts one reviewer's catch into a
 standing property.
 
+**11. A check can run correctly on the wrong representation.**
+Conventions 1–10 catch a check that examined *nothing*. This one catches a check that examined
+*something* — correctly, exiting clean — that was not the thing the claim is about. It yields a
+**plausible wrong answer** rather than a vacuous pass, so every guard built for the earlier
+conventions passes it through: the test ran, the ran-count is non-zero, the mutation applied, the
+instrument was capable of seeing the property. It simply was not pointed at it. *Why:* four
+instances in one day, on four different axes.
+
+- **Representation.** A `diff` reported `1,186c1,186` — the entire file — and was read as content
+  drift. It was the **line-ending signature**; re-measured normalized, all three artifacts were
+  fresh. Reporting the first result would have triggered work on a defect that does not exist.
+- **Level.** A freshness gate compared `json.loads(committed)` against `json.loads(fresh)` —
+  **parsed content** — while the property consumers depend on is **the bytes they hash**. Both are
+  "is the artifact fresh"; only one is the claim.
+- **Role.** Two dtypes were reported unreachable after checking reachability *in principle*. They
+  construct fine as operand 0; they are unreachable only in the **sibling-operand role** the
+  specification assigns them. The clause answered a question one role over.
+- **Axis.** *Spelled* (the implementation holds the dtype and emits its token) was read as
+  *derivable* (it can construct a cell that places that token in a key). Different measurements,
+  one label — and the wrong one made "add the missing dtypes" look like the remediation for a gap
+  that was never about dtypes being absent.
+
+**The discriminator, before running anything: name the representation, level, role, and axis the
+claim is about, then check that the instrument's input is that one.** And note what does *not*
+work — this class survives more care, and it survives a second run by a second person
+(convention 6), because the instrument is behaving correctly. **The only thing that reliably
+catches it is measuring twice by different means.** Three of the four above were caught that way;
+the fourth was caught by another party measuring their own project after being told what it
+contained.
+
 
 If you propose normative text, follow the house style so it stays testable:
 
