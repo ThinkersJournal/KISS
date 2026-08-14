@@ -32,24 +32,24 @@ fn set_key<'a>(fields: Vec<(&'a str, &'a str)>, key: &str, val: &'a str) -> Vec<
 fn enum_fields() -> Vec<(&'static str, &'static str)> {
     vec![
         ("schema", "\"kiss-namespace-vocabulary-v1\""),
-        ("namespace", "\"example\""),
+        ("namespace", "\"cuda\""),
         ("vocabulary_version", "3"),
-        ("generated_from", "\"spec/namespaces/example.md\""),
+        ("generated_from", "\"spec/namespaces/cuda.md\""),
         ("kind", "\"enumerated\""),
-        ("grammar", "\"example:e<N>\""),
+        ("grammar", "\"cuda:sm<N>[<letter>]\""),
         ("coverage_note", "\"closed list; recognition is the whole contract.\""),
-        ("members", "[{\"token\": \"example:e1\", \"notes\": \"the first\"}]"),
+        ("members", "[{\"token\": \"cuda:sm80\", \"notes\": \"synthetic row; content is the maintainer's\"}]"),
     ]
 }
 
 fn gen_fields() -> Vec<(&'static str, &'static str)> {
     vec![
         ("schema", "\"kiss-namespace-vocabulary-v1\""),
-        ("namespace", "\"example\""),
+        ("namespace", "\"vulkan\""),
         ("vocabulary_version", "3"),
-        ("generated_from", "\"spec/namespaces/example.md\""),
+        ("generated_from", "\"spec/namespaces/vulkan.md\""),
         ("kind", "\"generated\""),
-        ("grammar", "\"example:<set>\""),
+        ("grammar", "\"vulkan:<sg>.<ops>.<arith>.<coop>\""),
         ("coverage_note", "\"enumeration is impossible; the vectors are the contract.\""),
         ("field_spec", "{\"fields\": 1, \"separator\": \",\"}"),
         (
@@ -93,6 +93,51 @@ fn test_namespace_vocabulary_envelope_shape() {
         validate_envelope(&build_from(&drop_key(gen_fields(), "field_spec"))),
         Err(ManifestDecline::MissingField("field_spec"))
     );
+}
+
+// ---- §6.8-0008: the envelope constraints that SHAPE alone does not enforce -------------------
+
+#[test]
+fn test_namespace_vocabulary_envelope_constraints() {
+    // (a) §6.8-0008 requires a namespace whose registry status is `registered` (§6.8-0003).
+    // A synthetic name is NOT registered, so an envelope naming one declines — otherwise
+    // validation passes while violating the clause it implements.
+    let unreg = set_key(enum_fields(), "namespace", "\"example\"");
+    assert!(matches!(
+        validate_envelope(&build_from(&unreg)),
+        Err(ManifestDecline::UnregisteredNamespace { .. })
+    ));
+
+    // `reserved` is not `registered`: 6.8-0003 reserves the name and forbids producing under it.
+    let reserved = set_key(enum_fields(), "namespace", "\"rocm\"");
+    assert!(matches!(
+        validate_envelope(&build_from(&reserved)),
+        Err(ManifestDecline::UnregisteredNamespace { .. })
+    ));
+
+    // (b) §6.8-0009 is a GATE, so the version must be an integer. Truncating 3.9 -> 3 would
+    // admit a version nobody published.
+    let frac = set_key(enum_fields(), "vocabulary_version", "3.9");
+    assert!(matches!(
+        validate_envelope(&build_from(&frac)),
+        Err(ManifestDecline::NonIntegerVersion { .. })
+    ));
+
+    // (c) §6.8-0012 puts `grammar` in the declarative half, which MUST serve a parse-only
+    // consumer — and a parser without a grammar has nothing.
+    let no_grammar: Vec<_> =
+        enum_fields().into_iter().filter(|(k, _)| *k != "grammar").collect();
+    assert!(matches!(
+        validate_envelope(&build_from(&no_grammar)),
+        Err(ManifestDecline::MissingField("grammar"))
+    ));
+
+    // (d) PRESENCE IS NOT CONTENT: `"field_spec": null` is present and useless.
+    let null_spec = set_key(gen_fields(), "field_spec", "null");
+    assert!(matches!(
+        validate_envelope(&build_from(&null_spec)),
+        Err(ManifestDecline::MissingField("field_spec"))
+    ));
 }
 
 // ---- §6.8-0009: vocabulary_version is a gate, not a field -----------------------------------

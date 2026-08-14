@@ -38,6 +38,13 @@ pub enum ManifestDecline {
     GeneratedMissingVectors,
     /// `kind: generated` vector set does not cover this canonicalization concern (§6.8-0013).
     GeneratedVectorsMissingPin(&'static str),
+    /// `namespace` is not a namespace whose registry status is `registered` (§6.8-0003, cited
+    /// by §6.8-0008). An envelope naming an unregistered or reserved namespace is declined:
+    /// otherwise validation passes while violating the clause it implements.
+    UnregisteredNamespace { got: String },
+    /// `vocabulary_version` is a JSON number with a fractional part (§6.8-0009). A gate that
+    /// truncates `3.9` to `3` is not a gate — it silently admits a version nobody declared.
+    NonIntegerVersion { got: String },
     /// The consumer gate: `vocabulary_version` is not the one this consumer was built for
     /// (§6.8-0009). Reading the field without reaching this is not a gate.
     VocabularyVersionMismatch { got: u64, built_for: u64 },
@@ -73,6 +80,21 @@ const NON_EXEMPTIBLE_PINS: [&str; 2] = ["order", "dedup"];
 /// a consumer that only parses foreign tokens (§6.8-0012). Recognition only: no vocabulary
 /// content is inspected, and `vectors` are NOT required (they are the production half). An
 /// unrecognized `kind` is a typed decline (§6.8-0010), never a guess.
+/// The bundled §6.8-0003 registry. `validate_envelope` reads only the `namespace` and `status`
+/// columns — never a maintainer's vocabulary — so the envelope check stays content-blind.
+const REGISTRY: &str = include_str!("../registry/namespaces.json");
+
+/// True iff `ns` appears in the bundled registry with `status == "registered"`. A `reserved`
+/// row is NOT registered: §6.8-0003 reserves the name and forbids producing under it.
+fn is_registered(ns: &str) -> bool {
+    let Ok(reg) = json::parse(REGISTRY) else { return false };
+    let Some(rows) = reg.get("namespaces").and_then(|j| j.as_arr()) else { return false };
+    rows.iter().any(|row| {
+        row.get("namespace").and_then(|j| j.as_str()) == Some(ns)
+            && row.get("status").and_then(|j| j.as_str()) == Some("registered")
+    })
+}
+
 pub fn validate_envelope(text: &str) -> Result<Manifest, ManifestDecline> {
     let doc = json::parse(text).map_err(|_| ManifestDecline::BadJson)?;
     if !matches!(doc, Json::Obj(_)) {
@@ -84,16 +106,30 @@ pub fn validate_envelope(text: &str) -> Result<Manifest, ManifestDecline> {
     if schema != MANIFEST_SCHEMA {
         return Err(ManifestDecline::UnknownSchema { got: schema.to_string() });
     }
+    // §6.8-0008 requires a namespace whose registry status is `registered` (§6.8-0003).
+    // Shape alone is not enough: an envelope that validates while naming an unregistered
+    // namespace passes the check and violates the clause the check exists to enforce.
     let namespace = str_field(&doc, "namespace")?.to_string();
-    let vocabulary_version = doc
-        .get("vocabulary_version")
-        .and_then(|j| j.as_u64())
-        .ok_or(ManifestDecline::MissingField("vocabulary_version"))?;
+    if !is_registered(&namespace) {
+        return Err(ManifestDecline::UnregisteredNamespace { got: namespace });
+    }
+    // §6.8-0009: the version is a GATE, so it MUST be an integer. `as_u64` alone truncates —
+    // a manifest declaring 3.9 would be admitted as 3, a version nobody published.
+    let vocabulary_version = match doc.get("vocabulary_version") {
+        Some(Json::Num(n)) if n.fract() == 0.0 && *n >= 0.0 => *n as u64,
+        Some(Json::Num(n)) => {
+            return Err(ManifestDecline::NonIntegerVersion { got: n.to_string() })
+        }
+        _ => return Err(ManifestDecline::MissingField("vocabulary_version")),
+    };
     let generated_from = str_field(&doc, "generated_from")?.to_string();
     if generated_from.is_empty() {
         return Err(ManifestDecline::EmptyProvenance); // §6.8-0011
     }
     // `coverage_note` is required (§6.8-0008 / RFC §4.4).
+    // `grammar` is required for BOTH kinds: §6.8-0012 places it in the declarative half, which
+    // MUST be sufficient for a parse-only consumer — and a parser without a grammar has nothing.
+    str_field(&doc, "grammar")?;
     str_field(&doc, "coverage_note")?;
 
     // §6.8-0010: kind is an OPEN set — an unrecognized value declines, never guesses.
@@ -113,7 +149,9 @@ pub fn validate_envelope(text: &str) -> Result<Manifest, ManifestDecline> {
             }
         }
         Kind::Generated => {
-            if doc.get("field_spec").is_none() {
+            // Presence is not content: `"field_spec": null` satisfies `is_none()` and leaves a
+            // parse-only consumer with nothing (§6.8-0012).
+            if !matches!(doc.get("field_spec"), Some(Json::Obj(_))) {
                 return Err(ManifestDecline::MissingField("field_spec"));
             }
         }

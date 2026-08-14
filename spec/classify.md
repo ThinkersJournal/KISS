@@ -1279,11 +1279,13 @@ separating a registered namespace from that namespace's capability-set token.
 - **KISS-CLASSIFY-6.8-0008** — A namespace's capability-set vocabulary (§6.8-0004)
   MAY be published as a machine-readable **vocabulary manifest** whose `schema` is
   `kiss-namespace-vocabulary-v1`. Such a manifest MUST carry `schema`, `namespace` (a
-  namespace whose registry status is `registered`, §6.8-0003), `vocabulary_version`,
-  `generated_from`, `kind`, and `coverage_note`; a reader MUST reject with a typed
-  decline a manifest missing any of these or bearing an unrecognized `schema`. KISS
-  pins this **envelope** only — the manifest's vocabulary content remains owned by the
-  namespace maintainer (§6.8-0004) and is never pinned here. *Test:*
+  namespace whose registry status is `registered`, §6.8-0003), `vocabulary_version` (an
+  **integer** — a gate that truncates a fractional value is not a gate), `generated_from`,
+  `kind`, `grammar`, and `coverage_note`. `grammar` is required because §6.8-0012 places it in
+  the declarative half, which MUST be sufficient for a parse-only consumer. A reader MUST
+  reject with a typed decline a manifest missing any of these or bearing an unrecognized
+  `schema`. KISS pins this **envelope** only — the manifest's vocabulary content remains
+  owned by the namespace maintainer (§6.8-0004) and is never pinned here. *Test:*
   `test_namespace_vocabulary_envelope_shape`.
 
   > *Informative.* The manifest is the machine-readable form of the annex the
@@ -1906,3 +1908,7 @@ KISS-Ops. Every binding requirement lives in an identified §6+ clause with a ma
 KISS-Conform test. Project and product names appear only in non-normative examples,
 provenance, and reference-implementation pointers; normative clauses use only the
 generic roles provider, consumer, implementation, kernel, contract, and target.*
+
+
+
+
