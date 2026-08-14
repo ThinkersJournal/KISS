@@ -650,6 +650,25 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     // out-of-range (BadReduceField, §6.7-0009). Runs AFTER the gate so a non-red cell
     // reports the gating decline rather than a mask-shape decline.
     validate_reduce_mask(&reduce, rank)?;
+    // §6.6-0009: a rank-0 (scalar) cell has no iteration-frame axis to reduce, so it admits
+    // ONLY `-`. `validate_reduce_mask` above already rejects every `x<hh>` at rank 0, but the
+    // `rall`/`rlast` SENTINELS are not `Reduce::Subset` and bypass it — reject them here. They
+    // split on §6.6-0009's real-set-vs-cannot-exist axis, NOT to the same code:
+    //   * `rall` = the full set of ZERO axes, which *is* the empty set — a real set spelled
+    //     wrong that `-` owns → NonCanonicalReduceField (exactly `x00`'s shape);
+    //   * `rlast` = a lone innermost axis that does not exist at rank 0 — a set that cannot
+    //     exist for the rank → BadReduceField (exactly `x04@r2`'s out-of-range shape).
+    // (Placed after the §6.6-0017 op-family gate, so a non-`red` cell still reports the gating
+    // decline, and after `validate_reduce_mask`, so an `x<hh>` keeps its mask-specific code.)
+    if rank == 0 {
+        match reduce {
+            Reduce::All => return Err(KeyDecline::NonCanonicalReduceField),
+            Reduce::Trailing => return Err(KeyDecline::BadReduceField),
+            // `None` is the one valid rank-0 reduce; `Subset` was already resolved by
+            // `validate_reduce_mask` above (it never reaches here at rank 0).
+            Reduce::None | Reduce::Subset(_) => {}
+        }
+    }
     // The optional-trailing field 9 (present iff 10 fields) is dispatched by the
     // op-family (§6.7-0013): a `gem` cell spells the dense-contraction group, any
     // other cell the non-contraction `(acc+mp)` precision field. The two never

@@ -959,7 +959,13 @@ form (§6.7-0011).
   every other in-range set → its `x<hh>` bitmask. A reduced-axis bit at index ≥ `rank`
   names a non-existent axis and is out of range (rejected under §6.7-0005 / §6.7-0009),
   not a reduced-set spelling at all — so the `x<hh>` sentinel-overload decline and the
-  out-of-range decline are kept distinct.** A collapsed (rank-reduced)
+  out-of-range decline are kept distinct. At rank 0 the same axis splits the two
+  **sentinels**: `rall` names the full set of zero axes, which *is* the empty set — a
+  real set spelled wrong, declined as a sentinel overload exactly as `x00` is; `rlast`
+  names a lone innermost axis that does not exist at rank 0 — a set that cannot exist
+  for the rank, declined as out-of-range exactly as a bit at index ≥ `rank` is. The two
+  MUST decline distinctly, so a consumer can tell "wrong spelling of the empty set" from
+  "a reduction over an axis the rank does not have."** A collapsed (rank-reduced)
   reduction output MUST be rejected with a typed decline (§7.1-0002) rather than
   keyed, so that reductions over different axis sets never collide. *Test:*
   `test_classify_reduce_axes_encoding`.

@@ -338,6 +338,20 @@
       "note": "x04 at rank 2 sets bit 2, an axis that does not exist — out-of-range mask, not a sentinel overload",
       "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04",
       "decline": "BadReduceField"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0009",
+      "name": "noncanonical_reduce_rall_rank0",
+      "note": "rall at rank 0 is the full set of zero axes = the empty set — a real set spelled wrong that `-` owns, exactly x00's shape",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall",
+      "decline": "NonCanonicalReduceField"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0009",
+      "name": "out_of_range_reduce_rlast_rank0",
+      "note": "rlast at rank 0 names a lone innermost axis that does not exist — a set that cannot exist for the rank, exactly x04@r2's out-of-range shape",
+      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast",
+      "decline": "BadReduceField"
     }
   ]
 }

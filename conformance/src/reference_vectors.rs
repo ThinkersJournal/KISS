@@ -397,6 +397,25 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04".to_string(),
             expected: KeyDecline::BadReduceField,
         },
+        // §6.6-0009: a rank-0 (scalar) cell has no axis to reduce, so it admits only `-`. The
+        // `rall`/`rlast` sentinels are not `x<hh>` masks, so they bypass the mask validator and
+        // are pinned by §6.6-0009's rank-0 sentence — and they SPLIT on its real-set-vs-cannot-
+        // exist axis, NOT to one code: `rall` is the empty set spelled wrong (NonCanonical),
+        // `rlast` names an axis the rank does not have (out-of-range → BadReduceField).
+        DeclineVector {
+            name: "noncanonical_reduce_rall_rank0",
+            clause: "KISS-CLASSIFY-6.6-0009",
+            note: "rall at rank 0 is the full set of zero axes = the empty set — a real set spelled wrong that `-` owns, exactly x00's shape",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        DeclineVector {
+            name: "out_of_range_reduce_rlast_rank0",
+            clause: "KISS-CLASSIFY-6.6-0009",
+            note: "rlast at rank 0 names a lone innermost axis that does not exist — a set that cannot exist for the rank, exactly x04@r2's out-of-range shape",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast".to_string(),
+            expected: KeyDecline::BadReduceField,
+        },
     ]
 }
 

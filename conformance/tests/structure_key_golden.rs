@@ -924,8 +924,27 @@ fn test_classify_noncanonical_reduce_mask_declines() {
         from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04"),
         Err(KeyDecline::BadReduceField)
     );
-    // the two declines are genuinely distinct enum values (not one Err reached two ways).
-    assert_ne!(KeyDecline::NonCanonicalReduceField, KeyDecline::BadReduceField);
+    // rank 0 (scalar): no axis to reduce, so ONLY `-` is valid. The `rall`/`rlast` SENTINELS are
+    // not `Reduce::Subset`, so they bypass `validate_reduce_mask` and are caught by a separate
+    // rank-0 guard. THESE ARE THAT GUARD'S OWN FLIPS — every Subset-arm assertion above stays
+    // green if the rank-0 guard is deleted, so the guard would be untested without them. And the
+    // two SPLIT on §6.6-0009's real-set-vs-cannot-exist axis, NOT to one code:
+    //   * `rall` = the full set of ZERO axes = the empty set — a real set spelled wrong that `-`
+    //     owns → NonCanonicalReduceField, exactly x00's shape;
+    //   * `rlast` = a lone innermost axis that does not exist at rank 0 — a set that cannot exist
+    //     for the rank → BadReduceField, exactly x04@r2's out-of-range shape.
+    let rall_r0 = from_token("sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    let rlast_r0 = from_token("sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast");
+    assert_eq!(rall_r0, Err(KeyDecline::NonCanonicalReduceField));
+    assert_eq!(rlast_r0, Err(KeyDecline::BadReduceField));
+    // The discriminability §6.7-0005 / §6.6-0009 demand OF THIS PAIR — asserted on the two
+    // sentinel OUTCOMES, not on two enum variants (which are distinct by construction and prove
+    // nothing). This is the guard that fails if the two rank-0 arms are ever merged to one code.
+    assert_ne!(rall_r0, rlast_r0);
+    // boundary: `-` is the ONE valid rank-0 reduce (built at runtime, not a source literal).
+    let ok_r0 =
+        "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".replace("|rall", "|-");
+    assert!(from_token(&ok_r0).is_ok(), "rank-0 `-` (no reduction) must parse");
     // BOUNDARY (guard discriminates, does not over-reject): a genuine partial reduction that
     // has NO shorter canonical spelling survives. At rank 2, reducing axis 0 only (bit 0) is
     // neither all-axes (x03), the lone trailing axis (x02), nor empty — so `x01` is the correct
