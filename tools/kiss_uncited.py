@@ -14,20 +14,31 @@ actual obligation — the standard ruled on #191: **reading a clause's text as
 data does not back it; asserting its requirement does.**
 
   declared   an author names a clause in `§<sec>-<nnnn>` SHORT form anywhere from
-             the previous test up to and including this one — body, doc comment,
-             or a GROUP-HEADER comment covering several tests. The short form is
-             deliberate: it does not match the citation grammar, so the author
-             said "this enforces that clause" without claiming the credit.
-             Strongest available signal, and still NOT a citation — the short form
-             omits the SUB-STANDARD, so `§6.11-0002` resolves only by the file's
-             context, per row, by a reader.
+             the END OF THE PREVIOUS TEST up to and including this one — its body,
+             its doc comment, or a header comment sitting in that gap. A header
+             therefore covers the NEXT test only; it does not carry forward to the
+             rest of a group. The short form is deliberate: it does not match the
+             citation grammar, so the author said "this enforces that clause"
+             without claiming the credit. Strongest available signal, and still
+             NOT a citation — the short form omits the SUB-STANDARD, so
+             `§6.11-0002` resolves only by the file's context, per row, by a
+             reader.
 
-             THE SCOPE HERE IS WIDER THAN `kiss_trace`'S, ON PURPOSE. The gate
-             reads the CONTIGUOUS `//` run above `#[test]`, because that is what
-             grants credit, and this sweep must never widen THAT. But a group
-             header separated by a blank line is invisible to a contiguous run,
-             and 27 of the 85 rows first bucketed "needs a human" carried exactly
-             that — the first cut understated DECLARED by a third.
+             THE SCOPE IS WIDER THAN `kiss_trace`'S, ON PURPOSE. The gate reads
+             the CONTIGUOUS `//` run above `#[test]`, because that is what grants
+             credit, and this sweep must never widen THAT. But a header separated
+             by a blank line is invisible to a contiguous run, and 27 of the 85
+             rows first bucketed "needs a human" carried exactly that — the first
+             cut understated DECLARED by a third.
+
+             AND IT IS DELIBERATELY NOT WIDER STILL. Carrying a header forward
+             until superseded was considered and MEASURED: it moves 53 further
+             rows into `declared`, and the additions are plainly wrong — the hash
+             helper `fnv1a64_is_deterministic_and_input_sensitive` inherits
+             §6.4-0010 from its MODULE doc comment, and `exact_byte_comparator`
+             inherits §6.0-0001 from `lib.rs`'s header. Proximity to a file's
+             prose is not declaration, and inflating the strongest bucket with
+             false positives is the failure this tool exists to avoid.
 
   plumbing   the test exercises the harness's own machinery — the JSON parser,
              hex helpers, the FFI loader and marshalling, corpus generation, the
@@ -102,13 +113,17 @@ def sweep(spec_dir, conf_dir):
             # credits a clause, and this sweep must not widen it, or it would
             # report coverage the gate does not grant.
             #
-            # The DECLARATION scope is wider: everything since the previous test
-            # in the file. An author who writes `// ---- declines (§6.10-0006 …)`
-            # as a GROUP HEADER above several tests has declared the clause for
-            # all of them, and a blank line makes that invisible to the contiguous
-            # run. Measured: 27 of the 85 rows first bucketed "needs a human"
-            # carry exactly that, so the first cut of this sweep understated
-            # DECLARED by a third and overstated UNCLEAR by the same.
+            # The DECLARATION scope is wider: everything since the END of the
+            # previous test. An author who writes `// ---- declines (§6.10-0006 …)`
+            # above a test has declared the clause for THAT test, and a blank line
+            # makes it invisible to the contiguous run. Measured: 27 of the 85 rows
+            # first bucketed "needs a human" carry exactly that, so the first cut
+            # understated DECLARED by a third and overstated UNCLEAR by the same.
+            #
+            # NOT carried forward past the next test. Doing so moves 53 further
+            # rows in, and they are false: the hash helper `fnv1a64_is_…` inherits
+            # §6.4-0010 from its MODULE doc comment. A header covers what follows
+            # it up to the next test, never a whole file.
             prev_end = 0
             for m in kt.RE_RUST_TEST.finditer(src):
                 brace = src.find("{", m.end() - 1)
