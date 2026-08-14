@@ -329,7 +329,20 @@ def _ledger_lint_ids(text):
     return ids
 
 
-def base_ledger_lint(root, ledger_path, base_ref):
+def _in_git_repo(path):
+    """Whether `path` is inside a git work tree — i.e. whether a base ledger CAN be read.
+    When it can, `--ratchet` requires --base-ref: a constant-count lint<->harness swap is
+    invisible to the counts, so 'the counts didn't move' is not a licence to skip the set
+    comparison (#213). Only a genuinely git-less checkout is exempt, and it must say so."""
+    try:
+        out = subprocess.run(["git", "-C", path, "rev-parse", "--is-inside-work-tree"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return False
+    return out.returncode == 0 and out.stdout.strip() == "true"
+
+
+def base_ledger_lint(ledger_path, base_ref):
     """The `lint`-category clause IDs in the ledger AT `base_ref` — the PRE-change state.
 
     Read by REF via `git show`, NEVER from disk. An on-disk ledger regenerated before
@@ -337,13 +350,20 @@ def base_ledger_lint(root, ledger_path, base_ref):
     lint<->harness movement as 'no movement' and passes silently — the currency hazard,
     convention 11 arriving inside the fix for convention 11 (#213).
 
-    Returns the ID set, or None when the base cannot be read (not a git repo, ref unknown,
-    git absent). The caller MUST fail loud on None, never degrade to an empty diff — a
-    degraded diff is the same silent pass, reached through the environment instead of order.
+    Resolved against the LEDGER's own repository (not the tool's), so a fixture ledger in a
+    git-less tempdir reads as git-less rather than borrowing the tool's repo. Returns the ID
+    set, or None when the base cannot be read (not a git repo, ref unknown, git absent). The
+    caller MUST fail loud on None, never degrade to an empty diff — a degraded diff is the
+    same silent pass, reached through the environment instead of through ordering.
     """
-    rel = os.path.relpath(ledger_path, root).replace(os.sep, "/")
+    ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
     try:
-        out = subprocess.run(["git", "-C", root, "show", f"{base_ref}:{rel}"],
+        top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
+        out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
                              capture_output=True, text=True, timeout=30)
     except Exception:
         return None
@@ -363,9 +383,10 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
     ENFORCED conserves and so cannot show, #187/#213) apart from a laundered regression
     whose three COUNTS are byte-identical to it (X: lint->untested plus Y: untested->harness
     nets harness +1 / lint -1 / untested flat, exactly a substitution's signature). When
-    `prev_lint` is None — permitted ONLY when the lint COUNT is unchanged, which the caller
-    enforces — the lint dimension is compared by count alone: no substitution is possible,
-    so a git-free at-the-floor run stays git-free.
+    `prev_lint` is None the run is GENUINELY GIT-LESS (in a git repo the caller requires
+    --base-ref, #213): the count dimensions are characterized and the lint dimension is
+    reported as NOT characterized — never `at_floor`, because a constant-count swap looks
+    exactly like at-the-floor to the counts.
     """
     missing = [k for k in ("harness", "lint", "untested") if k not in floor]
     if missing:
@@ -376,8 +397,16 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
     harness_delta = live["harness"] - floor["harness"]       # -ve worse
 
     if prev_lint is None:
-        # The caller only omits prev_lint when the lint count is unchanged, so no
-        # substitution is in play — characterize by counts alone.
+        # GIT-LESS: no base ledger to diff the lint SET against. The caller reaches here ONLY
+        # in a genuinely git-less checkout (in a git repo, --base-ref is required, #213). We
+        # characterize the two COUNT dimensions we can see and say PLAINLY that the lint
+        # dimension was not characterized — printing `at_floor` here is the exact hole the
+        # count-gated base read left: a constant-count lint<->harness swap looks at-the-floor.
+        if live["lint"] != floor["lint"]:
+            return ("uncharacterized", [
+                f"the lint count moved ({floor['lint']} -> {live['lint']}) but this is a git-less "
+                "run: a substitution and a regression cannot be told apart without the base "
+                "ledger. Re-run in a git checkout with --base-ref <base>."])
         reg = []
         if untested_delta > 0:
             reg.append(f"untested rose {floor['untested']} -> {live['untested']}: a clause lost "
@@ -393,8 +422,10 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
             return ("stale", [f"coverage improved past the floor: {', '.join(b)}.",
                               f"Set the floor to harness {live['harness']}, untested "
                               f"{live['untested']}. Green means AT the floor, never under it."])
-        return ("at_floor", [f"harness {live['harness']}, lint {live['lint']}, "
-                             f"untested {live['untested']}."])
+        return ("at_floor_unchecked", [
+            f"at the floor on COUNTS - harness {live['harness']}, lint {live['lint']}, untested "
+            f"{live['untested']}. LINT DIMENSION NOT CHARACTERIZED: git-less run, no --base-ref, "
+            "so a constant-count lint<->harness swap would be invisible here."])
 
     # --- SET-based lint dimension (prev_lint given) ---
     left_lint = prev_lint - live_lint                              # were lint, no longer
@@ -452,8 +483,8 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
                           f"Set the floor to harness {live['harness']}, lint {live['lint']}, "
                           f"untested {live['untested']}. Green means AT the floor, never under it."])
 
-    return ("at_floor", [f"harness {live['harness']}, lint {live['lint']}, "
-                         f"untested {live['untested']}."])
+    return ("at_floor", [f"at the floor - harness {live['harness']}, lint {live['lint']}, "
+                         f"untested {live['untested']}; lint set matches the base."])
 
 
 def write_ledger(path, unbacked, prior=None):
@@ -989,26 +1020,32 @@ def main():
         # reports a reclassification as progress (#177: untested 515 -> 502, ENFORCED unmoved).
         # But counts alone cannot tell a lint->harness UPGRADE from a laundered regression with
         # the identical signature (#213), so the lint dimension is compared as a SET against the
-        # PRE-change ledger read at --base-ref. Scoped: the base is read ONLY when the lint count
-        # moved, so a normal at-the-floor run stays git-free.
+        # PRE-change ledger read at --base-ref. --base-ref is REQUIRED whenever a base can be
+        # determined (a git checkout) — NOT gated on the lint count, because a constant-count
+        # lint<->harness swap leaves every count flat and would slip through a count gate, which
+        # is the very defect this check exists to close. Only a genuinely git-less run may skip
+        # it, and it must SAY the lint dimension went unchecked rather than print at-the-floor.
+        ledger_path = os.path.join(conf_dir, "UNBACKED.tsv")
         print("-" * 68)
-        lint_moved = ("lint" in floor) and (live["lint"] != floor["lint"])
         prev_lint, base_error = None, None
         if args.base_ref:
-            prev_lint = base_ledger_lint(root, os.path.join(conf_dir, "UNBACKED.tsv"),
-                                         args.base_ref)
+            prev_lint = base_ledger_lint(ledger_path, args.base_ref)
             if prev_lint is None:
                 base_error = (f"cannot read the base ledger at `{args.base_ref}` "
-                              "(not a git repo / ref unknown / git absent)")
-        elif lint_moved:
-            base_error = (f"the lint dimension moved ({floor['lint']} -> {live['lint']}) but "
-                          "--base-ref was not given")
+                              "(ref unknown / git absent)")
+        elif _in_git_repo(conf_dir):
+            base_error = ("this is a git checkout but --base-ref was not given. A constant-count "
+                          "lint<->harness swap is invisible to the counts, so --ratchet MUST diff "
+                          "the lint SET against the base ledger")
+        # else: genuinely git-less -> prev_lint stays None; classify_ratchet reports the lint
+        #       dimension as NOT characterized instead of at-the-floor.
         if base_error:
             any_fail = True
             print(f"  RATCHET: {base_error} — refusing to characterize the lint dimension rather")
             print("          than degrade to 'no movement' (the currency hazard, #213). Re-run")
-            print("          with --base-ref <PR base>, e.g. origin/main (CI: origin/$base_ref); a")
-            print("          defaulted base would silently compare against a stale tree.")
+            print("          with --base-ref <PR base>: origin/$base_ref on a PR, the push")
+            print("          before-sha or HEAD^ on main. A defaulted base would compare against")
+            print("          a stale tree.")
         else:
             verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
                                               set(backed.keys()), prev_lint)
@@ -1019,9 +1056,11 @@ def main():
                                 "(a strengthening the aggregate cannot show, #213).",
                 "lint_drift": "RATCHET: the lint SET changed under a flat count.",
                 "stale": "RATCHET: the floor is STALE - coverage improved past it.",
+                "uncharacterized": "RATCHET: the lint dimension moved but could not be "
+                                   "characterized (git-less).",
             }
-            if verdict == "at_floor":
-                print(f"  RATCHET: at the floor - {lines[0]}")
+            if verdict in ("at_floor", "at_floor_unchecked"):
+                print(f"  RATCHET: {lines[0]}")
             else:
                 any_fail = True
                 print(f"  {headers[verdict]}")

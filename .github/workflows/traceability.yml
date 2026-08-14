@@ -24,6 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
+          # the PR path fetches its base ref explicitly.
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
@@ -47,17 +51,19 @@ jobs:
       - name: Coverage ratchet discrimination controls
         run: python tools/test_kiss_ratchet.py
       - name: Coverage ratchet (blocking)
-        # On a PR, pass the base ref so a lint->harness SUBSTITUTION can be told from a
-        # laundered regression with identical counts (#213): the check reads UNBACKED.tsv at
-        # the base, so we fetch that ref first. `github.base_ref` is empty on push-to-main,
-        # where nothing has moved and the run stays git-free. A defaulted base is deliberately
-        # NOT used — it would silently compare against a stale tree.
+        # The ratchet compares the lint SET against the PRE-change ledger read at a base ref,
+        # so a lint->harness SUBSTITUTION and a constant-count swap can be told from a laundered
+        # regression with the identical counts (#213). A base is passed on BOTH events — a
+        # push-to-main run that cannot see a downgrade is the run nobody re-checks:
+        #   PR:   the target branch (fetched first);
+        #   push: HEAD^, the pre-merge tip (fetch-depth 2 on checkout makes it available).
+        # A defaulted base is deliberately NOT used — it would compare against a stale tree.
         run: |
           if [ -n "${{ github.base_ref }}" ]; then
             git fetch --quiet origin "${{ github.base_ref }}"
             python tools/kiss_trace.py --ratchet --base-ref "origin/${{ github.base_ref }}"
           else
-            python tools/kiss_trace.py --ratchet
+            python tools/kiss_trace.py --ratchet --base-ref HEAD^
           fi
       - name: Citation audit discrimination controls
         run: python tools/test_kiss_cites.py
@@ -131,6 +137,10 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
+          # the PR path fetches its base ref explicitly.
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"

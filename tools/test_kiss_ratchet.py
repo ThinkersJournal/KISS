@@ -22,12 +22,18 @@ Case 1 is the control: without it, a ratchet hardcoded to fail would pass 2-6.
 Case 5 is the one a single ENFORCED number cannot see — floor 2+1 vs live 3+0
 both total 3, and only comparing the parts separately catches it.
 
-STATED LIMIT: case 5 approaches #187's substitution from the FLOOR side, not by
-making a real document lint stop covering a clause. Lint coverage is discovered
-from the actual `tools/` directory, so a fixture clause ID can never be
-lint-covered and a live substitution cannot be staged here. What is proven is
-that the two dimensions are compared independently; what is not proven is the
-end-to-end path from a lint losing a clause to this check firing.
+The subprocess fixtures cannot stage a live lint<->harness move (a fixture clause
+can never be lint-covered — lint coverage is discovered from the real `tools/`),
+so the substitution / laundering / masked-downgrade cases call `classify_ratchet`
+DIRECTLY with a synthetic previous lint set, and a git-fixture drives
+`base_ledger_lint` to prove it reads the base by REF not disk. Together they lift
+the old limit that a live substitution could not be exercised here.
+
+Also proven (the #213 review finding, one level in): in a git checkout `--ratchet`
+REQUIRES `--base-ref` — a COUNT must not gate the SET comparison, because a
+constant-count lint<->harness swap leaves every count at the floor. Only a genuinely
+git-less run may skip it, and it must ANNOUNCE the lint dimension went unchecked
+rather than print at-the-floor.
 
 Run: python tools/test_kiss_ratchet.py
 """
@@ -109,9 +115,16 @@ def main():
     with tempfile.TemporaryDirectory() as d:
         # 1. CONTROL — floor matches live. Must be GREEN. Without this, a ratchet
         #    hardcoded to fail passes every case below.
+        # The fixtures live in a git-less tempdir, so an at-floor run is GREEN but must ANNOUNCE
+        # that the lint dimension went unchecked — a plain `at_floor` here is the constant-count
+        # swap hole (#213), where a run that looks at-the-floor hides a harness->lint downgrade.
         ok, out = run_ratchet(os.path.join(d, "c1"), ROWS3, ALL3, FLOOR3)
-        check("at-the-floor control", ok and "at the floor" in out,
+        check("at-the-floor control (git-less)", ok and "at the floor" in out,
               f"expected green 'at the floor', got ok={ok}\n{out[-400:]}")
+        check("git-less at-floor announces the unchecked lint dimension",
+              "NOT CHARACTERIZED" in out,
+              f"a git-less at-floor printed a clean at_floor instead of stating the lint "
+              f"dimension went unchecked: {out[-400:]}")
 
         # 2. REGRESSION — a backing test disappears, so harness falls below floor.
         ok, out = run_ratchet(os.path.join(d, "c2"), ROWS3, ["test_ops_fixture_a", "test_ops_fixture_b"], FLOOR3,
@@ -215,15 +228,50 @@ def main():
         # regenerate-the-ledger-then-run order that silences a disk-reading check.
         with open(ledger, "w", encoding="utf-8") as f:
             f.write("# ledger\n")
-        base = kiss_trace.base_ledger_lint(g, ledger, "HEAD")
+        base = kiss_trace.base_ledger_lint(ledger, "HEAD")
         check("base ledger is read from the REF, not the regenerated disk file",
               base == {"KISS-OPS-6.0-0042"},
               f"read the on-disk (already-new) ledger instead of the base ref: got {base}")
         # An indeterminable base MUST be None so the caller fails loud — never an empty diff,
         # which is the same silent pass reached through the environment.
-        bad = kiss_trace.base_ledger_lint(g, ledger, "no-such-ref-xyz")
+        bad = kiss_trace.base_ledger_lint(ledger, "no-such-ref-xyz")
         check("indeterminable base returns None (fail-loud, not an empty diff)", bad is None,
               f"a missing ref degraded to a set instead of None: got {bad}")
+
+    # ---- THE REVIEW FINDING (#213, one level in): a COUNT must not gate the SET check ----
+    # A constant-count lint↔harness swap leaves every count at the floor, so a count gate on
+    # the base read lets it pass as at_floor. Fix: in a git checkout --ratchet REQUIRES
+    # --base-ref (unconditionally, not gated on the lint count); only a genuinely git-less run
+    # may skip it, and it must SAY the lint dimension went unchecked, never print at_floor.
+    with tempfile.TemporaryDirectory() as gd:
+        gspec = os.path.join(gd, "spec")
+        gconf = os.path.join(gd, "conformance")
+        os.makedirs(gspec)
+        os.makedirs(gconf)
+        for s in STEMS:
+            with open(os.path.join(gspec, s + ".md"), "w", encoding="utf-8") as f:
+                f.write(spec_with(ROWS3) if s == "ops" else "")
+        with open(os.path.join(gconf, "fixture_tests.rs"), "w", encoding="utf-8") as f:
+            f.write(harness_with(ALL3))
+        with open(os.path.join(gconf, "UNBACKED.tsv"), "w", encoding="utf-8") as f:
+            f.write("# ledger\n")
+        with open(os.path.join(gconf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
+            f.write("# floor\nharness\t3\nlint\t0\nuntested\t0\n")
+
+        def gg(*a):
+            subprocess.run(["git", "-C", gd, *a], check=True, capture_output=True, text=True)
+        gg("init", "-q")
+        gg("config", "user.email", "t@t")
+        gg("config", "user.name", "t")
+        gg("add", "-A")
+        gg("commit", "-q", "-m", "base")
+        r = subprocess.run([sys.executable, TOOL, "--ratchet", "--spec-dir", gspec,
+                            "--conformance-dir", gconf], capture_output=True, text=True, timeout=300)
+        gout = r.stdout + r.stderr
+        check("git checkout --ratchet REQUIRES --base-ref (a count must not gate the set check)",
+              r.returncode != 0 and "base-ref" in gout,
+              f"a git-checkout --ratchet without --base-ref passed at-the-floor — the constant-"
+              f"count swap hole: rc={r.returncode}\n{gout[-400:]}")
 
     if failures:
         print("FAIL - the coverage ratchet does not discriminate:")
