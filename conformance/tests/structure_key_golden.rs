@@ -924,6 +924,24 @@ fn test_classify_noncanonical_reduce_mask_declines() {
         from_token("sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04"),
         Err(KeyDecline::BadReduceField)
     );
+    // rank 0 (scalar): no axis to reduce, so ONLY `-` is valid. The `rall`/`rlast` SENTINELS
+    // are not `Reduce::Subset`, so they bypass `validate_reduce_mask` and are caught by a
+    // separate rank-0 guard as the same sentinel overload x00 gets. THESE ARE THAT GUARD'S OWN
+    // FLIPS — every Subset-arm assertion above stays green if the rank-0 guard is deleted, so
+    // the guard would be untested without them. (`rall` reduces all of zero axes = the empty
+    // reduction; `rlast` names a trailing axis that does not exist — both are what `-` owns.)
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    assert_eq!(
+        from_token("sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast"),
+        Err(KeyDecline::NonCanonicalReduceField)
+    );
+    // boundary: `-` is the ONE valid rank-0 reduce (built at runtime, not a source literal).
+    let ok_r0 =
+        "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".replace("|rall", "|-");
+    assert!(from_token(&ok_r0).is_ok(), "rank-0 `-` (no reduction) must parse");
     // the two declines are genuinely distinct enum values (not one Err reached two ways).
     assert_ne!(KeyDecline::NonCanonicalReduceField, KeyDecline::BadReduceField);
     // BOUNDARY (guard discriminates, does not over-reject): a genuine partial reduction that

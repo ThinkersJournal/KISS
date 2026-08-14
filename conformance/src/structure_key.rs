@@ -650,6 +650,17 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     // out-of-range (BadReduceField, §6.7-0009). Runs AFTER the gate so a non-red cell
     // reports the gating decline rather than a mask-shape decline.
     validate_reduce_mask(&reduce, rank)?;
+    // §6.6-0009: a rank-0 (scalar) cell has no iteration-frame axis to reduce, so it
+    // admits ONLY `-`. `validate_reduce_mask` already rejects every `x<hh>` at rank 0
+    // (the empty-set `x00` as a sentinel overload → NonCanonicalReduceField; any other bit
+    // as out-of-range → BadReduceField), but the `rall`/`rlast` SENTINELS are not
+    // `Reduce::Subset`, so they bypass it. Reject them here as the same sentinel overload —
+    // `rall`/`rlast` at rank 0 are spellings for the empty reduction that `-` owns. (Placed
+    // after the §6.6-0017 op-family gate, so a non-`red` cell still reports the gating
+    // decline, and after `validate_reduce_mask`, so an `x<hh>` keeps its mask-specific code.)
+    if rank == 0 && reduce != Reduce::None {
+        return Err(KeyDecline::NonCanonicalReduceField);
+    }
     // The optional-trailing field 9 (present iff 10 fields) is dispatched by the
     // op-family (§6.7-0013): a `gem` cell spells the dense-contraction group, any
     // other cell the non-contraction `(acc+mp)` precision field. The two never

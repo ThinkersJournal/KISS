@@ -397,6 +397,23 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04".to_string(),
             expected: KeyDecline::BadReduceField,
         },
+        // §6.6-0009: a rank-0 (scalar) cell has no axis to reduce, so it admits only `-`. The
+        // `rall`/`rlast` sentinels are not `x<hh>` masks, so they bypass the mask validator and
+        // need their own guard — these vectors are the consumer-visible half of that guard.
+        DeclineVector {
+            name: "noncanonical_reduce_rall_rank0",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "rall at rank 0 reduces all of zero axes — the empty reduction, which `-` owns, never a sentinel",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
+        DeclineVector {
+            name: "noncanonical_reduce_rlast_rank0",
+            clause: "KISS-CLASSIFY-6.7-0005",
+            note: "rlast at rank 0 names a trailing axis that does not exist — the empty reduction, spelled `-`, never a sentinel",
+            token: "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast".to_string(),
+            expected: KeyDecline::NonCanonicalReduceField,
+        },
     ]
 }
 
