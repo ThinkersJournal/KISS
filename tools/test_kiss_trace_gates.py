@@ -254,20 +254,29 @@ def main():
     check(RE_QUAL.search(out2) is None,
           "and prints no qualified figure — there is nothing to qualify")
 
-    # THE BUILD CAVEAT (#195). Wherever an ENFORCED figure is printed, the
-    # statement that it is unverified against a build MUST be printed with it.
-    # Not a style rule: this tool reads source and never compiles, so it will
-    # report coverage for a crate that does not build — it did, on a
-    # non-compiling `contract.rs`, in the same format and with the same exit code
-    # as a true figure. A number carrying no evidence a build was attempted is
-    # unfalsifiable with respect to buildability, so the caveat travels WITH the
-    # number rather than living in documentation someone has to have read. Both
-    # fixtures are checked: the caveat must not be conditional on what a
-    # particular run happened to find.
+    # THE BUILD CAVEAT (#195), checked for ADJACENCY and NOT conditionally.
+    #
+    # An earlier version of this control was `if "ENFORCED" in text: check(caveat
+    # in text)`. Two defects, both of the kind this file exists to catch:
+    # conditioning on ENFORCED means the check passes VACUOUSLY if the figure is
+    # ever dropped or moved, and a substring search anywhere in the report does
+    # not establish the adjacency the message claims. So: the figure MUST be
+    # present, and the caveat MUST follow it within a few lines.
+    #
+    # Why adjacency and not mere presence: the caveat's whole purpose is that a
+    # reader who receives a quoted figure receives its limit with it. A caveat
+    # forty lines away is documentation, which is the thing it replaces.
     for label, text in (("gated fixture", out), ("clean fixture", out2)):
-        if "ENFORCED" in text:
-            check("UNVERIFIED AGAINST A" in text,
-                  f"the {label} report states its build caveat beside the ENFORCED figure")
+        lines = text.splitlines()
+        idx = [i for i, l in enumerate(lines) if "ENFORCED (harness" in l]
+        check(len(idx) == 1,
+              f"the {label} report prints exactly one ENFORCED figure "
+              f"(found {len(idx)}) — the caveat check below is vacuous without it)")
+        if len(idx) == 1:
+            window = " ".join(lines[idx[0] + 1:idx[0] + 7])
+            check("UNVERIFIED AGAINST A" in window,
+                  f"the {label} report states its build caveat WITHIN 6 LINES of the "
+                  f"ENFORCED figure, not merely somewhere in the output")
 
     print()
     if failures:
