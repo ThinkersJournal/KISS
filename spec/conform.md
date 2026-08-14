@@ -999,9 +999,19 @@ atomic clause with its own append-only ID and dedicated test.
 - **KISS-CONFORM-6.13-0006** — KISS-Conform MUST **own** the independent CPU-oracle differential
   harness (§6.5), sharing no lowering module with any reference implementation, and MUST provide a
   KISS-Ops freeze-gate test (KISS-OPS §8-0005 / §8-0006) that differences a candidate against the
-  oracle and proves **≥2 dissimilar implementations agree on a primitive-floor op's semantics** — a
-  conformant implementation is accepted and a divergent one is caught. *Test:*
-  `test_conform_ops_oracle_and_freeze_gate`.
+  oracle: a conformant implementation is **accepted** and a divergent one is **caught**. This is a
+  property of the harness. The **≥2-dissimilar-implementations** condition of that same gate is a
+  separate obligation with separate evidence — §6.13-0006c — and MUST NOT be treated as
+  demonstrated by this one. *Test:* `test_conform_ops_oracle_and_freeze_gate`.
+- **KISS-CONFORM-6.13-0006c** — The KISS-Ops freeze-gate (KISS-OPS §8-0005 / §8-0006) MUST prove
+  that **≥2 structurally dissimilar implementations agree** on a primitive-floor op's semantics,
+  in the Appendix-B item-1 sense: **distinct codebases with disjoint declared lowering-module
+  manifests** (§6.5-0002). Differential fixtures authored within the conformance suite itself
+  MUST NOT be counted toward the ≥2 — they exercise the harness (§6.13-0006), and two spellings
+  of one algorithm by one author under one toolchain are not two implementations. A candidate
+  that declares **no** lowering-module manifest MUST NOT be counted either, because §6.5-0002's
+  disjointness test then has nothing to evaluate and dissimilarity is asserted rather than
+  checked. *Test:* `test_conform_ops_dissimilar_impls_agree`.
 - **KISS-CONFORM-6.13-0006a** — KISS-Conform's differential harness MUST **resolve a non-primitive
   op** through its KISS-Ops reference decomposition down to the primitive floor and difference the
   resolved form; the freeze-gate MUST prove ≥2 dissimilar implementations agree on **decompositions**
@@ -1342,6 +1352,7 @@ the traceability lint.
 | KISS-CONFORM-6.13-0004 | `test_conform_classify_freeze_gate` |
 | KISS-CONFORM-6.13-0005 | `test_conform_ops_per_class_comparators` |
 | KISS-CONFORM-6.13-0006 | `test_conform_ops_oracle_and_freeze_gate` |
+| KISS-CONFORM-6.13-0006c | `test_conform_ops_dissimilar_impls_agree` |
 | KISS-CONFORM-6.13-0006a | `test_conform_ops_decomposition_agreement` |
 | KISS-CONFORM-6.13-0006b | `test_conform_ops_class_comparator_selection` |
 | KISS-CONFORM-6.13-0007 | `test_conform_ops_transcendental_and_split` |
@@ -1541,7 +1552,8 @@ Conform clause that closes it. This is the informative rendering of §6.13; on a
 | KISS-Classify | Exact-byte `structure_key`/token codec/`target_capability` + bundled namespace registry + golden tokens | §6.13-0003 (via §6.3-0003, §6.8-0001) |
 | KISS-Classify | Freeze gate; stays UNFROZEN until usage exercises a target outside the initial reference-hardware namespace | §6.13-0004 (via §8-0006) |
 | KISS-Ops | Canonical determinism enum + three per-class comparators | §6.13-0005 (via §6.0-0001, §6.8) |
-| KISS-Ops | Oracle-differential harness + freeze gates §8-0005/0006 + per-op class advertisement | §6.13-0006 (via §6.5, §6.8-0006) |
+| KISS-Ops | Oracle-differential harness: a conformant candidate accepted, a divergent one caught | §6.13-0006 (via §6.5, §6.8-0006) |
+| KISS-Ops | Freeze gate §8-0005/0006: ≥2 dissimilar implementations agree, disjoint lowering-module manifests | §6.13-0006c (via §6.5-0002, Appendix B item 1) |
 | KISS-Ops | Transcendental declared accuracy tier as the sole gate + no cross-language identity + complex split comparator | §6.13-0007 (via §6.8-0002/0003/0005) |
 | KISS-Ops | OpAttrs golden hex (every field, no elision) + opaque-embedding byte-compare | §6.13-0008 (via §6.4) |
 | KISS-Grammar | Exact-byte region wire form + `grammar_version` keying | §6.13-0009 (via §6.8-0001, §8-0001) |
