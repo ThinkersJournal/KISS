@@ -104,9 +104,16 @@ ALL3 = ["test_ops_fixture_a", "test_ops_fixture_b", "test_ops_fixture_c"]
 FLOOR3 = {"harness": 3, "lint": 0, "untested": 0}
 
 failures = []
+ran = []  # every control that executed — asserted against a pinned count so an early
+          # return that skips controls cannot report success (a green run and a green run
+          # that ran half the controls are otherwise the same exit code). This file is the
+          # instrument that proves the instrument, so a silent skip here is the worst place.
+
+EXPECTED_CONTROLS = 16
 
 
 def check(name, cond, detail=""):
+    ran.append(name)
     if not cond:
         failures.append(f"  {name}: {detail}")
 
@@ -290,8 +297,21 @@ def test_kiss_ratchet_discrimination():
     reports success having run none of the controls — the #158 shape, which is
     gated in CI and has already caught one omission in this session.
     """
+    ran.clear()
     assert main() == 0, "the coverage ratchet failed its discrimination controls"
+    # POPULATION: a green run and a green run that skipped half the controls are the
+    # same exit code, so pin the count. An early return anywhere in main() leaves
+    # len(ran) short and reddens here — checked AFTER main() so a mid-function return
+    # cannot skip the check itself.
+    assert len(ran) == EXPECTED_CONTROLS, (
+        f"main() returned 0 but only {len(ran)}/{EXPECTED_CONTROLS} controls ran — an early "
+        f"return skipped some, and a suite that skips controls must not report success")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    rc = main()
+    if len(ran) != EXPECTED_CONTROLS:
+        print(f"FAIL - only {len(ran)}/{EXPECTED_CONTROLS} controls ran (an early return "
+              f"skipped some); a suite that skips controls must not exit 0")
+        rc = 1
+    sys.exit(rc)
