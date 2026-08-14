@@ -190,8 +190,9 @@ instrument was capable of seeing the property. It simply was not pointed at it. 
 instances in one day, on four different axes.
 
 - **Representation.** A `diff` reported `1,186c1,186` — the entire file — and was read as content
-  drift. It was the **line-ending signature**; re-measured normalized, all three artifacts were
-  fresh. Reporting the first result would have triggered work on a defect that does not exist.
+  drift. It was the **line-ending signature** — CRLF on disk against an LF generation; re-measured
+  with line endings normalized, all three artifacts were fresh. Reporting the first result would
+  have triggered work on a defect that does not exist.
 - **Level.** A freshness gate compared `json.loads(committed)` against `json.loads(fresh)` —
   **parsed content** — while the property consumers depend on is **the bytes they hash**. Both are
   "is the artifact fresh"; only one is the claim.
