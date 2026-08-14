@@ -6,4 +6,9 @@
 #
 # Scoped to this one file deliberately: a corpus-wide *.json renormalization is filed
 # separately so its one-time diff does not collide with an open freshness-gate PR.
-conformance/corpus/structure_key_vectors.json text eol=lf
+# Every generated corpus artifact, not just the byte-match reference (#162). The
+# freshness gates compare BYTES, and a consumer byte-hashing any of these on a
+# CRLF checkout must see what the generator wrote. The one-file scope above was
+# deliberate at the time and is now lifted: the renormalization lands in its own
+# commit so the one-time diff is reviewable on its own.
+conformance/corpus/*.json text eol=lf
