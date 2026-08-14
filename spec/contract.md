@@ -438,8 +438,9 @@ mean them.
 - **KISS-Ops** (by version) — DAG edge labeled **STRUCTURAL**, **upstream** dependency:
   the Semantics op DAG's nodes are KISS-Ops op names carrying the KISS-Ops **OpAttrs**
   channel (axis / OOB policy / permutation / reduce-axis); per-node NaN / signed-zero /
-  edge-case behavior and the per-transcendental declared-ULP ceiling are resolved **from**
-  the KISS-Ops op semantics, never restated; each non-primitive node's reference
+  edge-case behavior is resolved **from** the KISS-Ops op semantics, never restated (the
+  per-target accuracy tier is NOT among these — the contract declares it, §6.8-0002); each
+  non-primitive node's reference
   decomposition (the resolution oracle) and the **primitive floor** (the termination
   guarantee) are owned by KISS-Ops; the Guarantees **determinism class** (the single
   canonical enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`,
@@ -1263,11 +1264,13 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   path; KISS-Grammar citation is present only when a contract names an advertisable op and MUST
   NOT be required otherwise (§6.2-0006). An implementation MUST NOT introduce a private op
   vocabulary in any section. *Test:* `test_contract_grammar_ops_seam_two_sections`.
-- **KISS-CONTRACT-6.10-0002** — Per-node NaN / signed-zero / edge-case behavior and the
-  per-transcendental declared-ULP ceiling MUST be resolved **from** the KISS-Ops op semantics
-  and MUST NOT be restated in the contract; where a contract records such a value, it MUST
-  equal the value the node's KISS-Ops op pins (§6.4-0004, §6.8-0002). *Test:*
-  `test_contract_edge_case_and_ulp_from_ops`.
+- **KISS-CONTRACT-6.10-0002** — Per-node **NaN / signed-zero / edge-case behavior** MUST be
+  resolved **from** the KISS-Ops op semantics and MUST NOT be restated in the contract; where a
+  contract records such a value, it MUST equal the value the node's KISS-Ops op **pins**
+  (§6.4-0004). This rule covers exactly the facts KISS-Ops pins. It does **not** cover the
+  per-target **accuracy tier**: that is declared by the contract itself (§6.8-0002) and is the
+  sole accuracy gate (KISS-OPS §6.8-0001), so there is no KISS-Ops-pinned value for it to be
+  resolved from or compared against. *Test:* `test_contract_edge_case_not_restated`.
 - **KISS-CONTRACT-6.10-0003** — Because KISS-Grammar re-bases every advertisable op onto a
   KISS-Ops op name, a consumer MUST be able to reconcile the advertisable surface and the op
   meaning **without a second op vocabulary**: KISS-Grammar supplies the advertisable surface
@@ -1638,7 +1641,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.9-0008 | `test_contract_negotiation_metadata_opaque` |
 | KISS-CONTRACT-6.9-0009 | `test_contract_bundle_envelope_shared_provenance` |
 | KISS-CONTRACT-6.10-0001 | `test_contract_grammar_ops_seam_two_sections` |
-| KISS-CONTRACT-6.10-0002 | `test_contract_edge_case_and_ulp_from_ops` |
+| KISS-CONTRACT-6.10-0002 | `test_contract_edge_case_not_restated` |
 | KISS-CONTRACT-6.10-0003 | `test_contract_single_op_vocabulary` |
 | KISS-CONTRACT-6.10-0004 | `test_contract_opattrs_cited_from_ops` |
 | KISS-CONTRACT-6.11-0001 | `test_contract_text_field_encoding` |

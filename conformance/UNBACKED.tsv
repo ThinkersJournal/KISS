@@ -230,7 +230,7 @@ KISS-CONTRACT-6.0-0001	test_contract_determinism_class_exact_byte	untested
 KISS-CONTRACT-6.1-0005	test_contract_opaque_length_delimited_over_announce	untested	
 KISS-CONTRACT-6.1-0006	test_contract_strict_schema	untested	
 KISS-CONTRACT-6.10-0001	test_contract_grammar_ops_seam_two_sections	untested	
-KISS-CONTRACT-6.10-0002	test_contract_edge_case_and_ulp_from_ops	untested	
+KISS-CONTRACT-6.10-0002	test_contract_edge_case_not_restated	untested	
 KISS-CONTRACT-6.10-0003	test_contract_single_op_vocabulary	untested	
 KISS-CONTRACT-6.10-0004	test_contract_opattrs_cited_from_ops	untested	
 KISS-CONTRACT-6.11-0006	test_contract_text_positional_signature	untested	
