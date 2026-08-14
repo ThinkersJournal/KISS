@@ -31,6 +31,74 @@ pub const VECTORS_SCHEMA: &str = "kiss-structure-key-vectors-v1";
 /// claim about an unspecified state.
 pub const SOURCE_COMMIT: &str = "19c3ad7";
 
+/// The **vocabulary version** each embedded `<namespace>:` token was generated
+/// against (§6.8-0004: a namespace's capability-set vocabulary is owned by that
+/// namespace's maintainer, not by KISS).
+///
+/// Why this exists (#200). The artifact pinned `SOURCE_COMMIT` for the KISS spec
+/// and recorded NOTHING about the maintainer-owned vocabularies its tokens are
+/// spelled in. So a vocabulary could bump and the artifact go silently wrong with
+/// no event marking the transition — and it did: `vulkan.md` reached version 4
+/// (five fields, rule V-1) while this artifact still published a four-field token,
+/// and the four-leg byte-match AGREED on it, because every consumer derived from
+/// the same stale artifact rather than from the maintainer's document.
+///
+/// A match against a value you did not author is only as fresh as the thing you
+/// did not author. This table is what makes that freshness checkable instead of
+/// assumed; `reference_vectors_state_a_vocabulary_version_for_every_namespace`
+/// ties each entry to the `**Vocabulary version:** N` header of the owning
+/// document, so a bump fails CI at the moment it lands.
+///
+/// Each entry is `(namespace, vocabulary version, capability-set field arity)`.
+///
+/// The arity is the count of `.`-separated fields the owning document's grammar
+/// requires — `cuda` C-1: one field (`sm<N>[<letter>]`); `vulkan` V-1 at v4:
+/// exactly five, none omissible. It is pinned here so the GENERATOR can reject a
+/// malformed token, and tied to the owning document by
+/// `reference_vectors_match_the_namespace_documents`.
+pub const NAMESPACE_VOCAB_VERSIONS: &[(&str, u32, usize)] = &[("cuda", 1, 1), ("vulkan", 4, 5)];
+
+/// Validate an embedded `<namespace>:<capability-set>` target against the owning
+/// document's grammar, at GENERATION time. Panics on any violation.
+///
+/// A version stamp catches a vocabulary BUMP; it does not catch a token that was
+/// malformed the day it was written (#200). Both produce an artifact whose tokens no
+/// consumer can derive independently — and the byte-match cannot tell them apart,
+/// because every consumer copies the token from here. Arity is the part of the grammar
+/// KISS can enforce without re-implementing a maintainer-owned vocabulary; the field
+/// VOCABULARIES stay the maintainer's.
+pub fn validate_target_token(target: &str) {
+    let (ns, cap) = match target.split_once(':') {
+        Some(p) => p,
+        None => panic!("structure_key_vectors: target `{target}` has no `<namespace>:` prefix"),
+    };
+    let want = match NAMESPACE_VOCAB_VERSIONS.iter().find(|(n, _, _)| *n == ns) {
+        Some((_, _, a)) => *a,
+        None => panic!("structure_key_vectors: target `{target}` names namespace `{ns}:` with no recorded vocabulary; add it to NAMESPACE_VOCAB_VERSIONS (#200)"),
+    };
+    let got = cap.split('.').count();
+    assert_eq!(
+        got, want,
+        "structure_key_vectors: target `{target}` has {got} capability-set field(s); spec/namespaces/{ns}.md requires exactly {want}. The artifact MUST NOT publish a token malformed under the vocabulary that owns it (#200)."
+    );
+}
+
+/// The vocabulary version for `ns`, or a hard failure.
+///
+/// Deliberately a panic rather than an `Option`: this runs in the artifact
+/// GENERATOR, and the obligation is that the artifact cannot be produced carrying a
+/// namespace whose vocabulary version it is unable to state. A `None` that silently
+/// emitted nothing would reproduce the exact defect — an artifact making a claim it
+/// has no provenance for.
+pub fn namespace_vocab_version(ns: &str) -> u32 {
+    match NAMESPACE_VOCAB_VERSIONS.iter().find(|(n, _, _)| *n == ns) {
+        Some((_, v, _)) => *v,
+        None => panic!(
+            "structure_key_vectors: a vector names namespace `{ns}:` but no vocabulary version is recorded for it. Add it to NAMESPACE_VOCAB_VERSIONS with the version from spec/namespaces/{ns}.md. The artifact MUST NOT publish a token whose vocabulary provenance it cannot state (#200)."
+        ),
+    }
+}
+
 // ---- construction helpers (same shapes the golden test constructs) -----------
 
 fn op(contig: Contig, mask: u8, vec: VecWidth, div: DivBucket, flipped: bool) -> OperandSubKey {
@@ -199,8 +267,8 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             name: "dense_contraction_vulkan_target",
             clause: "KISS-CLASSIFY-6.8",
             note: "same gem cell on a vulkan capability-set target",
-            key: key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::Stable))),
-            token: "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+            key: key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::Stable))),
+            token: "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "gem_batched_cell",
@@ -536,6 +604,33 @@ pub fn emit_reference_vectors_json() -> String {
     s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
     s.push_str(&format!("  \"source_commit\": {},\n", json_str(SOURCE_COMMIT)));
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.7\",\n");
+    // Per-namespace vocabulary provenance (#200). Emitted for exactly the
+    // namespaces the vectors actually embed, DERIVED from the vectors rather than
+    // listed by hand — a hand-listed set can omit a namespace some vector uses,
+    // which is the omission this block exists to make impossible.
+    {
+        let pv = positive_vectors();
+        // GENERATION-TIME VALIDATION (#200 req 3): every embedded target must be
+        // well-formed under its owning document's grammar, not merely stamped with a
+        // version. A stamp catches a bump; it does not catch a token malformed when
+        // written — and no consumer can catch that either, because they copy it.
+        for v in &pv {
+            validate_target_token(&v.key.target);
+        }
+        let mut seen: Vec<&str> = pv
+            .iter()
+            .map(|v| target_namespace(&v.key.target))
+            .collect();
+        seen.sort_unstable();
+        seen.dedup();
+        s.push_str("  \"namespace_vocabulary_note\": \"Each <namespace>: token is spelled in a vocabulary owned by that namespace's maintainer (KISS-CLASSIFY-6.8-0004), versioned independently of this artifact. These are the versions the tokens below were GENERATED AGAINST; a consumer asserting a vocabulary version (KISS-CLASSIFY-6.8-0009) asserts against these. The generator FAILS rather than emit a token whose vocabulary version it cannot state.\",\n");
+        s.push_str("  \"namespace_vocabulary_versions\": {\n");
+        for (i, ns) in seen.iter().enumerate() {
+            let comma = if i + 1 < seen.len() { "," } else { "" };
+            s.push_str(&format!("    {}: {}{}\n", json_str(ns), namespace_vocab_version(ns), comma));
+        }
+        s.push_str("  },\n");
+    }
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
     s.push_str("  \"token_prefix\": \"sk4\",\n");
     s.push_str("  \"dtype_axis_note\": \"recognition_set is all 24 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 22 a byte-match runs over. The two are different obligations (KISS-CLASSIFY-6.1-0001).\",\n");
