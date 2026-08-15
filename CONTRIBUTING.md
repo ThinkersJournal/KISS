@@ -181,6 +181,15 @@ confusing red in an unrelated test. **The difference between the two is when you
 whether you learn it at all** — a red that looks like the one you predicted invites no further
 questions.
 
+**Undo a seeded mutation by reversing that edit, never by discarding the file.** `git checkout --
+<file>` restores the *committed* state, so when the file also holds the uncommitted work being
+proven, the mutation and the fix go together — and the suite then fails for the honest reason that
+the fix is gone. *Why:* exactly that, on the flip for a newly added guard: the tool reverted, the
+test kept its new control, and the re-run went red. It was caught only because the failure
+**contradicted a green verified minutes earlier** — the same contradiction-with-a-verified-result
+signal that catches a stale read, and the only one that fires here. Reverse the specific edit, or
+stash and pop.
+
 **10. Close the class, not the instance.**
 A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
 the instance in front of you leaves the next one to
