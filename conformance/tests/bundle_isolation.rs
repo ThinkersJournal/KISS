@@ -63,6 +63,7 @@ fn test_contract_bundle_member_isolation() {
 
 /// §6.11-0011 — a headingless (magic-less body) member is likewise isolated: its siblings still
 /// parse and it declines rather than importing as an empty/no-op contract (§6.1-0002).
+// Backs: KISS-CONTRACT-6.1-0002, KISS-CONTRACT-6.11-0011
 #[test]
 fn test_contract_bundle_headingless_member_isolated() {
     let a = member("op_identity = add\n");
@@ -91,6 +92,7 @@ fn test_contract_bundle_headingless_member_isolated() {
 /// §6.11-0011 — a member whose FRAME is unrecoverable ends reading with a terminal typed
 /// decline (never a panic), yet every well-formed member already read is preserved: a frame
 /// break cannot un-read an earlier sibling.
+// Backs: KISS-CONTRACT-6.11-0011
 #[test]
 fn test_contract_bundle_frame_break_preserves_prefix() {
     let a = member("op_identity = add\n");
@@ -110,6 +112,7 @@ fn test_contract_bundle_frame_break_preserves_prefix() {
 }
 
 /// §6.1-0004 — an empty bundle is not a panic: it reads as zero members, no frame error.
+// Backs: KISS-CONTRACT-6.1-0004
 #[test]
 fn test_contract_bundle_empty_is_not_a_panic() {
     let (outcomes, frame_err) = read_bundle(&[]);

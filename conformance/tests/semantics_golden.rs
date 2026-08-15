@@ -154,6 +154,7 @@ fn minmax_signed_zero_ties_keep_operand_a_f64() {
 /// oracle, round the result back to bf16. The tie result is ±0 — exactly
 /// representable — so the ONLY thing the round-trip could lose is the sign
 /// bit; these rows prove it survives.
+// Backs: KISS-OPS-6.16-0003
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_bf16_roundtrip() {
     const PZ: u16 = 0x0000; // bf16 +0.0

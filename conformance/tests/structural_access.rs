@@ -17,6 +17,7 @@ fn bits_eq(a: f32, b: f32) -> bool {
 
 // ---- reduce: monoid identities + empty-reduction (KISS-OPS §6.11-0002) -------
 
+// Backs: KISS-OPS-6.11-0002
 #[test]
 fn reduce_empty_axis_yields_monoid_identity() {
     // §6.11-0002: "a reduction over an empty axis MUST yield the monoid identity."
@@ -36,6 +37,7 @@ fn reduce_ordinary_values() {
     assert_eq!(reduce_f32(&xs, Monoid::Min), 1.0);
 }
 
+// Backs: KISS-OPS-6.11-0002
 #[test]
 fn reduce_maxmin_are_nan_propagating() {
     // §6.11-0002: max/min monoids MUST be NaN-propagating (not IEEE maxNum).
@@ -44,6 +46,7 @@ fn reduce_maxmin_are_nan_propagating() {
     assert!(reduce_f32(&xs, Monoid::Min).is_nan());
 }
 
+// Backs: KISS-OPS-6.2-0004
 #[test]
 fn reduce_maxmin_preserve_signed_zero() {
     // §6.2-0004 via the max_prop/min_prop decomposition: -0.0 not normalized.
@@ -53,6 +56,7 @@ fn reduce_maxmin_preserve_signed_zero() {
     assert!(bits_eq(reduce_f32(&[-0.0], Monoid::Sum), 0.0));
 }
 
+// Backs: KISS-OPS-6.0-0002, KISS-OPS-6.0-0004
 #[test]
 fn reduce_class_is_selected_per_spec() {
     // §6.0-0002: max/min reduce is exact-byte; §6.0-0004: fp sum/prod is
@@ -110,6 +114,7 @@ fn scan_exclusive_max_first_is_identity() {
 
 // ---- gather: OOB policy {skip, clamp, zero-fill} (§6.11-0004) -----------------
 
+// Backs: KISS-OPS-6.11-0004
 #[test]
 fn gather_in_bounds_reads_datum() {
     let d = [10.0, 20.0, 30.0];
@@ -139,6 +144,7 @@ fn gather_negative_index_never_wraps() {
     assert_eq!(gather_f32(&d, &[-100], OobRead::Clamp), vec![Some(10.0)]);
 }
 
+// Backs: KISS-OPS-6.0-0002
 #[test]
 fn gather_preserves_read_datum_bits() {
     // gather is exact-byte (§6.0-0002): a -0.0 or NaN datum is read verbatim.
@@ -192,6 +198,7 @@ fn scatter_deterministic_combines_are_exact_byte() {
 
 // ---- the ONE nondeterministic op: fp scatter atomic-add (§6.11-0006) ---------
 
+// Backs: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
 #[test]
 fn scatter_fp_atomic_add_is_order_invariant_class() {
     // §6.11-0006 / §6.0-0004: the fp atomic-add combine is the one nondeterministic
@@ -199,6 +206,7 @@ fn scatter_fp_atomic_add_is_order_invariant_class() {
     assert_eq!(Combine::AtomicAdd.class_f32(), DeterminismClass::OrderInvariant);
 }
 
+// Backs: KISS-CONFORM-6.8-0004
 #[test]
 fn atomic_add_two_orderings_diverge_but_agree_order_invariantly() {
     // THE crux (Conform §6.8-0004): two visit orders of the same atomic-add multiset
@@ -232,6 +240,7 @@ fn order_invariant_still_catches_a_real_error() {
     assert!(!order_invariant_agree(f32::NAN, 1.0, 1e30, 1.0));
 }
 
+// Backs: KISS-CONFORM-6.8-0006
 #[test]
 fn class_aware_dispatch_selects_the_comparator() {
     // Conform §6.8-0006: the comparator is SELECTED by the declared class, never
@@ -284,6 +293,7 @@ fn seeded_finite_f32(rng: &mut SplitMix64) -> f32 {
     ((rng.next_u64() >> 40) as f32 - 8_388_608.0) / 65_536.0
 }
 
+// Backs: KISS-CONFORM-6.8-0004, KISS-OPS-6.11-0004, KISS-OPS-6.11-0006
 #[test]
 fn differential_scatter_atomic_add_reproducible() {
     // Reproducible src + index arrays (Conform §6.5: same seed -> same inputs, so a
