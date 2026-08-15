@@ -10,7 +10,6 @@ Every test here is a DISCRIMINATION control: it fails on the pre-fix behaviour
 and passes on the fixed one. A scope test that passes under both scopes is
 measuring the file, not the rule.
 """
-import os
 import pathlib
 import sys
 import tempfile

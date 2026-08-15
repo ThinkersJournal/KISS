@@ -150,9 +150,9 @@ def sweep(spec_dir, conf_dir):
                 brace = src.find("{", m.end() - 1)
                 end = kt._body_span(src, brace) if brace != -1 else m.end()
                 body = src[m.start():end] if brace != -1 else m.group(0)
-                scopes[m.group(1)] = body + "\n" + kt._leading_comment(src, m.start())
-                gap = (kt._leading_comment(src, m.start()) if prev_end == 0
-                       else src[prev_end:m.start()])
+                lead = kt._leading_comment(src, m.start())
+                scopes[m.group(1)] = body + "\n" + lead
+                gap = lead if prev_end == 0 else src[prev_end:m.start()]
                 decl_scopes[m.group(1)] = gap + "\n" + body
                 prev_end = end
 
