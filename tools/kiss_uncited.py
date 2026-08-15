@@ -70,6 +70,50 @@ import kiss_trace as kt  # noqa: E402
 # `§6.11-0002` / `§6.5-0004b` — the short form the citation grammar ignores.
 RE_SHORT = re.compile(r"§\s*([0-9]+(?:\.[0-9]+)?)-([0-9]{4}[a-z]?)")
 
+# THE AUTHOR SOMETIMES ANSWERS THE QUESTION THIS TOOL ASKS. The short form's whole
+# problem is that it omits the sub-standard, so `§6.8-0004` has to be resolved by a
+# reader — but authors frequently write the sub-standard immediately before it:
+#
+#     // magnitude (Conform §6.8-0004: the declared, derived tolerance — not a byte
+#
+# `RE_SHORT` starts at the `§` and discards the word in front of it, so the
+# STRONGEST available evidence — the author's own disambiguation — was thrown away
+# and inference guessed in its place. Measured: 7 declared rows carry a qualifier,
+# and 5 resolve to a DIFFERENT sub-standard than the file's home doc implies.
+#
+# This is not a tie-breaker, it is a different KIND of evidence. `§6.8-0004` in an
+# ops-homed file infers to `KISS-OPS-6.8-0004` — `erf`/`lgamma` special-function
+# atoms — in three tests about floating-point atomic ordering. The author wrote
+# `Conform`, and `KISS-CONFORM-6.8-0004` is the comparator clause those tests
+# exercise. Inference produced a clause on the wrong SUBJECT, and nothing in the
+# row would have shown it.
+SUB_WORDS = ("classify", "ops", "conform", "contract", "grammar",
+             "emit", "consume", "announce", "synth", "dispatch")
+RE_QUALIFIED = re.compile(
+    r"\b(" + "|".join(SUB_WORDS) + r")\b[\s\-]*§\s*([0-9]+(?:\.[0-9]+)?)-([0-9]{4}[a-z]?)",
+    re.I,
+)
+
+# Wording that may mean the test does NOT enforce the clause it names. This FLAGS
+# for a reader; it does not rebucket. The measurement is the reason: matching
+# `kiss_cites`' RE_CONTRASTIVE against the ref's own line hits 14 declared rows and
+# only TWO are real disclaimers —
+#
+#     "(caught by the differential + SYNTH §6.5-0004b, not this lint)"
+#     "Out-of-contract degenerate (§6.11-0004 does not pin)"
+#
+# The other twelve are the negation attaching to the CLAUSE'S CONTENT rather than
+# to the test's relationship with it: `max/min monoids MUST be NaN-propagating (not
+# IEEE maxNum)` is the obligation being asserted, not a disclaimer of it. Same
+# words, opposite meaning, and the difference is what the `not` attaches to — which
+# a regex cannot see. Rebucketing on it would silently drop twelve legitimate
+# candidates while looking like a precision improvement, so the narrow phrases
+# below flag only the shapes that speak about THIS test's scope.
+RE_WORDING = re.compile(
+    r"(not this\b|does not pin\b|not enforced here\b|not (?:this )?lint\b)",
+    re.I,
+)
+
 # Files whose tests exercise the harness's own machinery rather than a spec
 # obligation. Kept as an explicit list rather than a path heuristic, because a
 # path heuristic is what got this wrong the first time.
@@ -161,14 +205,25 @@ def sweep(spec_dir, conf_dir):
         info = harness[t]
         if info["clauses"] or t in named:
             continue  # cited, or backed forward by name — not this sweep's subject
-        refs = sorted({f"§{a}-{b}" for a, b in RE_SHORT.findall(decl_scopes.get(t, ""))})
+        scope = decl_scopes.get(t, "")
+        refs = sorted({f"§{a}-{b}" for a, b in RE_SHORT.findall(scope)})
+        # The author's own disambiguation, where they gave one. Keyed by short ref
+        # so a row can carry both qualified and bare refs; the caller resolving a
+        # bare one still needs the home doc, but must never override a qualified.
+        qualified = {f"§{a}-{b}": s.lower()
+                     for s, a, b in RE_QUALIFIED.findall(scope)}
+        # Lines where this test says something about its OWN relationship to a
+        # clause it names. A flag for a reader, never a rebucket.
+        wording = sorted({ln.strip()[:100] for ln in scope.splitlines()
+                          if RE_SHORT.search(ln) and RE_WORDING.search(ln)})
         if refs:
             bucket = "declared"
         elif info["file"] in PLUMBING_FILES:
             bucket = "plumbing"
         else:
             bucket = "unclear"
-        rows.append({"test": t, "file": info["file"], "bucket": bucket, "refs": refs})
+        rows.append({"test": t, "file": info["file"], "bucket": bucket, "refs": refs,
+                     "qualified": qualified, "wording": wording})
     return rows
 
 
@@ -193,10 +248,17 @@ def main():
     print(f"  {counts['plumbing']:4d} PLUMBING  harness machinery, no clause obligation")
     print(f"  {counts['unclear']:4d} UNCLEAR   needs a human")
     print("-" * 68)
+    nqual = sum(1 for r in rows if r.get("qualified"))
+    nword = sum(1 for r in rows if r.get("wording"))
+    print(f"  {nqual:4d} rows carry the author's OWN sub-standard word (`Conform §6.8-0004`)")
+    print(f"  {nword:4d} rows say something about their own scope near a ref  <- read before citing")
+    print("-" * 68)
     print("  A candidate is NOT a citation. The short form omits the SUB-STANDARD,")
     print("  so resolving `§6.11-0002` to a full ID is a per-row judgement — and per")
     print("  #191, a test backs a clause only where it asserts that clause's own")
     print("  obligation, not where it merely mentions or reads it.")
+    print("  A ref shown as `conform §6.8-0004` was QUALIFIED BY THE AUTHOR. That is")
+    print("  evidence, not inference — do not override it with the file's home doc.")
     for b in ("declared", "plumbing", "unclear"):
         if a.bucket and a.bucket != b:
             continue
@@ -208,7 +270,11 @@ def main():
             if r["bucket"] != b:
                 continue
             short = r["file"].replace("conformance/", "").replace("tests/", "t/").replace("src/", "s/")
-            print(f"    {short:34s} {r['test'][:44]:46s} {' '.join(r['refs'])}")
+            shown = " ".join(f"{r['qualified'][x]} {x}" if x in r.get("qualified", {}) else x
+                             for x in r["refs"])
+            print(f"    {short:34s} {r['test'][:44]:46s} {shown}")
+            for w in r.get("wording", []):
+                print(f"    {'':34s} {'':46s} ^ scope note: {w}")
     return 0
 
 
