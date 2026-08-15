@@ -237,6 +237,64 @@ catches it is measuring twice by different means.** Three of the four above were
 the fourth was caught by another party measuring their own project after being told what it
 contained.
 
+**12. A "blocked on X" record is a claim with no expiry, and it ages into a confident lie.**
+Conventions 1–11 are about instruments that measure the wrong thing. This one is about a claim
+**no instrument is pointed at at all**: a line in a register, a tracker entry, a comment saying
+*we are waiting on someone else*. It is written once, believed indefinitely, and **nothing in your
+own repository changes at the moment it stops being true** — so no control you own can fire. It
+then propagates, because a recorded blocker reads as a fact about the world rather than as a
+prediction nobody has rechecked.
+
+*Why:* four instances in one day, across four projects, in four distinct shapes. Two were found
+only because an outsider happened to ask.
+
+- **The trigger names an issue instead of the ruling.** A register said a decision *"cannot be
+  Accepted without cosign"* — for a ruling that had merged the previous day, whose clauses that
+  same project's code **already consumed**. Machine-sweepable: the trigger cites an artifact you
+  can look up.
+- **The trigger names a predicted coupling that never materialized.** *"Whether we import a table,
+  a grammar, or both changes what the replacement has to hold."* It didn't — the replacement
+  declined to hold vocabulary at all, so the coupling dissolved. **Not sweepable:** there is no
+  artifact to look up, because the design it predicted was never made. Hence — **a dependency
+  between two pieces of work is a claim about a design that hasn't been made yet, and it expires
+  when the design does.**
+- **The tracker asserts the opposite of the repository.** An **open**, `rfc`-labeled issue titled
+  *"three unpinned decisions — the last is a freeze-blocker"*, filed **fifteen days after** all
+  three were ruled and merged. Worse than a stale document: **a tracker is the instrument you
+  consult specifically to avoid trusting your memory**, so it launders a stale belief into a cited
+  fact. The merged clause set is the authority; the tracker is a claim about it.
+- **The watch list is itself a cached claim.** A subscription naming the files you depend on drifts
+  the moment you stop depending on one — and it fails toward **silence**, the direction nobody
+  investigates.
+
+**Carry both halves explicitly marked by which is detectable**, or someone will sweep for the
+undetectable one and conclude they are clean.
+
+**The discriminator: a "blocked on X" record must name the artifact that will exist when the block
+lifts — a clause ID, a published version, a file — never the issue where the question was asked.**
+An issue closes for many reasons; a clause either exists or it does not.
+
+**Then make it a guard that can fail: assert the absence.** If your register says *blocked on
+clause X*, have your own CI assert that clause X is **absent** from the specification you pin.
+When the ruling lands and you bump that pin, the assertion goes red and tells you your blocker
+resolved. Two properties earn it a place here: it is owned by the party that **holds the belief**,
+so it cannot drift away from what it protects; and it **can fail**, which is what separates a guard
+from a decoration.
+
+Two honest limits, both learned by getting them wrong:
+
+- An absence assertion against a **vendored pin** tests the pin, not upstream. It fires at bump
+  time, not at merge time. For this failure mode that is the correct moment — you learn when you
+  would act on it — but left unstated it becomes another guard that looks like it works.
+- An absence assertion written against **guessed** names passes forever, asserting the absence of
+  something that was never going to exist under that spelling. **Name the thing precisely, or the
+  assertion is decorative.**
+
+*What this cost:* in every instance the waiting party had already shipped releases carrying the
+answer while advertising that it lacked it. In one, the ruling was three weeks old and **the only
+thing between the project and it was a message** — the reconciliation shipped within the hour of
+being told. **None of the four was caught by any check any project owned.**
+
 
 If you propose normative text, follow the house style so it stays testable:
 
