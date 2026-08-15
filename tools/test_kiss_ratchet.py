@@ -109,7 +109,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 16
+EXPECTED_CONTROLS = 18
 
 
 def check(name, cond, detail=""):
@@ -179,10 +179,11 @@ def main():
     # These call the classifier directly so a real lint↔harness movement can be staged —
     # fixture clauses can never be lint-covered (lint coverage is discovered from the real
     # tools/), which is the STATED LIMIT the count-only test above could not get past.
-    def cr(floor, live, live_lint, live_harness, prev_lint):
+    def cr(floor, live, live_lint, live_harness, prev_lint, disk_lint=None):
         return kiss_trace.classify_ratchet(
             floor, live, set(live_lint), set(live_harness),
-            None if prev_lint is None else set(prev_lint))
+            None if prev_lint is None else set(prev_lint),
+            None if disk_lint is None else set(disk_lint))
 
     # clean lint→harness substitution: X leaves lint, arrives in harness. h+1 / l−1 / u flat.
     v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
@@ -214,6 +215,29 @@ def main():
     v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 2, "lint": 0, "untested": 0},
               [], ["A", "B"], None)
     check("git-free regression still fires", v == "regression", f"got {v}")
+
+    # COMPLETED SUBSTITUTION (#223): the floor is already bumped to POST (h+N / l−N), so counts
+    # are AT the floor while the base ledger still shows the moved clause as lint. The old
+    # harness_lost MISFIRES here — Δharness = 0 against the bumped floor, left_to_harness = 1 —
+    # and printed "1 disappeared (harness 3 -> 3)", a message that contradicts its parentheses.
+    # META: every fixture above models the floor at PRE (the in-progress state). No fixture was
+    # ever in the POST state a real substitution PR is in, which is why a broken harness_lost
+    # stayed green through all of them. A fixture set that models only the pre-fix state never
+    # tests the post — the same population gap as a flip that cannot reach the arm it protects.
+    v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
+              [], ["X", "A", "B"], ["X"], [])
+    check("completed substitution (floor bumped, ledger updated) is GREEN",
+          v == "substitution_recorded",
+          f"a recorded lint→harness substitution was misread once the floor was bumped: got {v}")
+
+    # STALE LEDGER gate: identical, but the on-disk ledger STILL lists X as lint. Green there
+    # would fire on every later unrelated PR (the base ledger lists X forever), reporting a
+    # substitution commits after it happened. The ledger update must gate the green.
+    v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
+              [], ["X", "A", "B"], ["X"], ["X"])
+    check("completed substitution with a STALE ledger is a regression",
+          v == "regression",
+          f"a green here repeats on every later PR — the ledger update must gate it: got {v}")
 
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:
