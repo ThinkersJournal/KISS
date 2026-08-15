@@ -372,11 +372,16 @@ def base_ledger_lint(ledger_path, base_ref):
     return _ledger_lint_ids(out.stdout)
 
 
-def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
+def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=None):
     """Classify a `--ratchet` comparison. Returns (verdict, lines); verdict is one of
-    incomplete | regression | substitution | lint_drift | stale | at_floor. Only
-    `at_floor` is green; every other verdict is a deliberate floor move, so all set
-    `any_fail` in the caller.
+    incomplete | regression | substitution | substitution_recorded | ledger_unverifiable |
+    uncharacterized | lint_drift | stale | at_floor | at_floor_unchecked. `at_floor`,
+    `at_floor_unchecked`, and `substitution_recorded` are green; the rest set `any_fail` in
+    the caller.
+
+    `substitution` is the IN-PROGRESS state (floor still at PRE, "bump the floor to N");
+    `substitution_recorded` is the same move once the floor is bumped to POST and the ledger
+    dropped the moved IDs — green, because the deliberate floor move is complete (#223).
 
     When `prev_lint` (the base ledger's lint set) is given, the lint dimension is compared
     as a SET — the identity check that tells a lint->harness SUBSTITUTION (a strengthening
@@ -432,6 +437,48 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint):
     arrived_lint = live_lint - prev_lint                           # lint now, were not
     left_to_harness = {c for c in left_lint if c in live_harness}  # lint -> harness (upgrade)
     left_lost = left_lint - left_to_harness                        # documentary coverage gone
+
+    # COMPLETED SUBSTITUTION (#223): the counts are already AT the floor — the PR bumped
+    # harness +N / lint -N to record the move — AND the base-ledger SET shows a clean
+    # lint->harness upgrade (clauses left lint, all now harness, nothing arrived, nothing lost).
+    # `harness_lost` below MISFIRES here: Δharness is 0 against the bumped floor while
+    # left_to_harness is N, so `N - 0 = N` reads as a loss and prints "N disappeared (harness
+    # X -> X)", a message that contradicts its own parentheses. The count baseline (the floor,
+    # bumped to POST) and the set baseline (the base ledger, still PRE) diverge in a
+    # substitution PR; recognize the completed move before the count-conservation trick runs.
+    counts_at_floor = (harness_delta == 0 and live["lint"] == floor["lint"]
+                       and untested_delta == 0)
+    if counts_at_floor and left_to_harness and not arrived_lint and not left_lost:
+        # Green only if the ON-DISK ledger also dropped the moved IDs from its lint set. Else the
+        # base ledger lists them as lint forever, left_to_harness stays non-empty, and this branch
+        # fires green on every later UNRELATED PR — a substitution reported commits after it
+        # happened. #215 said "remove the moved ID(s) from the ledger", but an instruction is not
+        # a gate; the ledger update IS the gate.
+        if disk_lint is None:
+            # The ledger could not be read, so the gate could not run. `None or set()` would make
+            # "I could not read the ledger" indistinguishable from "the ledger is clean" — and it
+            # resolves GREEN, the exact degradation this gate exists to prevent, arriving through
+            # the environment instead of through staleness (cf. an indeterminable base ref, #213).
+            # Refuse to characterize rather than degrade to a silent pass.
+            return ("ledger_unverifiable", [
+                f"the floor records a lint->harness substitution of {len(left_to_harness)} "
+                f"clause(s), but the on-disk ledger (UNBACKED.tsv) could not be read to confirm "
+                "they were dropped from its lint set. An unreadable ledger is NOT a clean one; "
+                "refusing the green rather than passing an unchecked gate."])
+        stale = sorted(left_to_harness & disk_lint)
+        if stale:
+            return ("regression", [
+                f"the floor records a lint->harness substitution of {len(left_to_harness)} "
+                f"clause(s), but UNBACKED.tsv still lists {len(stale)} of them as lint: "
+                f"{', '.join(stale)}. Remove them from the ledger — otherwise this reads as a "
+                "fresh substitution on every later PR."])
+        return ("substitution_recorded", [
+            f"at the floor - harness {live['harness']}, lint {live['lint']}, untested "
+            f"{live['untested']}.",
+            f"A lint->harness substitution of {len(left_to_harness)} clause(s) is RECORDED: "
+            f"{', '.join(sorted(left_to_harness))} left the base ledger's lint set, are now "
+            "harness-backed, and both the floor and the ledger reflect the move. Green."])
+
     # Behavioral backings that vanished — directly, OR masked by a compensating lint->harness
     # arrival that held the harness count flat. Count conservation recovers the masked case
     # (`|left_to_harness| - Δharness`), so the floor need NOT carry a previous HARNESS set —
@@ -1047,20 +1094,31 @@ def main():
             print("          before-sha or HEAD^ on main. A defaulted base would compare against")
             print("          a stale tree.")
         else:
+            # The CURRENT on-disk ledger's lint set — used to gate a completed substitution:
+            # a green there requires the moved IDs to have actually left the ledger, not just
+            # the base ref, or the substitution reports green on every later PR (#223).
+            disk_lint = None
+            if os.path.exists(ledger_path):
+                with open(ledger_path, encoding="utf-8") as fh:
+                    disk_lint = _ledger_lint_ids(fh.read())
             verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
-                                              set(backed.keys()), prev_lint)
+                                              set(backed.keys()), prev_lint, disk_lint)
             headers = {
                 "incomplete": "RATCHET: floor file is incomplete.",
                 "regression": "RATCHET REGRESSION: coverage moved backwards.",
                 "substitution": "RATCHET SUBSTITUTION: documentary -> behavioral backing "
                                 "(a strengthening the aggregate cannot show, #213).",
+                "ledger_unverifiable": "RATCHET: a completed substitution is recorded but the "
+                                       "on-disk ledger could not be read to verify it (#223).",
                 "lint_drift": "RATCHET: the lint SET changed under a flat count.",
                 "stale": "RATCHET: the floor is STALE - coverage improved past it.",
                 "uncharacterized": "RATCHET: the lint dimension moved but could not be "
                                    "characterized (git-less).",
             }
-            if verdict in ("at_floor", "at_floor_unchecked"):
-                print(f"  RATCHET: {lines[0]}")
+            if verdict in ("at_floor", "at_floor_unchecked", "substitution_recorded"):
+                print(f"  RATCHET: {lines[0]}"
+                      + ("".join(f"\n          {ln}" for ln in lines[1:])
+                         if verdict == "substitution_recorded" else ""))
             else:
                 any_fail = True
                 print(f"  {headers[verdict]}")
