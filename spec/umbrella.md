@@ -241,7 +241,7 @@ Each sub-standard is in exactly one maturity stage, recorded in §0 front-matter
 
 A sub-standard advances Draft → Frozen only when all three conditions are met and demonstrated:
 
-1. **At least two structurally dissimilar implementations interoperate on the golden vectors.** Two implementations that share lowering code do not count as dissimilar.
+1. **At least two structurally dissimilar implementations interoperate on the golden vectors — counted per field, not per implementation.** For each field of a golden vector, at least two parties must **independently derive** that field's value. A party that receives the value as an input and reproduces it byte-exactly demonstrates **faithful passthrough** — a real and testable property, and not evidence of independent derivation of that field. Two implementations that share lowering code do not count as dissimilar. **Nor do two whose value for a field traces to a single authored source rather than to separate derivations** — byte-agreement on a field is what interoperation *requires*, so agreement alone never establishes that two parties derived it; the question is provenance, not equality. That second case is the one a shared-lowering-code test cannot detect, because **a passed-through field has no lowering code to share.** A conformance report quoting a whole-vector count states, per field, whether each party **derived** or **copied** it.
 2. **A non-native foreign reader consumes the wire.** A reader written outside the reference language reproduces or parses the exact bytes, with endianness, pointer width, and structure padding checked (the adversarial-outsider checklist).
 3. **The sub-standard's KISS-Conform suite exists and passes**, with complete bidirectional clause-to-test traceability.
 
