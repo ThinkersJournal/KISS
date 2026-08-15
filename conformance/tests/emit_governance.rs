@@ -277,18 +277,30 @@ fn section_refs(text: &str, major: &str) -> BTreeSet<String> {
 /// language or grammar; no normative clause pins a target syntax. Teeth: a
 /// spec-grounded blocklist of the document's OWN informative examples of leaked/
 /// blessed target-language surface (`Slang`, `CUDA`, `cuda:`, `sqrtf`, `0.5f`,
-/// `C-family`, `baracuda-kernelgen`). Two-sided: (presence guard, non-vacuous) each
-/// token MUST occur in an informative region — the overview (§0–§5) or the Appendix
-/// — so an all-neutralized spec cannot make the check pass trivially; and (teeth)
-/// NONE may occur inside ANY defined §6–§9 normative clause body. The moment a
-/// normative clause is edited to spell a target language / intrinsic
+/// `C-family`, and the reference seed crate's name). Two-sided: (presence guard,
+/// non-vacuous) each token MUST occur in an informative region — the overview (§0–§5)
+/// or the Appendix — so an all-neutralized spec cannot make the check pass trivially;
+/// and (teeth) NONE may occur inside ANY defined §6–§9 normative clause body. The
+/// moment a normative clause is edited to spell a target language / intrinsic
 /// (e.g. "emit `sqrtf` on CUDA"), the absence side fails. Blocklist grounding: §5 and
 /// the closing note confine product/vendor names to non-normative text.
+///
+/// **The vendor entry tracks the CURRENT seed crate name and is expected to go red
+/// when that crate is renamed.** That is the presence guard working, not a defect: it
+/// couples the blocklist to the document, so a rename cannot silently leave the
+/// blocklist policing a name that no longer exists. Do NOT replace it with a synthetic
+/// sentinel — a sentinel would prove the mechanism is live while allowing the vendor
+/// entry itself to go stale unnoticed, which is strictly weaker. On a rename: update
+/// the entry to the new name, having first confirmed the new name appears in an
+/// informative region and in no normative clause body. Fired once on 2026-08-15, when
+/// the §0 seed rewrite removed the last `baracuda-kernelgen` occurrence.
 #[test]
 fn test_emit_defines_no_source_language() {
     let emit = read_spec("emit.md");
     let blocklist = [
-        "baracuda-kernelgen",
+        // vendor/project name — tracks the §0 `Reference seed crate(s)` row; see the
+        // rename note in this test's doc comment before changing it.
+        "unpopped",
         "Slang",
         "CUDA",
         "cuda:",
@@ -312,7 +324,13 @@ fn test_emit_defines_no_source_language() {
     for tok in blocklist {
         assert!(
             informative.contains(tok),
-            "KISS-EMIT-6.1-0005: blocklist token `{tok}` no longer appears in any informative region — the guard has gone stale"
+            "KISS-EMIT-6.1-0005: blocklist token `{tok}` no longer appears in any informative \
+             region — the presence guard would be vacuous, so this test refuses to pass.\n\
+             THIS IS THE GUARD WORKING. If the document deliberately removed the token \
+             (e.g. the seed crate was renamed), update the blocklist entry to the current \
+             name, after confirming the new name appears in an informative region and in NO \
+             normative clause body. If the removal was NOT deliberate, restore the token \
+             instead — the absence check for it has been silently vacuous since it went."
         );
     }
 
