@@ -233,7 +233,7 @@ only because an outsider happened to ask.
   artifact to look up, because the design it predicted was never made. Hence — **a dependency
   between two pieces of work is a claim about a design that hasn't been made yet, and it expires
   when the design does.**
-- **The tracker asserts the opposite of the repository.** An **open**, `rfc`-labelled issue titled
+- **The tracker asserts the opposite of the repository.** An **open**, `rfc`-labeled issue titled
   *"three unpinned decisions — the last is a freeze-blocker"*, filed **fifteen days after** all
   three were ruled and merged. Worse than a stale document: **a tracker is the instrument you
   consult specifically to avoid trusting your memory**, so it launders a stale belief into a cited
