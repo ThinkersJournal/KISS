@@ -109,7 +109,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 18
+EXPECTED_CONTROLS = 19
 
 
 def check(name, cond, detail=""):
@@ -238,6 +238,17 @@ def main():
     check("completed substitution with a STALE ledger is a regression",
           v == "regression",
           f"a green here repeats on every later PR — the ledger update must gate it: got {v}")
+
+    # LEDGER UNREADABLE (#225 review finding): disk_lint=None must NOT degrade to green through
+    # `None or set()` — "I could not read the ledger" is not "the ledger is clean", and it would
+    # resolve GREEN, the currency hazard arriving through the environment. The input the claim
+    # names (#226) is disk_lint=None, and its verdict must be red, not substitution_recorded.
+    v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
+              [], ["X", "A", "B"], ["X"], None)
+    check("completed substitution with an UNREADABLE ledger is NOT green",
+          v == "ledger_unverifiable",
+          f"an unreadable ledger degraded to a green substitution_recorded via `None or set()`: "
+          f"got {v}")
 
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:

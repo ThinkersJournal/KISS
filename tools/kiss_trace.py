@@ -374,9 +374,10 @@ def base_ledger_lint(ledger_path, base_ref):
 
 def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=None):
     """Classify a `--ratchet` comparison. Returns (verdict, lines); verdict is one of
-    incomplete | regression | substitution | substitution_recorded | lint_drift | stale |
-    at_floor | at_floor_unchecked. `at_floor`, `at_floor_unchecked`, and
-    `substitution_recorded` are green; the rest set `any_fail` in the caller.
+    incomplete | regression | substitution | substitution_recorded | ledger_unverifiable |
+    uncharacterized | lint_drift | stale | at_floor | at_floor_unchecked. `at_floor`,
+    `at_floor_unchecked`, and `substitution_recorded` are green; the rest set `any_fail` in
+    the caller.
 
     `substitution` is the IN-PROGRESS state (floor still at PRE, "bump the floor to N");
     `substitution_recorded` is the same move once the floor is bumped to POST and the ledger
@@ -453,7 +454,18 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
         # fires green on every later UNRELATED PR — a substitution reported commits after it
         # happened. #215 said "remove the moved ID(s) from the ledger", but an instruction is not
         # a gate; the ledger update IS the gate.
-        stale = sorted(left_to_harness & (disk_lint or set()))
+        if disk_lint is None:
+            # The ledger could not be read, so the gate could not run. `None or set()` would make
+            # "I could not read the ledger" indistinguishable from "the ledger is clean" — and it
+            # resolves GREEN, the exact degradation this gate exists to prevent, arriving through
+            # the environment instead of through staleness (cf. an indeterminable base ref, #213).
+            # Refuse to characterize rather than degrade to a silent pass.
+            return ("ledger_unverifiable", [
+                f"the floor records a lint->harness substitution of {len(left_to_harness)} "
+                f"clause(s), but the on-disk ledger (UNBACKED.tsv) could not be read to confirm "
+                "they were dropped from its lint set. An unreadable ledger is NOT a clean one; "
+                "refusing the green rather than passing an unchecked gate."])
+        stale = sorted(left_to_harness & disk_lint)
         if stale:
             return ("regression", [
                 f"the floor records a lint->harness substitution of {len(left_to_harness)} "
@@ -1096,6 +1108,8 @@ def main():
                 "regression": "RATCHET REGRESSION: coverage moved backwards.",
                 "substitution": "RATCHET SUBSTITUTION: documentary -> behavioral backing "
                                 "(a strengthening the aggregate cannot show, #213).",
+                "ledger_unverifiable": "RATCHET: a completed substitution is recorded but the "
+                                       "on-disk ledger could not be read to verify it (#223).",
                 "lint_drift": "RATCHET: the lint SET changed under a flat count.",
                 "stale": "RATCHET: the floor is STALE - coverage improved past it.",
                 "uncharacterized": "RATCHET: the lint dimension moved but could not be "
