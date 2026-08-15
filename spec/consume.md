@@ -50,7 +50,7 @@ out of scope; KISS-Consume consumes **structure, not syntax**.
 | Maturity stage | **Draft** (first-draft proposal; the refusal taxonomy and the lift-contract behavior are NOT yet frozen — the freeze gate of umbrella §5.3 is unmet) |
 | Editor of record | **Unpopped** — the neutral kernel-generator reference project — **ratified 2026-08-15**, holding the pen for **both** KISS-Consume and its inverse KISS-Emit. The identical round-trip wording the two share (§6.6) now has a **single pen** across both inverse standards; the KISS-Emit §6.7-0008 correspondence-table lint remains in force as the mechanical check. **Editor–implementer identity is deliberate and bounded** — see KISS-Emit §0 and §10 for the two constraints, which apply to both documents. **Capability caveat, stated rather than implied:** the editor's **Consume-side implementation is materially less mature than its Emit-side one** — a hand-written pilot lifter, with a recognizer that hardcodes a target-specific marker and grammar dependencies behind an off-by-default feature. Holding this pen with a pilot is a different proposition from holding KISS-Emit's with a mature emitter, and the appointment does not imply parity it does not have. The caveat was volunteered by the editor before ratification. |
 | Steward | ThinkersJournal |
-| Reference seed crate(s) | a recognition/lift reference crate — **`unpopped`** (crate names given in Appendix C as non-normative provenance); this crate is *a* conformant implementation with no privilege. **Its lift side is a pilot**, not a mature exemplar — see the Editor-of-record row. |
+| Reference seed crate(s) | a recognition/lift reference crate — **`unpopped`** (crate names given in Appendix C as non-normative provenance); this crate is *a* reference implementation with no privilege. **Its lift side is a pilot**, not a mature exemplar — see the Editor-of-record row. |
 | DAG position | **Protocol/behavior tier.** Depends (structurally) on KISS-Classify, KISS-Ops, and KISS-Contract. Does **not** depend on KISS-Announce, KISS-Grammar (directly), KISS-Synth/Provision, or KISS-Emit. Consumed by KISS-Conform (test dependency). Not a root. |
 | Upstream edges | KISS-Classify (**STRUCTURAL** — the produced contract's Identity `accept_predicate` is a KISS-Classify `structure_key` / specialization cell, and the operand descriptors / `target_capability` recorded on the lifted contract are Classify vocabulary); KISS-Ops (**STRUCTURAL** — the lift **target** is the KISS-Ops op DAG, every emitted node's `op_name` is a KISS-Ops op name, every lift bottoms out at the KISS-Ops **primitive floor**, and the round-trip tier selection imports the KISS-Ops determinism/fidelity enum verbatim); KISS-Contract (**STRUCTURAL** — a successful lift produces a KISS-Contract's Semantics field and its recorded `lift_residue`; the seven-section contract format itself is owned by KISS-Contract and is not re-defined here) |
 | Downstream edges | KISS-Conform (**test dependency** — the oracle-differential harness resolves a lifted Semantics DAG to the primitive floor and compares under the op's determinism class; the negative/decline-vector modality exercises the four refusal categories and the never-panic obligation) |
@@ -1009,7 +1009,9 @@ by reference and restates none of it. The **editor of record** is **Unpopped**, 
 kernel-generator reference project, **ratified 2026-08-15** for both KISS-Consume and its inverse
 KISS-Emit; the identical round-trip wording of §6.6 therefore has a **single pen** across the two,
 and the KISS-Emit §6.7-0008 correspondence-table lint remains the mechanical check (Appendix D).
-The editor is also a conformant implementation of both directions; the two constraints that bound
+The editor is also an implementer of both directions — a fact about who holds the pen, not a
+conformance claim; conformance is self-certified with published results like anyone else's. The
+two constraints that bound
 that identity — a recorded, current conformance status against the clauses it edits, and a
 non-editor cosignatory for round-trip-table clauses and for any clause changed because the
 reference implementation found it difficult — are stated in KISS-Emit §10 and apply here
@@ -1077,7 +1079,7 @@ The KISS-Consume recognition/lift direction generalizes an existing kernel-decom
 in the reference generator project (a source→IR lift) and an existing runtime kernel-decomposer, both
 of which are KISS-Consume lifters under this sub-standard: standardizing the neutral op vocabulary
 makes them target the same KISS-Ops op DAG, so either can produce a contract's Semantics field. The
-reference seed crate is *a* conformant implementation with no privilege; its project/crate name is
+reference seed crate is *a* reference implementation with no privilege; its project/crate name is
 recorded here as non-normative provenance only.
 
 ## Appendix D — Open questions (informative)
