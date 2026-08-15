@@ -165,6 +165,31 @@ And for a test credited to more than one clause, per-vector proofs are necessary
 publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
 together is the only thing distinguishing N properties from one property credited N times.
 
+**A mutation that applied is not yet a mutation that tested what you meant.** Asserting the patch
+landed proves the file changed; it does not prove the *installed* text has the property under test.
+*Why:* a narrow pattern was to be justified by seeding the broad one in its place. The mutation
+applied, behavior changed, and a test went red — and the evidence was worthless, because the
+installed pattern did not match the line the whole argument was about, so it never exercised the
+claim; the red came from an unrelated assertion. **A green mutation proves nothing and a red one
+proves only that *something* broke** — which is the thing it was meant to establish only when the
+mutation actually reaches the behavior in dispute. So the applied-check must assert the property,
+not the diff: install the mutation, then — **before running the suite** — call the mutated predicate
+on the exact input the claim names and confirm it answers wrongly. In the case above that is one
+line, `RE_WORDING.search("MUST be NaN-propagating (not IEEE maxNum)")`, expected `True` from the
+broad pattern and actually `False`; run after the suite instead, and the same fact arrives as a
+confusing red in an unrelated test. **The difference between the two is when you learn it, and
+whether you learn it at all** — a red that looks like the one you predicted invites no further
+questions.
+
+**Undo a seeded mutation by reversing that edit, never by discarding the file.** `git checkout --
+<file>` restores the *committed* state, so when the file also holds the uncommitted work being
+proven, the mutation and the fix go together — and the suite then fails for the honest reason that
+the fix is gone. *Why:* exactly that, on the flip for a newly added guard: the tool reverted, the
+test kept its new control, and the re-run went red. It was caught only because the failure
+**contradicted a green verified minutes earlier** — the same contradiction-with-a-verified-result
+signal that catches a stale read, and the only one that fires here. Reverse the specific edit, or
+stash and pop.
+
 **10. Close the class, not the instance.**
 A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
 the instance in front of you leaves the next one to
