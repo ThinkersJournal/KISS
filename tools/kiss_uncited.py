@@ -124,13 +124,36 @@ def sweep(spec_dir, conf_dir):
             # rows in, and they are false: the hash helper `fnv1a64_is_…` inherits
             # §6.4-0010 from its MODULE doc comment. A header covers what follows
             # it up to the next test, never a whole file.
+            #
+            # THE FIRST TEST IN A FILE IS THE EXCEPTION, and getting it wrong is how
+            # this tool broke its own stated rule. "Everything since the end of the
+            # previous test" has no previous test to start from, so `prev_end = 0`
+            # made the scope THE ENTIRE FILE ABOVE — every clause named anywhere in
+            # the implementation body, the module doc comment, the imports. That is
+            # exactly the whole-file inheritance the paragraph above disclaims, and
+            # it named the very example it produced: `fnv1a64_empty_is_the_offset_basis`
+            # is the first test in `expressibility.rs` and inherited EIGHT refs from
+            # the file above it.
+            #
+            # With no previous test to bound a header's reach, there is no evidence
+            # about how far one reaches, so fall back to the NARROW contiguous run —
+            # the same scope `kiss_trace` credits. Understating a first test's
+            # declarations is a row that needs a human; overstating them is a false
+            # citation candidate that reads as authored.
+            #
+            # Measured at origin/main efe111c: refs 506 -> 330, declared bucket
+            # 59 -> 50. Thirteen rows are first-in-file and contributed 45% of all
+            # declared refs before this. `empty_reduction_is_monoid_identity` alone
+            # went 14 -> 1, and the 1 is the clause its own comment names.
             prev_end = 0
             for m in kt.RE_RUST_TEST.finditer(src):
                 brace = src.find("{", m.end() - 1)
                 end = kt._body_span(src, brace) if brace != -1 else m.end()
                 body = src[m.start():end] if brace != -1 else m.group(0)
                 scopes[m.group(1)] = body + "\n" + kt._leading_comment(src, m.start())
-                decl_scopes[m.group(1)] = src[prev_end:m.start()] + "\n" + body
+                gap = (kt._leading_comment(src, m.start()) if prev_end == 0
+                       else src[prev_end:m.start()])
+                decl_scopes[m.group(1)] = gap + "\n" + body
                 prev_end = end
 
     rows = []
