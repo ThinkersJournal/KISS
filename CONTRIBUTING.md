@@ -173,9 +173,13 @@ installed pattern did not match the line the whole argument was about, so it nev
 claim; the red came from an unrelated assertion. **A green mutation proves nothing and a red one
 proves only that *something* broke** — which is the thing it was meant to establish only when the
 mutation actually reaches the behavior in dispute. So the applied-check must assert the property,
-not the diff: install the mutation, then confirm the mutant *itself* does the wrong thing on the
-exact input the claim names. That check runs at the moment of mutation and costs a line; without it
-the failure is diagnosed after the fact, from a red test that was answering a different question.
+not the diff: install the mutation, then — **before running the suite** — call the mutated predicate
+on the exact input the claim names and confirm it answers wrongly. In the case above that is one
+line, `RE_WORDING.search("MUST be NaN-propagating (not IEEE maxNum)")`, expected `True` from the
+broad pattern and actually `False`; run after the suite instead, and the same fact arrives as a
+confusing red in an unrelated test. **The difference between the two is when you learn it, and
+whether you learn it at all** — a red that looks like the one you predicted invites no further
+questions.
 
 **10. Close the class, not the instance.**
 A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
