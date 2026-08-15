@@ -124,5 +124,88 @@ class DeclarationScopeTest(unittest.TestCase):
             self.assertIn(ref, head, "fixture must name clauses ABOVE the first test")
 
 
+QUALIFIED_FIXTURE = """\
+#[cfg(test)]
+mod tests {
+    // magnitude (Conform §6.99-0004: the declared, derived tolerance)
+    #[test]
+    fn qualified_ref_names_its_own_sub_standard() {
+        assert!(true);
+    }
+
+    // §6.99-0005 with no sub-standard word anywhere near it
+    #[test]
+    fn bare_ref_has_no_qualifier() {
+        assert!(true);
+    }
+
+    // (caught by the differential + SYNTH §6.99-0006, not this lint)
+    #[test]
+    fn ref_whose_line_disclaims_this_test() {
+        assert!(true);
+    }
+
+    // §6.99-0007: max/min monoids MUST be NaN-propagating (not IEEE maxNum)
+    #[test]
+    fn negation_belongs_to_the_clause_not_the_test() {
+        assert!(true);
+    }
+}
+"""
+
+
+class RefResolutionTest(unittest.TestCase):
+    def _sweep(self, source):
+        with tempfile.TemporaryDirectory() as td:
+            conf = pathlib.Path(td) / "conformance"
+            conf.mkdir()
+            (conf / "sample.rs").write_text(source, encoding="utf-8")
+            spec = pathlib.Path(td) / "spec"
+            spec.mkdir()
+            rows = ku.sweep(str(spec), str(conf))
+        return {r["test"]: r for r in rows}
+
+    def test_author_qualifier_is_captured(self):
+        """`Conform §6.99-0004` resolves to conform, not to the file's home doc.
+
+        This is the point of the change: the sub-standard word is the author
+        answering the question the tool asks, and RE_SHORT discarded it by
+        starting the match at the `§`.
+        """
+        r = self._sweep(QUALIFIED_FIXTURE)["qualified_ref_names_its_own_sub_standard"]
+        self.assertEqual(r["qualified"], {"§6.99-0004": "conform"})
+
+    def test_bare_ref_does_not_acquire_a_qualifier(self):
+        """Control. A rule that attached any nearby word to any ref would pass the
+        test above while destroying resolution everywhere else."""
+        r = self._sweep(QUALIFIED_FIXTURE)["bare_ref_has_no_qualifier"]
+        self.assertEqual(r["qualified"], {})
+
+    def test_scope_note_flags_a_test_disclaiming_its_own_ref(self):
+        """`not this lint` speaks about THIS test's scope, so a reader must see it."""
+        r = self._sweep(QUALIFIED_FIXTURE)["ref_whose_line_disclaims_this_test"]
+        self.assertEqual(len(r["wording"]), 1)
+        self.assertIn("not this lint", r["wording"][0])
+
+    def test_negation_about_the_clause_is_not_flagged(self):
+        """The control that decides the design — why this FLAGS and never rebuckets.
+
+        `MUST be NaN-propagating (not IEEE maxNum)` is the obligation being
+        asserted, not a disclaimer of it. Measured against `kiss_cites`' broader
+        RE_CONTRASTIVE, 12 of 14 matching rows are this shape, so a rebucketing
+        rule would silently drop twelve legitimate candidates while looking like a
+        precision improvement.
+        """
+        r = self._sweep(QUALIFIED_FIXTURE)["negation_belongs_to_the_clause_not_the_test"]
+        self.assertEqual(r["wording"], [])
+        self.assertEqual(r["bucket"], "declared", "a flagged-free row stays a candidate")
+
+    def test_qualification_changes_the_target_not_the_bucket(self):
+        rows = self._sweep(QUALIFIED_FIXTURE)
+        for n in ("qualified_ref_names_its_own_sub_standard",
+                  "ref_whose_line_disclaims_this_test"):
+            self.assertEqual(rows[n]["bucket"], "declared")
+
+
 if __name__ == "__main__":
     unittest.main()
