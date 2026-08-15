@@ -165,6 +165,18 @@ And for a test credited to more than one clause, per-vector proofs are necessary
 publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
 together is the only thing distinguishing N properties from one property credited N times.
 
+**A mutation that applied is not yet a mutation that tested what you meant.** Asserting the patch
+landed proves the file changed; it does not prove the *installed* text has the property under test.
+*Why:* a narrow pattern was to be justified by seeding the broad one in its place. The mutation
+applied, behaviour changed, and a test went red — and the evidence was worthless, because the
+installed pattern did not match the line the whole argument was about, so it never exercised the
+claim; the red came from an unrelated assertion. **A green mutation proves nothing and a red one
+proves only that *something* broke** — which is the thing it was meant to establish only when the
+mutation actually reaches the behaviour in dispute. So the applied-check must assert the property,
+not the diff: install the mutation, then confirm the mutant *itself* does the wrong thing on the
+exact input the claim names. That check runs at the moment of mutation and costs a line; without it
+the failure is diagnosed after the fact, from a red test that was answering a different question.
+
 **10. Close the class, not the instance.**
 A class guard covers cases its author never imagined, including ones that did not exist yet. Fixing
 the instance in front of you leaves the next one to
