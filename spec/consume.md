@@ -48,9 +48,9 @@ out of scope; KISS-Consume consumes **structure, not syntax**.
 | Sub-standard ID | KISS-CONSUME |
 | Tier | **Protocol / behavior** (the recognition/lift direction; sits above the two foundational vocabularies and the universal kernel-contract format that it produces) |
 | Maturity stage | **Draft** (first-draft proposal; the refusal taxonomy and the lift-contract behavior are NOT yet frozen — the freeze gate of umbrella §5.3 is unmet) |
-| Editor of record | **Proposed, pending ratification** — the governance record assigns the pen for KISS-Consume to the neutral kernel-generator reference project; the ratified governance record does not yet finalize an editor for KISS-Consume, and the identical round-trip wording it shares with KISS-Emit (§6.6) has no single pen across the two inverse standards until both editors are ratified (Appendix D). |
+| Editor of record | **Unpopped** — the neutral kernel-generator reference project — **ratified 2026-08-15**, holding the pen for **both** KISS-Consume and its inverse KISS-Emit. The identical round-trip wording the two share (§6.6) now has a **single pen** across both inverse standards; the KISS-Emit §6.7-0008 correspondence-table lint remains in force as the mechanical check. **Editor–implementer identity is deliberate and bounded** — see KISS-Emit §0 and §10 for the two constraints, which apply to both documents. **Capability caveat, stated rather than implied:** the editor's **Consume-side implementation is materially less mature than its Emit-side one** — a hand-written pilot lifter, with a recognizer that hardcodes a target-specific marker and grammar dependencies behind an off-by-default feature. Holding this pen with a pilot is a different proposition from holding KISS-Emit's with a mature emitter, and the appointment does not imply parity it does not have. The caveat was volunteered by the editor before ratification. |
 | Steward | ThinkersJournal |
-| Reference seed crate(s) | a recognition/lift reference crate (project/crate name given in Appendix C as non-normative provenance); this crate is *a* conformant implementation with no privilege. |
+| Reference seed crate(s) | a recognition/lift reference crate — **`unpopped`** (crate names given in Appendix C as non-normative provenance); this crate is *a* reference implementation with no privilege. **Its lift side is a pilot**, not a mature exemplar — see the Editor-of-record row. |
 | DAG position | **Protocol/behavior tier.** Depends (structurally) on KISS-Classify, KISS-Ops, and KISS-Contract. Does **not** depend on KISS-Announce, KISS-Grammar (directly), KISS-Synth/Provision, or KISS-Emit. Consumed by KISS-Conform (test dependency). Not a root. |
 | Upstream edges | KISS-Classify (**STRUCTURAL** — the produced contract's Identity `accept_predicate` is a KISS-Classify `structure_key` / specialization cell, and the operand descriptors / `target_capability` recorded on the lifted contract are Classify vocabulary); KISS-Ops (**STRUCTURAL** — the lift **target** is the KISS-Ops op DAG, every emitted node's `op_name` is a KISS-Ops op name, every lift bottoms out at the KISS-Ops **primitive floor**, and the round-trip tier selection imports the KISS-Ops determinism/fidelity enum verbatim); KISS-Contract (**STRUCTURAL** — a successful lift produces a KISS-Contract's Semantics field and its recorded `lift_residue`; the seven-section contract format itself is owned by KISS-Contract and is not re-defined here) |
 | Downstream edges | KISS-Conform (**test dependency** — the oracle-differential harness resolves a lifted Semantics DAG to the primitive floor and compares under the op's determinism class; the negative/decline-vector modality exercises the four refusal categories and the never-panic obligation) |
@@ -1005,10 +1005,17 @@ any normative MUST without a mapped test and on any test citing a retired or non
 ## 10. Governance
 
 KISS-Consume adopts the umbrella governance model (umbrella §7) and legal/IP posture (umbrella §9)
-by reference and restates none of it. The **editor of record** is *proposed, pending ratification*
-— the governance record assigns the pen to the neutral kernel-generator reference project; until
-ratified, KISS-Consume and its inverse KISS-Emit have no single pen, and the identical round-trip
-wording of §6.6 could drift between the two (Appendix D). Maturity-stage advances are signed by the
+by reference and restates none of it. The **editor of record** is **Unpopped**, the neutral
+kernel-generator reference project, **ratified 2026-08-15** for both KISS-Consume and its inverse
+KISS-Emit; the identical round-trip wording of §6.6 therefore has a **single pen** across the two,
+and the KISS-Emit §6.7-0008 correspondence-table lint remains the mechanical check (Appendix D).
+The editor is also an implementer of both directions — a fact about who holds the pen, not a
+conformance claim; conformance is self-certified with published results like anyone else's. The
+two constraints that bound
+that identity — a recorded, current conformance status against the clauses it edits, and a
+non-editor cosignatory for round-trip-table clauses and for any clause changed because the
+reference implementation found it difficult — are stated in KISS-Emit §10 and apply here
+identically. Maturity-stage advances are signed by the
 **KISS-Conform AUDIT role** jointly with the editor (umbrella §7.3), not by the authoring editor
 alone. The **specification text** is CC0 1.0 Universal (umbrella §9.1); the **reference crates** are
 MIT-OR-Apache-2.0 (umbrella §9.2); the **conformance suite** carries the mark policy of umbrella
@@ -1072,7 +1079,7 @@ The KISS-Consume recognition/lift direction generalizes an existing kernel-decom
 in the reference generator project (a source→IR lift) and an existing runtime kernel-decomposer, both
 of which are KISS-Consume lifters under this sub-standard: standardizing the neutral op vocabulary
 makes them target the same KISS-Ops op DAG, so either can produce a contract's Semantics field. The
-reference seed crate is *a* conformant implementation with no privilege; its project/crate name is
+reference seed crate is *a* reference implementation with no privilege; its project/crate name is
 recorded here as non-normative provenance only.
 
 ## Appendix D — Open questions (informative)
@@ -1082,12 +1089,17 @@ recorded here as non-normative provenance only.
    canonically-ordered, byte-exact list of KISS-Ops op names in the capability channel, and a tier-1
    round-trip claim holds over the **intersection (overlap)** of the two sides' declared subsets, not
    over their equality. No longer freeze-blocking.
-2. **Shared pen on the identical round-trip wording.** The editors of record for KISS-Consume and
-   KISS-Emit are proposed, pending ratification (both assigned to the neutral generator project);
-   until ratified, the two inverse standards have no single pen and the §6.6 wording could drift. The
-   semantic correspondence is enforced by the KISS-Emit §6.7-0008 clause-correspondence-table lint,
-   not by any per-implementation conformance test (§6.6); the two blocker/minor fixes applied to
-   §6.6-0001 and §6.6-0003 in this revision must be mirrored in KISS-Emit in lockstep.
+2. **Shared pen on the identical round-trip wording — RESOLVED (2026-08-15).** One editor now
+   holds both KISS-Consume and KISS-Emit, so the no-single-pen risk this item recorded no longer
+   applies. The semantic correspondence remains enforced by the KISS-Emit §6.7-0008
+   clause-correspondence-table lint, not by any per-implementation conformance test (§6.6); the two
+   blocker/minor fixes applied to §6.6-0001 and §6.6-0003 in this revision must still be mirrored in
+   KISS-Emit in lockstep. **What remains open is a design question, not a governance one:** whether
+   the round-trip statement should live in a shared section both documents cite. This document
+   carries no correspondence table of its own and defers to KISS-Emit's in three places, and the
+   lint binds only §6.7-0001..-0005 — so §6.7-0006, which defines the tier-2 determinants both
+   documents use, is outside it. A single pen makes drift less likely; a shared section would make
+   the asymmetry impossible.
 3. **Residue honesty across op-set version bumps.** The `unrecognized-but-expressible` ↔
    `inexpressible-residue` boundary is op-set-version-relative; §6.3-0005 / §8.1-0002 stamp each
    residue entry with its determining op-set version, but the re-evaluation/migration workflow when

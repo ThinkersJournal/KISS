@@ -23,9 +23,9 @@
 | Sub-standard ID | KISS-EMIT |
 | Tier | **Protocol** (the generation direction: it owns how an op definition plus a specialization-cell identity is lowered into a callable kernel described by a contract; it sits above the two foundational vocabularies and the middle-tier contract format it produces, and it is the inverse of the recognition direction KISS-Consume). |
 | Maturity stage | **Draft** (first-draft proposal; the lowering partition and the emit/consume round-trip are NOT frozen — the freeze gate of §8 is unmet, and the blocking pre-freeze neutrality audit of §6.5 has not yet been performed). |
-| Editor of record | **Proposed, pending ratification** — the neutral generator reference-impl project holds the pen and requests comment from interested cosignatories; the ratified governance record assigns both KISS-Emit and its inverse KISS-Consume to that project, but has not yet finalized an editor for either. Until ratified, KISS-Emit and KISS-Consume have no single pen, and the round-trip statement shared with KISS-Consume (§6.7) is at risk of drift; §6.7-0008 and the §10 governance pen-drift guard pin the two statements semantically identical, via an enumerated clause-correspondence table, to guard against it. |
+| Editor of record | **Unpopped** — the neutral generator reference-impl project — **ratified 2026-08-15**, holding the pen for **both** KISS-Emit and its inverse KISS-Consume. The two inverse standards now share a **single pen**, which is the primary guard on the round-trip statement of §6.7; §6.7-0008 and the §10 pen-drift guard remain in force as the mechanical check, since one pen makes drift less likely rather than impossible. **Editor–implementer identity here is deliberate and bounded.** The editor is also an implementer of this specification — which is a fact about who holds the pen, not a conformance claim — so: **(a)** the editor's own conformance status against the clauses it edits is recorded in Appendix A.1 and kept current; and **(b)** a change to any clause enumerated in the §6.7-0008 correspondence table — or to any clause whose alteration is motivated by the reference implementation's own difficulty — **requires a cosignatory who is not the editor.** Constraint (b) was proposed by the editor about itself. |
 | Steward | ThinkersJournal |
-| Reference seed crate(s) | a kernel-generation reference crate (`baracuda-kernelgen`, project/crate name given in Appendix A as non-normative provenance), whose IR→Slang emitter demonstrates an emitter whose surface spellings differ from a C-family emitter's; this crate is *a* conformant implementation with no privilege. |
+| Reference seed crate(s) | a kernel-generation reference crate — **`unpopped`**, with its vocabulary crate `unpopped-vocab` and its IR→Slang emitter `unpopped-slang`, which demonstrates an emitter whose surface spellings differ from a C-family emitter's (crate names given in Appendix A as non-normative provenance). This crate is *a* reference implementation with no privilege. **Two limits on reading it as an exemplar.** It **does not today emit a KISS-Contract** — it emits a consumer-specific contract format — so it seeds the lowering partition of §6.2–§6.5 and is **not** an exemplar of the §6.6 contract-pairing obligation. And its `Backend` trait is a **lowering** interface, narrower than this document's **emitter**, which per the Tier row above owns contract production; mapping the one onto the other silently omits obligations §6 places on the emitter. |
 | DAG position | **Protocol tier.** Depends **STRUCTURALLY** on KISS-Ops (the lowering source is a KISS-Ops op definition), KISS-Classify (the specialization-cell identity is a `structure_key`), and KISS-Contract (the emitter's output is described by a contract). It is a **sibling** of KISS-Consume (the inverse recognition direction): the two share the round-trip of §6.7 but neither depends on the other. Not a root; nothing in the suite depends on KISS-Emit except KISS-Conform (test dependency). |
 | Upstream edges | KISS-Ops (**STRUCTURAL** — the normative lowering source is a KISS-Ops **OpDef**, resolvable to the KISS-Ops primitive floor; the determinism/fidelity enum and the MathPrecision attribute the emitted kernel declares are imported verbatim from KISS-Ops, never re-forked); KISS-Classify (**STRUCTURAL** — the second half of the normative input is a KISS-Classify `structure_key` specialization-cell identity, carried verbatim; the emitted kernel's operand descriptors and `target_capability` are Classify vocabulary); KISS-Contract (**STRUCTURAL** — the emitter's output is described by a seven-section KISS-Contract, whose Interface + Dispatch pin the emitted ABI and whose Guarantees declare the emitted kernel's fidelity) |
 | Downstream edges | KISS-Conform (test dependency — Conform tests this sub-standard, resolves the emitted kernel's Semantics DAG to the primitive floor as the oracle, and runs the round-trip of §6.7 under the determinism-class comparators). KISS-Emit has **no** other downstream edge. |
@@ -1072,13 +1072,24 @@ maturity-transition signing by the KISS-Conform AUDIT role, the specification li
 with defensive termination, and the mark-use tie — is defined once in the umbrella
 (umbrella §7, §9) and referenced here, not restated.
 
-Three governance facts are specific to KISS-Emit and recorded here by reference:
+Four governance facts are specific to KISS-Emit and recorded here by reference:
 
-- **Editor of record.** Proposed, pending ratification. The governance record assigns
-  both KISS-Emit and its inverse KISS-Consume to the neutral generator reference-impl
-  project, but has not finalized an editor for either. Until ratified, the two inverse
-  standards have **no single pen**, and the round-trip statement shared with KISS-Consume
-  (§6.7) is at risk of drift.
+- **Editor of record.** **Unpopped**, the neutral generator reference-impl project,
+  ratified **2026-08-15** for **both** KISS-Emit and its inverse KISS-Consume. The two
+  inverse standards therefore share a **single pen**. That is the primary guard on the
+  round-trip statement of §6.7 and it replaces the no-single-pen risk this section
+  previously recorded — but it does not retire the mechanical guard below, because one
+  pen makes drift less likely, not impossible.
+- **Editor–implementer identity (bounded).** The editor is also an implementer of both
+  directions — a fact about who holds the pen, not a conformance claim; conformance
+  here is self-certified with published results, as for any other implementer
+  (§8-0007). Two constraints hold in consequence: the editor's
+  own conformance status against the clauses it edits is **recorded in Appendix A.1 and
+  kept current**; and a change to any clause enumerated in the §6.7-0008 correspondence
+  table, **or to any clause whose alteration is motivated by the reference
+  implementation's own difficulty, requires a cosignatory who is not the editor.** The
+  second constraint was proposed by the editor about itself, and is recorded here rather
+  than left as an understanding.
 - **Pen-drift guard (editorial obligation).** The editor of KISS-Emit SHALL NOT alter
   the wording or intent of any round-trip clause enumerated in the §6.7-0008
   correspondence table without the corresponding, semantically-equivalent alteration to
@@ -1101,12 +1112,38 @@ Informative only; where an example and a normative clause differ, the clause gov
 
 ### A.1 Provenance
 
-The reference seed crate for KISS-Emit is `baracuda-kernelgen`, a kernel-generation
-crate whose IR→Slang emitter demonstrates an emitter whose surface spellings differ
-from a C-family emitter's (the "differing-surface-spelling emitter" of the §8.2-0002
-freeze precondition). It is *a* conformant implementation with no privilege; the
-reference implementation runs the same public KISS-Conform suite with no exemption.
-Project and crate names appear here as non-normative provenance only.
+The reference seed crate for KISS-Emit is **`unpopped`**, a kernel-generation crate,
+with its vocabulary crate `unpopped-vocab`; its IR→Slang emitter lives in
+`unpopped-slang` and demonstrates an emitter whose surface spellings differ from a
+C-family emitter's (the "differing-surface-spelling emitter" of the §8.2-0002 freeze
+precondition). It is *a* reference implementation with no privilege, and **being the
+seed confers no conformance claim**: per §8-0007 it runs the same public, unmodified
+KISS-Conform suite with no exemption, and its conformance status is whatever that
+suite reports — self-certified with published results, exactly as for any other
+implementer. The open divergences recorded below are the current answer. Project and
+crate names appear here as non-normative provenance only.
+
+> **Lineage (informative).** This crate was extracted from an earlier CUDA
+> kernel-generation crate; the CUDA emitter went to a separate project-specific crate at
+> the same time. Earlier revisions of this document named that predecessor. The name is
+> recorded here so a reader tracing the provenance is not left matching a crate that no
+> longer holds the thing cited.
+
+**Editor conformance status (§10, constraint (a)).** The editor of record is also this
+reference implementation, and its conformance against the clauses it edits is recorded
+here rather than assumed. As of 2026-08-15 the following divergences are **known and
+open**, each with a tracking issue:
+
+| clause | divergence |
+|---|---|
+| §6.6-0001 / §6.6-0003 | the emit API does not return the `{artifact, contract}` pair; contract construction is a separate call the caller must make |
+| §6.8-0004 | the lowering trait documents that it MAY panic on a dtype it cannot spell, with the caller expected to gate it; §6.8-0004 admits no trusted-input exemption |
+| §6.2-0001 | the emitted document is a consumer-specific contract format, not a seven-section KISS-Contract |
+| §6.2-0002 / §6.2-0003 | contract existence is gated on a downstream vocabulary in three places, including the whole scatter family |
+
+**A reference implementation that diverges from the specification it seeds is a fact the
+document should carry, not one a reader should have to discover.** The divergences were
+measured and reported by the implementation itself, before the editorship was ratified.
 
 ### A.2 Worked emit — strided binary `add` on `f32` (partition trace)
 
@@ -1166,10 +1203,16 @@ RFC directory; they gate no clause above except where a clause explicitly defers
    equal or merely overlap for a **joint** round-trip claim (§7.2 pins only that a claim
    is bounded by the advertised subset; the mandatory core requires only the single-party
    self-round-trip, §7.1-0001).
-2. **Editors of record for KISS-Emit and KISS-Consume are proposed, pending
-   ratification** — until ratified the two inverse standards have no single pen and the
-   semantically-identical round-trip statement (§6.7-0008, §10 pen-drift guard) could
-   drift.
+2. **RESOLVED (2026-08-15) — one editor now holds both pens.** KISS-Emit and
+   KISS-Consume are both edited by the neutral generator reference-impl project, so the
+   no-single-pen risk this item recorded no longer applies. **What remains open is a
+   design question, not a governance one:** whether the §6.7 round-trip statement should
+   be extracted into a shared section both documents cite, so the asymmetry is
+   structurally impossible rather than merely unlikely. Today Consume carries no
+   correspondence table of its own and defers to this document's in three places, and
+   §6.7-0006 — which defines the tier-2 determinants — sits outside the §6.7-0008 lint's
+   binding range. A single pen makes drift less likely; a shared section would make the
+   asymmetry impossible.
 3. **The pre-freeze neutrality audit has not been performed** — until it is, the
    driver/emitter boundary for the **surface-bearing** driver-side spellings (at this
    schema version, the infix `+ - * /` operators of §6.3-0004) is provisional (§6.5).
