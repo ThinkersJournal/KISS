@@ -287,6 +287,18 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             token: "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
         },
         PositiveVector {
+            name: "gem_weight_role_discriminator",
+            clause: "KISS-CLASSIFY-6.6-0019",
+            note: "DISCRIMINATING (§6.6-0019): quantized-GEMM operands [weight=i4, \
+                   weight_scale=f8e8m0, activation=bf16]; <wdt> derives to i4 from the \
+                   caller's weight-role hint (slot 0), NOT the fixed operand-1 read that \
+                   names the scale f8e8m0. wdt/acc/out are distinct (i4/f32/bf16) so a \
+                   positional resolution yields DIFFERENT BYTES -- do not flatten to \
+                   uniform dtypes; that silently destroys the discriminator.",
+            key: key("gem", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, derive_weight_dtype(&["i4", "f8e8m0", "bf16"], 0), "f32", "bf16", MathPrecision::Stable))),
+            token: "sk4|gem|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
+        },
+        PositiveVector {
             name: "simt_f32",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
