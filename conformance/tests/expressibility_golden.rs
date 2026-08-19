@@ -84,6 +84,7 @@ fn test_conform_expressible_signature_set_schema() {
 /// reversed) canonicalizes to the SAME bytes as `add(Bind0,Bind1)` — they are
 /// the same signature. `sub` is positional, so the two authored orders MUST
 /// be DISTINCT signatures.
+// Backs: KISS-GRAMMAR-6.4-0010
 #[test]
 fn commutative_add_canonicalizes_positional_sub_does_not() {
     let add_01 = binary_sig("add", [0, 1]);
@@ -282,6 +283,7 @@ fn serialize_set_orders_signatures_ascending_by_bytes() {
 // ---- declines (§6.10-0006: reject a set missing a REQUIRED field, carrying
 // an unknown field, or violating an enumerant) --------------------------------
 
+// Backs: KISS-CONFORM-6.10-0006
 #[test]
 fn reject_set_declines_missing_owner() {
     let valid = String::from_utf8(serialize_set(&valid_set())).unwrap();

@@ -41,6 +41,7 @@ fn an_envelope() -> BundleEnvelope {
 
 /// §6.9-0009: `revision_base` is the versioning triple + `generator_commit`, all
 /// four present; a missing element is malformed.
+// Backs: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_revision_base_is_triple_plus_commit() {
     let rb = a_revision_base();
@@ -60,6 +61,7 @@ fn test_revision_base_is_triple_plus_commit() {
 
 /// §6.9-0009: `derivation_lineage` is the closed three-token set; an unknown
 /// token is rejected and every tag round-trips its pinned ASCII spelling.
+// Backs: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_derivation_lineage_closed_set() {
     assert_eq!(DerivationLineage::closed_set().len(), 3);
@@ -75,6 +77,7 @@ fn test_derivation_lineage_closed_set() {
 }
 
 /// §6.9-0009: a well-formed bundle envelope validates.
+// Backs: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_bundle_envelope_validates() {
     assert_eq!(an_envelope().validate(), Ok(()));
@@ -82,6 +85,7 @@ fn test_bundle_envelope_validates() {
 
 /// §6.9-0009: the envelope is a *catalog* feature — a single-kernel provider
 /// carries none, and its absence is never a decline.
+// Backs: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_bundle_envelope_is_optional() {
     let single_kernel_provider: Option<BundleEnvelope> = None;
@@ -95,6 +99,7 @@ fn test_bundle_envelope_is_optional() {
 }
 
 /// §6.9-0009: a malformed envelope is a typed decline, never a silent repair.
+// Backs: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_bundle_envelope_declines_malformed() {
     let mut e = an_envelope();

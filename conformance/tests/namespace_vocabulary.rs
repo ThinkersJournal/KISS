@@ -97,6 +97,7 @@ fn test_namespace_vocabulary_envelope_shape() {
 
 // ---- §6.8-0008: the envelope constraints that SHAPE alone does not enforce -------------------
 
+// Backs: KISS-CLASSIFY-6.8-0003, KISS-CLASSIFY-6.8-0008, KISS-CLASSIFY-6.8-0009, KISS-CLASSIFY-6.8-0012
 #[test]
 fn test_namespace_vocabulary_envelope_constraints() {
     // (a) §6.8-0008 requires a namespace whose registry status is `registered` (§6.8-0003).

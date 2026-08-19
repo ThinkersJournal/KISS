@@ -59,6 +59,6 @@
 # unchanged — the six clauses are tested, not reclassified.
 #
 # key	value
-harness	368
+harness	369
 lint	35
-untested	495
+untested	494

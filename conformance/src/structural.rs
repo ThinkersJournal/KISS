@@ -558,6 +558,7 @@ pub fn compare_scattered_f32(
 mod structural_tests {
     use super::*;
 
+    // Backs: KISS-OPS-6.11-0002
     #[test]
     fn empty_reduction_is_monoid_identity() {
         // KISS-OPS §6.11-0002: a reduction over an empty axis yields the identity.
@@ -567,6 +568,7 @@ mod structural_tests {
         assert_eq!(reduce_f32(&[], Monoid::Min), f32::INFINITY);
     }
 
+    // Backs: KISS-OPS-6.11-0002
     #[test]
     fn reduce_max_propagates_nan_and_preserves_signed_zero() {
         // §6.11-0002: max/min monoids are NaN-propagating.
@@ -621,6 +623,7 @@ mod structural_tests {
         assert!(dest[0].is_nan());
     }
 
+    // Backs: KISS-CONFORM-6.8-0004, KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
     #[test]
     fn order_invariant_accepts_reassociation_but_exact_byte_rejects() {
         // The crux (§6.11-0006 / §6.0-0004 / Conform §6.8-0004): two visit orders of
@@ -643,6 +646,7 @@ mod structural_tests {
         assert!(compare_order_invariant(&a, &b, tol, 0.0).is_ok());
     }
 
+    // Backs: KISS-OPS-6.0-0002, KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
     #[test]
     fn class_dispatch_matches_spec() {
         // §6.0-0002 / §6.0-0004: max/min exact-byte, sum/prod order-invariant.
@@ -710,6 +714,7 @@ mod structural_tests {
         assert!(reassoc_bound_f32(3, 3.0) > 0.0);
     }
 
+    // Backs: KISS-OPS-6.11-0006
     #[test]
     fn scatter_atomic_minmax_signed_zero_agrees_under_canon() {
         // Two valid visit orders of an atomic-max/min can differ only in the sign of a

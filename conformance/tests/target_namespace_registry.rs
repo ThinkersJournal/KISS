@@ -424,6 +424,7 @@ fn plant_tree(tag: &str, cap: &str) -> std::path::PathBuf {
     root
 }
 
+// Backs: KISS-CLASSIFY-6.5-0011
 #[test]
 fn test_conform_sweep_incompleteness_is_surfaced() {
     // (a) CAPABILITY (§6.5-0011): the sweep must actually reach a nested
