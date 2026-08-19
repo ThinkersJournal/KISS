@@ -1081,10 +1081,13 @@ form (§6.7-0011).
   surfaces deferred to a future schema version: (1) an **emit-derivation stage** that
   computes a token from a cell and its role hints, and (2) **cell-carrying corpus
   vectors** the harness derives and compares. Until then the rule is an emit-side
-  obligation the reference encodes (`derive_weight_dtype`); at this schema version no
-  golden token can distinguish a hint-following emitter from a positional one, so a
-  discriminating `gem` vector (distinct weight / scale / activation dtypes) is a
-  **latent** detector at best — inert until an emit-derivation stage exists. The
+  obligation the reference **states in code but does not yet apply**:
+  `derive_weight_dtype` defines the derivation and no stage calls it, because no stage
+  derives `<wdt>` at this schema version — it is the seed of the deferred
+  emit-derivation stage, not a live derivation path. So no golden token can
+  distinguish a hint-following emitter from a positional one, and a discriminating
+  `gem` vector (distinct weight / scale / activation dtypes) is a **latent** detector
+  at best — inert until that stage exists. The
   "no fixed operand position identifies the weight" conclusion additionally depends on
   §6.1-0013 leaving the MX-scale **sibling** slot unpinned; if a later revision pins
   sibling placement, this clause's positional prohibition MUST be revisited. *Test:*

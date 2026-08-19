@@ -793,7 +793,12 @@ pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
 /// `i4` is meant). `weight_slot` is the caller-hinted index into `operand_dtypes`.
 #[must_use]
 pub fn derive_weight_dtype<'a>(operand_dtypes: &[&'a str], weight_slot: usize) -> &'a str {
-    operand_dtypes[weight_slot]
+    operand_dtypes.get(weight_slot).copied().unwrap_or_else(|| {
+        panic!(
+            "weight-role hint slot {weight_slot} is out of range for {} operand(s)",
+            operand_dtypes.len()
+        )
+    })
 }
 
 /// §6.5-0010 + §6.6-0013: the work-class **total element count** — the product,

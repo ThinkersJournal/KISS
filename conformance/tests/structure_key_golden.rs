@@ -1160,7 +1160,7 @@ fn test_classify_div_bucket_derivation() {
 /// wdt = the weight AND != operand-1 — so a regression to positional derivation, or a
 /// fixture flattened to uniform operand dtypes, goes red. It does NOT prove a foreign
 /// emitter correct: per §6.6-0019's coverage note the rule is not corpus-detectable at
-/// this schema version (the corpus round-trips tokens; nothing derives <wdt> from
+/// this schema version (the corpus round-trips tokens; nothing derives `<wdt>` from
 /// operands).
 #[test]
 fn test_classify_weight_role_hint() {
