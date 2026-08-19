@@ -1414,8 +1414,8 @@ separating a registered namespace from that namespace's capability-set token.
   agreement is a relation between two artifacts, and neither settles which is the source.**
   An implementation MAY generate from the annex, from a reference crate, or from another
   authority, MUST name whichever it used, and owes the agreement gate in every case. The
-  commit such an artifact records alongside this field is governed by KISS-Conform
-  §6.3-0009 — the source tree the generator ran in, never a document it describes. *Test:*
+  commit such an artifact records alongside this field is a **separate** obligation from
+  either of the two above, and is not pinned at this version. *Test:*
   `test_namespace_vocabulary_freshness_provenance`.
 - **KISS-CLASSIFY-6.8-0012** — A vocabulary manifest has a **declarative** half
   (grammar, alphabets, orderings, and — for `enumerated` — `members`) and a

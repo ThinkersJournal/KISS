@@ -607,10 +607,12 @@ enum (§6.0). See umbrella §3 for the full statement.
   `test_published_declines_are_injective_by_token`.
 - **KISS-CONFORM-6.3-0007** — A reference artifact MUST carry **both** dtype axes
   (KISS-Classify §6.1-0001) — the recognition set and the usable subset — non-vacuously and
-  distinguishably, because consumers scope their runs on them. The artifact MUST
-  additionally pin its **top-level key set** and version it, so a consumer can detect **any**
-  field added or removed rather than only looking up fields it already knows to ask for. An
-  absence-assertion over enumerated names is worth no more than the enumeration.
+  **distinguishably**, because consumers scope their runs on them. Every declared count MUST
+  equal the length of the array it describes, and the suite MUST assert that the two axes
+  actually **discriminate**: each reserved token present in recognition and absent from
+  usable, at least one usable token absent from reserved, and usable exactly recognition
+  minus reserved. A whole-document search for a token name satisfies the surface form of all
+  three while distinguishing none of them.
   *Test:* `test_dual_axis_is_present_and_discriminates`.
 - **KISS-CONFORM-6.3-0008** — Every machine-readable axis tag a reference artifact attaches
   to a token (target, target-namespace) MUST **agree with the token it annotates**, and the

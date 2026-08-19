@@ -112,7 +112,12 @@ fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(reserved.len(), 2);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(4));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk4"));
-    assert_eq!(doc.get("source_commit").and_then(|j| j.as_str()), Some(SOURCE_COMMIT));
+    // NOT asserted here: `source_commit`. `doc` is the emitter's own output and the
+    // emitter writes SOURCE_COMMIT into that field, so comparing the two compares a
+    // value to itself and cannot fail — verified by mutating the constant to a bogus
+    // value, after which this test still passed. The committed-vs-fresh byte equality
+    // in `test_structure_key_vectors_artifact_is_fresh` catches that same mutation
+    // (it fails STALE), so the obligation is covered non-vacuously there, not here.
 
     // the discriminating per-axis assertions: each reserved token is in the reserved
     // ARRAY, present in recognition, and ABSENT from usable — the three a whole-document
@@ -504,30 +509,65 @@ fn test_published_declines_are_injective_by_token() {
     )
     .expect("published artifact must be readable");
 
-    // Count vectors by their published `"token":` fields, without a JSON parser —
-    // the artifact is the subject here, so read what it literally contains.
-    let tokens: Vec<&str> = raw
-        .match_indices("\"token\": \"")
-        .map(|(i, m)| {
-            let rest = &raw[i + m.len()..];
-            &rest[..rest.find('"').expect("token string must terminate")]
-        })
-        .collect();
-    let decline_tokens: Vec<&str> = tokens.iter().copied().filter(|t| t.starts_with("sk")).collect();
+    // The artifact is the subject, so read what it literally contains rather than a
+    // parsed projection. `positive_vectors` and `decline_vectors` are separate arrays
+    // and the clause's subject is the DECLINES, so split on the array boundary first:
+    // filtering all `"token"` fields by an `sk` prefix does NOT separate them — every
+    // positive token carries the same prefix, so such a filter silently asserts over
+    // the union while its name claims otherwise.
+    let split = raw
+        .find("\"decline_vectors\"")
+        .expect("artifact must publish a decline_vectors array");
+    let tokens_in = |region: &str| -> Vec<String> {
+        region
+            .match_indices("\"token\": \"")
+            .map(|(i, m)| {
+                let rest = &region[i + m.len()..];
+                rest[..rest.find('"').expect("token string must terminate")].to_string()
+            })
+            .collect()
+    };
+    let positives = tokens_in(&raw[..split]);
+    let declines = tokens_in(&raw[split..]);
 
+    // Vacuity guard: injectivity over an empty set holds trivially and proves nothing.
     assert!(
-        !decline_tokens.is_empty(),
-        "vacuity guard: the artifact published no tokens at all, so injectivity \
-         would hold trivially and prove nothing"
+        !declines.is_empty(),
+        "vacuity guard: the artifact published no decline tokens, so decline injectivity          would hold trivially"
     );
-    let distinct: BTreeSet<&str> = decline_tokens.iter().copied().collect();
+    assert!(
+        !positives.is_empty(),
+        "vacuity guard: no positive tokens found, so the array split located the wrong          boundary and `declines` may be the whole file"
+    );
+    // Every decline vector carries exactly one token: this pins the COUNT and
+    // independently confirms the split, since a mis-placed boundary would leave the
+    // two tallies disagreeing.
+    let declared = raw[split..].matches("\"decline\": \"").count();
+    assert_eq!(
+        declines.len(),
+        declared,
+        "each decline vector MUST publish exactly one token: {} tokens against {}          `decline` fields",
+        declines.len(),
+        declared,
+    );
+
+    // The obligation: the published decline kinds are pairwise distinct. Vector count
+    // and distinct-token count asserted separately and phrased against each other.
+    let distinct: BTreeSet<&String> = declines.iter().collect();
     assert_eq!(
         distinct.len(),
-        decline_tokens.len(),
-        "published tokens MUST be pairwise distinct: {} vectors collapsed to {} \
-         distinct tokens — two vectors share a token, so a consumer keying by token \
-         silently drops one",
-        decline_tokens.len(),
+        declines.len(),
+        "published DECLINE tokens MUST be pairwise distinct: {} vectors collapsed to {}          distinct tokens — two declines share a token, so a consumer keying by token          silently drops one and the decline set stops discriminating",
+        declines.len(),
         distinct.len(),
+    );
+
+    // A decline token equal to a positive token is the same collision across the array
+    // boundary, and neither per-array check alone would see it.
+    let pos: BTreeSet<&String> = positives.iter().collect();
+    let shared: Vec<&&String> = distinct.intersection(&pos).collect();
+    assert!(
+        shared.is_empty(),
+        "a decline token MUST NOT equal a positive token — a consumer cannot tell which          answer the vector demands: {shared:?}"
     );
 }
