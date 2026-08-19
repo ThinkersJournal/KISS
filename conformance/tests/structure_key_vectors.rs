@@ -16,7 +16,7 @@
 //!      and no second transcription is introduced to drift against the first.
 
 use kiss_conformance::reference_vectors::*;
-use kiss_conformance::structure_key::{from_token, DTYPES, RESERVED_DTYPES};
+use kiss_conformance::structure_key::{derive_weight_dtype, from_token, DTYPES, RESERVED_DTYPES};
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -314,8 +314,8 @@ fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
 
     // direction-NEUTRAL pinned guard (see `check_pinned_coverage`): it states what it OBSERVED
     // before prescribing, so an equality miss on a DECREASE isn't reported as an improvement.
-    check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 3, format!("{in_dtype_pos:?}"));
-    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 5, format!("{anywhere:?}"));
+    check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 4, format!("{in_dtype_pos:?}"));
+    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 7, format!("{anywhere:?}"));
     // the boundary the note states: strictly fewer than the 22 usable tokens are exercised.
     assert!(
         in_dtype_pos.len() < usable.len(),
@@ -569,5 +569,51 @@ fn test_published_declines_are_injective_by_token() {
     assert!(
         shared.is_empty(),
         "a decline token MUST NOT equal a positive token — a consumer cannot tell which          answer the vector demands: {shared:?}"
+    );
+}
+
+/// KISS-CLASSIFY-6.6-0019 — DEMONSTRATE that `gem_weight_role_discriminator` discriminates
+/// in BYTES, not merely in the dtype it names. Reconstruct its cell two ways — the weight
+/// role resolved by the caller hint (slot 0 -> the weight `i4`) vs by a fixed operand-1 read
+/// (slot 1 -> the scale `f8e8m0`) — and show the tokens DIFFER. The hint resolution reproduces
+/// the published golden byte-for-byte; the positional read yields a different, wrong token
+/// (names the scale where the weight is meant). The trigger population is empty today — no
+/// foreign emitter derives this cell (§6.6-0019's coverage note) — but the artifact CAN fail:
+/// flatten the operands to one dtype and the two resolutions collapse to identical bytes, which
+/// is exactly what would silently destroy the detector.
+#[test]
+fn gem_weight_role_vector_discriminates_in_bytes() {
+    let operand_dtypes = ["i4", "f8e8m0", "bf16"]; // [weight, weight_scale, activation]
+    let golden = positive_vectors()
+        .into_iter()
+        .find(|v| v.name == "gem_weight_role_discriminator")
+        .expect("discriminating vector present in the corpus");
+
+    // The hint resolution (weight = operand 0) IS the published golden.
+    assert_eq!(golden.key.to_token(), golden.token, "golden is self-consistent");
+    assert_eq!(derive_weight_dtype(&operand_dtypes, 0), "i4");
+
+    // The positional resolution: same cell, `<wdt>` read from a fixed operand-1 slot.
+    let mut positional = golden.key.clone();
+    let c = positional
+        .contraction
+        .as_mut()
+        .expect("the discriminating vector must be a gem cell with a contraction group");
+    c.wdt = derive_weight_dtype(&operand_dtypes, 1).to_string(); // the scale, f8e8m0
+    let positional_token = positional.to_token();
+
+    // The detector's whole worth: a wrong resolution yields DIFFERENT BYTES.
+    assert_ne!(
+        golden.token, positional_token,
+        "weight-role resolution must change the token bytes, or the vector detects nothing"
+    );
+    assert!(
+        positional_token.contains("/f8e8m0/"),
+        "a positional (operand-1) emitter names the scale dtype: {positional_token}"
+    );
+    assert!(
+        golden.token.contains("/i4/f32/bf16/"),
+        "the golden pins the weight dtype i4: {}",
+        golden.token
     );
 }
