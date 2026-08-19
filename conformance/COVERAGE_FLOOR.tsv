@@ -58,7 +58,17 @@
 # harness-backed (conformance/tests/namespace_vocabulary.rs). lint and untested are
 # unchanged — the six clauses are tested, not reclassified.
 #
+#
+# harness 369 -> 372 / lint 35 -> 32 by the uncited-declared sweep (Refs #91),
+# base main @ 0197def (#227 left the floor at 369/35/494). Three CLASSIFY clauses
+# move from documentary (lint) to behavioral (harness) backing -- 6.1-0001 (closed
+# dtype set), 6.5-0006 (closed op-family set), 6.5-0007 (work-class boundaries) --
+# via tests already asserting them in structure_key_golden.rs (all 50 pass). This
+# is a lint->harness SUBSTITUTION: ENFORCED holds at 404 and untested is UNCHANGED
+# at 494 (genuine untested earn = 0). The moved IDs are removed from UNBACKED.tsv;
+# the ratchet reports RATCHET SUBSTITUTION (#213/#215), confirmed
+# substitution_recorded (#225), not a regression.
 # key	value
-harness	369
-lint	35
+harness	372
+lint	32
 untested	494

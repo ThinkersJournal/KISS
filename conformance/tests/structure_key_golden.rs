@@ -487,6 +487,7 @@ const A_GOLDEN: &str = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/
 
 #[test]
 fn reject_wrong_field_count() {
+    // KISS-CLASSIFY-6.7-0009 — a token with the wrong field count declines with a typed WrongFieldCount, never a panic (second backing).
     assert_eq!(from_token("sk4|bin|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
@@ -542,12 +543,14 @@ fn test_classify_no_sk3_decoder_arm() {
 
 #[test]
 fn reject_bad_reduce_field() {
+    // KISS-CLASSIFY-6.7-0005 — a field-8 spelling outside the four reduce values declines BadReduceField (second backing).
     let t = format!("{}zzz", A_GOLDEN.strip_suffix('-').unwrap());
     assert_eq!(from_token(&t), Err(KeyDecline::BadReduceField));
 }
 
 #[test]
 fn reject_uppercase_hex_mask() {
+    // KISS-CLASSIFY-6.7-0010 — an uppercase hex mask declines UppercaseOrWidthHex (second backing).
     // §6.7-0010: masks must be lowercase, 2 digits — a `FF` broadcast mask is refused.
     let t = A_GOLDEN.replacen("co/00/", "co/FF/", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UppercaseOrWidthHex));
@@ -555,24 +558,28 @@ fn reject_uppercase_hex_mask() {
 
 #[test]
 fn reject_bad_operand_subkey() {
+    // KISS-CLASSIFY-6.7-0004 — a malformed operand sub-key declines BadOperandSubKey (second backing).
     let t = A_GOLDEN.replacen("co/00/v4/d16/f", "zz/00/v4/d16/f", 1); // unknown contig code
     assert_eq!(from_token(&t), Err(KeyDecline::BadOperandSubKey));
 }
 
 #[test]
 fn reject_bad_work_class() {
+    // KISS-CLASSIFY-6.7-0003 — an unknown work-class code in field 5 declines BadWorkClass (second backing).
     let t = A_GOLDEN.replacen("|grid|", "|foo|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::BadWorkClass));
 }
 
 #[test]
 fn reject_bad_rank() {
+    // KISS-CLASSIFY-6.7-0003 — a non-decimal rank in field 6 declines BadRank (second backing).
     let t = A_GOLDEN.replacen("|r2|", "|rX|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::BadRank));
 }
 
 #[test]
 fn reject_unknown_op_family() {
+    // KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownOpFamily — behavioral backing for the closed op-family set the kiss_vocab lint enforces textually (lint->harness).
     // A.2 decline vector: `sk4|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
     let t = A_GOLDEN.replacen("|bin|", "|zzz|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownOpFamily));
@@ -580,6 +587,7 @@ fn reject_unknown_op_family() {
 
 #[test]
 fn reject_unknown_dtype() {
+    // KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype (second backing).
     // A.2 decline vector: `sk4|bin|f99|…` — dtype outside the closed §6.1 set.
     let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
@@ -587,6 +595,7 @@ fn reject_unknown_dtype() {
 
 #[test]
 fn accepts_every_closed_op_family_and_dtype() {
+    // KISS-CLASSIFY-6.1-0001 — every closed-set dtype is recognized and each reserved one declines ReservedDtype — behavioral backing for the closed dtype vocabulary the kiss_tables lint enforces (lint->harness).
     // every one of the 24 op-family codes and 24 dtype tokens is recognized
     for fam in OP_FAMILIES {
         let t = A_GOLDEN.replacen("|bin|", &format!("|{fam}|"), 1);
@@ -607,6 +616,7 @@ fn accepts_every_closed_op_family_and_dtype() {
 
 #[test]
 fn test_classify_work_class_element_count() {
+    // KISS-CLASSIFY-6.5-0007 — derive_work_class returns the warp/block/grid class per the <=32 / <=1024 element-count boundaries — behavioral backing for the boundaries the kiss_vocab lint enforces (lint->harness).
     // §6.5-0010 + §6.6-0013 (backs the clause; KISS #82 finding 2 ruling, 2026-07-23):
     // the work-class total element count is the FRAME-MAX — the product over the
     // iteration-frame axes of each axis's max extent across operands — NOT the output
@@ -732,6 +742,7 @@ fn test_classify_broadcast_axis_mask() {
 
 #[test]
 fn reserved_fnuz_dtypes_typed_decline() {
+    // KISS-CLASSIFY-6.1-0001 — the reserved fnuz dtypes decline ReservedDtype, distinct from unknown (second backing).
     // §6.1-0001: `f8e4m3fnuz`/`f8e5m2fnuz` are IN the closed vocabulary (their
     // spellings pinned now so a byte-incompatible variant can never squat on
     // them) but reserved — recognized on parse, distinct from an unknown token,

@@ -69,7 +69,6 @@ KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	untested
 KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	untested	
 KISS-CLASSIFY-6.0-0001	test_classify_determinism_class_exact_byte	untested	
 KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested	
-KISS-CLASSIFY-6.1-0001	test_classify_dtype_set_is_closed	lint:kiss_tables	the closed 20-token dtype set drifts (count word or a full dtype table)
 KISS-CLASSIFY-6.1-0002	test_classify_dtype_bit_widths	untested	
 KISS-CLASSIFY-6.1-0003	test_classify_dtype_numeric_kinds	untested	
 KISS-CLASSIFY-6.1-0005	test_classify_dtypes_are_pure_storage	untested	
@@ -91,8 +90,6 @@ KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig 
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	lint:kiss_vocab	the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width
-KISS-CLASSIFY-6.5-0006	test_classify_op_family_enum	lint:kiss_vocab	the 24 op-family codes drift between Classify §6.5-0006 and the reference structure_key codec (OP_FAMILIES)
-KISS-CLASSIFY-6.5-0007	test_classify_work_class_enum	lint:kiss_vocab	the WorkClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.6-0002	test_classify_structure_key_is_not_op_identity	untested	
 KISS-CLASSIFY-6.6-0005	test_classify_structure_key_primary_dtype	untested	
