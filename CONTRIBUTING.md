@@ -327,8 +327,11 @@ shape that silently narrows another.**
 **14. The natural check after an action often answers a different question than the one you asked.**
 Distinct from convention 11 (a check run on the wrong *representation*): here the instrument is
 correct and healthy, and the *question* is mis-posed — so the answer is both accurate and
-misleading. Two live instances, and the failure is alarming rather than reassuring, which is why
-it wastes time rather than hiding defects.
+misleading. **It runs in both directions**, and which one you get depends on where the mis-posed
+question sits: mis-pose the check on your *own* action and it usually fails **alarmingly**,
+wasting time; mis-pose the check that **validates a measurement** and it fails **quietly**, in
+whichever direction the measurement pointed. The second is the dangerous half and has its own
+treatment below.
 
 - **After a squash merge, `git branch -r --contains <sha>` reports the branch commit as ABSENT
   from `main`.** The content landed; the commit identity did not. The obvious post-merge check
@@ -359,7 +362,21 @@ cheap.** So validation drifts systematically toward looseness — which yields f
 when the measurement said "clean" and false *retraction* when it said "defect." The second is
 rarer and more expensive: it discards work that was right.
 
-**Anchor the pattern when you verify a measurement** — `fn <name>\s*\(`, not `fn <name>` —
+**Two instances, two different loosenesses, one afternoon, found independently** — which is what
+makes this a class rather than a grep anecdote:
+
+- **A looser PATTERN.** `grep -rq "fn test_ops_add_sub_mul"` prefix-matched
+  `fn test_ops_add_sub_mul_wrapping`. The validator accepted a superset of what it was asked
+  about.
+- **A wrong DIRECTION.** A `cited_in` heuristic searched **backward** from a citation for its
+  enclosing `fn`, and so attributed every doc-comment citation to the **previous** test —
+  because those citations *precede* the test they belong to. The validator scanned the wrong
+  way past its target.
+
+Neither is a careless grep. Both are validators built in a hurry against a measurement built
+carefully, which is the asymmetry.
+
+**Anchor the pattern when you verify a measurement** — `fn <name>\s*\(`, not `fn <name>` —
 and when a spot-check contradicts a measurement, **suspect the spot-check first.** It is the
 instrument you spent less on.
 
