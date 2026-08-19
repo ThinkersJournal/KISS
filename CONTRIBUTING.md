@@ -295,6 +295,55 @@ answer while advertising that it lacked it. In one, the ruling was three weeks o
 thing between the project and it was a message** — the reconciliation shipped within the hour of
 being told. **None of the four was caught by any check any project owned.**
 
+**13. When a fix adds a new outcome, prove the OLD outcomes are still reachable.**
+Conventions 1–12 point falsification at the *defect*: can this check catch the bug? This one
+points it at the *remedy*: **can this fix now miss a different bug?** A control that verifies the
+reported symptom is gone will happily certify a fix that broke something else — because the
+symptom **is** gone, and the tool **does** say what was asked of it.
+
+*Why:* the coverage ratchet reported `VIOLATIONS FOUND` for a *usage* error — a missing
+`--base-ref` — which is a false alarm in the tool whose own header says *"a check that has always
+been red teaches everyone to ignore it."* The obvious fix wrapped the refusal so a missing base
+reported INCONCLUSIVE instead of failing. The symptom vanished. It also nested the **count**
+comparison inside the same `else`, so **any genuine floor regression run without a base returned a
+soft non-answer.**
+
+**That is strictly worse than the false alarm it replaced.** The false alarm cried wolf; the fix
+turned a missing flag into **a way to mask a regression** — and it would have shipped, because
+everything asked of it passed. What caught it was a second control asking whether a **real breach
+with `--base-ref` absent** still reported VIOLATIONS. It did not. `rc=2`.
+
+**Use the mechanical form, not the general one.** *"Add a control for the failure mode the fix
+could introduce"* is true and nearly useless when you are the author: you have just spent an hour
+convincing yourself it introduces none. The askable version is:
+
+> **The fix widened the result space. For each outcome that existed before, is it still
+> reachable — and is there a control that says so?**
+
+A fix that adds a third exit state must prove the first two still occur. A fix that adds a new
+decline variant must prove the old ones still fire. **Widening a result space is the specific
+shape that silently narrows another.**
+
+**14. The natural check after an action often answers a different question than the one you asked.**
+Distinct from convention 11 (a check run on the wrong *representation*): here the instrument is
+correct and healthy, and the *question* is mis-posed — so the answer is both accurate and
+misleading. Two live instances, and the failure is alarming rather than reassuring, which is why
+it wastes time rather than hiding defects.
+
+- **After a squash merge, `git branch -r --contains <sha>` reports the branch commit as ABSENT
+  from `main`.** The content landed; the commit identity did not. The obvious post-merge check
+  reads as *"the wrong commit was merged."* Ask whether the **content** is on `main` — compare the
+  file, or read the merge commit's message — not whether the SHA is an ancestor.
+- **A PR that sat through another merge carries a stale floor BY CONSTRUCTION, not by mistake.**
+  One PR's floor figure was re-derived three times and the arithmetic was right every time; the
+  **base** was stale twice. The number was never wrong. **Re-derive at the actual merge base
+  immediately before merging**, and treat any interleaved PR as stale-by-default rather than
+  suspect-on-evidence.
+
+**The discriminator: name what the check's answer is ABOUT, and confirm that is what you wanted to
+know.** A green from the right instrument on the wrong question is indistinguishable, at a glance,
+from a green on the right one.
+
 
 If you propose normative text, follow the house style so it stays testable:
 
