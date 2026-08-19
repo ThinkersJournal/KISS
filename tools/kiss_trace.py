@@ -693,7 +693,10 @@ def main():
                     help="gate on the committed floor in conformance/COVERAGE_FLOOR.tsv: "
                          "harness and lint MUST NOT fall, untested MUST NOT rise, and a "
                          "figure BETTER than the floor fails as a stale floor. A second "
-                         "mode, not a replacement for --strict.")
+                         "mode, not a replacement for --strict. THREE exit states: 0 clean, "
+                         "1 the floor moved, 2 INCONCLUSIVE (the counts were compared but the "
+                         "lint SET could not be, because --base-ref was absent). 2 is not a "
+                         "pass and not a violation -- re-run with --base-ref to get either.")
     ap.add_argument("--strict", action="store_true",
                     help="fail on ANY unbacked clause, ignoring the ledger (§6.2 verbatim)")
     ap.add_argument("--freeze-ready", nargs="?", const="ALL", default=None,
@@ -869,6 +872,14 @@ def main():
     # ---- report ----
     total_clauses = 0
     any_fail = False
+    # A REFUSAL is not a VIOLATION. --ratchet without --base-ref cannot characterize the
+    # lint dimension, and declining to answer is correct -- but reporting that decline as
+    # VIOLATIONS FOUND spends the one word that must keep meaning `the floor moved`. This
+    # file's own rationale is that a check which is always red teaches everyone to ignore
+    # it; a default invocation that reddens for a usage problem builds exactly that habit.
+    # Tracked separately so a real violation always OUTRANKS a refusal (see the report at
+    # the end): otherwise this state would become a way to mask one.
+    inconclusive = False
     print("KISS-Conform traceability check  —  " + spec_dir)
     print("=" * 68)
     for res in results:
@@ -1087,43 +1098,48 @@ def main():
         # else: genuinely git-less -> prev_lint stays None; classify_ratchet reports the lint
         #       dimension as NOT characterized instead of at-the-floor.
         if base_error:
-            any_fail = True
+            inconclusive = True
             print(f"  RATCHET: {base_error} — refusing to characterize the lint dimension rather")
             print("          than degrade to 'no movement' (the currency hazard, #213). Re-run")
             print("          with --base-ref <PR base>: origin/$base_ref on a PR, the push")
             print("          before-sha or HEAD^ on main. A defaulted base would compare against")
             print("          a stale tree.")
+        # The refusal blinds the lint SET comparison ONLY. The harness/lint/untested COUNTS
+        # do not need a base ref -- they are floor-vs-live -- so they are still compared
+        # below. Skipping them here (the original shape) meant a genuine floor breach
+        # reported INCONCLUSIVE whenever --base-ref was absent, which is strictly worse than
+        # the false alarm: it turns a missing flag into a way to mask a regression. Caught by
+        # the `a real floor breach OUTRANKS the missing-base refusal` control.
+        # The CURRENT on-disk ledger's lint set — used to gate a completed substitution:
+        # a green there requires the moved IDs to have actually left the ledger, not just
+        # the base ref, or the substitution reports green on every later PR (#223).
+        disk_lint = None
+        if os.path.exists(ledger_path):
+            with open(ledger_path, encoding="utf-8") as fh:
+                disk_lint = _ledger_lint_ids(fh.read())
+        verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
+                                          set(backed.keys()), prev_lint, disk_lint)
+        headers = {
+            "incomplete": "RATCHET: floor file is incomplete.",
+            "regression": "RATCHET REGRESSION: coverage moved backwards.",
+            "substitution": "RATCHET SUBSTITUTION: documentary -> behavioral backing "
+                            "(a strengthening the aggregate cannot show, #213).",
+            "ledger_unverifiable": "RATCHET: a completed substitution is recorded but the "
+                                   "on-disk ledger could not be read to verify it (#223).",
+            "lint_drift": "RATCHET: the lint SET changed under a flat count.",
+            "stale": "RATCHET: the floor is STALE - coverage improved past it.",
+            "uncharacterized": "RATCHET: the lint dimension moved but could not be "
+                               "characterized (git-less).",
+        }
+        if verdict in ("at_floor", "at_floor_unchecked", "substitution_recorded"):
+            print(f"  RATCHET: {lines[0]}"
+                  + ("".join(f"\n          {ln}" for ln in lines[1:])
+                     if verdict == "substitution_recorded" else ""))
         else:
-            # The CURRENT on-disk ledger's lint set — used to gate a completed substitution:
-            # a green there requires the moved IDs to have actually left the ledger, not just
-            # the base ref, or the substitution reports green on every later PR (#223).
-            disk_lint = None
-            if os.path.exists(ledger_path):
-                with open(ledger_path, encoding="utf-8") as fh:
-                    disk_lint = _ledger_lint_ids(fh.read())
-            verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
-                                              set(backed.keys()), prev_lint, disk_lint)
-            headers = {
-                "incomplete": "RATCHET: floor file is incomplete.",
-                "regression": "RATCHET REGRESSION: coverage moved backwards.",
-                "substitution": "RATCHET SUBSTITUTION: documentary -> behavioral backing "
-                                "(a strengthening the aggregate cannot show, #213).",
-                "ledger_unverifiable": "RATCHET: a completed substitution is recorded but the "
-                                       "on-disk ledger could not be read to verify it (#223).",
-                "lint_drift": "RATCHET: the lint SET changed under a flat count.",
-                "stale": "RATCHET: the floor is STALE - coverage improved past it.",
-                "uncharacterized": "RATCHET: the lint dimension moved but could not be "
-                                   "characterized (git-less).",
-            }
-            if verdict in ("at_floor", "at_floor_unchecked", "substitution_recorded"):
-                print(f"  RATCHET: {lines[0]}"
-                      + ("".join(f"\n          {ln}" for ln in lines[1:])
-                         if verdict == "substitution_recorded" else ""))
-            else:
-                any_fail = True
-                print(f"  {headers[verdict]}")
-                for ln in lines:
-                    print(f"          {ln}")
+            any_fail = True
+            print(f"  {headers[verdict]}")
+            for ln in lines:
+                print(f"          {ln}")
     elif args.strict:
         # §6.2 verbatim gates on a normative MUST with no test. A lint-enforced
         # document clause HAS a test (the lint), so strict gates on the rest.
@@ -1161,6 +1177,11 @@ def main():
     print("-" * 68)
     if any_fail:
         print("  RESULT: VIOLATIONS FOUND")
+    elif inconclusive:
+        # Non-zero (a caller must not treat this as a pass) but DISTINCT from 1, so a
+        # script can tell "I could not measure" from "the floor moved".
+        print("  RESULT: INCONCLUSIVE — the ratchet declined to answer; this is NOT a floor")
+        print("          violation and NOT a clean run. Re-run with --base-ref to get either.")
     else:
         untested_n = len(by_category.get("untested", []))
         print(f"  RESULT: CLEAN — document consistency holds; every clause is harness-"
@@ -1169,7 +1190,7 @@ def main():
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
               f"{untested_n}\n          (blocked/untestable/definitional are accounted for; "
               f"see the breakdown above).")
-    return 1 if any_fail else 0
+    return 1 if any_fail else (2 if inconclusive else 0)
 
 
 if __name__ == "__main__":

@@ -109,7 +109,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 19
+EXPECTED_CONTROLS = 21
 
 
 def check(name, cond, detail=""):
@@ -314,6 +314,34 @@ def main():
               r.returncode != 0 and "base-ref" in gout,
               f"a git-checkout --ratchet without --base-ref passed at-the-floor — the constant-"
               f"count swap hole: rc={r.returncode}\n{gout[-400:]}")
+
+        # A REFUSAL IS NOT A VIOLATION. The check above only asks that the refusal is
+        # non-zero, which a single failure state satisfies -- so it cannot tell "I declined
+        # to measure" from "the floor moved". Reporting the decline as VIOLATIONS FOUND
+        # spends the word that must keep meaning a floor breach, and this file's own
+        # rationale is that an always-red check teaches everyone to ignore it. CI always
+        # passes --base-ref, so the false alarm lands only on a human spot-checking by hand
+        # -- the reader least able to tell it is spurious.
+        check("--ratchet without --base-ref reports INCONCLUSIVE, not a floor violation",
+              r.returncode == 2 and "INCONCLUSIVE" in gout and "VIOLATIONS FOUND" not in gout,
+              f"a usage refusal must be its own exit state (2), distinct from a floor breach "
+              f"(1) and from clean (0): rc={r.returncode}\n{gout[-400:]}")
+
+        # THE CONTROL THAT MAKES THE ONE ABOVE SAFE. Without it, "always report INCONCLUSIVE
+        # when --base-ref is missing" passes -- and that would turn every real regression run
+        # without a base into a soft non-answer, strictly worse than the false alarm it
+        # replaced. A genuine violation MUST outrank a refusal.
+        with open(os.path.join(gconf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
+            f.write("# floor\nharness\t2\nlint\t0\nuntested\t0\n")
+        rv = subprocess.run([sys.executable, TOOL, "--ratchet", "--spec-dir", gspec,
+                             "--conformance-dir", gconf], capture_output=True, text=True,
+                            timeout=300)
+        vout = rv.stdout + rv.stderr
+        check("a real floor breach OUTRANKS the missing-base refusal",
+              rv.returncode == 1 and "VIOLATIONS FOUND" in vout,
+              f"floor 2 vs live 3 is a genuine breach and must report VIOLATIONS FOUND even "
+              f"with --base-ref absent, or INCONCLUSIVE becomes a way to mask one: "
+              f"rc={rv.returncode}\n{vout[-400:]}")
 
     if failures:
         print("FAIL - the coverage ratchet does not discriminate:")
