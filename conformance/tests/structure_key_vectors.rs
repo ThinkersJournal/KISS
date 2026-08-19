@@ -27,7 +27,7 @@ fn committed_path() -> std::path::PathBuf {
 /// (1) The committed artifact is byte-identical to a fresh generation. If this fails,
 /// regenerate with `cargo run --bin emit_structure_key_vectors > conformance/corpus/structure_key_vectors.json`.
 #[test]
-fn structure_key_vectors_artifact_is_fresh() {
+fn test_structure_key_vectors_artifact_is_fresh() {
     let committed = std::fs::read(committed_path())
         .expect("conformance/corpus/structure_key_vectors.json is missing — generate it with the emit_structure_key_vectors bin");
     let fresh = emit_reference_vectors_json();
@@ -91,7 +91,7 @@ fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
 /// Deleting `reserved_dtypes` panics in `str_array`; emptying or mis-filling it fails
 /// the membership/length assertions — verified by scratch deletion in the PR #161 review.
 #[test]
-fn dual_axis_is_present_and_discriminates() {
+fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(DTYPES.len(), 24, "recognition set must be 24 tokens");
     assert_eq!(RESERVED_DTYPES.len(), 2, "two reserved tokens");
     assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 22, "usable const = 22");
@@ -141,7 +141,7 @@ fn dual_axis_is_present_and_discriminates() {
 /// pins `target` == the token's serialized field-3, which catches a `to_token` that
 /// mangled the target.
 #[test]
-fn target_axis_is_machine_readable_and_cross_checked() {
+fn test_target_axis_is_machine_readable_and_cross_checked() {
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
         .expect("artifact must be valid JSON");
 
@@ -479,4 +479,55 @@ fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
             v.name
         );
     }
+}
+
+/// KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
+///
+/// `decline_wire_kinds_are_injective` asserts pairwise distinctness over
+/// `all_decline_wire_kinds()` — the `KeyDecline` enum's wire strings. That is a
+/// property of the CODE. The clause obliges a property of the FILE, and the two
+/// populations differ: the enum carries 21 wire kinds, the artifact publishes 17
+/// decline vectors. A collision introduced by a GENERATION change leaves the enum
+/// untouched, so the enum-side check stays green through exactly the failure this
+/// one exists to catch.
+///
+/// Vector count and distinct-token count are asserted SEPARATELY and phrased
+/// against each other. A single `set.len()` assertion cannot tell "17 distinct
+/// tokens" from "17 vectors that collapsed to 17 distinct tokens by luck" — and a
+/// map keyed by token reports its DISTINCT count as its length, so bumping a
+/// pinned total passes even when two vectors have collided.
+#[test]
+fn test_published_declines_are_injective_by_token() {
+    use std::collections::BTreeSet;
+    let raw = std::fs::read_to_string(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/structure_key_vectors.json"),
+    )
+    .expect("published artifact must be readable");
+
+    // Count vectors by their published `"token":` fields, without a JSON parser —
+    // the artifact is the subject here, so read what it literally contains.
+    let tokens: Vec<&str> = raw
+        .match_indices("\"token\": \"")
+        .map(|(i, m)| {
+            let rest = &raw[i + m.len()..];
+            &rest[..rest.find('"').expect("token string must terminate")]
+        })
+        .collect();
+    let decline_tokens: Vec<&str> = tokens.iter().copied().filter(|t| t.starts_with("sk")).collect();
+
+    assert!(
+        !decline_tokens.is_empty(),
+        "vacuity guard: the artifact published no tokens at all, so injectivity \
+         would hold trivially and prove nothing"
+    );
+    let distinct: BTreeSet<&str> = decline_tokens.iter().copied().collect();
+    assert_eq!(
+        distinct.len(),
+        decline_tokens.len(),
+        "published tokens MUST be pairwise distinct: {} vectors collapsed to {} \
+         distinct tokens — two vectors share a token, so a consumer keying by token \
+         silently drops one",
+        decline_tokens.len(),
+        distinct.len(),
+    );
 }

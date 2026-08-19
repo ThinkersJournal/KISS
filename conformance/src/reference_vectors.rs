@@ -29,6 +29,15 @@ pub const VECTORS_SCHEMA: &str = "kiss-structure-key-vectors-v1";
 /// provenance (§6.7 Appendix A at sk4, #131 `SCHEMA_VERSION` 3→4). An artifact that
 /// names its source tree is checkable against that tree; one that does not is a
 /// claim about an unspecified state.
+/// **KNOWN DEFECT - #218, fix scheduled with the coordinated artifact cut.**
+/// This literal is maintained by hand, so nothing moves it when the generator's
+/// inputs move: it survived the decline set going 10 -> 15 -> 17 and the vulkan v4
+/// respell unchanged. The doc comment above calls it "falsifiable provenance", and
+/// that is the claim being falsified here - a stamp proves BINDING, not CURRENCY. It
+/// records which tree was bound and structurally cannot report that the tree has
+/// since moved. The fix derives the value at generation time under a NEW field name
+/// (the old one deprecated, never redefined in place); it changes published bytes,
+/// so it ships with the coordinated cut. DO NOT COPY THIS PATTERN.
 pub const SOURCE_COMMIT: &str = "19c3ad7";
 
 /// The **vocabulary version** each embedded `<namespace>:` token was generated
@@ -601,6 +610,11 @@ pub fn emit_reference_vectors_json() -> String {
     let mut s = String::new();
     s.push_str("{\n");
     s.push_str(&format!("  \"schema\": {},\n", json_str(VECTORS_SCHEMA)));
+    // **KNOWN DEFECT - #218, fix scheduled with the coordinated artifact cut.**
+    // `generated_from` must name the GENERATOR that emitted these bytes - this
+    // module - not the document that specifies them. Provenance names the producer;
+    // agreement with an annex is a separate relation, and neither settles the other.
+    // Changes published bytes, so it moves with `source_commit` above, not before it.
     s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
     s.push_str(&format!("  \"source_commit\": {},\n", json_str(SOURCE_COMMIT)));
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.7\",\n");
