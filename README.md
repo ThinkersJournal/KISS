@@ -93,7 +93,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
 | [`PRIOR-ART.md`](PRIOR-ART.md) | Prior art (informative): KISS measured against StableHLO/PJRT, ONNX, Triton/MLIR, PyTorch, DLPack, SPIR-V/IREE, the vendor kernel libraries, and the Khronos ULP/CTS precedent — what they already solve, what they do not, and the one claim that survives. **Read this before implementing.** |
 | [`WIRE-FIRST.md`](WIRE-FIRST.md) | A work order (informative): the 38 confirmed blockers between here and one real handshake+provision across a process boundary, what is already green, and what each implementation can do now. |
-| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 552 normative clauses with no executable test. The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
+| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 549 normative clauses with no executable harness test. The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
 
 ## How to read a KISS sub-standard
 
@@ -108,17 +108,19 @@ Every sub-standard follows one **dual-document template** (umbrella §4):
 Read the informative half for understanding; implement against the normative half.
 
 > **Test coverage — a clause↔test *mapping*, not a passing rate — is ~40% as of
-> `0197def`, not the 3.4% this note long claimed.** Of 921 normative clauses, 369
-> (40.1%) are backed by a named executable test; 552 name a conformance test that
-> **does not exist yet**. Read the 40% precisely: `tools/kiss_trace.py` reads spec
-> markdown and Rust source and never builds or runs the crate, so a named test is
-> known to **exist** — not to compile, run, or pass. Every unbacked clause is listed
-> in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) (of the 552, 494 are the
-> real gap — genuinely untested — the rest are lint-enforced, blocked on an unpinned
-> decision, or definitional). Treat a clause as *proposed* unless it appears outside
-> that ledger — a named test is not a passing test. These figures drift with every
-> merge; `python tools/kiss_trace.py --report` prints the live number and the commit
-> is your timestamp.
+> `b311f1c`, not the 3.4% this note long claimed.** Of 921 normative clauses, 372
+> (40.4%) are backed by a named executable test; 549 have no harness test. Read the
+> 40% precisely: `tools/kiss_trace.py` reads spec markdown and Rust source and never
+> builds or runs the crate, so a named test is known to **exist** — not to compile,
+> run, or pass. Of the 549 without a harness test, **494** are the real gap (genuinely
+> untested); the rest are lint-enforced (32), blocked on an unpinned decision (19), or
+> definitional (4) — "no harness test" is not "no coverage." Every unbacked clause is
+> listed in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv); treat a clause as
+> *proposed* unless it appears outside that ledger — a named test is not a passing
+> test. These figures drift with every merge; run `python tools/kiss_trace.py
+> --report` for the live numbers and **record the commit you read them at** (the
+> figures here are stamped `b311f1c`) — a figure without its commit is not a
+> measurement.
 
 ## Conformance
 
