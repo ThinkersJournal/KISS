@@ -846,10 +846,10 @@ correspondence the sibling relies on).
   are identical; the comparison is performed **after** resolution to the primitive floor
   and **includes** the OpAttrs bytes. An implementation MUST NOT claim tier-1 equality
   under any looser predicate. *Test:* `test_emit_op_dag_equality_defined`.
-- **KISS-EMIT-6.7-0008** — The two-tier round-trip statement of §6.7-0001 through
-  §6.7-0005 MUST be **semantically equivalent** — same clause intent, same normative
-  effect — to the corresponding round-trip clauses of KISS-Consume under the following
-  enumerated **clause-correspondence table**; the only permitted difference is that the
+- **KISS-EMIT-6.7-0008** — The round-trip statement of §6.7-0001 through §6.7-0005
+  **and §6.7-0009** MUST be **semantically equivalent** — same clause intent, same
+  normative effect — to the corresponding round-trip clauses of KISS-Consume under the
+  following enumerated **clause-correspondence table**; the only permitted difference is that the
   vendor-language illustration of the informative §2.6 is neutralized to generic roles
   in this normative section. This obligation is verified by a KISS-Conform
   **cross-standard document lint** over both sub-standards' texts, not by an emitter-
@@ -862,6 +862,7 @@ correspondence the sibling relies on).
   | §6.7-0003 | §6.6-0003 | No cross-language numeric identity |
   | §6.7-0004 | §6.6-0004 | Tier selected by determinism enum |
   | §6.7-0005 | §6.6-0005 | DAG siblings, no dependency edge |
+  | §6.7-0009 | §6.6-0006 | Whole-kernel tier aggregation |
 
   *Test:* `test_conform_emit_consume_correspondence_lint` (KISS-Conform
   cross-standard lint).
@@ -869,7 +870,8 @@ correspondence the sibling relies on).
 - **KISS-EMIT-6.7-0009** — **Whole-kernel tier aggregation.** A whole-kernel tier-2
   (numeric bit-identity) round-trip claim MUST be admissible **only** when **every** op
   in the resolved DAG — resolved through its KISS-Ops reference decomposition to the
-  KISS-Ops primitive floor — is of the **exact-byte** determinism class; if **any** op
+  KISS-Ops primitive floor — is of the **exact-byte** determinism class **and the
+  same-language, on-device restriction of §6.7-0002 holds**; if **any** op
   in the resolved DAG is of the `ULP/tolerance` or `order-invariant/nondeterministic`
   class, the whole-kernel round-trip MUST stop at tier 1 (structural) only, and an
   implementation MUST NOT claim whole-kernel tier-2 bit-identity for it. This mirrors
