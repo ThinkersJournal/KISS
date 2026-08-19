@@ -795,7 +795,8 @@ pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
 pub fn derive_weight_dtype<'a>(operand_dtypes: &[&'a str], weight_slot: usize) -> &'a str {
     operand_dtypes.get(weight_slot).copied().unwrap_or_else(|| {
         panic!(
-            "weight-role hint slot {weight_slot} is out of range for {} operand(s)",
+            "§6.6-0019: weight-role hint slot {weight_slot} is out of range for {} \
+             operand(s) — the caller's role hint must name an existing operand",
             operand_dtypes.len()
         )
     })
