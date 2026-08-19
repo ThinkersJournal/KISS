@@ -85,11 +85,25 @@ suite whose proposition is that the nine are minimal — and its own freeze gate
 satisfy.
 
 **B. Consume carries no round-trip clauses and cites Emit's normatively.** The
-true single-source fix; dissolves the asymmetry completely. **Cost:** it creates
-the dependency edge the DAG explicitly denies — `emit.md` §0: *"a **sibling** of
-KISS-Consume … neither depends on the other."* That is a DAG change, not a
-wording change, and the sibling relation may be load-bearing for reasons beyond
-this RFC.
+true single-source fix; dissolves the asymmetry completely.
+
+**Cost, as it is usually stated:** it creates the dependency edge the DAG denies
+— `emit.md` §0: *"a **sibling** of KISS-Consume … neither depends on the
+other."*
+
+**But that statement is already false in substance, which changes the
+proposition.** Consume defers to Emit's correspondence table in **three places**
+in prose, **and** its tier-2 clause relies on a determinant — `language-identity
+token` — that **KISS-Emit defines and KISS-Consume does not** (see Addendum).
+Two independent informal dependencies already exist.
+
+**So B would be *documenting* an edge rather than creating one.** That is a
+materially different proposition from the one §0 makes it sound like, and the
+honest comparison is not "add a dependency vs keep independence" but "**make the
+existing dependency explicit and directional, vs leave it implicit and
+unenforced.**" The sibling relation may still be load-bearing for reasons beyond
+this RFC — but it should be defended on those reasons, not on an independence the
+documents do not actually have.
 
 **C. Status quo plus rows** (being done now, independently): add §6.7-0009 ↔
 §6.6-0006 and a Consume twin for §6.7-0006. **Closes the measured hole. Does not
@@ -148,3 +162,32 @@ plausibly resolves it for the statement.
 **Consequence: option C is partially blocked.** The §6.7-0009 ↔ §6.6-0006 row is
 clean and is landed. The §6.7-0006 twin is not authorable without choosing one of
 the three above, which is a cosigner decision rather than an editorial one.
+
+## If the answer is no, that is a finding — not a fallback
+
+**Required of whatever this RFC concludes.** If the guarantee cannot be made
+structural under the current ID and DAG constraints, the outcome must be recorded
+as:
+
+> **We asked whether the emit/consume round-trip guarantee could be made
+> structural, established that it cannot under per-document clause IDs and the
+> declared sibling relation, and therefore state the guarantee honestly instead.**
+
+Not as *"we added a row."*
+
+**Two reasons, and the second is the load-bearing one.**
+
+It is a considerably stronger artifact: a reader learns what was asked, what was
+established, and why the weaker guarantee is the honest one rather than the lazy
+one.
+
+And **an unrecorded negative result is expensive.** The next person to notice the
+correspondence table is maintained rather than structural will re-open exactly
+this question, re-derive the umbrella constraint, re-discover the borrowed term,
+and arrive back here — because nothing in the documents says it was asked and
+answered. **A settled question that does not look settled gets re-litigated**, and
+the cost lands on whoever is next rather than on whoever failed to write it down.
+
+The same then applies in the spec text, per §"What the author recommends": if C is
+the ceiling, both documents say so. **A reader of `consume.md` should not have to
+find an RFC to learn what the guarantee is worth.**
