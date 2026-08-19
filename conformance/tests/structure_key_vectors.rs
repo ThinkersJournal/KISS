@@ -27,7 +27,7 @@ fn committed_path() -> std::path::PathBuf {
 /// (1) The committed artifact is byte-identical to a fresh generation. If this fails,
 /// regenerate with `cargo run --bin emit_structure_key_vectors > conformance/corpus/structure_key_vectors.json`.
 #[test]
-fn structure_key_vectors_artifact_is_fresh() {
+fn test_structure_key_vectors_artifact_is_fresh() {
     let committed = std::fs::read(committed_path())
         .expect("conformance/corpus/structure_key_vectors.json is missing — generate it with the emit_structure_key_vectors bin");
     let fresh = emit_reference_vectors_json();
@@ -91,7 +91,7 @@ fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
 /// Deleting `reserved_dtypes` panics in `str_array`; emptying or mis-filling it fails
 /// the membership/length assertions — verified by scratch deletion in the PR #161 review.
 #[test]
-fn dual_axis_is_present_and_discriminates() {
+fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(DTYPES.len(), 24, "recognition set must be 24 tokens");
     assert_eq!(RESERVED_DTYPES.len(), 2, "two reserved tokens");
     assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 22, "usable const = 22");
@@ -112,7 +112,12 @@ fn dual_axis_is_present_and_discriminates() {
     assert_eq!(reserved.len(), 2);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(4));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk4"));
-    assert_eq!(doc.get("source_commit").and_then(|j| j.as_str()), Some(SOURCE_COMMIT));
+    // NOT asserted here: `source_commit`. `doc` is the emitter's own output and the
+    // emitter writes SOURCE_COMMIT into that field, so comparing the two compares a
+    // value to itself and cannot fail — verified by mutating the constant to a bogus
+    // value, after which this test still passed. The committed-vs-fresh byte equality
+    // in `test_structure_key_vectors_artifact_is_fresh` catches that same mutation
+    // (it fails STALE), so the obligation is covered non-vacuously there, not here.
 
     // the discriminating per-axis assertions: each reserved token is in the reserved
     // ARRAY, present in recognition, and ABSENT from usable — the three a whole-document
@@ -141,7 +146,7 @@ fn dual_axis_is_present_and_discriminates() {
 /// pins `target` == the token's serialized field-3, which catches a `to_token` that
 /// mangled the target.
 #[test]
-fn target_axis_is_machine_readable_and_cross_checked() {
+fn test_target_axis_is_machine_readable_and_cross_checked() {
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
         .expect("artifact must be valid JSON");
 
@@ -479,4 +484,90 @@ fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
             v.name
         );
     }
+}
+
+/// KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
+///
+/// `decline_wire_kinds_are_injective` asserts pairwise distinctness over
+/// `all_decline_wire_kinds()` — the `KeyDecline` enum's wire strings. That is a
+/// property of the CODE. The clause obliges a property of the FILE, and the two
+/// populations differ: the enum carries 21 wire kinds, the artifact publishes 17
+/// decline vectors. A collision introduced by a GENERATION change leaves the enum
+/// untouched, so the enum-side check stays green through exactly the failure this
+/// one exists to catch.
+///
+/// Vector count and distinct-token count are asserted SEPARATELY and phrased
+/// against each other. A single `set.len()` assertion cannot tell "17 distinct
+/// tokens" from "17 vectors that collapsed to 17 distinct tokens by luck" — and a
+/// map keyed by token reports its DISTINCT count as its length, so bumping a
+/// pinned total passes even when two vectors have collided.
+#[test]
+fn test_published_declines_are_injective_by_token() {
+    use std::collections::BTreeSet;
+    let raw = std::fs::read_to_string(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/structure_key_vectors.json"),
+    )
+    .expect("published artifact must be readable");
+
+    // The artifact is the subject, so read what it literally contains rather than a
+    // parsed projection. `positive_vectors` and `decline_vectors` are separate arrays
+    // and the clause's subject is the DECLINES, so split on the array boundary first:
+    // filtering all `"token"` fields by an `sk` prefix does NOT separate them — every
+    // positive token carries the same prefix, so such a filter silently asserts over
+    // the union while its name claims otherwise.
+    let split = raw
+        .find("\"decline_vectors\"")
+        .expect("artifact must publish a decline_vectors array");
+    let tokens_in = |region: &str| -> Vec<String> {
+        region
+            .match_indices("\"token\": \"")
+            .map(|(i, m)| {
+                let rest = &region[i + m.len()..];
+                rest[..rest.find('"').expect("token string must terminate")].to_string()
+            })
+            .collect()
+    };
+    let positives = tokens_in(&raw[..split]);
+    let declines = tokens_in(&raw[split..]);
+
+    // Vacuity guard: injectivity over an empty set holds trivially and proves nothing.
+    assert!(
+        !declines.is_empty(),
+        "vacuity guard: the artifact published no decline tokens, so decline injectivity          would hold trivially"
+    );
+    assert!(
+        !positives.is_empty(),
+        "vacuity guard: no positive tokens found, so the array split located the wrong          boundary and `declines` may be the whole file"
+    );
+    // Every decline vector carries exactly one token: this pins the COUNT and
+    // independently confirms the split, since a mis-placed boundary would leave the
+    // two tallies disagreeing.
+    let declared = raw[split..].matches("\"decline\": \"").count();
+    assert_eq!(
+        declines.len(),
+        declared,
+        "each decline vector MUST publish exactly one token: {} tokens against {}          `decline` fields",
+        declines.len(),
+        declared,
+    );
+
+    // The obligation: the published decline kinds are pairwise distinct. Vector count
+    // and distinct-token count asserted separately and phrased against each other.
+    let distinct: BTreeSet<&String> = declines.iter().collect();
+    assert_eq!(
+        distinct.len(),
+        declines.len(),
+        "published DECLINE tokens MUST be pairwise distinct: {} vectors collapsed to {}          distinct tokens — two declines share a token, so a consumer keying by token          silently drops one and the decline set stops discriminating",
+        declines.len(),
+        distinct.len(),
+    );
+
+    // A decline token equal to a positive token is the same collision across the array
+    // boundary, and neither per-array check alone would see it.
+    let pos: BTreeSet<&String> = positives.iter().collect();
+    let shared: Vec<&&String> = distinct.intersection(&pos).collect();
+    assert!(
+        shared.is_empty(),
+        "a decline token MUST NOT equal a positive token — a consumer cannot tell which          answer the vector demands: {shared:?}"
+    );
 }

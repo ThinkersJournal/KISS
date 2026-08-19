@@ -75,7 +75,23 @@
 # UNCHANGED and total clauses 921 -> 922. The discriminating gem vector that pins the
 # rule latently is HELD for a Fuel corpus re-vendor (== -> >=) and lands in a follow-up
 # PR; it is a corpus artifact, not a clause, and moves no count here.
+# Re-derived on main @ f8a2a23 for #212/#218; NOT carried from any earlier base.
+# harness 373 -> 377: the four KISS-CONFORM-6.3-0005..-0008 published-artifact clauses
+# each name a test already in conformance/tests/structure_key_vectors.rs. lint 32 and
+# untested 494 UNCHANGED -- the clauses arrive backed, so no new normative text enters
+# the ledger, and -0009 is deliberately absent (it can only be backed by moving published
+# artifact bytes; it ships with its test in the coordinated cut -- #218).
+#
+# THIS NUMBER HAS NOW BEEN RE-DERIVED THREE TIMES, and was wrong the first two, because
+# the base moved under it while the branch sat in review: 368+4=372, then 372+4=376, now
+# 373+4=377. The +4 was right every time; the BASE was stale every time. Worse, the first
+# stale value (372) was numerically EQUAL to what #243's lint->harness substitution had
+# meanwhile put on main, so 'harness matches main' CONFIRMED the wrong number. A floor is
+# a dated measurement, not a property of the branch: re-derive at the actual merge base
+# with `--ratchet --base-ref origin/main` immediately before merge, and never carry an
+# arithmetic result across a rebase.
+#
 # key	value
-harness	373
+harness	377
 lint	32
 untested	494

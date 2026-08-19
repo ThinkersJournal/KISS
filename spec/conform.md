@@ -591,6 +591,34 @@ enum (§6.0). See umbrella §3 for the full statement.
   version MUST be immutable and archived; an implementation MUST NOT mutate a frozen version's
   matrix, and new or changed clauses MUST land only against a new schema version's matrix
   (§8-0004). *Test:* `test_conform_frozen_matrix_immutable`.
+- **KISS-CONFORM-6.3-0005** — A **published reference artifact** (§6.3-0003) MUST be
+  byte-identical to a fresh generation from the reference codec **at the same source tree**,
+  and the suite MUST carry an executable check that it is. The check MUST
+  compare **bytes**, not a parsed projection: a consumer diffs the artifact's octets, so a
+  gate comparing parsed structure runs green on a file that every byte-hashing consumer
+  reads differently. *Test:* `test_structure_key_vectors_artifact_is_fresh`.
+- **KISS-CONFORM-6.3-0006** — The decline kinds a reference artifact **publishes** MUST be
+  pairwise distinct, and the suite MUST assert it **against the published vectors** — the
+  vector count and the distinct-token count asserted separately and phrased against each
+  other. Asserting injectivity over the generating enumeration instead proves a property of
+  the **code** while the obligation is a property of the **file**: a collision introduced by
+  a generation change leaves the enumeration untouched, so such a check stays green through
+  exactly the failure it appears to cover. *Test:*
+  `test_published_declines_are_injective_by_token`.
+- **KISS-CONFORM-6.3-0007** — A reference artifact MUST carry **both** dtype axes
+  (KISS-Classify §6.1-0001) — the recognition set and the usable subset — non-vacuously and
+  **distinguishably**, because consumers scope their runs on them. Every declared count MUST
+  equal the length of the array it describes, and the suite MUST assert that the two axes
+  actually **discriminate**: each reserved token present in recognition and absent from
+  usable, at least one usable token absent from reserved, and usable exactly recognition
+  minus reserved. A whole-document search for a token name satisfies the surface form of all
+  three while distinguishing none of them.
+  *Test:* `test_dual_axis_is_present_and_discriminates`.
+- **KISS-CONFORM-6.3-0008** — Every machine-readable axis tag a reference artifact attaches
+  to a token (target, target-namespace) MUST **agree with the token it annotates**, and the
+  suite MUST cross-check tag against token. That axis is how a consumer scopes capability
+  exclusions mechanically rather than narratively, so a tag disagreeing with its token
+  silently scopes the wrong vector. *Test:* `test_target_axis_is_machine_readable_and_cross_checked`.
 
 ### 6.4 Modality 1 — golden byte-vectors
 
@@ -1295,6 +1323,10 @@ the traceability lint.
 | KISS-CONFORM-6.3-0002 | `test_conform_matrix_carries_metadata` |
 | KISS-CONFORM-6.3-0003 | `test_conform_suite_self_contained_bundle` |
 | KISS-CONFORM-6.3-0004 | `test_conform_frozen_matrix_immutable` |
+| KISS-CONFORM-6.3-0005 | `test_structure_key_vectors_artifact_is_fresh` |
+| KISS-CONFORM-6.3-0006 | `test_published_declines_are_injective_by_token` |
+| KISS-CONFORM-6.3-0007 | `test_dual_axis_is_present_and_discriminates` |
+| KISS-CONFORM-6.3-0008 | `test_target_axis_is_machine_readable_and_cross_checked` |
 | KISS-CONFORM-6.4-0001 | `test_conform_golden_byte_vectors` |
 | KISS-CONFORM-6.4-0002 | `test_conform_golden_vectors_fully_pinned` |
 | KISS-CONFORM-6.4-0003 | `test_conform_golden_vectors_hex_rows` |

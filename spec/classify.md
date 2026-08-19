@@ -1404,11 +1404,18 @@ separating a registered namespace from that namespace's capability-set token.
   > is a closed list built from `n = 2`. The unrecognized-`kind` decline is the
   > abstention rule: a reader that cannot recognize a shape refuses rather than assuming
   > the nearer of the two it knows.
-- **KISS-CLASSIFY-6.8-0011** — A vocabulary manifest MUST name its source annex in
-  `generated_from` and MUST be reproducible from that annex under an
-  emit-and-`git diff --exit-code` freshness gate, so the machine-readable form cannot
-  drift from the annex it derives from (as `dtype_manifest.json` and
-  `structure_key_vectors.json` are gated). *Test:*
+- **KISS-CLASSIFY-6.8-0011** — A vocabulary manifest MUST name **what emitted its bytes** in
+  `generated_from`, and MUST **agree** with its prose annex under an
+  emit-and-`git diff --exit-code` freshness gate. These are two obligations, and this clause
+  previously fused them into an annex-as-source model that compelled a false field: it
+  required `generated_from` to name the **annex**, so a manifest generated from a reference
+  crate — with the annex a peer output rather than the source — could satisfy the clause only
+  by naming a document its bytes did not come from. **Provenance names the producer;
+  agreement is a relation between two artifacts, and neither settles which is the source.**
+  An implementation MAY generate from the annex, from a reference crate, or from another
+  authority, MUST name whichever it used, and owes the agreement gate in every case. The
+  commit such an artifact records alongside this field is a **separate** obligation from
+  either of the two above, and is not pinned at this version. *Test:*
   `test_namespace_vocabulary_freshness_provenance`.
 - **KISS-CLASSIFY-6.8-0012** — A vocabulary manifest has a **declarative** half
   (grammar, alphabets, orderings, and — for `enumerated` — `members`) and a
