@@ -91,6 +91,18 @@
 # with `--ratchet --base-ref origin/main` immediately before merge, and never carry an
 # arithmetic result across a rebase.
 #
+# EXIT STATES of `--ratchet`, because this file's whole rationale is that a check which is
+# always red teaches everyone to ignore it:
+#   0  CLEAN         at the floor.
+#   1  VIOLATIONS    the floor moved -- the word reserved for exactly that.
+#   2  INCONCLUSIVE  the counts were compared, but --base-ref was absent so the lint SET
+#                    could not be diffed against the base ledger. NOT a pass and NOT a
+#                    violation. CI always passes --base-ref, so this state is only ever
+#                    seen by a human spot-checking by hand -- the reader least equipped to
+#                    tell a false alarm from a real one, which is why it gets its own word.
+#  A genuine floor breach OUTRANKS the refusal and still reports 1, so a missing flag can
+#  never mask a regression.
+#
 # key	value
 harness	377
 lint	32
