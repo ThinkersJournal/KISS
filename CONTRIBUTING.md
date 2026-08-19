@@ -344,6 +344,25 @@ it wastes time rather than hiding defects.
 know.** A green from the right instrument on the wrong question is indistinguishable, at a glance,
 from a green on the right one.
 
+**And the sharpest case is when the mis-posed question is the one VALIDATING a measurement.**
+A sweep found 53 clauses naming a test that does not exist. Spot-checking it,
+`grep -rq "fn test_ops_add_sub_mul"` returned **YES** — apparently falsifying the sweep. It was
+prefix-matching `fn test_ops_add_sub_mul_wrapping`. **The spot-check was wrong, not the sweep**,
+and a correct finding was one keystroke from being retracted.
+
+> **A check used to validate a measurement must be at least as precise as the measurement — and
+> the natural quick check is reliably less precise, not more.**
+
+That asymmetry is what makes it a rule rather than an anecdote. **Nobody reaches for a *more*
+rigorous instrument to spot-check something; the whole point of a spot-check is that it is
+cheap.** So validation drifts systematically toward looseness — which yields false *reassurance*
+when the measurement said "clean" and false *retraction* when it said "defect." The second is
+rarer and more expensive: it discards work that was right.
+
+**Anchor the pattern when you verify a measurement** — `fn <name>\s*\(`, not `fn <name>` —
+and when a spot-check contradicts a measurement, **suspect the spot-check first.** It is the
+instrument you spent less on.
+
 
 If you propose normative text, follow the house style so it stays testable:
 
