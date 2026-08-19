@@ -68,7 +68,14 @@
 # at 494 (genuine untested earn = 0). The moved IDs are removed from UNBACKED.tsv;
 # the ratchet reports RATCHET SUBSTITUTION (#213/#215), confirmed
 # substitution_recorded (#225), not a regression.
+#
+# harness 372 -> 373 by #219: KISS-CLASSIFY-6.6-0019 (the weight-role hint) is newly
+# harness-backed by test_classify_weight_role_hint. base main @ b311f1c (372/32/494);
+# one new normative clause, backed in the same PR, so lint (32) and untested (494) are
+# UNCHANGED and total clauses 921 -> 922. The discriminating gem vector that pins the
+# rule latently is HELD for a Fuel corpus re-vendor (== -> >=) and lands in a follow-up
+# PR; it is a corpus artifact, not a clause, and moves no count here.
 # key	value
-harness	372
+harness	373
 lint	32
 untested	494

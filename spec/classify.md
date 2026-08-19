@@ -567,8 +567,12 @@ where it fixes storage bytes.
   MX-encoded value operand, carried as a **sibling operand** (§3.2), never an element
   value dtype. These are pinned format constants citing OCP-MX; their special values
   follow the OCP-MX definitions (not restated here), and the MX **block** structure
-  (block size, scale placement) is an encoding-axis concern **outside** §6.1. *Test:*
-  `test_classify_mx_scale_format`.
+  (block size, scale placement) is an encoding-axis concern **outside** §6.1.
+  *Sibling placement (informative):* this clause pins no **position** for the scale's
+  sibling operand in the canonical operand order (§6.6-0014); placement is left
+  unconstrained. §6.6-0019's prohibition on reading the weight role from operand
+  position depends on that — if a later revision pins sibling placement, revisit
+  §6.6-0019. *Test:* `test_classify_mx_scale_format`.
 
 ### 6.2 Numeric-kind and special-value pinning
 
@@ -990,8 +994,10 @@ form (§6.7-0011).
   be: the canonically-ordered operand descriptors (§6.6-0014), including the
   cell-level `op_family_tag` (op category, §6.3-0008); the `target`; and the
   caller-supplied **role hints** required by that op category — for a
-  dense-contraction cell the M/N/K axis-role assignment (§6.6-0016), and for a
-  gather/scatter/embedding cell which operand slot carries the index/address role
+  dense-contraction cell the M/N/K axis-role assignment (§6.6-0016) and which operand
+  slot carries the **weight role** (§6.6-0019; the weight is not identified by operand
+  position or dtype), and for a gather/scatter/embedding cell which operand slot
+  carries the index/address role
   (the KISS-Ops operand-role fact of §6.1-0006, supplied to the derivation as a
   caller role hint; the index is **not** identified by dtype). An implementation
   MUST NOT infer the op category or these role hints from bare
@@ -1055,6 +1061,34 @@ form (§6.7-0011).
   differing only in weight / accumulator / output dtype — is resolved in-key by the sk3
   contraction coordinates (§6.7-0006), so such `gem` cells are now distinct by their
   tokens. *Test:* `test_classify_no_colliding_cell_registration`.
+- **KISS-CLASSIFY-6.6-0019** — The **weight role** of a dense-contraction (`gem`)
+  cell — the operand whose dtype the `contraction` field's `<wdt>` coordinate
+  (§6.7-0006) carries — MUST be supplied by the caller as a role hint (§6.6-0012). An
+  implementation MUST NOT infer the weight operand from operand **position**, and MUST
+  NOT infer it from any operand's **dtype**: §6.6-0014's canonical order is the
+  caller's call order, not a semantic role assignment, so no fixed operand position
+  identifies the weight. The `<wdt>` token MUST be the §6.1 dtype of the
+  caller-designated weight operand. This closes for the weight role the inference gap
+  §6.6-0016 closes for the M/N/K axis roles. *Worked hazard (informative):* a
+  quantized-GEMM operand order `[weight, weight_scale, activation]` places a **scale**
+  at operand position 1, so an implementation reading a fixed "operand-1" position
+  emits the scale's dtype (e.g. `f8e8m0`) where the weight's (e.g. `i4`) is meant — a
+  well-formed, byte-stable token naming the wrong type, which nothing downstream would
+  question. *Coverage (informative):* this rule is **not corpus-detectable at this
+  schema version**. The `structure_key` corpus round-trips tokens
+  (`to_token`/`from_token`); no stage derives `<wdt>` from operands, so no published
+  token can disagree with a positional emitter today. A conformance detector needs two
+  surfaces deferred to a future schema version: (1) an **emit-derivation stage** that
+  computes a token from a cell and its role hints, and (2) **cell-carrying corpus
+  vectors** the harness derives and compares. Until then the rule is an emit-side
+  obligation the reference encodes (`derive_weight_dtype`); at this schema version no
+  golden token can distinguish a hint-following emitter from a positional one, so a
+  discriminating `gem` vector (distinct weight / scale / activation dtypes) is a
+  **latent** detector at best — inert until an emit-derivation stage exists. The
+  "no fixed operand position identifies the weight" conclusion additionally depends on
+  §6.1-0013 leaving the MX-scale **sibling** slot unpinned; if a later revision pins
+  sibling placement, this clause's positional prohibition MUST be revisited. *Test:*
+  `test_classify_weight_role_hint`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -1128,7 +1162,8 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   da}`); a **conditionally-present** batch coordinate `b<class>` (`<class>` ∈ `{t, s, m,
   l}`) emitted **iff the cell is batched** — a non-batched cell omits it entirely; the
   weight, accumulator, and output dtype tokens `<wdt>`/`<acc>`/`<out>`, each from the
-  closed §6.1 set; and the math-precision code `<mp>` ∈ `{st, rm}` (`st` = bit-stable,
+  closed §6.1 set (`<wdt>` is the dtype of the caller-designated **weight operand**,
+  §6.6-0019, not the operand at any fixed position); and the math-precision code `<mp>` ∈ `{st, rm}` (`st` = bit-stable,
   `rm` = reduced-mantissa-permitted, resolving to the KISS-Ops MathPrecision value of
   KISS-OPS §6.17 per `(primary_dtype, target)` — on an `f32` primary at `cuda:sm80+`,
   `rm` is TF32, §6.17-0006). `<mp>` codes MUST NOT begin with `b` (reserved for the
@@ -1635,6 +1670,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0016 | `test_classify_contraction_axis_roles` |
 | KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_op_family_gated` |
 | KISS-CLASSIFY-6.6-0018 | `test_classify_no_colliding_cell_registration` |
+| KISS-CLASSIFY-6.6-0019 | `test_classify_weight_role_hint` |
 | KISS-CLASSIFY-6.7-0001 | `test_classify_token_field_count` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `test_classify_token_scalar_fields` |
