@@ -1151,3 +1151,34 @@ fn test_classify_div_bucket_derivation() {
     assert_eq!(derive_div_bucket(3), DivBucket::Da);
     assert_eq!(derive_div_bucket(1), DivBucket::Da);
 }
+
+/// KISS-CLASSIFY-6.6-0019 — the weight role is a caller role hint (§6.6-0012), and
+/// `<wdt>` is the hinted weight operand's dtype, NOT a fixed operand position. The
+/// quantized-GEMM operand order [weight=i4, weight_scale=f8e8m0, activation=bf16]:
+/// the hint (slot 0) yields `i4`; the fixed "operand-1" reading the codec once
+/// documented yields the scale `f8e8m0`. This asserts the DISCRIMINATING property —
+/// wdt = the weight AND != operand-1 — so a regression to positional derivation, or a
+/// fixture flattened to uniform operand dtypes, goes red. It does NOT prove a foreign
+/// emitter correct: per §6.6-0019's coverage note the rule is not corpus-detectable at
+/// this schema version (the corpus round-trips tokens; nothing derives `<wdt>` from
+/// operands).
+#[test]
+fn test_classify_weight_role_hint() {
+    let ops = ["i4", "f8e8m0", "bf16"]; // [weight, weight_scale, activation]
+    let weight_slot = 0; // caller role hint (§6.6-0012), not a fixed position
+
+    // <wdt> is the dtype of the caller-designated weight operand.
+    assert_eq!(derive_weight_dtype(&ops, weight_slot), "i4");
+
+    // The hazard, made concrete: a fixed "operand-1" reading names the SCALE.
+    assert_eq!(derive_weight_dtype(&ops, 1), "f8e8m0");
+
+    // The discriminator: the hint and the positional read genuinely disagree, so the
+    // vector this pins would diverge byte-wise from a positional emitter. A regression
+    // of the reference to positional, or a fixture flattened to one dtype, goes red.
+    assert_ne!(
+        derive_weight_dtype(&ops, weight_slot),
+        derive_weight_dtype(&ops, 1),
+        "weight-role hint must not coincide with a fixed operand-1 read",
+    );
+}

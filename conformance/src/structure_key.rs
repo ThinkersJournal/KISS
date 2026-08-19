@@ -165,7 +165,8 @@ pub struct Contraction {
     pub k_div: DivBucket,
     /// Conditionally present: `Some(class)` iff batched (serialized `b<class>`).
     pub batch: Option<SizeClass>,
-    /// Weight (operand-1) dtype token, from the closed §6.1 set.
+    /// Weight dtype token, from the closed §6.1 set: the dtype of the
+    /// caller-designated weight operand (§6.6-0019), never a fixed operand position.
     pub wdt: String,
     /// Accumulator / compute dtype token, from the closed §6.1 set.
     pub acc: String,
@@ -781,6 +782,24 @@ pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
     } else {
         "ix64"
     }
+}
+
+/// §6.6-0019: the weight dtype of a dense-contraction (`gem`) cell — the `<wdt>`
+/// contraction coordinate (§6.7-0006). The weight operand is identified by the
+/// caller's role hint (§6.6-0012), NEVER by operand position (§6.6-0014's canonical
+/// order is call order, not a semantic role assignment) and never by an operand's
+/// dtype: an operand order such as `[weight, weight_scale, activation]` puts a scale
+/// at position 1, so a fixed-position read would name the wrong type (`f8e8m0` where
+/// `i4` is meant). `weight_slot` is the caller-hinted index into `operand_dtypes`.
+#[must_use]
+pub fn derive_weight_dtype<'a>(operand_dtypes: &[&'a str], weight_slot: usize) -> &'a str {
+    operand_dtypes.get(weight_slot).copied().unwrap_or_else(|| {
+        panic!(
+            "§6.6-0019: weight-role hint slot {weight_slot} is out of range for {} \
+             operand(s) — the caller's role hint must name an existing operand",
+            operand_dtypes.len()
+        )
+    })
 }
 
 /// §6.5-0010 + §6.6-0013: the work-class **total element count** — the product,
