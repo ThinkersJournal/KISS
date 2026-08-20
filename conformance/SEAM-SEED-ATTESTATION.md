@@ -80,7 +80,7 @@ KISS-Announce §A.2 records the seeds as *"independently reproduced byte-identic
 project workspaces"*, and names both as Evans Laboratories projects.
 
 **Two workspaces is independence of LOCATION. The clause's stated property is independence
-of DERIVATION.** Those are different claims. **#260 has since ruled** — option A, re-anchor
+of DERIVATION.** Those are different claims. **#260 has since ruled** ([the ruling](https://github.com/ThinkersJournal/KISS/issues/260#issuecomment-5359589590)) — option A, re-anchor
 `KISS-CONFORM-6.13-0002` on the property rather than on the instance count — and the
 reasoning below is part of what the ruling rested on.
 
