@@ -71,11 +71,14 @@ def test_a_wellformed_marker_does_not_mask_a_malformed_one_for_the_same_clause()
 
 # -------------------------------------------------------------- collector --
 
-def test_proven_is_credited_only_with_a_backing():
-    """A well-formed marker in a test that BACKS the clause earns PROVEN, no violation."""
+def test_proven_maps_the_clause_to_its_proving_test():
+    """A well-formed marker in a test that BACKS the clause earns PROVEN, no violation — and
+    collect_proven returns the clause MAPPED TO ITS PROVING TEST, not a bare set. The 4th
+    ratchet dimension's drop gate needs that identity (a proof drop is green iff its proving
+    test is gone), so the map, not the set, is the contract."""
     harness = {"t": _test(clauses=[CID], proven={CID: ("impl", "PR#291")})}
-    proven, viol = kt.collect_proven(harness)
-    assert proven == {CID}, f"backed+proven not credited: {proven!r}"
+    pmap, viol = kt.collect_proven(harness)
+    assert pmap == {CID: ["t"]}, f"proving-test identity not mapped: {pmap!r}"
     assert viol == [], f"unexpected violation: {viol!r}"
 
 
@@ -83,22 +86,22 @@ def test_proof_without_a_backing_is_a_violation():
     """A marker in a test that does NOT back the clause is proof over nothing — flagged,
     not counted (PROVEN subset-of CITED)."""
     harness = {"t": _test(clauses=[], proven={CID: ("impl", "PR#291")})}
-    proven, viol = kt.collect_proven(harness)
-    assert proven == set(), f"proof without a backing was credited: {proven!r}"
+    pmap, viol = kt.collect_proven(harness)
+    assert pmap == {}, f"proof without a backing was credited: {pmap!r}"
     assert len(viol) == 1 and "does NOT back" in viol[0], f"not flagged: {viol!r}"
 
 
 def test_malformed_marker_is_a_violation_and_uncounted():
     harness = {"t": _test(clauses=[CID], malformed=[CID])}
-    proven, viol = kt.collect_proven(harness)
-    assert proven == set(), f"malformed marker was counted: {proven!r}"
+    pmap, viol = kt.collect_proven(harness)
+    assert pmap == {}, f"malformed marker was counted: {pmap!r}"
     assert len(viol) == 1 and "malformed" in viol[0], f"not flagged: {viol!r}"
 
 
 def test_clean_tree_has_no_proven_and_no_violations():
     harness = {"t": _test(clauses=[CID])}          # backs, but no proof marker
-    proven, viol = kt.collect_proven(harness)
-    assert proven == set() and viol == [], f"clean tree not clean: {proven!r} {viol!r}"
+    pmap, viol = kt.collect_proven(harness)
+    assert pmap == {} and viol == [], f"clean tree not clean: {pmap!r} {viol!r}"
 
 
 # -------------------------------------------------------------------- live --
@@ -111,9 +114,9 @@ def test_live_tree_is_armed_and_empty():
     """The floor starts at 0: no `// Proven:` markers exist yet, so PROVEN is empty and there
     are no malformed markers to flag. Reddens the instant a marker is added wrong (missing
     subject/ref, or over an unbacked clause) — the fail-closed guard the burndown rests on."""
-    proven, viol = kt.collect_proven(_live_harness())
+    pmap, viol = kt.collect_proven(_live_harness())
     assert viol == [], f"live tree has proven-marker violations: {viol}"
-    assert proven == set(), f"live PROVEN is non-empty ({sorted(proven)}) — expected 0 (armed, empty)"
+    assert pmap == {}, f"live PROVEN is non-empty ({sorted(pmap)}) — expected 0 (armed, empty)"
 
 
 def main():

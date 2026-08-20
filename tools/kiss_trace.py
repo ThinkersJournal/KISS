@@ -202,17 +202,23 @@ def _proven_markers(scope):
 
 
 def collect_proven(harness):
-    """#278. From the discovered tests, collect the PROVEN clause set and its fail-closed
-    violations. A clause is PROVEN iff SOME test both BACKS it (the clause is in that test's
-    `clauses`) AND carries a well-formed `// Proven:` marker for it — PROVEN ⊆ CITED by
-    construction. Returns (proven_clauses, violations), where a violation is raised (and the
-    clause NOT counted) for:
+    """#278. From the discovered tests, collect the PROVEN map and its fail-closed violations.
+    A clause is PROVEN iff SOME test both BACKS it (the clause is in that test's `clauses`) AND
+    carries a well-formed `// Proven:` marker for it — PROVEN ⊆ CITED by construction.
+
+    Returns (proven_map, violations), where proven_map is {clause_id: [proving_test, ...]}
+    sorted. The MAP, not a bare set, because the 4th ratchet dimension's drop gate needs the
+    proving TEST's identity, not just the clause's: a proof drop is green iff its proving test
+    no longer exists in the harness, so the gate must know which test carried the testimony
+    (the architect's #278 2b ruling). The proven clause SET is `set(proven_map)`.
+
+    A violation is raised (and the clause NOT counted) for:
       * a MALFORMED marker — a `Proven:` naming a clause without a subject and ref;
       * a well-formed marker for a clause the SAME test does NOT back — a proof with no
         backing for it to be about.
     main() drives this; the born-red control in test_kiss_proven_marker.py drives it too, so
     the gate proves the real collector rather than a copy (#279)."""
-    proven, violations = set(), []
+    proven_map, violations = defaultdict(list), []
     for tname, info in sorted(harness.items()):
         for cid in info.get("proven_malformed", ()):
             violations.append(
@@ -222,10 +228,10 @@ def collect_proven(harness):
             if cid not in info.get("clauses", set()):
                 violations.append(
                     f"`Proven:` in `{tname}` for {cid} but that test does NOT back {cid} "
-                    f"(proof without a backing — a proof presupposes the citation, PROVEN subset-of CITED)")
+                    f"(proof without a backing — a proof presupposes the citation, PROVEN ⊆ CITED)")
             else:
-                proven.add(cid)
-    return proven, violations
+                proven_map[cid].append(tname)
+    return {c: sorted(ts) for c, ts in proven_map.items()}, violations
 
 # A Rust test function in the harness: `#[test]` (possibly with intervening
 # attributes such as `#[cfg(feature = "cuda")]` or `#[ignore]`) then `fn name(`.
@@ -1074,6 +1080,69 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
                          f"untested {live['untested']}; lint set matches the base."])
 
 
+def classify_proven(floor_proven, live_proven_map, live_harness, base_proven_map=None):
+    """The 4th ratchet dimension (#278). Classify the PROVEN count against its floor. Returns
+    (verdict, lines); verdict is one of:
+      proven_at_floor      — live == floor. GREEN.
+      proven_improved      — live > floor: proofs were earned. Bump the floor up (action needed,
+                             like `stale`), so green means AT the floor, not under it.
+      proven_retired       — live < floor and EVERY dropped proof's proving test is GONE from the
+                             harness. A legitimate retirement: the testimony was about that test,
+                             the test no longer exists, so the proof is correctly void. Bump the
+                             floor DOWN in the same PR (action needed, not a regression).
+      proven_regression    — live < floor and some dropped proof's proving test SURVIVES. The
+                             marker was removed while the test stands: a stale proof, or a silent
+                             loss. RED, always — the architect's #278 2b ruling.
+      proven_uncharacterized — live < floor but base_proven_map is None, so which proofs dropped,
+                             and whether their tests survive, cannot be determined. Fail-closed:
+                             an undeterminable drop is refused, never passed (#213 shape).
+
+    The drop gate asks about the proving TEST, not whether any COUNT moved: deleting a redundant
+    test while the clause stays backed elsewhere moves no harness count yet voids the testimony,
+    so a count-based gate would false-green it (the false positive the architect caught in the
+    piggyback proposal). `live_harness` is the set of test fn names that exist now.
+
+    NOTE (convention 16(d)) — DEFERRED green path: a proof that expires while its test SURVIVES
+    (e.g. an impl refactor makes the old mutation inapplicable, and a new proof is not in yet)
+    reds here, and the author must re-prove. A deliberate `Proof-retired` record is the intended
+    remedy and is deferred until a real instance appears — building it for a population of zero is
+    speculation (#278). Likewise the live caller does not yet READ `base_proven_map` from the base
+    tree: with PROVEN starting at 0 the drop gate is unexercised live, so the caller passes None
+    and this function fail-closes any live drop; the reader lands with the first real proof
+    retirement. classify_proven's drop LOGIC is exercised now by the fixture in
+    test_kiss_proven_ratchet.py, which supplies base_proven_map directly (the tier reports 0->0
+    forever, so only a fixture can prove the arm — the #279 lesson, same shape as the tier)."""
+    live_count = len(live_proven_map)
+    if live_count == floor_proven:
+        return ("proven_at_floor", [f"proven at the floor - {live_count}."])
+    if live_count > floor_proven:
+        return ("proven_improved", [
+            f"proven rose {floor_proven} -> {live_count}: {live_count - floor_proven} proof(s) "
+            "earned. Bump the proven floor in this PR — green means AT the floor, never under it."])
+    # live_count < floor_proven — a proof dropped.
+    if base_proven_map is None:
+        return ("proven_uncharacterized", [
+            f"proven fell {floor_proven} -> {live_count} but the base proven set was not read, so "
+            "which proof dropped and whether its test survives cannot be told. Fail-closed: an "
+            "undeterminable proof drop is refused, not passed."])
+    dropped = {c: ts for c, ts in base_proven_map.items() if c not in live_proven_map}
+    stale = {c: [t for t in ts if t in live_harness] for c, ts in dropped.items()}
+    stale = {c: ts for c, ts in stale.items() if ts}
+    if stale:
+        detail = "; ".join(f"{c} (proving test {', '.join(ts)} still present)"
+                           for c, ts in sorted(stale.items()))
+        return ("proven_regression", [
+            f"proven fell {floor_proven} -> {live_count}, and {len(stale)} proof(s) lost their "
+            f"marker while the proving test SURVIVES: {detail}.",
+            "A stale proof claims aboutness it has lost — restore the marker or re-prove. A proof "
+            "drop is green ONLY when its proving test no longer exists (#278)."])
+    return ("proven_retired", [
+        f"proven fell {floor_proven} -> {live_count}: {len(dropped)} proof(s) retired because "
+        f"their proving test was removed ({', '.join(sorted(dropped))}). The testimony was about "
+        "that test and it is gone, so the retirement is legitimate. Bump the proven floor DOWN to "
+        f"{live_count} in this PR."])
+
+
 def write_ledger(path, unbacked, prior=None):
     """Write the ledger, PRESERVING the category/note of any clause still unbacked
     (so --update-ledger never silently drops a curated categorization). A clause
@@ -1471,7 +1540,8 @@ def main():
     # a proof tier is worth having only if nothing enters it unearned: a MALFORMED marker
     # (missing subject/ref), and a proof for a clause the proving test does not even back
     # (testimony with no backing for it to be about).
-    proven_clauses, proven_violations = collect_proven(harness)
+    proven_map, proven_violations = collect_proven(harness)
+    proven_clauses = set(proven_map)
     tier_named, tier_cited, tier_proven = compute_evidence_tiers(backed, cited, proven=proven_clauses)
     tier_cited_by_name = {c for c in tier_cited if clause_test.get(c) in cited.get(c, ())}
     # Every executable test backing a clause, by either direction — not just the one
@@ -1810,6 +1880,7 @@ def main():
             "harness": len(backed),
             "lint": len(lint_backed),
             "untested": untested_count(by_category),
+            "proven": len(proven_map),
         }
         # The three numbers are stored and compared SEPARATELY because ENFORCED = harness +
         # lint conserves under a lint->harness substitution (#187), and a one-number ratchet
@@ -1934,6 +2005,30 @@ def main():
             print(f"  {headers[verdict]}")
             for ln in lines:
                 print(f"          {ln}")
+        # 4th dimension (#278): the PROVEN ratchet. Independent of harness/lint/untested — it
+        # is about proofs (aboutness), not backings — so it is classified on its own and reds
+        # the run on its own. The count comparison needs no base ref; the DROP gate needs the
+        # base proven map, which is deferred (None) while PROVEN is 0 — see classify_proven's
+        # 16(d) note. At 0 -> 0 this is a one-line at-floor; the drop arm is fixture-proven.
+        if "proven" in floor:
+            pverdict, plines = classify_proven(floor["proven"], proven_map, set(harness),
+                                               base_proven_map=None)
+            pheaders = {
+                "proven_improved": "RATCHET: the PROVEN floor is STALE — proofs earned past it (#278).",
+                "proven_retired": "RATCHET: a PROVEN retirement is recorded but the floor sits above "
+                                  "it — bump it down (#278).",
+                "proven_regression": "RATCHET REGRESSION: a proof marker was lost while its proving "
+                                     "test survives (#278).",
+                "proven_uncharacterized": "RATCHET: the PROVEN dimension dropped but could not be "
+                                          "characterized (#278).",
+            }
+            if pverdict == "proven_at_floor":
+                print(f"  RATCHET: {plines[0]}")
+            else:
+                any_fail = True
+                print(f"  {pheaders[pverdict]}")
+                for ln in plines:
+                    print(f"          {ln}")
     elif args.strict:
         # §6.2 verbatim gates on a normative MUST with no test. A lint-enforced
         # document clause HAS a test (the lint), so strict gates on the rest.
