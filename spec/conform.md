@@ -1587,7 +1587,7 @@ Conform clause that closes it. This is the informative rendering of §6.13; on a
 | Deferring sub-standard | Obligation | Closed by |
 |---|---|---|
 | KISS-Announce | Exact-byte comparator for all POD wire fields | §6.13-0001 (via §6.4, §6.8-0001) |
-| KISS-Announce | Envelope + version-negotiation golden vectors | §6.13-0019 (via §6.4) |
+| KISS-Announce | Envelope golden vectors + negotiation-OUTCOME vectors ((L,R) -> profile or typed decline) | §6.13-0019 (via §6.4, KISS-ANNOUNCE §7.1-0001 / §7.1-0002) |
 | KISS-Announce | Freeze gate + `SeamHello` seed byte-identity + foreign reader + reserved-and-ignore / empty-profile negatives | §6.13-0002 (via §8-0006, §6.7) |
 | KISS-Classify | Exact-byte `structure_key`/token codec/`target_capability` + bundled namespace registry + golden tokens | §6.13-0003 (via §6.3-0003, §6.8-0001) |
 | KISS-Classify | Freeze gate; stays UNFROZEN until usage exercises a target outside the initial reference-hardware namespace | §6.13-0004 (via §8-0006) |
