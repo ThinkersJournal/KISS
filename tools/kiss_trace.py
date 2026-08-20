@@ -939,7 +939,14 @@ def write_ledger(path, unbacked, prior=None):
                 cat = f"{p['category']}:{p['lint']}" if p["category"] == "lint" and p["lint"] else p["category"]
                 fh.write(f"{cid}\t{test}\t{cat}\t{p['note']}\n")
             else:
-                fh.write(f"{cid}\t{test}\tuntested\t\n")
+                # An `untested` clause can still carry a CURATED note — why it is untested,
+                # and what would close it. Preserve it, or --update-ledger silently drops the
+                # ledger's institutional memory on a routine run (#272): the docstring promises
+                # it "never silently drops a curated categorization", but the old empty-note
+                # `untested\t\n` broke that for exactly the untested category. A clause unbacked
+                # for the FIRST time (no prior) still writes an empty note, as before.
+                note = p["note"] if p else ""
+                fh.write(f"{cid}\t{test}\tuntested\t{note}\n")
 
 
 def discover_lint_coverage(tools_dir):
