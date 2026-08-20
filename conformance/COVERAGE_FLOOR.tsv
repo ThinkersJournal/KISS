@@ -177,7 +177,24 @@
 # harness dimension. lint 33 and untested 497 UNCHANGED -- the clause ships with its detector.
 # Tool-derived at main @ cded43d, pasted, not computed by hand.
 #
+#
+# harness 378 -> 380, untested 497 -> 496 by #275 (freeze-blocker: admission / identity /
+# selection are three questions with two clauses). TOOL-DERIVED on the merge tree, not
+# arithmetic -- `--ratchet --base-ref origin/main` reported "Set the floor to harness 380,
+# lint 33, untested 496" and that output is pasted here.
+#
+# The +2 harness / -1 untested is NOT two new clauses: KISS-CLASSIFY-6.6-0020 (selection) is
+# new AND backed, and KISS-CLASSIFY-6.6-0002 was ALREADY NORMATIVE AND UNBACKED -- ledgered
+# `untested` with an EMPTY reason field. It is the clause a consumer cited to establish that
+# the substitutable-dispatch precondition was already covered; the obligation existed only as
+# prose, with nothing checking it. Backing it is the larger half of this change.
+#
+# KISS-CLASSIFY-6.6-0001 is amended, not added: the biconditional weakens to necessary-but-
+# not-sufficient. Its count does not move and its existing test still passes -- because that
+# test only ever asserted the ONLY-IF direction (one-field-different variants must not match).
+# THE REMOVED DIRECTION WAS NEVER BACKED BY THE TEST THAT NAMED THE CLAUSE, so removing it
+# de-credits nothing. Three consumers independently confirmed no reliance (see the PR).
 # key	value
-harness	378
+harness	380
 lint	33
-untested	497
+untested	496
