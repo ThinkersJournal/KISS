@@ -609,9 +609,13 @@ def main():
         sg("branch", "-f", "movedbase")
         sg("checkout", "-q", "basepoint")
 
+        # Called ONCE and cached: two calls inside one control repeat the git subprocesses
+        # and, if they ever disagreed, would make the failure unreadable -- a small version
+        # of the same problem this feature exists to catch.
+        moved = kiss_trace.base_is_current(ledger, "movedbase")
         check("a base that has moved ahead is reported STALE, with the distance",
-              kiss_trace.base_is_current(ledger, "movedbase") == 2,
-              f"expected distance 2, got {kiss_trace.base_is_current(ledger, 'movedbase')!r}")
+              moved == 2,
+              f"expected distance 2, got {moved!r}")
 
         # THE PAIRED CONTROL. Without it, "always report stale" passes the case above --
         # which would turn every correct run into a refusal and be strictly worse than the

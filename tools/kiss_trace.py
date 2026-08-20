@@ -532,7 +532,17 @@ def _in_git_repo(path):
 
 
 def base_is_current(ledger_path, base_ref):
-    """Is `base_ref` an ancestor of the working head? (True / False / None if unknowable)
+    """Is `base_ref` an ancestor of the working head?
+
+    RETURNS, and the caller contract is not truthiness:
+      True  -- the base IS an ancestor; the figures are current.
+      int   -- it is NOT, and this is how far ahead it has moved (always >= 1).
+      None  -- unknowable (git absent, ref unresolvable, count unreadable).
+
+    TEST `is True` / `is None` EXPLICITLY. `if not base_is_current(...)` is wrong for
+    None, and `is False` never matches because False is never returned -- the distance
+    is carried instead of a bare flag so the message can say HOW FAR the base has moved,
+    which is what tells a reader whether they are one merge behind or a day behind.
 
     THE RATCHET COMPARES THE BRANCH'S FLOOR AGAINST THE BRANCH'S LIVE FIGURES. Those can
     agree with each other while BOTH disagree with the base -- so a branch that has sat
@@ -562,7 +572,12 @@ def base_is_current(ledger_path, base_ref):
             return True
         c = subprocess.run(["git", "-C", ledger_dir, "rev-list", "--count",
                             f"HEAD..{base_ref}"], capture_output=True, text=True, timeout=30)
-        return int(c.stdout.strip()) if c.returncode == 0 and c.stdout.strip().isdigit() else 0
+        # A count we could not read is UNKNOWABLE, not zero. Returning 0 here would claim
+        # "moved 0 commit(s) ahead" -- a distance that cannot occur for a non-ancestor -- and
+        # 0 is falsy, so a truthiness-testing caller would read the stale base as current.
+        if c.returncode != 0 or not c.stdout.strip().isdigit():
+            return None
+        return int(c.stdout.strip()) or None
     except Exception:
         return None
 
