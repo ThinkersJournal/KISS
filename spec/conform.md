@@ -419,8 +419,8 @@ manifest from KISS-Emit. It re-defines none of them: Conform tests them.
   (§6.12, §6.13-0011, §6.13-0012 through §6.13-0024).
 - **KISS-Announce** (by version) — **test dependency**: KISS-Conform applies the byte-exact
   comparator to every Announce structural clause, supplies golden byte-vectors for the
-  56-byte envelope and the version-negotiation frames, proves the two seam-hello seeds are
-  byte-identical via golden hex, runs a foreign reader over the envelope, and supplies
+  56-byte envelope and negotiation-outcome vectors for §7.1, proves the SeamHello reference
+  seeds are byte-identical via golden hex, runs a foreign reader over the envelope, and supplies
   negative vectors for the unknown-bit reserved-and-ignore and empty-profile
   hard-fail-never-panic obligations (§6.13-0001, §6.13-0002, §6.13-0019).
 - **KISS-Synth/Provision** (by version) — **test dependency**: KISS-Conform owns the
@@ -994,11 +994,18 @@ atomic clause with its own append-only ID and dedicated test.
   hashes, bounds, bitset positions) and MUST forbid tolerance or order-invariant comparison on
   them. *Test:* `test_conform_announce_exact_byte_pod`.
 - **KISS-CONFORM-6.13-0019** — KISS-Conform MUST supply golden byte-vectors (§6.4) for the
-  KISS-Announce 56-byte handshake envelope and the version-negotiation frames. *Test:*
+  KISS-Announce 56-byte handshake envelope, and MUST supply **negotiation-outcome vectors**:
+  pinned live-profile sets `(L, R)` mapped to the negotiated profile or to the typed decline
+  (KISS-ANNOUNCE §7.1-0001 / §7.1-0002). There is no second wire artifact to byte-compare —
+  both roles emit the **same** 56-byte envelope, and negotiation is *computed* from the
+  `profiles` entries of the two exchanged envelopes (KISS-ANNOUNCE §7.1). An outcome vector
+  pins the algorithm; a byte-vector of a negotiation frame would pin nothing that exists.
+  *Test:*
   `test_conform_announce_golden_vectors`.
 - **KISS-CONFORM-6.13-0002** — KISS-Conform MUST provide the KISS-Announce **freeze-gate** test
-  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove the two seam-hello seeds
-  are **byte-identical via golden hex** (not struct equality), MUST run a foreign reader
+  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove the two `SeamHello`
+  **reference seeds** (KISS-ANNOUNCE §0 *Reference seed crate(s)*; provenance in §A.2) are
+  **byte-identical via golden hex** (not struct equality), MUST run a foreign reader
   (written outside the reference language) over the envelope, and MUST supply negative vectors
   for the unknown-bit **reserved-and-ignore** and the empty-profile **hard-fail-never-panic**
   obligations. *Test:* `test_conform_announce_freeze_gate`.
@@ -1089,7 +1096,7 @@ atomic clause with its own append-only ID and dedicated test.
 - **KISS-CONFORM-6.13-0020** — KISS-Conform MUST NOT byte-compare the optional free-text blurb /
   `human_annotation` (KISS-CONTRACT §6.4-0001). *Test:* `test_conform_contract_blurb_excluded`.
 - **KISS-CONFORM-6.13-0021** — KISS-Conform MUST verify the `audited_status` **derivation**
-  (`test_contract_audited_status_derived`, KISS-CONTRACT §6.4). *Test:*
+  (`test_contract_audited_status_derived`, KISS-CONTRACT §6.8-0008). *Test:*
   `test_conform_contract_audited_status`.
 - **KISS-CONFORM-6.13-0022** — KISS-Conform MUST resolve the KISS-Contract Semantics DAG to the
   primitive floor via the oracle (§6.5, KISS-CONTRACT §6.4-0005). *Test:*
@@ -1469,7 +1476,8 @@ applies reflexively to itself, umbrella §3.3).
 
 **A.1 Golden byte-vector families.** The exact-byte evidence (§6.4) mirrors each sub-standard's
 Appendix-A "bytes on the wire" rows (a bijection, §6.4-0003): the KISS-Announce 56-byte handshake
-envelope and version-negotiation frames and the byte-identity of the two seam-hello seeds (golden
+envelope, negotiation-outcome vectors for §7.1, and the byte-identity of the SeamHello reference
+seeds (golden
 hex, not struct equality, §6.13-0002, §6.13-0019); the KISS-Classify `structure_key` token codec
 and `target_capability` token grammar with the bundled namespace-registry snapshot (§6.13-0003);
 the KISS-Ops OpAttrs canonical little-endian records, every field at its resolved default with no
@@ -1580,7 +1588,7 @@ Conform clause that closes it. This is the informative rendering of §6.13; on a
 |---|---|---|
 | KISS-Announce | Exact-byte comparator for all POD wire fields | §6.13-0001 (via §6.4, §6.8-0001) |
 | KISS-Announce | Envelope + version-negotiation golden vectors | §6.13-0019 (via §6.4) |
-| KISS-Announce | Freeze gate + seam-hello byte-identity + foreign reader + reserved-and-ignore / empty-profile negatives | §6.13-0002 (via §8-0006, §6.7) |
+| KISS-Announce | Freeze gate + `SeamHello` seed byte-identity + foreign reader + reserved-and-ignore / empty-profile negatives | §6.13-0002 (via §8-0006, §6.7) |
 | KISS-Classify | Exact-byte `structure_key`/token codec/`target_capability` + bundled namespace registry + golden tokens | §6.13-0003 (via §6.3-0003, §6.8-0001) |
 | KISS-Classify | Freeze gate; stays UNFROZEN until usage exercises a target outside the initial reference-hardware namespace | §6.13-0004 (via §8-0006) |
 | KISS-Ops | Canonical determinism enum + three per-class comparators | §6.13-0005 (via §6.0-0001, §6.8) |
@@ -1601,7 +1609,7 @@ Conform clause that closes it. This is the informative rendering of §6.13; on a
 | KISS-Consume | Oracle-differential lift resolution + four-category refusal / never-panic negatives | §6.13-0014 (via §6.5, §6.7) |
 | KISS-Consume | Expressibility oracle + mislabeled-kernel structural lift + emit↔consume sibling join | §6.13-0015 (via §6.10) |
 | KISS-Emit | Emit↔Consume cross-standard document lint + neutrality-audit manifest + AUDIT-signed freeze | §6.13-0016 (via §6.11, §8-0006) |
-| KISS-Emit | Structural op-DAG equality tier-1 + tier-2 same-language-only + whole-kernel aggregation + emitted-kernel-as-oracle | §6.13-0017 (via §6.9, §6.8-0007, §6.6-0006) |
+| KISS-Emit | Structural op-DAG equality comparator + tier-2 same-language-only, gated on every resolved-to-floor op being exact-byte class + emitted-kernel-as-oracle + IR-DAG fuzzer to every backend | §6.13-0017 (via §6.9, §6.8-0007, KISS-EMIT §6.7-0006 / §6.7-0009, §6.6-0006) |
 | ALL (cross-cutting) | Build-fails-on-untested-MUST + per-sub-standard-per-version keying + reference-impl no exemption + AUDIT-signed transitions | §6.13-0018 (via §6.1, §6.2, §6.3, §8) |
 
 ---
