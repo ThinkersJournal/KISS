@@ -90,6 +90,7 @@ convention 9 the same day. **The failure was never coverage — it was retrieval
 | the check ran fine but on the wrong bytes / level / role / axis | **11** |
 | I read an exit code, a return value, or a log line instead of the state | **11** (*level*) |
 | the check is correct but I asked it the wrong question | **14** |
+| my query returned NOTHING — is that an absence, or a broken query? | **14** (run a positive control) |
 | a "blocked" note that nobody has re-read since it was written | **12** |
 | a fix added an outcome and I didn't check the old ones still happen | **13** |
 | a clause id appears in a test — does it count? | **15** |
@@ -410,6 +411,21 @@ makes this a class rather than a grep anecdote:
   returns **seven** hits across two documents. The grep had matched nothing it should have, and
   the issue reported a clause as undefined that was defined twice over. **A validator can invent
   a defect as readily as it can hide one**, and this one sent a lane to fix something half absent.
+- **AN EMPTY RESULT IS A CLAIM ABOUT YOUR QUERY, NOT ABOUT THE WORLD — three instances in one
+  evening, none of them careless.** A grep over four phrasings of an obligation returned nothing
+  and was reported as *"nowhere stated"*; the clause existed and said it in different words, and
+  a new clause was nearly written to duplicate a normative obligation. An API call failed on an
+  invalid JSON escape and the only signal was a bare exit code — "both dispositioned" was nearly
+  reported with one posted. A subprocess died on a `cp1252` decode error and its empty output was
+  read as *"no threaded replies"* on two PRs at once. **In all three the instrument returned
+  successfully-looking emptiness**, and in none of them had anyone asked whether it could have
+  returned anything at all.
+  **The remedy is one extra call: a POSITIVE CONTROL.** Run the same query against something you
+  know is there; if it finds that, the empty result is evidence. A consumer answering a
+  reliance question the same day did exactly this unprompted — *"the same pattern DOES find a
+  `link.structure_key` read, so the near-empty result is absence, not a broken query"* — and that
+  is the sentence to copy. **A null result reported without a positive control is a failure to
+  find, described as a finding.**
 
 Neither is a careless grep. Both are validators built in a hurry against a measurement built
 carefully, which is the asymmetry.
