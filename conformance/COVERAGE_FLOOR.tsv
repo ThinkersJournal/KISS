@@ -148,7 +148,31 @@
 # stale base across a rebase is the exact trap the entries above record. KISS squash-merges, so
 # this branch rebased with `--onto origin/main <old-base>` to replay only the #187 commit.
 #
+#
+# harness 375 -> 377 by #238: KISS-CONFORM-6.3-0010 (the reference artifact's normative
+# surface, declared in THREE parts -- vector content / scoping declarations / provenance) and
+# -0011 (cardinality is NOT a conformance surface) are each harness-backed in this PR --
+# test_reference_artifact_normative_surface_is_declared and
+# test_published_vector_counts_are_not_a_conformance_surface. Both clauses arrive WITH their
+# backing, so lint (33) and untested (497) are UNCHANGED; total clauses 928 -> 930.
+#
+# Neither clause moves an artifact byte: the normative surface is declared in the
+# SPECIFICATION, not in a new artifact field. That is what dissolves the circularity in #238
+# and lets it land without a coordinated regeneration across consumers.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC. This entry replaces an earlier 380/33/494 that was
+# correct against #268's 378 base AND IS NOW MEANINGLESS, because #270 merged underneath it
+# (harness 378 -> 375, untested 494 -> 497). Rebased with `--onto origin/main <old-base>`:
+# KISS squash-merges, so an already-merged branch is upstream by CONTENT but not by HASH and a
+# plain rebase replays it into a conflict.
+#
+# WORTH RECORDING BECAUSE IT LOOKS LIKE THE OPPOSITE LESSON: naive arithmetic (375 + 2) gives
+# 377 and the tool ALSO gives 377. They agree only because #270 de-credited three KISS-EMIT
+# clauses, disjoint from the two added here. Disjointness is exactly what the arithmetic
+# ASSUMES and what the tool ESTABLISHES -- the agreement is a fact about this pair of changes,
+# not evidence that the shortcut works. The prior entry in this file records the same shortcut
+# being WRONG one merge earlier.
 # key	value
-harness	375
+harness	377
 lint	33
 untested	497
