@@ -621,7 +621,11 @@ enum (§6.0). See umbrella §3 for the full statement.
   conformant producer's output MUST reproduce **byte-exact per entry**; **(b) SCOPING
   DECLARATIONS** — the members a consumer reads to decide *what it is looking at and which
   runs apply*: the artifact `schema`, `structure_key_schema_version`, `token_prefix`, the
-  dual dtype axes and `reserved_dtypes` (§6.3-0007), and `target_namespaces` (§6.3-0008).
+  dual dtype axes and `reserved_dtypes` (§6.3-0007), `target_namespaces` (§6.3-0008), and
+  `namespace_vocabulary_versions` — a consumer scopes on it to decide whether an embedded
+  suffix is **comparable**, and MAY decline rather than compare on a version it does not
+  implement. That the stamp proves **binding rather than currency** makes it a weak
+  instrument, not a non-normative one; the two are different claims.
   These MUST be present and accurate, and a consumer MAY rely on them; **(c) PROVENANCE AND
   COMMENTARY** — every other member, including `generated_from`, `source_commit`, `clause`,
   and every `*_note`. A consumer MUST NOT treat part (c) as a conformance surface, and a
@@ -630,6 +634,14 @@ enum (§6.0). See umbrella §3 for the full statement.
   scoping declarations non-normative, and a consumer that scopes its run on
   `dtype_usable_set` would then be relying on a member the specification had told it not
   to. *Test:* `test_reference_artifact_normative_surface_is_declared`.
+
+  > *Informative — what the test does and does not prove.* The exhaustiveness assertion
+  > catches an **unclassified** member, not a **misclassified** one: a member in the wrong
+  > part is still in some part, so the guard stays green. `namespace_vocabulary_versions`
+  > was drafted into (c) and moved to (b) after a live change to it demonstrated scoping
+  > behaviour — falsified not by review of this clause nor by its test, but by an unrelated
+  > PR doing ordinary work on the artifact. **A classification is a claim about how members
+  > BEHAVE, and the cheapest falsifier is a change that makes one behave.**
 
   > *Informative.* This was undecided until now, and the cost was measurable: four
   > consumers each chose a different surface privately, two of them citing a clause that

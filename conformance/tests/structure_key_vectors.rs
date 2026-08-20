@@ -639,6 +639,7 @@ fn test_reference_artifact_normative_surface_is_declared() {
         "dtype_usable_set",
         "reserved_dtypes",
         "target_namespaces",
+        "namespace_vocabulary_versions",
         "recognition_count",
         "usable_count",
     ];
@@ -652,7 +653,6 @@ fn test_reference_artifact_normative_surface_is_declared() {
         "mapping_guard_note",
         "namespace_vocabulary_note",
         "target_axis_note",
-        "namespace_vocabulary_versions",
     ];
 
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
