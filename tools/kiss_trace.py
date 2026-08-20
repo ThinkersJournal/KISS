@@ -1158,13 +1158,19 @@ def check_doc(res):
 
 
 def compute_masked_forward(clause_test, harness, cited):
-    """#286 detector. Return {cid: (named_test, backing_test)} for every clause BACKED
-    only by reverse citation whose §9 `*Test:*` names a test that resolves to nothing.
+    """#286 detector. Return {cid: (named_test, [backing_test, ...])} for every clause
+    BACKED only by reverse citation whose §9 `*Test:*` names a test that resolves to nothing.
 
     A clause qualifies iff its named test is ABSENT from `harness` (so it is not
     forward-backed) AND some harness test cites it (so it IS backed, via reverse). Its §9
     row is then a false artifact that the `no such test` report cannot see — that report
     fires only for otherwise-UNBACKED clauses, so the reverse backing MASKS the dead row.
+
+    The backing list is the FULL sorted set of citing tests, not the first — a masked clause
+    may have several reverse citers, and the report's recommended fix (point the §9 row at
+    the real test) must be chosen from ALL of them, not one arbitrarily-picked name that the
+    message then calls the sole backer (the Copilot #291 finding: do not hide the choice the
+    fix depends on).
 
     A clause whose named test is absent AND uncited is UNBACKED, not masked: its
     aspirational name is correct by design (the 553 that must never be flagged), so it is
@@ -1174,7 +1180,7 @@ def compute_masked_forward(clause_test, harness, cited):
     masked = {}
     for c, t in clause_test.items():
         if t not in harness and c in cited:
-            masked[c] = (t, sorted(cited[c])[0])
+            masked[c] = (t, sorted(cited[c]))
     return masked
 
 
@@ -1182,16 +1188,23 @@ def classify_shared_test(t, clauses, declared_shares):
     """#286. For a test named by MORE THAN ONE clause across the §9 matrices, decide
     whether the share is sanctioned. Returns one of:
 
-      'cross_standard'  — a Conform-owned `test_conform_*` test cited by exactly one
-                          deferring sub-standard clause (the original sanctioned exception);
+      'cross_standard'  — a Conform-owned `test_conform_*` test shared by EXACTLY TWO
+                          clauses: its one CONFORM owner and one deferring sub-standard
+                          clause (the original sanctioned exception). A third citer — one
+                          CONFORM owner and TWO deferrers — is NOT covered: it must be
+                          declared deliberately, not pass on a loose CONFORM count;
       'declared_share'  — an explicit same-standard entry in `declared_shares` whose clause
                           set matches the citing set EXACTLY (a superset is NOT covered);
       'violation'       — anything else: an undeclared collision that must reden.
 
     Called only when len(clauses) > 1. Injectivity is the default; both non-violation
-    verdicts are opt-in and must be declared, so a new collision cannot pass by omission."""
+    verdicts are opt-in and must be declared, so a new collision cannot pass by omission —
+    which is why the cross-standard arm pins the count at two rather than admitting any
+    number of deferrers behind a single CONFORM clause (the Copilot #291 finding: the code
+    was one CONFORM among the citers, the prose was exactly one deferrer; they coincide only
+    at width two)."""
     subs = [sub_of(c) for c in clauses]
-    if t.startswith("test_conform_") and subs.count("CONFORM") == 1:
+    if t.startswith("test_conform_") and len(clauses) == 2 and subs.count("CONFORM") == 1:
         return "cross_standard"
     if t in declared_shares and set(clauses) == declared_shares[t]["clauses"]:
         return "declared_share"
@@ -1449,8 +1462,10 @@ def main():
               f"citation but their §9 `*Test:*` names a test that does not exist — a false")
         print("  row nothing else can see (the `no such test` report is UNBACKED-only, #286):")
         for cid in sorted(masked_forward):
-            dead, real = masked_forward[cid]
-            print(f"          - {cid} names `{dead}` (no such test); backed only by `{real}`")
+            dead, reals = masked_forward[cid]
+            joined = ", ".join(f"`{r}`" for r in reals)
+            backers = "backing test" if len(reals) == 1 else f"{len(reals)} backing tests"
+            print(f"          - {cid} names `{dead}` (no such test); actual {backers}: {joined}")
         print("    Fix: point the §9 row at the real backing test, or DECLARE a same-standard")
         print("    share in kiss_trace.py DECLARED_SHARES with a reason.")
         print("-" * 68)

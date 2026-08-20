@@ -40,8 +40,21 @@ def test_detector_fires_on_a_reverse_backed_fictional_name():
     harness = {"test_real_backing": {"clauses": {"KISS-OPS-6.99-0001"}}}
     cited = {"KISS-OPS-6.99-0001": {"test_real_backing"}}   # reverse-backed
     masked = kt.compute_masked_forward(clause_test, harness, cited)
-    assert masked == {"KISS-OPS-6.99-0001": ("test_ghost", "test_real_backing")}, (
+    assert masked == {"KISS-OPS-6.99-0001": ("test_ghost", ["test_real_backing"])}, (
         f"detector failed to flag a reverse-backed fictional name: {masked!r}")
+
+
+def test_detector_reports_all_backers_not_just_the_first():
+    """A masked clause with SEVERAL reverse citers must surface ALL of them, sorted — the
+    report's recommended fix is chosen from this list, so hiding all but the first would
+    make the fix arbitrary (the Copilot #291 finding). BORN RED before that fix: the
+    detector returned only `sorted(cited[c])[0]`."""
+    clause_test = {"KISS-OPS-6.99-0004": "test_ghost"}
+    harness = {t: {"clauses": {"KISS-OPS-6.99-0004"}} for t in ("test_b", "test_a", "test_c")}
+    cited = {"KISS-OPS-6.99-0004": {"test_b", "test_a", "test_c"}}
+    masked = kt.compute_masked_forward(clause_test, harness, cited)
+    assert masked == {"KISS-OPS-6.99-0004": ("test_ghost", ["test_a", "test_b", "test_c"])}, (
+        f"detector dropped backers or mis-sorted them: {masked!r}")
 
 
 def test_detector_ignores_an_unbacked_fictional_name():
@@ -100,6 +113,16 @@ def test_a_conform_test_naming_two_conform_clauses_is_a_violation():
     clauses = {"KISS-CONFORM-6.13-0006", "KISS-CONFORM-6.13-0007"}
     kind = kt.classify_shared_test("test_conform_two", clauses, kt.DECLARED_SHARES)
     assert kind == "violation", f"a two-CONFORM conform share was deferred: {kind!r}"
+
+
+def test_three_way_conform_share_is_a_violation():
+    """The cross-standard arm is pinned at width TWO. One CONFORM owner + TWO deferrers is
+    NOT the sanctioned exception — it must be declared deliberately, not pass on a loose
+    CONFORM count. BORN RED before the #291 fix, when `subs.count('CONFORM') == 1` alone
+    admitted it (one CONFORM among three citers)."""
+    clauses = {"KISS-CONFORM-6.13-0006", "KISS-EMIT-6.15-0003", "KISS-OPS-6.11-0004"}
+    kind = kt.classify_shared_test("test_conform_three_way", clauses, kt.DECLARED_SHARES)
+    assert kind == "violation", f"a three-way (1 CONFORM + 2 deferrer) share was deferred: {kind!r}"
 
 
 # ------------------------------------------------------------- live guards --
