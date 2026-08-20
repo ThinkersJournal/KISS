@@ -6,7 +6,7 @@
   "namespace_vocabulary_note": "Each <namespace>: token is spelled in a vocabulary owned by that namespace's maintainer (KISS-CLASSIFY-6.8-0004), versioned independently of this artifact. These are the versions the tokens below were GENERATED AGAINST; a consumer asserting a vocabulary version (KISS-CLASSIFY-6.8-0009) asserts against these. The generator FAILS rather than emit a token whose vocabulary version it cannot state.",
   "namespace_vocabulary_versions": {
     "cuda": 1,
-    "vulkan": 4
+    "vulkan": 5
   },
   "structure_key_schema_version": 4,
   "token_prefix": "sk4",
