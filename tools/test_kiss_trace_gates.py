@@ -117,6 +117,43 @@ def fid(ordinal):
     return "-".join(["KISS", "OPS", "6.99", ordinal])
 
 
+def backing_fixture():
+    """One `#[test]` exercising every BACKING form and every MENTION form (#187).
+
+    Built with `fid()` so no clause-id literal sits in this file. Returns
+    (rust_src, backings, mentions): the scanner must credit exactly `backings` and
+    none of `mentions`. A regression to `cid_re.findall(scope)` credits all nine,
+    failing every MENTION check and the exact-set assertion; and dropping the indirect
+    assert-arg (`let VAR = "KISS-X"; assert_golden(VAR, ...)`) drops `b_indirect` and
+    fails the missing-backing check — the born-red control for the whole primitive.
+    """
+    b_golden = fid("0001")    # assert_golden LITERAL first-arg          -> BACKING
+    b_token = fid("0002")     # assert_token LITERAL first-arg           -> BACKING
+    b_backs = fid("0003")     # `// Backs:` comment                      -> BACKING
+    b_enforces = fid("0004")  # `/// Enforces` doc comment               -> BACKING
+    b_indirect = fid("0009")  # let VAR = "KISS-X"; assert_golden(VAR,..)-> BACKING (indirect)
+    m_bare = fid("0005")      # a bare `// <id>` comment                 -> MENTION
+    m_string = fid("0006")    # a clause-id bound to a var, NEVER asserted -> MENTION
+    m_panic = fid("0007")     # a panic! message                        -> MENTION
+    m_gap = fid("0008")       # keyword then a WORD then id              -> MENTION
+    src = (
+        f"/// Enforces {b_enforces} — a keyworded doc comment backs.\n"
+        "#[test]\n"
+        "fn backing_and_mention_forms() {\n"
+        f"    // Backs: {b_backs} — a keyworded line comment backs.\n"
+        f"    // {m_bare} — a bare comment id is a MENTION, not a backing.\n"
+        f"    // this test enforces the {m_gap} rule (a word sits between keyword and id).\n"
+        f'    let _fixture = "{m_string}"; // bound to a var but NEVER asserted -> MENTION.\n'
+        f'    let _cl = "{b_indirect}"; assert_golden(_cl, &z); // indirect first-arg -> BACKING.\n'
+        f'    assert_golden("{b_golden}", &value);\n'
+        f'    assert_token("{b_token}", &other);\n'
+        f'    if bad {{ panic!("{m_panic}: a message names a clause, it does not back it"); }}\n'
+        "}\n"
+    )
+    return (src, {b_golden, b_token, b_backs, b_enforces, b_indirect},
+            {m_bare, m_string, m_panic, m_gap})
+
+
 def spec_with(rows):
     """A minimal well-formed `ops.md`: body definitions + the §9 matrix."""
     out = ["## 6.0 Fixture\n\n"]
@@ -214,6 +251,48 @@ def main():
     check(found.get("comment_mentioning_the_macro_is_not_a_declaration",
                     {}).get("gate") is None,
           "a COMMENT naming runtime_gate! does not falsely mark a test as gated")
+
+    # ---- section 1b: BACKING vs MENTION (#187) -------------------------------
+    # A clause is credited (`clauses`) only when cited in a BACKING FORM: an
+    # assert_golden/assert_token first-arg, or a `Backs:`/`Enforces` keyworded
+    # comment. A bare comment id, a plain string literal, a panic! message, or a
+    # keyword with a word before the id is a MENTION and earns NO credit. This is
+    # the born-red control: the old `cid_re.findall(scope)` credited all eight and
+    # fails every MENTION check and the exact-set assertion below.
+    print()
+    print("backing vs mention (#187):")
+    bsrc, backings, mentions = backing_fixture()
+    with tempfile.TemporaryDirectory() as d:
+        conf = os.path.join(d, "conformance")
+        os.makedirs(os.path.join(conf, "src"))
+        with open(os.path.join(conf, "src", "backing.rs"), "w", encoding="utf-8") as f:
+            f.write(bsrc)
+        bfound = kt.discover_tests(conf)
+    credited = bfound.get("backing_and_mention_forms", {}).get("clauses", set())
+    for b in sorted(backings):
+        check(b in credited, f"a BACKING form credits {b[-9:]}")
+    for m in sorted(mentions):
+        check(m not in credited, f"a MENTION does NOT credit {m[-9:]}")
+    # EXACT set — no extra, no missing. Without this, a scanner that credited
+    # everything would still pass every `b in credited` check above.
+    check(credited == backings,
+          f"credited set is EXACTLY the five backings, got extra "
+          f"{sorted(c[-9:] for c in credited - backings)} / missing "
+          f"{sorted(c[-9:] for c in backings - credited)}")
+    # And the same forms read DIRECTLY by the primitive, so a break is localized
+    # to `_backing_clauses` rather than only visible through the walker.
+    direct = kt._backing_clauses(bsrc, bsrc)
+    check(direct == backings,
+          f"_backing_clauses(body, scope) alone yields exactly the backings, got {sorted(direct)}")
+    # THE SPLIT: `cited_raw` keeps EVERY citation (backings AND mentions), for reference
+    # hygiene (the dangling gate) and the citation audit; `clauses` is the narrow credited
+    # set. If cited_raw ever narrowed to backings, a bare-comment reference to a retired
+    # clause id would be caught by nothing — the #187 blind spot reopened one layer down.
+    raw = bfound.get("backing_and_mention_forms", {}).get("cited_raw", set())
+    check(raw == backings | mentions,
+          f"cited_raw keeps ALL nine citations (backings + mentions), got extra "
+          f"{sorted(c[-9:] for c in raw - (backings | mentions))} / missing "
+          f"{sorted(c[-9:] for c in (backings | mentions) - raw)}")
 
     # ---- section 2: the REPORT acts on the label (draft §6.1-0009a) ----------
     # Three clauses, each backed by exactly one test: one cfg-gated, one

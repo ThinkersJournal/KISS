@@ -11,7 +11,7 @@
 
 use kiss_conformance::integer::*;
 
-// KISS-OPS-6.4-0001 / §6.2-0002 — `test_ops_add_sub_mul` (integer path):
+// Backs: KISS-OPS-6.4-0001 (§6.2-0002 wrapping) — `test_ops_add_sub_mul` (integer path):
 // wrapping two's-complement add/sub/mul, per width, never saturating, never UB.
 #[test]
 fn test_ops_add_sub_mul_wrapping() {
@@ -44,7 +44,7 @@ fn test_ops_add_sub_mul_wrapping() {
     assert_eq!(mul(6i32, 7i32), 42i32);
 }
 
-// KISS-OPS-6.4-0003 — `test_ops_neg` (integer path): two's-complement wrapping
+// Backs: KISS-OPS-6.4-0003 — `test_ops_neg` (integer path): two's-complement wrapping
 // negate. The distinct integer neg, NOT the float sign-bit flip.
 #[test]
 fn test_ops_neg_integer() {
@@ -274,7 +274,7 @@ fn test_ops_narrow_int_promote_truncate_composition() {
     assert_ne!(0x1_0001u32, t16 as u32);
 }
 
-// KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
+// Backs: KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
 // now includes the 16-bit tokens `s16`/`u16` and 64-bit unsigned `u64` (the
 // former open question is resolved the other way: they are IN, made
 // compute-operable by the §6.16 bit layouts + §6.2-0002 wrapping arithmetic).

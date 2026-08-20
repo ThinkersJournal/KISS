@@ -132,6 +132,11 @@ fn assert_gate_accepts_a_wellformed_suite(tag: &str) {
 #[test]
 fn test_conform_build_fails_dangling_cite() {
     assert_gate_accepts_a_wellformed_suite("ctl_dangling");
+    // A bare-comment reference to a clause defined nowhere: the dangling gate is
+    // REFERENCE hygiene (§3.3 burns retired ids), so it flags a stale reference even in a
+    // comment that backs nothing — #187 narrowed COVERAGE credit to real backings but the
+    // dangling scan still reads every citation (`cited_raw`), or a burned id in a comment
+    // would be caught by nothing. This fixture is the teeth on that: a mention, not a backing.
     let harness = format!(
         "// this fixture test cites {}, which is defined nowhere\n#[test]\nfn \
          test_ops_fixture_probe() {{ assert!(true); }}\n",

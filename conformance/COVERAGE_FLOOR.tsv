@@ -131,7 +131,24 @@
 # arrival_recorded verdict now recognizes (#267). Before that verdict existed this branch
 # read as lint_drift: a clause shipping with its enforcement had no green path.
 #
+# harness 378 -> 375 / untested 494 -> 497 by #187 (the backing-vs-mention scanner), on top
+# of #261's recorded-move verdicts (merged in #269). The scanner counts only a BACKING form
+# (an assert_golden/assert_token first-arg, or a `Backs:`/`Enforces` keyworded comment); it
+# dropped 13 reverse-cited clauses. 10 were mutation-verified GENUINE backings in a bare-comment
+# form and MIGRATED to `// Backs:` (no count change); 3 -- KISS-EMIT-6.4-0001/-0002/-0005 -- are
+# genuine MENTIONS (lookup keys inside test_emit_constants_are_emitter_supplied, which asserts
+# §6.2-0002, #191). Mutating THEIR OWN obligation reddens no test, so they are de-credited:
+# marked `decredited` in UNBACKED.tsv, rolled into the untested TOTAL. A DE-CREDITING, not a
+# regression -- harness -3 / untested +3 -- reported `decrediting_recorded` GREEN (#261). lint is
+# 33, not 32: #268 landed its §6.8-0012 lint on main first, and the de-crediting leaves lint alone.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main` on the merged tree
+# (main @ afcd839, after #257/#269/#268) reported "Update the floor to harness 375, untested 497"
+# and that output is pasted here. Base was #268's 378/33/494, NOT any earlier tip -- carrying a
+# stale base across a rebase is the exact trap the entries above record. KISS squash-merges, so
+# this branch rebased with `--onto origin/main <old-base>` to replay only the #187 commit.
+#
 # key	value
-harness	378
+harness	375
 lint	33
-untested	494
+untested	497

@@ -71,7 +71,7 @@ fn reduce_class_is_selected_per_spec() {
 
 #[test]
 fn scan_is_length_preserving() {
-    // KISS-OPS-6.11-0003: one output element per input position, distinct from reduce.
+    // Backs: KISS-OPS-6.11-0003 — one output element per input position, distinct from reduce.
     let xs = [5.0, 6.0, 7.0];
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Inclusive).len(), 3);
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Exclusive).len(), 3);
@@ -166,7 +166,7 @@ fn scatter_assign_last_writer_in_iteration_order_wins() {
 
 #[test]
 fn scatter_oob_writes_are_skipped() {
-    // KISS-OPS-6.11-0005: OOB write skipped; a negative index is OOB (KISS-OPS-6.11-0004).
+    // Backs: KISS-OPS-6.11-0005 — OOB write skipped; a negative index is OOB (cf. KISS-OPS-6.11-0004, the OOB-policy clause — referenced, not backed here).
     let mut dest = [1.0, 2.0, 3.0];
     scatter_f32(&mut dest, &[-1, 5, 1], &[10.0, 20.0, 30.0], Combine::Assign);
     assert_eq!(dest, [1.0, 30.0, 3.0]); // only the in-bounds idx 1 wrote
@@ -174,7 +174,7 @@ fn scatter_oob_writes_are_skipped() {
 
 #[test]
 fn scatter_atomic_max_min_nan_propagating() {
-    // KISS-OPS-6.11-0010: fp atomic-max/min NaN-propagating — NaN scattered OR already
+    // Backs: KISS-OPS-6.11-0010 — fp atomic-max/min NaN-propagating — NaN scattered OR already
     // present yields NaN.
     let mut a = [1.0];
     scatter_f32(&mut a, &[0], &[f32::NAN], Combine::AtomicMax);

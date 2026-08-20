@@ -386,6 +386,27 @@ carefully, which is the asymmetry.
 and when a spot-check contradicts a measurement, **suspect the spot-check first.** It is the
 instrument you spent less on.
 
+**15. A citation's FORM settles deliberateness; only a MUTATION settles aboutness — and the
+mutation must target the SUBJECT of the obligation, not the text that states it.** A clause ID
+in a test earns coverage credit only in a **backing form**: the ID as the first argument of a
+backing assertion (`assert_golden("KISS-X", …)`, `assert_token(…)`), or after a `Backs:` /
+`Enforces` keyword in a comment. Every other occurrence — a fixture literal, a `panic!`/`assert!`
+message, a bare comment id, a lookup key — is a **mention** and earns nothing (`kiss_trace`'s
+scanner enforces this; `// Backs: KISS-X` is the one-line migration for a genuine backing written
+in a bare form). But form is only *deliberateness*; whether the test **asserts the clause's
+obligation** is settled by mutation — seed a violation and confirm the named test reddens — and
+you must mutate the **subject** of the obligation: the **implementation** for an implementation
+clause, the **spec text** only for a document-consistency clause. **A test that reddens only under
+a spec-text edit backs a document obligation, not the implementation clause.** *Why:* the #187
+backing-vs-mention scanner dropped 13 reverse-cited clauses; by their comments, ten looked like
+backings and three like mentions, and mutation confirmed exactly that — but the raw over-flag was
+**4.3× (13 vs 3), all toward apparent rigour.** De-crediting more *looks* like more honesty, so an
+over-flagging scanner reads as virtue while it destroys real backings, and a scanner false-negative
+fed to the `decrediting_recorded` ratchet verdict (#261) would launder ten live backings into
+recorded gaps — floor bumped, ledger marked, `RESULT: CLEAN`. So: **never de-credit on a
+recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-confirmed-dead one,
+and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
+three whose only reddening mutation is a spec-text edit).
 
 If you propose normative text, follow the house style so it stays testable:
 
