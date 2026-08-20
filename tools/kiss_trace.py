@@ -2006,8 +2006,12 @@ def main():
         # complete -- so the tool was not describing THEM wrongly; it was extending their
         # property to a category that never had it. A tool asserting a triage nobody
         # performed is the same defect as a ledger note nobody re-read (#290).
+        # EXCLUDE lint: it is reported as its OWN limb above, so counting lint rows here
+        # again put them in two limbs of a three-limb sentence and inflated the figure from
+        # 26 to 59. "Of the unbacked" means the remainder AFTER harness and lint.
         _curated = sum(1 for _c, _p in ledger.items()
-                       if _c in unbacked and _p["category"] != "untested" and _p["note"])
+                       if _c in unbacked and _p["category"] not in ("untested", "lint")
+                       and _p["note"])
         print(f"          Of the unbacked, {_curated} carry a curated reason; the rest are "
               f"bare `untested`, which records that no test exists and nothing more.")
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
