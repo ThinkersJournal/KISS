@@ -29,6 +29,23 @@ DIRECTLY with a synthetic previous lint set, and a git-fixture drives
 `base_ledger_lint` to prove it reads the base by REF not disk. Together they lift
 the old limit that a live substitution could not be exercised here.
 
+The `classify_ratchet`-direct block also covers the two RECORDED-MOVE families that
+share a regression's count signature and are told from it only by a marking (#261/#267):
+
+  #261 DE-CREDITING  harness -> decredited (an honest downward correction of a false
+                     credit). GREEN only when floored AND marked `decredited` on disk;
+                     an UNMARKED harness drop stays a regression; self-disposes once
+                     recorded at base.
+  #267 ARRIVAL       a new clause born WITH its lint detector (-> lint). GREEN only when
+                     recorded `lint:<tool>`, declared by --emit-coverage, AND not
+                     harness-backed at base. That last is two fail-closed gates: 3a the
+                     base FLOOR harness count (catches a harness->lint downgrade absorbed
+                     by a floor bump, which `harness_lost` goes blind to — `harness_delta`
+                     reads 0) and 3b the base LEDGER+SPEC sets (catches the count-flat
+                     residual — a downgrade offset by a promotion — since the ledger domain
+                     IS the unbacked set, so in-spec-but-not-in-ledger == was harness). A
+                     git-fixture drives `base_floor_harness` to prove it reads base by REF.
+
 Also proven (the #213 review finding, one level in): in a git checkout `--ratchet`
 REQUIRES `--base-ref` — a COUNT must not gate the SET comparison, because a
 constant-count lint<->harness swap leaves every count at the floor. Only a genuinely
@@ -109,7 +126,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 21
+EXPECTED_CONTROLS = 38
 
 
 def check(name, cond, detail=""):
@@ -179,11 +196,20 @@ def main():
     # These call the classifier directly so a real lint↔harness movement can be staged —
     # fixture clauses can never be lint-covered (lint coverage is discovered from the real
     # tools/), which is the STATED LIMIT the count-only test above could not get past.
-    def cr(floor, live, live_lint, live_harness, prev_lint, disk_lint=None):
+    def cr(floor, live, live_lint, live_harness, prev_lint, disk_lint=None,
+           live_decredited=None, prev_decredited=None, disk_decredited=None,
+           live_coverage=None, prev_floor_harness=None,
+           base_ledger_all=None, base_spec_ids=None):
+        def s(x):
+            return None if x is None else set(x)
         return kiss_trace.classify_ratchet(
             floor, live, set(live_lint), set(live_harness),
             None if prev_lint is None else set(prev_lint),
-            None if disk_lint is None else set(disk_lint))
+            None if disk_lint is None else set(disk_lint),
+            live_decredited=s(live_decredited), prev_decredited=s(prev_decredited),
+            disk_decredited=s(disk_decredited), live_coverage=s(live_coverage),
+            prev_floor_harness=prev_floor_harness,
+            base_ledger_all=s(base_ledger_all), base_spec_ids=s(base_spec_ids))
 
     # clean lint→harness substitution: X leaves lint, arrives in harness. h+1 / l−1 / u flat.
     v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 3, "lint": 0, "untested": 0},
@@ -250,26 +276,170 @@ def main():
           f"an unreadable ledger degraded to a green substitution_recorded via `None or set()`: "
           f"got {v}")
 
+    # ---- #261 HONEST DE-CREDITING (harness -> decredited) ----
+    # A false credit (a MENTION counted as a backing, #187/#191) corrected downward is
+    # harness -N / untested +N — BYTE-IDENTICAL to a regression. The base->disk `decredited`
+    # SET is the discriminator: a de-crediting is MARKED, a regression is silent. `decredited`
+    # rolls into the untested total but is tracked as its own set. `crd` stages a pure
+    # de-crediting (no lint movement, backings A+B intact).
+    def crd(floor, live, **kw):
+        return cr(floor, live, [], ["A", "B"], [], [], **kw)
+
+    # COMPLETED (floor bumped to POST h-1/u+1, D listed `decredited` on disk) -> GREEN.
+    v, _ = crd({"harness": 2, "lint": 0, "untested": 1}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=["D"], prev_decredited=[], disk_decredited=["D"])
+    check("completed de-crediting (floored + ledger-marked) is GREEN",
+          v == "decrediting_recorded", f"an honest de-crediting was not recognized: got {v}")
+
+    # IN-PROGRESS (floor still at PRE) -> `decrediting`, tells you to bump the floor.
+    v, _ = crd({"harness": 3, "lint": 0, "untested": 0}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=["D"], prev_decredited=[], disk_decredited=["D"])
+    check("in-progress de-crediting says bump the floor", v == "decrediting", f"got {v}")
+
+    # THE DISCRIMINATOR FLIP: same counts (h-1/u+1) but NOTHING is marked `decredited` — an
+    # accidental loss, not a documented correction. Must stay a REGRESSION. This is the whole
+    # point of #261: the honest correction is distinguished from the regression it resembles
+    # ONLY by the marking, never by the counts.
+    v, _ = crd({"harness": 3, "lint": 0, "untested": 0}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=[], prev_decredited=[], disk_decredited=[])
+    check("an UNMARKED harness drop is still a regression (de-credit is marked, regression silent)",
+          v == "regression", f"a silent harness loss was excused as a de-crediting: got {v}")
+
+    # UNREADABLE ledger at the completed shape -> not green (the currency hazard through the
+    # environment, #225), symmetric to the substitution case above.
+    v, _ = crd({"harness": 2, "lint": 0, "untested": 1}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=["D"], prev_decredited=[], disk_decredited=None)
+    check("de-crediting with an UNREADABLE ledger is NOT green", v == "ledger_unverifiable",
+          f"an unreadable ledger degraded to a green de-crediting: got {v}")
+
+    # UNRECORDED: the base->disk diff shows a de-credit but the disk ledger does not list it
+    # `decredited` -> regression (else it re-fires on every later PR, the #223 shape).
+    v, _ = crd({"harness": 2, "lint": 0, "untested": 1}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=["D"], prev_decredited=[], disk_decredited=[])
+    check("a de-crediting absent from the disk ledger is a regression", v == "regression",
+          f"an unrecorded de-credit passed: got {v}")
+
+    # ALREADY de-credited at BASE (prev lists D): not new this PR, counts at floor -> at_floor.
+    # Proves the verdict SELF-DISPOSES — green once, at the PR that lands it, then silent.
+    v, _ = crd({"harness": 2, "lint": 0, "untested": 1}, {"harness": 2, "lint": 0, "untested": 1},
+               live_decredited=["D"], prev_decredited=["D"], disk_decredited=["D"])
+    check("a de-crediting already recorded at base self-disposes to at_floor", v == "at_floor",
+          f"a settled de-credit re-fired instead of disposing: got {v}")
+
+    # ---- #267 BORN-WITH-DETECTOR ARRIVAL (-> lint) ----
+    # A new normative clause and its lint land together: the clause arrives in the lint set with
+    # the floor's lint bumped. Count shape is IDENTICAL to lint_drift and to a silent harness->doc
+    # downgrade, so green only when genuine: (1) recorded `lint:<tool>` on disk, (2) declared by
+    # --emit-coverage, (3) not harness-backed at base — checked by TWO fail-closed gates: 3a the
+    # base FLOOR harness count (cheap first filter) and 3b the base LEDGER+SPEC sets (the deciding
+    # check: present in the base spec but absent from the base ledger == was harness-backed).
+    # `cra` stages an arrival (`live_lint` both arrives — prev_lint empty — and is on disk) and
+    # DEFAULTS the base sets to the brand-new case (absent from the base spec -> no downgrade),
+    # overridable per test.
+    def cra(floor, live, live_lint, **kw):
+        kw.setdefault("base_ledger_all", [])
+        kw.setdefault("base_spec_ids", [])
+        return cr(floor, live, live_lint, ["A", "B"], [], live_lint, **kw)
+
+    # LEGIT arrival, BRAND-NEW clause N (absent from base spec), floor lint bumped, harness flat.
+    v, _ = cra({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+               ["N"], live_coverage=["N"], prev_floor_harness=2)
+    check("born-with-detector arrival (brand-new clause) is GREEN",
+          v == "arrival_recorded", f"a clause born with its detector was not recognized: got {v}")
+
+    # LEGIT arrival, UNTESTED->LINT UPGRADE: X pre-existed (in base spec) AND was in the base
+    # ledger (unbacked at base), so it was NOT harness-backed -> a fine new documentary
+    # enforcement, GREEN. This is the case condition 3b must ADMIT, not just the downgrade it must
+    # reject — a base-spec membership check alone would wrongly red this.
+    v, _ = cra({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+               ["X"], live_coverage=["X"], prev_floor_harness=2,
+               base_spec_ids=["X"], base_ledger_all=["X"])
+    check("an untested->lint upgrade (in base spec AND base ledger) is GREEN",
+          v == "arrival_recorded", f"a legitimate untested->lint upgrade was rejected: got {v}")
+
+    # CONDITION 3a FLIP (base FLOOR harness): a harness->lint downgrade (Z) ABSORBED by a floor
+    # bump. base floor harness 3, live harness 2. `harness_lost` is BLIND (harness_delta reads 0);
+    # 3a catches the drop. base sets pass 3b (both "new") so 3a is isolated as the blocker.
+    v, _ = cra({"harness": 2, "lint": 2, "untested": 0}, {"harness": 2, "lint": 2, "untested": 0},
+               ["Z", "N"], live_coverage=["Z", "N"], prev_floor_harness=3)
+    check("a harness->lint downgrade absorbed by a floor bump is caught by the base-floor gate",
+          v == "lint_drift",
+          f"a laundered downgrade passed 3a — the silent condition-3 hole: got {v}")
+
+    # CONDITION 3b FLIP (THE RESIDUAL, now CLOSED): a harness->lint downgrade (Z) OFFSET by an
+    # untested->harness promotion (M) that holds the harness COUNT flat, so 3a passes (base floor
+    # harness 3 == live harness 3). Only the base LEDGER+SPEC sets see it: Z is in the base spec
+    # but absent from the base ledger (== was harness-backed) -> a downgrade. Must be RED. This is
+    # the case that fooled both lanes; per the #267 review it goes red rather than documented.
+    v, _ = cr({"harness": 3, "lint": 2, "untested": 0}, {"harness": 3, "lint": 2, "untested": 0},
+              ["Z", "N"], ["A", "B", "M"], [], ["Z", "N"], live_coverage=["Z", "N"],
+              prev_floor_harness=3, base_spec_ids=["Z"], base_ledger_all=["M"])
+    check("a count-flat downgrade offset by a promotion is caught by the base ledger+spec sets",
+          v == "lint_drift",
+          f"the count-flat residual passed as an arrival — 3b did not close it: got {v}")
+
+    # CONDITION 1 FLIP: the arrival is not recorded `lint:<tool>` on disk -> lint_drift (raw cr,
+    # disk_lint empty; base sets pass so condition 1 is isolated).
+    v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+              ["N"], ["A", "B"], [], [], live_coverage=["N"], prev_floor_harness=2,
+              base_ledger_all=[], base_spec_ids=[])
+    check("an arrival absent from the disk ledger is not green", v == "lint_drift", f"got {v}")
+
+    # CONDITION 2 FLIP (the fixture-breakable seam that proves condition 2 is a LIVE gate, not a
+    # tautology of the caller's construction): recorded on disk but NOT declared by any tool's
+    # --emit-coverage -> lint_drift.
+    v, _ = cra({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+               ["N"], live_coverage=[], prev_floor_harness=2)
+    check("an arrival not declared by --emit-coverage is not green", v == "lint_drift", f"got {v}")
+
+    # CONDITION 3a UNCERTIFIABLE: the base FLOOR could not be read -> decline the green rather than
+    # pass an unchecked gate (the environment-degradation refusal, #225).
+    v, _ = cra({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+               ["N"], live_coverage=["N"], prev_floor_harness=None)
+    check("an arrival with an unreadable base floor declines the green", v == "lint_drift",
+          f"an uncertifiable condition 3a passed as green: got {v}")
+
+    # CONDITION 3b UNCERTIFIABLE: the base LEDGER/SPEC sets could not be read (floor fine) ->
+    # decline the green. Same fail-closed discipline; a base read that degrades to None must never
+    # become a silent pass.
+    v, _ = cra({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+               ["N"], live_coverage=["N"], prev_floor_harness=2,
+               base_ledger_all=None, base_spec_ids=None)
+    check("an arrival with unreadable base ledger/spec sets declines the green", v == "lint_drift",
+          f"an uncertifiable condition 3b passed as green: got {v}")
+
+    # UNREADABLE ledger at the arrival shape -> ledger_unverifiable (symmetric to the others).
+    v, _ = cr({"harness": 2, "lint": 1, "untested": 0}, {"harness": 2, "lint": 1, "untested": 0},
+              ["N"], ["A", "B"], [], None, live_coverage=["N"], prev_floor_harness=2,
+              base_ledger_all=[], base_spec_ids=[])
+    check("an arrival with an UNREADABLE ledger is not green", v == "ledger_unverifiable",
+          f"got {v}")
+
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:
         conf = os.path.join(g, "conformance")
         os.makedirs(conf)
         ledger = os.path.join(conf, "UNBACKED.tsv")
+        floor = os.path.join(conf, "COVERAGE_FLOOR.tsv")
 
         def git(*a):
             subprocess.run(["git", "-C", g, *a], check=True, capture_output=True, text=True)
         git("init", "-q")
         git("config", "user.email", "t@t")
         git("config", "user.name", "t")
-        # BASE (committed) state: X is lint.
+        # BASE (committed) state: X is lint; floor harness 3.
         with open(ledger, "w", encoding="utf-8") as f:
             f.write("# ledger\nKISS-OPS-6.0-0042\ttest_x\tlint:kiss_ops\tnote\n")
+        with open(floor, "w", encoding="utf-8") as f:
+            f.write("# floor\nharness\t3\nlint\t1\nuntested\t0\n")
         git("add", "-A")
         git("commit", "-q", "-m", "base")
-        # NEW state ON DISK: X removed (moved to harness). NOT committed — precisely the
-        # regenerate-the-ledger-then-run order that silences a disk-reading check.
+        # NEW state ON DISK: X removed (moved to harness), floor harness bumped DOWN to 2. NOT
+        # committed — precisely the regenerate-then-run order that silences a disk-reading check.
         with open(ledger, "w", encoding="utf-8") as f:
             f.write("# ledger\n")
+        with open(floor, "w", encoding="utf-8") as f:
+            f.write("# floor\nharness\t2\nlint\t1\nuntested\t0\n")
         base = kiss_trace.base_ledger_lint(ledger, "HEAD")
         check("base ledger is read from the REF, not the regenerated disk file",
               base == {"KISS-OPS-6.0-0042"},
@@ -279,6 +449,15 @@ def main():
         bad = kiss_trace.base_ledger_lint(ledger, "no-such-ref-xyz")
         check("indeterminable base returns None (fail-loud, not an empty diff)", bad is None,
               f"a missing ref degraded to a set instead of None: got {bad}")
+        # The #267 condition-3 gate reads the base FLOOR by REF, same hazard: the on-disk floor
+        # already shows harness 2, but HEAD holds 3. A disk read would report 2 and let a harness
+        # drop pass as an arrival; the ref read must return 3.
+        fh = kiss_trace.base_floor_harness(floor, "HEAD")
+        check("base floor harness is read from the REF, not the regenerated disk file", fh == 3,
+              f"read the on-disk (already-bumped) floor instead of the base ref: got {fh}")
+        badf = kiss_trace.base_floor_harness(floor, "no-such-ref-xyz")
+        check("indeterminable base floor returns None (declines the arrival green, not passes it)",
+              badf is None, f"a missing ref degraded to an int instead of None: got {badf}")
 
     # ---- THE REVIEW FINDING (#213, one level in): a COUNT must not gate the SET check ----
     # A constant-count lint↔harness swap leaves every count at the floor, so a count gate on
