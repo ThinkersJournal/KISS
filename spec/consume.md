@@ -802,7 +802,7 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
 > wording is deliberately **not** byte-identical: each side neutralizes the other's
 > vendor/source-language illustrations, so the two directions can never be a byte-for-byte diff.
 > That cross-document semantic correspondence is a **governance/CI invariant** enforced by the
-> KISS-Emit **§6.7-0008 clause-correspondence-table lint** (`test_conform_emit_consume_roundtrip_correspondence`),
+> KISS-Emit **§6.7-0008 clause-correspondence-table lint** (`test_conform_emit_consume_correspondence_lint`),
 > which pairs each Consume round-trip clause with its Emit counterpart and checks that the pair
 > states one invariant — it is **not** an implementation-conformance obligation and is not
 > exercisable by any per-implementation KISS-Conform behavior test; KISS-Consume does not depend on
