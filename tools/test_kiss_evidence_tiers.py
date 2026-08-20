@@ -105,7 +105,7 @@ def main():
     for t in tests:
         t()
     print(f"ok - {len(tests)} controls pass: NAMED+CITED partition backed, PROVEN subset-of CITED, "
-          f"proof record empty until the reserved #278 mechanism")
+          f"proof record empty until the #278 marker mechanism lands (step 2)")
     return 0
 
 
