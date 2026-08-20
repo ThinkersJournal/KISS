@@ -992,6 +992,21 @@ enum (§6.0). See umbrella §3 for the full statement.
   >
   > The incidents and derivations behind each paragraph above are recorded on **#265**.
   *Test:* `test_conform_comparator_declares_normalization`.
+- **KISS-CONFORM-6.8-0013** — For each dimension a comparison relation declares it normalizes
+  (§6.8-0012), the suite MUST **exhibit** that blindness: a pair of **distinct** inputs the
+  relation maps to **one** value. Each exhibition MUST be paired with a **discrimination
+  control** — inputs that must NOT collide — because a collision assertion alone is satisfied by
+  a relation that returns a constant, which would exhibit every blindness perfectly and destroy
+  the relation. A declared dimension whose derivation the suite does not implement MUST be
+  recorded as **unexhibited**, never omitted.
+
+  > *Informative.* A `Normalizes:` line is prose: it can be written for a blindness the
+  > relation does not have, and it can be silently widened later. **An exhibition is an
+  > artifact** — it fails when the relation stops collapsing what the declaration says it
+  > collapses, and its paired control fails when the relation collapses everything. Neither
+  > half is sufficient alone.
+
+  *Test:* `test_conform_declared_blindness_is_exhibited`.
 
 ### 6.9 The structural op-DAG equality comparator (tier-1 round-trip)
 
@@ -1478,6 +1493,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0010 | `test_conform_nan_result_compares_by_nanness` |
 | KISS-CONFORM-6.8-0011 | `test_conform_per_output_comparator_selection` |
 | KISS-CONFORM-6.8-0012 | `test_conform_comparator_declares_normalization` |
+| KISS-CONFORM-6.8-0013 | `test_conform_declared_blindness_is_exhibited` |
 | KISS-CONFORM-6.9-0001 | `test_conform_structural_dag_equality` |
 | KISS-CONFORM-6.9-0002 | `test_conform_structural_not_source_bytes` |
 | KISS-CONFORM-6.9-0003 | `test_conform_roundtrip_tier1` |
