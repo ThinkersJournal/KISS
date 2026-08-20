@@ -412,8 +412,14 @@ three whose only reddening mutation is a spec-text edit).
 durable as someone's ability to go back to what it rested on. These are one convention because
 they are one failure — the evidence moved, or was never named, or was argued instead of shown.
 
-**(a) When a finding rests on what another party said or did, NAME THE PARTY in the finding.**
-Attribution is part of the measurement, not decoration on it. *Why:* #238 recorded that *"two
+**(a) When a finding rests on what another party said or did, name BOTH the PARTY and the
+ARTIFACT the evidence lives in** — a commit SHA, a comment id, a re-runnable command.
+**The artifact makes the attribution checkable; the name makes it routable**, and they fail
+differently: a name with no artifact is an assertion about who did something, corroborated by
+nothing, while an artifact with no name tells you what happened but not whom to tell. **In this
+repo a name alone is especially weak** — the last 60 commits on `origin/main` are 60 by one
+account, and PR comments land under that same account, so **the record cannot corroborate a
+name.** Attribution is part of the measurement, not decoration on it. *Why:* #238 recorded that *"two
 independent projects"* cited the wrong clause and that *"both were verified against the clause
 text by the architect before this filing"* — **verified but never attributed.** When the
 correction finally needed routing, the attribution was recoverable from nothing: not the issue,
@@ -433,6 +439,12 @@ leaves exactly one question — do they cover everything? They covered the detec
 wiring: seeding `inconclusive = True` → `pass` left **every control green** while the feature
 silently stopped firing and the tool returned to `RESULT: CLEAN` on a stale tree. The gap was
 found by taking the warning as a premise rather than as a courtesy.
+**Author side, and it is load-bearing: stating what your evidence cannot show is a TECHNIQUE,
+not a confession.** A volunteered limitation is the reviewer's hardest work done for them, and
+it is what made the #279 gap findable at all. **A convention that rewards candour by auditing it
+teaches authors to stop volunteering** — and that failure is invisible, because an absence of
+warnings looks exactly like a run of PRs with no limitations worth stating. Read (b) as raising
+what a PR is worth, never as lowering what its author is trusted with.
 
 **(c) Do not delete a check because a stronger one covers it until you have DEMONSTRATED the
 stronger one fires on the case the old one was catching — and say which you are doing.**
