@@ -92,6 +92,12 @@ fn test_classify_cell_mates_are_not_substitutable() {
     let ops = all_ops();
     let tok = shape_key("bin").to_token();
 
+    // Vacuity guards, matching this test's sibling: an empty op vocabulary or a token with
+    // no fields would make the "no field names an op" check below pass by having nothing to
+    // check.
+    assert!(!ops.is_empty(), "KISS-CLASSIFY-6.6-0020: op manifest is empty — the check would be vacuous");
+    assert!(tok.split('|').count() > 1, "KISS-CLASSIFY-6.6-0020: token has no fields to inspect — the check would be vacuous");
+
     // No FIELD of a derived token is a KISS-Ops op name — so the token cannot name what
     // it computes, and two computations of one shape land on one cell.
     let named: Vec<&str> = tok.split('|')
@@ -103,11 +109,17 @@ fn test_classify_cell_mates_are_not_substitutable() {
          not be needed — so this failing means the clause is wrong, not the code."
     );
 
-    // Same shape, same bytes — the closure the hazard rests on.
-    assert_eq!(
-        shape_key("bin").to_token(), shape_key("bin").to_token(),
-        "KISS-CLASSIFY-6.6-0020: derivation is not a function of the shape alone"
-    );
+    // REMOVED, and the removal is the point. This line used to read:
+    //
+    //     assert_eq!(shape_key("bin").to_token(), shape_key("bin").to_token(), ...)
+    //
+    // BOTH SIDES ARE THE SAME EXPRESSION, so it could only ever fail on nondeterminism —
+    // it did not exhibit "two computations, one cell", which is what its message claimed.
+    // That is the comparison-against-itself shape this suite exists to catch, written into
+    // the file whose subject is instruments that cannot fail. What it was reaching for is
+    // already asserted above, and asserted properly: no field of the token can name a
+    // computation. Determinism of `to_token` is a real property but it is not THIS clause's
+    // obligation, and pinning it under §6.6-0020's message would mislabel both.
 
     // DISCRIMINATION CONTROL: the key is blind to the COMPUTATION, not to everything. A
     // derivation returning a constant would satisfy every collision above and destroy the

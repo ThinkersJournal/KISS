@@ -904,7 +904,7 @@ form (§6.7-0011).
 | `contraction` | optional | `{M, N, K size classes, K divisibility bucket, conditionally-present batch size class, weight dtype, accumulator dtype, output dtype, math-precision}` (sk3, §6.7-0006); absent for non-contraction cells |
 
 - **KISS-CLASSIFY-6.6-0001** — A `structure_key` MUST be an **admissibility
-  predicate**: a byte-match between the `structure_key` derived from an invocation's
+  predicate over ELIGIBILITY, not a decision procedure for admission**: a byte-match between the `structure_key` derived from an invocation's
   derivation inputs (§6.6-0012) and the kernel's key is **NECESSARY** for admission, and
   an implementation MUST NOT admit an invocation whose derived key differs by any byte.
   **A byte-match is NOT SUFFICIENT.** A kernel MAY decline an invocation whose derived key
