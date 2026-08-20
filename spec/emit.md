@@ -374,6 +374,19 @@ named language family; this note records only *why* the criterion exists.
   order*, not the concrete tokens — and is therefore neutral by construction. The
   neutrality audit (§6.5) and the audit-default rule (§6.2-0003) apply **only** to
   decisions that HAVE a target-language surface.
+- **Storage-capable** — a target is *storage-capable* for a dtype when it can hold
+  values of that dtype in memory and the emitter can render a target-language
+  spelling for the **carrier** (§6.4-0004). This is a fact about **surface and
+  representation**.
+- **Compute-capable** — a target is *compute-capable* for a dtype when it can perform
+  the op's arithmetic **in that dtype**. This is a fact about **the target's
+  arithmetic**, and it is **strictly stronger** than storage-capable: a target may be
+  storage-capable and not compute-capable for the same dtype, and that combination is
+  ordinary rather than exotic. Two registered namespaces exhibit it — a `vulkan:`
+  device may advertise `storageBuffer16BitAccess` (a **storage** capability) and
+  perform the arithmetic in `f32`; a `cuda:` device holds fp8 in memory on any
+  architecture while the arithmetic is architecture-gated. **The pair is a property of
+  dtypes, not of one vendor's spelling.**
 - **Structural decision** — a lowering decision that renders no target-language
   surface (§3, *Target-language surface*): topology, operand binding, index/address
   arithmetic, and control-flow scaffolding. Audit-exempt (§6.2-0005, §6.3-0006).
@@ -716,6 +729,14 @@ selects the correct comparator. See umbrella §3 for the full statement.
   **not** prove universal across the emitter's claimed targets MUST be an emitter-must-
   supply decision; an implementation MUST NOT retain such an operator on the driver-may-
   spell side. *Test:* `test_emit_unproven_operator_is_emitter_supplied`.
+- **KISS-EMIT-6.4-0006** — **Spellable is not computable.** That a dtype's
+  target-language surface is emitter-must-supply (§6.4-0004) says the target is
+  **storage-capable** (§3) for it and says **nothing** about whether the target is
+  **compute-capable** (§3). An implementation **MUST NOT** infer computability from
+  spellability, and **MUST NOT** treat the existence of a carrier spelling as a
+  licence to emit that dtype's arithmetic. Where the two differ the emitter MUST
+  return the typed decline of §6.8-0002 rather than emit arithmetic the target cannot
+  perform. *Test:* `test_emit_spellable_is_not_computable`.
 
 ### 6.5 The pre-freeze neutrality audit (blocking freeze-gate governance)
 
@@ -1026,6 +1047,7 @@ sync by the KISS-Conform lint.
 | KISS-EMIT-6.4-0003 | `test_emit_transcendental_spelling_emitter_supplied` |
 | KISS-EMIT-6.4-0004 | `test_emit_type_spelling_emitter_supplied` |
 | KISS-EMIT-6.4-0005 | `test_emit_unproven_operator_is_emitter_supplied` |
+| KISS-EMIT-6.4-0006 | `test_emit_spellable_is_not_computable` |
 | KISS-EMIT-6.5-0001 | `test_emit_neutrality_audit_manifest_is_freeze_precondition` |
 | KISS-EMIT-6.5-0002 | `test_emit_audit_moves_unproven_spelling` |
 | KISS-EMIT-6.5-0003 | `test_emit_audit_hunts_const_lit_siblings` |
