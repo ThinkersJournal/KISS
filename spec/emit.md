@@ -347,9 +347,10 @@ named language family; this note records only *why* the criterion exists.
   component that renders §6.4's emitter-must-supply set into a target language
   performs *part* of emitting; it is an emitter only if it also produces the
   contract of §6.6 and honours the typed-decline obligation of §6.8. An
-  implementation whose per-target interface stops at rendering **MUST NOT** read
-  §6's obligations on "the emitter" as obligations on that interface: they attach to
-  whatever component — or composition of components — produces the §6.6-0003 pair.
+  §6's obligations on "the emitter" therefore do **not** attach to an
+  implementation's per-target rendering interface merely because that interface is
+  the part which varies by target; they attach to whatever component — or
+  composition of components — produces the §6.6-0003 pair.
 
   This is stated because the narrower reading is the natural one and has been made
   in practice. An implementation mapping its per-target lowering interface onto the
