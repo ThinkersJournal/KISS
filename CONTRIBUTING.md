@@ -92,6 +92,9 @@ retrieval.**
 | I read an exit code, a return value, or a log line instead of the state | **11** (*level*) |
 | the check is correct but I asked it the wrong question | **14** |
 | my query returned NOTHING — is that an absence, or a broken query? | **14** (run a positive control) |
+| I truncated with `head`/a cap/a size limit — may I conclude absence? | **14** (**no** — positive findings only) |
+| my seed matched a DOCSTRING and left the code untouched | **9** (assert the file changed, not just that the pattern matched) |
+| my fixture is green — but does the thing it names actually exist? | **9** (a vacuous fixture passes either way; pair it) |
 | a "blocked" note that nobody has re-read since it was written | **12** |
 | a fix added an outcome and I didn't check the old ones still happen | **13** |
 | a clause id appears in a test — does it count? | **15** |
@@ -197,6 +200,23 @@ everything made no sense — a semantic smell, not a mechanical check.
 And for a test credited to more than one clause, per-vector proofs are necessary but not sufficient:
 publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
 together is the only thing distinguishing N properties from one property credited N times.
+
+**Asserting the PATTERN MATCHED is not asserting the FILE CHANGED**, and the two come apart
+exactly where it hurts: a pattern that also occurs in a **docstring** or a comment matches there
+first, `replace(..., 1)` edits prose, and the code is untouched. *Why:* a seed aimed at a
+fail-closed guard hit the same string in the function's own docstring; the suite reported **18
+passed** and the natural reading was *"the guard is not exercised."* Assert **both** — that the
+anchor exists **and** that the resulting text differs (`assert new != old`).
+
+**A PAIRED CONTROL CATCHES A FIXTURE THAT IS TESTING NOTHING, not only an over-eager fix.** A
+control naming a subject that does not exist — a clause absent from the ledger, a symbol absent
+from the tree — **passes whichever way its assertion points**, so a whole set of them can ship
+green against nothing. *Why:* a fixture was vacuous **three times** (`KISS-OPS-6.99-0003`, then
+`-0044`) before the tool's own output revealed the real id; **the first version was green**, and
+had the assertion been written the natural way, four controls would have shipped against a clause
+that was never in the ledger. **What caught it was one control pointing the other way and
+failing** — because **a vacuous fixture cannot satisfy both directions at once.** So: before
+trusting a new fixture, confirm its subject actually exists in the thing it is fixturing.
 
 **A mutation that applied is not yet a mutation that tested what you meant.** Asserting the patch
 landed proves the file changed; it does not prove the *installed* text has the property under test.
@@ -427,6 +447,19 @@ makes this a class rather than a grep anecdote:
   read as *"no threaded replies"* on two PRs at once. **In all three the instrument returned
   successfully-looking emptiness**, and in none of them had anyone asked whether it could have
   returned anything at all.
+  **THE RULE THAT NEEDS NO ONE TO NOTICE ANYTHING — a constraint on what an output LICENSES:**
+  **a truncated or crashed query can support a POSITIVE finding and never a NEGATIVE one.**
+  `head -N`, a size cap, a dead subprocess, a silently-cut heredoc — any of them can show you that
+  something *exists*; **none of them can show you that nothing does.** In every instance below the
+  error was the same: **a bounded output read as an exhaustive one.** So: **if you truncated, you
+  may not conclude absence** — re-run unbounded, or run a positive control.
+  *Six instances, three agents, one evening:* a `head -6` concluding a string was absent from a
+  list that was cut before reaching it (**it was there, eleven lines further down**); a `head -2`
+  on a merge gate, which is how a PR was merged and then reported as prevented; a `cp1252` decode
+  crash whose empty output printed as a clean *"no threaded replies"* **on two PRs at once**; a
+  heredoc that truncated at an apostrophe and wrote a 26KB file as 7.6KB, caught only by checking
+  the byte count; and a grep over four phrasings of an obligation reported as *"nowhere stated"*
+  when the clause existed in different words.
   **The remedy is one extra call: a POSITIVE CONTROL.** Run the same query against something you
   know is there; if it finds that, the empty result is evidence. A consumer answering a
   reliance question the same day did exactly this unprompted — *"the same pattern DOES find a
