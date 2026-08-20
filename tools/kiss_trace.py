@@ -153,6 +153,68 @@ def _backing_clauses(body, scope):
         ids.update(RE_CLAUSE_ID.findall(m.group(1)))
     return ids
 
+
+# --- PROVEN marker (#278) --------------------------------------------------------------
+# A `// Proven:` marker is TESTIMONY that a demonstration exists at a ref — NOT a live
+# re-run, and NOT "this is proven now". It records that a seeded mutation of the clause's
+# obligation was shown to redden THIS test. Convention 15 makes it evidence only with the
+# mutation SUBJECT (impl for an implementation clause, spec-text for a document clause);
+# convention 16(a) makes it checkable only with a resolvable REF. So the well-formed shape
+# is exactly:
+#     // Proven: KISS-X (subject: impl; ref: <sha/PR/issue>)
+# A `Proven:` that names a clause without that shape (no subject, no ref, malformed) is
+# MALFORMED — flagged, never counted. Fail-closed, because a proof claim missing its
+# subject or its ref is not a weaker proof, it is no proof: the whole point of the PROVEN
+# tier is that nothing enters it without a demonstration a reader can go re-run.
+RE_PROVEN_MARKER = re.compile(
+    r'Proven:\s*(' + CLAUSE_ID + r')\s*'
+    r'\(\s*subject:\s*(impl|spec-text)\s*;\s*ref:\s*([^)\s][^)]*?)\s*\)', re.I)
+RE_PROVEN_LOOSE = re.compile(r'Proven:\s*(' + CLAUSE_ID + r')', re.I)
+
+
+def _proven_markers(scope):
+    """Parse `// Proven:` markers from a test's scope. Returns (well_formed, malformed):
+      well_formed — {clause_id: (subject, ref)} for each marker carrying a subject
+                    (impl|spec-text) and a non-empty ref;
+      malformed   — sorted [clause_id, ...] named by a `Proven:` that does NOT parse to
+                    that shape. Fail-closed: a proof claim without a subject or a ref is
+                    FLAGGED, never counted.
+    The ref is recorded as testimony (a demonstration exists at `ref`), not resolved here —
+    the marker is not a live re-run, so this parser does not re-execute anything."""
+    well = {}
+    for m in RE_PROVEN_MARKER.finditer(scope):
+        well[m.group(1)] = (m.group(2).lower(), m.group(3).strip())
+    malformed = sorted({m.group(1) for m in RE_PROVEN_LOOSE.finditer(scope)
+                        if m.group(1) not in well})
+    return well, malformed
+
+
+def collect_proven(harness):
+    """#278. From the discovered tests, collect the PROVEN clause set and its fail-closed
+    violations. A clause is PROVEN iff SOME test both BACKS it (the clause is in that test's
+    `clauses`) AND carries a well-formed `// Proven:` marker for it — PROVEN ⊆ CITED by
+    construction. Returns (proven_clauses, violations), where a violation is raised (and the
+    clause NOT counted) for:
+      * a MALFORMED marker — a `Proven:` naming a clause without a subject and ref;
+      * a well-formed marker for a clause the SAME test does NOT back — a proof with no
+        backing for it to be about.
+    main() drives this; the born-red control in test_kiss_proven_marker.py drives it too, so
+    the gate proves the real collector rather than a copy (#279)."""
+    proven, violations = set(), []
+    for tname, info in sorted(harness.items()):
+        for cid in info.get("proven_malformed", ()):
+            violations.append(
+                f"malformed `Proven:` in `{tname}` for {cid} — a proof marker must read "
+                f"`Proven: {cid} (subject: impl|spec-text; ref: <sha/PR/issue>)`")
+        for cid, (_subject, _ref) in sorted(info.get("proven", {}).items()):
+            if cid not in info.get("clauses", set()):
+                violations.append(
+                    f"`Proven:` in `{tname}` for {cid} but that test does NOT back {cid} "
+                    f"(proof without a backing — a proof presupposes the citation, PROVEN subset-of CITED)")
+            else:
+                proven.add(cid)
+    return proven, violations
+
 # A Rust test function in the harness: `#[test]` (possibly with intervening
 # attributes such as `#[cfg(feature = "cuda")]` or `#[ignore]`) then `fn name(`.
 RE_RUST_TEST = re.compile(
@@ -363,6 +425,7 @@ def discover_tests(conf_dir):
                 # ungated test as gated. Citations still scan the wider `scope`,
                 # because a citation legitimately lives in the doc comment.
                 rt = RE_RUNTIME_GATE.search(body)
+                proven_well, proven_bad = _proven_markers(scope)
                 found[name] = {
                     "file": rel,
                     # A compile-time `cfg` gate and a declared runtime gate are the
@@ -380,6 +443,12 @@ def discover_tests(conf_dir):
                     # citation audit (kiss_cites, which classifies the mentions). Splitting the
                     # two is the point of #187: credit is narrow, reference-hygiene is wide.
                     "cited_raw": set(RE_CLAUSE_ID.findall(scope)),
+                    # PROVEN markers (#278): {cid: (subject, ref)} of well-formed proof
+                    # testimony, and the clause ids of any malformed `Proven:` (flagged,
+                    # never counted). A proof is credited only where the SAME test also
+                    # backs the clause — enforced in main(), not here.
+                    "proven": proven_well,
+                    "proven_malformed": proven_bad,
                 }
     return found
 
@@ -1381,9 +1450,17 @@ def main():
     # tool: the ONLY tier that is actual evidence has no number. Ruled #278: the record is a
     # `// Proven:` marker at the test (carrying the mutation SUBJECT per conv 15 and a resolvable
     # REF per conv 16(a) — TESTIMONY that a demonstration exists at a ref, NOT a live re-run),
-    # enforced by a 4th blocking ratchet dimension from 0. Step 1 (this) only COUNTS the tiers;
-    # step 2 supplies `proven` from the markers and adds the gate.
-    tier_named, tier_cited, tier_proven = compute_evidence_tiers(backed, cited, proven=None)
+    # enforced by a 4th blocking ratchet dimension from 0. Step 1 counted the tiers; step 2
+    # (this) supplies `proven` from the markers. The GATE (the 4th ratchet dimension) is the
+    # next increment; here PROVEN is reported and its markers are validated fail-closed.
+    #
+    # A clause is PROVEN only where the SAME test both BACKS it (deliberateness) and carries a
+    # well-formed `// Proven:` (aboutness) — PROVEN ⊆ CITED. Two fail-closed violations, because
+    # a proof tier is worth having only if nothing enters it unearned: a MALFORMED marker
+    # (missing subject/ref), and a proof for a clause the proving test does not even back
+    # (testimony with no backing for it to be about).
+    proven_clauses, proven_violations = collect_proven(harness)
+    tier_named, tier_cited, tier_proven = compute_evidence_tiers(backed, cited, proven=proven_clauses)
     tier_cited_by_name = {c for c in tier_cited if clause_test.get(c) in cited.get(c, ())}
     # Every executable test backing a clause, by either direction — not just the one
     # `backed` happened to pick. A clause is only honestly gate-free if at least one
@@ -1523,6 +1600,14 @@ def main():
         print("    Fix: point the §9 row at the real backing test, or DECLARE a same-standard")
         print("    share in kiss_trace.py DECLARED_SHARES with a reason.")
         print("-" * 68)
+    if proven_violations:
+        any_fail = True
+        print(f"  PROVEN MARKER (#278): {len(proven_violations)} `// Proven:` marker(s) do not earn")
+        print("  the PROVEN tier — a proof claim missing its subject/ref, or asserted over a clause")
+        print("  the proving test does not back, is rejected fail-closed (never silently counted):")
+        for v in proven_violations:
+            print(f"          - {v}")
+        print("-" * 68)
     print(f"  DOCUMENT CONSISTENCY: {total_clauses} normative clauses, "
           f"{total_tests} unique test names.")
 
@@ -1551,12 +1636,12 @@ def main():
     print(f"                   {len(tier_cited_by_name):>4} the §9-named test carries it (pointer and evidence agree)")
     print(f"                   {tier_cited_other:>4} a DIFFERENT test carries it — backed, but the §9 row points")
     print(f"                        elsewhere than the evidence: a §9-alignment queue (#247's residue)")
-    print(f"          {len(tier_proven):>4} PROVEN  a seeded mutation of the obligation's SUBJECT reddens the test —")
-    print(f"                 ABOUTNESS, and PROVEN is a subset of CITED. The one tier that is actual")
-    print(f"                 evidence has no number yet: no proof record exists. A `// Proven:` marker is")
-    print(f"                 TESTIMONY that a demonstration exists at a ref, NOT a re-run — so it carries")
-    print(f"                 the mutation SUBJECT and a resolvable REF. Ruled #278: marker at the test +")
-    print(f"                 a 4th blocking ratchet dimension from 0, built in step 2. This report counts.")
+    print(f"          {len(tier_proven):>4} PROVEN  a `// Proven:` marker records a seeded mutation of the obligation's")
+    print(f"                 SUBJECT was shown to redden the test — ABOUTNESS, and PROVEN is a subset of CITED.")
+    print(f"                 The marker is TESTIMONY that a demonstration exists at a ref, NOT a live re-run,")
+    print(f"                 so it carries the mutation SUBJECT (conv 15) and a resolvable REF (conv 16(a)).")
+    print(f"                 {len(tier_proven)} today — nothing is bulk-marked; each entry is an earned per-clause")
+    print(f"                 demonstration. The 4th BLOCKING ratchet dimension from 0 is the next increment.")
     print(f"      {len(unbacked)} clauses have NO executable test.")
     if gated:
         cfg_only = {c: t for c, t in gated.items()
