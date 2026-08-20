@@ -1,4 +1,9 @@
-//! Gate for KISS-CONFORM-§6.8-0013 — a declared blindness must be EXHIBITED.
+//! Gate for KISS-CONFORM §6.8-0013 — a declared blindness must be EXHIBITED.
+//!
+//! The sub-standard is spelled out on every reference here on purpose:
+//! KISS-CLASSIFY-6.8-0013 also exists (namespace-vocabulary `kind: generated`), and the
+//! bare short form `§6.8-0013` now names two clauses. That collision has already cost
+//! two projects a mis-citation once (#238).
 //!
 //! §6.8-0012 makes a comparison relation declare the dimensions along which two
 //! *differing* inputs compare equal. A declaration is prose: it can be written for a
@@ -19,6 +24,13 @@
 
 use kiss_conformance::structure_key::*;
 
+/// Backs: KISS-CONFORM-6.8-0013 — each declared blindness is exhibited by a distinct pair
+/// mapping to one value, and paired with a discrimination control.
+///
+/// The clause is ALSO forward-backed: §9's matrix names this function, so the credit does not
+/// depend on this comment. It is written anyway because forward backing dies silently on a
+/// rename — the matrix would still name a function that no longer exists, and the clause would
+/// go unbacked with nothing pointing at the cause.
 /// (1) Extent divisibility above the ceiling. Declared: `d16` absorbs every multiple of 16.
 #[test]
 fn test_conform_declared_blindness_is_exhibited() {
