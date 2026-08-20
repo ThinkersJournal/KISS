@@ -49,6 +49,7 @@ SELECTS_ONLY = {
     "KISS-CONFORM-6.8-0009": "restricts which comparator is admissible for POD wire fields",
     "KISS-CONFORM-6.8-0011": "multi-output application rule; defines no relation",
     "KISS-CONFORM-6.8-0012": "the declaration obligation itself",
+    "KISS-CONFORM-6.8-0013": "the exhibition obligation; requires a demonstration, defines no relation",
     "KISS-CONFORM-6.9-0002": "requires the tier-1 comparator BE the structural one",
     "KISS-CONFORM-6.9-0003": "applies the structural comparator to a named round-trip",
     "KISS-CONFORM-6.12-0002": "consumer-verify runs under the declared-precision comparator",

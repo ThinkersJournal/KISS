@@ -172,7 +172,12 @@
 # ASSUMES and what the tool ESTABLISHES -- the agreement is a fact about this pair of changes,
 # not evidence that the shortcut works. The prior entry in this file records the same shortcut
 # being WRONG one merge earlier.
+# harness 377 -> 378 by #265: KISS-CONFORM-6.8-0013 (a declared blindness must be EXHIBITED)
+# arrives with test_conform_declared_blindness_is_exhibited, a harness test, so it lands in the
+# harness dimension. lint 33 and untested 497 UNCHANGED -- the clause ships with its detector.
+# Tool-derived at main @ cded43d, pasted, not computed by hand.
+#
 # key	value
-harness	377
+harness	378
 lint	33
 untested	497
