@@ -1672,8 +1672,14 @@ def main():
     elif inconclusive:
         # Non-zero (a caller must not treat this as a pass) but DISTINCT from 1, so a
         # script can tell "I could not measure" from "the floor moved".
+        # NAME THE CAUSE, do not describe the exit code. A generic "re-run with --base-ref"
+        # is actively wrong when staleness fired: --base-ref WAS passed, and the remedy is a
+        # rebase, printed above. A footer that misdirects is worse than none -- the reader
+        # follows it instead of the line that told them what to do (#258's shape).
         print("  RESULT: INCONCLUSIVE — the ratchet declined to answer; this is NOT a floor")
-        print("          violation and NOT a clean run. Re-run with --base-ref to get either.")
+        print("          violation and NOT a clean run. The refusal is named above: either the")
+        print("          base could not be read (pass --base-ref), or it is no longer an")
+        print("          ancestor of this head (rebase, then re-derive).")
     else:
         untested_n = untested_count(by_category)
         print(f"  RESULT: CLEAN — document consistency holds; every clause is harness-"
