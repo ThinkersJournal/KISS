@@ -179,6 +179,7 @@ KISS-CONFORM-6.7-0005	test_conform_decline_vs_residue_taxonomy	untested
 KISS-CONFORM-6.8-0003	test_conform_ulp_declared_tier_is_gate	untested	
 KISS-CONFORM-6.8-0007	test_conform_whole_kernel_downgrade	untested	
 KISS-CONFORM-6.8-0008	test_conform_comparator_precedence	untested	
+KISS-CONFORM-6.8-0012	test_conform_comparator_declares_normalization	lint:kiss_comparators	enforced by tools/kiss_comparators.py: every clause naming a comparison relation declares what it normalizes or is explicitly recorded as defining none
 KISS-CONFORM-6.9-0001	test_conform_structural_dag_equality	untested	
 KISS-CONFORM-6.9-0002	test_conform_structural_not_source_bytes	untested	
 KISS-CONFORM-6.9-0003	test_conform_roundtrip_tier1	untested	

@@ -807,10 +807,12 @@ enum (§6.0). See umbrella §3 for the full statement.
 
 - **KISS-CONFORM-6.8-0001** — The **exact-byte** comparator MUST be a bit/byte-identical
   compare (memcmp), and KISS-Conform MUST NOT relax a clause whose declared class is exact-byte
+  **Normalizes:** nothing. A bit/byte difference anywhere is a mismatch.
   to a tolerance or order-invariant comparator. *Test:* `test_conform_exact_byte_comparator`.
 - **KISS-CONFORM-6.8-0002** — The **ULP/tolerance** comparator MUST compare within the op's
   **declared per-target ULP** bound and MUST NOT be a byte compare across implementations or
   languages; it MUST apply to any op whose decomposition transitively contains a transcendental
+  **Normalizes:** numeric difference within the op's declared ULP/tolerance bound.
   atom, and KISS-Conform MUST NOT claim cross-language numeric identity for such an op. *Test:*
   `test_conform_ulp_comparator`.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
@@ -827,12 +829,14 @@ enum (§6.0). See umbrella §3 for the full statement.
   **declared class** is order-invariant/nondeterministic — floating-point atomic-combine
   reductions/scatter (e.g. scatter atomic-add, scatter_add) are **illustrative** of that
   declared class, not an independent selector — and the tolerance used MUST be the one declared
+  **Normalizes:** bit differences arising from combine order, within the tolerance declared in the contract Guarantees.
   in the contract Guarantees, never an implementation-chosen implicit default. *Test:*
   `test_conform_nondeterministic_comparator`.
 - **KISS-CONFORM-6.8-0005** — For the complex-transcendental ops `carg`, `clog`, `csqrt`,
   `cexp`, KISS-Conform MUST apply the **split comparator**: an exact-bit comparator on the sign
   bit of every zero-valued result component combined with a ULP/tolerance comparator on the
   magnitude. The split comparator is a hybrid of the three canonical classes and MUST NOT be
+  **Normalizes:** numeric difference in the magnitude, within the ULP bound. Normalizes **nothing** on the sign bit of a zero-valued component.
   registered as a fourth enum member (§6.0-0001). *Test:* `test_conform_split_comparator`.
 - **KISS-CONFORM-6.8-0006** — The comparator MUST be **selected** by the clause's declared
   determinism/fidelity class travelling with the artifact — a provided kernel's contract
@@ -878,6 +882,7 @@ enum (§6.0). See umbrella §3 for the full statement.
   signed-zero ties) and by the split comparator's zero-sign arm (§6.8-0005) — only NaN, never
   `±0.0`, is exempted from bit comparison. NaN **propagation semantics** — which NaN a
   propagating op yields (`max_prop` vs `fmax_ieee`) — remain pinned by the KISS-Ops §6.13
+  **Normalizes:** the payload and sign bits of a **computed** NaN. Normalizes **nothing** about NaN-ness itself.
   decompositions and are unaffected by this comparison rule. *Test:*
   `test_conform_nan_result_compares_by_nanness`.
 - **KISS-CONFORM-6.8-0011** — For an op with **more than one output**, KISS-Conform MUST
@@ -888,6 +893,27 @@ enum (§6.0). See umbrella §3 for the full statement.
   or ULP/tolerance value, which is itself order-invariant/nondeterministic (§6.0-0007) — and a
   tolerance comparator MUST NOT be applied to an output whose per-output class is exact-byte.
   *Test:* `test_conform_per_output_comparator_selection`.
+- **KISS-CONFORM-6.8-0012** — Every clause that **defines** a comparison relation the suite
+  relies on MUST carry a **`Normalizes:`** enumeration: the dimensions along which two
+  *differing* inputs compare **equal**, or an explicit statement that it normalizes nothing. A
+  clause MUST NOT cite a comparator as the backing for an obligation over a dimension that
+  comparator enumerates — such a test cannot fail on that dimension and so does not bind it.
+  The obligation covers **every** comparison relation, including one not written as a
+  comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7) normalizes
+  **nothing**, and is therefore NOT blind to the primitive-floor resolution that the structural
+  op-DAG comparator (§6.9-0001) normalizes away. That divergence is a **declared fact** of this
+  registry, not an incident: the same computation, fused and decomposed, compares **equal**
+  structurally and **unequal** by key.
+
+  > *Informative.* A check that normalizes away a difference cannot see the difference it
+  > normalizes — true of every correct normalizing comparator, which is why it must be written
+  > down rather than discovered. The suite already defends against this four times without
+  > naming it: §6.13-0002 (*golden hex, not struct equality*), §6.3-0005 (*bytes, not a parsed
+  > projection*), §6.8-0009 (exact-byte is the **only** admissible comparator for POD wire
+  > fields), and §6.9-0002 (a comparator **tighter** than structural MUST NOT be required). A
+  > fifth will be written the next time someone notices; the sixth omission will not be.
+
+  *Test:* `test_conform_comparator_declares_normalization`.
 
 ### 6.9 The structural op-DAG equality comparator (tier-1 round-trip)
 
@@ -895,6 +921,7 @@ enum (§6.0). See umbrella §3 for the full statement.
   two KISS-Ops op DAGs are equal iff, after resolving every non-primitive node to the primitive
   floor, placing nodes and edges in KISS-Ops canonical order, and normalizing
   commutative/associative operands, their **node sets, edge sets, and per-node OpAttrs byte
+  **Normalizes:** (1) non-primitive versus floor-resolved form; (2) node and edge order; (3) commutative/associative operand order.
   channels are identical**. *Test:* `test_conform_structural_dag_equality`.
 - **KISS-CONFORM-6.9-0002** — The tier-1 round-trip comparator MUST be this **structural**
   comparator (owned by KISS-Conform), NOT a byte-compare of emitted source; a predicate tighter
@@ -1370,6 +1397,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0009 | `test_conform_exact_byte_admissibility` |
 | KISS-CONFORM-6.8-0010 | `test_conform_nan_result_compares_by_nanness` |
 | KISS-CONFORM-6.8-0011 | `test_conform_per_output_comparator_selection` |
+| KISS-CONFORM-6.8-0012 | `test_conform_comparator_declares_normalization` |
 | KISS-CONFORM-6.9-0001 | `test_conform_structural_dag_equality` |
 | KISS-CONFORM-6.9-0002 | `test_conform_structural_not_source_bytes` |
 | KISS-CONFORM-6.9-0003 | `test_conform_roundtrip_tier1` |
