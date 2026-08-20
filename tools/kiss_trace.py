@@ -1529,10 +1529,23 @@ def main():
     lint_label_unbacked = sorted(
         c for c, p in ledger.items()
         if p["category"] == "lint" and c in unbacked and c not in lint_cov)
-    # A curated non-`untested`, non-`lint` category with no note is unauditable.
+    # A category that makes a CLAIM must say why; a category that makes none need not.
+    # `blocked`, `untestable`, `definitional` and `decredited` each assert a falsifiable
+    # reason -- "the bytes are unpinned", "the clause contradicts itself", "the credit was
+    # false" -- and a claim with no reason cannot be audited or retired. Bare `untested`
+    # asserts nothing beyond "no test", so demanding 492 reasons for it would manufacture
+    # exactly the triage the ledger would then appear to record (#290).
+    #
+    # `lint` is deliberately absent: its note is explanatory, but its ENFORCEMENT is
+    # verified independently by the tool's own `--emit-coverage`, so the label cannot
+    # outrun the check even with an empty note.
+    #
+    # `decredited` was added by #261 and never added here -- a new claim category arrived
+    # without the check that makes claim categories auditable.
+    CLAIM_CATEGORIES = ("blocked", "untestable", "definitional", "decredited")
     missing_note = sorted(
         c for c, p in ledger.items()
-        if p["category"] in ("blocked", "untestable", "definitional")
+        if p["category"] in CLAIM_CATEGORIES
         and c in unbacked and not p["note"])
 
     if args.update_ledger:
@@ -1734,7 +1747,7 @@ def main():
         any_fail = True
         print("-" * 68)
         print(f"  UNAUDITABLE CATEGORY: {len(missing_note)} clause(s) are "
-              f"blocked/untestable/definitional with no note:")
+              f"{'/'.join(CLAIM_CATEGORIES)} with no note — a category that makes a CLAIM must say why:")
         for cid in missing_note[:6]:
             print(f"          - {cid}")
 
@@ -1986,9 +1999,19 @@ def main():
         untested_n = untested_count(by_category)
         print(f"  RESULT: CLEAN — document consistency holds; every clause is harness-"
               f"tested\n          ({len(backed)}), lint-enforced ({len(lint_backed)}), or "
-              f"recorded with its reason.")
+              f"recorded as unbacked.")
+        # "recorded with its reason" was FALSE for the overwhelming majority: when this was
+        # corrected, 492 of 493 `untested` rows carried no reason at all. The CLAIM-bearing
+        # categories DO carry one -- blocked/untestable/definitional/decredited were 100%
+        # complete -- so the tool was not describing THEM wrongly; it was extending their
+        # property to a category that never had it. A tool asserting a triage nobody
+        # performed is the same defect as a ledger note nobody re-read (#290).
+        _curated = sum(1 for _c, _p in ledger.items()
+                       if _c in unbacked and _p["category"] != "untested" and _p["note"])
+        print(f"          Of the unbacked, {_curated} carry a curated reason; the rest are "
+              f"bare `untested`, which records that no test exists and nothing more.")
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
-              f"{untested_n}\n          (blocked/untestable/definitional are accounted for; "
+              f"{untested_n}\n          (blocked/untestable/definitional/decredited are accounted for; "
               f"see the breakdown above).")
     return 1 if any_fail else (2 if inconclusive else 0)
 

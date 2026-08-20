@@ -126,7 +126,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 44
+EXPECTED_CONTROLS = 48
 
 
 def check(name, cond, detail=""):
@@ -639,6 +639,54 @@ def main():
               kiss_trace.base_is_current(ledger, "origin/main") is None,
               "outside a repo there is no ancestry to read; claiming staleness would be "
               "an assertion from an absent measurement")
+
+    # ---- CLAIM CATEGORIES MUST CARRY A REASON (#290) -----------------------------------
+    # A category that makes a CLAIM must say why; a category that makes none need not.
+    # `decredited` arrived with #261 and was never added to the check, so a de-crediting
+    # with no recorded reason -- the one category whose whole content IS the reason --
+    # passed silently. Bare `untested` asserts nothing, and demanding a reason for all 492
+    # of them would manufacture the triage the ledger would then appear to record.
+    def _ledger_case(cat_line, label, want_fire):
+        with tempfile.TemporaryDirectory() as ld:
+            lspec = os.path.join(ld, "spec"); lconf = os.path.join(ld, "conformance")
+            os.makedirs(lspec); os.makedirs(lconf)
+            for st in STEMS:
+                with open(os.path.join(lspec, st + ".md"), "w", encoding="utf-8") as f:
+                    f.write(spec_with(ROWS3) if st == "ops" else "")
+            with open(os.path.join(lconf, "fixture_tests.rs"), "w", encoding="utf-8") as f:
+                f.write(harness_with(ALL3[:2]))
+            with open(os.path.join(lconf, "UNBACKED.tsv"), "w", encoding="utf-8") as f:
+                f.write("""# fixture ledger
+{}
+""".format(cat_line))
+            with open(os.path.join(lconf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
+                f.write("""# fixture floor
+harness	2
+lint	0
+untested	1
+""")
+            r = subprocess.run([sys.executable, TOOL, "--ratchet", "--spec-dir", lspec,
+                                "--conformance-dir", lconf], capture_output=True,
+                               text=True, timeout=300)
+            out = r.stdout + r.stderr
+            fired = "UNAUDITABLE CATEGORY" in out
+            check(label, fired == want_fire,
+                  f"expected fire={want_fire}, got {fired}: {out[-400:]}")
+
+    _ledger_case("KISS-OPS-6.0-0044	test_ops_fixture_c	decredited	",
+                 "a `decredited` row with no reason is UNAUDITABLE (#261's category, #290's check)",
+                 True)
+    _ledger_case("KISS-OPS-6.0-0044	test_ops_fixture_c	blocked	",
+                 "a `blocked` row with no reason is UNAUDITABLE (pre-existing, must not regress)",
+                 True)
+    # THE PAIRED CONTROL. Without it, "demand a reason from every row" passes both cases
+    # above -- and would require 492 reasons nobody has, which is the defect this fixes.
+    _ledger_case("KISS-OPS-6.0-0044	test_ops_fixture_c	untested	",
+                 "a bare `untested` row with no reason is NOT flagged -- it claims nothing",
+                 False)
+    _ledger_case("KISS-OPS-6.0-0044	test_ops_fixture_c	decredited	mutation-confirmed dead backing",
+                 "a `decredited` row WITH a reason passes -- the check wants the reason, not the category",
+                 False)
 
     if failures:
         print("FAIL - the coverage ratchet does not discriminate:")
