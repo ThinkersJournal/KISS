@@ -327,11 +327,12 @@ shape that silently narrows another.**
 **14. The natural check after an action often answers a different question than the one you asked.**
 Distinct from convention 11 (a check run on the wrong *representation*): here the instrument is
 correct and healthy, and the *question* is mis-posed — so the answer is both accurate and
-misleading. **It runs in both directions**, and which one you get depends on where the mis-posed
-question sits: mis-pose the check on your *own* action and it usually fails **alarmingly**,
-wasting time; mis-pose the check that **validates a measurement** and it fails **quietly**, in
-whichever direction the measurement pointed. The second is the dangerous half and has its own
-treatment below.
+misleading. **The error direction follows the direction of the imprecision, not the kind of
+check.** A validator that is too **loose** accepts a superset and reassures you falsely; one that
+is too **narrow**, or pointed the wrong way, misses what is there and **alarms** you falsely.
+Both produce a confident wrong answer, and neither announces which it is. **A check that validates
+a MEASUREMENT is the case that costs most** — it can discard correct work or manufacture absent
+work — and it has its own treatment below.
 
 - **After a squash merge, `git branch -r --contains <sha>` reports the branch commit as ABSENT
   from `main`.** The content landed; the commit identity did not. The obvious post-merge check
@@ -372,6 +373,11 @@ makes this a class rather than a grep anecdote:
   enclosing `fn`, and so attributed every doc-comment citation to the **previous** test —
   because those citations *precede* the test they belong to. The validator scanned the wrong
   way past its target.
+- **A pattern too NARROW — the opposite direction, and the one that manufactures work.** An
+  issue's own evidence was `grep -rn "6\.5-0011" spec/*.md` *"returns nothing."* Re-run, it
+  returns **seven** hits across two documents. The grep had matched nothing it should have, and
+  the issue reported a clause as undefined that was defined twice over. **A validator can invent
+  a defect as readily as it can hide one**, and this one sent a lane to fix something half absent.
 
 Neither is a careless grep. Both are validators built in a hurry against a measurement built
 carefully, which is the asymmetry.
