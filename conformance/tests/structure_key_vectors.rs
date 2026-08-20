@@ -724,21 +724,42 @@ fn test_published_vector_counts_are_not_a_conformance_surface() {
         }
         let src = std::fs::read_to_string(&p).expect("readable test source");
         scanned += 1;
-        for (i, line) in src.lines().enumerate() {
-            let l = line.trim();
-            if l.starts_with("//") {
+
+        // Scan by MACRO INVOCATION, not by line. A line-based scan is disarmed by a
+        // newline -- and rustfmt wraps a long `assert_eq!` across lines as a matter of
+        // course, so the guard would stop enforcing the moment someone formats the file,
+        // while still being present and still green. Found by review before it could
+        // happen; it is the defect this whole PR is about, inside this PR's own guard.
+        //
+        // For each `assert_eq!`, take the text up to the terminating `;` (bounded) and
+        // test the WHOLE invocation for the vector array and `len()`.
+        let bytes = src.as_bytes();
+        let mut i = 0usize;
+        while let Some(rel) = src[i..].find("assert_eq!") {
+            let start = i + rel;
+            // Skip a match inside a line comment.
+            let line_start = src[..start].rfind('\n').map_or(0, |n| n + 1);
+            let before = &src[line_start..start];
+            if before.trim_start().starts_with("//") {
+                i = start + "assert_eq!".len();
                 continue;
             }
+            let end = src[start..]
+                .find(';')
+                .map_or(bytes.len(), |e| start + e);
+            let inv = &src[start..end];
             let touches_vectors =
-                l.contains("positive_vectors") || l.contains("decline_vectors");
-            if touches_vectors && l.contains("assert_eq!") && l.contains("len()") {
+                inv.contains("positive_vectors") || inv.contains("decline_vectors");
+            if touches_vectors && inv.contains("len()") {
+                let line_no = src[..start].matches('\n').count() + 1;
                 offenders.push(format!(
                     "{}:{}: {}",
                     p.file_name().unwrap().to_string_lossy(),
-                    i + 1,
-                    l
+                    line_no,
+                    inv.split_whitespace().collect::<Vec<_>>().join(" ")
                 ));
             }
+            i = start + "assert_eq!".len();
         }
     }
 

@@ -618,10 +618,13 @@ enum (§6.0). See umbrella §3 for the full statement.
   normative surface**, and this specification declares it in **three parts** rather than
   two, because a consumer relies on more than the vectors and less than the whole file:
   **(a) VECTOR CONTENT** — the entries of `positive_vectors` and `decline_vectors`, which a
-  conformant producer's output MUST reproduce **byte-exact per entry**; **(b) SCOPING
+  conformant producer's output MUST reproduce **byte-exact per entry**, and which MUST be
+  **non-empty**: an empty vector array satisfies *present* while asserting nothing, so the
+  arrays are required to carry content rather than merely to exist; **(b) SCOPING
   DECLARATIONS** — the members a consumer reads to decide *what it is looking at and which
   runs apply*: the artifact `schema`, `structure_key_schema_version`, `token_prefix`, the
-  dual dtype axes and `reserved_dtypes` (§6.3-0007), `target_namespaces` (§6.3-0008), and
+  dual dtype axes and `reserved_dtypes` **and the declared axis counts that must equal their array lengths**
+  (§6.3-0007), `target_namespaces` (§6.3-0008), and
   `namespace_vocabulary_versions` — a consumer scopes on it to decide whether an embedded
   suffix is **comparable**, and MAY decline rather than compare on a version it does not
   implement. That the stamp proves **binding rather than currency** makes it a weak
