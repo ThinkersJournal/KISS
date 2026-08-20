@@ -211,8 +211,8 @@ anchor exists **and** that the resulting text differs (`assert new != old`).
 **A PAIRED CONTROL CATCHES A FIXTURE THAT IS TESTING NOTHING, not only an over-eager fix.** A
 control naming a subject that does not exist — a clause absent from the ledger, a symbol absent
 from the tree — **passes whichever way its assertion points**, so a whole set of them can ship
-green against nothing. *Why:* a fixture was vacuous **three times** (`KISS-OPS-6.99-0003`, then
-`-0044`) before the tool's own output revealed the real id; **the first version was green**, and
+green against nothing. *Why:* a fixture was vacuous through more than one revision
+(`KISS-OPS-6.99-0003`, then `-0044`) before the tool's own output revealed the real id; **the first version was green**, and
 had the assertion been written the natural way, four controls would have shipped against a clause
 that was never in the ledger. **What caught it was one control pointing the other way and
 failing** — because **a vacuous fixture cannot satisfy both directions at once.** So: before
@@ -453,7 +453,7 @@ makes this a class rather than a grep anecdote:
   something *exists*; **none of them can show you that nothing does.** In every instance below the
   error was the same: **a bounded output read as an exhaustive one.** So: **if you truncated, you
   may not conclude absence** — re-run unbounded, or run a positive control.
-  *Six instances, three agents, one evening:* a `head -6` concluding a string was absent from a
+  *The instances below — three agents, one evening:* a `head -6` concluding a string was absent from a
   list that was cut before reaching it (**it was there, eleven lines further down**); a `head -2`
   on a merge gate, which is how a PR was merged and then reported as prevented; a `cp1252` decode
   crash whose empty output printed as a clean *"no threaded replies"* **on two PRs at once**; a
