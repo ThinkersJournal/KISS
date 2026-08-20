@@ -531,6 +531,42 @@ def _in_git_repo(path):
     return out.returncode == 0 and out.stdout.strip() == "true"
 
 
+def base_is_current(ledger_path, base_ref):
+    """Is `base_ref` an ancestor of the working head? (True / False / None if unknowable)
+
+    THE RATCHET COMPARES THE BRANCH'S FLOOR AGAINST THE BRANCH'S LIVE FIGURES. Those can
+    agree with each other while BOTH disagree with the base -- so a branch that has sat
+    while main moved reports CLEAN, correctly, about a tree nobody is merging into. That
+    happened four times in one session and every time the signal was a GREEN.
+
+    The question the ratchet cannot otherwise ask is one predicate: is the base still an
+    ancestor of what I am measuring? `git merge-base --is-ancestor` answers it with no
+    judgement, and returns the distance for the message.
+
+    NOT A VIOLATION. A stale base means the figures were not certified against the tree
+    they will merge into -- a refusal to certify CURRENCY, which is `INCONCLUSIVE`'s
+    existing shape (exit 2: not a pass, not a breach). The counts are still compared and
+    a genuine floor breach still OUTRANKS it, because a refusal must never mask one.
+
+    `None` when ancestry cannot be determined (git absent, ref unknown). The caller does
+    NOT claim staleness on None: the base-ledger read fails on the same conditions and
+    already reports its own refusal, so claiming both would double-report one cause.
+    """
+    ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
+    try:
+        r = subprocess.run(["git", "-C", ledger_dir, "merge-base", "--is-ancestor",
+                            base_ref, "HEAD"], capture_output=True, text=True, timeout=30)
+        if r.returncode not in (0, 1):
+            return None
+        if r.returncode == 0:
+            return True
+        c = subprocess.run(["git", "-C", ledger_dir, "rev-list", "--count",
+                            f"HEAD..{base_ref}"], capture_output=True, text=True, timeout=30)
+        return int(c.stdout.strip()) if c.returncode == 0 and c.stdout.strip().isdigit() else 0
+    except Exception:
+        return None
+
+
 def base_ledger_lint(ledger_path, base_ref):
     """The `lint`-category clause IDs in the ledger AT `base_ref` — the PRE-change state.
 
@@ -1523,6 +1559,18 @@ def main():
                           "the lint SET against the base ledger")
         # else: genuinely git-less -> prev_lint stays None; classify_ratchet reports the lint
         #       dimension as NOT characterized instead of at-the-floor.
+        # STALE BASE (#276). Separate from base_error: the base READ succeeded, so every
+        # figure below is correct -- about a tree that is no longer what this branch merges
+        # into. `None` is NOT treated as stale: the base-ledger read fails on the same
+        # conditions and already reports its own refusal above.
+        stale_by = base_is_current(ledger_path, args.base_ref) if args.base_ref else True
+        if stale_by is not True and stale_by is not None:
+            inconclusive = True
+            print(f"  RATCHET: `{args.base_ref}` is NOT an ancestor of this head — it has moved "
+                  f"{stale_by} commit(s)")
+            print("          ahead. The floor and the live figures below were compared against")
+            print("          EACH OTHER and agree; neither was certified against the tree this")
+            print("          branch merges into. Rebase and re-derive before merging (#276).")
         if base_error:
             inconclusive = True
             print(f"  RATCHET: {base_error} — refusing to characterize the lint dimension rather")

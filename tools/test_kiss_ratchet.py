@@ -126,7 +126,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 38
+EXPECTED_CONTROLS = 42
 
 
 def check(name, cond, detail=""):
@@ -521,6 +521,60 @@ def main():
               f"floor 2 vs live 3 is a genuine breach and must report VIOLATIONS FOUND even "
               f"with --base-ref absent, or INCONCLUSIVE becomes a way to mask one: "
               f"rc={rv.returncode}\n{vout[-400:]}")
+
+    # ---- STALE BASE (#276) -------------------------------------------------------------
+    # The ratchet compares the branch's FLOOR against the branch's LIVE figures. Those can
+    # agree with each other while BOTH disagree with the base, so a branch that has sat
+    # while main moved reports CLEAN -- correctly, about a tree nobody merges into. It went
+    # green that way four times in one session. `base_is_current` asks the one predicate the
+    # comparison cannot: is the base still an ancestor of what I am measuring?
+    with tempfile.TemporaryDirectory() as sd:
+        conf = os.path.join(sd, "conformance")
+        os.makedirs(conf)
+        ledger = os.path.join(conf, "UNBACKED.tsv")
+        with open(ledger, "w", encoding="utf-8") as f:
+            f.write("# ledger\n")
+
+        def sg(*a):
+            subprocess.run(["git", "-C", sd, *a], check=True, capture_output=True, text=True)
+        sg("init", "-q")
+        sg("config", "user.email", "t@t")
+        sg("config", "user.name", "t")
+        sg("add", "-A")
+        sg("commit", "-q", "-m", "base")
+        sg("branch", "basepoint")
+        # advance the BASE two commits past the working head
+        sg("commit", "-q", "--allow-empty", "-m", "one")
+        sg("commit", "-q", "--allow-empty", "-m", "two")
+        sg("branch", "-f", "movedbase")
+        sg("checkout", "-q", "basepoint")
+
+        check("a base that has moved ahead is reported STALE, with the distance",
+              kiss_trace.base_is_current(ledger, "movedbase") == 2,
+              f"expected distance 2, got {kiss_trace.base_is_current(ledger, 'movedbase')!r}")
+
+        # THE PAIRED CONTROL. Without it, "always report stale" passes the case above --
+        # which would turn every correct run into a refusal and be strictly worse than the
+        # silence it replaced.
+        check("a base that IS an ancestor is not reported stale",
+              kiss_trace.base_is_current(ledger, "basepoint") is True,
+              f"an up-to-date base must be True, got {kiss_trace.base_is_current(ledger, 'basepoint')!r}")
+
+        check("an unknown ref is UNKNOWABLE (None), never a staleness claim",
+              kiss_trace.base_is_current(ledger, "no-such-ref-xyz") is None,
+              "an unresolvable ref must not be reported as a stale base -- the base-ledger "
+              "read fails on the same condition and already reports its own refusal")
+
+    with tempfile.TemporaryDirectory() as nd:
+        conf = os.path.join(nd, "conformance")
+        os.makedirs(conf)
+        ledger = os.path.join(conf, "UNBACKED.tsv")
+        with open(ledger, "w", encoding="utf-8") as f:
+            f.write("# ledger\n")
+        check("a git-less tree is UNKNOWABLE, not stale",
+              kiss_trace.base_is_current(ledger, "origin/main") is None,
+              "outside a repo there is no ancestry to read; claiming staleness would be "
+              "an assertion from an absent measurement")
 
     if failures:
         print("FAIL - the coverage ratchet does not discriminate:")
