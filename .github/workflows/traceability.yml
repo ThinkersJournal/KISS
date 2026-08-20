@@ -58,6 +58,15 @@ jobs:
         #   PR:   the target branch (fetched first);
         #   push: HEAD^, the pre-merge tip (fetch-depth 2 on checkout makes it available).
         # A defaulted base is deliberately NOT used — it would compare against a stale tree.
+        #
+        # DO NOT SIMPLIFY THE BRANCH BELOW (#251). `--ratchet` returns THREE states:
+        #   0 CLEAN · 1 VIOLATIONS FOUND (the floor moved) · 2 INCONCLUSIVE (it declined
+        #   to answer, because no --base-ref was given).
+        # Actions fails a step on ANY non-zero exit, so CI CANNOT DISTINGUISH 2 FROM 1: an
+        # INCONCLUSIVE would present as a floor violation under a step named "blocking".
+        # That never happens today only because a base is supplied on both events. Remove
+        # or default the branch and every run becomes a refusal reported as a violation.
+        # The echo below makes the red self-describing so the distinction survives anyway.
         run: |
           if [ -n "${{ github.base_ref }}" ]; then
             git fetch --quiet origin "${{ github.base_ref }}"
@@ -65,6 +74,14 @@ jobs:
           else
             python tools/kiss_trace.py --ratchet --base-ref HEAD^
           fi
+          rc=$?
+          case $rc in
+            0) echo "ratchet: exit 0 — CLEAN (at the floor)";;
+            1) echo "ratchet: exit 1 — VIOLATIONS FOUND: the floor moved. This is a real failure.";;
+            2) echo "ratchet: exit 2 — INCONCLUSIVE: the ratchet DECLINED to answer (no --base-ref). NOT a floor violation — the base-ref logic above is broken or was removed. See #251.";;
+            *) echo "ratchet: exit $rc — unexpected";;
+          esac
+          exit $rc
       - name: Comparator-blindness discrimination controls
         run: python tools/test_kiss_comparators.py
       # A comparator that normalizes a dimension cannot fail on it. This gates the
