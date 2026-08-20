@@ -134,7 +134,32 @@ CATEGORIES = {
     "definitional",   # a test would be a tautology — the clause states a
                       # definition/ownership with no implementation behaviour
                       # (note = one-line reason). Use sparingly and auditably.
+    "decredited",     # an over-credit CORRECTED downward (#261): the clause was
+                      # counted harness-backed by a citation that MENTIONS but does
+                      # not ASSERT it (#187/#191), and the false credit is removed.
+                      # note = the over-credit ref + that a real test is still OWED.
+                      # `decredited` and `definitional` point in OPPOSITE directions
+                      # in time: `definitional` is TERMINAL (a test would be a
+                      # tautology, so it never leaves); `decredited` is a DEBT (a real
+                      # test is owed, so it must eventually EMPTY). A bucket holding
+                      # both cannot be burned down and cannot answer "how much real
+                      # work is outstanding" for either — so they are separate.
 }
+# A `decredited` clause ROLLS INTO the `untested` count (see `untested_count`): before
+# the de-credit it was counted BACKED — falsely; after, unbacked. THE GAP DID NOT
+# CHANGE, only our knowledge of it, so `untested` is the only home consistent with the
+# number meaning what it claims. Filing it OUTSIDE `untested` would make de-crediting
+# IMPROVE the apparent numbers — and a measure that gets better when you find a defect
+# in it is gamed by accident, which is worse than deliberately. It is tracked as its
+# own SET (the category) only so the ratchet tells an honest de-crediting (#261) from a
+# regression: a de-crediting is MARKED, a regression is silent.
+DECREDITED = "decredited"
+
+
+def untested_count(by_category):
+    """The real-gap number: genuinely `untested` plus `decredited` (an over-credit
+    corrected still OWES a real test, so it is part of the gap, #261)."""
+    return len(by_category.get("untested", ())) + len(by_category.get(DECREDITED, ()))
 
 LEDGER_HEADER = """\
 # KISS-Conform — the unbacked-clause ledger.
@@ -329,6 +354,84 @@ def _ledger_lint_ids(text):
     return ids
 
 
+def _ledger_decredited_ids(text):
+    """The `decredited`-category clause IDs from an UNBACKED.tsv body (#261). A clause
+    listed `decredited` at BASE was already a corrected over-credit before this PR; one
+    that is `decredited` NOW but was not at base is THIS PR's honest de-crediting. The
+    base-vs-disk diff on this set is what tells a de-crediting from a regression."""
+    ids = set()
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("	")
+        if len(parts) >= 3 and parts[2].strip() == DECREDITED:
+            ids.add(parts[0].strip())
+    return ids
+
+
+def _ledger_all_ids(text):
+    """EVERY clause ID in an UNBACKED.tsv body (col 0), any category. The ledger's domain is
+    exactly the UNBACKED clauses, so `id in ledger` == `id is NOT harness-backed`. That
+    equivalence is what the #267 condition-3 downgrade check rests on: a now-lint clause that
+    is present in the base SPEC but ABSENT from the base ledger was harness-backed at base — a
+    harness->lint downgrade, not a born-with-detector arrival. Free to compute: the same base
+    ledger string `base_ledger_lint` already fetches and parses is reused here."""
+    ids = set()
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if parts and RE_IDPART.match(parts[0].strip()):
+            ids.add(parts[0].strip())
+    return ids
+
+
+def base_ledger_all_ids(ledger_path, base_ref):
+    """Every clause ID in the ledger AT `base_ref` — the PRE-change UNBACKED domain, read by
+    REF via `git show` (#213). Returns the ID set, or None when the base cannot be read; the
+    caller treats None as 'condition 3 uncertifiable' and declines the arrival green."""
+    ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
+    try:
+        top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
+        out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    return _ledger_all_ids(out.stdout)
+
+
+def base_spec_clause_ids(spec_dir, stem, base_ref):
+    """The clause IDs DEFINED in spec/<stem>.md AT `base_ref`, read by REF via `git show`
+    (#213). Used by the #267 condition-3 check to tell a BRAND-NEW clause (absent here -> a
+    legitimate born arrival, e.g. 6.8-0012) from a PRE-EXISTING one (present here; if it is also
+    absent from the base ledger it was harness-backed -> a downgrade). One `git show` per
+    distinct sub-standard among the arrived clauses (typically one). Returns the ID set, or None
+    when the base doc cannot be read (fail-closed: the caller declines the arrival green)."""
+    spec_path = os.path.join(spec_dir, stem + ".md")
+    base_dir = os.path.dirname(os.path.abspath(spec_path))
+    try:
+        top = subprocess.run(["git", "-C", base_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(spec_path, top.stdout.strip()).replace(os.sep, "/")
+        out = subprocess.run(["git", "-C", base_dir, "show", f"{base_ref}:{rel}"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    return {m.group(1) for m in RE_DEF.finditer(out.stdout)}
+
+
 def _in_git_repo(path):
     """Whether `path` is inside a git work tree — i.e. whether a base ledger CAN be read.
     When it can, `--ratchet` requires --base-ref: a constant-count lint<->harness swap is
@@ -372,16 +475,92 @@ def base_ledger_lint(ledger_path, base_ref):
     return _ledger_lint_ids(out.stdout)
 
 
-def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=None):
+def base_ledger_decredited(ledger_path, base_ref):
+    """The `decredited`-category clause IDs in the ledger AT `base_ref` (#261) — the
+    PRE-change set, read by REF via `git show`, never from disk (same currency hazard as
+    `base_ledger_lint`, #213). Returns the set, or None when the base cannot be read; the
+    caller MUST fail loud on None rather than treat an unreadable base as an empty set."""
+    ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
+    try:
+        top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
+        out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    return _ledger_decredited_ids(out.stdout)
+
+
+def base_floor_harness(floor_path, base_ref):
+    """The `harness` count in COVERAGE_FLOOR.tsv AT `base_ref` — the PRE-change floor,
+    read by REF via `git show`, never from disk (#213). Used to gate the born-arrival
+    verdict (#267): a genuine arrival adds a NEW clause and NEVER retires a harness backing,
+    so `live.harness < base_floor_harness` means a harness clause was lost across the floor
+    bump — a harness->lint downgrade the count-conservation check cannot see once the floor
+    is bumped to absorb the drop (its `harness_delta` reads 0). Returns the int, or None when
+    the base cannot be read; the caller treats None as 'condition 3 uncertifiable' and declines
+    the green rather than passing an unchecked gate."""
+    floor_dir = os.path.dirname(os.path.abspath(floor_path))
+    try:
+        top = subprocess.run(["git", "-C", floor_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(floor_path, top.stdout.strip()).replace(os.sep, "/")
+        out = subprocess.run(["git", "-C", floor_dir, "show", f"{base_ref}:{rel}"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    for line in out.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) >= 2 and parts[0].strip() == "harness" and parts[1].strip().isdigit():
+            return int(parts[1].strip())
+    return None
+
+
+def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=None,
+                     live_decredited=None, prev_decredited=None, disk_decredited=None,
+                     live_coverage=None, prev_floor_harness=None,
+                     base_ledger_all=None, base_spec_ids=None):
     """Classify a `--ratchet` comparison. Returns (verdict, lines); verdict is one of
-    incomplete | regression | substitution | substitution_recorded | ledger_unverifiable |
-    uncharacterized | lint_drift | stale | at_floor | at_floor_unchecked. `at_floor`,
-    `at_floor_unchecked`, and `substitution_recorded` are green; the rest set `any_fail` in
-    the caller.
+    incomplete | regression | substitution | substitution_recorded | decrediting |
+    decrediting_recorded | arrival_recorded | ledger_unverifiable | uncharacterized |
+    lint_drift | stale | at_floor | at_floor_unchecked. `at_floor`, `at_floor_unchecked`,
+    `substitution_recorded`, `decrediting_recorded`, and `arrival_recorded` are green; the rest
+    set `any_fail` in the caller.
 
     `substitution` is the IN-PROGRESS state (floor still at PRE, "bump the floor to N");
     `substitution_recorded` is the same move once the floor is bumped to POST and the ledger
     dropped the moved IDs — green, because the deliberate floor move is complete (#223).
+
+    `decrediting` / `decrediting_recorded` are the same pair for an HONEST harness->decredited
+    correction (#261): a false credit from a MENTION, not an assertion (#187/#191), removed
+    downward. In the counts this is harness -N / untested +N — byte-identical to a regression;
+    the base->disk `decredited` SET is the discriminator (a de-crediting is MARKED, a
+    regression is silent). `decredited` rolls into the `untested` total but is its own set.
+
+    `arrival_recorded` (#267) is the born-with-detector case: a new normative clause and its
+    lint enforcement land in the SAME PR, so the clause arrives in the lint set (`arrived_lint`)
+    with the floor's lint count already bumped. Its count shape is identical to `lint_drift` (and
+    to a silent harness->doc downgrade), so it is green ONLY when genuine: every arrival is (1)
+    recorded `lint:<tool>` in the current ledger, (2) declared by that tool's --emit-coverage
+    (`live_coverage`), and (3) not harness-backed at base. Condition 3 is two fail-closed gates:
+    the base FLOOR harness count (`prev_floor_harness`, a cheap first filter — the floor's harness
+    must not have dropped) and the DECIDING base LEDGER + SPEC sets (`base_ledger_all`,
+    `base_spec_ids`): since the ledger domain IS the unbacked set, an arrival present in the base
+    spec but absent from the base ledger was harness-backed -> a downgrade, red. Unlike
+    `decredited`, arrival earns NO ledger category: it is a TRANSITION (base vs current), green
+    once at the landing PR, and self-disposes next run.
 
     When `prev_lint` (the base ledger's lint set) is given, the lint dimension is compared
     as a SET — the identity check that tells a lint->harness SUBSTITUTION (a strengthening
@@ -437,6 +616,11 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
     arrived_lint = live_lint - prev_lint                           # lint now, were not
     left_to_harness = {c for c in left_lint if c in live_harness}  # lint -> harness (upgrade)
     left_lost = left_lint - left_to_harness                        # documentary coverage gone
+    # DE-CREDITING SET (#261): clauses `decredited` NOW but not at base. A harness->untested
+    # correction of a false credit is harness -N / untested +N, IDENTICAL to a regression in the
+    # counts; this SET is the discriminator — a de-crediting is MARKED, a regression is silent.
+    newly_decredited = (set() if live_decredited is None or prev_decredited is None
+                        else live_decredited - prev_decredited)
 
     # COMPLETED SUBSTITUTION (#223): the counts are already AT the floor — the PR bumped
     # harness +N / lint -N to record the move — AND the base-ledger SET shows a clean
@@ -479,6 +663,49 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
             f"{', '.join(sorted(left_to_harness))} left the base ledger's lint set, are now "
             "harness-backed, and both the floor and the ledger reflect the move. Green."])
 
+    # COMPLETED DE-CREDITING (#261): counts already at the (bumped) floor AND the base->disk
+    # `decredited` SET shows N clauses newly de-credited. Recognized before the count-conservation
+    # regression below, exactly as the completed substitution is — the POST floor and the PRE base
+    # ledger diverge in a de-crediting PR, so `harness_lost` would misread the recorded move as a
+    # loss. `decredited` rolls into `untested`, so both counts are at the floor here.
+    if counts_at_floor and newly_decredited and not left_to_harness:
+        if disk_decredited is None:
+            # Same degradation the substitution gate refuses: an unreadable ledger is not a clean
+            # one, and `None or set()` would resolve GREEN through the environment (#213/#225).
+            return ("ledger_unverifiable", [
+                f"the floor records a de-crediting of {len(newly_decredited)} clause(s), but the "
+                "on-disk ledger (UNBACKED.tsv) could not be read to confirm they are listed "
+                "`decredited`. An unreadable ledger is NOT a clean one; refusing the green."])
+        unrecorded = sorted(newly_decredited - disk_decredited)
+        if unrecorded:
+            return ("regression", [
+                f"the base->disk diff shows {len(newly_decredited)} clause(s) newly de-credited, "
+                f"but UNBACKED.tsv does not list {len(unrecorded)} of them `decredited`: "
+                f"{', '.join(unrecorded)}. A de-crediting must be RECORDED in the ledger, else it "
+                "reads as a fresh correction on every later PR."])
+        return ("decrediting_recorded", [
+            f"at the floor - harness {live['harness']}, lint {live['lint']}, untested "
+            f"{live['untested']}.",
+            f"An honest DE-CREDITING of {len(newly_decredited)} clause(s) is RECORDED: "
+            f"{', '.join(sorted(newly_decredited))} were credited by a MENTION, not an assertion "
+            "(#187/#191); the false credit is removed, they are listed `decredited`, and the floor "
+            "reflects the move. Green — the gap did not change, only our knowledge of it."])
+
+    # IN-PROGRESS DE-CREDITING (#261): floor still at PRE. harness fell and untested rose by
+    # EXACTLY the newly-decredited set (they roll into untested), and the ledger already lists
+    # them. Report "bump the floor", NOT a regression — intercept before the regression block
+    # below, which would fire on both `untested rose` and `harness_lost`.
+    if (newly_decredited and not left_to_harness and harness_delta < 0 and untested_delta > 0
+            and disk_decredited is not None and not (newly_decredited - disk_decredited)
+            and len(newly_decredited) == -harness_delta == untested_delta):
+        return ("decrediting", [
+            f"{len(newly_decredited)} over-credit(s) corrected downward (#261): "
+            f"{', '.join(sorted(newly_decredited))} were credited by a mention, not an assertion "
+            "(#187/#191).",
+            f"Update the floor to harness {live['harness']}, untested {live['untested']} "
+            "(lint unchanged), keeping them listed `decredited`. This is a DE-CREDITING, not a "
+            "regression — the gap did not change, only our knowledge of it."])
+
     # Behavioral backings that vanished — directly, OR masked by a compensating lint->harness
     # arrival that held the harness count flat. Count conservation recovers the masked case
     # (`|left_to_harness| - Δharness`), so the floor need NOT carry a previous HARNESS set —
@@ -514,6 +741,84 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
             f"Update the floor to harness {live['harness']}, lint {live['lint']}, untested "
             f"{live['untested']}, and remove the moved ID(s) from the ledger. This is a "
             "SUBSTITUTION, not a regression."])
+
+    # BORN-WITH-DETECTOR ARRIVAL (#267): clauses that newly appear in the lint set because they
+    # were CREATED with their lint detector in this PR — a new normative clause and its
+    # enforcement landing together. In the counts this is a lint bump the floor already reflects
+    # (counts_at_floor), harness and untested flat. It reads EXACTLY like `lint_drift` — the count
+    # signature of a fine new enforcement and of a silent harness->doc downgrade are identical —
+    # so it needs the same discipline as the recorded substitution/de-crediting: the move is GREEN
+    # only when it is verifiably genuine, never on the count shape alone.
+    #
+    # Asymmetry with `decredited` (state) vs arrival (transition): a de-credited clause is a STATE
+    # the ledger could not otherwise express (we thought it backed and it never was), so it earns
+    # a category; an arrival has no distinguishing end state — next PR it is an ordinary lint row,
+    # indistinguishable from one lint-backed since the file was created, AND IT SHOULD BE. So
+    # arrival leaves NO ledger category: it is green once, at the landing PR, and self-disposes
+    # (next run: arrived_lint is empty because the base now contains it) — no floor bookkeeping.
+    #
+    # `not left_to_harness`: keep this to the clean single-transition case; a PR that both
+    # substitutes and arrives falls through to the substitution/lint_drift handling below.
+    if counts_at_floor and arrived_lint and not left_to_harness:
+        if disk_lint is None:
+            # Condition 1 cannot be checked without the ledger. An unreadable ledger is not a
+            # clean one; refuse the green rather than pass an unchecked gate (#223/#225).
+            return ("ledger_unverifiable", [
+                f"{len(arrived_lint)} clause(s) newly appear lint-backed, but the on-disk ledger "
+                "(UNBACKED.tsv) could not be read to confirm they are recorded `lint:<tool>`. "
+                "An unreadable ledger is NOT a clean one; refusing the green."])
+        # Condition 1: every arrival is recorded `lint:<tool>` in the CURRENT on-disk ledger.
+        not_in_ledger = sorted(arrived_lint - disk_lint)
+        # Condition 2: every arrival is DECLARED by a running tool's --emit-coverage. In the real
+        # caller `live_coverage` is the set of emit-covered clause IDs and `live_lint` is built as
+        # (ledger-unbacked ∩ emit-coverage), so arrived_lint ⊆ live_coverage holds by construction
+        # — the check is belt-and-suspenders AND the seam a fixture can break to prove the gate is
+        # live. `None` means the coverage was not supplied (git-less/older caller): cannot certify
+        # condition 2, so fall through to `lint_drift` rather than green on an unchecked condition.
+        # NOTE / known limit (surface in the PR, per #267 review): --emit-coverage is an ASSERTION,
+        # not a proof — an inert lint that confidently emits a clause ID it does not enforce passes
+        # condition 2. That is the hollow-backing shape relocated into the ratchet's trust chain;
+        # the guard (the declaring tool must carry discrimination controls, which CI already gates
+        # via test_*.py) belongs with #187's backing-forms work, not baked in here.
+        undeclared = None if live_coverage is None else sorted(arrived_lint - live_coverage)
+        # Condition 3 (no arrival was harness-backed at base). Two gates, both fail-closed:
+        #
+        # 3a — cheap FIRST FILTER (base FLOOR harness). The `harness_lost` check ABOVE catches a
+        # harness->lint downgrade ONLY while the floor still reflects the drop (`harness_delta<0`).
+        # Once the floor is BUMPED to absorb it — which a "recorded" PR does by definition —
+        # `harness_delta` reads 0 and the downgrade goes SILENT. A genuine arrival never retires a
+        # harness backing, so the floor's harness must not have dropped (`live.harness >=
+        # prev_floor_harness`). But a downgrade OFFSET by a promotion holds the COUNT flat and
+        # slips this — hence 3b.
+        #
+        # 3b — the DECIDING check (base LEDGER + base SPEC sets, #267 review ruling). The ledger's
+        # domain IS the unbacked set, so `id in base ledger` == `id NOT harness-backed at base`.
+        # For each arrival: NEW (absent from the base spec) -> legit; in the base ledger (untested/
+        # lint at base) -> legit upgrade; present in the base spec but ABSENT from the base ledger
+        # -> it was HARNESS-backed -> a downgrade, not a birth. This closes the count-flat residual
+        # 3a cannot, at the cost of one already-parsed ledger string plus one `git show` per stem.
+        #
+        # Any base read unavailable (None) -> the gate is uncertifiable -> decline the green and
+        # fall to `lint_drift` (RED), never pass an unchecked condition (#213/#225).
+        harness_not_dropped = (prev_floor_harness is not None
+                               and live["harness"] >= prev_floor_harness)
+        if base_ledger_all is None or base_spec_ids is None:
+            downgraded = None
+        else:
+            downgraded = sorted(x for x in arrived_lint
+                                if x in base_spec_ids and x not in base_ledger_all)
+        if not not_in_ledger and undeclared == [] and harness_not_dropped and downgraded == []:
+            return ("arrival_recorded", [
+                f"at the floor - harness {live['harness']}, lint {live['lint']}, untested "
+                f"{live['untested']}.",
+                f"{len(arrived_lint)} clause(s) ARRIVED lint-backed, born with their detector: "
+                f"{', '.join(sorted(arrived_lint))}. Each is recorded `lint:<tool>` in the ledger "
+                "and declared by that tool's --emit-coverage; none was harness-backed at base "
+                "(new to the spec, or already unbacked) and the floor's harness did not drop. "
+                "Green — a new normative clause and its enforcement landed together (#267)."])
+        # else: a condition failed — fall through to `lint_drift`, which tells the human to verify
+        # each arrival and update the ledger deliberately (the un-bumped / un-recorded / downgrade
+        # case). lint_drift is RED, so every uncertified case stays human-gated.
 
     if arrived_lint:
         return ("lint_drift", [
@@ -849,7 +1154,7 @@ def main():
                 eff_prior[c] = {"category": "lint", "lint": lint_cov[c][0],
                                 "note": lint_cov[c][1] or "enforced by the lint"}
         write_ledger(ledger_path, unbacked, prior=eff_prior)
-        nb = len(by_category["untested"])
+        nb = untested_count(by_category)
         print(f"Wrote {ledger_path}: {len(unbacked)} unbacked "
               f"({len(lint_backed)} lint, {nb} untested).")
         return 0
@@ -959,7 +1264,7 @@ def main():
     enforced = len(backed) + len(lint_backed)
     print(f"  ENFORCED (harness {len(backed)} + lint {len(lint_backed)}) = "
           f"{enforced}/{n_map} ({100.0*enforced/n_map:.1f}%). "
-          f"Genuinely untested: {len(by_category.get('untested', []))}.")
+          f"Genuinely untested (incl. decredited): {untested_count(by_category)}.")
     # THE CAVEAT (#195). Every figure above is a CLAUSE<->TEST MAPPING measured by
     # reading spec markdown and Rust source. This tool never builds or runs the Rust crate; it does run sibling lint
     # subprocesses, but nothing it prints is conditioned on the crate
@@ -1071,7 +1376,7 @@ def main():
         live = {
             "harness": len(backed),
             "lint": len(lint_backed),
-            "untested": len(by_category.get("untested", [])),
+            "untested": untested_count(by_category),
         }
         # The three numbers are stored and compared SEPARATELY because ENFORCED = harness +
         # lint conserves under a lint->harness substitution (#187), and a one-number ratchet
@@ -1086,8 +1391,34 @@ def main():
         ledger_path = os.path.join(conf_dir, "UNBACKED.tsv")
         print("-" * 68)
         prev_lint, base_error = None, None
+        prev_decredited = None
+        prev_floor_harness = None
+        base_ledger_all = None
+        base_spec_ids = None
         if args.base_ref:
             prev_lint = base_ledger_lint(ledger_path, args.base_ref)
+            prev_decredited = base_ledger_decredited(ledger_path, args.base_ref)
+            prev_floor_harness = base_floor_harness(floor_path, args.base_ref)
+            base_ledger_all = base_ledger_all_ids(ledger_path, args.base_ref)
+            # #267 condition 3b: the base SPEC clause sets for exactly the stems of the arriving
+            # clauses (arrived = live lint set minus base lint set). One `git show` per distinct
+            # sub-standard, typically one. Fail-closed: if ANY needed base doc is unreadable,
+            # base_spec_ids stays None and classify_ratchet declines the arrival green.
+            if prev_lint is not None:
+                arrived_preview = set(lint_backed.keys()) - prev_lint
+                stems = set()
+                for cid in arrived_preview:
+                    m = RE_IDPART.match(cid)
+                    if m:
+                        stems.add(m.group(1).lower())
+                acc, ok = set(), True
+                for st in stems:
+                    ids = base_spec_clause_ids(spec_dir, st, args.base_ref)
+                    if ids is None:
+                        ok = False
+                        break
+                    acc |= ids
+                base_spec_ids = acc if ok else None
             if prev_lint is None:
                 base_error = (f"cannot read the base ledger at `{args.base_ref}` "
                               "(ref unknown / git absent)")
@@ -1114,11 +1445,24 @@ def main():
         # a green there requires the moved IDs to have actually left the ledger, not just
         # the base ref, or the substitution reports green on every later PR (#223).
         disk_lint = None
+        disk_decredited = None
         if os.path.exists(ledger_path):
             with open(ledger_path, encoding="utf-8") as fh:
-                disk_lint = _ledger_lint_ids(fh.read())
+                _ledger_text = fh.read()
+            disk_lint = _ledger_lint_ids(_ledger_text)
+            disk_decredited = _ledger_decredited_ids(_ledger_text)
+        # The clauses the CURRENT scan marks `decredited` — the live set the ratchet
+        # diffs against the base to confirm an honest harness->decredited move (#261).
+        live_decredited = set(by_category.get(DECREDITED, ()))
         verdict, lines = classify_ratchet(floor, live, set(lint_backed.keys()),
-                                          set(backed.keys()), prev_lint, disk_lint)
+                                          set(backed.keys()), prev_lint, disk_lint,
+                                          live_decredited=live_decredited,
+                                          prev_decredited=prev_decredited,
+                                          disk_decredited=disk_decredited,
+                                          live_coverage=set(lint_cov.keys()),
+                                          prev_floor_harness=prev_floor_harness,
+                                          base_ledger_all=base_ledger_all,
+                                          base_spec_ids=base_spec_ids)
         headers = {
             "incomplete": "RATCHET: floor file is incomplete.",
             "regression": "RATCHET REGRESSION: coverage moved backwards.",
@@ -1126,15 +1470,20 @@ def main():
                             "(a strengthening the aggregate cannot show, #213).",
             "ledger_unverifiable": "RATCHET: a completed substitution is recorded but the "
                                    "on-disk ledger could not be read to verify it (#223).",
+            "decrediting": "RATCHET: an honest de-crediting is recorded but the floor still "
+                           "sits at the over-credited numbers — bump it (#261).",
             "lint_drift": "RATCHET: the lint SET changed under a flat count.",
             "stale": "RATCHET: the floor is STALE - coverage improved past it.",
             "uncharacterized": "RATCHET: the lint dimension moved but could not be "
                                "characterized (git-less).",
         }
-        if verdict in ("at_floor", "at_floor_unchecked", "substitution_recorded"):
+        if verdict in ("at_floor", "at_floor_unchecked", "substitution_recorded",
+                       "decrediting_recorded", "arrival_recorded"):
             print(f"  RATCHET: {lines[0]}"
                   + ("".join(f"\n          {ln}" for ln in lines[1:])
-                     if verdict == "substitution_recorded" else ""))
+                     if verdict in ("substitution_recorded", "decrediting_recorded",
+                                    "arrival_recorded")
+                     else ""))
         else:
             any_fail = True
             print(f"  {headers[verdict]}")
@@ -1183,7 +1532,7 @@ def main():
         print("  RESULT: INCONCLUSIVE — the ratchet declined to answer; this is NOT a floor")
         print("          violation and NOT a clean run. Re-run with --base-ref to get either.")
     else:
-        untested_n = len(by_category.get("untested", []))
+        untested_n = untested_count(by_category)
         print(f"  RESULT: CLEAN — document consistency holds; every clause is harness-"
               f"tested\n          ({len(backed)}), lint-enforced ({len(lint_backed)}), or "
               f"recorded with its reason.")
