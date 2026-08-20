@@ -815,9 +815,16 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   > this clause. It was **not** given a distinct forward name because that one test is genuinely
   > §6.5-0010's forward name and no separate injective test exists — and #247 ruled reverse backing
   > is first-class (since #187), so a test is not split to satisfy a naming label. **Cost, recorded
-  > so it is accepted knowingly:** when `test_classify_work_class_element_count` reddens, its fn name
-  > alone does not say whether §6.5-0007 or §6.5-0010 failed. Reverse backing here trades forward-name
-  > diagnosability for not manufacturing a redundant test.
+  > so it is accepted knowingly:** the `*Test:*` name and the §9 row still say
+  > `test_classify_work_class_enum`, **and no test of that name exists anywhere in the harness** —
+  > so this row names nothing. That is invisible to the tooling: the "no such test" report fires
+  > only for clauses that are otherwise unbacked, so **the reverse backing masks the forward-name
+  > check** (#286). Pointing the row at `test_classify_work_class_element_count` would make it true
+  > but trips the injectivity rule, which today exempts only cross-standard `test_conform_*` shares
+  > — that exemption is the decision #286 carries. A **second** cost applies only once the row is
+  > corrected: when the shared test reddens, its fn name alone does not say whether §6.5-0007 or
+  > §6.5-0010 failed. Reverse backing here trades forward-name diagnosability for not manufacturing
+  > a redundant test.
 - **KISS-CLASSIFY-6.5-0008** — The contraction size-class domain MUST be exactly
   `{tiny, small, mid, large}` with token codes `t`, `s`, `m`, `l` and boundaries
   `≤ 8`, `9..=128`, `129..=2048`, `> 2048`; a `structure_key` MUST key size
