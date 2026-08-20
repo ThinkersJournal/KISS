@@ -964,8 +964,8 @@ enum (§6.0). See umbrella §3 for the full statement.
   > and §6.9-0002. A fifth will be written the next time someone notices; the sixth omission
   > will not be.
   >
-  > **Check the *because*, not only the claim.** *"A true observation with a false* because *is
-  > the hardest to catch — the truth vouches for the reasoning no one then examines"* (kiss-ref).
+  > **Check the *because*, not only the claim.** "A true observation with a false *because* is
+  > the hardest to catch — the truth vouches for the reasoning no one then examines" (kiss-ref).
   > This clause's own `structure_key` declaration was first written inverted, on a true
   > observation resting on a mechanism that does not exist; the observation is what stopped
   > anyone reading the reason. A `Normalizes:` line states a *mechanism*, and a reader who
