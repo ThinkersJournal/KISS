@@ -1184,6 +1184,36 @@ def compute_masked_forward(clause_test, harness, cited):
     return masked
 
 
+def compute_evidence_tiers(backed, cited, proven=None):
+    """#278. Partition the BACKED clauses by evidence STRENGTH, the distinction convention
+    15 draws — a citation's FORM settles deliberateness; only a MUTATION settles aboutness.
+    Returns (named, cited_set, proven_set):
+
+      named      — backed clauses with NO backing-form citation: the §9 name matches a real
+                   fn but nothing asserts the tie. A name coincidence (convention 15's
+                   "mention", one step up), and the population #278 exists to stop over-counting;
+      cited_set  — backed clauses WITH a backing-form citation: a human deliberately tied test
+                   to clause. Deliberateness;
+      proven_set — cited clauses carrying a recorded mutation-proof: aboutness.
+
+    INVARIANTS, asserted by the born-red control in test_kiss_evidence_tiers.py:
+      * named and cited_set PARTITION backed (disjoint, union == backed);
+      * proven_set ⊆ cited_set — a proof presupposes the citation; recording a proof for a
+        NAMED-only clause means first MIGRATING it to cited (an evidence-adding move, never
+        the bare-name→citation mass sweep that would inflate deliberateness without proof).
+
+    `proven` is the set of clauses with a recorded proof; it defaults to empty because no
+    machine-readable proof record exists yet — the recording mechanism and its enforcement
+    (a 4th ratchet dimension vs a ledger field) are the architect's reserved #278 ruling.
+    Any element of `proven` not in cited_set is dropped, so the ⊆ invariant holds by
+    construction rather than by the caller's discipline."""
+    proven = proven or set()
+    cited_set = {c for c in backed if c in cited}
+    named = {c for c in backed if c not in cited}
+    proven_set = {c for c in proven if c in cited_set}
+    return named, cited_set, proven_set
+
+
 def classify_shared_test(t, clauses, declared_shares):
     """#286. For a test named by MORE THAN ONE clause across the §9 matrices, decide
     whether the share is sanctioned. Returns one of:
@@ -1331,6 +1361,27 @@ def main():
     # test_kiss_masked_forward.py (a detector that cannot be seen to fire is indistinguishable
     # from a broken one, the #279 finding).
     masked_forward = compute_masked_forward(clause_test, harness, cited)
+    # EVIDENCE-STRENGTH TIERS (#278). The single `backed` count spans three strengths of
+    # evidence, and convention 15 names the lines between them — a citation's FORM settles
+    # DELIBERATENESS; only a MUTATION settles ABOUTNESS:
+    #   NAMED  — the §9 name matches a real fn, but NO backing-form citation exists for the
+    #            clause. The credit rests on a name coincidence — convention 15's "mention",
+    #            one step up. This is the population #278 exists to stop over-counting.
+    #   CITED  — a backing-form citation (`// Backs:`/`Enforces`/assert first-arg) asserts the
+    #            link: a human deliberately tied this test to this clause. Deliberateness.
+    #   PROVEN — a seeded mutation of the obligation's SUBJECT (impl for an impl clause, spec
+    #            text for a document clause) reddens the test. Aboutness. PROVEN ⊆ CITED:
+    #            recording a proof for a NAMED-only clause entails first migrating it to CITED
+    #            (adding the citation) — an evidence-ADDING move, not the bare-name→citation
+    #            mass sweep the report exists to prevent (that adds deliberateness, not proof).
+    # There is NO machine-readable proof record yet (the `Mutation:` doc-comment is prose,
+    # rare, not clause-tied), so PROVEN reports 0 — which is the finding, not a gap in this
+    # tool: the ONLY tier that is actual evidence has no number. Its recording mechanism and
+    # its enforcement (a 4th ratchet dimension vs a ledger field) are the architect's reserved
+    # #278 ruling; this report COUNTS the tiers, it does not gate on them, and forecloses
+    # neither choice.
+    tier_named, tier_cited, tier_proven = compute_evidence_tiers(backed, cited, proven=None)
+    tier_cited_by_name = {c for c in tier_cited if clause_test.get(c) in cited.get(c, ())}
     # Every executable test backing a clause, by either direction — not just the one
     # `backed` happened to pick. A clause is only honestly gate-free if at least one
     # of its backing tests runs unconditionally.
@@ -1481,6 +1532,17 @@ def main():
     print(f"      {len(backed)}/{n_map} clauses ({pct:.1f}%) are backed by executable code")
     print(f"          {len(by_name):>4} via the named test existing (forward)")
     print(f"          {len(by_citation):>4} via a test citing the clause (reverse)")
+    # By EVIDENCE STRENGTH (convention 15) — the same `backed` count, split by how strong the
+    # tie actually is. NAMED + CITED partition `backed`; PROVEN is a subset of CITED. See #278.
+    print(f"      — by evidence strength (convention 15); NAMED+CITED partition the {len(backed)} backed —")
+    print(f"          {len(tier_named):>4} NAMED   §9 name matches a real fn, but NO backing-form citation (name coincidence)")
+    print(f"          {len(tier_cited):>4} CITED   a `// Backs:`/`Enforces`/assert citation asserts the link — deliberateness")
+    print(f"                 ({len(tier_cited_by_name)} of the {len(tier_cited)} are cited by the named test itself; "
+          f"{len(tier_cited) - len(tier_cited_by_name)} by another test)")
+    print(f"          {len(tier_proven):>4} PROVEN  a seeded mutation of the obligation reddens the test — ABOUTNESS")
+    print(f"                 the one tier that is actual evidence has no number yet: no machine-readable")
+    print(f"                 proof record exists. Recording + enforcement (4th ratchet dim vs ledger field)")
+    print(f"                 is the reserved #278 ruling — this line counts, it does not gate.")
     print(f"      {len(unbacked)} clauses have NO executable test.")
     if gated:
         cfg_only = {c: t for c, t in gated.items()
