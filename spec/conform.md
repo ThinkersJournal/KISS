@@ -614,6 +614,42 @@ enum (§6.0). See umbrella §3 for the full statement.
   minus reserved. A whole-document search for a token name satisfies the surface form of all
   three while distinguishing none of them.
   *Test:* `test_dual_axis_is_present_and_discriminates`.
+- **KISS-CONFORM-6.3-0010** — A published reference artifact MUST have a **declared
+  normative surface**, and this specification declares it in **three parts** rather than
+  two, because a consumer relies on more than the vectors and less than the whole file:
+  **(a) VECTOR CONTENT** — the entries of `positive_vectors` and `decline_vectors`, which a
+  conformant producer's output MUST reproduce **byte-exact per entry**; **(b) SCOPING
+  DECLARATIONS** — the members a consumer reads to decide *what it is looking at and which
+  runs apply*: the artifact `schema`, `structure_key_schema_version`, `token_prefix`, the
+  dual dtype axes and `reserved_dtypes` (§6.3-0007), and `target_namespaces` (§6.3-0008).
+  These MUST be present and accurate, and a consumer MAY rely on them; **(c) PROVENANCE AND
+  COMMENTARY** — every other member, including `generated_from`, `source_commit`, `clause`,
+  and every `*_note`. A consumer MUST NOT treat part (c) as a conformance surface, and a
+  producer MAY add to it freely without a coordinated change. **The three-part split is the
+  clause, not an illustration**: a two-part *vectors-versus-metadata* reading makes the
+  scoping declarations non-normative, and a consumer that scopes its run on
+  `dtype_usable_set` would then be relying on a member the specification had told it not
+  to. *Test:* `test_reference_artifact_normative_surface_is_declared`.
+
+  > *Informative.* This was undecided until now, and the cost was measurable: four
+  > consumers each chose a different surface privately, two of them citing a clause that
+  > governs a different artifact. **A specification silent on a question implementers must
+  > answer does not avoid the answer; it distributes it.** The surface is declared here,
+  > in the specification, rather than in the artifact — so declaring it moves no bytes and
+  > needs no coordinated regeneration.
+- **KISS-CONFORM-6.3-0011** — The **cardinality** of a published vector array MUST NOT be
+  part of the normative surface. A vector set grows **additively**: adding a vector is not
+  a breaking change, and a conformant consumer MUST NOT gate on an exact count. A consumer
+  that needs a non-vacuity floor MUST express it as a **lower bound**. **A consumer MAY
+  still hold an exact count as a deliberate re-vendor tripwire — that is a currency device,
+  not a conformance claim, and it MUST NOT be reported as a conformance failure when it
+  fires.** The reference suite demonstrates the rule on its own corpus check. *Test:*
+  `test_published_vector_counts_are_not_a_conformance_surface`.
+
+  > *Informative.* The distinction is what a check is FOR, not whether one exists. An
+  > exact-count assertion that fires when the corpus grows has told its owner *"upstream
+  > moved"* — useful, and the opposite of a defect. The same assertion reported as
+  > *"KISS broke us"* is a conformance claim the specification does not support.
 - **KISS-CONFORM-6.3-0008** — Every machine-readable axis tag a reference artifact attaches
   to a token (target, target-namespace) MUST **agree with the token it annotates**, and the
   suite MUST cross-check tag against token. That axis is how a consumer scopes capability
@@ -1438,6 +1474,8 @@ the traceability lint.
 | KISS-CONFORM-6.3-0006 | `test_published_declines_are_injective_by_token` |
 | KISS-CONFORM-6.3-0007 | `test_dual_axis_is_present_and_discriminates` |
 | KISS-CONFORM-6.3-0008 | `test_target_axis_is_machine_readable_and_cross_checked` |
+| KISS-CONFORM-6.3-0010 | `test_reference_artifact_normative_surface_is_declared` |
+| KISS-CONFORM-6.3-0011 | `test_published_vector_counts_are_not_a_conformance_surface` |
 | KISS-CONFORM-6.4-0001 | `test_conform_golden_byte_vectors` |
 | KISS-CONFORM-6.4-0002 | `test_conform_golden_vectors_fully_pinned` |
 | KISS-CONFORM-6.4-0003 | `test_conform_golden_vectors_hex_rows` |

@@ -617,3 +617,143 @@ fn gem_weight_role_vector_discriminates_in_bytes() {
         golden.token
     );
 }
+
+/// KISS-CONFORM-6.3-0010 — the artifact's normative surface is declared in THREE parts,
+/// and this test is exhaustive over the artifact's top-level members: a member added
+/// without being classified fails here. That is the point. A two-part
+/// vectors-versus-metadata reading would make the scoping declarations non-normative,
+/// and a consumer scoping its run on `dtype_usable_set` would be relying on something
+/// the spec had told it not to.
+#[test]
+fn test_reference_artifact_normative_surface_is_declared() {
+    use kiss_conformance::json::Json;
+
+    // (a) VECTOR CONTENT — reproduced byte-exact per entry by a conformant producer.
+    const VECTOR_CONTENT: &[&str] = &["positive_vectors", "decline_vectors"];
+    // (b) SCOPING DECLARATIONS — read to decide what this is and which runs apply.
+    const SCOPING: &[&str] = &[
+        "schema",
+        "structure_key_schema_version",
+        "token_prefix",
+        "dtype_recognition_set",
+        "dtype_usable_set",
+        "reserved_dtypes",
+        "target_namespaces",
+        "recognition_count",
+        "usable_count",
+    ];
+    // (c) PROVENANCE AND COMMENTARY — never a conformance surface; freely addable.
+    const PROVENANCE: &[&str] = &[
+        "generated_from",
+        "source_commit",
+        "clause",
+        "coverage_note",
+        "dtype_axis_note",
+        "mapping_guard_note",
+        "namespace_vocabulary_note",
+        "target_axis_note",
+        "namespace_vocabulary_versions",
+    ];
+
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
+        .expect("KISS-CONFORM-6.3-0010: the emitted artifact must be valid JSON");
+
+    // (a) present AND non-vacuous — an empty vector array would satisfy "present".
+    for k in VECTOR_CONTENT {
+        let n = doc.get(k).and_then(|j| j.as_arr()).map_or(0, |a| a.len());
+        assert!(
+            n > 0,
+            "KISS-CONFORM-6.3-0010(a): `{k}` is the normative vector content and must be \
+             present and non-empty; found {n} entries"
+        );
+    }
+    // (b) present — a consumer is entitled to rely on these.
+    for k in SCOPING {
+        assert!(
+            doc.get(k).is_some(),
+            "KISS-CONFORM-6.3-0010(b): scoping declaration `{k}` is absent; a consumer \
+             scopes its run on it"
+        );
+    }
+
+    // The teeth: the classification is EXHAUSTIVE over the artifact's members. A member
+    // added to the artifact without a class fails here rather than defaulting silently
+    // into whichever category the next reader assumes.
+    let actual: HashSet<&str> = match &doc {
+        Json::Obj(m) => m.iter().map(|(k, _)| k.as_str()).collect(),
+        _ => panic!("KISS-CONFORM-6.3-0010: the artifact must be a JSON object"),
+    };
+    let classified: HashSet<&str> = VECTOR_CONTENT
+        .iter()
+        .chain(SCOPING.iter())
+        .chain(PROVENANCE.iter())
+        .copied()
+        .collect();
+
+    let unclassified: Vec<&&str> = actual.difference(&classified).collect();
+    let phantom: Vec<&&str> = classified.difference(&actual).collect();
+    assert!(
+        unclassified.is_empty(),
+        "KISS-CONFORM-6.3-0010: artifact member(s) {unclassified:?} are not classified \
+         into (a) vector content, (b) scoping declaration, or (c) provenance. Classify \
+         them in the clause AND here — an unclassified member has no declared normative \
+         status, which is the defect this clause exists to close."
+    );
+    assert!(
+        phantom.is_empty(),
+        "KISS-CONFORM-6.3-0010: {phantom:?} are classified but absent from the artifact — \
+         the classification has gone stale against the file it describes."
+    );
+}
+
+/// KISS-CONFORM-6.3-0011 — cardinality of a published vector array is not a conformance
+/// surface, and the reference suite demonstrates the rule on its own corpus checks: no
+/// test in this suite asserts an EQUALITY on a published vector array's length. A lower
+/// bound is fine (non-vacuity); an equality would make corpus growth a breaking change
+/// for anyone copying the reference's shape.
+#[test]
+fn test_published_vector_counts_are_not_a_conformance_surface() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let mut scanned = 0usize;
+    let mut offenders: Vec<String> = Vec::new();
+
+    for entry in std::fs::read_dir(&dir).expect("KISS-CONFORM-6.3-0011: tests/ must be readable") {
+        let p = entry.expect("readable dir entry").path();
+        if p.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let src = std::fs::read_to_string(&p).expect("readable test source");
+        scanned += 1;
+        for (i, line) in src.lines().enumerate() {
+            let l = line.trim();
+            if l.starts_with("//") {
+                continue;
+            }
+            let touches_vectors =
+                l.contains("positive_vectors") || l.contains("decline_vectors");
+            if touches_vectors && l.contains("assert_eq!") && l.contains("len()") {
+                offenders.push(format!(
+                    "{}:{}: {}",
+                    p.file_name().unwrap().to_string_lossy(),
+                    i + 1,
+                    l
+                ));
+            }
+        }
+    }
+
+    // Non-vacuity: a scan that read nothing would pass this test trivially.
+    assert!(
+        scanned >= 5,
+        "KISS-CONFORM-6.3-0011: scanned only {scanned} test files — the scan is not \
+         reading the suite, so a clean result means nothing"
+    );
+    assert!(
+        offenders.is_empty(),
+        "KISS-CONFORM-6.3-0011: exact-count assertion(s) on a published vector array:\n  {}\n\
+         Cardinality is not a conformance surface — the corpus grows additively. Use a \
+         LOWER BOUND for non-vacuity. If this is a deliberate re-vendor tripwire, it \
+         belongs in a consumer's own tree, not in the reference suite that defines the rule.",
+        offenders.join("\n  ")
+    );
+}
