@@ -327,8 +327,12 @@ shape that silently narrows another.**
 **14. The natural check after an action often answers a different question than the one you asked.**
 Distinct from convention 11 (a check run on the wrong *representation*): here the instrument is
 correct and healthy, and the *question* is mis-posed — so the answer is both accurate and
-misleading. Two live instances, and the failure is alarming rather than reassuring, which is why
-it wastes time rather than hiding defects.
+misleading. **The error direction follows the direction of the imprecision, not the kind of
+check.** A validator that is too **loose** accepts a superset and reassures you falsely; one that
+is too **narrow**, or pointed the wrong way, misses what is there and **alarms** you falsely.
+Both produce a confident wrong answer, and neither announces which it is. **A check that validates
+a MEASUREMENT is the case that costs most** — it can discard correct work or manufacture absent
+work — and it has its own treatment below.
 
 - **After a squash merge, `git branch -r --contains <sha>` reports the branch commit as ABSENT
   from `main`.** The content landed; the commit identity did not. The obvious post-merge check
@@ -343,6 +347,44 @@ it wastes time rather than hiding defects.
 **The discriminator: name what the check's answer is ABOUT, and confirm that is what you wanted to
 know.** A green from the right instrument on the wrong question is indistinguishable, at a glance,
 from a green on the right one.
+
+**And the sharpest case is when the mis-posed question is the one VALIDATING a measurement.**
+A sweep found 53 clauses naming a test that does not exist. Spot-checking it,
+`grep -rq "fn test_ops_add_sub_mul"` returned **YES** — apparently falsifying the sweep. It was
+prefix-matching `fn test_ops_add_sub_mul_wrapping`. **The spot-check was wrong, not the sweep**,
+and a correct finding was one keystroke from being retracted.
+
+> **A check used to validate a measurement must be at least as precise as the measurement — and
+> the natural quick check is reliably less precise, not more.**
+
+That asymmetry is what makes it a rule rather than an anecdote. **Nobody reaches for a *more*
+rigorous instrument to spot-check something; the whole point of a spot-check is that it is
+cheap.** So validation drifts systematically toward looseness — which yields false *reassurance*
+when the measurement said "clean" and false *retraction* when it said "defect." The second is
+rarer and more expensive: it discards work that was right.
+
+**Two instances, two different loosenesses, one afternoon, found independently** — which is what
+makes this a class rather than a grep anecdote:
+
+- **A looser PATTERN.** `grep -rq "fn test_ops_add_sub_mul"` prefix-matched
+  `fn test_ops_add_sub_mul_wrapping`. The validator accepted a superset of what it was asked
+  about.
+- **A wrong DIRECTION.** A `cited_in` heuristic searched **backward** from a citation for its
+  enclosing `fn`, and so attributed every doc-comment citation to the **previous** test —
+  because those citations *precede* the test they belong to. The validator scanned the wrong
+  way past its target.
+- **A pattern too NARROW — the opposite direction, and the one that manufactures work.** An
+  issue's own evidence was `grep -rn "6\.5-0011" spec/*.md` *"returns nothing."* Re-run, it
+  returns **seven** hits across two documents. The grep had matched nothing it should have, and
+  the issue reported a clause as undefined that was defined twice over. **A validator can invent
+  a defect as readily as it can hide one**, and this one sent a lane to fix something half absent.
+
+Neither is a careless grep. Both are validators built in a hurry against a measurement built
+carefully, which is the asymmetry.
+
+**Anchor the pattern when you verify a measurement** — `fn <name>\s*\(`, not `fn <name>` —
+and when a spot-check contradicts a measurement, **suspect the spot-check first.** It is the
+instrument you spent less on.
 
 
 If you propose normative text, follow the house style so it stays testable:
