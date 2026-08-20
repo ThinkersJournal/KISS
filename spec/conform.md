@@ -973,6 +973,14 @@ enum (§6.0). See umbrella §3 for the full statement.
   > have.** Fused and decomposed forms do differ, but because their **shapes** differ — one cell
   > against two, of different categories and arities — not because anything resolved to a floor.
   >
+  > **Why it survived drafting, which is the transferable part.** The *observation* was correct
+  > throughout — fused and decomposed do produce different keys — and **a true observation is
+  > what stops you looking for the mechanism under it.** The error was found only because the
+  > question put to the implementors was shaped so the answer could surprise: *if this is wrong
+  > I want to know before it merges*. Asked as *does this confirm?*, every implementor could
+  > have said yes — truthfully, about the observation — while the mechanism stayed false. **A
+  > question that cannot return a no is the interviewing form of a check that cannot go red.**
+  >
   > **Two keys in one stack, answering different questions.** A consumer implementation reports
   > running the admissibility key *alongside* a second identity that is deliberately **invariant**
   > across fuse/decompose, because it names a **recipe** rather than a concrete instantiation.
