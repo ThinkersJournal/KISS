@@ -408,7 +408,7 @@ recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-con
 and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
 three whose only reddening mutation is a spec-text edit).
 
-**16. Evidence has a LOCATION, and three ways of losing track of it.** A finding is only as
+**16. Evidence has a LOCATION, and four ways of losing track of it.** A finding is only as
 durable as someone's ability to go back to what it rested on. These are one convention because
 they are one failure — the evidence moved, or was never named, or was argued instead of shown.
 
@@ -445,6 +445,16 @@ which the prefix check never could) — but that is a claim about a tool's behav
 seeds that settle it (a matrix entry naming a nonexistent test; one naming a non-test symbol
 that exists elsewhere) cost minutes. **If the second seed does not redden, the subsumption is
 incomplete and the old check was doing something after all.**
+
+**(d) A BLOCKED record hides the blockers it does not list — and a PARTIAL blocker list is
+more misleading than none, because it looks like someone checked.** Record a known future
+obstacle **while the item is blocked**, not at the moment someone tries to unblock it. *Why:*
+`KISS-CONFORM-6.13-0002` carried three blocking reasons; one had been resolved and a fourth was
+never listed. **Two of three true is exactly what made it read as accurate.** Whoever cleared
+the listed reasons would have believed they were finished and then hit an unrecorded obstacle —
+**a blocked item is precisely where a known future blocker gets lost, because nobody re-reads
+the note until they think they are done.** The re-read never happens while it is blocked, and by
+then the evidence for the unlisted obstacle may have expired.
 
 > **On convention 9, from the same week it was needed twice.** A mutation seeded during the
 > #280 review failed to apply and produced three green results that read exactly like evidence;
