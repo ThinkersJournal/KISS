@@ -207,7 +207,9 @@ def collect_proven(harness):
     carries a well-formed `// Proven:` marker for it — PROVEN ⊆ CITED by construction.
 
     Returns (proven_map, violations), where proven_map is {clause_id: [proving_test, ...]}
-    sorted. The MAP, not a bare set, because the 4th ratchet dimension's drop gate needs the
+    with the CLAUSE KEYS sorted and each clause's proving-test list sorted — fully
+    deterministic, so a fixture may rely on the order and the ratchet's output is stable
+    across runs. The MAP, not a bare set, because the 4th ratchet dimension's drop gate needs the
     proving TEST's identity, not just the clause's: a proof drop is green iff its proving test
     no longer exists in the harness, so the gate must know which test carried the testimony
     (the architect's #278 2b ruling). The proven clause SET is `set(proven_map)`.
@@ -231,7 +233,7 @@ def collect_proven(harness):
                     f"(proof without a backing — a proof presupposes the citation, PROVEN ⊆ CITED)")
             else:
                 proven_map[cid].append(tname)
-    return {c: sorted(ts) for c, ts in proven_map.items()}, violations
+    return {c: sorted(proven_map[c]) for c in sorted(proven_map)}, violations
 
 # A Rust test function in the harness: `#[test]` (possibly with intervening
 # attributes such as `#[cfg(feature = "cuda")]` or `#[ignore]`) then `fn name(`.
@@ -1136,10 +1138,13 @@ def classify_proven(floor_proven, live_proven_map, live_harness, base_proven_map
             f"marker while the proving test SURVIVES: {detail}.",
             "A stale proof claims aboutness it has lost — restore the marker or re-prove. A proof "
             "drop is green ONLY when its proving test no longer exists (#278)."])
+    gone_tests = sorted({t for ts in dropped.values() for t in ts})
+    detail = "; ".join(f"{c} (was proven by {', '.join(dropped[c])})" for c in sorted(dropped))
     return ("proven_retired", [
-        f"proven fell {floor_proven} -> {live_count}: {len(dropped)} proof(s) retired because "
-        f"their proving test was removed ({', '.join(sorted(dropped))}). The testimony was about "
-        "that test and it is gone, so the retirement is legitimate. Bump the proven floor DOWN to "
+        f"proven fell {floor_proven} -> {live_count}: {len(dropped)} clause(s) lost their proof "
+        f"because the proving test(s) were removed from the harness — {detail}.",
+        f"The removed test(s): {', '.join(gone_tests)}. The testimony was about those tests and "
+        f"they are gone, so the retirement is legitimate. Bump the proven floor DOWN to "
         f"{live_count} in this PR."])
 
 
