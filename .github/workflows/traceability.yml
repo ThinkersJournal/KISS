@@ -84,7 +84,7 @@ jobs:
           case $rc in
             0) echo "ratchet: exit 0 — CLEAN (at the floor)";;
             1) echo "ratchet: exit 1 — VIOLATIONS FOUND: the floor moved. This is a real failure.";;
-            2) echo "ratchet: exit 2 — INCONCLUSIVE: the ratchet DECLINED to answer (no --base-ref). NOT a floor violation — the base-ref logic above is broken or was removed. See #251.";;
+            2) echo "ratchet: exit 2 — INCONCLUSIVE: the ratchet DECLINED to characterize the lint dimension. NOT a floor violation. Either no --base-ref was passed, OR one was passed and could not be read — an unfetched or unknown ref counts, and the fetch above is --quiet and unchecked, so that is the likelier cause HERE. Check the ref resolves before suspecting the ratchet. See #251.";;
             *) echo "ratchet: exit $rc — unexpected";;
           esac
           exit $rc
