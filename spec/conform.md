@@ -951,11 +951,17 @@ enum (§6.0). See umbrella §3 for the full statement.
   comparator enumerates — such a test cannot fail on that dimension and so does not bind it.
   The obligation covers **every** comparison relation, including one not written as a
   comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7). Its
-  declaration is **`Normalizes:` the computation** — the key is derived from **shape**
-  (op category, arity, dtypes, layout, target) and is **silent on semantics**, so two
-  *different* computations of the same shape compare **byte-equal**. A clause MUST NOT cite the
-  admissibility match as backing for a **semantic** obligation: the derivation never took the
-  computation as an input, so such a test could not fail.
+  declaration is **`Normalizes:` the computation, and every bucketed component of shape** —
+  the key is derived from **shape** (op category, arity, dtypes, layout, target) and is
+  **silent on semantics**, so two *different* computations of the same shape compare
+  **byte-equal**; and each bucketed component collapses a range onto one token: extent
+  divisibility above its ceiling (`d16`), vector width above its widest (`v8`), element count
+  within a work class (`warp`/`block`/`grid`), maximum touched offset below the index-width
+  boundary (`ix32`/`ix64`), extent-and-stride detail within a layout class
+  (`co`/`ic`/`st`/`br`), and contraction extent within a size class (`t`/`s`/`m`/`l`). A clause
+  MUST NOT cite the admissibility match as backing for an obligation over **any** of these: the
+  derivation never took the computation as an input, and it cannot distinguish two inputs that
+  land in the same bucket, so such a test could not fail.
 
   > *Informative.* A check that normalizes away a difference cannot see the difference it
   > normalizes — true of every **correct** normalizing comparator, which is why it must be

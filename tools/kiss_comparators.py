@@ -65,6 +65,64 @@ SELECTS_ONLY = {
 }
 
 
+# --- §6.8-0012 completeness: every bucketed component of the key must be declared -------
+#
+# A `Normalizes:` enumeration that OMITS a dimension is worse than one that names it: a reader
+# checks the list, does not find `extent`, concludes the key discriminates extents, and may cite
+# the admissibility match for an obligation that cannot fail above the bucket ceiling. The
+# declaration was in fact short by SIX dimensions when first written -- true as far as it went.
+#
+# The alphabet a bucket collapses onto is declared by `code_enum!` in the codec, so the CODEC is
+# the population and the CLAUSE is what must mention it. Presence is tested by TOKEN CODE, not by
+# type name: a declaration that paraphrases the dimension without naming a token it collapses has
+# not told the reader which values are indistinguishable.
+KEY_CODEC = os.path.join(os.path.dirname(HERE), "conformance", "src", "structure_key.rs")
+RE_CODE_ENUM = re.compile(r"code_enum!\(\s*(\w+)\s*\{([^}]*)\}", re.S)
+RE_CODE_TOK = re.compile(r'=\s*"([^"]+)"')
+
+# Alphabets that are NOT a bucketing of a continuum, each with the reason. A bucket collapses a
+# RANGE onto one token; an enum of declared alternatives does not, and forcing it into the
+# declaration would claim a blindness the key does not have.
+NON_BUCKET = {
+    "MathPrecision": "declared attribute (st/rm), not a bucketing of any continuum",
+}
+
+# Index width is derived as a &'static str pair rather than a `code_enum!`, so the scan above
+# cannot see it. DETECTED FROM THE SOURCE, not hardcoded: a hardcoded entry would be asserted
+# for a fixture codec that has no such derivation, and would keep being asserted after a rename.
+# KNOWN LIMIT: a future alphabet that is neither a code_enum! nor this pair fails OPEN.
+IX_TOKENS = ("ix32", "ix64")
+
+
+def key_alphabets(path=KEY_CODEC):
+    """{name: (token, ...)} for every bounded alphabet the structure_key carries."""
+    out = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            src = fh.read()
+    except OSError:
+        return None
+    for m in RE_CODE_ENUM.finditer(src):
+        out[m.group(1)] = tuple(RE_CODE_TOK.findall(m.group(2)))
+    if all(f'"{t}"' in src for t in IX_TOKENS):
+        out["index width"] = IX_TOKENS
+    return out
+
+
+def undeclared_buckets(clause_body, path=KEY_CODEC):
+    """Alphabets whose tokens appear nowhere in the clause and are not excused."""
+    alpha = key_alphabets(path)
+    if alpha is None:
+        return None
+    missing = []
+    for name, toks in sorted(alpha.items()):
+        if name in NON_BUCKET or not toks:
+            continue
+        if not any(f"`{t}`" in clause_body for t in toks):
+            missing.append(name)
+    return missing
+
+
 def clause_bodies(text):
     """(clause_id, body) for every clause, body running to the next clause."""
     marks = [(m.group(1), m.start()) for m in RE_CLAUSE.finditer(text)]
@@ -100,6 +158,11 @@ def main():
               "what it normalizes, or is explicitly recorded as defining none")
         return 0
     declared, undeclared, excluded, stale = scan()
+    # Completeness of the admissibility match's own declaration (#274).
+    with open(DOC, encoding="utf-8") as fh:
+        _doc = fh.read()
+    _body = next((b for c, b in clause_bodies(_doc) if c == "KISS-CONFORM-6.8-0012"), "")
+    buckets = undeclared_buckets(_body)
     print("KISS-Conform comparator-blindness lint  -  §6.8-0012")
     print("=" * 68)
     print(f"  {len(declared):3d} clause(s) declare what they normalize")
@@ -121,6 +184,21 @@ def main():
         print("  A stale exclusion silently exempts nothing today and the WRONG clause tomorrow:")
         for cid in stale:
             print(f"          - {cid}")
+    if buckets is None:
+        bad = True
+        print("-" * 68)
+        print("  UNVERIFIED: the key codec could not be read, so the admissibility match's")
+        print("  declaration could not be checked for completeness. Refusing the green rather")
+        print("  than passing an unchecked condition.")
+    elif buckets:
+        bad = True
+        print("-" * 68)
+        print("  INCOMPLETE DECLARATION: §6.8-0012 names the admissibility match but omits")
+        print("  bucketed component(s) of the key. A reader checks the list, does not find the")
+        print("  dimension, and may cite the match for an obligation that cannot fail:")
+        for b in buckets:
+            print(f"          - {b}")
+        print("  Name a token the bucket collapses onto, or record it in NON_BUCKET with why.")
     if not declared:
         bad = True
         print("-" * 68)
