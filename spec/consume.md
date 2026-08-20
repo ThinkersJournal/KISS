@@ -1,5 +1,27 @@
 # KISS-Consume — The Kernel Recognition (Lift) Protocol
 
+> **The name misleads, and this note is load-bearing.** "KISS-Consume" reads as
+> *"the kernel consumer's sub-standard."* **It is not.** This is the **recognition
+> (lift)** protocol, and its central role is **orthogonal to the provider/consumer
+> axis** — as §3 says of the Lifter: *"a provider's own kernel-decomposer is a
+> lifter; a consumer's kernel-decomposer is a lifter."* A provider implements this
+> document as often as a consumer does.
+>
+> **Why the name was not changed** (#237, decided 2026-08-19). Clause IDs here are
+> append-only and **never reused after retirement** (§ below). Renaming the
+> sub-standard would retire all 46 `KISS-CONSUME-*` IDs, burn them permanently,
+> mint 46 replacements, and break every cross-reference in the suite — including
+> KISS-Emit's §6.7-0008 correspondence table. **Burning a sub-standard's entire ID
+> space to fix a name that misleads on first contact is not proportionate.** The
+> remedy is this note, plus leading with the real name wherever the pair is listed.
+>
+> **The evidence that it misleads is readers, not opinion:** in a single day the
+> suite maintainer proposed an editorship on the strength of the wrong reading, and
+> a portfolio coordinator reported they would have made the same inference from the
+> README one-liner. A third reader declined to guess the document's content from its
+> name at all — which is the same signal from the inside. **That is a surface
+> defect, not a reader defect.**
+
 **Sub-standard ID:** KISS-CONSUME
 **Part of:** KISS — Kernel Interface Standards Suite
 **Steward:** ThinkersJournal (non-profit public-standards publisher)
