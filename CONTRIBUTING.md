@@ -460,6 +460,14 @@ makes this a class rather than a grep anecdote:
   heredoc that truncated at an apostrophe and wrote a 26KB file as 7.6KB, caught only by checking
   the byte count; and a grep over four phrasings of an obligation reported as *"nowhere stated"*
   when the clause existed in different words.
+  **And one sub-case where checking the return code would NOT have helped: the failure can be in
+  the PAYLOAD rather than the call.** A PR body passed inline to a shell had its backticked spans
+  evaluated as command substitution — one span ran as a command, `not found` went to stderr, and
+  **the span was replaced with nothing.** The tool created the PR and reported success; the only
+  signal was stderr scrolling past a successful call. **A document arguing that a truncated output
+  cannot license a conclusion was itself about to ship truncated.** Caught by reading the state
+  back, which is the only check that covers this: **the call succeeded, so neither an exit code
+  nor a positive control would have fired.**
   **The remedy is one extra call: a POSITIVE CONTROL.** Run the same query against something you
   know is there; if it finds that, the empty result is evidence. A consumer answering a
   reliance question the same day did exactly this unprompted — *"the same pattern DOES find a
