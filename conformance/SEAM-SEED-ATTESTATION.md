@@ -81,11 +81,13 @@ project workspaces"*, and names both as Evans Laboratories projects.
 
 **Two workspaces is independence of LOCATION. The clause's stated property is independence
 of DERIVATION.** Those are different claims, and this file does not resolve which one the
-evidence supports — see #260, where it is under ruling. **And the `SEAM_MAGIC` correction above settles the direction:** on that axis the seeds are
+evidence supports — see #260, where it is under ruling.
+
+**And the `SEAM_MAGIC` correction above settles the direction.** On that axis the seeds are
 known to have derived **different** bytes, and the disagreement was resolved by **fixing one
 side**, not by a re-derivation. Agreement produced by correction toward a reference is
-definitionally not independent derivation — so on the one axis where the seeds' independence
-was actually tested, it did not hold.
+definitionally not independent derivation — so **on the one axis where the seeds'
+independence was actually tested, it did not hold.**
 
-**The bytes are worth freezing
-either way**; what the freeze does *not* do is settle what they are evidence of.
+**The bytes are worth freezing either way**; what the freeze does *not* do is settle what
+they are evidence of.
