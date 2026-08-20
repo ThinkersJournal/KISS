@@ -958,89 +958,33 @@ enum (§6.0). See umbrella §3 for the full statement.
   computation as an input, so such a test could not fail.
 
   > *Informative.* A check that normalizes away a difference cannot see the difference it
-  > normalizes — true of every correct normalizing comparator, which is why it must be written
-  > down rather than discovered. The suite already defends against this four times without
-  > naming it: §6.13-0002 (*golden hex, not struct equality*), §6.3-0005 (*bytes, not a parsed
-  > projection*), §6.8-0009 (exact-byte is the **only** admissible comparator for POD wire
-  > fields), and §6.9-0002 (a comparator **tighter** than structural MUST NOT be required). A
-  > fifth will be written the next time someone notices; the sixth omission will not be.
+  > normalizes — true of every **correct** normalizing comparator, which is why it must be
+  > written down rather than discovered. **This is a class, not a special case:** the suite
+  > already defends against it four times without naming it — §6.13-0002, §6.3-0005, §6.8-0009,
+  > and §6.9-0002. A fifth will be written the next time someone notices; the sixth omission
+  > will not be.
   >
-  > **Scope, and what this clause does NOT reach.** The obligation binds the comparison
-  > relations this specification defines and cites — the scope in which *"cited as backing for
-  > an obligation"* is meaningful, because a citation is the thing that can be checked. **The
-  > underlying hazard is not confined to them.** Any narrowing applied between an observation
-  > and its report can hide what it narrows, including tooling outside the suite entirely.
+  > **Check the *because*, not only the claim.** "A true observation with a false *because* is
+  > the hardest to catch — the truth vouches for the reasoning no one then examines" (kiss-ref).
+  > This clause's own `structure_key` declaration was first written inverted, on a true
+  > observation resting on a mechanism that does not exist; the observation is what stopped
+  > anyone reading the reason. A `Normalizes:` line states a *mechanism*, and a reader who
+  > accepts it because its consequence looks right has audited nothing.
   >
-  > Two live instances, neither reachable by anything this section can say. On 2026-08-20 the
-  > portfolio coordinator built a gated-merge script *after* merging #256 with its Windows
-  > check still queued, tested it against a **live** PR as the control, and piped the output
-  > through `head -2` — which truncated the line reporting that the merge had happened. The
-  > written report said testing had **caught** the flaw; it had **committed** it an hour
-  > earlier. Investigating that, a `git ls-remote | grep <pattern>` whose pattern could not
-  > match the branch name reported absence because it could not have reported presence.
+  > **A worked consequence.** A clause citing §6.9-0001 as backing for a numeric-reassociation
+  > obligation would be **un-failable** — the structural relation normalizes commutative and
+  > associative operands (its dimension 3) while the numeric result is order-**sensitive**. No
+  > clause does this today, which is what the enumeration is for.
   >
-  > `head -2` normalizes away everything after line two; a non-matching `grep` normalizes the
-  > result set to empty. **The instrument that hid the merge and the instrument that produced
-  > the report were the same narrowing, applied twice.** The floor came out correct because an
-  > ordering table happened to match what materialised — **a correct outcome and a repeatable
-  > method are different things, and only one of them is worth having.**
+  > **Scope.** The obligation binds the comparison relations this specification defines and
+  > cites — the scope in which *"cited as backing"* is checkable. **The underlying hazard is
+  > wider:** any narrowing between an observation and its report can hide what it narrows,
+  > including tooling outside the suite. A clause covering *any* such narrowing was considered
+  > and **rejected** — no artifact to gate, no citation to check, unbounded population; an
+  > undetectable clause is the defect this work exists to prevent. That hazard belongs to
+  > convention 14, where the direction of the imprecision predicts the direction of the error.
   >
-  > A clause covering *any* narrowing between observation and report was considered and
-  > **rejected**: it would have no artifact to gate, no citation to check, and an unbounded
-  > population — an undetectable clause, which is the defect this whole family of work exists
-  > to prevent. That hazard belongs to **convention 14** and its amendment, where the direction
-  > of the imprecision predicts the direction of the error. This clause makes the suite's
-  > comparators declare their blindness; it does not, and cannot, reach an operator's
-  > instrument.
-  >
-  > **Why declaring a blindness is preventive rather than pedantic — a worked case.** The
-  > structural comparator normalizes **(3) commutative/associative operand order**. The
-  > **numeric** comparators do not: reassociation perturbs the bits, which is why KISS-Ops
-  > §6.17 carries a reduction-order (reassociation) error term at all. **So the structural and
-  > numeric relations disagree about reassociation BY DESIGN, and both are correct.**
-  >
-  > The consequence is that a clause citing §6.9-0001 as backing for a numeric-reassociation
-  > obligation would be **un-failable** — the comparator normalizes exactly the difference such
-  > an obligation is about, so its test could never go red. **No clause does this today**, which
-  > is the point: the enumeration is what keeps it that way, and an undeclared blindness is only
-  > discovered by the clause that mis-cites it.
-  >
-  > Corroborated from the value side by the KISS reference implementation, whose
-  > decomposition-differential is a **numeric** comparator (op output versus decomposition
-  > output) and is order-**sensitive** on associativity. The same implementation independently
-  > confirms **(1)**: non-primitive and floor-resolved forms agree in **value**, so the
-  > structural comparator's floor-resolution rests on a demonstrated equivalence rather than an
-  > assumed one.
-  >
-  > **The admissibility match, measured rather than reasoned.** The declaration above was first
-  > written the other way round — that the key *normalizes nothing* and is therefore sensitive
-  > to the floor-resolution §6.9-0001 normalizes away. **That mechanism does not exist.** The
-  > derivation takes an op **category**, operand descriptors, and a target; the computation is
-  > not a parameter, so there was never a floor to normalize. A kernel-generator implementation
-  > measured `relu(a+b)` and `a+b` at the same shape and target and obtained **byte-identical**
-  > keys — *different computations, one key* — and this specification's own reference
-  > `StructureKey` carries no field for an op body either. **A clause resting on "it normalizes
-  > nothing, therefore it sees the difference" was claiming a sensitivity the derivation cannot
-  > have.** Fused and decomposed forms do differ, but because their **shapes** differ — one cell
-  > against two, of different categories and arities — not because anything resolved to a floor.
-  >
-  > **Why it survived drafting, which is the transferable part.** The *observation* was correct
-  > throughout — fused and decomposed do produce different keys — and **a true observation is
-  > what stops you looking for the mechanism under it.** The error was found only because the
-  > question put to the implementors was shaped so the answer could surprise: *if this is wrong
-  > I want to know before it merges*. Asked as *does this confirm?*, every implementor could
-  > have said yes — truthfully, about the observation — while the mechanism stayed false. **A
-  > question that cannot return a no is the interviewing form of a check that cannot go red.**
-  >
-  > **Two keys in one stack, answering different questions.** A consumer implementation reports
-  > running the admissibility key *alongside* a second identity that is deliberately **invariant**
-  > across fuse/decompose, because it names a **recipe** rather than a concrete instantiation.
-  > Neither normalization is an oversight. **And the invariant direction has a measured bill:**
-  > that consumer traced a defect in which two distinct kernels computing the same recipe
-  > collided on one identity, so stale launches returned **correct answers** while a test passed
-  > without ever running the kernel it named. **Invariance is the feature and the collision is
-  > its cost** — which is the whole reason a comparison relation must state which one it bought.
-
+  > The incidents and derivations behind each paragraph above are recorded on **#265**.
   *Test:* `test_conform_comparator_declares_normalization`.
 
 ### 6.9 The structural op-DAG equality comparator (tier-1 round-trip)
