@@ -103,7 +103,28 @@
 #  A genuine floor breach OUTRANKS the refusal and still reports 1, so a missing flag can
 #  never mask a regression.
 #
+# harness 377 -> 378 by #257 (Refs #230): KISS-EMIT-6.4-0006 (spellable is not
+# computable) arrives BACKED in the same PR that earns it, by
+# test_emit_spellable_is_not_computable. lint (32) and untested (494) UNCHANGED --
+# the clause is tested, not reclassified -- and total clauses 926 -> 927.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main`
+# reported "Set the floor to harness 378, lint 32, untested 494" and that output is
+# pasted here. This file's own history is the argument for doing it that way -- the
+# 377 above was re-derived three times and wrong twice, because the base moved while
+# the branch sat in review, and one stale value was numerically EQUAL to what a
+# meanwhile-merged substitution had put on main, so "harness matches main" CONFIRMED
+# the wrong number.
+#
+# STALE BY CONSTRUCTION IF #238 LANDS FIRST. #238 also moves the floor (377 -> 379,
+# two new backed §6.3 clauses), so the two are in flight simultaneously and NEITHER
+# can write a number now that is right at merge:
+#   #257 first -> floor 378, and #238 must re-derive to 380, not 379.
+#   #238 first -> floor 379, and #257 must re-derive to 380, not 378.
+# Whoever merges SECOND re-derives with `--ratchet --base-ref origin/main` against
+# the actual post-merge main and pastes the tool output. Do not add the deltas.
+#
 # key	value
-harness	377
+harness	378
 lint	32
 untested	494
