@@ -408,6 +408,50 @@ recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-con
 and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
 three whose only reddening mutation is a spec-text edit).
 
+**16. Evidence has a LOCATION, and three ways of losing track of it.** A finding is only as
+durable as someone's ability to go back to what it rested on. These are one convention because
+they are one failure — the evidence moved, or was never named, or was argued instead of shown.
+
+**(a) When a finding rests on what another party said or did, NAME THE PARTY in the finding.**
+Attribution is part of the measurement, not decoration on it. *Why:* #238 recorded that *"two
+independent projects"* cited the wrong clause and that *"both were verified against the clause
+text by the architect before this filing"* — **verified but never attributed.** When the
+correction finally needed routing, the attribution was recoverable from nothing: not the issue,
+not its comments (one shared account), not any sibling working copy (the citation lived in
+correspondence). The finding itself was undamaged, because it never rested on identity — but
+**the ability to act on it was gone**, and the only honest answer was that a plausible pair
+would be an inference wearing a measurement's clothes. Same failure shape as a summary that
+caches a floor number: **a record that drifts from its source does not fail, it ages.**
+
+**(b) When a change argues that some usual evidence DOES NOT APPLY to it, that argument is the
+load-bearing claim and is the first thing to audit.** A volunteered limitation is a claim about
+where the evidence lives. *Why:* #279 stated plainly that GitHub runs PR checks on a merge
+commit where the base is always an ancestor, **so its new stale-base detector could never fire
+in CI, and the controls were therefore the evidence.** Read as candour that is commendable and
+was meant as such; read as a premise it says *the controls are the ENTIRE evidence*, which
+leaves exactly one question — do they cover everything? They covered the detector and not its
+wiring: seeding `inconclusive = True` → `pass` left **every control green** while the feature
+silently stopped firing and the tool returned to `RESULT: CLEAN` on a stale tree. The gap was
+found by taking the warning as a premise rather than as a courtesy.
+
+**(c) Do not delete a check because a stronger one covers it until you have DEMONSTRATED the
+stronger one fires on the case the old one was catching — and say which you are doing.**
+*Removal by subsumption* and *relaxation* can produce the identical diff and license opposite
+futures: the first is a precedent for proving subsumption, the second for relaxing the next
+inconvenient check. **Prove it with a seeded case, not with an argument** — and per convention
+9, the seed must assert that it applied. *Why:* #247's `test_`-prefix requirement is genuinely
+subsumed (forward-existence catches a bogus name *including* one that starts with `test_`,
+which the prefix check never could) — but that is a claim about a tool's behaviour, and the two
+seeds that settle it (a matrix entry naming a nonexistent test; one naming a non-test symbol
+that exists elsewhere) cost minutes. **If the second seed does not redden, the subsumption is
+incomplete and the old check was doing something after all.**
+
+> **On convention 9, from the same week it was needed twice.** A mutation seeded during the
+> #280 review failed to apply and produced three green results that read exactly like evidence;
+> only the seeder's own `substring not found` gave it away. **A convention that exists is not a
+> convention that ran.** Print the seed's confirmation, and treat any green obtained from an
+> unconfirmed seed as no result at all.
+
 If you propose normative text, follow the house style so it stays testable:
 
 - Use RFC 2119 / RFC 8174 keywords (MUST, SHOULD, MAY) with their exact meanings.
