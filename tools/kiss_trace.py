@@ -181,11 +181,23 @@ def _proven_markers(scope):
                     FLAGGED, never counted.
     The ref is recorded as testimony (a demonstration exists at `ref`), not resolved here —
     the marker is not a live re-run, so this parser does not re-execute anything."""
-    well = {}
+    # Detect malformed markers by SPAN, not by clause id. Both regexes anchor on `Proven:`, so
+    # a well-formed marker and its loose counterpart start at the SAME offset; a loose match that
+    # begins nowhere a well-formed one does is a stray malformed marker. Subtracting by id instead
+    # (the earlier form) let a well-formed `Proven: X` MASK a stray `// Proven: X` for the same X —
+    # good evidence hiding bad, the exact defect this tier exists to expose (Copilot #295).
+    well, well_starts = {}, set()
     for m in RE_PROVEN_MARKER.finditer(scope):
         well[m.group(1)] = (m.group(2).lower(), m.group(3).strip())
+        well_starts.add(m.start())
     malformed = sorted({m.group(1) for m in RE_PROVEN_LOOSE.finditer(scope)
-                        if m.group(1) not in well})
+                        if m.start() not in well_starts})
+    # Fail-closed REGARDLESS of what else the scope contains: a clause carrying ANY malformed
+    # marker is flagged AND loses its credit here, even if a sibling well-formed marker exists.
+    # Otherwise "fail-closed" would name something the code does not do — a second, correct
+    # marker could talk the first out of failing.
+    for cid in malformed:
+        well.pop(cid, None)
     return well, malformed
 
 

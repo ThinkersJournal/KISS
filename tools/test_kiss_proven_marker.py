@@ -13,7 +13,6 @@ Run: python tools/test_kiss_proven_marker.py
 """
 import os
 import sys
-from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kiss_trace as kt  # noqa: E402
@@ -57,6 +56,17 @@ def test_marker_with_invalid_subject_is_malformed():
     """subject must be impl|spec-text — a free-text subject does not parse and is flagged."""
     well, bad = kt._proven_markers(f"// Proven: {CID} (subject: vibes; ref: x)")
     assert well == {} and bad == [CID], f"bad-subject not flagged: well={well!r} bad={bad!r}"
+
+
+def test_a_wellformed_marker_does_not_mask_a_malformed_one_for_the_same_clause():
+    """FAIL-CLOSED REGARDLESS (Copilot #295): a stray bare `// Proven: X` alongside a correct
+    one for the SAME X must still be flagged AND must poison X's credit — good evidence cannot
+    mask bad, the exact class the PROVEN tier exists to expose. BORN RED before the span-based
+    detection: the earlier id-subtraction let the well-formed marker hide the stray."""
+    scope = f"// Proven: {CID} (subject: impl; ref: PR#291)\n// Proven: {CID}"
+    well, bad = kt._proven_markers(scope)
+    assert bad == [CID], f"stray marker masked by a sibling well-formed one: {bad!r}"
+    assert well == {}, f"a clause with a malformed marker kept its credit: {well!r}"
 
 
 # -------------------------------------------------------------- collector --
