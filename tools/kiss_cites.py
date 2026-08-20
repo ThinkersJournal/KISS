@@ -148,9 +148,15 @@ def audit(spec_dir, conf_dir):
     for res in results:
         for cid, t, _ in res.matrix:
             clause_test[cid] = t
+    # The RAW citation landscape — every clause-id occurrence, backings AND mentions —
+    # NOT kiss_trace's post-#187 BACKING subset (`clauses`). This audit's whole job is to
+    # classify the MENTIONS #187 deliberately stops crediting (a spec-lookup key, a
+    # contrastive comment), so reading the narrowed set would hide the exact shapes it
+    # exists to surface. `discover_tests` exposes both: `clauses` (backings, for coverage)
+    # and `cited_raw` (all citations, for reference hygiene) — this reads the latter.
     cited = {}
     for tname, info in harness.items():
-        for c in info["clauses"]:
+        for c in info["cited_raw"]:
             cited.setdefault(c, set()).add(tname)
 
     # The population kiss_trace actually measures for coverage: the clauses with a

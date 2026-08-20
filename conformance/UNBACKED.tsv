@@ -310,6 +310,9 @@ KISS-EMIT-6.1-0007	test_emit_other_input_not_conforming	untested
 KISS-EMIT-6.1-0008	test_emit_no_scheduler_in_abi	untested	
 KISS-EMIT-6.1-0009	test_emit_opdef_outside_opset_declines	untested	
 KISS-EMIT-6.1-0010	test_emit_accept_predicate_is_structure_key	untested	
+KISS-EMIT-6.4-0001	test_emit_constant_spelling_emitter_supplied	decredited	De-credited under #187: cited only as a lookup-key ("KISS-EMIT-6.4-0001" home string) in test_emit_constants_are_emitter_supplied, whose 7 assertions all target §6.2-0002 (#191) — a MENTION, not a backing form. Per the mutation-subject rule (#261): mutating this clause's OWN emitter obligation reddens no test; only mutating §6.4-0001's spec TEXT does, which backs §6.2-0002's document-placement, not this clause. A behavioral emitter test is owed.
+KISS-EMIT-6.4-0002	test_emit_special_float_value_spelling_emitter_supplied	decredited	De-credited under #187: cited only as a lookup-key ("KISS-EMIT-6.4-0002" home string) in test_emit_constants_are_emitter_supplied, which asserts §6.2-0002 (#191) — a MENTION. Mutating the clause's own obligation reddens no test (mutation-subject rule, #261). A behavioral emitter test is owed.
+KISS-EMIT-6.4-0005	test_emit_unproven_operator_is_emitter_supplied	decredited	De-credited under #187: cited only via a clause_block("KISS-EMIT-6.4-0005") spec-text fetch in the §6.2-0003 unproven-decision test (#191) — a MENTION reading the clause prose, not a behavioral backing. A behavioral test of the emitter-side sweep is owed.
 KISS-EMIT-6.6-0001	test_emit_output_has_contract	untested	
 KISS-EMIT-6.6-0002	test_emit_fidelity_declared_in_guarantees	untested	
 KISS-EMIT-6.6-0003	test_emit_output_is_artifact_contract_pair	untested	

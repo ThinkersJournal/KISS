@@ -98,6 +98,62 @@ RE_HEAD = re.compile(r"^#{1,6}\s+.*$", re.M)
 RE_TEST = re.compile(r"\*Test:\*\s*`([A-Za-z][A-Za-z0-9_]*)`")
 RE_IDPART = re.compile(r"^KISS-([A-Z]+)-(\d+(?:\.\d+)?)-(\d{4}[a-z]?)$")
 
+# --- BACKING vs MENTION (#187) ---------------------------------------------------------
+# A clause ID counts as a BACKING (real coverage) iff it appears in one of two forms; every
+# other occurrence — a fixture literal, a `panic!`/`assert!` message, an explanatory
+# `// unlike KISS-X`, an ID spelled only to LOCATE a clause — is a MENTION and earns no credit.
+# `cid_re.findall(scope)` credited them all; that is the defect this pair closes.
+#
+# Form 1 — ASSERTION-ARGUMENT: the clause ID as the FIRST argument of a designated backing
+# assertion. The citation and the check are the SAME expression, so aboutness is settled by
+# construction. Allow-list = the assertions that take a clause ID they enforce (assert_golden,
+# assert_token — the two in the harness today). TWO spellings, both first-arg backings:
+#   direct   — assert_golden("KISS-X", ...)
+#   indirect — let VAR = "KISS-X"; ... assert_golden(VAR, ...)   (a one-hop variable binding)
+# The indirect spelling is the same backing (the clause id IS the assertion's subject), and it
+# is common — 21 GRAMMAR clauses use `let _clause = "KISS-X"; assert_golden(_clause, ...)`.
+# Matching only the literal would reclassify all of them as MENTIONS, which is the exact
+# over-crediting-in-reverse this primitive exists to avoid (#270 review; all 21 happen to be
+# forward-backed today, so no floor moved, but a reverse-only indirect backing would be
+# silently dropped).
+RE_ASSERT_BACKING = re.compile(
+    r'\b(?:assert_golden|assert_token)\s*\(\s*"(' + CLAUSE_ID + r')"')
+# The two halves of the indirect spelling: a clause-id literal bound to a variable, and that
+# variable used as the FIRST argument of a backing assertion. A binding is credited only when
+# its variable is such a first argument (a `let x = "KISS-X"` never passed to an assertion is
+# still a MENTION). `RE_ASSERT_VAR`'s first char is `[A-Za-z_]`, so it never matches the direct
+# `assert_golden("KISS-...` (a `"`), keeping the two forms disjoint.
+RE_CLAUSE_LET = re.compile(
+    r'\blet\s+(?:mut\s+)?([A-Za-z_]\w*)\s*(?::[^=;{]+)?=\s*"(' + CLAUSE_ID + r')"')
+RE_ASSERT_VAR = re.compile(
+    r'\b(?:assert_golden|assert_token)\s*\(\s*([A-Za-z_]\w*)\s*[,)]')
+# Form 2 — DECLARED backing: a backing KEYWORD (`Backs:` / `Enforces`) in a comment, followed
+# with ONLY separators before the clause ID(s). So `/// Enforces KISS-X` and `// Backs: KISS-X,
+# KISS-Y` back; a bare `// KISS-X` and prose like `enforces the KISS-X rule` (a word sits
+# between the keyword and the id) do NOT. Case-insensitive; captures the whole id run.
+RE_BACKING_KEYWORD = re.compile(
+    r'(?:Backs|Enforces)\b[:\s]*((?:' + CLAUSE_ID + r'[\s,]*(?:and\s+)?)+)', re.I)
+RE_CLAUSE_ID = re.compile(CLAUSE_ID)
+
+
+def _backing_clauses(body, scope):
+    """The clause IDs a test BACKS (not merely MENTIONS, #187): assertion-argument IDs read
+    from the executable BODY, plus keyworded-comment IDs read from the whole SCOPE (a citation
+    legitimately lives in the doc comment). Everything else the old `cid_re.findall(scope)`
+    swept up — messages, fixtures, locate-strings, keyword-less comment IDs — is dropped."""
+    ids = {m.group(1) for m in RE_ASSERT_BACKING.finditer(body)}
+    # Indirect assertion-argument: a clause-id literal bound to a variable that is then the
+    # first arg of a backing assertion (`let VAR = "KISS-X"; ... assert_golden(VAR, ...)`).
+    let_bound = {m.group(1): m.group(2) for m in RE_CLAUSE_LET.finditer(body)}
+    if let_bound:
+        for m in RE_ASSERT_VAR.finditer(body):
+            cid = let_bound.get(m.group(1))
+            if cid:
+                ids.add(cid)
+    for m in RE_BACKING_KEYWORD.finditer(scope):
+        ids.update(RE_CLAUSE_ID.findall(m.group(1)))
+    return ids
+
 # A Rust test function in the harness: `#[test]` (possibly with intervening
 # attributes such as `#[cfg(feature = "cuda")]` or `#[ignore]`) then `fn name(`.
 RE_RUST_TEST = re.compile(
@@ -153,6 +209,26 @@ CATEGORIES = {
 # in it is gamed by accident, which is worse than deliberately. It is tracked as its
 # own SET (the category) only so the ratchet tells an honest de-crediting (#261) from a
 # regression: a de-crediting is MARKED, a regression is silent.
+#
+# PRECONDITION for marking a clause `decredited` (the load-bearing rule; #187/#261). A
+# clause enters `decredited` ONLY after a MUTATION confirms the named test no longer
+# asserts the obligation. A scanner (or a human) ceasing to RECOGNIZE a citation is a
+# FALSE NEGATIVE, not evidence: the backing may be live and merely written in a form the
+# recognizer misses — migrate it, do not de-credit it. `decrediting_recorded` cannot tell
+# "discovered never-backed" from "recognizer stopped seeing a live backing" — both are
+# harness-N / untested+N with a marked ledger — so WITHOUT this precondition the verdict
+# would launder a form-change regression into a green, recorded, permanent de-crediting.
+#
+# And the mutation must target the SUBJECT OF THE OBLIGATION, NOT THE TEXT THAT STATES IT:
+# a clause that binds an implementation is backed only if mutating the IMPLEMENTATION
+# reddens the test. A test that reddens ONLY when you mutate the SPEC TEXT is backing a
+# document-consistency obligation (which may be a real clause) — not the implementation
+# clause, and crediting it there is the exact #191 defect the gate exists to catch. So the
+# `decredited` note MUST record the SUBJECT of the confirming mutation, not merely that
+# "a mutation reddened it" — else the next de-crediting runs a spec-text mutation on an
+# implementation clause, sees red, and credits it, passing the gate while committing the
+# defect. (Worked example: KISS-EMIT-6.4-000x — the only mutation that reddens their test
+# is a spec-text edit; their implementation obligations are untouched, so they de-credit.)
 DECREDITED = "decredited"
 
 
@@ -246,7 +322,6 @@ def discover_tests(conf_dir):
     found = {}
     if not os.path.isdir(conf_dir):
         return found
-    cid_re = re.compile(CLAUSE_ID)
     for root, dirs, files in os.walk(conf_dir):
         # `target/` is build output, not source; it contains no authored tests.
         dirs[:] = [d for d in dirs if d != "target"]
@@ -276,7 +351,18 @@ def discover_tests(conf_dir):
                     # A compile-time `cfg` gate and a declared runtime gate are the
                     # same fact for coverage purposes: this test may not have run.
                     "gate": gated.get(name) or (f"runtime:{rt.group(1)}" if rt else None),
-                    "clauses": set(cid_re.findall(scope)),
+                    # BACKINGS only, not every literal clause ID (#187): an assertion-arg
+                    # (assert_golden/assert_token) or a keyworded comment (Backs:/Enforces).
+                    # A fixture literal, a panic message, or a bare comment ID is a MENTION.
+                    # This drives COVERAGE CREDIT — a clause is backed only by a real backing.
+                    "clauses": _backing_clauses(body, scope),
+                    # EVERY literal clause ID in the scope — backings AND mentions. Hygiene
+                    # checks that care about a REFERENCE, not a backing, read this: the
+                    # dangling-citation gate (a bare comment naming a RETIRED id is a stale
+                    # reference worth flagging even though it backs nothing, #187/§3.3) and the
+                    # citation audit (kiss_cites, which classifies the mentions). Splitting the
+                    # two is the point of #187: credit is narrow, reference-hygiene is wide.
+                    "cited_raw": set(RE_CLAUSE_ID.findall(scope)),
                 }
     return found
 
@@ -1107,11 +1193,20 @@ def main():
              if backing_tests(c) and all(harness[t].get("gate") for t in backing_tests(c))}
 
     # A citation naming a clause that does not exist is a dangling reference —
-    # §3.3 burns retired IDs, so this catches a test pinned to a dead clause.
+    # §3.3 burns retired IDs, so this catches a test pinned to a dead clause. This is
+    # REFERENCE hygiene, not coverage credit, so it scans EVERY citation (`cited_raw`, backings
+    # AND mentions): a bare comment naming a retired id is a stale reference worth flagging even
+    # though #187 gives it no backing credit. Narrowing this to backings (the #187 change to
+    # `cited`) would leave a bare-comment reference to a burned id caught by NOTHING — the exact
+    # blind spot #187's own scanner was built to close, reopened one layer down.
     all_clause_ids = set()
     for res in results:
         all_clause_ids |= res.clause_ids
-    dangling = {cid: sorted(ts) for cid, ts in cited.items() if cid not in all_clause_ids}
+    cited_all = defaultdict(set)
+    for tname, info in harness.items():
+        for cid in info["cited_raw"]:
+            cited_all[cid].add(tname)
+    dangling = {cid: sorted(ts) for cid, ts in cited_all.items() if cid not in all_clause_ids}
 
     # Executable tests that cite no clause at all: real work the matrix cannot see.
     orphans = sorted(t for t, i in harness.items()

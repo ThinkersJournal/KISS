@@ -487,7 +487,7 @@ const A_GOLDEN: &str = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/
 
 #[test]
 fn reject_wrong_field_count() {
-    // KISS-CLASSIFY-6.7-0009 — a token with the wrong field count declines with a typed WrongFieldCount, never a panic (second backing).
+    // Backs: KISS-CLASSIFY-6.7-0009 — a wrong field count declines WrongFieldCount, never a panic.
     assert_eq!(from_token("sk4|bin|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
@@ -579,7 +579,7 @@ fn reject_bad_rank() {
 
 #[test]
 fn reject_unknown_op_family() {
-    // KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownOpFamily — behavioral backing for the closed op-family set the kiss_vocab lint enforces textually (lint->harness).
+    // Backs: KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownOpFamily.
     // A.2 decline vector: `sk4|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
     let t = A_GOLDEN.replacen("|bin|", "|zzz|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownOpFamily));
@@ -587,7 +587,7 @@ fn reject_unknown_op_family() {
 
 #[test]
 fn reject_unknown_dtype() {
-    // KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype (second backing).
+    // Backs: KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype.
     // A.2 decline vector: `sk4|bin|f99|…` — dtype outside the closed §6.1 set.
     let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
@@ -595,7 +595,12 @@ fn reject_unknown_dtype() {
 
 #[test]
 fn accepts_every_closed_op_family_and_dtype() {
-    // KISS-CLASSIFY-6.1-0001 — every closed-set dtype is recognized and each reserved one declines ReservedDtype — behavioral backing for the closed dtype vocabulary the kiss_tables lint enforces (lint->harness).
+    // Backs: KISS-CLASSIFY-6.1-0001 (acceptance half only) — every closed-set dtype token is
+    // accepted and each reserved one declines ReservedDtype. Does NOT cover the set's CONTENTS:
+    // this loops `DTYPES` while `from_token` checks `DTYPES.contains(..)` — a self-comparison
+    // (the #191 tautology shape), so it cannot detect the closed vocabulary changing. `kiss_tables`
+    // remains the only check that the set is exactly the pinned one; this is NOT a full
+    // lint->harness substitution (cf. #263 op-family-domain neighbourhood).
     // every one of the 24 op-family codes and 24 dtype tokens is recognized
     for fam in OP_FAMILIES {
         let t = A_GOLDEN.replacen("|bin|", &format!("|{fam}|"), 1);
@@ -616,7 +621,7 @@ fn accepts_every_closed_op_family_and_dtype() {
 
 #[test]
 fn test_classify_work_class_element_count() {
-    // KISS-CLASSIFY-6.5-0007 — derive_work_class returns the warp/block/grid class per the <=32 / <=1024 element-count boundaries — behavioral backing for the boundaries the kiss_vocab lint enforces (lint->harness).
+    // Backs: KISS-CLASSIFY-6.5-0007 — derive_work_class returns warp/block/grid per the <=32 / <=1024 element-count boundaries.
     // §6.5-0010 + §6.6-0013 (backs the clause; KISS #82 finding 2 ruling, 2026-07-23):
     // the work-class total element count is the FRAME-MAX — the product over the
     // iteration-frame axes of each axis's max extent across operands — NOT the output
