@@ -130,7 +130,7 @@ KISS-CONFORM-6.12-0001	test_conform_consumer_verify_check	untested
 KISS-CONFORM-6.12-0002	test_conform_consumer_verify_reuses_oracle	untested	
 KISS-CONFORM-6.12-0003	test_conform_consumer_verify_not_gating	untested	
 KISS-CONFORM-6.13-0001	test_conform_announce_exact_byte_pod	blocked	#144 no sidecar: "every Announce POD clause" has no machine-readable enumeration; becomes a lint once one exists
-KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	blocked	#173 seam-hello undefined; plus no foreign envelope reader and freeze governance (§8-0006)
+KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	blocked	no foreign envelope reader; freeze governance (KISS-ANNOUNCE-8-0006, untested); AND the two-seed count (#260, ruled option A) -- the clause obliges "the two" SeamHello seeds while KISS-Announce schedules them to converge to one. That third obstacle was NOT in this note until 2026-08-20 and would have been met only by whoever cleared the first two and believed they were finished. Reference bytes + provenance frozen in conformance/SEAM-SEED-ATTESTATION.md so the evidence does not expire with the second seed. (#173, previously listed here, is CLOSED: the term is bound to KISS-ANNOUNCE's SeamHello.)
 KISS-CONFORM-6.13-0003	test_conform_classify_exact_byte_and_registry_bundle	untested	
 KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	blocked	freeze governance (§8-0006); no out-of-namespace usage evidence artifact exists
 KISS-CONFORM-6.13-0006c	test_conform_ops_dissimilar_impls_agree	blocked	#176 no external implementor: both differential fixtures are in-suite, and neither declares a lowering-module manifest for the §6.5-0002 disjointness test — freeze-blocking
