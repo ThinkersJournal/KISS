@@ -80,14 +80,27 @@ KISS-Announce §A.2 records the seeds as *"independently reproduced byte-identic
 project workspaces"*, and names both as Evans Laboratories projects.
 
 **Two workspaces is independence of LOCATION. The clause's stated property is independence
-of DERIVATION.** Those are different claims, and this file does not resolve which one the
-evidence supports — see #260, where it is under ruling.
+of DERIVATION.** Those are different claims. **#260 has since ruled** — option A, re-anchor
+`KISS-CONFORM-6.13-0002` on the property rather than on the instance count — and the
+reasoning below is part of what the ruling rested on.
 
-**And the `SEAM_MAGIC` correction above settles the direction.** On that axis the seeds are
-known to have derived **different** bytes, and the disagreement was resolved by **fixing one
-side**, not by a re-derivation. Agreement produced by correction toward a reference is
-definitionally not independent derivation — so **on the one axis where the seeds'
-independence was actually tested, it did not hold.**
+> **RECORDED AS ARGUMENT, NOT AS ATTESTATION.** The paragraph that follows is the KISS
+> architect's reasoning on #260. It is **not** an attested fact about the seeds in the sense
+> the rest of this document uses that word: everything above is measured — bytes, commits,
+> layout — and this is an inference drawn from them. **Cite it as the ruling's reasoning and
+> not as a measurement**, and if #260 is ever revisited this paragraph is revisited with it.
+>
+> *Why this fence exists:* an earlier revision of this file added the paragraph **one line
+> below a sentence saying the question was "under ruling"** — so the document asserted, a
+> line apart, both that the matter was open and that it was settled. **An attestation is the
+> worst possible place for an unearned claim**, because its whole function is to be cited
+> later by someone who was not here and cannot tell which sentences were measured.
+
+**The `SEAM_MAGIC` correction above bears directly on the direction.** On that axis the seeds
+are known to have derived **different** bytes, and the disagreement was resolved by **fixing
+one side**, not by a re-derivation. Agreement produced by correction toward a reference is
+definitionally not independent derivation — so **on the one axis where the seeds' independence
+was actually tested, it did not hold.**
 
 **The bytes are worth freezing either way**; what the freeze does *not* do is settle what
 they are evidence of.
