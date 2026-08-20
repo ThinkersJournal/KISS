@@ -899,11 +899,12 @@ enum (§6.0). See umbrella §3 for the full statement.
   clause MUST NOT cite a comparator as the backing for an obligation over a dimension that
   comparator enumerates — such a test cannot fail on that dimension and so does not bind it.
   The obligation covers **every** comparison relation, including one not written as a
-  comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7) normalizes
-  **nothing**, and is therefore NOT blind to the primitive-floor resolution that the structural
-  op-DAG comparator (§6.9-0001) normalizes away. That divergence is a **declared fact** of this
-  registry, not an incident: the same computation, fused and decomposed, compares **equal**
-  structurally and **unequal** by key.
+  comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7). Its
+  declaration is **`Normalizes:` the computation** — the key is derived from **shape**
+  (op category, arity, dtypes, layout, target) and is **silent on semantics**, so two
+  *different* computations of the same shape compare **byte-equal**. A clause MUST NOT cite the
+  admissibility match as backing for a **semantic** obligation: the derivation never took the
+  computation as an input, so such a test could not fail.
 
   > *Informative.* A check that normalizes away a difference cannot see the difference it
   > normalizes — true of every correct normalizing comparator, which is why it must be written
@@ -959,6 +960,27 @@ enum (§6.0). See umbrella §3 for the full statement.
   > confirms **(1)**: non-primitive and floor-resolved forms agree in **value**, so the
   > structural comparator's floor-resolution rests on a demonstrated equivalence rather than an
   > assumed one.
+  >
+  > **The admissibility match, measured rather than reasoned.** The declaration above was first
+  > written the other way round — that the key *normalizes nothing* and is therefore sensitive
+  > to the floor-resolution §6.9-0001 normalizes away. **That mechanism does not exist.** The
+  > derivation takes an op **category**, operand descriptors, and a target; the computation is
+  > not a parameter, so there was never a floor to normalize. A kernel-generator implementation
+  > measured `relu(a+b)` and `a+b` at the same shape and target and obtained **byte-identical**
+  > keys — *different computations, one key* — and this specification's own reference
+  > `StructureKey` carries no field for an op body either. **A clause resting on "it normalizes
+  > nothing, therefore it sees the difference" was claiming a sensitivity the derivation cannot
+  > have.** Fused and decomposed forms do differ, but because their **shapes** differ — one cell
+  > against two, of different categories and arities — not because anything resolved to a floor.
+  >
+  > **Two keys in one stack, answering different questions.** A consumer implementation reports
+  > running the admissibility key *alongside* a second identity that is deliberately **invariant**
+  > across fuse/decompose, because it names a **recipe** rather than a concrete instantiation.
+  > Neither normalization is an oversight. **And the invariant direction has a measured bill:**
+  > that consumer traced a defect in which two distinct kernels computing the same recipe
+  > collided on one identity, so stale launches returned **correct answers** while a test passed
+  > without ever running the kernel it named. **Invariance is the feature and the collision is
+  > its cost** — which is the whole reason a comparison relation must state which one it bought.
 
   *Test:* `test_conform_comparator_declares_normalization`.
 
