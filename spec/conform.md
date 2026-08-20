@@ -912,6 +912,34 @@ enum (§6.0). See umbrella §3 for the full statement.
   > projection*), §6.8-0009 (exact-byte is the **only** admissible comparator for POD wire
   > fields), and §6.9-0002 (a comparator **tighter** than structural MUST NOT be required). A
   > fifth will be written the next time someone notices; the sixth omission will not be.
+  >
+  > **Scope, and what this clause does NOT reach.** The obligation binds the comparison
+  > relations this specification defines and cites — the scope in which *"cited as backing for
+  > an obligation"* is meaningful, because a citation is the thing that can be checked. **The
+  > underlying hazard is not confined to them.** Any narrowing applied between an observation
+  > and its report can hide what it narrows, including tooling outside the suite entirely.
+  >
+  > Two live instances, neither reachable by anything this section can say. On 2026-08-20 the
+  > portfolio coordinator built a gated-merge script *after* merging #256 with its Windows
+  > check still queued, tested it against a **live** PR as the control, and piped the output
+  > through `head -2` — which truncated the line reporting that the merge had happened. The
+  > written report said testing had **caught** the flaw; it had **committed** it an hour
+  > earlier. Investigating that, a `git ls-remote | grep <pattern>` whose pattern could not
+  > match the branch name reported absence because it could not have reported presence.
+  >
+  > `head -2` normalizes away everything after line two; a non-matching `grep` normalizes the
+  > result set to empty. **The instrument that hid the merge and the instrument that produced
+  > the report were the same narrowing, applied twice.** The floor came out correct because an
+  > ordering table happened to match what materialised — **a correct outcome and a repeatable
+  > method are different things, and only one of them is worth having.**
+  >
+  > A clause covering *any* narrowing between observation and report was considered and
+  > **rejected**: it would have no artifact to gate, no citation to check, and an unbounded
+  > population — an undetectable clause, which is the defect this whole family of work exists
+  > to prevent. That hazard belongs to **convention 14** and its amendment, where the direction
+  > of the imprecision predicts the direction of the error. This clause makes the suite's
+  > comparators declare their blindness; it does not, and cannot, reach an operator's
+  > instrument.
 
   *Test:* `test_conform_comparator_declares_normalization`.
 
