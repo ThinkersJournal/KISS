@@ -97,5 +97,65 @@ class BlindnessLintTest(unittest.TestCase):
         self.assertGreaterEqual(len(declared), 6, "the real document must carry declarations")
 
 
+class DeclarationCompletenessTest(unittest.TestCase):
+    """§6.8-0012's own declaration must name every bucketed component of the key (#274).
+
+    The defect this closes was a check TRUE AS FAR AS IT WENT: the declaration named
+    semantics-blindness and stopped, omitting six bucketed dimensions. Such a check has
+    no naturally failing case, so the control below supplies one -- A COMPLETENESS CHECK
+    WITH NOTHING MISSING IS UNTESTED BY CONSTRUCTION.
+    """
+
+    CODEC = """
+code_enum!(Alpha { A1 = "a1", A2 = "a2" });
+code_enum!(Beta { B1 = "b1", B2 = "b2" });
+code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
+"""
+
+    def _codec(self, td):
+        p = pathlib.Path(td) / "structure_key.rs"
+        p.write_text(self.CODEC, encoding="utf-8")
+        return str(p)
+
+    def test_an_omitted_bucket_is_caught(self):
+        """BORN RED: a derivation deliberately absent from the declaration."""
+        with tempfile.TemporaryDirectory() as td:
+            body = "declares `a1` only, and says nothing about the other alphabet."
+            self.assertEqual(kc.undeclared_buckets(body, self._codec(td)), ["Beta"])
+
+    def test_a_complete_declaration_passes(self):
+        """The paired control. Without it, 'always report missing' passes the test above."""
+        with tempfile.TemporaryDirectory() as td:
+            body = "declares `a1` and `b2` — both alphabets named by a token they collapse onto."
+            self.assertEqual(kc.undeclared_buckets(body, self._codec(td)), [])
+
+    def test_a_non_bucket_alphabet_is_not_demanded(self):
+        """MathPrecision is a declared attribute, not a bucketing of a continuum.
+
+        Demanding it would make the clause claim a blindness the key does not have —
+        the false-disclaimer direction, which is worse than the omission this catches.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            body = "declares `a1` and `b2` and never mentions st/rm."
+            self.assertNotIn("MathPrecision", kc.undeclared_buckets(body, self._codec(td)))
+
+    def test_presence_is_by_TOKEN_not_by_type_name(self):
+        """Naming the type without a token does not tell the reader WHICH values collide."""
+        with tempfile.TemporaryDirectory() as td:
+            body = "mentions Alpha and Beta by name, with no token codes at all."
+            self.assertEqual(kc.undeclared_buckets(body, self._codec(td)), ["Alpha", "Beta"])
+
+    def test_unreadable_codec_declines_rather_than_passes(self):
+        """An unreadable population is not an empty one (#213/#267 discipline)."""
+        self.assertIsNone(kc.undeclared_buckets("anything", "/nonexistent/structure_key.rs"))
+
+    def test_the_real_declaration_is_complete(self):
+        """Convention 9: the document must actually be in the state the fixtures assume."""
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
+        self.assertEqual(kc.undeclared_buckets(body), [],
+                         "§6.8-0012 omits a bucketed component of the key")
+
+
 if __name__ == "__main__":
     unittest.main()
