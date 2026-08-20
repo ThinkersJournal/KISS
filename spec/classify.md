@@ -904,16 +904,44 @@ form (§6.7-0011).
 | `contraction` | optional | `{M, N, K size classes, K divisibility bucket, conditionally-present batch size class, weight dtype, accumulator dtype, output dtype, math-precision}` (sk3, §6.7-0006); absent for non-contraction cells |
 
 - **KISS-CLASSIFY-6.6-0001** — A `structure_key` MUST be an **admissibility
-  predicate**: a kernel MUST admit an invocation **if and only if** the
-  `structure_key` derived from that invocation's derivation inputs (§6.6-0012)
-  byte-matches the kernel's key. An implementation MUST NOT admit an invocation
-  whose derived key differs by any byte. *Test:*
-  `test_classify_structure_key_is_admissibility_predicate`.
+  predicate over ELIGIBILITY, not a decision procedure for admission**: a byte-match between the `structure_key` derived from an invocation's
+  derivation inputs (§6.6-0012) and the kernel's key is **NECESSARY** for admission, and
+  an implementation MUST NOT admit an invocation whose derived key differs by any byte.
+  **A byte-match is NOT SUFFICIENT.** A kernel MAY decline an invocation whose derived key
+  byte-matches its own: the key is silent on the computation (§6.6-0002), so a matching
+  cell does not establish that this kernel computes what the caller asked for (§6.6-0020).
+
+  > *Informative.* This clause previously read **if and only if**, which made admission
+  > *compulsory* on a byte-match and left a kernel no room to refuse a cell-mate it does
+  > not compute. The **only-if** direction — the one that is correct — is already carried
+  > by the second sentence, so the biconditional was redundant where it was right and
+  > wrong where it was not. **The removed direction was already unobserved in practice:**
+  > at least one consumer's decline vocabulary models *"key matches, admission does not
+  > follow"* in shipped code, and those codes would be unreachable by construction if
+  > anything had relied on compulsory admission.
+  >
+  > **Stronger than unobserved: the removed direction was never SATISFIABLE as stated.** A
+  > producer carries the computation separately from the key — an op definition alongside a
+  > shape descriptor — so `relu(a + b)` and `a + b` **share a key**. A shape key cannot
+  > compel admission of a computation it does not describe, and a kernel obliged to admit
+  > every byte-match would be obliged to admit invocations it cannot compute.
+  >
+  > **A consequence that is deliberately not resolved here.** Compulsory admission was
+  > also a *liveness* guarantee — it is why a cell lookup always resolved. Under
+  > **necessary-but-not-sufficient** a lookup may refuse, and a consumer holding a single
+  > candidate row has nowhere to go. Requiring that such a refusal be **typed and
+  > observable** is a consumer-side obligation and belongs to KISS-Consume, not here.
+  *Test:* `test_classify_structure_key_is_admissibility_predicate`.
 - **KISS-CLASSIFY-6.6-0002** — A `structure_key` MUST NOT encode the op's semantic
   identity; its `op_family` field MUST be a coarse op **category**, never a KISS-Ops
   op name. Op-semantic identity is owned by KISS-Ops / KISS-Contract, and a
   consumer MUST match **both** the cell (this key) and the op identity (KISS-Ops) to
-  establish kernel identity. *Test:*
+  establish kernel identity. **That pair is necessary and NOT sufficient for a multi-node
+  lift:** KISS-Consume pins `op_identity` to the **bare op name of the lifted DAG root**
+  and forbids carrying the full DAG in it (KISS-CONSUME §6.2-0006), so two different
+  computations sharing a root op name are **not** distinguished by (cell + op identity).
+  A consumer MUST NOT treat that pair as establishing computation identity for a fused or
+  multi-node kernel (§6.6-0020). *Test:*
   `test_classify_structure_key_is_not_op_identity`.
 - **KISS-CLASSIFY-6.6-0003** — A `structure_key` MUST be **extent-free**: it MUST
   key size *classes* (`work_class`, contraction size classes) and structural facts,
@@ -1105,6 +1133,25 @@ form (§6.7-0011).
   §6.1-0013 leaving the MX-scale **sibling** slot unpinned; if a later revision pins
   sibling placement, this clause's positional prohibition MUST be revisited. *Test:*
   `test_classify_weight_role_hint`.
+
+- **KISS-CLASSIFY-6.6-0020** — A consumer MUST NOT treat two kernels admitted by the
+  **same cell** as **mutually substitutable** — benchmarked against one another, cached
+  under one entry, evicted on measured cost, or selected between on any basis that assumes
+  they produce the same result — unless it has established that they compute the same thing
+  **by a means other than this key**. Cell membership is evidence about **shape**, never
+  about computation: the key is semantics-blind by construction (§6.6-0002) and its
+  bucketed components collapse ranges onto one token (§6.8-0012).
+
+  > *Informative.* §6.6-0001 answers **admission** and §6.6-0002 answers **identity**;
+  > neither answers **selection among several admissible kernels**, which is where the
+  > hazard actually lives. A dispatch structure keyed on this token alone carries an
+  > unstated precondition — that every candidate in a cell computes the same thing — which
+  > no field of the key can enforce and which the producer therefore owns. **The collision is
+  > concrete, not hypothetical:** where the computation travels beside the key rather than
+  > inside it, `relu(a + b)` and `a + b` derive the **same token**. An implementation that
+  > derives a computation identity **upstream** of the cell satisfies this clause; one that
+  > keys on the cell alone does not.
+  *Test:* `test_classify_cell_mates_are_not_substitutable`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -1694,6 +1741,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_op_family_gated` |
 | KISS-CLASSIFY-6.6-0018 | `sk4_mixed_precision_fp8_disambiguated` |
 | KISS-CLASSIFY-6.6-0019 | `test_classify_weight_role_hint` |
+| KISS-CLASSIFY-6.6-0020 | `test_classify_cell_mates_are_not_substitutable` |
 | KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |
