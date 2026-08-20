@@ -124,7 +124,14 @@
 # Whoever merges SECOND re-derives with `--ratchet --base-ref origin/main` against
 # the actual post-merge main and pastes the tool output. Do not add the deltas.
 #
+# Re-derived on main @ 69c535b for #265/#268. lint 32 -> 33: KISS-CONFORM-6.8-0012
+# (comparators declare what they normalize) is enforced by tools/kiss_comparators.py, a
+# document lint, so it lands in the lint dimension rather than harness. harness 378 and
+# untested 494 UNCHANGED -- the clause arrives WITH its detector, which is the move #269's
+# arrival_recorded verdict now recognizes (#267). Before that verdict existed this branch
+# read as lint_drift: a clause shipping with its enforcement had no green path.
+#
 # key	value
 harness	378
-lint	32
+lint	33
 untested	494

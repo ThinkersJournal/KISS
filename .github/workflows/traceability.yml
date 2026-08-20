@@ -65,6 +65,15 @@ jobs:
           else
             python tools/kiss_trace.py --ratchet --base-ref HEAD^
           fi
+      - name: Comparator-blindness discrimination controls
+        run: python tools/test_kiss_comparators.py
+      # A comparator that normalizes a dimension cannot fail on it. This gates the
+      # DECLARATION half (KISS-CONFORM-6.8-0012): every clause naming a comparison
+      # relation says what it is blind to, or is explicitly recorded as defining none.
+      # The detector is over-broad and fails CLOSED, so a new comparator lands red
+      # until someone classifies it -- which is the whole point.
+      - name: Comparator-blindness lint (blocking)
+        run: python tools/kiss_comparators.py
       - name: Citation audit discrimination controls
         run: python tools/test_kiss_cites.py
       - name: Citation audit (reports; does not gate)
