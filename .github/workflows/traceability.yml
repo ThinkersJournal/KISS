@@ -58,13 +58,36 @@ jobs:
         #   PR:   the target branch (fetched first);
         #   push: HEAD^, the pre-merge tip (fetch-depth 2 on checkout makes it available).
         # A defaulted base is deliberately NOT used — it would compare against a stale tree.
+        #
+        # DO NOT SIMPLIFY THE BRANCH BELOW (#251). `--ratchet` returns THREE states:
+        #   0 CLEAN · 1 VIOLATIONS FOUND (the floor moved) · 2 INCONCLUSIVE (it declined
+        #   to answer, because no --base-ref was given).
+        # Actions fails a step on ANY non-zero exit, so CI CANNOT DISTINGUISH 2 FROM 1: an
+        # INCONCLUSIVE would present as a floor violation under a step named "blocking".
+        # That never happens today only because a base is supplied on both events. Remove
+        # or default the branch and every run becomes a refusal reported as a violation.
+        # The echo below makes the red self-describing so the distinction survives anyway.
         run: |
+          # `|| rc=$?` is LOAD-BEARING, not defensive: Actions runs a `run:` step under
+          # `bash -e`, and a failing command inside an `if` BODY is not exempt from `-e`
+          # (only the condition is). Without the `||` the script aborts at the python
+          # line on exit 1 or 2 and the case below NEVER RUNS -- the message prints only
+          # on success, which is the one state it is not needed for. An `||` list IS
+          # exempt, so the code reaches `rc` and still propagates via the final `exit`.
+          rc=0
           if [ -n "${{ github.base_ref }}" ]; then
             git fetch --quiet origin "${{ github.base_ref }}"
-            python tools/kiss_trace.py --ratchet --base-ref "origin/${{ github.base_ref }}"
+            python tools/kiss_trace.py --ratchet --base-ref "origin/${{ github.base_ref }}" || rc=$?
           else
-            python tools/kiss_trace.py --ratchet --base-ref HEAD^
+            python tools/kiss_trace.py --ratchet --base-ref HEAD^ || rc=$?
           fi
+          case $rc in
+            0) echo "ratchet: exit 0 — CLEAN (at the floor)";;
+            1) echo "ratchet: exit 1 — VIOLATIONS FOUND: the floor moved. This is a real failure.";;
+            2) echo "ratchet: exit 2 — INCONCLUSIVE: the ratchet DECLINED to characterize the lint dimension. NOT a floor violation. Either no --base-ref was passed, OR one was passed and could not be read — an unfetched or unknown ref counts, and the fetch above is --quiet and unchecked, so that is the likelier cause HERE. Check the ref resolves before suspecting the ratchet. See #251.";;
+            *) echo "ratchet: exit $rc — unexpected";;
+          esac
+          exit $rc
       - name: Comparator-blindness discrimination controls
         run: python tools/test_kiss_comparators.py
       # A comparator that normalizes a dimension cannot fail on it. This gates the
