@@ -61,11 +61,13 @@ pub const SOURCE_COMMIT: &str = "19c3ad7";
 /// Each entry is `(namespace, vocabulary version, capability-set field arity)`.
 ///
 /// The arity is the count of `.`-separated fields the owning document's grammar
-/// requires — `cuda` C-1: one field (`sm<N>[<letter>]`); `vulkan` V-1 at v4:
-/// exactly five, none omissible. It is pinned here so the GENERATOR can reject a
+/// requires — `cuda` C-1: one field (`sm<N>[<letter>]`); `vulkan` V-1, unchanged
+/// from v4 through v5: exactly five, none omissible. Note the arity and the
+/// vocabulary version move INDEPENDENTLY — v5 adds three `<arith>` names and no
+/// field, so the version advances while the arity does not. It is pinned here so the GENERATOR can reject a
 /// malformed token, and tied to the owning document by
 /// `reference_vectors_match_the_namespace_documents`.
-pub const NAMESPACE_VOCAB_VERSIONS: &[(&str, u32, usize)] = &[("cuda", 1, 1), ("vulkan", 4, 5)];
+pub const NAMESPACE_VOCAB_VERSIONS: &[(&str, u32, usize)] = &[("cuda", 1, 1), ("vulkan", 5, 5)];
 
 /// Validate an embedded `<namespace>:<capability-set>` target against the owning
 /// document's grammar, at GENERATION time. Panics on any violation.

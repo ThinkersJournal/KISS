@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 4 · **Status:** draft
+· **Vocabulary version:** 5 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -107,6 +107,9 @@ lexicographic order, each at most once:
 |---|---|
 | `dot8` | any accelerated 8-bit integer dot product (`VK_KHR_shader_integer_dot_product`) |
 | `f16` | `shaderFloat16` — half-precision *arithmetic* |
+| `f64` | `shaderFloat64` — double-precision *arithmetic* |
+| `i16` | `shaderInt16` — 16-bit integer *arithmetic* |
+| `i64` | `shaderInt64` — 64-bit integer *arithmetic* |
 | `i8` | `shaderInt8` — 8-bit integer *arithmetic* |
 | `st16` | `storageBuffer16BitAccess` |
 | `st8` | `storageBuffer8BitAccess` |
@@ -118,6 +121,22 @@ lexicographic order, each at most once:
   are separate members because they are separate capabilities: a device may
   accept 16-bit data in a storage buffer while performing the arithmetic in
   f32.
+- **V-15.** `i16`, `i64` and `f64` are **vocabulary version 5**. They name the
+  core `VkPhysicalDeviceFeatures` bits `shaderInt16`, `shaderInt64` and
+  `shaderFloat64`, and a consumer MUST NOT infer any of them from another name
+  in this field. In particular **`i16` MUST NOT be read off `st16`**: `st16` is
+  `storageBuffer16BitAccess`, a *storage* capability, and a conformant device
+  may accept 16-bit data in a buffer while performing the arithmetic in f32.
+  Reading one as the other is a silently wrong lowering on hardware that is
+  behaving correctly — the same separation V-6 states, now with names on both
+  sides of it so the distinction is expressible rather than merely true.
+
+  > *Informative.* The gap was reported by a consumer whose emitter needed to
+  > know whether a target implies 16-bit integer arithmetic and could not tell:
+  > before version 5 the vocabulary had no way to say it either way, so absence
+  > was **silence, not denial**. The three names land together because all
+  > three feature bits predate the registry baseline (§4), so each would
+  > otherwise force a version of its own.
 
 ### 2.4 `<coop>` — cooperative-matrix shapes used
 
@@ -352,6 +371,21 @@ against, so the test above has a fixed thing to compare with rather than
 | 2 | 348 |
 | 3 | 348 |
 | 4 | 348 |
+| 5 | 348 |
+
+**Version 5 is an addition, and a partial invalidation.** Three `<arith>` names
+land at once — `i16`, `i64`, `f64` — and they change the bytes only of tokens
+derived from devices reporting the corresponding feature bits. A device
+reporting none of the three spells exactly what it spelled at version 4.
+
+That it bumps at all is the §4 test run mechanically, not a judgement:
+`shaderInt16`, `shaderInt64` and `shaderFloat64` are core
+`VkPhysicalDeviceFeatures` members and were assigned long before the recorded
+baseline of 348, so a conformant device could always have reported them. A
+derivable token could therefore already have been affected by the absence of
+the name. **Bump.** They land together because each would otherwise force a
+version of its own for the same reason — three bumps for one afternoon's
+vocabulary work, and two of them invalidating caches for nothing.
 
 **Version 4 is a grammar change, not only an addition**, and it is the most
 expensive kind this vocabulary can make: adding the fifth field changes the
