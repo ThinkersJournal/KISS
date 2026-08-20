@@ -79,8 +79,9 @@ its *content*.**
 **Find the one you need by SYMPTOM, not by number.** This list exists because the conventions are
 now numerous enough that people re-derive rules already written here — including their authors.
 On 2026-08-20 the architect proposed three "new" conventions in one evening and **two were
-already in this file**, both inside convention 9; a lane independently rediscovered the same
-convention 9 the same day. **The failure was never coverage — it was retrieval.**
+already in this file**, both inside convention 9 — one of them added there five days earlier by
+the very amendment being re-proposed (`8dfc56e`, #226). **The failure was never coverage — it was
+retrieval.**
 
 | the thing that just happened | convention |
 |---|---|
@@ -178,8 +179,13 @@ Assert the pattern matched exactly once before replacing.
 
 Note the asymmetry, because it bounds how much older proofs are worth: **a green result proves
 nothing until the application is checked**, while a red result proves *something* broke. **A red is
-NOT self-validating** — an earlier draft of this convention said it was, and the paragraph four
-below already refuted it. *Why the correction:* a seed wrote `return []` into a function returning
+NOT self-validating** — an earlier draft of this convention said it was, and the statement later
+in this same convention beginning *"A green mutation proves nothing and a red one proves only
+that something broke"* already refuted it. (**Named rather than located on purpose:** the first
+draft said *"the paragraph four below"*, which was already wrong when it was reviewed, because
+editing the file moved the paragraph. A positional reference inside the convention titled
+*Evidence has a LOCATION* is the rule failing on itself — see 16(a): name the thing, not where it
+sits.) *Why the correction:* a seed wrote `return []` into a function returning
 a **dict**; four controls reddened on the resulting type error, and "caught by 4 controls" was
 nearly reported as evidence of discrimination. The seed applied, the anchor matched, `SEED APPLIED`
 printed — **and the red was worthless.** Re-run type-correctly, exactly ONE control reddened.
@@ -252,8 +258,9 @@ instances in one day, on four different axes.
   construct fine as operand 0; they are unreachable only in the **sibling-operand role** the
   specification assigns them. The clause answered a question one role over.
 - **Level, again — a return value is not a state.** A threaded reply was posted by API; the
-  second call failed on an invalid JSON escape (a backtick is not `\b`, `\n`, `\t`…), and the only
-  signal was a bare non-zero exit. **"The command returned" and "the thing happened" are different
+  second call failed because the body contained a **backslash followed by a backtick**, and JSON
+  permits only a fixed escape set (`\"` `\` `\/` `\b` `\f` `\n` `\r` `\t` `\uXXXX`) — that pair is
+  not among them, so the payload was malformed. The only signal was a bare non-zero exit. **"The command returned" and "the thing happened" are different
   levels**, and reporting the first as the second would have claimed two dispositions with one
   posted. Caught by counting the replies afterwards. **After any action whose success you intend
   to report, measure the state rather than read the return.**
