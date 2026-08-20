@@ -807,17 +807,18 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   one-block, grid-stride}` with token codes `warp`, `block`, `grid`, and the
   boundaries MUST be total element count `≤ 32` (`one-warp`), `≤ 1024`
   (`one-block`), otherwise `grid-stride`; the count is computed per §6.5-0010.
-  *Test:* `test_classify_work_class_enum`.
+  *Test:* `test_classify_work_class_element_count`.
 
-  > *Note (#247):* this clause is backed by **reverse citation**, not the named forward test.
-  > `test_classify_work_class_element_count` asserts both this work-class enum **and** §6.5-0010's
-  > element-count boundaries (both mutation-verified, #187), and a `// Backs:` comment there cites
-  > this clause. It was **not** given a distinct forward name because that one test is genuinely
-  > §6.5-0010's forward name and no separate injective test exists — and #247 ruled reverse backing
-  > is first-class (since #187), so a test is not split to satisfy a naming label. **Cost, recorded
-  > so it is accepted knowingly:** when `test_classify_work_class_element_count` reddens, its fn name
-  > alone does not say whether §6.5-0007 or §6.5-0010 failed. Reverse backing here trades forward-name
-  > diagnosability for not manufacturing a redundant test.
+  > *Note (#247/#286):* this clause and §6.5-0010 **share** one forward test —
+  > `test_classify_work_class_element_count` asserts both this work-class ENUM and §6.5-0010's
+  > element-count BOUNDARIES (both mutation-verified, #187). It is a **declared same-standard
+  > share** (kiss_trace `DECLARED_SHARES`, #286), not a fiction. Until #286 the row named
+  > `test_classify_work_class_enum`, which existed in no harness — a dead row masked by reverse
+  > backing, because the "no such test" check fires only for otherwise-unbacked clauses. The test
+  > was **not** split to give each clause a distinct name: that manufactures a redundant test to
+  > satisfy a naming label, ruled against on #247. **Cost, accepted knowingly:** when the shared
+  > test reddens, its fn name alone does not say whether §6.5-0007 or §6.5-0010 failed — the share
+  > trades per-clause diagnosability for not duplicating a test.
 - **KISS-CLASSIFY-6.5-0008** — The contraction size-class domain MUST be exactly
   `{tiny, small, mid, large}` with token codes `t`, `s`, `m`, `l` and boundaries
   `≤ 8`, `9..=128`, `129..=2048`, `> 2048`; a `structure_key` MUST key size
@@ -1715,7 +1716,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0004 | `test_classify_div_bucket_enum` |
 | KISS-CLASSIFY-6.5-0005 | `test_classify_index_width_boundary` |
 | KISS-CLASSIFY-6.5-0006 | `reject_unknown_op_family` |
-| KISS-CLASSIFY-6.5-0007 | `test_classify_work_class_enum` |
+| KISS-CLASSIFY-6.5-0007 | `test_classify_work_class_element_count` |
 | KISS-CLASSIFY-6.5-0008 | `test_classify_size_class_enum` |
 | KISS-CLASSIFY-6.5-0009 | `test_classify_vec_width_derivation` |
 | KISS-CLASSIFY-6.5-0010 | `test_classify_work_class_element_count` |
