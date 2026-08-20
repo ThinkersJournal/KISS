@@ -178,6 +178,43 @@ fn test_conform_build_fails_untested_must() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+// ---- #247 subsumption proof: forward-existence subsumes the `test_`-prefix check ----
+
+/// The `test_`-prefix convention (`kiss_trace.py`, doc-consistency check 5) was removed
+/// in #247 because its ONLY real service — *"the matrix names something that is actually a
+/// test"* — is delivered STRICTLY BETTER by the forward-existence check above: existence
+/// also catches a bogus name that happens to start with `test_`, which a prefix match never
+/// could. This proves the subsumption on the case the architect named as load-bearing (#247):
+/// a §9 entry naming a REAL symbol that is not a `#[test]`. The name IS `test_`-prefixed, so
+/// the prefix check is NEUTRAL — any failure here is the existence check alone. If this ever
+/// passes, the existence check does NOT subsume the prefix check and it must not be removed.
+/// Convention 9: the seed asserts it applied.
+#[test]
+fn test_conform_existence_subsumes_the_prefix_check() {
+    assert_gate_accepts_a_wellformed_suite("ctl_subsume");
+    // `clean_spec()` names `test_ops_fixture_probe` (test_-prefixed). The harness defines that
+    // EXACT symbol but NOT as a `#[test]` — a real fn, not a test. `discover_tests` finds only
+    // `#[test] fn`s, so existence must still redden.
+    let harness = "fn test_ops_fixture_probe() { assert!(true); } // a plain fn, no test attribute\n";
+    assert!(
+        harness.contains("fn test_ops_fixture_probe") && !harness.contains("#[test]"),
+        "SEED NOT APPLIED (convention 9): the fixture must define the named symbol as a \
+         non-#[test] fn, or this proves nothing"
+    );
+    eprintln!("SEED APPLIED: §9 names `test_ops_fixture_probe`; harness defines it as a non-#[test] fn");
+    let root = fixture("subsume", &clean_spec(), harness);
+    let (ok, out) = run_gate(&root);
+    assert!(
+        !ok,
+        "#247 SUBSUMPTION INCOMPLETE: a §9 matrix entry naming a real symbol that is not a \
+         `#[test]` (name test_-prefixed, so the prefix check is neutral) MUST fail via \
+         forward-existence. If it does not, `discover_tests`' `#[test]`-only scan is not \
+         catching a non-test symbol, the prefix check WAS doing something, and it must NOT be \
+         removed. Output:\n{out}"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 // ---- KISS-CONFORM-6.1-0002 — direction-1 totality (clause -> test) ---------
 
 /// KISS-CONFORM-6.1-0002 — the matrix MUST be total in direction 1: every

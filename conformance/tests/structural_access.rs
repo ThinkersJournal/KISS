@@ -293,7 +293,9 @@ fn seeded_finite_f32(rng: &mut SplitMix64) -> f32 {
     ((rng.next_u64() >> 40) as f32 - 8_388_608.0) / 65_536.0
 }
 
-// Backs: KISS-CONFORM-6.8-0004, KISS-OPS-6.11-0004, KISS-OPS-6.11-0006
+// Backs: KISS-CONFORM-6.8-0004, KISS-OPS-6.11-0006
+// (§6.11-0004 is the GATHER OOB clause — this SCATTER test does not exercise gather; its
+// backing is the forward-named gather_oob_policies. #247 dropped the loose cite.)
 #[test]
 fn differential_scatter_atomic_add_reproducible() {
     // Reproducible src + index arrays (Conform §6.5: same seed -> same inputs, so a

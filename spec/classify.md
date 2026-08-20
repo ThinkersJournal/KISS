@@ -481,7 +481,7 @@ where it fixes storage bytes.
   answered with a typed decline (§6.7-0009) distinct from the unknown-token
   decline (decline vectors: `reserved_fnuz_dtypes_typed_decline`). Activating a
   reserved spelling is a future additive schema event.
-  *Test:* `test_classify_dtype_set_is_closed`.
+  *Test:* `accepts_every_closed_op_family_and_dtype`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
   the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `i8` = 8;
   `i16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;
@@ -802,12 +802,22 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   twenty-four categories of the table above, each spelled by its 3-letter token
   code; an implementation MUST NOT invent a twenty-fifth code at this schema
   version, and MUST fail (not silently encode as an "unknown" code) when it cannot
-  map a cell to one of the twenty-four. *Test:* `test_classify_op_family_enum`.
+  map a cell to one of the twenty-four. *Test:* `reject_unknown_op_family`.
 - **KISS-CLASSIFY-6.5-0007** — The work-class domain MUST be exactly `{one-warp,
   one-block, grid-stride}` with token codes `warp`, `block`, `grid`, and the
   boundaries MUST be total element count `≤ 32` (`one-warp`), `≤ 1024`
   (`one-block`), otherwise `grid-stride`; the count is computed per §6.5-0010.
   *Test:* `test_classify_work_class_enum`.
+
+  > *Note (#247):* this clause is backed by **reverse citation**, not the named forward test.
+  > `test_classify_work_class_element_count` asserts both this work-class enum **and** §6.5-0010's
+  > element-count boundaries (both mutation-verified, #187), and a `// Backs:` comment there cites
+  > this clause. It was **not** given a distinct forward name because that one test is genuinely
+  > §6.5-0010's forward name and no separate injective test exists — and #247 ruled reverse backing
+  > is first-class (since #187), so a test is not split to satisfy a naming label. **Cost, recorded
+  > so it is accepted knowingly:** when `test_classify_work_class_element_count` reddens, its fn name
+  > alone does not say whether §6.5-0007 or §6.5-0010 failed. Reverse backing here trades forward-name
+  > diagnosability for not manufacturing a redundant test.
 - **KISS-CLASSIFY-6.5-0008** — The contraction size-class domain MUST be exactly
   `{tiny, small, mid, large}` with token codes `t`, `s`, `m`, `l` and boundaries
   `≤ 8`, `9..=128`, `129..=2048`, `> 2048`; a `structure_key` MUST key size
@@ -972,7 +982,7 @@ form (§6.7-0011).
   "a reduction over an axis the rank does not have."** A collapsed (rank-reduced)
   reduction output MUST be rejected with a typed decline (§7.1-0002) rather than
   keyed, so that reductions over different axis sets never collide. *Test:*
-  `test_classify_reduce_axes_encoding`.
+  `a1_reduction_rank1_all_axes`.
 - **KISS-CLASSIFY-6.6-0010** — A **dense-contraction cell** is defined as a cell
   whose `op_family` is `gem` (§6.5-0006). The `contraction` field MUST be present
   **if and only if** the cell is a dense-contraction cell (`op_family == gem`), and
@@ -1060,7 +1070,7 @@ form (§6.7-0011).
   mixed-precision `gem` collision that formerly forced this out-of-band step — two GEMMs
   differing only in weight / accumulator / output dtype — is resolved in-key by the sk3
   contraction coordinates (§6.7-0006), so such `gem` cells are now distinct by their
-  tokens. *Test:* `test_classify_no_colliding_cell_registration`.
+  tokens. *Test:* `sk4_mixed_precision_fp8_disambiguated`.
 - **KISS-CLASSIFY-6.6-0019** — The **weight role** of a dense-contraction (`gem`)
   cell — the operand whose dtype the `contraction` field's `<wdt>` coordinate
   (§6.7-0006) carries — MUST be supplied by the caller as a role hint (§6.6-0012). An
@@ -1124,7 +1134,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   `|`-separated fields for a non-contraction cell, or exactly ten fields (the tenth
   being the contraction field) for a dense-contraction cell; a reader MUST reject a
   token with any other field count with a typed decline. *Test:*
-  `test_classify_token_field_count`.
+  `a1_binary_two_operands`.
 - **KISS-CLASSIFY-6.7-0002** — Field 0 MUST be `sk` immediately followed by the
   canonical decimal schema version (`sk4` at this maturity); a reader MUST reject a
   token whose field 0 is not `sk` followed by a supported version, including a
@@ -1136,12 +1146,12 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   (§6.5-0006), the dtype token (§6.1), the target_capability string (§6.8), the
   index-width code (`ix32`/`ix64`, §6.5-0005 — distinct from the `i32`/`i64` dtype
   tokens), the work-class code (`warp`/`block`/`grid`), and `r` immediately followed
-  by the decimal iteration rank. *Test:* `test_classify_token_scalar_fields`.
+  by the decimal iteration rank. *Test:* `a1_unary_f16_v8`.
 - **KISS-CLASSIFY-6.7-0004** — Field 7 MUST be the per-operand sub-keys joined by
   `;`, each formatted `<contig>/<bcasthex>/<vec>/<div>/<flip>` with the codes of
   §6.5 and §6.6-0007, in the canonical operand order of §6.6-0014; the number of
   `;`-separated entries MUST equal `n_operands` and MUST NOT exceed `MAX_OPERANDS`.
-  *Test:* `test_classify_token_operand_field`.
+  *Test:* `a1_elementwise_with_broadcast_operand`.
 - **KISS-CLASSIFY-6.7-0005** — Field 8 MUST be exactly one of the four
   distinctly-encoded reduce values of §6.6-0009: `-` (none / not-a-reduction),
   `rall` (all-axes reduction), `rlast` (trailing-axis reduction), or `x` followed by
@@ -1161,7 +1171,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   reader names it `BadReduceField`): a wrong spelling of a real set versus a set that
   cannot exist for the rank are separable producer bugs, and a reader MUST keep the two
   declines discriminable (the `noncanonical_reduce_*` and `out_of_range_reduce_mask_r2`
-  decline vectors). *Test:* `test_classify_token_reduce_field`.
+  decline vectors). *Test:* `a1_reduction_all_axes`.
 - **KISS-CLASSIFY-6.7-0006** — When present (dense-contraction `gem` cells only,
   §6.7-0001), field 9 MUST be `c` followed by the three M/N/K size-class codes (each ∈
   `{t, s, m, l}`), then `/`-separated: the K-divisibility code (∈ `{d16, d8, d4, d2,
@@ -1179,7 +1189,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   outside the closed set, an `<mp>` not in `{st, rm}`, or a wrong part-count) with a
   typed decline (§6.7-0009). The `<acc>` coordinate is the identity/lookup surface of the
   same accumulator dtype the contract declares as `accumulation_type` (KISS-CONTRACT
-  §6.8-0011). *Test:* `test_classify_token_contraction_field`.
+  §6.8-0011). *Test:* `a1_dense_contraction_cuda`.
 - **KISS-CLASSIFY-6.7-0007** — The token codec MUST be **spelling-keyed, not
   discriminant-keyed**: adding a new dtype code or op-family code MUST NOT change
   the bytes of any pre-existing token and MUST NOT bump the schema version. *Test:*
@@ -1193,7 +1203,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   without a panic, abort, crash, hang, or out-of-bounds read, any token with a
   malformed field, an unknown op-family or dtype code, an out-of-range mask, or a
   length outside `[1, MAX_STRUCTURE_KEY_LEN]`. *Test:*
-  `test_classify_token_reject_malformed`.
+  `reject_wrong_field_count`.
 - **KISS-CLASSIFY-6.7-0010** — Every hexadecimal mask in a token — the per-operand
   broadcast mask `<bcasthex>` (§6.7-0004) and the reduce field's `x<hex>` keepdim
   bitmask form (§6.7-0005; the `-`, `rall`, and `rlast` reduce values are not hex
@@ -1621,7 +1631,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 |---|---|
 | KISS-CLASSIFY-6.0-0001 | `test_classify_determinism_class_exact_byte` |
 | KISS-CLASSIFY-6.0-0002 | `test_classify_special_value_bit_patterns` |
-| KISS-CLASSIFY-6.1-0001 | `test_classify_dtype_set_is_closed` |
+| KISS-CLASSIFY-6.1-0001 | `accepts_every_closed_op_family_and_dtype` |
 | KISS-CLASSIFY-6.1-0002 | `test_classify_dtype_bit_widths` |
 | KISS-CLASSIFY-6.1-0003 | `test_classify_dtype_numeric_kinds` |
 | KISS-CLASSIFY-6.1-0004 | `test_classify_dtype_token_spelling` |
@@ -1657,7 +1667,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0003 | `test_classify_vec_width_enum` |
 | KISS-CLASSIFY-6.5-0004 | `test_classify_div_bucket_enum` |
 | KISS-CLASSIFY-6.5-0005 | `test_classify_index_width_boundary` |
-| KISS-CLASSIFY-6.5-0006 | `test_classify_op_family_enum` |
+| KISS-CLASSIFY-6.5-0006 | `reject_unknown_op_family` |
 | KISS-CLASSIFY-6.5-0007 | `test_classify_work_class_enum` |
 | KISS-CLASSIFY-6.5-0008 | `test_classify_size_class_enum` |
 | KISS-CLASSIFY-6.5-0009 | `test_classify_vec_width_derivation` |
@@ -1673,7 +1683,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0006 | `test_classify_structure_key_rank_and_operand_count` |
 | KISS-CLASSIFY-6.6-0007 | `test_classify_operand_sub_key_fields` |
 | KISS-CLASSIFY-6.6-0008 | `test_classify_broadcast_axis_mask` |
-| KISS-CLASSIFY-6.6-0009 | `test_classify_reduce_axes_encoding` |
+| KISS-CLASSIFY-6.6-0009 | `a1_reduction_rank1_all_axes` |
 | KISS-CLASSIFY-6.6-0010 | `test_classify_contraction_field_optional` |
 | KISS-CLASSIFY-6.6-0011 | `test_classify_structure_key_derivation_canonical` |
 | KISS-CLASSIFY-6.6-0012 | `test_classify_derivation_input_tuple` |
@@ -1682,17 +1692,17 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0015 | `test_classify_secondary_dtype_unkeyed` |
 | KISS-CLASSIFY-6.6-0016 | `test_classify_contraction_axis_roles` |
 | KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_op_family_gated` |
-| KISS-CLASSIFY-6.6-0018 | `test_classify_no_colliding_cell_registration` |
+| KISS-CLASSIFY-6.6-0018 | `sk4_mixed_precision_fp8_disambiguated` |
 | KISS-CLASSIFY-6.6-0019 | `test_classify_weight_role_hint` |
-| KISS-CLASSIFY-6.7-0001 | `test_classify_token_field_count` |
+| KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
-| KISS-CLASSIFY-6.7-0003 | `test_classify_token_scalar_fields` |
-| KISS-CLASSIFY-6.7-0004 | `test_classify_token_operand_field` |
-| KISS-CLASSIFY-6.7-0005 | `test_classify_token_reduce_field` |
-| KISS-CLASSIFY-6.7-0006 | `test_classify_token_contraction_field` |
+| KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |
+| KISS-CLASSIFY-6.7-0004 | `a1_elementwise_with_broadcast_operand` |
+| KISS-CLASSIFY-6.7-0005 | `a1_reduction_all_axes` |
+| KISS-CLASSIFY-6.7-0006 | `a1_dense_contraction_cuda` |
 | KISS-CLASSIFY-6.7-0007 | `test_classify_token_codec_additive` |
 | KISS-CLASSIFY-6.7-0008 | `test_classify_token_roundtrip` |
-| KISS-CLASSIFY-6.7-0009 | `test_classify_token_reject_malformed` |
+| KISS-CLASSIFY-6.7-0009 | `reject_wrong_field_count` |
 | KISS-CLASSIFY-6.7-0010 | `test_classify_mask_hex_lowercase` |
 | KISS-CLASSIFY-6.7-0011 | `test_classify_token_is_only_wire_form` |
 | KISS-CLASSIFY-6.7-0012 | `test_classify_reduction_accumulator_coordinate` |
