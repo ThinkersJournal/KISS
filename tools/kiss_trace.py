@@ -2011,7 +2011,7 @@ def main():
         print(f"          Of the unbacked, {_curated} carry a curated reason; the rest are "
               f"bare `untested`, which records that no test exists and nothing more.")
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
-              f"{untested_n}\n          (blocked/untestable/definitional/decredited are accounted for; "
+              f"{untested_n}\n          ({'/'.join(CLAIM_CATEGORIES)} are accounted for; "
               f"see the breakdown above).")
     return 1 if any_fail else (2 if inconclusive else 0)
 
