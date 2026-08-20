@@ -288,14 +288,14 @@ envelope; all multi-byte integers little-endian):
   contiguous bytes with each field at the offset in the table above (the wire form
   carries no in-memory alignment requirement; native 8-byte alignment of the
   `capabilities` mirror is an informative implementation note, not a wire clause).
-  *Test:* `test_announce_envelope_wire_is_56_contiguous`.
+  *Test:* `envelope_golden_bytes`.
 - **KISS-ANNOUNCE-6.1-0003** — Every field MUST occupy the exact offset in the table
-  above. *Test:* `test_announce_field_offsets_match_table`.
+  above. *Test:* `field_offsets_match_table`.
 - **KISS-ANNOUNCE-6.1-0013** — Every field MUST occupy the exact size in the table
   above. *Test:* `test_announce_field_sizes_match_table`.
 - **KISS-ANNOUNCE-6.1-0004** — The `magic` field MUST equal `0x4D414553` when read as
   a little-endian u32 (on-wire bytes `53 45 41 4D`, ASCII `SEAM`). *Test:*
-  `test_announce_magic_constant`.
+  `magic_is_seam_wire_order`.
 - **KISS-ANNOUNCE-6.1-0014** — The `magic` field (offset 0, size 4) and the
   `envelope_version` field (offset 4, size 1) MUST occupy those fixed offsets and
   sizes in **every** envelope version, so a reader can dispatch on version before
@@ -321,7 +321,7 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.1-0011** — The `capabilities` field MUST occupy offset 48 as an
   8-byte little-endian unsigned integer. *Test:* `test_announce_capabilities_field`.
 - **KISS-ANNOUNCE-6.1-0012** — Every multi-byte integer field MUST be encoded
-  little-endian. *Test:* `test_announce_all_fields_little_endian`.
+  little-endian. *Test:* `decode_roundtrips_the_reference`.
 
 ### 6.2 POD reader discipline (hard-reject)
 
@@ -331,30 +331,30 @@ envelope; all multi-byte integers little-endian):
   `test_announce_reads_prefix_before_length`.
 - **KISS-ANNOUNCE-6.2-0001** — A reader MUST reject, with a typed decline, any input
   whose length is not exactly the length mandated by its `envelope_version` (56 bytes
-  for version 1). *Test:* `test_announce_reject_wrong_length_for_version`.
+  for version 1). *Test:* `reject_wrong_length`.
 - **KISS-ANNOUNCE-6.2-0002** — A reader MUST reject, with a typed decline, any
-  envelope whose `magic` is not `0x4D414553`. *Test:* `test_announce_reject_bad_magic`.
+  envelope whose `magic` is not `0x4D414553`. *Test:* `reject_bad_magic`.
 - **KISS-ANNOUNCE-6.2-0003** — A reader MUST reject, with a typed decline, any
   envelope whose `envelope_version` it does not support. *Test:*
-  `test_announce_reject_unknown_version`.
+  `reject_unknown_version`.
 - **KISS-ANNOUNCE-6.2-0004** — A reader MUST reject, with a typed decline, any
   envelope in which `reserved0` contains a nonzero byte. *Test:*
-  `test_announce_reject_nonzero_reserved0`.
+  `reject_nonzero_reserved0`.
 - **KISS-ANNOUNCE-6.2-0011** — A reader MUST reject, with a typed decline, any
   envelope in which `reserved1` contains a nonzero byte. *Test:*
-  `test_announce_reject_nonzero_reserved1`.
+  `reject_nonzero_reserved1`.
 - **KISS-ANNOUNCE-6.2-0005** — A reader MUST reject, with a typed decline, any
   envelope whose `profiles_len` is greater than 16. *Test:*
-  `test_announce_reject_profiles_len_overflow`.
+  `reject_profiles_len_overflow`.
 - **KISS-ANNOUNCE-6.2-0006** — A reader MUST reject, with a typed decline, any
   envelope whose `profiles[0..profiles_len]` are not in strictly ascending order.
-  *Test:* `test_announce_reject_non_ascending_profiles`.
+  *Test:* `reject_non_ascending_profiles`.
 - **KISS-ANNOUNCE-6.2-0012** — A reader MUST reject, with a typed decline, any
   envelope in which a `profiles` entry at index `>= profiles_len` is nonzero. *Test:*
-  `test_announce_reject_nonzero_trailing_profiles`.
+  `reject_trailing_profile_nonzero`.
 - **KISS-ANNOUNCE-6.2-0013** — A reader MUST reject, with a typed decline, any
   envelope in which a `profiles` entry at index `< profiles_len` equals `0`. *Test:*
-  `test_announce_reject_zero_live_profile`.
+  `reject_zero_live_profile`.
 - **KISS-ANNOUNCE-6.2-0007** — On any rejection, a reader MUST return a typed decline
   and MUST NOT panic, abort, crash, hang, or read outside the input buffer. *Test:*
   `test_announce_rejection_is_typed_decline`.
@@ -679,10 +679,10 @@ a free-standing Announce clause.
 |---|---|
 | KISS-ANNOUNCE-6.0-0001 | `test_announce_determinism_class_exact_byte` |
 | KISS-ANNOUNCE-6.1-0001 | `test_announce_envelope_size_is_56` |
-| KISS-ANNOUNCE-6.1-0002 | `test_announce_envelope_wire_is_56_contiguous` |
-| KISS-ANNOUNCE-6.1-0003 | `test_announce_field_offsets_match_table` |
+| KISS-ANNOUNCE-6.1-0002 | `envelope_golden_bytes` |
+| KISS-ANNOUNCE-6.1-0003 | `field_offsets_match_table` |
 | KISS-ANNOUNCE-6.1-0013 | `test_announce_field_sizes_match_table` |
-| KISS-ANNOUNCE-6.1-0004 | `test_announce_magic_constant` |
+| KISS-ANNOUNCE-6.1-0004 | `magic_is_seam_wire_order` |
 | KISS-ANNOUNCE-6.1-0014 | `test_announce_fixed_prefix_stable_across_versions` |
 | KISS-ANNOUNCE-6.1-0005 | `test_announce_version_field_is_1` |
 | KISS-ANNOUNCE-6.1-0006 | `test_announce_reserved0_is_zero` |
@@ -692,17 +692,17 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.1-0009 | `test_announce_profiles_strictly_ascending` |
 | KISS-ANNOUNCE-6.1-0010 | `test_announce_reserved1_pad_zero` |
 | KISS-ANNOUNCE-6.1-0011 | `test_announce_capabilities_field` |
-| KISS-ANNOUNCE-6.1-0012 | `test_announce_all_fields_little_endian` |
+| KISS-ANNOUNCE-6.1-0012 | `decode_roundtrips_the_reference` |
 | KISS-ANNOUNCE-6.2-0010 | `test_announce_reads_prefix_before_length` |
-| KISS-ANNOUNCE-6.2-0001 | `test_announce_reject_wrong_length_for_version` |
-| KISS-ANNOUNCE-6.2-0002 | `test_announce_reject_bad_magic` |
-| KISS-ANNOUNCE-6.2-0003 | `test_announce_reject_unknown_version` |
-| KISS-ANNOUNCE-6.2-0004 | `test_announce_reject_nonzero_reserved0` |
-| KISS-ANNOUNCE-6.2-0011 | `test_announce_reject_nonzero_reserved1` |
-| KISS-ANNOUNCE-6.2-0005 | `test_announce_reject_profiles_len_overflow` |
-| KISS-ANNOUNCE-6.2-0006 | `test_announce_reject_non_ascending_profiles` |
-| KISS-ANNOUNCE-6.2-0012 | `test_announce_reject_nonzero_trailing_profiles` |
-| KISS-ANNOUNCE-6.2-0013 | `test_announce_reject_zero_live_profile` |
+| KISS-ANNOUNCE-6.2-0001 | `reject_wrong_length` |
+| KISS-ANNOUNCE-6.2-0002 | `reject_bad_magic` |
+| KISS-ANNOUNCE-6.2-0003 | `reject_unknown_version` |
+| KISS-ANNOUNCE-6.2-0004 | `reject_nonzero_reserved0` |
+| KISS-ANNOUNCE-6.2-0011 | `reject_nonzero_reserved1` |
+| KISS-ANNOUNCE-6.2-0005 | `reject_profiles_len_overflow` |
+| KISS-ANNOUNCE-6.2-0006 | `reject_non_ascending_profiles` |
+| KISS-ANNOUNCE-6.2-0012 | `reject_trailing_profile_nonzero` |
+| KISS-ANNOUNCE-6.2-0013 | `reject_zero_live_profile` |
 | KISS-ANNOUNCE-6.2-0007 | `test_announce_rejection_is_typed_decline` |
 | KISS-ANNOUNCE-6.2-0008 | `test_announce_reader_never_repairs` |
 | KISS-ANNOUNCE-6.3-0001 | `test_announce_availability_is_identity_pair` |

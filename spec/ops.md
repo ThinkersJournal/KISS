@@ -577,7 +577,7 @@ verbatim, everywhere).
   `reduce_std`, `reduce_norm2`, `logsumexp`, `softmax`, `log_softmax`, `rms_norm`,
   `layer_norm`, `avg_pool`) from the exact-byte class, because floating-point summation
   is not associative and neither a canonical reduction order nor a canonical accumulator
-  width is pinned by KISS-Ops. *Test:* `test_ops_nondeterministic_class_ops`.
+  width is pinned by KISS-Ops. *Test:* `class_dispatch_matches_spec`.
 - **KISS-OPS-6.0-0005** — Where an op qualifies for more than one class under §6.0-0002
   through §6.0-0004, it MUST be assigned the **most permissive** class in the order
   `order-invariant/nondeterministic` (most permissive) > `ULP/tolerance` >
@@ -757,14 +757,14 @@ wrapping two's-complement per §6.2-0002):
 
 - **KISS-OPS-6.4-0001** — `add`, `sub`, and `mul` MUST compute `a+b`, `a-b`, `a*b`
   respectively, using IEEE-754 for float dtypes and wrapping two's-complement for integer
-  dtypes. *Test:* `test_ops_add_sub_mul`.
+  dtypes. *Test:* `test_ops_add_sub_mul_wrapping`.
 - **KISS-OPS-6.4-0002** — `div` MUST compute `a/b` under IEEE-754 for float dtypes only;
   integer division and integer remainder are excluded from the op set, and division by
   zero MUST be treated as target-defined (target-UB), not pinned by KISS-Ops. *Test:*
   `test_ops_div_float_only`.
 - **KISS-OPS-6.4-0003** — `neg` MUST compute `-x` by flipping the sign bit for float
   dtypes such that `neg(-0.0)` yields `+0.0` and a NaN operand propagates a NaN, and by
-  two's-complement negation for integer dtypes. *Test:* `test_ops_neg`.
+  two's-complement negation for integer dtypes. *Test:* `test_ops_neg_integer`.
 - **KISS-OPS-6.4-0004** — `abs` MUST compute `|x|` by clearing the sign bit as a raw-bit
   operation for float dtypes such that `abs(-0.0)` yields `+0.0` and a NaN operand's
   payload is preserved (the result is a NaN with the same payload, sign cleared), and by
@@ -806,7 +806,7 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
   and yield `1` (true) or `0` (false) in the compute dtype. *Test:*
   `test_ops_compare_predicates`.
 - **KISS-OPS-6.6-0002** — `cmp_eq`, `cmp_lt`, `cmp_le`, `cmp_gt`, and `cmp_ge` MUST each
-  yield `0` (false) whenever either operand is NaN. *Test:* `test_ops_compare_nan_false`.
+  yield `0` (false) whenever either operand is NaN. *Test:* `comparisons_are_ieee_ordered`.
 - **KISS-OPS-6.6-0003** — `cmp_ne` MUST yield `1` (true) whenever either operand is NaN,
   and consequently `cmp_ne(x, x)` MUST serve as the `isnan` predicate for `x`. *Test:*
   `test_ops_cmp_ne_nan_true`.
@@ -826,7 +826,7 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 - **KISS-OPS-6.7-0001** — `floor` MUST round toward −∞, `ceil` MUST round toward +∞,
   `trunc` MUST round toward zero, and `round_even` MUST round to nearest with ties to
   even, each per the corresponding IEEE 754-2019 rounding-direction attribute. *Test:*
-  `test_ops_rounding_directions`.
+  `round_even_is_bankers_rounding`.
 - **KISS-OPS-6.7-0002** — Each rounding atom MUST propagate a NaN operand to a NaN result
   and MUST preserve the sign of a zero operand (`trunc(-0.0)=-0.0`). *Test:*
   `test_ops_rounding_nan_signed_zero`.
@@ -977,16 +977,16 @@ section-intro paragraph is an informative pointer to it):
   `±∞` unchanged. *Test:* `test_ops_reduce_identity_no_inf_dtype`.
 - **KISS-OPS-6.11-0003** — `prefix_scan` MUST compute an inclusive or exclusive running
   monoid fold along exactly one axis and MUST be length-preserving (one output element per
-  input position), distinct from `reduce`. *Test:* `test_ops_prefix_scan_length_preserving`.
+  input position), distinct from `reduce`. *Test:* `scan_is_length_preserving`.
 - **KISS-OPS-6.11-0004** — `gather` MUST substitute a runtime integer index value for one
   iteration-axis coordinate (a data-dependent read) with an out-of-bounds policy in
   `{skip, clamp, zero-fill}`; a negative index (representable only in a signed index
   dtype, §6.11-0009) MUST always be treated as out-of-bounds (no from-end wrap). *Test:*
-  `test_ops_gather_oob_policy`.
+  `gather_oob_policies`.
 - **KISS-OPS-6.11-0005** — `scatter` MUST substitute a runtime integer index for one
   output-axis coordinate (a data-dependent write) with a combine operator in `{assign,
   atomic-add, atomic-max, atomic-min}`, and MUST skip an out-of-bounds write. *Test:*
-  `test_ops_scatter_combine_and_oob`.
+  `scatter_oob_writes_are_skipped`.
 - **KISS-OPS-6.11-0006** — The `scatter` `atomic-add` combine on a floating-point dtype
   MUST be declared nondeterministic (class order-invariant/nondeterministic, §6.0-0004).
   The `atomic-max`, `atomic-min`, and integer `atomic-add` combines MUST be
@@ -994,7 +994,7 @@ section-intro paragraph is an informative pointer to it):
   elements scatter to the **same** destination index, the write from the **highest
   source (row-major iteration) index** MUST win (a pinned last-writer-in-iteration-order
   tie-break), so `assign` never depends on hardware race order. *Test:*
-  `test_ops_scatter_fp_atomic_add_nondeterministic`.
+  `scatter_fp_atomic_add_is_order_invariant_class`.
 - **KISS-OPS-6.11-0007** — `sort_network` MUST carry a `direction` attribute in
   `{ascending, descending}` (default `ascending`) and MUST perform a **stable** per-row
   permutation under a total order on `(key, original-index)` pairs in which NaN orders as
@@ -1022,7 +1022,7 @@ section-intro paragraph is an informative pointer to it):
   combines MUST be **NaN-propagating**, consistent with the `max` / `min` `reduce`
   monoids (§6.11-0002): if a NaN is scattered to a destination, or a destination already
   holds a NaN, the combined result MUST be NaN. *Test:*
-  `test_ops_scatter_atomic_minmax_nan`.
+  `scatter_atomic_max_min_nan_propagating`.
 - **KISS-OPS-6.11-0011** — `reduce` and `prefix_scan` MUST carry a `reduce_axes` descriptor
   that distinguishes **exactly four** non-overloaded categories of value — **all-axes**,
   **trailing-axis**, **none / not-a-reduction**, and an **explicit per-axis subset mask** —
@@ -1369,11 +1369,11 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 - **KISS-OPS-6.15-0001** — `max_prop` and `min_prop` (NaN-propagating) and `fmax_ieee`
   and `fmin_ieee` (NaN-suppressing, returning the non-NaN operand when exactly one operand
   is NaN) MUST be four distinct ops; an implementation MUST NOT merge, alias, or
-  substitute one for another. *Test:* `test_ops_minmax_nan_split`.
+  substitute one for another. *Test:* `max_propagates_nan_but_fmax_suppresses_it`.
 - **KISS-OPS-6.15-0002** — `relu` MUST be NaN-propagating and `-0.0`-preserving per its
   decomposition `select(cmp_lt(x, const(0)), const(0), x)`; an implementation MUST NOT
   implement `relu` as `max(x, 0)`, which would scrub a NaN input and normalize `-0.0` to
-  `+0.0`. *Test:* `test_ops_relu_not_max_zero`.
+  `+0.0`. *Test:* `relu_diverges_from_max_x_zero_at_nan`.
 - **KISS-OPS-6.15-0003** — `rem_floor` (floored remainder, taking the sign of the
   **divisor**) and `rem_trunc` (truncated remainder / `fmod`, taking the sign of the
   **dividend**) MUST be distinct ops; an implementation MUST NOT merge or substitute one
@@ -1453,7 +1453,7 @@ shared naming convention spelled identically in both foundational vocabularies.
   MUST NOT be read as a second normative pinning of the packing facts. The Ops-owned
   normative fact in this clause is the `b1` **xor+popcount accumulation to a raw `s32`**
   binary-GEMM computation semantics (a computation fact, not storage packing). *Test:*
-  `test_ops_integer_dtype_layouts`.
+  `test_ops_integer_dtype_tokens`.
 - **KISS-OPS-6.16-0007** — The interleaved (re,im) **storage layout** of `c64`/`c128` —
   pairs of `f32` and `f64` respectively (64 and 128 bits, real lane at offset 0 / the
   lower-addressed half, imaginary lane at offset 1) — is **restated here informatively and
@@ -1862,7 +1862,7 @@ cross-op axis rules in §6.19.5.
   already **resolved** to its effective value (schema default applied at encode time);
   an encoder MUST NOT omit a field because it equals its default, so a defaulted
   attribute and an explicitly-stated equal attribute MUST produce identical bytes.
-  *Test:* `test_ops_opattrs_explicit_default_resolution`.
+  *Test:* `e3_default_resolution_byte_equality`.
 - **KISS-OPS-6.19-0006** — Every enumerated OpAttrs sub-vocabulary MUST be encoded as a
   frozen little-endian unsigned-integer ordinal with ordinal `0` reserved as an
   invalid/unspecified sentinel that a conforming encoder never emits and a reader
@@ -2001,7 +2001,7 @@ inlined normatively in §6.19-0037.
   order: (1) if `r > 1` **and** `a == r-1` (the trailing axis), emit `0xFFFE`; (2)
   otherwise — a non-trailing single axis, **or** the sole axis of a rank-1 operand — emit
   the single-bit subset mask `1 << a`. A `prefix_scan` MUST NOT emit `0xFFFF` and MUST NOT
-  emit `0x0000`. *Test:* `test_ops_opattrs_reduce_axes_multiplex`.
+  emit `0x0000`. *Test:* `e2_reduce_rank1_sole_axis_is_all_axes`.
 - **KISS-OPS-6.19-0021** — The `output_column_ordering` OpAttrs field MUST be encoded as
   the frozen `u8` ordinal `{1=channel-major (tap-minor), 2=tap-major (channel-minor)}`
   with `0` reserved, drawing its ordinals from the `column_ordering` sub-vocabulary of
@@ -2022,7 +2022,7 @@ inlined normatively in §6.19-0037.
   elements, where **element `i` corresponds to spatial axis `i` in ascending operand
   spatial-axis index order (the outermost spatial axis first, the innermost spatial axis
   last)**; the elements MUST be preserved in that order and MUST NOT be sorted (an ordered
-  vector). *Test:* `test_ops_opattrs_window_param_vector`.
+  vector). *Test:* `e2_avg_pool_nonsquare_preserves_axis_order`.
 - **KISS-OPS-6.19-0024** — The `permutation` sub-vocabulary MUST be encoded as a `u8`
   element-count prefix (`0..MAX_RANK`) followed by that many `u8` axis-index elements
   forming a valid permutation of `0..rank-1`, preserved in the given order (never
@@ -2072,7 +2072,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
   Both are emitted explicitly (§6.19-0005); the Classify structure_key **omits** the `(acc + mp)`
   field when both are at their default — a separate concern of §6.7-0013, not this blob. This is the
   ops-side that makes the accumulator/precision **requestable**, realizing KISS-CLASSIFY-6.7-0012.
-  *Test:* `test_ops_opattrs_reduce_schema`.
+  *Test:* `e2_reduce_sum_all_axes_keepdim`.
 - **KISS-OPS-6.19-0026** — The `prefix_scan` OpAttrs blob MUST be exactly `monoid`
   (`u8`, mandatory) then `reduce_axes` (`u16` LE, selecting exactly one axis per the
   scan precedence of §6.19-0020: `0xFFFE` when that axis is the trailing axis of a
@@ -2083,48 +2083,48 @@ by the embedding layer) selects the schema and the reader replays it positionall
   `accumulator` (`u8`, encoded exactly as for `reduce` in §6.19-0025: `0x00` = compute-dtype
   diagonal, else the 1-based §6.1-table dtype ordinal of a float accumulator, meaningful only for a
   float `sum`/`prod` scan) then `math_precision` (`u8`, the `<mp>` ordinal of §6.7-0006), in that
-  order. *Test:* `test_ops_opattrs_prefix_scan_schema`.
+  order. *Test:* `e2_prefix_scan_trailing_inclusive`.
 - **KISS-OPS-6.19-0027** — The `gather` OpAttrs blob MUST be exactly `axis` (`u8`, the
   indexed axis of §6.11-0013, range `0..MAX_RANK-1`) then `oob_policy` (enum `u8`, default
   `1` skip) then `index_operand` (`u8`, range `0..MAX_OPERANDS-1`) then `index_dtype`
-  (enum `u8`, mandatory), in that order. *Test:* `test_ops_opattrs_gather_schema`.
+  (enum `u8`, mandatory), in that order. *Test:* `e2_gather_clamp_nondefault`.
 - **KISS-OPS-6.19-0028** — The `scatter` OpAttrs blob MUST be exactly `axis` (`u8`, the
   indexed axis of §6.11-0013) then `combine` (`scatter_combine` enum `u8`, default `1`
   assign) then `oob_policy` (enum `u8`, fixed `1` skip) then `index_operand` (`u8`) then
   `index_dtype` (enum `u8`, mandatory), in that order. *Test:*
-  `test_ops_opattrs_scatter_schema`.
+  `e2_scatter_atomic_add`.
 - **KISS-OPS-6.19-0029** — The `sort_network` OpAttrs blob MUST be exactly `axis` (`u8`,
   the permuted axis of §6.11-0014, resolving to the trailing axis `r-1`) then `direction`
   (`sort_direction` enum `u8`, default `1` ascending) then `stability` (bool `u8`, fixed
-  `1` stable), in that order. *Test:* `test_ops_opattrs_sort_network_schema`.
+  `1` stable), in that order. *Test:* `e2_sort_network_ascending_stable`.
 - **KISS-OPS-6.19-0030** — The `reduce_var` and `reduce_std` OpAttrs blobs MUST each be
   exactly `reduce_axes` (`u16` LE, mandatory; `0x0000` forbidden per §6.19-0038) then
   `keepdim` (bool `u8`, fixed `1`) then `bessel_correction` (bool `u8`, default `0`
   population, §6.13-0004), in that order. *Test:*
-  `test_ops_opattrs_reduce_var_std_schema`.
+  `e2_reduce_var_population`.
 - **KISS-OPS-6.19-0031** — The `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`
   OpAttrs blobs MUST each be exactly a single `norm_axis` (`u8`, mandatory, range
   `0..MAX_RANK-1`) field — the normalization axis pinned by §6.13-0004 for
   `softmax`/`log_softmax` and by §6.13-0008 for `rms_norm`/`layer_norm`; the
   `eps`/`gamma`/`beta` quantities of `rms_norm`/`layer_norm` are operands/params
   (§6.13 operand-ordering convention), NOT OpAttrs fields. *Test:*
-  `test_ops_opattrs_norm_axis_schema`.
+  `e2_softmax_norm_axis`.
 - **KISS-OPS-6.19-0032** — The `avg_pool` OpAttrs blob MUST be exactly `window_size`,
   `stride`, `dilation`, `padding` (each a window-parameter vector, §6.19-0023) then
   `count_include_pad` (bool `u8`, default `1`), in that order; the `max_pool` OpAttrs
   blob MUST be exactly `window_size`, `stride`, `dilation`, `padding` in that order with
-  no trailing flag. *Test:* `test_ops_opattrs_pool_schema`.
+  no trailing flag. *Test:* `e2_avg_pool_square_37_bytes`.
 - **KISS-OPS-6.19-0033** — The `im2col` OpAttrs blob MUST be exactly `window_size`,
   `stride`, `dilation`, `padding` (each a window-parameter vector) then
   `output_column_ordering` (`column_ordering` enum `u8`, default `1` channel-major), in
-  that order. *Test:* `test_ops_opattrs_im2col_schema`.
+  that order. *Test:* `e2_im2col_channel_major`.
 - **KISS-OPS-6.19-0034** — The `index_select`, `embedding`, and `scatter_add` OpAttrs
   blobs MUST each be exactly `axis` (`u8`, the indexed axis of §6.11-0013) then
   `index_operand` (`u8`) then `index_dtype` (enum `u8`), in that order; these
   gather/scatter wrappers MUST NOT carry a free `oob_policy` or `combine` field, because
   those values are fixed by their §6.13 decompositions (`index_select`→skip,
   `embedding`→zero-fill, `scatter_add`→atomic-add + skip). *Test:*
-  `test_ops_opattrs_gather_scatter_wrapper_schema`.
+  `e2_index_select_u32`.
 
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
@@ -2503,7 +2503,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.0-0001 | `test_ops_determinism_class_enum` |
 | KISS-OPS-6.0-0002 | `test_ops_exact_byte_ops` |
 | KISS-OPS-6.0-0003 | `test_ops_ulp_class_ops` |
-| KISS-OPS-6.0-0004 | `test_ops_nondeterministic_class_ops` |
+| KISS-OPS-6.0-0004 | `class_dispatch_matches_spec` |
 | KISS-OPS-6.0-0005 | `test_ops_determinism_class_precedence` |
 | KISS-OPS-6.0-0006 | `test_ops_no_fma_contraction_exact_byte` |
 | KISS-OPS-6.0-0007 | `test_ops_per_output_determinism_class` |
@@ -2526,9 +2526,9 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.3-0003 | `test_ops_floor_ops_have_no_decomposition` |
 | KISS-OPS-6.3-0004 | `test_ops_decomposition_terminates_at_floor` |
 | KISS-OPS-6.3-0005 | `test_ops_floor_ops_justified_atoms` |
-| KISS-OPS-6.4-0001 | `test_ops_add_sub_mul` |
+| KISS-OPS-6.4-0001 | `test_ops_add_sub_mul_wrapping` |
 | KISS-OPS-6.4-0002 | `test_ops_div_float_only` |
-| KISS-OPS-6.4-0003 | `test_ops_neg` |
+| KISS-OPS-6.4-0003 | `test_ops_neg_integer` |
 | KISS-OPS-6.4-0004 | `test_ops_abs_raw_bit` |
 | KISS-OPS-6.4-0005 | `test_ops_int_neg_abs_wrap` |
 | KISS-OPS-6.5-0001 | `test_ops_select_order` |
@@ -2536,10 +2536,10 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.5-0003 | `test_ops_select_cond_zero_nan` |
 | KISS-OPS-6.5-0004 | `test_ops_select_no_mask_multiply` |
 | KISS-OPS-6.6-0001 | `test_ops_compare_predicates` |
-| KISS-OPS-6.6-0002 | `test_ops_compare_nan_false` |
+| KISS-OPS-6.6-0002 | `comparisons_are_ieee_ordered` |
 | KISS-OPS-6.6-0003 | `test_ops_cmp_ne_nan_true` |
 | KISS-OPS-6.6-0004 | `test_ops_compare_signed_zero` |
-| KISS-OPS-6.7-0001 | `test_ops_rounding_directions` |
+| KISS-OPS-6.7-0001 | `round_even_is_bankers_rounding` |
 | KISS-OPS-6.7-0002 | `test_ops_rounding_nan_signed_zero` |
 | KISS-OPS-6.8-0001 | `test_ops_transcendental_declared_tier_is_gate` |
 | KISS-OPS-6.8-0002 | `test_ops_transcendental_no_cross_lang_identity` |
@@ -2559,14 +2559,14 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0001 | `test_ops_element_map_base_access` |
 | KISS-OPS-6.11-0002 | `test_ops_reduce_monoids` |
 | KISS-OPS-6.11-0002a | `test_ops_reduce_identity_no_inf_dtype` |
-| KISS-OPS-6.11-0003 | `test_ops_prefix_scan_length_preserving` |
-| KISS-OPS-6.11-0004 | `test_ops_gather_oob_policy` |
-| KISS-OPS-6.11-0005 | `test_ops_scatter_combine_and_oob` |
-| KISS-OPS-6.11-0006 | `test_ops_scatter_fp_atomic_add_nondeterministic` |
+| KISS-OPS-6.11-0003 | `scan_is_length_preserving` |
+| KISS-OPS-6.11-0004 | `gather_oob_policies` |
+| KISS-OPS-6.11-0005 | `scatter_oob_writes_are_skipped` |
+| KISS-OPS-6.11-0006 | `scatter_fp_atomic_add_is_order_invariant_class` |
 | KISS-OPS-6.11-0007 | `test_ops_sort_network_total_order` |
 | KISS-OPS-6.11-0008 | `test_ops_reduce_keepdim_broadcast` |
 | KISS-OPS-6.11-0009 | `test_ops_index_dtype_set` |
-| KISS-OPS-6.11-0010 | `test_ops_scatter_atomic_minmax_nan` |
+| KISS-OPS-6.11-0010 | `scatter_atomic_max_min_nan_propagating` |
 | KISS-OPS-6.11-0011 | `test_ops_reduce_axes_four_categories` |
 | KISS-OPS-6.11-0012 | `test_ops_index_operand_role` |
 | KISS-OPS-6.11-0013 | `test_ops_index_axis_attribute` |
@@ -2594,8 +2594,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.14-0004 | `test_ops_consumer_resolves_unknown_op` |
 | KISS-OPS-6.14-0005 | `test_ops_op_not_in_own_decomposition` |
 | KISS-OPS-6.14-0006 | `test_ops_embedded_body_level` |
-| KISS-OPS-6.15-0001 | `test_ops_minmax_nan_split` |
-| KISS-OPS-6.15-0002 | `test_ops_relu_not_max_zero` |
+| KISS-OPS-6.15-0001 | `max_propagates_nan_but_fmax_suppresses_it` |
+| KISS-OPS-6.15-0002 | `relu_diverges_from_max_x_zero_at_nan` |
 | KISS-OPS-6.15-0003 | `test_ops_rem_floor_vs_trunc` |
 | KISS-OPS-6.15-0004 | `test_ops_gelu_exact_vs_tanh` |
 | KISS-OPS-6.16-0001 | `test_ops_dtype_bit_layouts` |
@@ -2603,7 +2603,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0003 | `test_ops_bf16_layout` |
 | KISS-OPS-6.16-0004 | `test_ops_e4m3_layout` |
 | KISS-OPS-6.16-0005 | `test_ops_e5m2_layout` |
-| KISS-OPS-6.16-0006 | `test_ops_integer_dtype_layouts` |
+| KISS-OPS-6.16-0006 | `test_ops_integer_dtype_tokens` |
 | KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
 | KISS-OPS-6.16-0008 | `test_ops_dtype_layout_coversioned` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
@@ -2636,7 +2636,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0002 | `test_ops_opattrs_distinct_from_pattern_attrs` |
 | KISS-OPS-6.19-0003 | `test_ops_opattrs_carrier_set_closed` |
 | KISS-OPS-6.19-0004 | `test_ops_opattrs_field_order_abi` |
-| KISS-OPS-6.19-0005 | `test_ops_opattrs_explicit_default_resolution` |
+| KISS-OPS-6.19-0005 | `e3_default_resolution_byte_equality` |
 | KISS-OPS-6.19-0006 | `test_ops_opattrs_enum_ordinal_reserve_zero` |
 | KISS-OPS-6.19-0007 | `test_ops_opattrs_int_fixed_width_le` |
 | KISS-OPS-6.19-0008 | `test_ops_opattrs_little_endian` |
@@ -2651,21 +2651,21 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0017 | `test_ops_opattrs_index_dtype_enum` |
 | KISS-OPS-6.19-0018 | `test_ops_opattrs_sort_direction_enum` |
 | KISS-OPS-6.19-0019 | `test_ops_opattrs_scan_exclusivity_enum` |
-| KISS-OPS-6.19-0020 | `test_ops_opattrs_reduce_axes_multiplex` |
+| KISS-OPS-6.19-0020 | `e2_reduce_rank1_sole_axis_is_all_axes` |
 | KISS-OPS-6.19-0021 | `test_ops_opattrs_column_ordering_enum` |
 | KISS-OPS-6.19-0022 | `test_ops_opattrs_boolean_flags` |
-| KISS-OPS-6.19-0023 | `test_ops_opattrs_window_param_vector` |
+| KISS-OPS-6.19-0023 | `e2_avg_pool_nonsquare_preserves_axis_order` |
 | KISS-OPS-6.19-0024 | `test_ops_opattrs_permutation_reserved` |
-| KISS-OPS-6.19-0025 | `test_ops_opattrs_reduce_schema` |
-| KISS-OPS-6.19-0026 | `test_ops_opattrs_prefix_scan_schema` |
-| KISS-OPS-6.19-0027 | `test_ops_opattrs_gather_schema` |
-| KISS-OPS-6.19-0028 | `test_ops_opattrs_scatter_schema` |
-| KISS-OPS-6.19-0029 | `test_ops_opattrs_sort_network_schema` |
-| KISS-OPS-6.19-0030 | `test_ops_opattrs_reduce_var_std_schema` |
-| KISS-OPS-6.19-0031 | `test_ops_opattrs_norm_axis_schema` |
-| KISS-OPS-6.19-0032 | `test_ops_opattrs_pool_schema` |
-| KISS-OPS-6.19-0033 | `test_ops_opattrs_im2col_schema` |
-| KISS-OPS-6.19-0034 | `test_ops_opattrs_gather_scatter_wrapper_schema` |
+| KISS-OPS-6.19-0025 | `e2_reduce_sum_all_axes_keepdim` |
+| KISS-OPS-6.19-0026 | `e2_prefix_scan_trailing_inclusive` |
+| KISS-OPS-6.19-0027 | `e2_gather_clamp_nondefault` |
+| KISS-OPS-6.19-0028 | `e2_scatter_atomic_add` |
+| KISS-OPS-6.19-0029 | `e2_sort_network_ascending_stable` |
+| KISS-OPS-6.19-0030 | `e2_reduce_var_population` |
+| KISS-OPS-6.19-0031 | `e2_softmax_norm_axis` |
+| KISS-OPS-6.19-0032 | `e2_avg_pool_square_37_bytes` |
+| KISS-OPS-6.19-0033 | `e2_im2col_channel_major` |
+| KISS-OPS-6.19-0034 | `e2_index_select_u32` |
 | KISS-OPS-6.19-0035 | `test_ops_opattrs_reduce_axes_classify_reconciliation` |
 | KISS-OPS-6.19-0036 | `test_ops_opattrs_noncarrier_axis_resolution` |
 | KISS-OPS-6.19-0037 | `test_ops_opattrs_max_rank_operands_pinned` |

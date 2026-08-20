@@ -23,7 +23,6 @@ Violations reported by check 1:
   - a clause whose body `*Test:*` tag disagrees with its matrix row
   - a clause with zero or multiple `*Test:*` tags
   - a duplicate clause ID, or a clause ID whose prefix != its document
-  - a test name that lacks the suite `test_` prefix
   - a conformance test mapped to more than one clause (a Conform-owned
     cross-standard test cited by a deferring clause is reported as an allowed
     deferral, not a violation)
@@ -1119,11 +1118,18 @@ def check_doc(res):
         elif cid in matrix_test and uniq[0] != matrix_test[cid]:
             res.add(f"test disagreement for {cid}: body `{uniq[0]}` vs matrix `{matrix_test[cid]}`")
 
-    # 5. test-naming convention: every test name starts with `test_`
-    offenders = sorted({t for _, t, _ in res.matrix if not t.startswith("test_")})
-    if offenders:
-        eg = ", ".join(f"`{o}`" for o in offenders[:2])
-        res.add(f"{len(offenders)} test name(s) lack the suite `test_` prefix (e.g. {eg})")
+    # 5. REMOVED (#247): the `test_`-prefix convention. Its only real service was "the matrix
+    #    names something that is actually a test", and the forward-EXISTENCE check (binding,
+    #    check 2) delivers that STRICTLY BETTER — existence also catches a bogus name that
+    #    happens to start with `test_`, which a prefix match never could. This is a subsumption,
+    #    not a relaxation: proven born-red, not argued, by
+    #    `test_conform_existence_subsumes_the_prefix_check` (trace_gate.rs), which reddens on a
+    #    §9 entry naming a real non-#[test] symbol with the name test_-prefixed so the prefix
+    #    check is neutral. The convention forced a matrix `*Test:*` to be a `test_*` placeholder
+    #    even when the real backing test is descriptively named (`reject_bad_magic`,
+    #    `gather_oob_policies`), which kept the matrix UNTRUE — the very drift #247 fixes. The
+    #    tool's own authority model already says so: `discover_tests`' docstring — "the citation,
+    #    not the name, is what ties a requirement to executable code."
 
 
 def main():
