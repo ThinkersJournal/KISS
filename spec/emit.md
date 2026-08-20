@@ -338,13 +338,35 @@ named language family; this note records only *why* the criterion exists.
 ## 3. Terms & Definitions
 
 - **Emitter** — a party or component that, given the normative input `(OpDef +
-  structure_key)`, produces a callable kernel (an artifact) described by a
-  KISS-Contract, rendering the emitter-must-supply portion of the lowering partition
-  (§6.4) in a target language.
+  structure_key)`, produces the **ordered pair `{artifact, contract}`** (§6.6-0003):
+  a callable kernel, **and** the KISS-Contract that describes it. It renders the
+  emitter-must-supply portion of the lowering partition (§6.4) in a target language.
+  **Producing the artifact alone does not make a component an emitter.**
+
+  **An emitter is strictly larger than a target-language rendering component.** A
+  component that renders §6.4's emitter-must-supply set into a target language
+  performs *part* of emitting; it is an emitter only if it also produces the
+  contract of §6.6 and honours the typed-decline obligation of §6.8. An
+  §6's obligations on "the emitter" therefore do **not** attach to an
+  implementation's per-target rendering interface merely because that interface is
+  the part which varies by target; they attach to whatever component — or
+  composition of components — produces the §6.6-0003 pair.
+
+  This is stated because the narrower reading is the natural one and has been made
+  in practice. An implementation mapping its per-target lowering interface onto the
+  word "emitter" inherits every §6 obligation the larger object carries but the
+  smaller one does not — observed twice, on §6.6-0001/-0003 (the pair) and
+  §6.8-0004 (never panic), in the same implementation, for this reason both times.
 - **Neutral driver** — the target-independent portion of the lowering machinery that
   spells the driver-may-spell portion of the partition (§6.3) without knowing the
-  target language. It is the same code across all targets; the emitter is the part
-  that differs per target.
+  target language. It is the same code across all targets; **the target-language
+  spelling is what differs per target.**
+
+  *"The part that differs per target" is not a synonym for "the emitter."* An
+  emitter is strictly larger than that part — see **Emitter** above. Reading the two
+  as equivalent is precisely the mapping that drops the contract and typed-decline
+  obligations, because those attach to the emitter and not to the rendering
+  component.
 - **OpDef (op definition)** — a KISS-Ops op definition: an op name, its OpAttrs
   channel, its per-op numeric semantics, and (for a non-primitive op) its reference
   decomposition into strictly-lower-level ops, resolvable to the KISS-Ops primitive
