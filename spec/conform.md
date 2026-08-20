@@ -940,6 +940,25 @@ enum (§6.0). See umbrella §3 for the full statement.
   > of the imprecision predicts the direction of the error. This clause makes the suite's
   > comparators declare their blindness; it does not, and cannot, reach an operator's
   > instrument.
+  >
+  > **Why declaring a blindness is preventive rather than pedantic — a worked case.** The
+  > structural comparator normalizes **(3) commutative/associative operand order**. The
+  > **numeric** comparators do not: reassociation perturbs the bits, which is why KISS-Ops
+  > §6.17 carries a reduction-order (reassociation) error term at all. **So the structural and
+  > numeric relations disagree about reassociation BY DESIGN, and both are correct.**
+  >
+  > The consequence is that a clause citing §6.9-0001 as backing for a numeric-reassociation
+  > obligation would be **un-failable** — the comparator normalizes exactly the difference such
+  > an obligation is about, so its test could never go red. **No clause does this today**, which
+  > is the point: the enumeration is what keeps it that way, and an undeclared blindness is only
+  > discovered by the clause that mis-cites it.
+  >
+  > Corroborated from the value side by the KISS reference implementation, whose
+  > decomposition-differential is a **numeric** comparator (op output versus decomposition
+  > output) and is order-**sensitive** on associativity. The same implementation independently
+  > confirms **(1)**: non-primitive and floor-resolved forms agree in **value**, so the
+  > structural comparator's floor-resolution rests on a demonstrated equivalence rather than an
+  > assumed one.
 
   *Test:* `test_conform_comparator_declares_normalization`.
 
