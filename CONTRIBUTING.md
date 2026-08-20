@@ -76,6 +76,25 @@ motivating incident is named so the rule reads as a lesson rather than as ceremo
 one general form: **a state derived from an artifact's *existence* is not a state derived from
 its *content*.**
 
+**Find the one you need by SYMPTOM, not by number.** This list exists because the conventions are
+now numerous enough that people re-derive rules already written here — including their authors.
+On 2026-08-20 the architect proposed three "new" conventions in one evening and **two were
+already in this file**, both inside convention 9; a lane independently rediscovered the same
+convention 9 the same day. **The failure was never coverage — it was retrieval.**
+
+| the thing that just happened | convention |
+|---|---|
+| my check examined nothing / passed vacuously | 1–10 |
+| my seed didn't apply, or applied and proved nothing | **9** |
+| my seed applied and went RED — for the wrong reason | **9** (second half) |
+| the check ran fine but on the wrong bytes / level / role / axis | **11** |
+| I read an exit code, a return value, or a log line instead of the state | **11** (*level*) |
+| the check is correct but I asked it the wrong question | **14** |
+| a "blocked" note that nobody has re-read since it was written | **12** |
+| a fix added an outcome and I didn't check the old ones still happen | **13** |
+| a clause id appears in a test — does it count? | **15** |
+| the record is stale, unattributed, unenforced, or ambiguous | **16** |
+
 **1. A claim that gates a decision states its method, and what that method did not examine.**
 Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:* two separate
 sweeps were reported as complete when each had searched one axis — one for dtype spellings but
@@ -156,10 +175,17 @@ search string was mangled before it reached the replacer, so nothing matched. **
 investigation at the code, which is fine, and away from the tooling, which is where the fault was.**
 Assert the pattern matched exactly once before replacing.
 
-Note the asymmetry, because it bounds how much older proofs are worth: **a red result is
-self-validating** — the test could not have failed unless the patch applied — **while a green result
-proves nothing until the application is checked.** Proofs run before this convention are trustworthy
-exactly insofar as every vector came back red.
+Note the asymmetry, because it bounds how much older proofs are worth: **a green result proves
+nothing until the application is checked**, while a red result proves *something* broke. **A red is
+NOT self-validating** — an earlier draft of this convention said it was, and the paragraph four
+below already refuted it. *Why the correction:* a seed wrote `return []` into a function returning
+a **dict**; four controls reddened on the resulting type error, and "caught by 4 controls" was
+nearly reported as evidence of discrimination. The seed applied, the anchor matched, `SEED APPLIED`
+printed — **and the red was worthless.** Re-run type-correctly, exactly ONE control reddened.
+**A seed must be type-correct and semantically plausible, not merely applied**, and an ill-typed
+seed is more seductive than a false green because *a red reads as the control working.* What
+caught it was noticing that tests named `ignores_*` failing under a detector that ignores
+everything made no sense — a semantic smell, not a mechanical check.
 
 And for a test credited to more than one clause, per-vector proofs are necessary but not sufficient:
 publish the **isolation matrix** showing each mutation fails **exactly one** test. That no two fail
@@ -224,6 +250,12 @@ instances in one day, on four different axes.
 - **Role.** Two dtypes were reported unreachable after checking reachability *in principle*. They
   construct fine as operand 0; they are unreachable only in the **sibling-operand role** the
   specification assigns them. The clause answered a question one role over.
+- **Level, again — a return value is not a state.** A threaded reply was posted by API; the
+  second call failed on an invalid JSON escape (a backtick is not `\b`, `\n`, `\t`…), and the only
+  signal was a bare non-zero exit. **"The command returned" and "the thing happened" are different
+  levels**, and reporting the first as the second would have claimed two dispositions with one
+  posted. Caught by counting the replies afterwards. **After any action whose success you intend
+  to report, measure the state rather than read the return.**
 - **Axis.** *Spelled* (the implementation holds the dtype and emits its token) was read as
   *derivable* (it can construct a cell that places that token in a key). Different measurements,
   one label — and the wrong one made "add the missing dtypes" look like the remediation for a gap
@@ -408,7 +440,7 @@ recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-con
 and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
 three whose only reddening mutation is a spec-text edit).
 
-**16. Evidence has a LOCATION, and four ways of losing track of it.** A finding is only as
+**16. Evidence has a LOCATION, and five ways of losing track of it.** A finding is only as
 durable as someone's ability to go back to what it rested on. These are one convention because
 they are one failure — the evidence moved, or was never named, or was argued instead of shown.
 
@@ -467,6 +499,18 @@ the listed reasons would have believed they were finished and then hit an unreco
 **a blocked item is precisely where a known future blocker gets lost, because nobody re-reads
 the note until they think they are done.** The re-read never happens while it is blocked, and by
 then the evidence for the unlisted obstacle may have expired.
+
+**(e) A bare `§X.Y-NNNN` does not locate a clause — spell the SUB-STANDARD in any prose that
+crosses documents.** Clause numbering is per sub-standard, so the short form is ambiguous by
+construction and the ambiguity is invisible: both readings resolve to a real clause. *Why:* three
+live collisions, and **two of them produced a wrong citation by a careful reader.** `§6.8-0013` is
+a namespace-vocabulary clause in KISS-Classify and an exhibition clause in KISS-Conform — two
+projects cited the wrong one, which is what made #238 necessary. `§6.6-0002` is an op-identity
+clause in KISS-Classify and a tier-2 numeric round-trip clause in KISS-Consume — **a finding about
+the first was relayed against the second, and the correction of that relay drew a wrong conclusion
+about a correct finding.** Two errors, one collision, both by careful readers, inside twenty
+minutes. Unlike (a)–(d) this one is **mechanically checkable**: an unprefixed `§\d+\.\d+-\d+` in
+cross-document prose is a grep, so it can have a detector rather than only a rule.
 
 > **On convention 9, from the same week it was needed twice.** A mutation seeded during the
 > #280 review failed to apply and produced three green results that read exactly like evidence;
