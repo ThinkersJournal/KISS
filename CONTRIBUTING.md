@@ -468,6 +468,13 @@ makes this a class rather than a grep anecdote:
   cannot license a conclusion was itself about to ship truncated.** Caught by reading the state
   back, which is the only check that covers this: **the call succeeded, so neither an exit code
   nor a positive control would have fired.**
+  **And it runs in BOTH directions — the payload you SEND and the payload you RECEIVE.** A merge
+  gate queried a PR's review comments, **the API returned an incomplete list and reported
+  success**, and the gate cleared a PR that had two undispositioned findings on it. **Exit 0, no
+  truncation, no crash, nothing malformed** — the tool simply answered with less than it had.
+  Reading the state back does not cover this one either, because *this was* reading the state
+  back. **What covers it is asking a second time and comparing**, which is what that gate now
+  does. **A single successful read is a sample, not a census.**
   **The remedy is one extra call: a POSITIVE CONTROL.** Run the same query against something you
   know is there; if it finds that, the empty result is evidence. A consumer answering a
   reliance question the same day did exactly this unprompted — *"the same pattern DOES find a
