@@ -14,7 +14,7 @@ every path via try/finally. Run from the batch worktree ROOT:  python tools/prov
 WARNING: run only on a clean tree; an interrupt mid-cargo leaves the current seed applied (the
 finally restores it, but kill -9 does not). `git diff conformance/src` must be empty after.
 """
-import io, subprocess, re, sys
+import subprocess, re, sys
 
 SK = "conformance/src/structure_key.rs"; IT = "conformance/src/integer.rs"
 ST = "conformance/src/structural.rs"; CT = "conformance/src/contract.rs"
@@ -48,7 +48,17 @@ def run_cargo():
                         "--test", "structural_access", "--test", "contract_framing"],
                        capture_output=True, text=True, timeout=560)
     out = r.stdout + r.stderr
-    return set(re.findall(r"^test (\S+) \.\.\. FAILED", out, re.M)), out
+    # A mutation must COMPILE and RUN, or the failed set is meaningless: a compile error emits
+    # NO per-test results, and parsing zero FAILED would read as "killed nothing" — a silent
+    # wrong-population defect INSIDE the instrument (Copilot #311). The exit code alone can't
+    # tell a test failure (wanted — cargo exits 101) from a compile abort (not), so require the
+    # test-output signature and fail LOUD on its absence rather than measure a false zero.
+    if "test result:" not in out:
+        raise RuntimeError(
+            f"cargo produced NO test results (exit {r.returncode}) — a compile error or an abort "
+            f"before tests ran. The failed set would be a false zero. First lines:\n"
+            + "\n".join(out.splitlines()[:20]))
+    return set(re.findall(r"^test (\S+) \.\.\. FAILED", out, re.M))
 
 
 def read_bytes(p):
@@ -74,7 +84,7 @@ def main():
         try:
             write_bytes(f, src.replace(old, new, 1))
             assert read_bytes(f).count(new) >= 1, f"SEED NOT APPLIED: {name}"  # convention 9
-            failed, _ = run_cargo()
+            failed = run_cargo()  # raises if the mutation did not compile + run (Copilot #311)
         finally:
             write_bytes(f, src)                                   # byte-exact restore, every path
             assert read_bytes(f) == src, f"NOT RESTORED byte-exact: {name}"

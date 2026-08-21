@@ -55,12 +55,16 @@ scatter_atomic_max_min_nan_propagating   kills [scatter_atomic_max_min_nan_propa
 test_contract_version_value_pinned       kills [test_contract_version_value_pinned]       OK
 ```
 
-**Defect rate (KISS's first measured demonstration defect rate): 0/10** — every intended test
-reddened on the first matrix run (all ten demonstrations, including the deferred 6.1-0008). This
-is a *designed-then-verified* zero: each mutation was written against the read implementation,
-not a blind first guess, and the seed-applied / seed-restored assertions confirm no mutation
-silently no-op'd. Reported even though it is zero, per #278; MLMF's 11-across-10 is a prior, not
-this measurement.
+**Defect rate (KISS's first measured demonstration defect rate): 0 defects — and the denominator
+is worth stating, because two are in play (Copilot #311).** Ten mutations were *demonstrated*
+(the matrix above), so the demonstration defect rate is **0/10**; nine of the ten became
+`// Proven:` markers and the tenth (`KISS-CONTRACT-6.1-0008`) was deferred as NAMED-not-CITED, so
+across *marked clauses* the rate is **0/9**. Same zero, different construct: 0/10 counts
+demonstrations, 0/9 counts markers. Every intended test reddened on the first matrix run. This is
+a *designed-then-verified* zero: each mutation was written against the read implementation, not a
+blind first guess, and the seed-applied / seed-restored assertions confirm no mutation silently
+no-op'd. Reported even though it is zero, per #278; MLMF's 11-across-10 is a prior, not this
+measurement.
 
 ## The NAMED-not-CITED finding (why 6.1-0008 is demonstrated but not marked)
 
