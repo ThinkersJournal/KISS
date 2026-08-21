@@ -157,5 +157,100 @@ code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
                          "§6.8-0012 omits a bucketed component of the key")
 
 
+# --- §6.8-0013 completeness: a declared dimension must be bound to an exhibit -----------
+#
+# The defect (#283): -0013 makes each DECLARED dimension falsifiable and leaves the
+# COMPLETENESS of the declaration exactly as unfalsifiable as before. The architect
+# demonstrated it by appending a SEVENTH dimension with no exhibit anywhere -- lint CLEAN,
+# ratchet CLEAN, test passes, nothing fires. These controls are that demonstration, kept.
+
+DECL_SIX = """\
+- **KISS-CONFORM-9.9-0004** - The **example** byte-match compares tokens.
+  Its declaration is **`Normalizes:`** the computation, and each bucketed component
+  collapses a range onto one token: extent divisibility above its ceiling (`d16`), vector
+  width above its widest (`v8`), and element count within a work class
+  (`warp`/`block`/`grid`).
+
+  > *Informative.* An aside naming a token pair (`ix32`/`ix64`) that is NOT a declared
+  > dimension of this relation.
+  *Test:* `test_example`.
+"""
+
+# The architect's seventh dimension, appended to the declaring paragraph with no exhibit.
+DECL_SEVEN = DECL_SIX.replace(
+    "and element count within a work class\n  (`warp`/`block`/`grid`).",
+    "element count within a work class (`warp`/`block`/`grid`), and contraction extent\n"
+    "  within a size class (`t`/`s`/`m`/`l`).",
+)
+
+EXHIBITS_THREE = """\
+// EXHIBITS `d16` -- extent divisibility
+// EXHIBITS `v8` -- vector width
+// EXHIBITS `warp`/`block`/`grid` -- element count within a work class
+"""
+
+
+def unbound_with(clause_body, rs_text):
+    with tempfile.TemporaryDirectory() as td:
+        p = pathlib.Path(td) / "declared_blindness.rs"
+        p.write_text(rs_text, encoding="utf-8")
+        return kc.unbound_dimensions(clause_body, str(p))
+
+
+class DeclarationCompletenessTest(unittest.TestCase):
+    def test_seed_applied(self):
+        """Vacuity guard, and it earns its place.
+
+        If the seventh dimension never landed in the fixture, the caught-case below would
+        pass because there was nothing to catch -- a green from a fixture that tests
+        nothing. Assert the seed applied before asserting what it does.
+        """
+        self.assertNotEqual(DECL_SEVEN, DECL_SIX, "the seventh dimension was not seeded")
+        self.assertEqual(len(kc.declared_dimensions(DECL_SIX)), 3)
+        self.assertEqual(len(kc.declared_dimensions(DECL_SEVEN)), 4)
+
+    def test_declared_but_unexhibited_dimension_is_caught(self):
+        """#283 itself: a dimension appended to the declaration with no exhibit."""
+        unbound = unbound_with(DECL_SEVEN, EXHIBITS_THREE)
+        self.assertEqual(unbound, [("t", "s", "m", "l")])
+
+    def test_fully_bound_declaration_passes(self):
+        """Control. Without it, a check hardcoded to report SOMETHING would pass above."""
+        self.assertEqual(unbound_with(DECL_SIX, EXHIBITS_THREE), [])
+
+    def test_unexhibited_record_binds_the_dimension(self):
+        """§6.8-0013 allows `unexhibited` -- but only as a record something can READ.
+
+        The record that existed when this was written lived in a `//!` prose paragraph.
+        "MUST be recorded, never omitted" is prose nothing reads; this is the half that
+        makes it an artifact.
+        """
+        rs = EXHIBITS_THREE + "//! UNEXHIBITED `t`/`s`/`m`/`l` -- no derivation in this codec\n"
+        self.assertEqual(unbound_with(DECL_SEVEN, rs), [])
+
+    def test_informative_aside_is_not_a_declared_dimension(self):
+        """Scope control: the parse must not manufacture dimensions from prose.
+
+        `ix32`/`ix64` appears in the informative block of the fixture and is not declared.
+        Counting it would demand an exhibit for a blindness the relation does not claim --
+        failing closed, but on a fiction, which trains readers to ignore the check.
+        """
+        self.assertNotIn(("ix32", "ix64"), kc.declared_dimensions(DECL_SIX))
+
+    def test_unreadable_exhibit_file_fails_closed(self):
+        """An unreadable artifact must refuse the green, not silently bind nothing."""
+        self.assertIsNone(kc.unbound_dimensions(DECL_SIX, "/nonexistent/declared_blindness.rs"))
+
+    def test_live_declaration_is_fully_bound(self):
+        """The real tree, not a fixture: every dimension §6.8-0012 declares is bound.
+
+        This started RED -- all six unbound, because no machine-readable marker existed.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
+        self.assertEqual(len(kc.declared_dimensions(body)), 6)
+        self.assertEqual(kc.unbound_dimensions(body), [])
+
+
 if __name__ == "__main__":
     unittest.main()
