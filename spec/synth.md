@@ -299,8 +299,12 @@ and KISS-Consume:
 > **TIER 2 — numeric round-trip:** bit-identity of the computed result is claimed ONLY
 > SAME-LANGUAGE, ON-DEVICE — same source language, same target device — and only for the
 > exact-byte determinism class; ULP/tolerance and order-invariant/nondeterministic ops
-> are compared under their declared comparator, never for bit identity. This tier is a
-> strict, narrowly-scoped add-on to tier 1, never a substitute for it.
+> are never claimed bit-identical. This tier is a strict, narrowly-scoped add-on to
+> tier 1, never a substitute for it.
+>
+> How such an op's result is *evaluated* is KISS-Conform's, not this sub-standard's
+> and not KISS-Emit's — see KISS-EMIT §6.7-0002 on the verification mandate excised
+> from that clause, and on what its removal leaves unnamed.
 
 > Numeric identity is NEVER claimed across languages. Cross-language round-trip is
 > TIER 1 (structural) ONLY — Slang tanh is not bit-identical to CUDA tanh, and

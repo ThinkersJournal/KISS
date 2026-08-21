@@ -843,10 +843,17 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   as the always-claimable round-trip. *Test:* `test_consume_roundtrip_tier1_structural`.
 - **KISS-CONSUME-6.6-0002** — **TIER 2 — numeric round-trip:** bit-identity of the computed result
   is claimed ONLY SAME-LANGUAGE, ON-DEVICE — same source language, same target device — and only
-  for the exact-byte determinism class; ULP/tolerance and order-invariant/nondeterministic ops are
-  compared under their declared comparator, never for bit identity. This tier is a strict,
-  narrowly-scoped add-on to tier 1, never a substitute for it. An implementation MUST NOT claim
-  tier-2 bit identity except same-language, on-device, and for the exact-byte determinism class.
+  for the exact-byte determinism class; ULP/tolerance and order-invariant/nondeterministic ops
+  MUST NOT be claimed bit-identical. This tier is a strict, narrowly-scoped add-on to tier 1,
+  never a substitute for it. An implementation MUST NOT claim tier-2 bit identity except
+  same-language, on-device, and for the exact-byte determinism class.
+
+  This clause restricts a **claim** and states no verification method; how a
+  `ULP/tolerance` op's result is evaluated is KISS-Conform's, under §6.0-0003. The
+  excised conjunct, the reason it was excised rather than reworded, and the consequence
+  for equivalence checks are stated identically in the corresponding KISS-Emit clause
+  (§6.7-0002) — the two are held semantically equivalent by KISS-EMIT §6.7-0008 and its
+  cross-standard lint.
   *Test:* `test_consume_roundtrip_tier2_numeric_same_language_ondevice`.
 - **KISS-CONSUME-6.6-0003** — Numeric identity is NEVER claimed across languages. Cross-language
   round-trip is TIER 1 (structural) ONLY — an op's implementation in one source language is not
@@ -858,8 +865,11 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   KISS-Ops determinism/fidelity enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`
   (KISS-OPS §6.0-0001), imported verbatim: an `exact-byte` op is compared for tier-2 bit identity
   only under §6.6-0002's same-language on-device restriction, while `ULP/tolerance` and
-  `order-invariant/nondeterministic` ops MUST be compared under their declared comparator and MUST
-  NOT be compared for bit identity. An implementation MUST NOT re-fork this enum. *Test:*
+  `order-invariant/nondeterministic` ops MUST NOT be compared for bit identity. An
+  implementation MUST NOT re-fork this enum. As in §6.6-0002, this clause decides WHICH
+  CLAIM IS ADMISSIBLE and states no verification method; the "MUST be compared under
+  their declared comparator" conjunct was excised with the same mandate for the same
+  reason. *Test:*
   `test_consume_roundtrip_tier_selected_by_determinism_enum`.
 - **KISS-CONSUME-6.6-0005** — KISS-Consume and KISS-Emit MUST be treated as **DAG siblings** with
   **no** dependency edge between them: an implementation MUST NOT require KISS-Emit to perform a
