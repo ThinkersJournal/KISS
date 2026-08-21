@@ -256,7 +256,8 @@ def main():
     print(f"  {len(declared):3d} clause(s) declare what they normalize")
     print(f"  {len(excluded):3d} select/apply a comparator without defining one (explicit)")
     print(f"  {len(undeclared):3d} name a comparison relation and declare NOTHING")
-    print(f"  {len(dims):3d} dimension(s) declared by the admissibility match, each bound to an exhibit")
+    print(f"  {len(dims):3d} dimension(s) declared by the admissibility match, each bound to an "
+          f"exhibit or an `unexhibited` record")
     bad = False
     if undeclared:
         bad = True
@@ -304,8 +305,6 @@ def main():
             print("          - " + "/".join("`" + t + "`" for t in g))
         print("  Add an exhibition with its discrimination control, or a `// UNEXHIBITED`")
         print("  record naming a token and the reason the derivation is unavailable.")
-    elif dims and not declared:
-        pass
     if declared and not dims:
         bad = True
         print("-" * 68)

@@ -7,6 +7,7 @@ lint exists to catch, so it would be a poor joke to commit it here.
 Run: python tools/test_kiss_comparators.py
 """
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -197,7 +198,10 @@ def unbound_with(clause_body, rs_text):
         return kc.unbound_dimensions(clause_body, str(p))
 
 
-class DeclarationCompletenessTest(unittest.TestCase):
+# NB: this class was originally named DeclarationCompletenessTest, SHADOWING the class
+# above and silently dropping its six tests -- the suite still reported OK, over a
+# population six smaller than it looked. Found in review of #306.
+class DeclaredDimensionBindingTest(unittest.TestCase):
     def test_seed_applied(self):
         """Vacuity guard, and it earns its place.
 
@@ -288,6 +292,36 @@ class DeclarationCompletenessTest(unittest.TestCase):
         body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
         self.assertEqual(len(kc.declared_dimensions(body)), 6)
         self.assertEqual(kc.unbound_dimensions(body), [])
+
+
+class SuiteIntegrityTest(unittest.TestCase):
+    """The suite must run every test it contains.
+
+    Added after review of #306 found `DeclarationCompletenessTest` defined TWICE in this
+    module: the second definition shadowed the first and six tests silently stopped
+    running, while the suite still reported OK -- over a population six smaller than it
+    looked. A green count is not evidence the count is over the right set, which is the
+    defect this whole file exists to catch, appearing in the file itself.
+    """
+
+    def test_no_class_name_is_defined_twice(self):
+        src = pathlib.Path(__file__).read_text(encoding="utf-8")
+        names = re.findall(r"^class\s+(\w+)", src, re.M)
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        self.assertEqual(dupes, [], "shadowed class(es): %r -- earlier tests never run" % dupes)
+
+    def test_every_defined_test_is_discovered(self):
+        """Counts what unittest LOADS against what the file DEFINES.
+
+        Catches shadowing by any route, not just a duplicate class name.
+        """
+        src = pathlib.Path(__file__).read_text(encoding="utf-8")
+        defined = len(re.findall(r"^    def (test_\w+)", src, re.M))
+        loaded = unittest.defaultTestLoader.loadTestsFromModule(
+            sys.modules[__name__]).countTestCases()
+        self.assertEqual(loaded, defined,
+                         "%d tests defined but %d loaded -- something is shadowed"
+                         % (defined, loaded))
 
 
 if __name__ == "__main__":
