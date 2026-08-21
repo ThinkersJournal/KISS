@@ -209,8 +209,32 @@
 # regression, always — a stale proof claiming aboutness it has lost is worse than no proof. When
 # a legitimate retirement drops the count, bump this number down in the same PR, exactly as a
 # `stale` improvement bumps it up. See #278 and classify_proven().
+#
+# untested 496 -> 495 by the KISS-EMIT-6.4-0005 RECLASSIFICATION, REBASED onto #297's floor.
+# TOOL-DERIVED: `--ratchet --base-ref origin/main` on the rebased tree reported "Set the floor to
+# harness 380, lint 33, untested 495" and prints `proven at the floor - 0` separately.
+#
+# THIS IS NOT A COVERAGE IMPROVEMENT AND MUST NOT BE READ AS ONE. No test was written and the
+# clause is no better exercised. The row moved from `decredited` (which rolls into the
+# genuinely-untested total) to `blocked` (accounted for), because the KISS-Emit editor of record
+# established WHY it cannot be tested and WHEN that ends.
+#
+# The reason: §6.4-0005's subject is the COMPLEMENT OF AN AUDIT RESULT -- "any operator the
+# neutrality audit (§6.5) did not prove universal". §6.5-0001 makes the recorded audit manifest a
+# FREEZE PRECONDITION, so at Draft maturity no manifest exists, the set has no value, and no test
+# can construct a member -- therefore none can construct a violation. Recording it `untested`
+# INVITES SOMEONE TO WRITE A TEST THAT CANNOT EXIST; `blocked` names when it stops being blocked.
+#
+# A downward move in `untested` with no test written is exactly the shape that can launder a
+# regression, so it is recorded here rather than only in the ledger note: the mechanism is a
+# category change, the authority is the sub-standard's editor, and the unblock condition is a
+# named artifact the spec itself sequences.
+#
+# REBASE NOTE: #297 landed the 4th dimension (`proven`) while this sat. The conflict was resolved
+# by taking main's floor whole and RE-DERIVING with the tool rather than hand-merging the two
+# numbers -- `untested` was the only row this change touches, and `proven 0` is #297's to own.
 # key	value
 harness	380
 lint	33
-untested	496
+untested	495
 proven	0
