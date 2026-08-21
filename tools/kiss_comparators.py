@@ -138,9 +138,32 @@ def undeclared_buckets(clause_body, path=KEY_CODEC):
 # never be asked for an exhibit.
 #
 # The stable tag is the TOKEN GROUP the declaration already names -- `d16`,
-# `warp`/`block`/`grid`. Nothing new has to be kept in sync: a dimension that does not say
-# which tokens it collapses onto has not told the reader what is indistinguishable, which
-# §6.8-0012 already requires of it.
+# `warp`/`block`/`grid` -- so there is no second registry to drift.
+#
+# FAILS OPEN, and the earlier justification for that was FALSE (found in review of #306).
+# This comment claimed §6.8-0012 already requires a dimension to name its tokens, making a
+# token-less dimension an upstream violation rather than a silent pass here. IT DOES NOT:
+# §6.8-0012's three MUSTs require an enumeration of DIMENSIONS and forbid citing a comparator
+# for a dimension it normalizes; none mentions tokens. The token list in the clause is
+# DESCRIPTIVE of the current six buckets. Tracked as #307, whose amendment is the architect's.
+#
+# AND THE NAIVE FIX IS WRONG TWICE OVER. Requiring a token group per declared dimension would
+# make five of the six `Normalizes:` clauses violations -- a tolerance comparator normalizes
+# 'numeric difference within the declared ULP bound' and a NaN comparator 'the payload and
+# sign bits', and neither collapses onto a token alphabet. It would also make §6.8-0012's OWN
+# FIRST ENTRY non-conformant: `Normalizes:` THE COMPUTATION has no token group, because the
+# computation is ABSENT from the compared value entirely rather than collapsed onto a token.
+# Two different kinds of blindness; one of them has nothing to name.
+#
+# THE LIVE INSTANCE, which is the reason this is disclosed rather than shrugged at: `the
+# computation` is declared, is NOT exhibited in declared_blindness.rs, and is NOT in the
+# unexhibited record (which names only the contraction size class). The semantics-blindness
+# this entire clause exists for is the one dimension the check cannot see. #307 closes it at
+# source by distinguishing the two kinds; nothing here can, because the parse keys on tokens.
+#
+# WHAT IS ALREADY CLOSED, so the hole is not read as wider than it is: `undeclared_buckets`
+# above requires a token of EVERY codec alphabet to appear in the clause, so a bucketed
+# dimension that HAS a derivation cannot be declared token-lessly -- it fails there first.
 BLINDNESS_TEST = os.path.join(os.path.dirname(HERE), "conformance", "tests",
                               "declared_blindness.rs")
 RE_DIM_GROUP = re.compile(r"\(((?:`[^`]+`)(?:/`[^`]+`)*)\)")

@@ -241,6 +241,44 @@ class DeclarationCompletenessTest(unittest.TestCase):
         """An unreadable artifact must refuse the green, not silently bind nothing."""
         self.assertIsNone(kc.unbound_dimensions(DECL_SIX, "/nonexistent/declared_blindness.rs"))
 
+    def test_requiring_a_token_group_would_break_five_clauses(self):
+        """Guards the corrected fails-open justification against being 'fixed' back.
+
+        #306 review found the original justification false: §6.8-0012 has no MUST
+        requiring a declared dimension to name its tokens. The obvious remedy -- add one --
+        is ALSO wrong, and this pins why. Five of the six clauses carrying a `Normalizes:`
+        declaration name zero tokens, correctly: a tolerance comparator normalizes "numeric
+        difference within the declared ULP bound" and a NaN comparator "the payload and sign
+        bits", and neither blindness collapses onto a token alphabet at all.
+
+        If this count ever drops, either a clause grew a token group or the scan changed --
+        both worth a human look before the remedy is reconsidered.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        bodies = dict(kc.clause_bodies(doc))
+        declared, _, _, _ = kc.scan()
+        tokenless = [c for c in declared if not kc.declared_dimensions(bodies[c])]
+        self.assertEqual(
+            len(tokenless), 5,
+            "expected exactly five token-less `Normalizes:` declarations, got %r" % (tokenless,))
+        self.assertNotIn("KISS-CONFORM-6.8-0012", tokenless,
+                         "the admissibility match's declaration MUST carry token groups")
+
+    def test_a_codec_backed_bucket_cannot_be_declared_tokenlessly(self):
+        """The half of the hole that IS closed, and by the other check.
+
+        `undeclared_buckets` requires a token of every codec alphabet to appear in the
+        clause, so a bucketed dimension that has a derivation cannot be declared without
+        its tokens -- it fails there before reaching this parse. The residual hole is a
+        bucketed dimension with NO codec alphabet behind it.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
+        stripped = body.replace("`d16`", "the divisibility ceiling")
+        self.assertEqual(kc.undeclared_buckets(stripped), ["DivBucket"],
+                         "removing a bucket's tokens must be caught by the codec check")
+        self.assertEqual(kc.undeclared_buckets(body), [])
+
     def test_live_declaration_is_fully_bound(self):
         """The real tree, not a fixture: every dimension §6.8-0012 declares is bound.
 
