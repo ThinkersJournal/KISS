@@ -16,6 +16,7 @@ Run: python tools/test_kiss_floor_dimensions.py
 """
 import pathlib
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -58,6 +59,12 @@ class DimensionSetTest(unittest.TestCase):
         This is the test that does not have to be rewritten when a fifth dimension is
         added — it reads DIMENSIONS. A version enumerating the four by hand would pass
         forever while the fifth went unchecked, which is exactly how #271 arrived.
+
+        SCOPE, narrowed after review: this proves each key is PRESENT-or-red. It does NOT
+        prove the dimension's value is COMPARED — a dimension added to DIMENSIONS and never
+        wired to a comparison passes here while gating nothing, the exact inverse of how
+        `proven` arrived. That is `ValueIsComparedTest` below, which has to drive the tool
+        end-to-end because `classify_ratchet` never compares `proven` at all.
         """
         for dropped in kt.DIMENSIONS:
             with self.subTest(dropped=dropped):
@@ -132,6 +139,108 @@ class DimensionSetTest(unittest.TestCase):
         floor, problems = kt.read_floor(str(real))
         self.assertEqual(problems, [])
         self.assertEqual(sorted(floor), sorted(kt.DIMENSIONS))
+
+
+# --- PRESENCE IS NOT COMPARISON (#271 review) -----------------------------------------
+#
+# The drop arm above proves each dimension's KEY IS REQUIRED. It does not prove the
+# dimension's VALUE IS COMPARED — a dimension added to DIMENSIONS but never wired to a
+# comparison passes the drop arm while gating nothing, which is the exact inverse of how
+# `proven` arrived. Worse, `verdict_for` reaches only `classify_ratchet`, and
+# `classify_ratchet` never compares `proven` at all: that lives at the CALL SITE. So for
+# the very dimension this change protects, the drop arm shows presence and never comparison.
+#
+# These arms therefore run the REAL TOOL END-TO-END against the repo, perturbing one floor
+# value at a time. A fixture would answer the wrong question: `floor["lint"]` IS compared on
+# the GIT-LESS path (kiss_trace.py:863) and is NOT compared when a --base-ref is supplied,
+# so a git-less fixture would report a gate that the shipping path does not have.
+
+# Dimensions whose FLOOR VALUE is NOT count-compared on the git path, with the measurement.
+# EXACT-SET, so it fails closed in both directions: a NEW uncompared dimension reds here,
+# and a dimension that STARTS being compared also reds, forcing a deliberate edit.
+VALUE_NOT_COMPARED = {
+    "lint": "measured: floor lint 33 -> 38 with live 33 exits 0 and prints `at the floor - "
+            "... lint 33 ...`, i.e. the LIVE number, so the mismatch is invisible. On the git "
+            "path `floor['lint']` is read only inside the git-less branch (:863) and as the "
+            "`counts_at_floor` precondition (:907) — neither can produce a red. The lint "
+            "dimension is gated as a SET against the base ledger, which is the real check; "
+            "whether the COUNT should also red is a design question, raised on #271 rather "
+            "than decided here.",
+}
+
+PERTURB = {"harness": +1, "lint": +1, "untested": -1, "proven": +1}
+
+
+def ratchet_with_floor(text):
+    """Run the REAL ratchet against the repo with a perturbed floor, then restore."""
+    floor = pathlib.Path(HERE.parent / "conformance" / "COVERAGE_FLOOR.tsv")
+    orig = floor.read_text(encoding="utf-8")
+    try:
+        floor.write_text(text, encoding="utf-8")
+        r = subprocess.run([sys.executable, str(HERE / "kiss_trace.py"), "--ratchet",
+                            "--base-ref", "origin/main"],
+                           capture_output=True, text=True, timeout=300)
+        return r.returncode, r.stdout
+    finally:
+        floor.write_text(orig, encoding="utf-8")
+        assert floor.read_text(encoding="utf-8") == orig, "floor restore FAILED"
+
+
+class ValueIsComparedTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.floor_text = (HERE.parent / "conformance" / "COVERAGE_FLOOR.tsv").read_text(
+            encoding="utf-8")
+
+    def _perturbed(self, dim, delta):
+        tab = chr(9)
+        cur = int([l.split(tab)[1] for l in self.floor_text.splitlines()
+                   if l.split(tab)[0].strip() == dim][0])
+        old, new = "%s%s%d" % (dim, tab, cur), "%s%s%d" % (dim, tab, cur + delta)
+        text = self.floor_text.replace(old, new, 1)
+        self.assertNotEqual(text, self.floor_text, "seed did not apply for %s" % dim)
+        return text
+
+    def test_control_the_unperturbed_floor_is_clean(self):
+        """Without this every arm below passes against a tool that is simply always red.
+
+        It also fails loudly on a stale base — `origin/main` not being an ancestor makes the
+        ratchet return INCONCLUSIVE (exit 2), which is non-zero and would satisfy a careless
+        `assertNotEqual(rc, 0)` in every arm below. Rebase, then re-run.
+        """
+        rc, out = ratchet_with_floor(self.floor_text)
+        self.assertEqual(rc, 0, "control is not clean — rebase onto origin/main first:\n"
+                                + out[-600:])
+
+    def test_every_dimensions_value_is_compared(self):
+        """Perturb each floor value by one; a compared dimension must go RED (exit 1).
+
+        Exit 1 specifically, never merely non-zero: exit 2 is the ratchet's INCONCLUSIVE
+        refusal and is reachable for reasons that have nothing to do with the perturbation.
+        """
+        for dim, delta in PERTURB.items():
+            with self.subTest(dim=dim):
+                rc, out = ratchet_with_floor(self._perturbed(dim, delta))
+                if dim in VALUE_NOT_COMPARED:
+                    self.assertEqual(
+                        rc, 0,
+                        "`%s` is recorded as NOT count-compared but the perturbation red — "
+                        "the gap has been closed, so remove it from VALUE_NOT_COMPARED.\n%s"
+                        % (dim, out[-400:]))
+                else:
+                    self.assertEqual(
+                        rc, 1,
+                        "perturbing `%s` by %+d did not red the ratchet (exit %d). Its key is "
+                        "required but its VALUE is not compared — the dimension gates "
+                        "nothing.\n%s" % (dim, delta, rc, out[-400:]))
+
+    def test_the_uncompared_set_is_exact(self):
+        """Fails closed both ways, and every entry carries its measurement."""
+        self.assertTrue(set(VALUE_NOT_COMPARED) <= set(kt.DIMENSIONS))
+        for dim, why in VALUE_NOT_COMPARED.items():
+            self.assertIn("measured", why, "%s is excepted without a measurement" % dim)
+        self.assertEqual(sorted(PERTURB), sorted(kt.DIMENSIONS),
+                         "a dimension has no perturbation arm")
 
 
 if __name__ == "__main__":
