@@ -99,6 +99,9 @@ retrieval.**
 | a fix added an outcome and I didn't check the old ones still happen | **13** |
 | a clause id appears in a test — does it count? | **15** |
 | the record is stale, unattributed, unenforced, or ambiguous | **16** |
+| I am about to tidy something that looks redundant — is it? | **17** (the defence should have told you; if it did not, measure) |
+| my comment says "don't simplify this" and gives a reason | **17** (a reason is believed; a measurement is checked) |
+| I am adding a guard because another gate has one | **17** (which STRUCTURE needs it? analogy is cargo cult) |
 
 **1. A claim that gates a decision states its method, and what that method did not examine.**
 Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:* two separate
@@ -609,6 +612,118 @@ what a correct no-op produces.**
 > only the seeder's own `substring not found` gave it away. **A convention that exists is not a
 > convention that ran.** Print the seed's confirmation, and treat any green obtained from an
 > unconfirmed seed as no result at all.
+
+**17. A comment defending a non-obvious choice must carry the MEASUREMENT, not the reason.**
+Conventions 1–16 all catch a **claim that outran its evidence**. This one fails in the opposite
+direction: **a defence that never captured its evidence**, and so is asserted too weakly to
+survive contact with a competent editor. *"Keep these distinct"* is a **preference** and loses an
+argument with someone tidying. *"Tidy this and the sabotage that reddens two tests reddens none"*
+is a **fact**, and it tells the reader how to re-derive it before touching the line.
+**The failure mode of the weak version is that it reads as superstition — and superstition is the
+first thing a competent person removes.** A defence that survives only while the next reader
+believes an unsupported assertion has an expiry date set by someone else's confidence.
+
+*Why, and the instance is cited as a RECIPE rather than a number on purpose — see below.*
+**MLMF** (`https://github.com/ciresnave/mlmf`, branch `design/backend-agnostic-mlmf`, ref `8c1fbb5`)
+carries an array fixture at `crates/mlmf-gguf/src/metadata.rs:728` and `:776` whose values are
+deliberately **distinct** rather than zeros. Reproduce, in a worktree at that ref: replace
+`(i * 11)` with `0u32` at both sites; set the `array_get("nums", 3)` expectation to `U32(0)`;
+apply the off-by-one `index.checked_mul(w)` → `index.saturating_sub(1).checked_mul(w)`; run
+`cargo test -p mlmf-gguf --lib`. **The off-by-one alone reddens two tests. With the fixture
+tidied to zeros it reddens NONE** — every assertion stays true because two elements become the
+same bytes. **The distinctness was load-bearing and nothing said so.**
+
+> **The citation is a recipe because the convention applied to itself demands one.** MLMF's own
+> reason for refusing the short form: *"I would rather they wrote that than '2 red vs 47 green,
+> measured by mlmf', because **the second is a number someone has to believe and the first is a
+> thing someone can run**."* Note also that **the all-zeros variant does not exist in the
+> repository** — it was built in a throwaway worktree, measured, and removed. A citation naming a
+> stored artifact would have been wrong.
+>
+> **And a hazard inside the strong form, which is theirs:** a measurement can carry a number that
+> is **incidental to the point**. The passing total in that run will grow with every test they
+> add; **the load-bearing figure is the contrast — two reds became zero — not the total.** An
+> entry hanging on the incidental number goes stale and then looks wrong for a reason that does
+> not matter. **Cite the contrast, not the magnitude.**
+
+**A second instance, and a different failure of the weak form. Baracuda** (`baracuda`, PR #27,
+commit `e4188096`, `scripts/check-test-crate-locality.sh`, fn `names_crate`) runs `sed` to
+completion into a variable rather than piping it to `grep -q`. **It looks like a pipe somebody
+forgot to simplify.** Simplifying it reintroduces a SIGPIPE-under-`pipefail` bug: `grep -q` exits
+at first match and closes the pipe, `sed` — still writing a file larger than the pipe buffer —
+takes SIGPIPE, `pipefail` promotes 141 to the pipeline status although grep *succeeded*, and `if !`
+inverts a pass into a violation. **Measured on the guard's first live CI run: 8 files reddened on
+`ubuntu-latest`, 0 on `windows-latest`, 0 on the local Git-Bash box** — because MSYS masks the
+signal Linux delivers.
+
+> **Their failure mode is the opposite of MLMF's and that is why both are cited.** MLMF's weak
+> comment would be removed as **superstition**. Baracuda's would be removed as **"it does not even
+> reproduce"** — a maintainer on Windows sees zero and concludes the defence is imaginary. **The
+> strong form tells that reader why their platform is the wrong instrument before they draw the
+> conclusion.** A measurement that is a *split* carries more than a contrast: it predicts what a
+> skeptic will see, including when they will see nothing.
+
+> **THIS ENTRY FAILED ITS OWN RULE THREE TIMES WHILE BEING DRAFTED, each caught by a different
+> party, and that is recorded here rather than tidied away.** Written as *"2 red vs 47 green,
+> measured by mlmf"*, the founding citation would have been a number to believe rather than a
+> recipe to run — **caught by MLMF.** Citing Baracuda before their consent landed would have
+> carried a **weak-form** comment as the example of the **strong** form — **caught by waiting.**
+> And the worked example above originally said *"this file's own guard"* when the guard is in a
+> Rust test file, **so the thirty-second verification pointed at something the reader could not
+> locate** — **caught by review.**
+>
+> **A convention about verifiability that failed verifiability three times in its own drafting is
+> not embarrassing; it is the strongest available evidence that the failure is DEFAULT rather than
+> careless.** Nobody was being sloppy. **The weak form is what writing produces unless something
+> external checks it**, which is precisely why the rule is worth having and precisely why it will
+> keep needing enforcement rather than agreement.
+
+**THE COUNTERWEIGHT, AND IT IS THIS CONVENTION'S OWN FAILURE MODE ARRIVING AS A FALSE POSITIVE.**
+A rule that says *defend your choices with measurements* invites defences everywhere. **A defence
+added by ANALOGY rather than by MECHANISM is cargo cult, and it is indistinguishable from a real
+one to the next reader** — which is strictly worse than the weak comment this convention replaces,
+because it will be believed. *Why:* an empty-set assertion was proposed for a gate whose set is a
+**cargo-validated literal list** — an unknown or removed package makes cargo hard-error, so that
+step **cannot** silently check an empty set. **The empty-set defence belongs to a gate that
+DISCOVERS its set**, and that gate already carried it. **Ask which structure needs which defence;
+do not apply the shape everywhere it rhymes.**
+
+**The strongest instance is this repository's own, it predates the convention, and it defends an
+ABSENCE rather than a choice** — which is the harder case, because there is no code to point at and
+the next reader's default assumption is that somebody forgot. In
+`conformance/tests/structure_key_vectors.rs`, where the obvious assertion would be to compare the
+emitted artifact's `source_commit` against `SOURCE_COMMIT`:
+
+> *"**NOT asserted here:** `source_commit`. `doc` is the emitter's own output and the emitter writes
+> `SOURCE_COMMIT` into that field, so comparing the two compares a value to itself and cannot fail —
+> **verified by mutating the constant to a bogus value, after which this test still passed.** The
+> committed-vs-fresh byte equality in `test_structure_key_vectors_artifact_is_fresh` catches that
+> same mutation (it fails STALE), so **the obligation is covered non-vacuously there, not here.**"*
+
+**It does all three things the strong form requires, and one more.** It states the **measurement**
+(the constant was mutated and the test still passed), it names **the mutation that established
+it**, and it says **where the obligation IS covered instead** — so a reader who thinks the check is
+missing is told both why it is absent and what to inspect in its place. **Without that last part, a
+defended absence still reads as a gap.**
+
+**A convention whose best instance was already in the file before anyone wrote the convention is a
+much stronger claim that the rule describes something real** than any number of instances written
+to comply with it. Nobody was following a rule here; **this is what the strong form looks like when
+it is produced by the work rather than by the process.**
+
+**This raises the bar here rather than describing what we already do.** A single grep over
+`conformance/`, `tools/` and `.github/` finds this category **everywhere** — `"DO NOT SIMPLIFY THE
+BRANCH BELOW"`, `` "`|| rc=$?` is LOAD-BEARING, not defensive" ``, `"deliberately narrow in two
+ways, both load-bearing"`, `"Scan by MACRO INVOCATION, not by line"` — and **nearly every one is
+the weak form.** They carry a mechanism, which is a reason, not a measurement.
+
+**The worked example is this repository's own, and it is named precisely so a skeptic can reach
+it:** `conformance/tests/structure_key_vectors.rs`, the guard backing
+`KISS-CONFORM-6.3-0011`. Its comment says a line-based scan
+*"is disarmed by a newline — and rustfmt wraps a long `assert_eq!` across lines as a matter of
+course."* **True, and unfalsifiable as written.** The strong form seeds the multi-line form and
+records that **the guard goes green while the defect stands** — which a skeptic checks in thirty
+seconds instead of taking on trust.
 
 If you propose normative text, follow the house style so it stays testable:
 
