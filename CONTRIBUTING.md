@@ -555,7 +555,7 @@ first thing a competent person removes.** A defence that survives only while the
 believes an unsupported assertion has an expiry date set by someone else's confidence.
 
 *Why, and the instance is cited as a RECIPE rather than a number on purpose — see below.*
-**MLMF** (`github.com/ciresnave/mlmf`, branch `design/backend-agnostic-mlmf`, ref `8c1fbb5`)
+**MLMF** (`https://github.com/ciresnave/mlmf`, branch `design/backend-agnostic-mlmf`, ref `8c1fbb5`)
 carries an array fixture at `crates/mlmf-gguf/src/metadata.rs:728` and `:776` whose values are
 deliberately **distinct** rather than zeros. Reproduce, in a worktree at that ref: replace
 `(i * 11)` with `0u32` at both sites; set the `array_get("nums", 3)` expectation to `U32(0)`;
@@ -594,6 +594,21 @@ signal Linux delivers.
 > conclusion.** A measurement that is a *split* carries more than a contrast: it predicts what a
 > skeptic will see, including when they will see nothing.
 
+> **THIS ENTRY FAILED ITS OWN RULE THREE TIMES WHILE BEING DRAFTED, each caught by a different
+> party, and that is recorded here rather than tidied away.** Written as *"2 red vs 47 green,
+> measured by mlmf"*, the founding citation would have been a number to believe rather than a
+> recipe to run — **caught by MLMF.** Citing Baracuda before their consent landed would have
+> carried a **weak-form** comment as the example of the **strong** form — **caught by waiting.**
+> And the worked example above originally said *"this file's own guard"* when the guard is in a
+> Rust test file, **so the thirty-second verification pointed at something the reader could not
+> locate** — **caught by review.**
+>
+> **A convention about verifiability that failed verifiability three times in its own drafting is
+> not embarrassing; it is the strongest available evidence that the failure is DEFAULT rather than
+> careless.** Nobody was being sloppy. **The weak form is what writing produces unless something
+> external checks it**, which is precisely why the rule is worth having and precisely why it will
+> keep needing enforcement rather than agreement.
+
 **THE COUNTERWEIGHT, AND IT IS THIS CONVENTION'S OWN FAILURE MODE ARRIVING AS A FALSE POSITIVE.**
 A rule that says *defend your choices with measurements* invites defences everywhere. **A defence
 added by ANALOGY rather than by MECHANISM is cargo cult, and it is indistinguishable from a real
@@ -610,7 +625,9 @@ BRANCH BELOW"`, `` "`|| rc=$?` is LOAD-BEARING, not defensive" ``, `"deliberatel
 ways, both load-bearing"`, `"Scan by MACRO INVOCATION, not by line"` — and **nearly every one is
 the weak form.** They carry a mechanism, which is a reason, not a measurement.
 
-**Take this file's own `-0011` guard as the worked example.** Its comment says a line-based scan
+**The worked example is this repository's own, and it is named precisely so a skeptic can reach
+it:** `conformance/tests/structure_key_vectors.rs`, the guard backing
+`KISS-CONFORM-6.3-0011`. Its comment says a line-based scan
 *"is disarmed by a newline — and rustfmt wraps a long `assert_eq!` across lines as a matter of
 course."* **True, and unfalsifiable as written.** The strong form seeds the multi-line form and
 records that **the guard goes green while the defect stands** — which a skeptic checks in thirty
