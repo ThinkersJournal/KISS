@@ -766,10 +766,19 @@ enum (§6.0). See umbrella §3 for the full statement.
   not a native machine float — is a minting instrument, not a hot-path service a consumer or foreign
   reader can call. For a **transcendental atom** the stored value MUST be the §6.5-0007
   wide-precision reference, and at the **widest supported floating compute dtype**, where no wider
-  native float exists, it MUST be produced with an **extended- or arbitrary-precision facility** (a
-  correctly-rounded or not-less-than-double-mantissa reference) and rounded once to the compute
-  dtype; a stored transcendental reference computed at that dtype's own native precision MUST be
-  rejected under §6.5-0007. KISS-Conform MUST NOT mandate a specific such facility. *Test:*
+  native float exists, it MUST be produced with an **extended- or arbitrary-precision facility**
+  and rounded once to the compute dtype; a stored transcendental reference computed at that
+  dtype's own native precision MUST be rejected under §6.5-0007. **There is ONE acceptance bar,
+  and it is §6.5-0007's: error ≤ 0.5 ULP of the compute dtype — which, under round-to-nearest, IS
+  correct rounding.** An extended-precision construction — including a *not-less-than-double-
+  mantissa* intermediate rounded once — is a **means of reaching that bar, never an alternative
+  standard to it**, and its sufficiency is **conditional**: rounding a wide intermediate to the
+  compute dtype is harmless only where the facility is itself correctly rounded to its own width
+  **and** that width carries sufficient guard bits, because `round(round(true, wide), compute)`
+  can otherwise manufacture a midpoint that `round(true, compute)` does not have. **A vector whose
+  construction does not demonstrably meet the ≤ 0.5 ULP bar MUST NOT be recorded as meeting it.**
+  KISS-Conform MUST NOT mandate a specific such facility, and MUST NOT be read as asserting that a
+  double-mantissa construction meets the bar unconditionally. *Test:*
   `test_conform_oracle_vector_stores_wide_precision_value`.
 - **KISS-CONFORM-6.5-0010** — The §6.5-0007 wide-precision oracle floor is scoped to
   **transcendental atoms** (KISS-OPS §6.8) and MUST NOT be read as the oracle for
