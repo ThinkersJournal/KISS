@@ -130,7 +130,7 @@ against the actual op set:
 | Reading | Codes reachable | Codes with no op |
 |---|---|---|
 | **most-specific-wins** (ruled) | **14** | 10 |
-| most-general-wins (rejected) | 12 | 12 |
+| most-general-wins (rejected) | 11 | 13 |
 
 **But the ruling does not remove unreachability — it moves it, and that is worth recording**
 **rather than glossing.** Under most-specific-wins, `shp`, `lin` become
@@ -139,7 +139,7 @@ unreachable instead: `lin`'s only candidate was `matmul`, which now resolves to 
 KISS-Ops has no linalg ops (no solve, no inverse, no decomposition), and it expresses shape
 manipulation through **strides and `layout_tag` on the operand descriptor rather than**
 **through ops**, so a version with no reshape op having no `shp` cell is coherent. The net is
-still strongly in the ruling's favour (14 reachable versus 12). **This is recorded as**
+still strongly in the ruling's favour (14 reachable versus 11). **This is recorded as**
 **decided, not noticed** — a rule justified by *“otherwise these five are unreachable”* that
 quietly makes two others unreachable is the **partial-enumeration defect** (convention 16(d))
 appearing inside the ruling that cites it. Stating the exchange is what keeps the next reader
@@ -178,7 +178,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `cexp` | complex | complex | 1 | **une** | formula |
 | `cim` | complex | complex | 1 | **une** | unstated |
 | `clog` | complex | complex | 1 | **une** | formula |
-| `cmake` | complex | complex | 1 | **une** | formula |
+| `cmake` | complex | complex | 2 | **bin** | formula |
 | `cmul` | complex | complex | 2 | **bin** | formula |
 | `cneg` | complex | complex | 1 | **une** | formula |
 | `cpow` | complex | complex | 2 | **bin** | formula |
@@ -324,7 +324,7 @@ of the `token` string in each row of `conformance/corpus/structure_key_vectors.j
 count in this document is computed from the mapping data at render time rather than written
 by hand.
 
-**The arity extractor was wrong four times, and each was caught by a control rather than by reading it.** They are recorded because the corrected mapping is only as trustworthy as the thing that found the errors:
+**The arity extractor was wrong five times, and not one was caught by reading it** — 3 by review, 2 by its own controls. They are recorded because the corrected mapping is only as trustworthy as the thing that found the errors:
 
 | Failure | Effect | Caught by |
 |---|---|---|
@@ -332,16 +332,20 @@ by hand.
 | matched variables in **prose**, so the English article *“a”* counted as operand `a` | `popcount` — which has **no formula at all** — came out arity 2 | **review (#304)** |
 | read complex **component** vars as operands | `cabs` = `hypot(a, b)` over *one* operand read as binary | **review (#304)** |
 | counted only component vars, missing whole-operand names | `cpow` = `cexp(cmul(w, clog(z)))` is **binary** and read as unary | positive control, after the fix |
+| fixed the whole-operand case for `(w, z)` only, missing `(x, y)` | `cmake(x, y)` — which “consumes two real lanes” — still read as unary | **review (#304)** |
 
-The last row is the one worth keeping: **the fix for the second and third findings introduced**
-**a fourth error**, and only the control caught it. The extractor is now gated on **35 known
-arities and a 5-op negative control** asserting that ops with no formula report *unknown*
-rather than guessing — the check the article bug slipped through, because the original
-control tested only that known arities were right and never that unknown ones stayed unknown.
+**Two of those rows are the fixes for the rows above them.** Correcting the prose-matching and complex-component errors introduced the `cpow` error; correcting `cpow` left its sibling `cmake` unfixed. **A fix for a miscount is itself a count, and inherits the same failure mode** — which is the argument for a control rather than for more care.
 
-**Blast radius of the correction: 22 of 121 extracted arities changed, and 7 final Classify
-codes** — `cabs`, `carg`, `cconj`, `cexp`, `cneg`, `csqrt` (`bin` → `une`) and `popcount`
-(`bin` → `une`). Review reported 4 of those 7; the rest came from re-deriving rather than
-patching the reported rows.
+The extractor is now gated on **36 known arities and a 5-op negative control** asserting
+that ops with no formula report *unknown* rather than guessing — the check the article bug
+slipped through, because the original control tested only that known arities were RIGHT and
+never that unknown ones stayed UNKNOWN. A control that checks one direction cannot see a
+detector that fires on everything.
+
+**Blast radius of the correction: 23 of 121 extracted arities changed, and 8 final Classify
+codes** — `cabs`, `carg`, `cconj`, `cexp`, `cneg`, `csqrt`, `popcount` (`bin` → `une`) and
+`cmake` (`une` → `bin`). Review reported 5 of those 8; the rest came from re-deriving rather
+than patching the reported rows. These are one-time measurements of the correction, not live
+counts — every other figure in this document is computed at render time.
 count in this document is computed from the mapping data at render time rather than written
 by hand.
