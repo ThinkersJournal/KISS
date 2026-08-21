@@ -217,8 +217,15 @@
 # rate 0/9. NOT transcribed from #270/#188's prose (a reverted memory of a proof); re-run, per
 # the architect's byte-identical-AND-re-runnable rule. harness/lint/untested UNCHANGED — a proof
 # marker credits ABOUTNESS on a clause already backed, it moves no other dimension.
+#
+# proven 9 -> 10 (#278 follow-up to #311): KISS-CONTRACT-6.1-0008 joins. The founding batch
+# deferred it — the survey listed it CITED but its test named the clause only in an assert
+# message (a mention), so it was NAMED and collect_proven's proof-without-backing gate rejected
+# the marker. This migrates it NAMED->CITED with a genuine `// Backs:` (evidence-adding, justified
+# by its recorded mutation), then proves it. harness/lint/untested still UNCHANGED — 6.1-0008 was
+# already forward-backed, so crediting its citation + proof moves only `proven`.
 # key	value
 harness	380
 lint	33
 untested	496
-proven	9
+proven	10

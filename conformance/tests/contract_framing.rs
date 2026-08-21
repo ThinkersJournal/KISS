@@ -349,6 +349,13 @@ fn test_contract_kind_recognized_token() {
 ///
 /// TEETH: a reader that numeric-parses the version would accept `01` or `1.0`
 /// (both equal to 1 numerically); byte-exact comparison declines them.
+// Backs: KISS-CONTRACT-6.1-0008 — the contract version value is pinned to `1`: §6.1-0008 pins
+// the exact decimal token `1`, and read_document accepts exactly that (byte-exact, not numeric).
+// Migrated NAMED->CITED (#278 follow-up to #311): previously the clause id appeared ONLY in this
+// test's assert messages — a mention, so discover_tests saw no backing and the clause was NAMED.
+// The migration is evidence-adding, justified by the mutation below (read_document `!= "1"` ->
+// `!= "2"` reddens this test), not a bare-name->citation sweep.
+// Proven: KISS-CONTRACT-6.1-0008 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_contract_version_value_pinned() {
     let contract = read_spec("contract.md");

@@ -72,8 +72,13 @@ by its §9 name alone). This is exactly the distinction the tier exists to draw,
 own `collect_proven` proof-without-backing gate is what caught it: a `// Proven:` there would be
 rejected. `PROVEN ⊆ CITED`, so proving it first requires an evidence-adding **migration** to
 CITED (a genuine `// Backs:`, justified by the demonstration above), which is a distinct step
-kept out of the founding batch to keep every founding member *already* CITED. Deferred to a
-follow-up. The demonstration itself is valid and recorded above.
+kept out of the founding batch to keep every founding member *already* CITED. **Resolved in the
+#278 follow-up to #311:** 6.1-0008 was migrated NAMED→CITED (a `// Backs:` on
+`test_contract_version_value_pinned`) and then proven, taking the floor `proven 9 → 10`. A
+pool-wide re-check afterward (the proof-without-backing gate across all twelve byte-identical
+candidates) found a **second** survey mis-classification — `KISS-CLASSIFY-6.6-0019` is also NAMED,
+not CITED — so one caught instance did not bound the survey's error rate, and the Tier-2 pool
+must pass the same gate before batch 2 selects from it.
 
 ## Cross-marker properties (checked over the whole set)
 
