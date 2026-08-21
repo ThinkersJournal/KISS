@@ -233,8 +233,16 @@
 # REBASE NOTE: #297 landed the 4th dimension (`proven`) while this sat. The conflict was resolved
 # by taking main's floor whole and RE-DERIVING with the tool rather than hand-merging the two
 # numbers -- `untested` was the only row this change touches, and `proven 0` is #297's to own.
+#
+# REBASE NOTE (#311 PROVEN batch 1, after #302): #302 moved untested 496 -> 495 (EMIT-6.4-0005
+# reclassified) while this branch held untested 496 + proven 9, so the floor block conflicted.
+# Resolved by taking MAIN'S floor whole (untested 495, proven 0) and RE-DERIVING with
+# `--ratchet --base-ref origin/main`, which reported "untested at the floor 495" and "proven rose
+# 0 -> 9, bump to 9" -- NOT by hand-assembling untested-495-from-one-side + proven-9-from-the-other
+# (the tool-unchecked number the ratchet exists to reject). harness/lint UNCHANGED. Green
+# traceability CI on the rebased branch is the verification, not this paste.
 # key	value
 harness	380
 lint	33
 untested	495
-proven	0
+proven	9
