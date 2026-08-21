@@ -510,16 +510,38 @@ def read_ledger(path):
     return out
 
 
+# The ratchet's dimension SET — ONE constant driving BOTH the required-key check and the
+# call-site dispatch (#271).
+#
+# THE BUG THIS FIXES WAS THE HARDCODED TUPLE, NOT A MISSING NAME. #297 added `proven` as a
+# fourth BLOCKING dimension but wired it at the call site as `if "proven" in floor:`, while
+# the required-key guard still read `("harness", "lint", "untested")`. That makes a blocking
+# dimension OPT-IN FROM THE VERY FILE IT CONSTRAINS: delete the row, or typo it to `proen`,
+# and the dimension is switched off while the ratchet reports CLEAN, exit 0. Measured at
+# origin/main @ 083917d — no proven verdict emitted at all in either arm.
+#
+# A WRONG VALUE IS COMPARED AND REDS. A WRONG KEY WAS NEVER COMPARED AT ALL. Adding "proven"
+# to a second hardcoded tuple would fix today and reproduce this the next time a dimension is
+# added, so both sites read this constant and a test asserts EVERY member is load-bearing.
+DIMENSIONS = ("harness", "lint", "untested", "proven")
+
+
 def read_floor(path):
-    """The committed ratchet floor: {key: int} from a `key<TAB>value` TSV.
+    """The committed ratchet floor: `({key: int}, [problem, ...])` from a `key<TAB>value` TSV.
 
     Hand-edited and never written by this tool. A floor the tool maintains is a
     state derived from the run rather than from a decision, and it would silently
     absorb a regression that coincided with an improvement elsewhere.
+
+    Returns PROBLEMS alongside the floor rather than raising: an unknown key and a duplicate
+    key are both states a reviewer cannot see by reading the file — a typo leaves the right
+    NUMBER of rows, a duplicate leaves the right KEYS — so they are reported by the tool or
+    not at all. The parser takes the LAST occurrence of a duplicated key (demonstrated, not
+    assumed), which is why a duplicate is an error here rather than a silently-resolved shadow.
     """
-    floor = {}
+    floor, problems, seen = {}, [], set()
     if not os.path.exists(path):
-        return floor
+        return floor, problems
     with open(path, encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -527,8 +549,17 @@ def read_floor(path):
                 continue
             parts = line.split("	")
             if len(parts) >= 2 and parts[1].strip().isdigit():
-                floor[parts[0].strip()] = int(parts[1].strip())
-    return floor
+                key = parts[0].strip()
+                if key in seen:
+                    problems.append(f"duplicate key `{key}` — the parser takes the LAST "
+                                    "occurrence, so an earlier row is silently shadowed.")
+                seen.add(key)
+                if key not in DIMENSIONS:
+                    problems.append(f"unknown key `{key}` — not a ratchet dimension. A "
+                                    "misspelled dimension leaves the file LOOKING complete "
+                                    "while that dimension is switched off.")
+                floor[key] = int(parts[1].strip())
+    return floor, problems
 
 
 def _ledger_lint_ids(text):
@@ -815,7 +846,7 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
     reported as NOT characterized — never `at_floor`, because a constant-count swap looks
     exactly like at-the-floor to the counts.
     """
-    missing = [k for k in ("harness", "lint", "untested") if k not in floor]
+    missing = [k for k in DIMENSIONS if k not in floor]
     if missing:
         return ("incomplete", [f"floor is missing key(s): {', '.join(missing)} — a dimension "
                                "silently absent is that dimension switched off."])
@@ -1893,7 +1924,7 @@ def main():
 
     if args.ratchet:
         floor_path = os.path.join(conf_dir, "COVERAGE_FLOOR.tsv")
-        floor = read_floor(floor_path)
+        floor, floor_problems = read_floor(floor_path)
         live = {
             "harness": len(backed),
             "lint": len(lint_backed),
@@ -2023,12 +2054,23 @@ def main():
             print(f"  {headers[verdict]}")
             for ln in lines:
                 print(f"          {ln}")
+        if floor_problems:
+            any_fail = True
+            print("  RATCHET: the floor file's DIMENSION SET is malformed (#271).")
+            for ln in floor_problems:
+                print(f"          {ln}")
         # 4th dimension (#278): the PROVEN ratchet. Independent of harness/lint/untested — it
         # is about proofs (aboutness), not backings — so it is classified on its own and reds
         # the run on its own. The count comparison needs no base ref; the DROP gate needs the
         # base proven map, which is deferred (None) while PROVEN is 0 — see classify_proven's
         # 16(d) note. At 0 -> 0 this is a one-line at-floor; the drop arm is fixture-proven.
-        if "proven" in floor:
+        #
+        # NOT `if "proven" in floor` (#271). That made a BLOCKING dimension opt-in from the
+        # file it constrains — deleting the row switched it off silently and reported CLEAN.
+        # `proven` is in DIMENSIONS, so its absence is already an `incomplete` verdict above;
+        # the guard here is only to avoid indexing a floor we have just declared malformed,
+        # and the run is failing either way.
+        if verdict != "incomplete" and "proven" in floor:
             pverdict, plines = classify_proven(floor["proven"], proven_map, set(harness),
                                                base_proven_map=None)
             pheaders = {
