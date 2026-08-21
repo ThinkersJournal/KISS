@@ -168,6 +168,26 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 `op identity` = an access-primitive assigned directly; `most-specific-wins` = settled by the
 §5 ruling.
 
+**Which rows are a judgement and which fell out of the definition.** A reviewer handed 121
+rows checks the shape; a reviewer handed the discretionary subset checks the decisions. The
+split:
+
+| Basis | Rows | What a reviewer is checking |
+|---|---|---|
+| **derived** — arity from a formula, a prose operand-ordering paragraph, an access-primitive's identity, or ops.md's own family tag | 96 | that the derivation rule is right, once |
+| **ruled** — the six most-specific-wins pairs (§5) | 12 | the architect's ruling, already given |
+| **judgement** — arity stated **nowhere** in ops.md, inferred from the op's meaning | **12** | **each row, individually** |
+| **unassigned** — deliberately left open (§7) | 1 | that leaving it open is right |
+| **total** | 121 | |
+
+**The 12 judgement rows are the ones worth a reviewer's attention:** `atan`, `ceil`, `cim`, `clz`, `cre`, `ctz`, `erf`, `floor`, `popcount`, `round_even`, `sqrt`, `trunc`.
+Every one resolves to `une`, and every one is an op ops.md describes in prose without a
+formula — `ceil` is *“round toward +∞”*, and nothing states its arity. They are marked
+`unstated` in the basis column below so this subset is recoverable from the table itself.
+**Review has already corrected one of these twelve** (`popcount`, which the extractor had
+read as binary from prose), which is the evidence that this is the bucket where errors
+live.
+
 | Op | Tier | ops.md family | Arity | → code | Basis |
 |---|---|---|---|---|---|
 | `cabs` | complex | complex | 1 | **une** | formula |
