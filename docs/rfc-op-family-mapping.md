@@ -132,9 +132,17 @@ unreachable instead: `lin`'s only candidate was `matmul`, which now resolves to 
 KISS-Ops has no linalg ops (no solve, no inverse, no decomposition), and it expresses shape
 manipulation through **strides and `layout_tag` on the operand descriptor rather than**
 **through ops**, so a version with no reshape op having no `shp` cell is coherent. The net is
-still strongly in the ruling's favour (14 reachable versus 12). It is recorded because a rule
-justified by *“otherwise these five are unreachable”* should say which two it makes
-unreachable in exchange.
+still strongly in the ruling's favour (14 reachable versus 12). **This is recorded as**
+**decided, not noticed** — a rule justified by *“otherwise these five are unreachable”* that
+quietly makes two others unreachable is the **partial-enumeration defect** (convention 16(d))
+appearing inside the ruling that cites it. Stating the exchange is what keeps the next reader
+from finding `lin` and `shp` empty and concluding nobody looked.
+
+**`shp` sitting empty is ruled intended, not an oversight.** KISS-Ops expresses shape
+manipulation through **strides and `layout_tag` on the operand descriptor, not through ops**
+— there is no reshape, no transpose, and no permute in the op set. A version with no shape
+ops having no `shp` cell is therefore coherent. Recorded explicitly because an empty `shp`
+otherwise reads as an oversight forever.
 
 **The non-retroactivity condition, which the ruling carries and the mapping must not lose:**
 
@@ -233,7 +241,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `tanh` | non-primitive | transcendental | 1 | **une** | formula |
 | `avg_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
 | `max_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
-| `element_map` | primitive | access-primitive | — | `une/bin/ter` ⚠ | op identity |
+| `element_map` | primitive | access-primitive | — | **unassigned** ⚠ | unresolvable at the op level |
 | `gather` | primitive | access-primitive | 1 | **idx** | op identity |
 | `prefix_scan` | primitive | access-primitive | 1 | **scn** | op identity |
 | `reduce` | primitive | access-primitive | 2 | **red** | op identity |
@@ -277,18 +285,28 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `sin` | primitive | transcendental | 1 | **une** | formula |
 | `sqrt` | primitive | transcendental | 1 | **une** | formula |
 
-⚠ `element_map` cannot be assigned a fixed code — see §3 and §7.
+⚠ **`element_map` is deliberately left unassigned** — see §7. Assigning it a code would
+be the error, not the omission.
 
 ## 7. What this proposal asks for
 
 1. **Confirmation from the other derivers** that these assignments match what they already
    emit. This is the whole point of proposing rather than pinning — a mapping that
    contradicts a live deriver is a token change, not a clarification.
-2. **A decision on `element_map`**, whose family depends on the arity of the body it carries
-   and so cannot be fixed per-op. It is the one row here with no defensible answer.
-3. **Confirmation that the ruling's two displaced codes are intended** — `lin` and `shp`
-   having no KISS-Ops op is defensible (§5), but it should be decided rather than noticed.
-4. **No pinning until 1–3 are answered**, because the edit is not additive.
+2. **A cross-party answer on `element_map`**, which is *not* a case of a missing assignment.
+   Its family depends on the arity of **the body it carries**, so it is **not a property of
+   the op at all**, and most-specific-wins cannot reach it — there is no fixed pair of
+   candidates to choose between. **It is left unassigned deliberately.** The question for
+   the derivers: *if `element_map`'s family varies by instance, then either the mapping is
+   not a function of the op, or `element_map` needs its own rule.*
+
+   **This may be the sharpest evidence that the mapping cannot be authored from `ops.md`
+   alone.** #298 says the *input* is unstated; `element_map` says that for at least one op
+   **there is no per-op input to state.**
+3. **No pinning until 1–2 are answered**, because the edit is not additive.
+
+The ruling's two displaced codes (`lin`, `shp`) are **settled** — §5 records the exchange
+and the `shp` reading as ruled, rather than leaving them to be rediscovered.
 
 ## 8. Provenance
 
