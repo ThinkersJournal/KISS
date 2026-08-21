@@ -194,7 +194,23 @@
 # test only ever asserted the ONLY-IF direction (one-field-different variants must not match).
 # THE REMOVED DIRECTION WAS NEVER BACKED BY THE TEST THAT NAMED THE CLAUSE, so removing it
 # de-credits nothing. Three consumers independently confirmed no reliance (see the PR).
+# FOURTH DIMENSION — `proven` (#278). The `harness` count credits a clause the moment a test
+# NAMES or CITES it, which spans three strengths of evidence (convention 15): a name coincidence
+# (NAMED), a human-asserted citation (CITED, deliberateness), and a mutation-verified backing
+# (PROVEN, aboutness). `proven` counts only the last: a clause carrying a `// Proven:` marker —
+# testimony that a seeded mutation of its obligation was shown to redden its test.
+#
+#   proven     clauses with a mutation-proof marker        MUST NOT decrease (with one exception)
+#
+# It STARTS AT 0 and is ARMED, not vacuous: it can only rise as proofs are earned per-clause
+# (never bulk-marked). The one sanctioned DECREASE is a proof RETIREMENT — a proof drops green
+# IFF its proving TEST no longer exists in the harness (the testimony was about that test; the
+# test is gone, so the testimony is void). A marker removed while its proving test SURVIVES is a
+# regression, always — a stale proof claiming aboutness it has lost is worse than no proof. When
+# a legitimate retirement drops the count, bump this number down in the same PR, exactly as a
+# `stale` improvement bumps it up. See #278 and classify_proven().
 # key	value
 harness	380
 lint	33
 untested	496
+proven	0
