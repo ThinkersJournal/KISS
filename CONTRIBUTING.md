@@ -733,6 +733,19 @@ If you propose normative text, follow the house style so it stays testable:
   corresponding conformance test. **A MUST with no test fails the suite build.**
 - Pin values (byte offsets, magic constants, enumerations) exactly. No unquantified
   adjectives ("fast", "small", "reasonable") in normative text.
+- **Check a rule's own examples AGAINST the rule, as a separate pass — ideally by someone who
+  did not write it.** A rule's illustrative material is written in the same pass, by the same
+  person, in the same frame as the rule, **so it is the least likely part of the document to be
+  checked against it and the most likely to embody the habit the rule is correcting.**
+  *Why — five instances in one evening, most of them the same author's:* convention 9 opened
+  *"a red result is self-validating"* and its own later text refuted it; **16(a)** cited the
+  condition that defeats it (one shared account) and then prescribed *"name the party"*
+  regardless; **17**'s worked example pointed at a file the reader could not locate, and its
+  founding citation would have failed the convention had it been written as a number rather than
+  a recipe; and **`KISS-CONFORM-6.8-0012`'s illustrative declaration contained the exact form the
+  amendment forbids, one line below where the amendment was written.** Every one was caught by a
+  reader rather than the author, and **none was carelessness** — the example simply inherits the
+  frame that made the rule necessary.
 - Keep project and product names out of normative clauses. They may appear only in
   non-normative examples, provenance, acknowledgments, and the signatory record. Normative
   text uses the generic roles: *provider*, *consumer*, *implementation*, *kernel*,
