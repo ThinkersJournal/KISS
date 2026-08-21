@@ -1,19 +1,19 @@
 # Proposal — the op→family mapping (#263)
 
-**Status: PROPOSAL. This introduces no clause, no §9 row, and no coverage-floor movement,**
-and it is deliberately not drafted as normative text. The reason is the finding itself:
-`op_family_tag` is a `structure_key` cell field, and `structure_key` is the admissibility
-key — so **pinning a mapping is not an additive edit.** If any deriver already assigns
-differently from what is pinned here, its tokens change, and kernels that are admissible
-today stop being admissible. A mapping may be pinned only once the derivers are known to
-agree; this document exists to find out whether they do.
+**Status: PROPOSAL. This introduces no clause, no §9 row, and no coverage-floor movement**
+(the ratchet is unchanged at `380/33/496`), and it is deliberately not drafted as normative
+text. The reason is the finding itself: `op_family_tag` is a `structure_key` cell field, and
+`structure_key` is the admissibility key — so **pinning a mapping is not an additive edit.**
+If any deriver already assigns differently from what is pinned here, its tokens change, and
+kernels that are admissible today stop being admissible. A mapping may be pinned only once
+the derivers are known to agree; this document exists to find out whether they do.
 
 **And the majority of it cannot be falsified by anything in the repository.** Of the 24
-family codes, **5 are exercised by a positive vector** — `bin`, `une`, `red`, `gem`, `scn`
-— across the 21 positive vectors in `conformance/corpus/structure_key_vectors.json`. The
-other 19 have no vector behind them. A mapping over 24 families where 19 are unexercised
-**is a proposal about intent**, and every reader should treat the unexercised rows as
-stated intent rather than measured behaviour.
+family codes, **5 are exercised by a positive vector** — `bin`, `gem`, `red`, `scn`, `une` —
+across the 21 positive vectors in `conformance/corpus/structure_key_vectors.json`. The other
+19 have no vector behind them. A mapping over 24 families where 19 are unexercised **is a
+proposal about intent**, and every reader should treat the unexercised rows as stated intent
+rather than measured behaviour.
 
 ---
 
@@ -30,17 +30,16 @@ Measured from `spec/ops.md` at `origin/main`, from the document's own text.
 
 **The figure `106` in circulation is real and is from ops.md's own text — but it is
 `43 + 63`, the op set *minus* the 15 complex ops.** §6.1-0001 defines the op set as
-§6.3 ∪ §6.13 ∪ **§6.18**, so a sweep scoped to 106 silently omits the entire complex
-family. This mapping covers all 121.
+§6.3 ∪ §6.13 ∪ **§6.18**, so a sweep scoped to 106 silently omits the entire complex family.
+This mapping covers all 121.
 
 **A second correction, to #263's own measurement.** #263 reports that ops.md carries a
 *nine-value* op category vocabulary, listing `shape 69 · transcendental 67 · reduction 60`
 and so on. **Those are occurrence counts of nine words across the document, not op counts,
-and the actual §2.7 family-tag set has 18 values.** The nine it misses —
-`access-primitive`, `arithmetic`, `binary_math`, `bitwise`, `comparison`, `logical`,
-`minmax`, `rounding`, `select` — carry **51 of the 106** ops. The issue's central claim
-(two vocabularies that do not correspond) is unaffected and correct; its measurement of
-the near side is not.
+and the actual §2.7 family-tag set has 18 values.** The nine it misses — `access-primitive`,
+`arithmetic`, `binary_math`, `bitwise`, `comparison`, `logical`, `minmax`, `rounding`,
+`select` — carry **51 of the 106** ops. The issue's central claim (two vocabularies that do
+not correspond) is unaffected and correct; its measurement of the near side is not.
 
 ## 2. Why this is a re-partition, not a relabeling
 
@@ -64,10 +63,11 @@ recoverable, but from several different places, and for some ops not at all:
 
 | Where arity is recoverable from | Ops |
 |---|---|
-| a formula in a semantics table (`a + b`, `-x`) or a clause body (§6.9-0001's `(y=a, x=b)`) | 98 |
-| a prose operand-ordering paragraph (§6.13 preamble: `input(0)=x, input(1)=gamma`) | 6 |
+| a formula in a semantics table (`a + b`, `-x`) or a clause body (§6.9-0001's `(y=a, x=b)`) | 87 |
+| a prose operand-ordering paragraph (§6.13 preamble: `input(0)=x, input(1)=gamma`) | 5 |
 | **nowhere — prose only** (`ceil` “round toward +∞”), inferred from meaning | 11 |
 | an access-primitive, assigned by op identity rather than arity | 6 |
+| settled by the most-specific-wins ruling (§5) rather than by arity | 12 |
 | **total** | **121** |
 
 Two of those rows deserve attention. The `§6.9` case was found only because an extractor
@@ -78,51 +78,80 @@ property of the op at all. **It cannot be assigned a fixed code.**
 
 ## 4. Coverage of the 24-code alphabet
 
-| Class | Codes | |
-|---|---|---|
-| **firm** — reached by an uncontested assignment | 8 | `bin`, `idx`, `nrm`, `red`, `scn`, `srt`, `ter`, `une` |
-| **contested-only** — reachable only if a contested pair rules toward it | 8 | `cnv`, `emb`, `gat`, `gem`, `lin`, `pol`, `sft`, `shp` |
-| **no op under any reading** | 8 | `qnt`, `rnd`, `los`, `seg`, `img`, `fft`, `att`, `moe` |
+Under the §5 ruling:
 
-**Eight of the twenty-four codes have no KISS-Ops op at all** — `qnt`, `rnd`, `los`, `seg`, `img`, `fft`, `att`, `moe`.
-There is no quantize op, no loss op, no attention op, no FFT, no random, no segment, no
-image, and no mixture-of-experts op in this version's set. This is **not** a defect in the
-alphabet: per #263's own argument the family tag records **what a cell carries on the wire,
-not what ops an implementation has**, and a producer that fuses may legitimately emit an
-`att` or `moe` cell. But it does mean **a third of the alphabet is unpopulated by the op
-set**, and no mapping from KISS-Ops can ever make those codes reachable.
+| Class | Count | Codes |
+|---|---|---|
+| reachable by some KISS-Ops op | 14 | `bin`, `cnv`, `emb`, `gat`, `gem`, `idx`, `nrm`, `pol`, `red`, `scn`, `sft`, `srt`, `ter`, `une` |
+| **no KISS-Ops op at all** | 10 | `shp`, `qnt`, `rnd`, `los`, `seg`, `img`, `fft`, `lin`, `att`, `moe` |
+
+**Ten of the twenty-four codes have no KISS-Ops op.** There is no quantize op, no loss op,
+no attention op, no FFT, no random, no segment, no image, and no mixture-of-experts op in
+this version's set; and `shp`, `lin` lose their only candidates to the ruling
+(below). This is **not** a defect in the alphabet: per #263's own argument the family tag
+records **what a cell carries on the wire, not what ops an implementation has**, and a
+producer that fuses may legitimately emit an `att` or `moe` cell. But it does mean **a
+substantial part of the alphabet is unpopulated by the op set**, and no mapping from
+KISS-Ops can make those codes reachable.
 
 **The inversion worth reading twice:** `gem` is the **most-exercised** family in the corpus
-— 8 of the 21 positive vectors — and it is **contested-only**. Its sole op, `matmul`, is
-not assigned to it by any normative text. **The corpus has already committed to one arm of
-an undecided question, in the family it tests hardest.** Whatever the architect rules for
-`gem`/`lin`, that ruling is not free: it either ratifies 8 existing vectors or invalidates
-them.
+— 8 of the 21 positive vectors — and until the §5 ruling it was assigned to `matmul` by no
+normative text at all. **The corpus had already committed to one arm of an undecided
+question, in the family it tests hardest.** The ruling ratifies those 8 vectors; the point
+is that it could have invalidated them, and nothing recorded which way it would go.
 
-## 5. The contested pairs — explicitly not decided here
+## 5. The ruling on the six ambiguous pairs
 
-**These are the architect's calls, not this document's.** Each is a case where two codes
-both apply and no normative text picks one.
+**Ruled by the architect on #263: where two codes both apply, the most specific wins.**
+This document does not decide it and does not restate it as normative text — the ruling is
+itself a proposal, for the same reason this mapping is.
 
-| Pair | Ops | Why both apply |
+| Pair (specific / general) | Ops | Resolves to |
 |---|---|---|
-| `nrm` / `sft` | `softmax`, `log_softmax` | ops.md files both under `normalization`; Classify has a dedicated `sft` |
-| `idx` / `emb` | `index_select`, `embedding` | ops.md files both under `gather_scatter`; Classify separates them (**#263's own example**) |
-| `une` / `gat` | `silu`, `gelu`, `gelu_tanh`, `mish` | each is an `x·f(x)` gate, and each is also plain elementwise-unary |
-| `pol` / `cnv` | `avg_pool`, `max_pool` | pooling by name; convolution-family by access pattern |
-| `gem` / `lin` | `matmul` | `gem` is glossed “contraction (dense GEMM)” and ops.md's family is `contraction`, so the textual pull is strong; `lin` (linalg) could subsume it |
-| `shp` / `cnv` | `im2col` | ops.md files it under `shape`; it exists to lower convolution |
+| `sft` / `nrm` | `softmax`, `log_softmax` | **`sft`** |
+| `emb` / `idx` | `embedding` | **`emb`** (`index_select` stays `idx` — it is a gather, not an embedding) |
+| `gat` / `une` | `silu`, `gelu`, `gelu_tanh`, `mish` | **`gat`** |
+| `gem` / `lin` | `matmul` | **`gem`** |
+| `pol` / `cnv` | `avg_pool`, `max_pool` | **`pol`** |
+| `cnv` / `shp` | `im2col` | **`cnv`** |
 
-Twelve of the 121 ops sit on one of these six pairs. The arms are **not** equally balanced
-— `gem`/`lin` has a clear textual default and `une`/`gat` does not — but this document
-records the contest rather than resolving it, because resolving it changes tokens.
+**The rule is load-bearing rather than a preference, and the op set shows why.** If the
+general code won whenever both applied, the specific codes would be unreachable *by
+construction* — every op that would occupy them is already covered by a general code. Set
+against the actual op set:
+
+| Reading | Codes reachable | Codes with no op |
+|---|---|---|
+| **most-specific-wins** (ruled) | **14** | 10 |
+| most-general-wins (rejected) | 12 | 12 |
+
+**But the ruling does not remove unreachability — it moves it, and that is worth recording**
+**rather than glossing.** Under most-specific-wins, `shp`, `lin` become
+unreachable instead: `lin`'s only candidate was `matmul`, which now resolves to `gem`, and
+`shp`'s only candidate was `im2col`, which now resolves to `cnv`. Both are defensible —
+KISS-Ops has no linalg ops (no solve, no inverse, no decomposition), and it expresses shape
+manipulation through **strides and `layout_tag` on the operand descriptor rather than**
+**through ops**, so a version with no reshape op having no `shp` cell is coherent. The net is
+still strongly in the ruling's favour (14 reachable versus 12). It is recorded because a rule
+justified by *“otherwise these five are unreachable”* should say which two it makes
+unreachable in exchange.
+
+**The non-retroactivity condition, which the ruling carries and the mapping must not lose:**
+
+> A family code MAY be added freely. **Existing ops MUST NOT be reassigned to it without a**
+> **schema bump**, even where the new code is more specific — most-specific-wins binds at
+> **assignment** time, not retroactively.
+
+Without it the rule quietly makes every future vocabulary addition a breaking change under
+`§7.2-0002`.
 
 ## 6. The mapping
 
 `basis` records **how the assignment was reached**, so a reader can tell a lookup from an
 inference: `formula` = arity read off a formula; `prose` = arity from an operand-ordering
 paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**;
-`op identity` = an access-primitive assigned directly.
+`op identity` = an access-primitive assigned directly; `most-specific-wins` = settled by the
+§5 ruling.
 
 | Op | Tier | ops.md family | Arity | → code | Basis |
 |---|---|---|---|---|---|
@@ -141,12 +170,12 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `cre` | complex | complex | 1 | **une** | unstated |
 | `csqrt` | complex | complex | 2 | **bin** | formula |
 | `csub` | complex | complex | 2 | **bin** | formula |
-| `gelu` | non-primitive | activation | 1 | `une/gat` ⚠ | CONTESTED |
-| `gelu_tanh` | non-primitive | activation | 1 | `une/gat` ⚠ | CONTESTED |
-| `mish` | non-primitive | activation | 1 | `une/gat` ⚠ | CONTESTED |
+| `gelu` | non-primitive | activation | 1 | **gat** | most-specific-wins |
+| `gelu_tanh` | non-primitive | activation | 1 | **gat** | most-specific-wins |
+| `mish` | non-primitive | activation | 1 | **gat** | most-specific-wins |
 | `relu` | non-primitive | activation | 1 | **une** | formula |
 | `sigmoid` | non-primitive | activation | 1 | **une** | formula |
-| `silu` | non-primitive | activation | 1 | `une/gat` ⚠ | CONTESTED |
+| `silu` | non-primitive | activation | 1 | **gat** | most-specific-wins |
 | `softplus` | non-primitive | activation | 1 | **une** | formula |
 | `step` | non-primitive | activation | 1 | **une** | formula |
 | `recip` | non-primitive | arithmetic | 1 | **une** | formula |
@@ -157,9 +186,9 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `pow` | non-primitive | binary_math | 2 | **bin** | formula |
 | `rem_floor` | non-primitive | binary_math | 2 | **bin** | formula |
 | `rem_trunc` | non-primitive | binary_math | 2 | **bin** | formula |
-| `matmul` | non-primitive | contraction | 2 | `gem/lin` ⚠ | CONTESTED |
-| `embedding` | non-primitive | gather_scatter | 1 | `idx/emb` ⚠ | CONTESTED |
-| `index_select` | non-primitive | gather_scatter | 1 | `idx/emb` ⚠ | CONTESTED |
+| `matmul` | non-primitive | contraction | 2 | **gem** | most-specific-wins |
+| `embedding` | non-primitive | gather_scatter | 1 | **emb** | most-specific-wins |
+| `index_select` | non-primitive | gather_scatter | 1 | **idx** | most-specific-wins |
 | `scatter_add` | non-primitive | gather_scatter | 3 | **idx** | prose |
 | `logical_and` | non-primitive | logical | 2 | **bin** | formula |
 | `logical_not` | non-primitive | logical | 1 | **une** | formula |
@@ -169,9 +198,9 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `max_prop` | non-primitive | minmax | 2 | **bin** | formula |
 | `min_prop` | non-primitive | minmax | 2 | **bin** | formula |
 | `layer_norm` | non-primitive | normalization | 3 | **nrm** | prose |
-| `log_softmax` | non-primitive | normalization | 1 | `nrm/sft` ⚠ | CONTESTED |
+| `log_softmax` | non-primitive | normalization | 1 | **sft** | most-specific-wins |
 | `rms_norm` | non-primitive | normalization | 1 | **nrm** | formula |
-| `softmax` | non-primitive | normalization | 1 | `nrm/sft` ⚠ | CONTESTED |
+| `softmax` | non-primitive | normalization | 1 | **sft** | most-specific-wins |
 | `all` | non-primitive | reduction | 1 | **red** | formula |
 | `any` | non-primitive | reduction | 1 | **red** | formula |
 | `argmax` | non-primitive | reduction | 1 | **red** | formula |
@@ -184,7 +213,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `cummax` | non-primitive | scan | 1 | **scn** | prose |
 | `cumprod` | non-primitive | scan | 1 | **scn** | prose |
 | `cumsum` | non-primitive | scan | 1 | **scn** | prose |
-| `im2col` | non-primitive | shape | 1 | `shp/cnv` ⚠ | CONTESTED |
+| `im2col` | non-primitive | shape | 1 | **cnv** | most-specific-wins |
 | `acos` | non-primitive | transcendental | 1 | **une** | formula |
 | `acosh` | non-primitive | transcendental | 1 | **une** | formula |
 | `asin` | non-primitive | transcendental | 1 | **une** | formula |
@@ -202,9 +231,9 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `sinh` | non-primitive | transcendental | 1 | **une** | formula |
 | `tan` | non-primitive | transcendental | 1 | **une** | formula |
 | `tanh` | non-primitive | transcendental | 1 | **une** | formula |
-| `avg_pool` | non-primitive | window | 1 | `pol/cnv` ⚠ | CONTESTED |
-| `max_pool` | non-primitive | window | 1 | `pol/cnv` ⚠ | CONTESTED |
-| `element_map` | primitive | access-primitive | — | **une/bin/ter** | op identity |
+| `avg_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
+| `max_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
+| `element_map` | primitive | access-primitive | — | `une/bin/ter` ⚠ | op identity |
 | `gather` | primitive | access-primitive | 1 | **idx** | op identity |
 | `prefix_scan` | primitive | access-primitive | 1 | **scn** | op identity |
 | `reduce` | primitive | access-primitive | 2 | **red** | op identity |
@@ -248,24 +277,27 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `sin` | primitive | transcendental | 1 | **une** | formula |
 | `sqrt` | primitive | transcendental | 1 | **une** | formula |
 
-⚠ = contested pair, architect's call (§5).
+⚠ `element_map` cannot be assigned a fixed code — see §3 and §7.
 
 ## 7. What this proposal asks for
 
-1. **A ruling on the six contested pairs** (§5). Until those are decided, twelve ops have
-   no determinate family, and `gem`'s 8 vectors rest on an unstated assumption.
-2. **Confirmation from the other derivers** that these assignments match what they already
+1. **Confirmation from the other derivers** that these assignments match what they already
    emit. This is the whole point of proposing rather than pinning — a mapping that
    contradicts a live deriver is a token change, not a clarification.
-3. **A decision on `element_map`**, whose family is body-dependent and cannot be fixed.
+2. **A decision on `element_map`**, whose family depends on the arity of the body it carries
+   and so cannot be fixed per-op. It is the one row here with no defensible answer.
+3. **Confirmation that the ruling's two displaced codes are intended** — `lin` and `shp`
+   having no KISS-Ops op is defensible (§5), but it should be decided rather than noticed.
 4. **No pinning until 1–3 are answered**, because the edit is not additive.
 
 ## 8. Provenance
 
-Measured at `origin/main`, not in the shared anchor. Population and family tags derived
-from `spec/ops.md` §2.7/§6.13 by an extractor gated on a **positive control of 23 known
-arities**, which failed twice before passing — first reading only table cells and missing
-§6.9's clause-body formulas, then on `atan2`'s `(y=a, x=b)` spelling. The 24 codes are from
-`conformance/src/structure_key.rs:26` and `spec/classify.md` §6.5. Vector coverage is field
-1 of the `token` string in each row of `conformance/corpus/structure_key_vectors.json` —
-**not** a JSON `op_family` key, which does not exist and returns 0 if grepped for.
+Measured at `origin/main`, not in the shared anchor. Population and family tags derived from
+`spec/ops.md` §2.7/§6.13 by an extractor gated on a **positive control of 23 known arities**,
+which failed twice before passing — first reading only table cells and missing §6.9's
+clause-body formulas, then on `atan2`'s `(y=a, x=b)` spelling. The 24 codes are from
+`conformance/src/structure_key.rs:26` and `spec/classify.md` §6.5. Vector coverage is field 1
+of the `token` string in each row of `conformance/corpus/structure_key_vectors.json` —
+**not** a JSON `op_family` key, which does not exist and returns 0 if grepped for. Every
+count in this document is computed from the mapping data at render time rather than written
+by hand.
