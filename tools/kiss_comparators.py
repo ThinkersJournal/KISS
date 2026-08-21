@@ -124,6 +124,111 @@ def undeclared_buckets(clause_body, path=KEY_CODEC):
     return missing
 
 
+# --- §6.8-0013 completeness: every DECLARED dimension must be BOUND to an exhibit -------
+#
+# -0013 makes each declared dimension falsifiable and leaves the COMPLETENESS of the
+# declaration exactly as unfalsifiable as before: a SEVENTH dimension appended to the
+# `Normalizes:` list with no exhibit anywhere fires nothing (#283). That is the same shape
+# as the two completeness errors -0012's own declaration already carried -- inverted
+# (#268), then short by six dimensions (#277) -- appearing one level up.
+#
+# THE POPULATION HERE IS THE DECLARATION, NOT THE CODEC. The codec is the right population
+# for "is every bucket declared" (above); it is the WRONG one for "is every declared
+# dimension exhibited", because a prose-only widening never touches the codec and so would
+# never be asked for an exhibit.
+#
+# The stable tag is the TOKEN GROUP the declaration already names -- `d16`,
+# `warp`/`block`/`grid` -- so there is no second registry to drift.
+#
+# FAILS OPEN, and the earlier justification for that was FALSE (found in review of #306).
+# This comment claimed §6.8-0012 already requires a dimension to name its tokens, making a
+# token-less dimension an upstream violation rather than a silent pass here. IT DOES NOT:
+# §6.8-0012's three MUSTs require an enumeration of DIMENSIONS and forbid citing a comparator
+# for a dimension it normalizes; none mentions tokens. The token list in the clause is
+# DESCRIPTIVE of the current six buckets. Tracked as #307, whose amendment is the architect's.
+#
+# AND THE NAIVE FIX IS WRONG TWICE OVER. Requiring a token group per declared dimension would
+# make five of the six `Normalizes:` clauses violations -- a tolerance comparator normalizes
+# 'numeric difference within the declared ULP bound' and a NaN comparator 'the payload and
+# sign bits', and neither collapses onto a token alphabet. It would also make §6.8-0012's OWN
+# FIRST ENTRY non-conformant: `Normalizes:` THE COMPUTATION has no token group, because the
+# computation is ABSENT from the compared value entirely rather than collapsed onto a token.
+# Two different kinds of blindness; one of them has nothing to name.
+#
+# THE LIVE INSTANCE, which is the reason this is disclosed rather than shrugged at: `the
+# computation` is declared, is NOT exhibited in declared_blindness.rs, and is NOT in the
+# unexhibited record (which names only the contraction size class). The semantics-blindness
+# this entire clause exists for is the one dimension the check cannot see. #307 closes it at
+# source by distinguishing the two kinds; nothing here can, because the parse keys on tokens.
+#
+# WHAT IS ALREADY CLOSED, so the hole is not read as wider than it is: `undeclared_buckets`
+# above requires a token of EVERY codec alphabet to appear in the clause, so a bucketed
+# dimension that HAS a derivation cannot be declared token-lessly -- it fails there first.
+#
+# THE OTHER DIRECTION, MEASURED RATHER THAN REASONED ABOUT (asked by the portfolio PM).
+# This gate catches a blindness DECLARED WITHOUT BACKING. The mirror case is a blindness
+# DELETED -- which has no unbacked claim to catch, and a silently removed blindness is a
+# claim silently WIDENED. Sabotage at head 0ad6796, both arms:
+#
+#   delete a TOKEN-BEARING dimension (`d16`)   -> exit 1, `INCOMPLETE DECLARATION: omits
+#                                                 DivBucket`. CAUGHT -- by undeclared_buckets,
+#                                                 because the codec still has the alphabet.
+#   delete `Normalizes: the computation`       -> exit 0, RESULT: CLEAN. SILENT PASS.
+#
+# So deletion IS covered for every dimension with a derivation behind it, and is NOT covered
+# for the one dimension that has none. The tell is in the count: after deleting `the
+# computation` the header still reads `6 dimension(s) declared`, because that dimension was
+# never counted -- it names no token, so this parse never saw it.
+#
+# THAT IS THE SAME DIMENSION AS #307/#308, FROM THE OTHER SIDE. #307 is that a token-less
+# dimension can be ADDED without an exhibit; this is that it can be REMOVED without a
+# murmur. One clause amendment closes both, which is why nothing is bolted on here: a
+# deletion detector keyed on tokens would be blind to exactly the case that needs it.
+BLINDNESS_TEST = os.path.join(os.path.dirname(HERE), "conformance", "tests",
+                              "declared_blindness.rs")
+RE_DIM_GROUP = re.compile(r"\(((?:`[^`]+`)(?:/`[^`]+`)*)\)")
+RE_TOK = re.compile(r"`([^`]+)`")
+# An exhibition or an `unexhibited` record, both MACHINE-READABLE. §6.8-0013 already says an
+# unexhibited dimension MUST be recorded rather than omitted -- but the only such record
+# today lives in a `//!` prose paragraph, and "MUST be recorded, never omitted" is prose
+# nothing reads. This is the half that makes the record an artifact.
+RE_BOUND = re.compile(r"^\s*//[!/]?\s*(EXHIBITS|UNEXHIBITED)\b([^\n]*)", re.M)
+
+
+def declared_dimensions(clause_body):
+    """Token groups the declaration enumerates, scoped to the DECLARING paragraph.
+
+    Scoped deliberately: a parenthesised backtick group in the informative block is not a
+    declared dimension, and counting one would demand an exhibit for something that is not
+    a blindness at all.
+    """
+    m = RE_DECLARED.search(clause_body)
+    if not m:
+        return []
+    para = clause_body[m.start():]
+    cut = para.find("\n\n")
+    return [tuple(RE_TOK.findall(g))
+            for g in RE_DIM_GROUP.findall(para if cut == -1 else para[:cut])]
+
+
+def unbound_dimensions(clause_body, path=BLINDNESS_TEST):
+    """Declared dimensions bound to NEITHER an exhibition nor an `unexhibited` record.
+
+    A group is bound if ANY of its tokens is named on a marker line -- naming `warp` binds
+    `warp`/`block`/`grid`, because the exhibition is of the dimension, not of each token.
+    """
+    dims = declared_dimensions(clause_body)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            src = fh.read()
+    except OSError:
+        return None
+    bound = set()
+    for _kind, rest in RE_BOUND.findall(src):
+        bound |= set(RE_TOK.findall(rest))
+    return [g for g in dims if not set(g) & bound]
+
+
 def clause_bodies(text):
     """(clause_id, body) for every clause, body running to the next clause."""
     marks = [(m.group(1), m.start()) for m in RE_CLAUSE.finditer(text)]
@@ -164,11 +269,15 @@ def main():
         _doc = fh.read()
     _body = next((b for c, b in clause_bodies(_doc) if c == "KISS-CONFORM-6.8-0012"), "")
     buckets = undeclared_buckets(_body)
+    dims = declared_dimensions(_body)
+    unbound = unbound_dimensions(_body)
     print("KISS-Conform comparator-blindness lint  -  §6.8-0012")
     print("=" * 68)
     print(f"  {len(declared):3d} clause(s) declare what they normalize")
     print(f"  {len(excluded):3d} select/apply a comparator without defining one (explicit)")
     print(f"  {len(undeclared):3d} name a comparison relation and declare NOTHING")
+    print(f"  {len(dims):3d} dimension(s) declared by the admissibility match, each bound to an "
+          f"exhibit or an `unexhibited` record")
     bad = False
     if undeclared:
         bad = True
@@ -200,6 +309,28 @@ def main():
         for b in buckets:
             print(f"          - {b}")
         print("  Name a token the bucket collapses onto, or record it in NON_BUCKET with why.")
+    if unbound is None:
+        bad = True
+        print("-" * 68)
+        print("  UNVERIFIED: the exhibition test could not be read, so declared dimensions")
+        print("  could not be bound to exhibits. Refusing the green rather than passing an")
+        print("  unchecked condition.")
+    elif unbound:
+        bad = True
+        print("-" * 68)
+        print("  UNEXHIBITED DECLARATION: §6.8-0012 declares a blindness that §6.8-0013's")
+        print("  exhibition test neither EXHIBITS nor records as UNEXHIBITED. A declaration is")
+        print("  prose and can be widened silently; an exhibition is an artifact that fails:")
+        for g in unbound:
+            print("          - " + "/".join("`" + t + "`" for t in g))
+        print("  Add an exhibition with its discrimination control, or a `// UNEXHIBITED`")
+        print("  record naming a token and the reason the derivation is unavailable.")
+    if declared and not dims:
+        bad = True
+        print("-" * 68)
+        print("  VACUITY: the admissibility match declares dimensions in prose but the parse")
+        print("  found none, so every dimension would be trivially bound. A clean run here")
+        print("  would mean the parser is broken, not that the declaration is exhibited.")
     if not declared:
         bad = True
         print("-" * 68)

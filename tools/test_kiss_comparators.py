@@ -7,6 +7,7 @@ lint exists to catch, so it would be a poor joke to commit it here.
 Run: python tools/test_kiss_comparators.py
 """
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -155,6 +156,172 @@ code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
         body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
         self.assertEqual(kc.undeclared_buckets(body), [],
                          "§6.8-0012 omits a bucketed component of the key")
+
+
+# --- §6.8-0013 completeness: a declared dimension must be bound to an exhibit -----------
+#
+# The defect (#283): -0013 makes each DECLARED dimension falsifiable and leaves the
+# COMPLETENESS of the declaration exactly as unfalsifiable as before. The architect
+# demonstrated it by appending a SEVENTH dimension with no exhibit anywhere -- lint CLEAN,
+# ratchet CLEAN, test passes, nothing fires. These controls are that demonstration, kept.
+
+DECL_SIX = """\
+- **KISS-CONFORM-9.9-0004** - The **example** byte-match compares tokens.
+  Its declaration is **`Normalizes:`** the computation, and each bucketed component
+  collapses a range onto one token: extent divisibility above its ceiling (`d16`), vector
+  width above its widest (`v8`), and element count within a work class
+  (`warp`/`block`/`grid`).
+
+  > *Informative.* An aside naming a token pair (`ix32`/`ix64`) that is NOT a declared
+  > dimension of this relation.
+  *Test:* `test_example`.
+"""
+
+# The architect's seventh dimension, appended to the declaring paragraph with no exhibit.
+DECL_SEVEN = DECL_SIX.replace(
+    "and element count within a work class\n  (`warp`/`block`/`grid`).",
+    "element count within a work class (`warp`/`block`/`grid`), and contraction extent\n"
+    "  within a size class (`t`/`s`/`m`/`l`).",
+)
+
+EXHIBITS_THREE = """\
+// EXHIBITS `d16` -- extent divisibility
+// EXHIBITS `v8` -- vector width
+// EXHIBITS `warp`/`block`/`grid` -- element count within a work class
+"""
+
+
+def unbound_with(clause_body, rs_text):
+    with tempfile.TemporaryDirectory() as td:
+        p = pathlib.Path(td) / "declared_blindness.rs"
+        p.write_text(rs_text, encoding="utf-8")
+        return kc.unbound_dimensions(clause_body, str(p))
+
+
+# NB: this class was originally named DeclarationCompletenessTest, SHADOWING the class
+# above and silently dropping its six tests -- the suite still reported OK, over a
+# population six smaller than it looked. Found in review of #306.
+class DeclaredDimensionBindingTest(unittest.TestCase):
+    def test_seed_applied(self):
+        """Vacuity guard, and it earns its place.
+
+        If the seventh dimension never landed in the fixture, the caught-case below would
+        pass because there was nothing to catch -- a green from a fixture that tests
+        nothing. Assert the seed applied before asserting what it does.
+        """
+        self.assertNotEqual(DECL_SEVEN, DECL_SIX, "the seventh dimension was not seeded")
+        self.assertEqual(len(kc.declared_dimensions(DECL_SIX)), 3)
+        self.assertEqual(len(kc.declared_dimensions(DECL_SEVEN)), 4)
+
+    def test_declared_but_unexhibited_dimension_is_caught(self):
+        """#283 itself: a dimension appended to the declaration with no exhibit."""
+        unbound = unbound_with(DECL_SEVEN, EXHIBITS_THREE)
+        self.assertEqual(unbound, [("t", "s", "m", "l")])
+
+    def test_fully_bound_declaration_passes(self):
+        """Control. Without it, a check hardcoded to report SOMETHING would pass above."""
+        self.assertEqual(unbound_with(DECL_SIX, EXHIBITS_THREE), [])
+
+    def test_unexhibited_record_binds_the_dimension(self):
+        """§6.8-0013 allows `unexhibited` -- but only as a record something can READ.
+
+        The record that existed when this was written lived in a `//!` prose paragraph.
+        "MUST be recorded, never omitted" is prose nothing reads; this is the half that
+        makes it an artifact.
+        """
+        rs = EXHIBITS_THREE + "//! UNEXHIBITED `t`/`s`/`m`/`l` -- no derivation in this codec\n"
+        self.assertEqual(unbound_with(DECL_SEVEN, rs), [])
+
+    def test_informative_aside_is_not_a_declared_dimension(self):
+        """Scope control: the parse must not manufacture dimensions from prose.
+
+        `ix32`/`ix64` appears in the informative block of the fixture and is not declared.
+        Counting it would demand an exhibit for a blindness the relation does not claim --
+        failing closed, but on a fiction, which trains readers to ignore the check.
+        """
+        self.assertNotIn(("ix32", "ix64"), kc.declared_dimensions(DECL_SIX))
+
+    def test_unreadable_exhibit_file_fails_closed(self):
+        """An unreadable artifact must refuse the green, not silently bind nothing."""
+        self.assertIsNone(kc.unbound_dimensions(DECL_SIX, "/nonexistent/declared_blindness.rs"))
+
+    def test_requiring_a_token_group_would_break_five_clauses(self):
+        """Guards the corrected fails-open justification against being 'fixed' back.
+
+        #306 review found the original justification false: §6.8-0012 has no MUST
+        requiring a declared dimension to name its tokens. The obvious remedy -- add one --
+        is ALSO wrong, and this pins why. Five of the six clauses carrying a `Normalizes:`
+        declaration name zero tokens, correctly: a tolerance comparator normalizes "numeric
+        difference within the declared ULP bound" and a NaN comparator "the payload and sign
+        bits", and neither blindness collapses onto a token alphabet at all.
+
+        If this count ever drops, either a clause grew a token group or the scan changed --
+        both worth a human look before the remedy is reconsidered.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        bodies = dict(kc.clause_bodies(doc))
+        declared, _, _, _ = kc.scan()
+        tokenless = [c for c in declared if not kc.declared_dimensions(bodies[c])]
+        self.assertEqual(
+            len(tokenless), 5,
+            "expected exactly five token-less `Normalizes:` declarations, got %r" % (tokenless,))
+        self.assertNotIn("KISS-CONFORM-6.8-0012", tokenless,
+                         "the admissibility match's declaration MUST carry token groups")
+
+    def test_a_codec_backed_bucket_cannot_be_declared_tokenlessly(self):
+        """The half of the hole that IS closed, and by the other check.
+
+        `undeclared_buckets` requires a token of every codec alphabet to appear in the
+        clause, so a bucketed dimension that has a derivation cannot be declared without
+        its tokens -- it fails there before reaching this parse. The residual hole is a
+        bucketed dimension with NO codec alphabet behind it.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
+        stripped = body.replace("`d16`", "the divisibility ceiling")
+        self.assertEqual(kc.undeclared_buckets(stripped), ["DivBucket"],
+                         "removing a bucket's tokens must be caught by the codec check")
+        self.assertEqual(kc.undeclared_buckets(body), [])
+
+    def test_live_declaration_is_fully_bound(self):
+        """The real tree, not a fixture: every dimension §6.8-0012 declares is bound.
+
+        This started RED -- all six unbound, because no machine-readable marker existed.
+        """
+        doc = pathlib.Path(kc.DOC).read_text(encoding="utf-8")
+        body = next(b for c, b in kc.clause_bodies(doc) if c == "KISS-CONFORM-6.8-0012")
+        self.assertEqual(len(kc.declared_dimensions(body)), 6)
+        self.assertEqual(kc.unbound_dimensions(body), [])
+
+
+class SuiteIntegrityTest(unittest.TestCase):
+    """The suite must run every test it contains.
+
+    Added after review of #306 found `DeclarationCompletenessTest` defined TWICE in this
+    module: the second definition shadowed the first and six tests silently stopped
+    running, while the suite still reported OK -- over a population six smaller than it
+    looked. A green count is not evidence the count is over the right set, which is the
+    defect this whole file exists to catch, appearing in the file itself.
+    """
+
+    def test_no_class_name_is_defined_twice(self):
+        src = pathlib.Path(__file__).read_text(encoding="utf-8")
+        names = re.findall(r"^class\s+(\w+)", src, re.M)
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        self.assertEqual(dupes, [], "shadowed class(es): %r -- earlier tests never run" % dupes)
+
+    def test_every_defined_test_is_discovered(self):
+        """Counts what unittest LOADS against what the file DEFINES.
+
+        Catches shadowing by any route, not just a duplicate class name.
+        """
+        src = pathlib.Path(__file__).read_text(encoding="utf-8")
+        defined = len(re.findall(r"^    def (test_\w+)", src, re.M))
+        loaded = unittest.defaultTestLoader.loadTestsFromModule(
+            sys.modules[__name__]).countTestCases()
+        self.assertEqual(loaded, defined,
+                         "%d tests defined but %d loaded -- something is shadowed"
+                         % (defined, loaded))
 
 
 if __name__ == "__main__":

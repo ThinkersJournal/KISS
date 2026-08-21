@@ -16,7 +16,7 @@
 //! inputs that must NOT collide. Without it, "always return the ceiling" exhibits every
 //! blindness perfectly and destroys the key.
 //!
-//! Not exhibited here: the contraction SIZE CLASS. §6.5 of KISS-Classify defines its
+//! UNEXHIBITED `t`/`s`/`m`/`l` -- the contraction SIZE CLASS. §6.5 of KISS-Classify defines its
 //! boundaries (`tiny` <= 8, `small` 9..=128, `mid` 129..=2048, `large` > 2048) but this
 //! reference codec never DERIVES it — `SizeClass` is only ever parsed from a token or
 //! written as a literal in a vector. A blindness whose derivation is unimplemented
@@ -34,7 +34,7 @@ use kiss_conformance::structure_key::*;
 /// (1) Extent divisibility above the ceiling. Declared: `d16` absorbs every multiple of 16.
 #[test]
 fn test_conform_declared_blindness_is_exhibited() {
-    // -- extent divisibility -------------------------------------------------------
+    // EXHIBITS `d16` -- extent divisibility ---------------------------------------------------
     assert_ne!(16, 64, "vacuity guard: the two extents must actually differ");
     assert_eq!(
         derive_div_bucket(16),
@@ -48,7 +48,7 @@ fn test_conform_declared_blindness_is_exhibited() {
          returning a constant would satisfy every collision above and destroy the key"
     );
 
-    // -- element count within a work class -----------------------------------------
+    // EXHIBITS `warp`/`block`/`grid` -- element count within a work class ---------------------
     assert_eq!(
         derive_work_class(&[&[4]]),
         derive_work_class(&[&[32]]),
@@ -65,7 +65,7 @@ fn test_conform_declared_blindness_is_exhibited() {
         "DISCRIMINATION: the class boundary itself must still separate"
     );
 
-    // -- vector width above its widest ---------------------------------------------
+    // EXHIBITS `v8` -- vector width above its widest ------------------------------------------
     assert_eq!(
         derive_vec_width(1, 8, Some(4), 64, false),
         derive_vec_width(1, 64, Some(4), 64, false),
@@ -77,7 +77,7 @@ fn test_conform_declared_blindness_is_exhibited() {
         "DISCRIMINATION: a non-vectorizable extent must not land on the saturated token"
     );
 
-    // -- extent/stride detail within a layout class --------------------------------
+    // EXHIBITS `co`/`ic`/`st`/`br` -- extent/stride detail within a layout class --------------
     assert_eq!(
         derive_layout_tag(&[4, 4], &[4, 1]),
         derive_layout_tag(&[8, 8], &[8, 1]),
@@ -89,7 +89,7 @@ fn test_conform_declared_blindness_is_exhibited() {
         "DISCRIMINATION: a genuinely different layout must not collapse into it"
     );
 
-    // -- maximum touched offset below the index-width boundary ---------------------
+    // EXHIBITS `ix32`/`ix64` -- maximum touched offset below the index-width boundary ---------
     assert_eq!(
         derive_index_width(&[(&[10], &[1])]),
         derive_index_width(&[(&[1000], &[1])]),

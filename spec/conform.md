@@ -998,7 +998,9 @@ enum (§6.0). See umbrella §3 for the full statement.
   control** — inputs that must NOT collide — because a collision assertion alone is satisfied by
   a relation that returns a constant, which would exhibit every blindness perfectly and destroy
   the relation. A declared dimension whose derivation the suite does not implement MUST be
-  recorded as **unexhibited**, never omitted.
+  recorded as **unexhibited** in a form the suite's own tooling reads, never omitted and
+  never as prose alone — a record only a human can find is not a record the next widening
+  has to get past.
 
   > *Informative.* A `Normalizes:` line is prose: it can be written for a blindness the
   > relation does not have, and it can be silently widened later. **An exhibition is an
