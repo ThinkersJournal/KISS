@@ -571,9 +571,10 @@ the listed reasons would have believed they were finished and then hit an unreco
 the note until they think they are done.** The re-read never happens while it is blocked, and by
 then the evidence for the unlisted obstacle may have expired.
 
-**(e) A bare `§X.Y-NNNN` does not locate a clause — spell the SUB-STANDARD in any prose that
-crosses documents.** Clause numbering is per sub-standard, so the short form is ambiguous by
-construction and the ambiguity is invisible: both readings resolve to a real clause. *Why:* three
+**(e) A LOCALLY-SCOPED IDENTIFIER does not locate anything once it crosses a document boundary
+— carry the scope with it.** The commonest case is a bare `§X.Y-NNNN`: clause numbering is per
+sub-standard, so the short form is ambiguous by construction and **the ambiguity is invisible,
+because both readings resolve to a real clause.** *Why:* three
 live collisions, and **two of them produced a wrong citation by a careful reader.** `§6.8-0013` is
 a namespace-vocabulary clause in KISS-Classify and an exhibition clause in KISS-Conform — two
 projects cited the wrong one, which is what made #238 necessary. `§6.6-0002` is an op-identity
@@ -582,6 +583,26 @@ the first was relayed against the second, and the correction of that relay drew 
 about a correct finding.** Two errors, one collision, both by careful readers, inside twenty
 minutes. Unlike (a)–(d) this one is **mechanically checkable**: an unprefixed `§\d+\.\d+-\d+` in
 cross-document prose is a grep, so it can have a detector rather than only a rule.
+
+**The same mechanism reaches any identifier scoped to one document, and clause IDs are only its
+commonest form.** A decision document's **option letters** are per-document, so *"A"* becomes
+ambiguous the moment a second document renumbers them — **and both readings resolve to a real
+option.** *Why:* a four-option ruling was carried to the maintainer as a paraphrase that
+**re-lettered the options**, and the maintainer answered *"A"*. **In the original, `A` was the
+no-op — zero cost, zero effect. In the paraphrase, `A` was the most expensive option available: a
+normative tightening that breaks one sub-standard against another and rebuilds 34 call sites in a
+consumer.** The two `A`s sat at opposite ends of the cost range and **one letter answered both.**
+
+**So a paraphrase MAY compress the content and MUST preserve the identifiers.** The identifier is
+what a decision attaches to: **compression is lossy and recoverable; relabelling is a collision and
+is not.** Where renumbering is unavoidable, say so **at the point of use** — *"my letters differ
+from the source's"* travels with the question, and a note in the paraphrase does not.
+
+**It was caught only because the receiver asked which document the decision had been made against
+before acting on it**, and that question is worth asking because of the direction the error runs:
+**a no-op ruling is cheap to get wrong in the way that looks like agreement.** A wrong tightening
+produces broken builds and gets found; **a wrong no-op produces nothing at all, which is exactly
+what a correct no-op produces.**
 
 > **On convention 9, from the same week it was needed twice.** A mutation seeded during the
 > #280 review failed to apply and produced three green results that read exactly like evidence;
