@@ -1490,6 +1490,15 @@ def main():
     #   reverse — some executable test cites this clause as one it enforces.
     # The reverse direction is what gives credit for a real test whose fn name has
     # drifted from the spec's `*Test:*` name.
+    # `cited` maps a clause to EVERY test that backs it, by ANY test — not only the one the §9
+    # matrix names. A clause is CITED iff it is in some test's backing set here; a clause named
+    # by a test that only MENTIONS it (the id in an assert message, a bare comment) is NOT cited.
+    # DEFINITION TRAP, worth stating because it has already been reached for twice (#278): "is
+    # this clause CITED?" is `c in cited` (backed by ANY test), NEVER "does its §9-NAMED test
+    # back it". The narrow form misses a clause backed by a DIFFERENT test via reverse citation,
+    # so it reports ~the whole NAMED tier (~229 of 380) as if uncited — a number so large it is
+    # an instrument misaim, not a discovery. Use `c in cited`; a per-named-test check answers a
+    # different question (is the §9 pointer aligned with the evidence — the #294 CITED sub-split).
     cited = defaultdict(set)          # clause_id -> {test_name, ...}
     for tname, info in harness.items():
         for cid in info["clauses"]:
