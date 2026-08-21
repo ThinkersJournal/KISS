@@ -98,6 +98,7 @@ retrieval.**
 | the record is stale, unattributed, unenforced, or ambiguous | **16** |
 | I am about to tidy something that looks redundant — is it? | **17** (the defence should have told you; if it did not, measure) |
 | my comment says "don't simplify this" and gives a reason | **17** (a reason is believed; a measurement is checked) |
+| I am adding a guard because another gate has one | **17** (which STRUCTURE needs it? analogy is cargo cult) |
 
 **1. A claim that gates a decision states its method, and what that method did not examine.**
 Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:* two separate
@@ -575,6 +576,33 @@ same bytes. **The distinctness was load-bearing and nothing said so.**
 > add; **the load-bearing figure is the contrast — two reds became zero — not the total.** An
 > entry hanging on the incidental number goes stale and then looks wrong for a reason that does
 > not matter. **Cite the contrast, not the magnitude.**
+
+**A second instance, and a different failure of the weak form. Baracuda** (`baracuda`, PR #27,
+commit `e4188096`, `scripts/check-test-crate-locality.sh`, fn `names_crate`) runs `sed` to
+completion into a variable rather than piping it to `grep -q`. **It looks like a pipe somebody
+forgot to simplify.** Simplifying it reintroduces a SIGPIPE-under-`pipefail` bug: `grep -q` exits
+at first match and closes the pipe, `sed` — still writing a file larger than the pipe buffer —
+takes SIGPIPE, `pipefail` promotes 141 to the pipeline status although grep *succeeded*, and `if !`
+inverts a pass into a violation. **Measured on the guard's first live CI run: 8 files reddened on
+`ubuntu-latest`, 0 on `windows-latest`, 0 on the local Git-Bash box** — because MSYS masks the
+signal Linux delivers.
+
+> **Their failure mode is the opposite of MLMF's and that is why both are cited.** MLMF's weak
+> comment would be removed as **superstition**. Baracuda's would be removed as **"it does not even
+> reproduce"** — a maintainer on Windows sees zero and concludes the defence is imaginary. **The
+> strong form tells that reader why their platform is the wrong instrument before they draw the
+> conclusion.** A measurement that is a *split* carries more than a contrast: it predicts what a
+> skeptic will see, including when they will see nothing.
+
+**THE COUNTERWEIGHT, AND IT IS THIS CONVENTION'S OWN FAILURE MODE ARRIVING AS A FALSE POSITIVE.**
+A rule that says *defend your choices with measurements* invites defences everywhere. **A defence
+added by ANALOGY rather than by MECHANISM is cargo cult, and it is indistinguishable from a real
+one to the next reader** — which is strictly worse than the weak comment this convention replaces,
+because it will be believed. *Why:* an empty-set assertion was proposed for a gate whose set is a
+**cargo-validated literal list** — an unknown or removed package makes cargo hard-error, so that
+step **cannot** silently check an empty set. **The empty-set defence belongs to a gate that
+DISCOVERS its set**, and that gate already carried it. **Ask which structure needs which defence;
+do not apply the shape everywhere it rhymes.**
 
 **This raises the bar here rather than describing what we already do.** A single grep over
 `conformance/`, `tools/` and `.github/` finds this category **everywhere** — `"DO NOT SIMPLIFY THE
