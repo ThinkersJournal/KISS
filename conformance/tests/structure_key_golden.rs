@@ -485,6 +485,7 @@ fn test_classify_vec_width_unit_stride() {
 
 const A_GOLDEN: &str = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
 
+// Proven: KISS-CLASSIFY-6.7-0009 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_wrong_field_count() {
     // Backs: KISS-CLASSIFY-6.7-0009 — a wrong field count declines WrongFieldCount, never a panic.
@@ -577,6 +578,7 @@ fn reject_bad_rank() {
     assert_eq!(from_token(&t), Err(KeyDecline::BadRank));
 }
 
+// Proven: KISS-CLASSIFY-6.5-0006 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_unknown_op_family() {
     // Backs: KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownOpFamily.
@@ -585,6 +587,7 @@ fn reject_unknown_op_family() {
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownOpFamily));
 }
 
+// Proven: KISS-CLASSIFY-6.1-0001 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_unknown_dtype() {
     // Backs: KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype.
@@ -619,6 +622,7 @@ fn accepts_every_closed_op_family_and_dtype() {
     }
 }
 
+// Proven: KISS-CLASSIFY-6.5-0007 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_classify_work_class_element_count() {
     // Backs: KISS-CLASSIFY-6.5-0007 — derive_work_class returns warp/block/grid per the <=32 / <=1024 element-count boundaries.

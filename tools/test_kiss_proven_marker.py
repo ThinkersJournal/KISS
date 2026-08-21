@@ -123,13 +123,22 @@ def _live_harness():
     return kt.discover_tests(os.path.join(ROOT, "conformance"))
 
 
-def test_live_tree_is_armed_and_empty():
-    """The floor starts at 0: no `// Proven:` markers exist yet, so PROVEN is empty and there
-    are no malformed markers to flag. Reddens the instant a marker is added wrong (missing
-    subject/ref, or over an unbacked clause) — the fail-closed guard the burndown rests on."""
+def _floor_proven():
+    floor = kt.read_floor(os.path.join(ROOT, "conformance", "COVERAGE_FLOOR.tsv"))
+    return floor.get("proven", 0)
+
+
+def test_live_markers_are_all_valid_and_match_the_floor():
+    """Every live `// Proven:` marker is well-formed and backed (0 violations), and the live
+    PROVEN count equals the committed floor. Was armed-and-empty (floor 0) through #278 step 2;
+    #278 batch 1 populated it, so the invariant is now 'valid and consistent with the floor'
+    rather than 'empty'. Reddens the instant a marker is added wrong (missing subject/ref, or
+    over an unbacked clause) OR the floor and the markers drift apart — the fail-closed guard
+    the burndown rests on."""
     pmap, viol = kt.collect_proven(_live_harness())
     assert viol == [], f"live tree has proven-marker violations: {viol}"
-    assert pmap == {}, f"live PROVEN is non-empty ({sorted(pmap)}) — expected 0 (armed, empty)"
+    assert len(pmap) == _floor_proven(), (
+        f"live PROVEN {len(pmap)} != floor proven {_floor_proven()} — markers and floor drifted")
 
 
 def main():
@@ -138,7 +147,7 @@ def main():
     for t in tests:
         t()
     print(f"ok - {len(tests)} controls pass: the `// Proven:` marker parses subject+ref, "
-          f"fail-closes on malformed/unbacked, and the live tree is armed and empty")
+          f"fail-closes on malformed/unbacked, and the live markers are valid + match the floor")
     return 0
 
 
