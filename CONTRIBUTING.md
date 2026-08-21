@@ -96,6 +96,7 @@ retrieval.**
 | a fix added an outcome and I didn't check the old ones still happen | **13** |
 | a clause id appears in a test — does it count? | **15** |
 | the record is stale, unattributed, unenforced, or ambiguous | **16** |
+| I cannot verify a relayed claim — is there anything I CAN check? | **16(f)** (is it false on its own terms?) |
 
 **1. A claim that gates a decision states its method, and what that method did not examine.**
 Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:* two separate
@@ -463,7 +464,7 @@ recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-con
 and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
 three whose only reddening mutation is a spec-text edit).
 
-**16. Evidence has a LOCATION, and five ways of losing track of it.** A finding is only as
+**16. Evidence has a LOCATION, and six ways of losing track of it.** A finding is only as
 durable as someone's ability to go back to what it rested on. These are one convention because
 they are one failure — the evidence moved, or was never named, or was argued instead of shown.
 
@@ -534,6 +535,25 @@ the first was relayed against the second, and the correction of that relay drew 
 about a correct finding.** Two errors, one collision, both by careful readers, inside twenty
 minutes. Unlike (a)–(d) this one is **mechanically checkable**: an unprefixed `§\d+\.\d+-\d+` in
 cross-document prose is a grep, so it can have a detector rather than only a rule.
+
+**(f) When you cannot verify a claim, check whether it is false ON ITS OWN TERMS first.**
+**People reach for *"I cannot verify this"* and stop** — and self-consistency is **free**, so it
+gets skipped precisely in the cases where verification is impossible, **which are the cases where a
+wrong claim travels furthest.** (a) says *record the party and the artifact so a claim is
+checkable*; **this is what remains when you have neither.**
+
+> **An internally inconsistent summary is falsifiable without its source.**
+> — the portfolio PM's formulation, of a catch that ran the other way
+
+*Why:* a four-option ruling was relayed with a one-line gloss — *"the no-op is A in both tables,
+the full tightening is C in yours and A in mine."* **Both halves cannot be true: they are the same
+two letters, swapped.** That was visible **without access to either document**, and the sentence had
+already reached the decision-maker, pointing him toward re-confirming a letter that meant the
+opposite in the document he was being asked to rule against.
+
+**IT CAN FALSIFY, NEVER CONFIRM. A self-consistent claim is not thereby true.** Without that line
+this becomes a licence to accept coherent claims, **which is worse than not having the rule** — a
+relay that contradicts itself is rare; a relay that is wrong and coherent is the normal case.
 
 > **On convention 9, from the same week it was needed twice.** A mutation seeded during the
 > #280 review failed to apply and produced three green results that read exactly like evidence;
