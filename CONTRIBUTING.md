@@ -619,6 +619,29 @@ step **cannot** silently check an empty set. **The empty-set defence belongs to 
 DISCOVERS its set**, and that gate already carried it. **Ask which structure needs which defence;
 do not apply the shape everywhere it rhymes.**
 
+**The strongest instance is this repository's own, it predates the convention, and it defends an
+ABSENCE rather than a choice** — which is the harder case, because there is no code to point at and
+the next reader's default assumption is that somebody forgot. In
+`conformance/tests/structure_key_vectors.rs`, where the obvious assertion would be to compare the
+emitted artifact's `source_commit` against `SOURCE_COMMIT`:
+
+> *"**NOT asserted here:** `source_commit`. `doc` is the emitter's own output and the emitter writes
+> `SOURCE_COMMIT` into that field, so comparing the two compares a value to itself and cannot fail —
+> **verified by mutating the constant to a bogus value, after which this test still passed.** The
+> committed-vs-fresh byte equality in `test_structure_key_vectors_artifact_is_fresh` catches that
+> same mutation (it fails STALE), so **the obligation is covered non-vacuously there, not here.**"*
+
+**It does all three things the strong form requires, and one more.** It states the **measurement**
+(the constant was mutated and the test still passed), it names **the mutation that established
+it**, and it says **where the obligation IS covered instead** — so a reader who thinks the check is
+missing is told both why it is absent and what to inspect in its place. **Without that last part, a
+defended absence still reads as a gap.**
+
+**A convention whose best instance was already in the file before anyone wrote the convention is a
+much stronger claim that the rule describes something real** than any number of instances written
+to comply with it. Nobody was following a rule here; **this is what the strong form looks like when
+it is produced by the work rather than by the process.**
+
 **This raises the bar here rather than describing what we already do.** A single grep over
 `conformance/`, `tools/` and `.github/` finds this category **everywhere** — `"DO NOT SIMPLIFY THE
 BRANCH BELOW"`, `` "`|| rc=$?` is LOAD-BEARING, not defensive" ``, `"deliberately narrow in two
