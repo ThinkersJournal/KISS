@@ -104,7 +104,13 @@ def run_ratchet(tmp, rows, tests, floor, ledger_rows=()):
             f.write(f"{cid}\t{test}\tuntested\t\n")
     with open(os.path.join(conf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
         f.write("# fixture floor\n")
-        for k, v in floor.items():
+        # `proven` defaulted in, not written into each fixture (#271): these fixtures
+        # predate the 4th dimension and none of them is ABOUT it. It is now a REQUIRED
+        # key, so omitting it would make every fixture below report `incomplete` and
+        # test the dimension-set check instead of what it says it tests. A caller that
+        # passes `proven` explicitly still wins. The dimension-set check has its own
+        # file — tools/test_kiss_floor_dimensions.py.
+        for k, v in {"proven": 0, **floor}.items():
             f.write(f"{k}\t{v}\n")
     try:
         out = subprocess.run(
@@ -202,8 +208,10 @@ def main():
            base_ledger_all=None, base_spec_ids=None):
         def s(x):
             return None if x is None else set(x)
+        # `proven` defaulted in for the same reason as run_ratchet above (#271): a
+        # required key these fixtures predate, and none of them is about it.
         return kiss_trace.classify_ratchet(
-            floor, live, set(live_lint), set(live_harness),
+            {"proven": 0, **floor}, live, set(live_lint), set(live_harness),
             None if prev_lint is None else set(prev_lint),
             None if disk_lint is None else set(disk_lint),
             live_decredited=s(live_decredited), prev_decredited=s(prev_decredited),
@@ -431,7 +439,7 @@ def main():
         with open(ledger, "w", encoding="utf-8") as f:
             f.write("# ledger\nKISS-OPS-6.0-0042\ttest_x\tlint:kiss_ops\tnote\n")
         with open(floor, "w", encoding="utf-8") as f:
-            f.write("# floor\nharness\t3\nlint\t1\nuntested\t0\n")
+            f.write("# floor\nharness\t3\nlint\t1\nuntested\t0\nproven\t0\n")
         git("add", "-A")
         git("commit", "-q", "-m", "base")
         # NEW state ON DISK: X removed (moved to harness), floor harness bumped DOWN to 2. NOT
@@ -439,7 +447,7 @@ def main():
         with open(ledger, "w", encoding="utf-8") as f:
             f.write("# ledger\n")
         with open(floor, "w", encoding="utf-8") as f:
-            f.write("# floor\nharness\t2\nlint\t1\nuntested\t0\n")
+            f.write("# floor\nharness\t2\nlint\t1\nuntested\t0\nproven\t0\n")
         base = kiss_trace.base_ledger_lint(ledger, "HEAD")
         check("base ledger is read from the REF, not the regenerated disk file",
               base == {"KISS-OPS-6.0-0042"},
@@ -477,7 +485,7 @@ def main():
         with open(os.path.join(gconf, "UNBACKED.tsv"), "w", encoding="utf-8") as f:
             f.write("# ledger\n")
         with open(os.path.join(gconf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
-            f.write("# floor\nharness\t3\nlint\t0\nuntested\t0\n")
+            f.write("# floor\nharness\t3\nlint\t0\nuntested\t0\nproven\t0\n")
 
         def gg(*a):
             subprocess.run(["git", "-C", gd, *a], check=True, capture_output=True, text=True)
@@ -511,7 +519,7 @@ def main():
         # without a base into a soft non-answer, strictly worse than the false alarm it
         # replaced. A genuine violation MUST outrank a refusal.
         with open(os.path.join(gconf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
-            f.write("# floor\nharness\t2\nlint\t0\nuntested\t0\n")
+            f.write("# floor\nharness\t2\nlint\t0\nuntested\t0\nproven\t0\n")
         rv = subprocess.run([sys.executable, TOOL, "--ratchet", "--spec-dir", gspec,
                              "--conformance-dir", gconf], capture_output=True, text=True,
                             timeout=300)
@@ -546,7 +554,7 @@ def main():
 
         def at_floor(h):
             with open(os.path.join(econf, "COVERAGE_FLOOR.tsv"), "w", encoding="utf-8") as f:
-                f.write(f"# floor\nharness\t{h}\nlint\t0\nuntested\t0\n")
+                f.write(f"# floor\nharness\t{h}\nlint\t0\nuntested\t0\nproven\t0\n")
 
         at_floor(3)
         eg("init", "-q")
