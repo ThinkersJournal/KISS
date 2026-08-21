@@ -63,9 +63,9 @@ recoverable, but from several different places, and for some ops not at all:
 
 | Where arity is recoverable from | Ops |
 |---|---|
-| a formula in a semantics table (`a + b`, `-x`) or a clause body (§6.9-0001's `(y=a, x=b)`) | 87 |
-| a prose operand-ordering paragraph (§6.13 preamble: `input(0)=x, input(1)=gamma`) | 5 |
-| **nowhere — prose only** (`ceil` “round toward +∞”), inferred from meaning | 11 |
+| a formula in a semantics table (`a + b`, `-x`) or a clause body (§6.9-0001's `(y=a, x=b)`) | 85 |
+| a prose operand-ordering paragraph (§6.13 preamble: `input(0)=x, input(1)=gamma`) | 6 |
+| **nowhere — prose only** (`ceil` “round toward +∞”), inferred from meaning | 12 |
 | an access-primitive, assigned by op identity rather than arity | 6 |
 | settled by the most-specific-wins ruling (§5) rather than by arity | 12 |
 | **total** | **121** |
@@ -75,6 +75,13 @@ gated on a positive control **failed** on `atan2` — its arity is in a clause b
 table, so a table-only sweep silently reports it as unknown. And `element_map` is the sharp
 case: its Classify family depends on the **arity of the body it carries**, which is not a
 property of the op at all. **It cannot be assigned a fixed code.**
+
+**Reading arity out of prose does not work, and this document got it wrong first.** Arity is
+now read **only from inside backticked code spans**: matching operand names across whole
+sentences also matches the English article *“a”*, which gave `popcount` — an op with **no**
+formula anywhere — an arity of 2. §8 records every failure mode. The point here is that
+**the prose ops.md uses to describe an op is not a substitute for a signature it never
+states.**
 
 ## 4. Coverage of the 24-code alphabet
 
@@ -163,20 +170,20 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 
 | Op | Tier | ops.md family | Arity | → code | Basis |
 |---|---|---|---|---|---|
-| `cabs` | complex | complex | 2 | **bin** | formula |
+| `cabs` | complex | complex | 1 | **une** | formula |
 | `cadd` | complex | complex | 2 | **bin** | formula |
-| `carg` | complex | complex | 2 | **bin** | formula |
-| `cconj` | complex | complex | 2 | **bin** | formula |
+| `carg` | complex | complex | 1 | **une** | formula |
+| `cconj` | complex | complex | 1 | **une** | formula |
 | `cdiv` | complex | complex | 2 | **bin** | formula |
-| `cexp` | complex | complex | 2 | **bin** | formula |
+| `cexp` | complex | complex | 1 | **une** | formula |
 | `cim` | complex | complex | 1 | **une** | unstated |
-| `clog` | complex | complex | 1 | **une** | unstated |
+| `clog` | complex | complex | 1 | **une** | formula |
 | `cmake` | complex | complex | 1 | **une** | formula |
 | `cmul` | complex | complex | 2 | **bin** | formula |
-| `cneg` | complex | complex | 2 | **bin** | formula |
-| `cpow` | complex | complex | 2 | **bin** | unstated |
+| `cneg` | complex | complex | 1 | **une** | formula |
+| `cpow` | complex | complex | 2 | **bin** | formula |
 | `cre` | complex | complex | 1 | **une** | unstated |
-| `csqrt` | complex | complex | 2 | **bin** | formula |
+| `csqrt` | complex | complex | 1 | **une** | formula |
 | `csub` | complex | complex | 2 | **bin** | formula |
 | `gelu` | non-primitive | activation | 1 | **gat** | most-specific-wins |
 | `gelu_tanh` | non-primitive | activation | 1 | **gat** | most-specific-wins |
@@ -195,8 +202,8 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `rem_floor` | non-primitive | binary_math | 2 | **bin** | formula |
 | `rem_trunc` | non-primitive | binary_math | 2 | **bin** | formula |
 | `matmul` | non-primitive | contraction | 2 | **gem** | most-specific-wins |
-| `embedding` | non-primitive | gather_scatter | 1 | **emb** | most-specific-wins |
-| `index_select` | non-primitive | gather_scatter | 1 | **idx** | most-specific-wins |
+| `embedding` | non-primitive | gather_scatter | 2 | **emb** | most-specific-wins |
+| `index_select` | non-primitive | gather_scatter | 2 | **idx** | most-specific-wins |
 | `scatter_add` | non-primitive | gather_scatter | 3 | **idx** | prose |
 | `logical_and` | non-primitive | logical | 2 | **bin** | formula |
 | `logical_not` | non-primitive | logical | 1 | **une** | formula |
@@ -207,7 +214,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `min_prop` | non-primitive | minmax | 2 | **bin** | formula |
 | `layer_norm` | non-primitive | normalization | 3 | **nrm** | prose |
 | `log_softmax` | non-primitive | normalization | 1 | **sft** | most-specific-wins |
-| `rms_norm` | non-primitive | normalization | 1 | **nrm** | formula |
+| `rms_norm` | non-primitive | normalization | 2 | **nrm** | prose |
 | `softmax` | non-primitive | normalization | 1 | **sft** | most-specific-wins |
 | `all` | non-primitive | reduction | 1 | **red** | formula |
 | `any` | non-primitive | reduction | 1 | **red** | formula |
@@ -242,11 +249,11 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `avg_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
 | `max_pool` | non-primitive | window | 1 | **pol** | most-specific-wins |
 | `element_map` | primitive | access-primitive | — | **unassigned** ⚠ | unresolvable at the op level |
-| `gather` | primitive | access-primitive | 1 | **idx** | op identity |
+| `gather` | primitive | access-primitive | 2 | **idx** | op identity |
 | `prefix_scan` | primitive | access-primitive | 1 | **scn** | op identity |
-| `reduce` | primitive | access-primitive | 2 | **red** | op identity |
-| `scatter` | primitive | access-primitive | 2 | **idx** | op identity |
-| `sort_network` | primitive | access-primitive | 2 | **srt** | op identity |
+| `reduce` | primitive | access-primitive | 1 | **red** | op identity |
+| `scatter` | primitive | access-primitive | 3 | **idx** | op identity |
+| `sort_network` | primitive | access-primitive | 1 | **srt** | op identity |
 | `abs` | primitive | arithmetic | 1 | **une** | formula |
 | `add` | primitive | arithmetic | 2 | **bin** | formula |
 | `div` | primitive | arithmetic | 2 | **bin** | formula |
@@ -262,7 +269,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `bit_xor` | primitive | bitwise | 2 | **bin** | formula |
 | `clz` | primitive | bitwise | 1 | **une** | unstated |
 | `ctz` | primitive | bitwise | 1 | **une** | unstated |
-| `popcount` | primitive | bitwise | 2 | **bin** | formula |
+| `popcount` | primitive | bitwise | 1 | **une** | unstated |
 | `shl` | primitive | bitwise | 2 | **bin** | formula |
 | `shr` | primitive | bitwise | 2 | **bin** | formula |
 | `cmp_eq` | primitive | comparison | 2 | **bin** | formula |
@@ -272,7 +279,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `cmp_lt` | primitive | comparison | 2 | **bin** | formula |
 | `cmp_ne` | primitive | comparison | 2 | **bin** | formula |
 | `ceil` | primitive | rounding | 1 | **une** | unstated |
-| `floor` | primitive | rounding | 1 | **une** | formula |
+| `floor` | primitive | rounding | 1 | **une** | unstated |
 | `round_even` | primitive | rounding | 1 | **une** | unstated |
 | `trunc` | primitive | rounding | 1 | **une** | unstated |
 | `select` | primitive | select | 3 | **ter** | formula |
@@ -283,7 +290,7 @@ paragraph; `unstated` = **arity nowhere stated, inferred from the op's meaning**
 | `lgamma` | primitive | transcendental | 1 | **une** | formula |
 | `log` | primitive | transcendental | 1 | **une** | formula |
 | `sin` | primitive | transcendental | 1 | **une** | formula |
-| `sqrt` | primitive | transcendental | 1 | **une** | formula |
+| `sqrt` | primitive | transcendental | 1 | **une** | unstated |
 
 ⚠ **`element_map` is deliberately left unassigned** — see §7. Assigning it a code would
 be the error, not the omission.
@@ -310,12 +317,31 @@ and the `shp` reading as ruled, rather than leaving them to be rediscovered.
 
 ## 8. Provenance
 
-Measured at `origin/main`, not in the shared anchor. Population and family tags derived from
-`spec/ops.md` §2.7/§6.13 by an extractor gated on a **positive control of 23 known arities**,
-which failed twice before passing — first reading only table cells and missing §6.9's
-clause-body formulas, then on `atan2`'s `(y=a, x=b)` spelling. The 24 codes are from
+Measured at `origin/main`, not in the shared anchor. The 24 codes are from
 `conformance/src/structure_key.rs:26` and `spec/classify.md` §6.5. Vector coverage is field 1
 of the `token` string in each row of `conformance/corpus/structure_key_vectors.json` —
 **not** a JSON `op_family` key, which does not exist and returns 0 if grepped for. Every
+count in this document is computed from the mapping data at render time rather than written
+by hand.
+
+**The arity extractor was wrong four times, and each was caught by a control rather than by reading it.** They are recorded because the corrected mapping is only as trustworthy as the thing that found the errors:
+
+| Failure | Effect | Caught by |
+|---|---|---|
+| read only table cells | §6.9’s clause-body formulas invisible; `atan2` unknown | positive control |
+| matched variables in **prose**, so the English article *“a”* counted as operand `a` | `popcount` — which has **no formula at all** — came out arity 2 | **review (#304)** |
+| read complex **component** vars as operands | `cabs` = `hypot(a, b)` over *one* operand read as binary | **review (#304)** |
+| counted only component vars, missing whole-operand names | `cpow` = `cexp(cmul(w, clog(z)))` is **binary** and read as unary | positive control, after the fix |
+
+The last row is the one worth keeping: **the fix for the second and third findings introduced**
+**a fourth error**, and only the control caught it. The extractor is now gated on **35 known
+arities and a 5-op negative control** asserting that ops with no formula report *unknown*
+rather than guessing — the check the article bug slipped through, because the original
+control tested only that known arities were right and never that unknown ones stayed unknown.
+
+**Blast radius of the correction: 22 of 121 extracted arities changed, and 7 final Classify
+codes** — `cabs`, `carg`, `cconj`, `cexp`, `cneg`, `csqrt` (`bin` → `une`) and `popcount`
+(`bin` → `une`). Review reported 4 of those 7; the rest came from re-deriving rather than
+patching the reported rows.
 count in this document is computed from the mapping data at render time rather than written
 by hand.
