@@ -946,12 +946,19 @@ enum (§6.0). See umbrella §3 for the full statement.
   *Test:* `test_conform_per_output_comparator_selection`.
 - **KISS-CONFORM-6.8-0012** — Every clause that **defines** a comparison relation the suite
   relies on MUST carry a **`Normalizes:`** enumeration: the dimensions along which two
-  *differing* inputs compare **equal**, or an explicit statement that it normalizes nothing. A
+  *differing* inputs compare **equal**, or an explicit statement that it normalizes nothing.
+  **Each enumerated dimension MUST state what it collapses onto** — either the **token group**
+  onto which it maps a range (`d16`; `warp`/`block`/`grid`), or an explicit statement that the
+  dimension is **absent from the compared value entirely**, as *"the computation"* is below.
+  **A dimension stating neither MUST NOT be declared**: it satisfies the enumeration's surface
+  form while being **invisible to any instrument that binds a declaration to its exhibit**, so it
+  is declared and never asked for anything. A
   clause MUST NOT cite a comparator as the backing for an obligation over a dimension that
   comparator enumerates — such a test cannot fail on that dimension and so does not bind it.
   The obligation covers **every** comparison relation, including one not written as a
   comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7). Its
-  declaration is **`Normalizes:` the computation, and every bucketed component of shape** —
+  declaration is **`Normalizes:` the computation — ABSENT FROM THE COMPARED VALUE ENTIRELY, since
+  the derivation never takes it as an input — and every bucketed component of shape** —
   the key is derived from **shape** (op category, arity, dtypes, layout, target) and is
   **silent on semantics**, so two *different* computations of the same shape compare
   **byte-equal**; and each bucketed component collapses a range onto one token: extent
@@ -969,6 +976,17 @@ enum (§6.0). See umbrella §3 for the full statement.
   > already defends against it four times without naming it — §6.13-0002, §6.3-0005, §6.8-0009,
   > and §6.9-0002. A fifth will be written the next time someone notices; the sixth omission
   > will not be.
+  >
+  > **ENFORCEMENT IS PARTIAL AND THAT IS RECORDED RATHER THAN DISCOVERED (#307).** The
+  > declaration-to-exhibit binding is by **token group**, so a dimension declared as
+  > *absent-entirely* is bound by the second form above and a dimension naming neither is now
+  > forbidden rather than merely unreachable. **The suite's lint does not yet reject the
+  > forbidden form** — it cannot see it, which is the defect this sentence closes at the clause
+  > level. Until it does, this requirement is **enforced by review, not by instrument**, and
+  > `#307` tracks the backstop. **The live instance that produced it: "the computation" is this
+  > clause's own first enumerated dimension, and it was declared, unexhibited, and unrecorded** —
+  > invisible to the binding because it names no token, and legitimately so, since it collapses
+  > nothing onto anything.
   >
   > **Check the *because*, not only the claim.** "A true observation with a false *because* is
   > the hardest to catch — the truth vouches for the reasoning no one then examines" (kiss-ref).
