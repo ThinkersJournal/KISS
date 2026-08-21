@@ -209,8 +209,16 @@
 # regression, always — a stale proof claiming aboutness it has lost is worse than no proof. When
 # a legitimate retirement drops the count, bump this number down in the same PR, exactly as a
 # `stale` improvement bumps it up. See #278 and classify_proven().
+#
+# proven 0 -> 9 (#278 batch 1): the first `// Proven:` markers land. Nine clauses each carry a
+# FRESH mutation demonstration (subject=impl), shown to redden their proving test against
+# current main and recorded in conformance/PROVEN_BATCH1.md — the isolation matrix proves each
+# mutation reddens EXACTLY ONE batch test, so the nine are independently demonstrated, defect
+# rate 0/9. NOT transcribed from #270/#188's prose (a reverted memory of a proof); re-run, per
+# the architect's byte-identical-AND-re-runnable rule. harness/lint/untested UNCHANGED — a proof
+# marker credits ABOUTNESS on a clause already backed, it moves no other dimension.
 # key	value
 harness	380
 lint	33
 untested	496
-proven	0
+proven	9

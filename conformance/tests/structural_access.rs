@@ -69,6 +69,7 @@ fn reduce_class_is_selected_per_spec() {
 
 // ---- prefix_scan: inclusive/exclusive, length-preserving (§6.11-0003) --------
 
+// Proven: KISS-OPS-6.11-0003 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scan_is_length_preserving() {
     // Backs: KISS-OPS-6.11-0003 — one output element per input position, distinct from reduce.
@@ -164,6 +165,7 @@ fn scatter_assign_last_writer_in_iteration_order_wins() {
     assert_eq!(dest, [0.0, 9.0]);
 }
 
+// Proven: KISS-OPS-6.11-0005 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scatter_oob_writes_are_skipped() {
     // Backs: KISS-OPS-6.11-0005 — OOB write skipped; a negative index is OOB (cf. KISS-OPS-6.11-0004, the OOB-policy clause — referenced, not backed here).
@@ -172,6 +174,7 @@ fn scatter_oob_writes_are_skipped() {
     assert_eq!(dest, [1.0, 30.0, 3.0]); // only the in-bounds idx 1 wrote
 }
 
+// Proven: KISS-OPS-6.11-0010 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scatter_atomic_max_min_nan_propagating() {
     // Backs: KISS-OPS-6.11-0010 — fp atomic-max/min NaN-propagating — NaN scattered OR already

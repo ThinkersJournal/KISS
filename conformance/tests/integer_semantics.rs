@@ -13,6 +13,7 @@ use kiss_conformance::integer::*;
 
 // Backs: KISS-OPS-6.4-0001 (§6.2-0002 wrapping) — `test_ops_add_sub_mul` (integer path):
 // wrapping two's-complement add/sub/mul, per width, never saturating, never UB.
+// Proven: KISS-OPS-6.4-0001 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_ops_add_sub_mul_wrapping() {
     // signed MAX+1 wraps to MIN (§6.2-0002); unsigned MAX+1 wraps to 0.
@@ -46,6 +47,7 @@ fn test_ops_add_sub_mul_wrapping() {
 
 // Backs: KISS-OPS-6.4-0003 — `test_ops_neg` (integer path): two's-complement wrapping
 // negate. The distinct integer neg, NOT the float sign-bit flip.
+// Proven: KISS-OPS-6.4-0003 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_ops_neg_integer() {
     assert_eq!(neg(3i32), -3i32);
