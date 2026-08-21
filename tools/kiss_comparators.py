@@ -164,6 +164,26 @@ def undeclared_buckets(clause_body, path=KEY_CODEC):
 # WHAT IS ALREADY CLOSED, so the hole is not read as wider than it is: `undeclared_buckets`
 # above requires a token of EVERY codec alphabet to appear in the clause, so a bucketed
 # dimension that HAS a derivation cannot be declared token-lessly -- it fails there first.
+#
+# THE OTHER DIRECTION, MEASURED RATHER THAN REASONED ABOUT (asked by the portfolio PM).
+# This gate catches a blindness DECLARED WITHOUT BACKING. The mirror case is a blindness
+# DELETED -- which has no unbacked claim to catch, and a silently removed blindness is a
+# claim silently WIDENED. Sabotage at head 0ad6796, both arms:
+#
+#   delete a TOKEN-BEARING dimension (`d16`)   -> exit 1, `INCOMPLETE DECLARATION: omits
+#                                                 DivBucket`. CAUGHT -- by undeclared_buckets,
+#                                                 because the codec still has the alphabet.
+#   delete `Normalizes: the computation`       -> exit 0, RESULT: CLEAN. SILENT PASS.
+#
+# So deletion IS covered for every dimension with a derivation behind it, and is NOT covered
+# for the one dimension that has none. The tell is in the count: after deleting `the
+# computation` the header still reads `6 dimension(s) declared`, because that dimension was
+# never counted -- it names no token, so this parse never saw it.
+#
+# THAT IS THE SAME DIMENSION AS #307/#308, FROM THE OTHER SIDE. #307 is that a token-less
+# dimension can be ADDED without an exhibit; this is that it can be REMOVED without a
+# murmur. One clause amendment closes both, which is why nothing is bolted on here: a
+# deletion detector keyed on tokens would be blind to exactly the case that needs it.
 BLINDNESS_TEST = os.path.join(os.path.dirname(HERE), "conformance", "tests",
                               "declared_blindness.rs")
 RE_DIM_GROUP = re.compile(r"\(((?:`[^`]+`)(?:/`[^`]+`)*)\)")
