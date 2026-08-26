@@ -124,7 +124,9 @@ def _live_harness():
 
 
 def _floor_proven():
-    floor = kt.read_floor(os.path.join(ROOT, "conformance", "COVERAGE_FLOOR.tsv"))
+    # `read_floor` returns (floor, problems) since #315 — unpack it. The `problems` list
+    # (unknown / duplicate keys) is the ratchet's to report, not this test's subject.
+    floor, _problems = kt.read_floor(os.path.join(ROOT, "conformance", "COVERAGE_FLOOR.tsv"))
     return floor.get("proven", 0)
 
 
