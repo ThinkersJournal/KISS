@@ -858,16 +858,18 @@ correspondence the sibling relies on).
 
   This clause restricts a **claim**. It states no verification method and MUST NOT be
   read as sanctioning one: how a `ULP/tolerance` op's result is evaluated is
-  KISS-Conform's, under §6.0-0003. A previous revision of this clause additionally
-  required such an op to "compare under that op's declared comparator" — a
-  **verification mandate inside a claim-restriction clause**, legislating outside this
-  sub-standard's subject, and in direct conflict with KISS-Conform once §6.0-0003
-  anchors the class to an audited wide-precision referent. It was excised rather than
-  reworded: rewording would have left the same clause legislating outside its subject,
-  merely agreeing with the new rule for as long as that rule held still.
+  KISS-Conform's to perform, under **KISS-Ops §6.0-0003** — the clause that assigns
+  it. A previous revision of this clause additionally required such an op to
+  "compare under that op's declared comparator" — a **verification mandate inside a
+  claim-restriction clause**, legislating outside this sub-standard's subject, and in
+  direct conflict with KISS-Conform once **KISS-Ops §6.0-0003** anchors the class to
+  an audited wide-precision referent. It was excised rather than reworded: rewording
+  would have left the same clause legislating outside its subject, merely agreeing
+  with the new rule for as long as that rule held still.
 
-  **Consequence, stated rather than left to be inferred.** With the mandate gone and
-  §6.0-0003 not yet anchored, an **equivalence check** — two artifacts of the *same*
+  **Consequence, stated rather than left to be inferred.** With the mandate gone, and
+  **the audited wide-precision referent that KISS-Ops §6.0-0003 requires not yet
+  existing**, an **equivalence check** — two artifacts of the *same*
   computation compared against each other, which asks about no third thing and for
   which a wide-precision referent is meaningless rather than merely absent — has **no
   sanctioned form in this suite**. That is a known and accepted cost, not an oversight,

@@ -849,8 +849,9 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   same-language, on-device, and for the exact-byte determinism class.
 
   This clause restricts a **claim** and states no verification method; how a
-  `ULP/tolerance` op's result is evaluated is KISS-Conform's, under §6.0-0003. The
-  excised conjunct, the reason it was excised rather than reworded, and the consequence
+  `ULP/tolerance` op's result is evaluated is KISS-Conform's to perform, under
+  **KISS-Ops §6.0-0003** — the clause that assigns it. The excised conjunct, the
+  reason it was excised rather than reworded, and the consequence
   for equivalence checks are stated identically in the corresponding KISS-Emit clause
   (§6.7-0002) — the two are held semantically equivalent by KISS-EMIT §6.7-0008 and its
   cross-standard lint.
