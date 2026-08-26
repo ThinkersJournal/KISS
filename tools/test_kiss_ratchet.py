@@ -54,6 +54,7 @@ rather than print at-the-floor.
 
 Run: python tools/test_kiss_ratchet.py
 """
+import ast
 import os
 import subprocess
 import sys
@@ -81,6 +82,39 @@ def spec_with(rows):
     for ordinal, test in rows:
         out.append(f"| {fid(ordinal)} | `{test}` |\n")
     return "".join(out)
+
+
+def kiss_trace_inline_lint_comparisons(path):
+    """Line numbers of any comparison whose sides index `live` and `floor` at key "lint".
+
+    STRUCTURAL, not textual (#323 review). The substring version this replaced banned two
+    spellings (`==`, `!=`) and let the other four operators through, so it enforced a
+    narrower property than its own name claimed. An AST walk cannot be fooled by operator
+    choice, spacing, or argument order.
+
+    `lint_delta` (the single hoisted comparison, #320) is a BinOp, not a Compare, so it is
+    correctly invisible here — this looks only for a comparison that has come BACK inline.
+    """
+    with open(path, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+
+    def lint_index_of(node):
+        """The container name if `node` is `<name>["lint"]`, else None."""
+        if (isinstance(node, ast.Subscript)
+                and isinstance(node.value, ast.Name)
+                and isinstance(node.slice, ast.Constant)
+                and node.slice.value == "lint"):
+            return node.value.id
+        return None
+
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            names = {lint_index_of(s) for s in [node.left] + list(node.comparators)}
+            names.discard(None)
+            if {"live", "floor"} <= names:
+                hits.append(node.lineno)
+    return sorted(hits)
 
 
 def harness_with(tests):
@@ -132,7 +166,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 48
+EXPECTED_CONTROLS = 55
 
 
 def check(name, cond, detail=""):
@@ -422,6 +456,74 @@ def main():
               base_ledger_all=[], base_spec_ids=[])
     check("an arrival with an UNREADABLE ledger is not green", v == "ledger_unverifiable",
           f"got {v}")
+
+    # ---- THE LINT COUNT IS COMPARED ON THE GIT PATH TOO (#320) ----
+    # Until #320 the floor's `lint` VALUE was never compared on the path that ships. The
+    # comparison existed -- `if live["lint"] != floor["lint"]` -- but sat INSIDE the git-less
+    # branch, and in a git checkout `--base-ref` is required, so that branch never ran. Floor
+    # 28 / 32 / 34 / 38 against live 33 each returned CLEAN, and the at-floor line printed the
+    # LIVE number, so a floor off by five read as consistent.
+    #
+    # `lint_delta` is now computed ONCE above both paths. A second comparison on the git path
+    # would have been the divergence DIMENSIONS was introduced to prevent in #271, one
+    # function over -- so these controls also pin that there is only one.
+    #
+    # `cr` supplies prev_lint, i.e. the GIT path. No recorded move is staged (nothing left or
+    # arrived in the lint set), so a deviation reaching the verdict is unexplained by
+    # construction -- which is what makes these about the COUNT and not about the set.
+    v, lines = cr({"harness": 3, "lint": 5, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+                  ["A"], ["A", "B", "C"], ["A"])
+    check("lint BELOW its floor is a regression on the git path", v == "regression",
+          f"a lint count 5 -> 3 passed on the git path — the floor value is not compared: got {v}")
+    check("...and the message names FLOOR -> LIVE, not just 'deviates'",
+          v == "regression" and any("5 -> 3" in ln for ln in lines),
+          f"the deviation message does not carry both numbers, so a reader cannot tell which "
+          f"is wrong: {lines}")
+
+    v, lines = cr({"harness": 3, "lint": 1, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+                  ["A"], ["A", "B", "C"], ["A"])
+    check("lint ABOVE its floor is a STALE floor, not silence", v == "stale",
+          f"a lint count 1 -> 3 passed — 'a deviation in EITHER direction fails': got {v}")
+    check("...and the stale message names FLOOR -> LIVE too",
+          v == "stale" and any("1 -> 3" in ln for ln in lines),
+          f"the stale message does not carry both numbers: {lines}")
+
+    # CONTROL. Without it, a classifier hardcoded to red would satisfy all four above.
+    v, _ = cr({"harness": 3, "lint": 3, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+              ["A"], ["A", "B", "C"], ["A"])
+    check("lint AT its floor is still green", v == "at_floor",
+          f"the lint comparison reds when the counts agree: got {v}")
+
+    # The git-LESS path is UNCHANGED: it still declines to characterize rather than calling a
+    # lint move a regression, because without the base ledger a substitution and a regression
+    # are indistinguishable. Same `lint_delta`, different verdict -- which is the point of
+    # hoisting the comparison rather than duplicating it.
+    v, _ = kiss_trace.classify_ratchet(
+        {"harness": 3, "lint": 5, "untested": 0, "proven": 0},
+        {"harness": 3, "lint": 3, "untested": 0}, set(["A"]), set(["A", "B", "C"]), None)
+    check("git-less lint move still declines to characterize", v == "uncharacterized",
+          f"the git-less path changed behaviour: got {v}")
+
+    # ONE comparison site, checked on the AST rather than on substrings (#323 review).
+    #
+    # The first version of this control banned the two spellings `live["lint"] == floor["lint"]`
+    # and `!=`, and carried a no-op `- _code.count('f"') * 0` term. TWO PROBLEMS, and the second
+    # is the one that matters: FOUR OF THE SIX COMPARISON OPERATORS WALKED STRAIGHT THROUGH IT.
+    # `if live["lint"] > floor["lint"]:` passed untouched -- verified by seeding each operator.
+    #
+    # The control was named "the comparison exists in only one place" and enforced "`==` and
+    # `!=` appear in only one place". THOSE ARE DIFFERENT CLAIMS AND THE OUTPUT CANNOT TELL THEM
+    # APART -- a check whose population is narrower than the property it names, which is the
+    # same defect #320 fixes one level down, in the PR that fixes it.
+    #
+    # The AST form is immune to operator spelling, to whitespace, and to which side is written
+    # first, because it asks the structural question directly: is there a comparison whose sides
+    # index `live` and `floor` at the key "lint"?
+    inline = kiss_trace_inline_lint_comparisons(TOOL)
+    check("the lint floor comparison exists in exactly ONE place (AST, any operator)",
+          inline == [],
+          f"an inline live/floor lint comparison is back beside `lint_delta` at line(s) "
+          f"{inline} — the #271 divergence, one function over. Hoist it instead.")
 
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:

@@ -853,6 +853,13 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
 
     untested_delta = live["untested"] - floor["untested"]   # +ve worse
     harness_delta = live["harness"] - floor["harness"]       # -ve worse
+    # ONE lint comparison, read by BOTH paths (#320). It used to be written inline inside the
+    # git-less branch below, so on the path that actually ships — a git checkout, where
+    # --base-ref is required — the floor's `lint` VALUE was never compared at all: floor 28 /
+    # 32 / 34 / 38 against live 33 each returned CLEAN, and the at-floor line printed the LIVE
+    # number, so a floor off by five read as consistent. A SECOND comparison on the git path
+    # would be the divergence `DIMENSIONS` was introduced to prevent in #271, one function over.
+    lint_delta = live["lint"] - floor["lint"]                # -ve worse
 
     if prev_lint is None:
         # GIT-LESS: no base ledger to diff the lint SET against. The caller reaches here ONLY
@@ -860,7 +867,7 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
         # characterize the two COUNT dimensions we can see and say PLAINLY that the lint
         # dimension was not characterized — printing `at_floor` here is the exact hole the
         # count-gated base read left: a constant-count lint<->harness swap looks at-the-floor.
-        if live["lint"] != floor["lint"]:
+        if lint_delta:
             return ("uncharacterized", [
                 f"the lint count moved ({floor['lint']} -> {live['lint']}) but this is a git-less "
                 "run: a substitution and a regression cannot be told apart without the base "
@@ -904,7 +911,7 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
     # X -> X)", a message that contradicts its own parentheses. The count baseline (the floor,
     # bumped to POST) and the set baseline (the base ledger, still PRE) diverge in a
     # substitution PR; recognize the completed move before the count-conservation trick runs.
-    counts_at_floor = (harness_delta == 0 and live["lint"] == floor["lint"]
+    counts_at_floor = (harness_delta == 0 and lint_delta == 0
                        and untested_delta == 0)
     if counts_at_floor and left_to_harness and not arrived_lint and not left_lost:
         # Green only if the ON-DISK ledger also dropped the moved IDs from its lint set. Else the
@@ -1102,8 +1109,19 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
             "previously HARNESS (a behavioral->documentary downgrade, an evidence loss), then "
             "update the ledger deliberately."])
 
-    if harness_delta > 0 or untested_delta < 0:
+    # The lint COUNT reaches here only when no recorded move (substitution / arrival /
+    # de-crediting) has accounted for it — each of those returns above — so a deviation at this
+    # point is unexplained. NAMES BOTH NUMBERS (#320 review): a message saying only "lint
+    # deviates" sends the reader to the file to work out which of the two is wrong, and that
+    # invisibility was half of why this survived — the at-floor line printed the live number.
+    if lint_delta < 0:
+        return ("regression", [
+            f"lint fell {floor['lint']} -> {live['lint']}: documentary enforcement was lost, and "
+            "no recorded move (substitution / arrival / de-crediting) accounts for it."])
+
+    if harness_delta > 0 or untested_delta < 0 or lint_delta > 0:
         b = ([f"harness {floor['harness']} -> {live['harness']}"] if harness_delta > 0 else []) \
+            + ([f"lint {floor['lint']} -> {live['lint']}"] if lint_delta > 0 else []) \
             + ([f"untested {floor['untested']} -> {live['untested']}"] if untested_delta < 0 else [])
         return ("stale", [f"coverage improved past the floor: {', '.join(b)}.",
                           f"Set the floor to harness {live['harness']}, lint {live['lint']}, "
