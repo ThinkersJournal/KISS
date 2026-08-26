@@ -11,11 +11,13 @@ re-run** via `tools/proven_batch2_matrix.py`, not a transcription of prose.
 
 ## How to re-run
 
-`tools/proven_batch2_matrix.py` seeds each mutation below in `conformance/src/`, runs the batch's
-test set **unfiltered**, records which tests fail, and restores the source byte-for-byte. It asserts
-each seed applied (convention 9) and each restore byte-exact. Two of the ten proving tests are lib
-unit tests (`#[cfg(test)]` in `conformance/src/per_output.rs`), so the run passes `--lib` alongside
-five integration binaries and matches failed tests by their last `::` component:
+`tools/proven_batch2_matrix.py` is a thin wrapper: it holds the ten seeds and their clause map and
+delegates to the shared `tools/proven_matrix.py` core (the same runner batch 1 uses). The core DERIVES
+the cargo targets from `discover_tests`, runs a baseline first, passes `--no-fail-fast`, records which
+tests fail, and restores the source byte-for-byte (seed-applied + restore-exact asserted, convention 9).
+Two of the ten proving tests are lib unit tests (`#[cfg(test)]` in `conformance/src/per_output.rs`), so
+the derived target set is `--lib` alongside five integration binaries, matched by their last `::`
+component:
 
 ```
 cargo test --no-fail-fast --manifest-path conformance/Cargo.toml --lib \

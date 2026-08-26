@@ -1,35 +1,15 @@
-"""#278 batch 2 — the re-runnable isolation-matrix driver behind conformance/PROVEN_BATCH2.md.
+"""#278 batch 2 -- thin wrapper over the generic proven_matrix.py core; record in conformance/PROVEN_BATCH2.md.
 
-Same contract as tools/proven_batch1_matrix.py: for each batch clause it seeds a one-site
-mutation of the clause's IMPLEMENTATION (the obligation subject, convention 15) in
-conformance/src/, runs the relevant test binaries UNFILTERED, records which tests fail, and
-restores the source BYTE-FOR-BYTE (try/finally on every path, seed-applied + byte-exact-restore
-asserted). Prints per-mutation kills, the isolation matrix (each seed must kill EXACTLY ONE batch
-test = its own), and the demonstration defect rate.
+Only the ten mutation seeds and their clause map live here; the runner (DERIVED targets + baseline gate
++ --no-fail-fast + isolation matrix) is shared with batch 1 in proven_matrix.py. The two hardenings this
+batch's driver introduced in #326 review -- the baseline gate and --no-fail-fast -- now live in the core,
+so batch 1 inherits them too and the two drivers can no longer diverge on the runner.
 
-Two differences from batch 1, both because this batch's proving tests span BOTH integration tests
-(conformance/tests/*.rs) AND lib unit tests (#[cfg(test)] in conformance/src/*.rs):
-  * run_cargo passes `--lib` (for test_conform_per_output_comparator_selection and
-    test_ops_comparison_mask_is_selection, which live in src/per_output.rs) in addition to the
-    five integration binaries that hold the other eight proving tests;
-  * a FAILED line for a lib unit test is module-qualified (`per_output::tests::NAME`), so failed
-    names are matched by their LAST `::` component against the (bare) BATCH keys.
-
-This driver MUTATES source while it runs. Run from the batch worktree ROOT:
-    python tools/proven_batch2_matrix.py
-
-BASELINE (ENFORCED, not advised): main() runs the unmutated set FIRST and aborts (exit 2) unless it
-is all-green. A pre-existing failure in any run binary appears in EVERY mutation's kill set; if it is
-a BATCH test, "kills exactly one" is satisfied by the pre-existing red rather than by the mutation --
-a false PROVEN. "Run on a clean tree" as an operator instruction is not a check, so this is one
-(architect review, #326). Exit codes: 0 isolation all-exactly-one; 1 isolation violation; 2 baseline
-not green (nothing mutated).
-
-WARNING: an interrupt mid-cargo leaves the current seed applied (the finally restores it, but
-kill -9 does not). `git diff conformance/src` must be empty after a clean run; if a run was
-killed, `git checkout -- conformance/src` restores it (this worktree carries no src/ edits).
+Run from the batch worktree ROOT on a clean tree:  python tools/proven_batch2_matrix.py
 """
-import subprocess, re, sys
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from proven_matrix import run
 
 CT = "conformance/src/contract.rs"; ST = "conformance/src/structural.rs"
 SH = "conformance/src/shape_expr.rs"; DT = "conformance/src/determinism.rs"
@@ -48,10 +28,8 @@ BATCH = {  # proving test -> clause (ten CITED clauses migrated to PROVEN by thi
     "a1_elementwise_with_broadcast_operand": "CLASSIFY-6.7-0004",
 }
 
-# (proving_test, file, old, new) — each `old` occurs exactly once (grep-verified); the mutation
-# attacks the clause's obligation. Byte strings so seed/restore is line-ending exact; the KISC
-# entry is a RAW byte string because the `\n` inside that Rust format-string literal is the two
-# bytes backslash-n, not a newline.
+# (proving_test, file, old, new) -- each `old` occurs exactly once (grep-verified). The KISC entry is a
+# RAW byte string because the `\n` inside that Rust format-string literal is the two bytes backslash-n.
 MUT = [
     ("test_contract_text_field_encoding", CT,
      b'format!("[{}]", elems.join(", "))', b'format!("[{}]", elems.join(","))'),
@@ -80,87 +58,5 @@ MUT = [
      b'.join(";")', b'.join(",")'),
 ]
 
-
-def run_cargo():
-    # --no-fail-fast is LOAD-BEARING (architect review, #326): without it cargo stops after the first
-    # test TARGET that fails, so a mutation whose victim is in an early target truncates the run and
-    # later targets never execute -- "kills exactly one" would then be measured over a mutation-
-    # dependent PARTIAL population. The sharp case: `--lib` runs first, so a per_output lib victim
-    # would stop the run before any of the five integration binaries, hiding 8 of the 10 batch tests.
-    # With it, every target runs every time, so the kill set is the COMPLETE population. This is the
-    # same check that retired the fail-fast hazard on batch 1.
-    r = subprocess.run(["cargo", "test", "--no-fail-fast",
-                        "--manifest-path", "conformance/Cargo.toml", "--lib",
-                        "--test", "contract_golden", "--test", "contract_audited_status",
-                        "--test", "shape_expr", "--test", "synth_request_decline",
-                        "--test", "structure_key_golden"],
-                       capture_output=True, text=True, timeout=560)
-    out = r.stdout + r.stderr
-    # A mutation must COMPILE and RUN, or the failed set is meaningless (Copilot #311): a compile
-    # error emits no per-test results and parsing zero FAILED reads as "killed nothing" — a silent
-    # wrong-population defect inside the instrument. Require the test-output signature; fail loud.
-    if "test result:" not in out:
-        raise RuntimeError(
-            f"cargo produced NO test results (exit {r.returncode}) — compile error or abort "
-            f"before tests ran. First lines:\n" + "\n".join(out.splitlines()[:25]))
-    # Match by last `::` component: lib unit tests are module-qualified, integration tests are not.
-    return set(m.split("::")[-1] for m in re.findall(r"^test (\S+) \.\.\. FAILED", out, re.M))
-
-
-def read_bytes(p):
-    with open(p, "rb") as fh:
-        return fh.read()
-
-
-def write_bytes(p, b):
-    with open(p, "wb") as fh:
-        fh.write(b)
-
-
-def main():
-    # BASELINE GATE (architect review, #326): the unmutated set must be all-green BEFORE any seed.
-    # Otherwise a pre-existing failure rides in every mutation's kill set, and if it is a BATCH test
-    # "kills exactly one" is satisfied by the stale red, not the mutation -- a false PROVEN. An
-    # instruction to "run on a clean tree" is not a check; this is.
-    base_failed = run_cargo()
-    if base_failed:
-        print(f"BASELINE NOT GREEN -- {len(base_failed)} pre-existing failure(s): {sorted(base_failed)}")
-        print("Refusing to seed: every mutation's kill set would inherit these. Clean the tree first.")
-        return 2
-    print("BASELINE: unmutated set all-green (0 failures) -- each kill below is the mutation's own.\n")
-    matrix = {}
-    defect = 0
-    for name, f, old, new in MUT:
-        src = read_bytes(f)
-        nl = b"\r\n" if b"\r\n" in src else b"\n"
-        old = old.replace(b"\n", nl); new = new.replace(b"\n", nl)  # no-op for these single-line seeds
-        assert src.count(old) == 1, f"NOT UNIQUE/absent: {name} {old!r} count={src.count(old)}"
-        try:
-            write_bytes(f, src.replace(old, new, 1))
-            assert read_bytes(f).count(new) >= 1, f"SEED NOT APPLIED: {name}"  # convention 9
-            failed = run_cargo()
-        finally:
-            write_bytes(f, src)
-            assert read_bytes(f) == src, f"NOT RESTORED byte-exact: {name}"
-        batch_hit = sorted(t for t in failed if t in BATCH)
-        matrix[name] = batch_hit
-        reached = name in failed
-        if not reached:
-            defect += 1
-        spill = sorted(t for t in failed if t not in BATCH)
-        print(f"[{BATCH[name]:<16}] seed->{name}: batch_killed={batch_hit}  intended_reached={reached}")
-        print(f"                    spill(non-batch)={spill}")
-    print("\n=== ISOLATION MATRIX (each seed should kill EXACTLY ONE batch test = its own) ===")
-    ok = True
-    for name, _f, _o, _n in MUT:
-        hit = matrix[name]
-        if hit != [name]:
-            ok = False
-        print(f"  {name:<46} kills {hit}  {'OK' if hit == [name] else '!! NOT ISOLATED'}")
-    print(f"\nISOLATION: {'ALL EXACTLY-ONE' if ok else 'VIOLATIONS ABOVE'}")
-    print(f"DEFECT RATE (intended test not reached on first attempt): {defect}/{len(MUT)}")
-    return 0 if ok else 1
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run(BATCH, MUT))
