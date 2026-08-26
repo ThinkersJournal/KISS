@@ -798,6 +798,45 @@ enum (§6.0). See umbrella §3 for the full statement.
   wide truth; a suite that toleranced a narrow-A cell against the widest-A reference (or
   against §6.5-0007's transcendental oracle) MUST be rejected. *Test:*
   `test_conform_reduction_cell_oracle_reference`.
+- **KISS-CONFORM-6.5-0011** — The frozen oracle-vector corpus (§6.5-0008/0009) is carried in a
+  machine-readable bundle whose `schema` is `kiss-oracle-vectors-v1.json`. Such a bundle MUST carry
+  `schema`, `schema_version` (an **integer** — a gate that truncates a fractional value is not a
+  gate), `kiss_substandard`, `spec_clause`, `generator`, `number_of_vectors`, `ulp_metric`, and a
+  `vectors` array; each vector MUST carry `tcId`, `op`, `dtype`, `rounding`, `inputs`, `expected`,
+  `class`, `ulp_bound`, and `provenance`. A reader MUST reject with a **typed decline** a bundle
+  missing any required field, bearing an **unrecognized `schema`**, or bearing a **`schema_version`
+  it was not built against**; reading `schema`/`schema_version` without gating on it does **not**
+  satisfy this clause (cf. §6.8-0009), because a corpus freezes at a schema version (§8) and a reader
+  that runs a version it does not recognize has defeated the freeze rather than honored it. KISS pins
+  this **envelope** only — which ops and edges the corpus must cover, its oracle accuracy, and its
+  inline-stored values are owned by §6.5-0008/0009 and are never re-pinned here.
+
+  The comparator for a vector MUST be selected under §6.8-0008's **precedence**, with the vector's
+  declared `class` as the **default the precedence falls back to — never the selector directly.** An
+  op-named refinement overrides it: the split comparator (§6.8-0005) for `carg`/`clog`/`csqrt`/`cexp`,
+  and the moved-bytes exact-byte rule (§6.8-0010(a)) for a result a `select`-decomposed op **moves**
+  rather than computes — a NaN a minmax op propagates is such a moved result and compares
+  **exact-byte, payload included**. A reader that applies a vector's `class` without consulting the
+  precedence mis-compares exactly those ops, silently. `class` is a member of the §6.0-0001
+  determinism/fidelity enum imported verbatim; **the enum is never extended** — a comparison mode that
+  is not one of its three members is admitted as an op-named refinement under §6.8-0008's precedence,
+  never as a fourth `class` value (§6.8-0005 is the precedent). This schema version adds no refinement.
+
+  `spec_clause` MUST be present and a **well-formed KISS clause id** naming the clause the corpus
+  **discharges** — the oracle-differential coverage/storage obligations (§6.5-0008/0009), not a clause
+  that merely covers the op or shares a byte-pinning discipline across modalities. **Enforcement of
+  the naming is partial, and that is stated here rather than left to be discovered (convention 16(d)):**
+  a reader can check `spec_clause` is present and well-formed; it cannot check that the cited clause is
+  the *right* one, so this MUST is completed by review, not by a byte-check. *Test:*
+  `test_conform_oracle_vector_envelope`.
+
+  > *Informative.* §6.5-0007/0008/0009 pin what the corpus must CONTAIN; this pins the CONTAINER — the
+  > envelope a consumer binds against instead of hand-parsing, standing to the oracle corpus as the
+  > vocabulary manifest (KISS-CLASSIFY §6.8-0008) stands to a capability vocabulary. The two committed
+  > bundles predate this clause and both mis-cited `spec_clause` — `ops-arith.json` across modalities
+  > (a §6.4 Modality-1 golden-byte-vector clause cited by a §6.5 Modality-2 corpus), and
+  > `ops-minmax-signed-zero.json` at a decomposition clause that defines no format; both are corrected
+  > to §6.5-0008 in the same change that first gives the envelope a normative home.
 
 ### 6.6 Modality 3 — the IR-DAG fuzzer emitting to every backend
 
@@ -1502,6 +1541,7 @@ the traceability lint.
 | KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
 | KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
 | KISS-CONFORM-6.5-0010 | `test_conform_reduction_cell_oracle_reference` |
+| KISS-CONFORM-6.5-0011 | `test_conform_oracle_vector_envelope` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
 | KISS-CONFORM-6.6-0003 | `test_conform_fuzzer_cross_backend_agreement` |
