@@ -131,6 +131,8 @@ Sm90a	cuda:sm90a	hopper	accelerated features; requires the sm90a feature
 > already wired `ArchSku::Sm90` (`unpopped-vocab` `layout.rs:59`, `target.rs:309`).
 > **The rule fired correctly and nothing checked it:** the seed under-reported the
 > vocabulary by one token for weeks, while §2's table above listed four and
-> `ArchSku::Sm90`'s own doc comment cited KISS's §6.7 reference vectors as the reason
-> the variant exists — two artifacts each citing the other and disagreeing about the
-> same token. See #334.
+> `ArchSku::Sm90`'s own doc comment says it was *"Added because KISS names `cuda:sm90` in
+> its §6.7 reference vectors"* — the structure_key reference vectors of **KISS-Classify
+> §6.7**, resolved here because a bare `§6.7` is ambiguous across seven sub-standards
+> (the quoted identifier is preserved as the maintainer wrote it; the resolution is ours).
+> So two artifacts each cited the other and disagreed about the same token. See #334.
