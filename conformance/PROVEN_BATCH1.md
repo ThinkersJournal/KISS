@@ -16,10 +16,18 @@ prose (a memory of a proof), so they were re-run against current `main`.
 
 ## How to re-run
 
-`tools/proven_batch1_matrix.py` seeds each mutation below in `conformance/src/`, runs the four test
-binaries **unfiltered** (`cargo test --test structure_key_golden --test integer_semantics
---test structural_access --test contract_framing`), records which tests fail, and restores the
-source byte-for-byte. Each seed is asserted applied (convention 9) and asserted restored.
+`tools/proven_batch1_matrix.py` is a thin wrapper: it holds the ten seeds and their clause map and
+delegates to the shared `tools/proven_matrix.py` core (the same runner batch 2 uses). The core DERIVES
+the cargo targets from `discover_tests` (here `--test structure_key_golden --test integer_semantics
+--test structural_access --test contract_framing`, a set it reproduces byte-for-byte from the hand list
+this batch originally used), runs a **baseline** first (the unmutated set must be all-green, else abort),
+passes **`--no-fail-fast`** so every target runs every time, records which tests fail, and restores the
+source byte-for-byte (seed-applied + restore-exact asserted, convention 9).
+
+**Re-run under the hardened core confirmed this batch's matrix is not a fail-fast artefact.** The
+recorded matrix below was first produced WITHOUT `--no-fail-fast`; re-running through the core — which
+runs the complete population — reproduced it EXACTLY (ISOLATION ALL EXACTLY-ONE, defect 0/10), so being
+in the run set was being in the run here too.
 
 ## The mutations (subject = impl for all ten; each is a one-site edit)
 
