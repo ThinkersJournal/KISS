@@ -99,6 +99,7 @@ retrieval.**
 | a fix added an outcome and I didn't check the old ones still happen | **13** |
 | a clause id appears in a test — does it count? | **15** |
 | the record is stale, unattributed, unenforced, or ambiguous | **16** |
+| I cannot verify a relayed claim — is there anything I CAN check? | **16(f)** (is it false on its own terms?) |
 | I am about to tidy something that looks redundant — is it? | **17** (the defence should have told you; if it did not, measure) |
 | my comment says "don't simplify this" and gives a reason | **17** (a reason is believed; a measurement is checked) |
 | I am adding a guard because another gate has one | **17** (which STRUCTURE needs it? analogy is cargo cult) |
@@ -514,7 +515,7 @@ recognizer's silence.** Migrate a genuine backing; de-credit only a mutation-con
 and record the mutation's *subject* in the ledger note. See `KISS-EMIT-6.4-0001/-0002/-0005` (the
 three whose only reddening mutation is a spec-text edit).
 
-**16. Evidence has a LOCATION, and five ways of losing track of it.** A finding is only as
+**16. Evidence has a LOCATION, and six ways of losing track of it.** A finding is only as
 durable as someone's ability to go back to what it rested on. These are one convention because
 they are one failure — the evidence moved, or was never named, or was argued instead of shown.
 
@@ -606,6 +607,31 @@ before acting on it**, and that question is worth asking because of the directio
 **a no-op ruling is cheap to get wrong in the way that looks like agreement.** A wrong tightening
 produces broken builds and gets found; **a wrong no-op produces nothing at all, which is exactly
 what a correct no-op produces.**
+
+**(f) When you cannot verify a claim, check whether it is false ON ITS OWN TERMS first.**
+**People reach for *"I cannot verify this"* and stop** — and self-consistency is **free**, so it
+gets skipped precisely in the cases where verification is impossible, **which are the cases where a
+wrong claim travels furthest.** (a) says *record the party and the artifact so a claim is
+checkable*; **this is what remains when you have neither.**
+
+> **An internally inconsistent summary is falsifiable without its source.**
+> — the portfolio PM's formulation, of a catch that ran the other way
+
+*Why:* a four-option ruling was relayed with a one-line gloss — *"the no-op is A in both tables,
+the full tightening is C in yours and A in mine."* **Both halves cannot be true: they are the same
+two letters, swapped.** That was visible **without access to either document**, and the sentence had
+already reached the decision-maker, pointing him toward re-confirming a letter that meant the
+opposite in the document he was being asked to rule against.
+
+**This is the SAME INCIDENT as (e), read for a different failure — one event, two lessons, not two
+data points.** (e) is about the **relettering**, which is what made the answer wrong; this is about
+the **gloss being self-refuting**, which is what made it catchable with nothing in hand. Recorded
+because a convention set that cites one event twice without saying so **inflates its own evidence
+base**, which is the defect these conventions exist to catch.
+
+**IT CAN FALSIFY, NEVER CONFIRM. A self-consistent claim is not thereby true.** Without that line
+this becomes a licence to accept coherent claims, **which is worse than not having the rule** — a
+relay that contradicts itself is rare; a relay that is wrong and coherent is the normal case.
 
 > **On convention 9, from the same week it was needed twice.** A mutation seeded during the
 > #280 review failed to apply and produced three green results that read exactly like evidence;
