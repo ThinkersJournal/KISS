@@ -14,6 +14,16 @@ every path via try/finally. Run from the batch worktree ROOT:  python tools/prov
 WARNING: run only on a clean tree; an interrupt mid-cargo leaves the current seed applied (the
 finally restores it, but kill -9 does not). `git diff conformance/src` must be empty after.
 """
+# DUPLICATION MARKER -- DO NOT HARMONIZE TOWARD THIS FILE. tools/proven_batch2_matrix.py carries two
+# hardenings this driver LACKS: a BASELINE GATE (run the unmutated set first, abort unless all-green)
+# and `--no-fail-fast` (run every cargo target so the kill population is complete, not truncated at the
+# first failing target). Both are correct and this copy is the one BEHIND. If you are tidying adjacent
+# machinery and find these two drivers differing, batch 2 is ahead -- do not normalize this file toward
+# it by hand. The generic split (a shared proven_matrix.py core + thin wrappers) gives BOTH to this file
+# by construction and retires this marker. Until it lands, run this batch-1 driver only on a known-clean
+# tree and edit its run_cargo() to pass `--no-fail-fast` (a source edit to this file, not a flag the
+# script accepts). See #326 -- the review that added both hardenings to the batch-2 driver, NOT to this
+# one; this file still lacks them, which is the whole reason for this marker.
 import subprocess, re, sys
 
 SK = "conformance/src/structure_key.rs"; IT = "conformance/src/integer.rs"
