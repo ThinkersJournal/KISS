@@ -349,6 +349,10 @@ fn test_contract_kind_recognized_token() {
 ///
 /// TEETH: a reader that numeric-parses the version would accept `01` or `1.0`
 /// (both equal to 1 numerically); byte-exact comparison declines them.
+// Backs: KISS-CONTRACT-6.1-0008 — pins the accepted `contract_version` to the exact
+// byte-token `1`: exactly `1` is read, `01`/`1.0`/`10`/`2`/`+1` decline byte-exact
+// (never integer-parsed), and a whitespace-padded ` 1` is a FRAMING decline.
+// Proven: KISS-CONTRACT-6.1-0008 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_contract_version_value_pinned() {
     let contract = read_spec("contract.md");

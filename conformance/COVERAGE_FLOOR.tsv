@@ -241,8 +241,26 @@
 # 0 -> 9, bump to 9" -- NOT by hand-assembling untested-495-from-one-side + proven-9-from-the-other
 # (the tool-unchecked number the ratchet exists to reject). harness/lint UNCHANGED. Green
 # traceability CI on the rebased branch is the verification, not this paste.
+#
+# proven 9 -> 10 by the KISS-CONTRACT-6.1-0008 NAMED->CITED->PROVEN migration (#278 follow-up).
+# The clause was demonstrated in batch 1 (ee1d186 / PROVEN_BATCH1.md row 36: mutating read_document's
+# `version != "1"` -> `!= "2"` reddens EXACTLY test_contract_version_value_pinned) but DEFERRED as
+# NAMED-not-CITED: the test named the clause only in assert MESSAGES -- a MENTION, not a backing form
+# -- so it was harness-NAMED with no `// Backs:`. This PR adds the `// Backs:` (NAMED->CITED, harness
+# UNCHANGED: NAMED 241->240 / CITED 139->140, both inside the 380) and the `// Proven:` marker.
+# The ONLY floor dimension that moves is proven; harness/lint/untested are UNCHANGED.
+#
+# TOOL-DERIVED, NOT ARITHMETIC: `--ratchet --base-ref origin/main` reported "proven rose 9 -> 10:
+# 1 proof(s) earned. Bump the proven floor in this PR" and that output is pasted here.
+#
+# The `// Proven:` marker is TESTIMONY to a demonstration at a ref, not a live re-run. It is grounded
+# on green main (9c8543b) by FILE-INVARIANCE, not re-mutation: `git diff --quiet ee1d186 9c8543b --
+# conformance/src/contract.rs conformance/tests/contract_framing.rs` exits 0 (byte-identical), so the
+# recorded mutation site and its target test are unchanged and the demonstration applies bit-for-bit.
+# A live re-mutation of the source was refused by the sandbox classifier; file-invariance is the
+# stronger grounding anyway -- the subject bytes cannot have drifted -- and needs no source edit.
 # key	value
 harness	380
 lint	33
 untested	495
-proven	9
+proven	10

@@ -1,9 +1,10 @@
 # PROVEN batch 1 — the isolation matrix behind the first nine `// Proven:` markers (#278)
 
-**Ten clauses were demonstrated; nine became markers.** The tenth, `KISS-CONTRACT-6.1-0008`,
-was demonstrated cleanly (its mutation reddens exactly its own test) but is **not marked** — see
-"The NAMED-not-CITED finding" below. Its marker is deferred to a follow-up that first migrates it
-to CITED.
+**Ten clauses were demonstrated; nine became markers in the founding batch.** The tenth,
+`KISS-CONTRACT-6.1-0008`, was demonstrated cleanly (its mutation reddens exactly its own test)
+but was **deferred** as NAMED-not-CITED — see "The NAMED-not-CITED finding" below. **It is now
+migrated and marked in the #278 follow-up (this PR): CITED via `// Backs:`, PROVEN via `// Proven:`,
+floor proven 9 → 10. All ten demonstrations now carry markers.**
 
 Each `// Proven: KISS-X (subject: impl; ref: PROVEN_BATCH1.md)` marker in the harness is
 **testimony that a re-runnable demonstration exists here** — a seeded mutation of the clause's
@@ -78,6 +79,19 @@ rejected. `PROVEN ⊆ CITED`, so proving it first requires an evidence-adding **
 CITED (a genuine `// Backs:`, justified by the demonstration above), which is a distinct step
 kept out of the founding batch to keep every founding member *already* CITED. Deferred to a
 follow-up. The demonstration itself is valid and recorded above.
+
+**Resolved (this PR, #278 follow-up).** `test_contract_version_value_pinned` now carries
+`// Backs: KISS-CONTRACT-6.1-0008` (NAMED → CITED; harness unchanged — the move is NAMED 241 → 240 /
+CITED 139 → 140, both inside the 380) and `// Proven: KISS-CONTRACT-6.1-0008 (subject: impl; ref:
+PROVEN_BATCH1.md)`. The floor's `proven` dimension rises 9 → 10, tool-derived. No re-run was needed
+and none was transcribed from prose: the demonstration in row 36 / the isolation matrix (row 55) is
+batch 1's own **fresh matrix re-run**, which already satisfies the #278 transcribability rule — the
+proving test is byte-identical to its ref and the demonstration is re-runnable. That byte-identity is
+re-confirmed on green `main` (9c8543b): `git diff --quiet ee1d186 9c8543b -- conformance/src/contract.rs
+conformance/tests/contract_framing.rs` exits 0, so the recorded mutation site and its target test are
+unchanged and the demonstration applies bit-for-bit. (A fresh Edit-based re-mutation of the source on
+this tree was refused by the sandbox classifier; it was not routed around, and file-invariance is the
+stronger grounding regardless — the subject bytes cannot have drifted.)
 
 ## Cross-marker properties (checked over the whole set)
 
