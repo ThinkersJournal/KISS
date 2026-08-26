@@ -581,7 +581,7 @@ sub-standard, so the short form is ambiguous by construction and **the ambiguity
 because both readings resolve to a real clause.** *Why:* three
 live collisions, and **two of them produced a wrong citation by a careful reader.** `§6.8-0013` is
 a namespace-vocabulary clause in KISS-Classify and an exhibition clause in KISS-Conform — two
-projects cited the wrong one, which is what made #238 necessary. `§6.6-0002` is an op-identity
+projects cited the wrong one, which is what made #238 necessary. `KISS-Classify §6.6-0002` is an op-identity
 clause in KISS-Classify and a tier-2 numeric round-trip clause in KISS-Consume — **a finding about
 the first was relayed against the second, and the correction of that relay drew a wrong conclusion
 about a correct finding.** Two errors, one collision, both by careful readers, inside twenty

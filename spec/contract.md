@@ -1410,7 +1410,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   tuple therefore renders as the bare `<op_name>` (for example `add`). Two dissimilar
   implementations MUST render the identical `op_identity` bytes for the same root op, and a
   reader MUST reject, with a typed decline, an `op_identity` value not matching this spelling.
-  **Default-resolution (§6.19-0005 alignment).** Op-identity *equality* is authoritatively
+  **Default-resolution (KISS-Ops §6.19-0005 alignment).** Op-identity *equality* is authoritatively
   defined by the KISS-Grammar binary tag canonical serialization (KISS-GRAMMAR §6.8-0012),
   under which every identity-bearing attribute is resolved to its explicit default so that a
   defaulted attribute and an explicitly-equal one produce identical bytes (KISS-OPS §6.19-0005);
