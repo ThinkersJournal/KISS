@@ -97,6 +97,16 @@ jobs:
       # until someone classifies it -- which is the whole point.
       - name: Comparator-blindness lint (blocking)
         run: python tools/kiss_comparators.py
+      - name: Scoped-cite discrimination controls (16(e))
+        run: python tools/test_kiss_scoped_cites.py
+      # Convention 16(e) said this class was MECHANICALLY CHECKABLE and could have a
+      # detector rather than only a rule -- and then went without one, while two people
+      # who knew the rule broke it. A bare cross-document `§N.M` is ambiguous up to EIGHT
+      # ways (`§6.6-0002`) and the author cannot see it: they resolve it unconsciously on
+      # every re-read. Wiring it HERE is the point -- a detector nobody runs is the same
+      # gap one layer out.
+      - name: Bare cross-document §-cites (blocking)
+        run: python tools/kiss_scoped_cites.py
       - name: Citation audit discrimination controls
         run: python tools/test_kiss_cites.py
       - name: Citation audit (reports; does not gate)
