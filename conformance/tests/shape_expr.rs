@@ -9,6 +9,7 @@ use kiss_conformance::shape_expr::*;
 
 // ---- §6.20-0005 canonical serialization (golden byte-vectors) ----------------
 
+// Proven: KISS-OPS-6.20-0005 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_shape_expr_serialization_golden() {
     // KISS-OPS-6.20-0005: one-byte tag (0 reserved), fixed-width LE fields,

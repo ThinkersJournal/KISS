@@ -257,10 +257,23 @@
 # on green main (9c8543b) by FILE-INVARIANCE, not re-mutation: `git diff --quiet ee1d186 9c8543b --
 # conformance/src/contract.rs conformance/tests/contract_framing.rs` exits 0 (byte-identical), so the
 # recorded mutation site and its target test are unchanged and the demonstration applies bit-for-bit.
-# A live re-mutation of the source was refused by the sandbox classifier; file-invariance is the
-# stronger grounding anyway -- the subject bytes cannot have drifted -- and needs no source edit.
+# A live re-mutation of the source was refused by the sandbox classifier and was NOT routed around.
+# File-invariance is not STRONGER than a re-run, it is DIFFERENTLY SCOPED (#325 review): it cannot
+# see a THIRD file changing the outcome, and a re-run cannot establish identity with the ref --
+# neither dominates. It is SUFFICIENT here -- the subject bytes cannot have drifted -- and needs no
+# source edit.
+#
+# proven 10 -> 20 by #278 PROVEN BATCH 2 -- ten already-CITED clauses migrated to PROVEN, each with a
+# `// Proven:` marker backed by a fresh isolation-matrix demonstration (conformance/PROVEN_BATCH2.md,
+# tools/proven_batch2_matrix.py). ALL EXACTLY-ONE isolation, demonstration defect rate 0/10, run on
+# green main eae8c8b. The ten span CONTRACT (6.11-0001/-0002/-0005, 6.8-0008), CONFORM (6.8-0011),
+# OPS (6.20-0005, 6.0-0008), SYNTH (6.6-0004, 6.1-0002), CLASSIFY (6.7-0004). These clauses were
+# ALREADY CITED (single-backed), so only proven moves -- harness/lint/untested are UNCHANGED.
+#
+# TOOL-DERIVED, NOT ARITHMETIC: `--ratchet --base-ref origin/main` reported "proven rose 10 -> 20:
+# 10 proof(s) earned. Bump the proven floor in this PR" and that output is pasted here.
 # key	value
 harness	380
 lint	33
 untested	495
-proven	10
+proven	20

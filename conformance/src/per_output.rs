@@ -195,6 +195,7 @@ mod tests {
     // OUTPUT from that output's class. A reassociated result within the band is
     // accepted for the order-invariant root and rejected for the exact-byte root —
     // a single whole-op comparator cannot do both.
+    // Proven: KISS-CONFORM-6.8-0011 (subject: impl; ref: PROVEN_BATCH2.md)
     #[test]
     fn test_conform_per_output_comparator_selection() {
         use crate::structural::{compare_reduced_f32, reassoc_bound_f32};
@@ -219,6 +220,7 @@ mod tests {
     // here hand-tags a selection — from_op derives it from the op token. The witness is
     // kiss-ref's exposing DAG, which both oracles first got wrong by classing the mask
     // through the value lane.
+    // Proven: KISS-OPS-6.0-0008 (subject: impl; ref: PROVEN_BATCH2.md)
     #[test]
     fn test_ops_comparison_mask_is_selection() {
         // kiss-ref's exposing recipe: n0 Bind (exact leaf), n1 Exp(n0) (ULP key),

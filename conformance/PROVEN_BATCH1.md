@@ -90,8 +90,9 @@ proving test is byte-identical to its ref and the demonstration is re-runnable. 
 re-confirmed on green `main` (9c8543b): `git diff --quiet ee1d186 9c8543b -- conformance/src/contract.rs
 conformance/tests/contract_framing.rs` exits 0, so the recorded mutation site and its target test are
 unchanged and the demonstration applies bit-for-bit. (A fresh Edit-based re-mutation of the source on
-this tree was refused by the sandbox classifier; it was not routed around, and file-invariance is the
-stronger grounding regardless — the subject bytes cannot have drifted.)
+this tree was refused by the sandbox classifier and was not routed around. File-invariance is not
+STRONGER than a re-run but DIFFERENTLY SCOPED (#325 review) — it cannot see a third file changing the
+outcome, a re-run cannot establish identity with the ref, neither dominates; it is SUFFICIENT here.)
 
 ## Cross-marker properties (checked over the whole set)
 

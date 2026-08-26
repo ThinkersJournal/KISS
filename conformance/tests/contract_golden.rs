@@ -86,6 +86,7 @@ fn good_document() -> Vec<u8> {
 /// `<key> = <value>` spacing. TEETH: a `key=value` emitter with no spaces around
 /// `=`; an `[a,b]` array emitter with no space after the comma; an uppercase or
 /// wrong-count opaque-blob emitter.
+// Proven: KISS-CONTRACT-6.11-0001 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_contract_text_field_encoding() {
     // `<key> = <value>`: exactly one space each side of `=`, LF-terminated.
@@ -118,6 +119,7 @@ fn test_contract_text_field_encoding() {
 /// length, `crc32=<HHHHHHHH>` 8 lowercase hex digits, then a single LF. TEETH: a
 /// CRLF emitter; a wrong magic; a renamed/missing `len=`/`crc32=` field; a stub
 /// CRC (guarded by the canonical `0xCBF43926` check value of §6.11-0003).
+// Proven: KISS-CONTRACT-6.11-0002 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_contract_document_header_line() {
     // The CRC-32 must be the real IEEE 802.3 CRC: its canonical check value over
@@ -170,6 +172,7 @@ fn test_contract_document_header_line() {
 /// Identity block is compared byte-for-byte to the Appendix C golden. TEETH: a
 /// HashMap-backed emitter whose field order is nondeterministic (any permutation
 /// of the seven Identity fields fails this exact-byte golden).
+// Proven: KISS-CONTRACT-6.11-0005 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_contract_document_field_order() {
     assert_golden(
