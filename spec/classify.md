@@ -1276,7 +1276,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   its compute dtype MUST carry an accumulator-dtype coordinate drawn from the closed §6.1
   dtype set — the non-contraction analogue of the contraction `<acc>`. When the coordinate
   is **absent**, the accumulator dtype MUST default to the compute dtype
-  (accumulator-dtype == compute-dtype, the §6.17-0005 diagonal), so every existing token is
+  (accumulator-dtype == compute-dtype, the KISS-Ops §6.17-0005 diagonal), so every existing token is
   unchanged in meaning and every kernel that never opts in behaves exactly as at this
   version. The **wire/codec realization** — the non-contraction optional-trailing precision
   field `<acc>/<mp>` and its byte-exact spelling — is **realized at sk4** by §6.7-0013 (the
@@ -1306,7 +1306,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   The `<mp>` coordinate extends the strict-vs-TF32 math-precision axis (§6.7-0006) to the
   non-contraction key, so it stops collapsing for reductions/scans. This field **declares** the
   accumulator/precision coordinate for identity; it does **not** pin bit-level determinism
-  (§6.17-0007 — float accumulation may remain order-invariant-nondeterministic). **Byte-stability:**
+  (KISS-Ops §6.17-0007 — float accumulation may remain order-invariant-nondeterministic). **Byte-stability:**
   every non-contraction token whose accumulator equals its compute dtype and whose `<mp>` is
   default is **byte-identical to the pre-sk4 codec** modulo the §6.1 dtype renames, so the sk4
   regen diff is exactly the cells whose accumulator/precision actually deviates. The rule is

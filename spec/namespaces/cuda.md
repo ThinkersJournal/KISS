@@ -47,7 +47,7 @@ cuda:sm<N>[<letter>]
   digit capabilities such as `sm100` are admitted.
 - **C-3** Every character is lowercase ASCII drawn from `[a-z0-9]` plus the one `:`
   separator. A token MUST NOT contain the `structure_key` field separators `|`,
-  `;`, `/`, any whitespace, or any control byte (§6.8-0005). Matching is byte-exact
+  `;`, `/`, any whitespace, or any control byte (KISS-Classify §6.8-0005). Matching is byte-exact
   and therefore **case-sensitive**: `cuda:sm89`, `Cuda:sm89`, `cuda:SM89`, and
   `cuda:sm89x` are four different tokens.
 
@@ -84,9 +84,9 @@ token. It is **not** a `.`-separated multi-field grammar (as `vulkan:` is), and 
 carries **no concatenated member list and no range**. Two consequences follow
 directly:
 
-- The **fixed-width juxtaposition** rule (§6.8-0006) is **vacuous** here: nothing
+- The **fixed-width juxtaposition** rule (KISS-Classify §6.8-0006) is **vacuous** here: nothing
   is juxtaposed, so there is no member alphabet whose width must be fixed.
-- The **digest fallback** (§6.8-0007) is **structurally unreachable**: a digest
+- The **digest fallback** (KISS-Classify §6.8-0007) is **structurally unreachable**: a digest
   replaces a long enumeration, and a single scalar is never long enough — there is
   no enumeration to digest. A `cuda:` token is always its literal spelling.
 

@@ -126,6 +126,50 @@ class BareCiteTest(unittest.TestCase):
         self.assertEqual(v, [], "a name-nearby case must not gate")
         self.assertTrue(j, "...but it must still be REPORTED")
 
+    def test_a_FOREIGN_clause_id_does_not_make_a_document_a_definer(self):
+        """The precise case the unscoped version missed (#337 review), and the one the
+        lint exists for.
+
+        `defined_sections` matched `KISS-[A-Z]+-` — ANY sub-standard — so a foreign clause
+        id merely QUOTED in a document made that document "define" the section, suppressing
+        every bare cite to it there as a self-reference. Live instances: classify.md
+        carries `KISS-OPS-6.17-*`, contract.md carries `KISS-GRAMMAR-6.4-*`. Fixing it
+        surfaced ELEVEN violations that had been silently qualified.
+
+        The mechanism is this lint's own subject one level up: it resolved an identifier by
+        PROXIMITY rather than by SCOPE — exactly what a human does reading a bare `§6.7` and
+        landing on whichever §6.7 they are near.
+        """
+        body = ("A note quoting KISS-OPS-6.17-0001 for context.\n"
+                "The rule in §6.17-0005 applies.\n")
+        v, _j = scan_docs(ops=DEFINER, classify=body)
+        self.assertEqual([c for _d, _l, c in v], ["§6.17-0005"],
+                         "a foreign clause id suppressed a real violation — the document "
+                         "does not DEFINE a section merely by quoting another's clause")
+
+    def test_the_document_s_OWN_clause_ids_still_define(self):
+        """Paired control. Without it the fix above could be 'never treat ids as defining'.
+
+        A document that defines KISS-CLASSIFY-6.9-0001 DOES define §6.9, and a bare cite to
+        it there is a self-reference that must stay quiet.
+        """
+        body = ("- **KISS-CLASSIFY-6.9-0001** — the rule.\n"
+                "Restated: §6.9-0001 applies.\n")
+        v, _j = scan_docs(classify=body)
+        self.assertEqual(v, [], "a document's own clause id must still define its section")
+
+    def test_an_atomised_clause_id_is_reported_whole(self):
+        """`§6.13-0006a` must not report as `§6.13-0006` (#337 review).
+
+        Atomised ids are in use — §6.13-0006 was split into 0006/0006a/0006b, and the corpus
+        also carries §6.2-0008a, §6.3-0009a, §6.4-0001b. A truncated id does not merely read
+        badly: it can COLLIDE with a real sibling clause, pointing a reader at something that
+        exists and is wrong, which is worse than pointing at nothing.
+        """
+        v, _j = scan_docs(umbrella=DEFINER, conform="See §6.13-0006a for the split.\n")
+        self.assertEqual([c for _d, _l, c in v], ["§6.13-0006a"],
+                         "the trailing letter was dropped — the report names a different clause")
+
     def test_the_live_corpus_has_no_violations(self):
         """The real tree. This lands born-red and is the assertion that turns it green."""
         v, _j = sc.scan()

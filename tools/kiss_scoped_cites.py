@@ -64,9 +64,13 @@ SUBS = ["umbrella", "announce", "classify", "ops", "grammar", "contract", "synth
         "consume", "emit", "conform"]
 NAME = r"(?:KISS-[A-Za-z]+|" + "|".join(SUBS) + r")"
 
-RE_CITE = re.compile(r"§(?P<sec>\d+(?:\.\d+)+)(?P<clause>-\d+)?")
+# `[a-z]?` because ATOMISED ids are real and in use — §6.13-0006 was split into
+# 0006 / 0006a / 0006b. Truncating one does not merely print a bad message: the
+# truncated form can COLLIDE with a real sibling clause, pointing a reader at
+# something that exists and is wrong.
+RE_CITE = re.compile(r"§(?P<sec>\d+(?:\.\d+)+)(?P<clause>-\d+[a-z]?)?")
 RE_HEADING = re.compile(r"^#{2,4}\s+(\d+(?:\.\d+)*)", re.M)
-RE_OWN_CLAUSE = re.compile(r"KISS-[A-Z]+-(\d+(?:\.\d+)*)-\d+")
+RE_OWN_CLAUSE_TMPL = r"KISS-%s-(\d+(?:\.\d+)*)-\d+[a-z]?"
 # `NAME('s)? <empty tokens> §` — markup, spaces and newlines carry no meaning here.
 RE_QUAL_ADJ = re.compile(NAME + r"(?:'s)?[\s*_`>]*$", re.I)
 # `NAME (§` — apposition, the name immediately parenthesising the cite. The bracket is
@@ -79,9 +83,35 @@ RE_SENT_END = re.compile(r"[.!?]\s")
 RE_NAME_ANY = re.compile(NAME, re.I)
 
 
-def defined_sections(text):
-    """Sections this document defines — headings plus its own clause IDs."""
-    return set(RE_HEADING.findall(text)) | set(RE_OWN_CLAUSE.findall(text))
+def own_substandard(doc):
+    """The sub-standard a document defines clauses for, or None.
+
+    `spec/classify.md` -> CLASSIFY. `CONTRIBUTING.md` and `spec/namespaces/*.md` define
+    no clauses and contribute HEADINGS only.
+    """
+    stem = os.path.basename(doc)[:-3].upper()
+    return stem if stem.lower() in SUBS else None
+
+
+def defined_sections(text, doc):
+    """Sections this document defines — headings plus ITS OWN clause IDs.
+
+    SCOPED BY SUB-STANDARD, and the unscoped version had this lint's own bug one level
+    up. `KISS-[A-Z]+-` matched ANY sub-standard, so `KISS-OPS-6.17-0001` quoted inside
+    classify.md made classify.md "define" §6.17 — suppressing every bare `§6.17-*` cite
+    there as a self-reference. That is resolving an identifier by PROXIMITY rather than
+    by SCOPE, which is exactly what a human does reading a bare `§6.7` and landing on
+    whichever §6.7 they are near.
+
+    `defines()` below already reasoned about the over-qualifying hazard and locked the
+    HEADING door; this was the other entrance, invisible because it did not look like
+    the case being guarded.
+    """
+    secs = set(RE_HEADING.findall(text))
+    sub = own_substandard(doc)
+    if sub:
+        secs |= set(re.findall(RE_OWN_CLAUSE_TMPL % sub, text))
+    return secs
 
 
 def defines(sec, secs):
@@ -108,6 +138,23 @@ def _clause_scope(pre):
     return pre[ends[-1].end():] if ends else pre
 
 
+def _sentence(text, pos):
+    """The whole sentence containing `pos` — used only to decide JUDGEMENT vs VIOLATION.
+
+    Looks FORWARD as well as back, because a sub-standard can resolve a cite by following
+    it: CONTRIBUTING's `§ 6.8-0013 is a namespace-vocabulary clause in KISS-Classify and
+    an exhibition clause in KISS-Conform` is a MENTION of an ambiguous token, not a use of
+    one, and qualifying it would destroy the sentence's point. The syntactic model cannot
+    tell use from mention, so the honest place for it is the judgement list — which is the
+    ruling for any case the model cannot express narrowly.
+    """
+    pre = text[:pos]
+    ends = list(RE_SENT_END.finditer(pre))
+    start = ends[-1].end() if ends else max(0, pos - 400)
+    fwd = RE_SENT_END.search(text, pos)
+    return text[start:fwd.end() if fwd else min(len(text), pos + 400)]
+
+
 def classify_cite(text, pos, secs):
     """One of: self / qualified / quoted / judgement / violation."""
     pre = text[:pos]
@@ -123,7 +170,7 @@ def classify_cite(text, pos, secs):
     if RE_COORD.search(scope) and RE_NAME_ANY.search(scope):
         # a coordinator joining this cite to a qualified one in the SAME clause
         return "qualified"
-    if RE_NAME_ANY.search(scope):
+    if RE_NAME_ANY.search(_sentence(text, pos)):
         return "judgement"
     return "violation"
 
@@ -138,7 +185,7 @@ def scan(root=ROOT):
                 texts[d] = fh.read()
     violations, judgement = [], []
     for d, text in texts.items():
-        secs = defined_sections(text)
+        secs = defined_sections(text, d)
         for m in RE_CITE.finditer(text):
             if defines(m.group("sec"), secs):
                 continue
