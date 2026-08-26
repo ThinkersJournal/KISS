@@ -157,6 +157,7 @@ fn test_synth_request_no_capability_fields() {
 /// TEETH: the pinned golden catches a big-endian tag write (`51 52 59 43`) and a
 /// big-endian key-length; and the round-trip proves the reader reads the same
 /// little-endian framing.
+// Proven: KISS-SYNTH-6.1-0002 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_synth_request_reuses_cyrq() {
     assert_eq!(CYRQ, 0x5152_5943, "CYRQ u32-LE value (wire 43 59 52 51)");
@@ -320,6 +321,7 @@ fn test_synth_request_key_alone_not_pinned() {
 /// TEETH: the pinned golden catches a big-endian tag (`43 44 45 43` vs `43 45 44 43`
 /// reversed) and — load-bearing — a `decline_code` emitted as a u16 (which would
 /// drop the frame by 2 bytes); the code occupies the final FOUR bytes, LE.
+// Proven: KISS-SYNTH-6.6-0004 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_synth_decline_framing() {
     assert_eq!(CDEC, 0x4345_4443, "CDEC u32-LE value (wire 43 44 45 43)");

@@ -83,6 +83,7 @@ fn a1_elementwise_binary_canonical() {
     assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-");
 }
 
+// Proven: KISS-CLASSIFY-6.7-0004 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn a1_elementwise_with_broadcast_operand() {
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), br1(), co4()], Reduce::None, None);

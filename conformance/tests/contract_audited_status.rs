@@ -65,6 +65,7 @@ fn audited_guarantees() -> Guarantees {
 /// directions are asserted. This is the only test here that varies a field and
 /// demands the output change; the arm tests below fix the inputs and check the
 /// value, and would both pass against a constant.
+// Proven: KISS-CONTRACT-6.8-0008 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn test_contract_audited_status_derived() {
     let mut g = audited_guarantees();
