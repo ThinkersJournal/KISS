@@ -54,6 +54,7 @@ rather than print at-the-floor.
 
 Run: python tools/test_kiss_ratchet.py
 """
+import ast
 import os
 import subprocess
 import sys
@@ -81,6 +82,39 @@ def spec_with(rows):
     for ordinal, test in rows:
         out.append(f"| {fid(ordinal)} | `{test}` |\n")
     return "".join(out)
+
+
+def kiss_trace_inline_lint_comparisons(path):
+    """Line numbers of any comparison whose sides index `live` and `floor` at key "lint".
+
+    STRUCTURAL, not textual (#323 review). The substring version this replaced banned two
+    spellings (`==`, `!=`) and let the other four operators through, so it enforced a
+    narrower property than its own name claimed. An AST walk cannot be fooled by operator
+    choice, spacing, or argument order.
+
+    `lint_delta` (the single hoisted comparison, #320) is a BinOp, not a Compare, so it is
+    correctly invisible here — this looks only for a comparison that has come BACK inline.
+    """
+    with open(path, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+
+    def lint_index_of(node):
+        """The container name if `node` is `<name>["lint"]`, else None."""
+        if (isinstance(node, ast.Subscript)
+                and isinstance(node.value, ast.Name)
+                and isinstance(node.slice, ast.Constant)
+                and node.slice.value == "lint"):
+            return node.value.id
+        return None
+
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            names = {lint_index_of(s) for s in [node.left] + list(node.comparators)}
+            names.discard(None)
+            if {"live", "floor"} <= names:
+                hits.append(node.lineno)
+    return sorted(hits)
 
 
 def harness_with(tests):
@@ -470,17 +504,26 @@ def main():
     check("git-less lint move still declines to characterize", v == "uncharacterized",
           f"the git-less path changed behaviour: got {v}")
 
-    # ONE comparison site. A second inline `live[\"lint\"] ... floor[\"lint\"]` is how the
-    # divergence arrived in #271 (a fourth dimension wired at one site and not the other).
-    _src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_trace.py"),
-                encoding="utf-8").read()
-    _code = "\n".join(l for l in _src.splitlines() if not l.lstrip().startswith("#"))
-    check("the lint comparison exists in exactly ONE place",
-          _code.count('live["lint"]') - _code.count('f"') * 0 <= 4
-          and 'live["lint"] != floor["lint"]' not in _code
-          and 'live["lint"] == floor["lint"]' not in _code,
-          "an inline lint<->floor comparison is back beside lint_delta — the #271 divergence, "
-          "one function over")
+    # ONE comparison site, checked on the AST rather than on substrings (#323 review).
+    #
+    # The first version of this control banned the two spellings `live["lint"] == floor["lint"]`
+    # and `!=`, and carried a no-op `- _code.count('f"') * 0` term. TWO PROBLEMS, and the second
+    # is the one that matters: FOUR OF THE SIX COMPARISON OPERATORS WALKED STRAIGHT THROUGH IT.
+    # `if live["lint"] > floor["lint"]:` passed untouched -- verified by seeding each operator.
+    #
+    # The control was named "the comparison exists in only one place" and enforced "`==` and
+    # `!=` appear in only one place". THOSE ARE DIFFERENT CLAIMS AND THE OUTPUT CANNOT TELL THEM
+    # APART -- a check whose population is narrower than the property it names, which is the
+    # same defect #320 fixes one level down, in the PR that fixes it.
+    #
+    # The AST form is immune to operator spelling, to whitespace, and to which side is written
+    # first, because it asks the structural question directly: is there a comparison whose sides
+    # index `live` and `floor` at the key "lint"?
+    inline = kiss_trace_inline_lint_comparisons(TOOL)
+    check("the lint floor comparison exists in exactly ONE place (AST, any operator)",
+          inline == [],
+          f"an inline live/floor lint comparison is back beside `lint_delta` at line(s) "
+          f"{inline} — the #271 divergence, one function over. Hoist it instead.")
 
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:
