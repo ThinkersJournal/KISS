@@ -82,7 +82,15 @@ MUT = [
 
 
 def run_cargo():
-    r = subprocess.run(["cargo", "test", "--manifest-path", "conformance/Cargo.toml", "--lib",
+    # --no-fail-fast is LOAD-BEARING (architect review, #326): without it cargo stops after the first
+    # test TARGET that fails, so a mutation whose victim is in an early target truncates the run and
+    # later targets never execute -- "kills exactly one" would then be measured over a mutation-
+    # dependent PARTIAL population. The sharp case: `--lib` runs first, so a per_output lib victim
+    # would stop the run before any of the five integration binaries, hiding 8 of the 10 batch tests.
+    # With it, every target runs every time, so the kill set is the COMPLETE population. This is the
+    # same check that retired the fail-fast hazard on batch 1.
+    r = subprocess.run(["cargo", "test", "--no-fail-fast",
+                        "--manifest-path", "conformance/Cargo.toml", "--lib",
                         "--test", "contract_golden", "--test", "contract_audited_status",
                         "--test", "shape_expr", "--test", "synth_request_decline",
                         "--test", "structure_key_golden"],

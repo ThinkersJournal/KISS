@@ -18,14 +18,22 @@ unit tests (`#[cfg(test)]` in `conformance/src/per_output.rs`), so the run passe
 five integration binaries and matches failed tests by their last `::` component:
 
 ```
-cargo test --manifest-path conformance/Cargo.toml --lib \
+cargo test --no-fail-fast --manifest-path conformance/Cargo.toml --lib \
   --test contract_golden --test contract_audited_status --test shape_expr \
   --test synth_request_decline --test structure_key_golden
 ```
 
-It also runs a **baseline first**: the unmutated set must be all-green, or it aborts (exit 2, nothing
-seeded). A pre-existing red would ride in every mutation's kill set and could satisfy "kills exactly
-one" by a stale failure rather than by the mutation (architect review, #326).
+Two properties are ENFORCED, not merely advised (architect review, #326):
+- **`--no-fail-fast`** — without it cargo stops after the first failing TARGET, so a mutation whose
+  victim is in an early target truncates the run and later targets never execute. The sharp case:
+  `--lib` runs first, so a `per_output` victim would stop the run before any integration binary, and
+  "kills exactly one" would be measured over a partial population missing eight of the ten batch tests.
+  With it, every target runs every time, so the kill set is the COMPLETE population. Re-run under
+  `--no-fail-fast` produced the IDENTICAL matrix and spill recorded below — the claim is EARNED, not a
+  fail-fast artefact (the same check that retired this hazard on batch 1).
+- **baseline gate** — the unmutated set must be all-green first, or the driver aborts (exit 2, nothing
+  seeded). A pre-existing red would otherwise ride every mutation's kill set and could satisfy "kills
+  exactly one" by a stale failure rather than by the mutation.
 
 ## The mutations (subject = impl for all ten; each is a one-site edit, `old` grep-verified unique)
 
@@ -87,10 +95,12 @@ isolated impl site — recorded here rather than forced.
 
 ## Scope of the spill measurement (no silent cap)
 
-The isolation claim is COMPLETE: all ten batch proving tests live in the run set (`--lib` + the five
-named binaries), so "each kills exactly one BATCH test" is measured against every batch test. The spill
-lists above are measured **within that run scope** — a co-reddening in a binary NOT run (e.g. a
-different sub-standard's integration test) would not appear. Spill is informative, not the PROVEN gate;
+The isolation claim is COMPLETE, and **`--no-fail-fast` is what makes it so**: all ten batch proving
+tests live in the run set (`--lib` + the five named binaries) AND every target runs every time, so
+"each kills exactly one BATCH test" is measured against every batch test actually EXECUTED, not merely
+declared. (Being in the run SET is not being in the run; `--no-fail-fast` closes that gap — architect
+review, #326.) The spill lists above are measured within that run scope — a co-reddening in a binary
+NOT in the scope (e.g. a different sub-standard's integration test) would not appear. Spill is informative, not the PROVEN gate;
 the gate is isolation among batch tests, which is complete.
 
 This scope is a deliberate **narrowing** from a full-suite run described earlier in review, not the
