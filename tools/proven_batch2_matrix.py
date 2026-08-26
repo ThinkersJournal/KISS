@@ -15,8 +15,16 @@ Two differences from batch 1, both because this batch's proving tests span BOTH 
   * a FAILED line for a lib unit test is module-qualified (`per_output::tests::NAME`), so failed
     names are matched by their LAST `::` component against the (bare) BATCH keys.
 
-This driver MUTATES source while it runs. Run from the batch worktree ROOT on a CLEAN tree:
+This driver MUTATES source while it runs. Run from the batch worktree ROOT:
     python tools/proven_batch2_matrix.py
+
+BASELINE (ENFORCED, not advised): main() runs the unmutated set FIRST and aborts (exit 2) unless it
+is all-green. A pre-existing failure in any run binary appears in EVERY mutation's kill set; if it is
+a BATCH test, "kills exactly one" is satisfied by the pre-existing red rather than by the mutation --
+a false PROVEN. "Run on a clean tree" as an operator instruction is not a check, so this is one
+(architect review, #326). Exit codes: 0 isolation all-exactly-one; 1 isolation violation; 2 baseline
+not green (nothing mutated).
+
 WARNING: an interrupt mid-cargo leaves the current seed applied (the finally restores it, but
 kill -9 does not). `git diff conformance/src` must be empty after a clean run; if a run was
 killed, `git checkout -- conformance/src` restores it (this worktree carries no src/ edits).
@@ -102,6 +110,16 @@ def write_bytes(p, b):
 
 
 def main():
+    # BASELINE GATE (architect review, #326): the unmutated set must be all-green BEFORE any seed.
+    # Otherwise a pre-existing failure rides in every mutation's kill set, and if it is a BATCH test
+    # "kills exactly one" is satisfied by the stale red, not the mutation -- a false PROVEN. An
+    # instruction to "run on a clean tree" is not a check; this is.
+    base_failed = run_cargo()
+    if base_failed:
+        print(f"BASELINE NOT GREEN -- {len(base_failed)} pre-existing failure(s): {sorted(base_failed)}")
+        print("Refusing to seed: every mutation's kill set would inherit these. Clean the tree first.")
+        return 2
+    print("BASELINE: unmutated set all-green (0 failures) -- each kill below is the mutation's own.\n")
     matrix = {}
     defect = 0
     for name, f, old, new in MUT:

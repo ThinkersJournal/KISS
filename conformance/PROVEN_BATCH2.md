@@ -23,6 +23,10 @@ cargo test --manifest-path conformance/Cargo.toml --lib \
   --test synth_request_decline --test structure_key_golden
 ```
 
+It also runs a **baseline first**: the unmutated set must be all-green, or it aborts (exit 2, nothing
+seeded). A pre-existing red would ride in every mutation's kill set and could satisfy "kills exactly
+one" by a stale failure rather than by the mutation (architect review, #326).
+
 ## The mutations (subject = impl for all ten; each is a one-site edit, `old` grep-verified unique)
 
 | clause | proving test | file:site | mutation (obligation attacked) |
@@ -88,3 +92,24 @@ named binaries), so "each kills exactly one BATCH test" is measured against ever
 lists above are measured **within that run scope** — a co-reddening in a binary NOT run (e.g. a
 different sub-standard's integration test) would not appear. Spill is informative, not the PROVEN gate;
 the gate is isolation among batch tests, which is complete.
+
+This scope is a deliberate **narrowing** from a full-suite run described earlier in review, not the
+original plan quietly changed: isolation is complete in-scope (every batch test is in the run set), so
+a full-suite pass would only widen the informative spill list, not the gate. Recorded as a reconsidered
+decision so it reads as a narrowing, not a silent drift.
+
+## Structurally-unprovable clauses (a category, not a miss)
+
+A clause expressing a **structural or negative property** may have no single-site mutation at all — its
+PROVEN tier is then **structurally unreachable**, not merely unearned. Such a clause cannot join a
+PROVEN batch by construction, so the candidate pool is best understood as **provable minus
+structurally-unprovable**, rather than a target that mysteriously never reaches 100%.
+
+First member:
+- **KISS-CLASSIFY-6.6-0020** (`test_classify_cell_mates_are_not_substitutable`) — its teeth are a
+  negative property (`named.is_empty()`: no `|`-field of a derived token equals a KISS-Ops op-name)
+  and a discrimination control. The only impl it exercises is `StructureKey::to_token`, whose sole
+  distinguishing field between the "bin" and "une" keys is `op_family`; the single-site edit that
+  would collapse them to redden this test simultaneously changes every golden token (it reddens
+  6.7-0004's token and the whole golden suite). No mutation reddens it ALONE, so it has no isolable
+  PROVEN demonstration — a property of the obligation, not a gap in effort.
