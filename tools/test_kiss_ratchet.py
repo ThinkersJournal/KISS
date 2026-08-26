@@ -132,7 +132,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 48
+EXPECTED_CONTROLS = 55
 
 
 def check(name, cond, detail=""):
@@ -422,6 +422,65 @@ def main():
               base_ledger_all=[], base_spec_ids=[])
     check("an arrival with an UNREADABLE ledger is not green", v == "ledger_unverifiable",
           f"got {v}")
+
+    # ---- THE LINT COUNT IS COMPARED ON THE GIT PATH TOO (#320) ----
+    # Until #320 the floor's `lint` VALUE was never compared on the path that ships. The
+    # comparison existed -- `if live["lint"] != floor["lint"]` -- but sat INSIDE the git-less
+    # branch, and in a git checkout `--base-ref` is required, so that branch never ran. Floor
+    # 28 / 32 / 34 / 38 against live 33 each returned CLEAN, and the at-floor line printed the
+    # LIVE number, so a floor off by five read as consistent.
+    #
+    # `lint_delta` is now computed ONCE above both paths. A second comparison on the git path
+    # would have been the divergence DIMENSIONS was introduced to prevent in #271, one
+    # function over -- so these controls also pin that there is only one.
+    #
+    # `cr` supplies prev_lint, i.e. the GIT path. No recorded move is staged (nothing left or
+    # arrived in the lint set), so a deviation reaching the verdict is unexplained by
+    # construction -- which is what makes these about the COUNT and not about the set.
+    v, lines = cr({"harness": 3, "lint": 5, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+                  ["A"], ["A", "B", "C"], ["A"])
+    check("lint BELOW its floor is a regression on the git path", v == "regression",
+          f"a lint count 5 -> 3 passed on the git path — the floor value is not compared: got {v}")
+    check("...and the message names FLOOR -> LIVE, not just 'deviates'",
+          v == "regression" and any("5 -> 3" in ln for ln in lines),
+          f"the deviation message does not carry both numbers, so a reader cannot tell which "
+          f"is wrong: {lines}")
+
+    v, lines = cr({"harness": 3, "lint": 1, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+                  ["A"], ["A", "B", "C"], ["A"])
+    check("lint ABOVE its floor is a STALE floor, not silence", v == "stale",
+          f"a lint count 1 -> 3 passed — 'a deviation in EITHER direction fails': got {v}")
+    check("...and the stale message names FLOOR -> LIVE too",
+          v == "stale" and any("1 -> 3" in ln for ln in lines),
+          f"the stale message does not carry both numbers: {lines}")
+
+    # CONTROL. Without it, a classifier hardcoded to red would satisfy all four above.
+    v, _ = cr({"harness": 3, "lint": 3, "untested": 0}, {"harness": 3, "lint": 3, "untested": 0},
+              ["A"], ["A", "B", "C"], ["A"])
+    check("lint AT its floor is still green", v == "at_floor",
+          f"the lint comparison reds when the counts agree: got {v}")
+
+    # The git-LESS path is UNCHANGED: it still declines to characterize rather than calling a
+    # lint move a regression, because without the base ledger a substitution and a regression
+    # are indistinguishable. Same `lint_delta`, different verdict -- which is the point of
+    # hoisting the comparison rather than duplicating it.
+    v, _ = kiss_trace.classify_ratchet(
+        {"harness": 3, "lint": 5, "untested": 0, "proven": 0},
+        {"harness": 3, "lint": 3, "untested": 0}, set(["A"]), set(["A", "B", "C"]), None)
+    check("git-less lint move still declines to characterize", v == "uncharacterized",
+          f"the git-less path changed behaviour: got {v}")
+
+    # ONE comparison site. A second inline `live[\"lint\"] ... floor[\"lint\"]` is how the
+    # divergence arrived in #271 (a fourth dimension wired at one site and not the other).
+    _src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_trace.py"),
+                encoding="utf-8").read()
+    _code = "\n".join(l for l in _src.splitlines() if not l.lstrip().startswith("#"))
+    check("the lint comparison exists in exactly ONE place",
+          _code.count('live["lint"]') - _code.count('f"') * 0 <= 4
+          and 'live["lint"] != floor["lint"]' not in _code
+          and 'live["lint"] == floor["lint"]' not in _code,
+          "an inline lint<->floor comparison is back beside lint_delta — the #271 divergence, "
+          "one function over")
 
     # ---- CURRENCY HAZARD (base_ledger_lint reads the REF, not the disk, #213) ----
     with tempfile.TemporaryDirectory() as g:
