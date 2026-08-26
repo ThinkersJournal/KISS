@@ -41,7 +41,7 @@
       "vocabulary": "spec/namespaces/vulkan.md",
       "reference_implementation": "kiss-vulkan-vocab",
       "status": "registered",
-      "notes": "Capability-set is a deterministic four-field tuple rather than an opaque vendor-minted key, because Vulkan has no single authority minting per-part specialization names the way an sm-version is minted. See spec/namespaces/vulkan.md."
+      "notes": "Capability-set is a deterministic tuple of per-part specialization fields rather than an opaque vendor-minted key, because Vulkan has no single authority minting such names the way an sm-version is minted. The field COUNT is set by the vocabulary version and is deliberately not restated here: this note said 'four-field' from registration until 2026-08-26, while vocabulary_version 4 added a fifth field in August. A count in this row is a second copy of a fact spec/namespaces/vulkan.md owns, and the two drift silently because nothing compares them. See spec/namespaces/vulkan.md."
     },
     {
       "namespace": "rocm",
