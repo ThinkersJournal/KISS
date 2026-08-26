@@ -116,12 +116,23 @@ consume it. Format: tab-separated `sku` (the Rust `ArchSku` variant), `token`,
 sku	token	arch	notes
 Sm80	cuda:sm80	ampere	forward-compatible fallback on Ada/Hopper
 Sm89	cuda:sm89	ada	FP8 tensor cores; requires the sm89 feature
+Sm90	cuda:sm90	hopper	base Hopper; no arch-specific feature required (`cuda:sm90a` is a different cell, §2)
 Sm90a	cuda:sm90a	hopper	accelerated features; requires the sm90a feature
 ```
 
 > The rows above are the SKUs the reference emitter wires today (the `ArchSku`
-> enum's variants). `cuda:sm90` and `cuda:sm100a` are valid under §2's grammar and
-> appear in illustrative examples, but are not yet `ArchSku` variants; a row is
+> enum's variants). `cuda:sm100a` is valid under §2's grammar and appears in
+> illustrative examples, but is not yet an `ArchSku` variant; a row is
 > added here (with its variant) when the emitter wires that arch — deliberately a
 > breaking-change event for the exhaustive-match kernel dispatchers, per the
 > `ArchSku` design (it is intentionally not `#[non_exhaustive]`).
+>
+> `cuda:sm90`'s row was added 2026-08-26 under that rule, after the emitter had
+> already wired `ArchSku::Sm90` (`unpopped-vocab` `layout.rs:59`, `target.rs:309`).
+> **The rule fired correctly and nothing checked it:** the seed under-reported the
+> vocabulary by one token for weeks, while §2's table above listed four and
+> `ArchSku::Sm90`'s own doc comment says it was *"Added because KISS names `cuda:sm90` in
+> its §6.7 reference vectors"* — the structure_key reference vectors of **KISS-Classify
+> §6.7**, resolved here because a bare `§6.7` is ambiguous across seven sub-standards
+> (the quoted identifier is preserved as the maintainer wrote it; the resolution is ours).
+> So two artifacts each cited the other and disagreed about the same token. See #334.
