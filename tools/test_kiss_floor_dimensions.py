@@ -159,13 +159,14 @@ class DimensionSetTest(unittest.TestCase):
 # EXACT-SET, so it fails closed in both directions: a NEW uncompared dimension reds here,
 # and a dimension that STARTS being compared also reds, forcing a deliberate edit.
 VALUE_NOT_COMPARED = {
-    "lint": "measured: floor lint 33 -> 38 with live 33 exits 0 and prints `at the floor - "
-            "... lint 33 ...`, i.e. the LIVE number, so the mismatch is invisible. On the git "
-            "path `floor['lint']` is read only inside the git-less branch (:863) and as the "
-            "`counts_at_floor` precondition (:907) — neither can produce a red. The lint "
-            "dimension is gated as a SET against the base ledger, which is the real check; "
-            "whether the COUNT should also red is a design question, raised on #271 rather "
-            "than decided here.",
+    # EMPTY as of #320, which closed the one entry this started with.
+    #
+    # `lint` was here because the floor's lint VALUE was never compared on the git path:
+    # the comparison existed but sat inside the git-less branch, so floor 28/32/34/38
+    # against live 33 all returned CLEAN. #320 hoisted it to a single `lint_delta` read by
+    # BOTH paths, and it now reds in either direction. Removing the entry here is the
+    # coupling working as designed — the exact-set assertion below reds until the code
+    # changes, so a gap cannot be closed in the tool and left open in the record.
 }
 
 PERTURB = {"harness": +1, "lint": +1, "untested": -1, "proven": +1}
