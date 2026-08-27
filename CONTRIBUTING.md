@@ -194,7 +194,7 @@ fixed in `1cb7265`, `crates/mlmf-gguf/tests/authored.rs`, test
 requires, at any commit after `1cb7265`:
 
 ```
-cd C:\Projects\mlmf
+cd <mlmf-checkout>          # your local mlmf clone; no shell-specific syntax below
 # crates/mlmf-gguf/src/tensors.rs — change the past-EOF guard:
 #     if end > file_len {     ->     if false {
 cargo test -p mlmf-gguf --no-fail-fast
@@ -236,7 +236,7 @@ reader acting in good faith. When the answer is no, the fix is a second instrume
 class, not a weaker clause fitted to the instrument on hand.
 
 **The askable form, because the question above invites the wrong answer: what does a PERFECT
-implementation look like to this instrument? If the answer is “identical to an absent one,” the
+implementation look like to this instrument? If the answer is "identical to an absent one," the
 instrument is inverted.** *Why:* a portfolio sweep grepped a project's workflows for a `toolchain:`
 key, got zero, and reported that no MSRV job existed. **Two existed** — they read the version from
 `cargo metadata` at run time and never write it into the workflow, deliberately, so the promise and the
