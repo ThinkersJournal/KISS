@@ -798,7 +798,7 @@ enum (§6.0). See umbrella §3 for the full statement.
   wide truth; a suite that toleranced a narrow-A cell against the widest-A reference (or
   against §6.5-0007's transcendental oracle) MUST be rejected. *Test:*
   `test_conform_reduction_cell_oracle_reference`.
-- **KISS-CONFORM-6.5-0011** — The frozen oracle-vector corpus (§6.5-0008/0009) is carried in a
+- **KISS-CONFORM-6.5-0017** — The frozen oracle-vector corpus (§6.5-0008/0009) is carried in a
   machine-readable bundle whose `schema` is `kiss-oracle-vectors-v1.json`. Such a bundle MUST carry
   `schema`, `schema_version` (an **integer** — a gate that truncates a fractional value is not a
   gate), `kiss_substandard`, `spec_clause`, `generator`, `number_of_vectors`, `ulp_metric`, and a
@@ -1541,7 +1541,7 @@ the traceability lint.
 | KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
 | KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
 | KISS-CONFORM-6.5-0010 | `test_conform_reduction_cell_oracle_reference` |
-| KISS-CONFORM-6.5-0011 | `test_conform_oracle_vector_envelope` |
+| KISS-CONFORM-6.5-0017 | `test_conform_oracle_vector_envelope` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
 | KISS-CONFORM-6.6-0003 | `test_conform_fuzzer_cross_backend_agreement` |

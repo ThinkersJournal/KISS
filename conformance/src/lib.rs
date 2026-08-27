@@ -137,10 +137,10 @@ pub fn compare(class: DeterminismClass, actual: &[u8], expected: &[u8]) -> Resul
 /// The op-named comparator refinements of §6.8-0005 that OVERRIDE the declared class under
 /// §6.8-0008's precedence: the complex-transcendental ops take the split comparator, not their
 /// declared class. Kept as a SET so a further refinement is a data change (the KISS #271 shape),
-/// matching §6.5-0011's "a further comparator is admitted under §6.8-0008's precedence".
+/// matching §6.5-0017's "a further comparator is admitted under §6.8-0008's precedence".
 pub const OP_NAMED_REFINEMENT_OPS: &[&str] = &["carg", "clog", "csqrt", "cexp"];
 
-/// The comparator selected for a vector under §6.8-0008's precedence (§6.5-0011).
+/// The comparator selected for a vector under §6.8-0008's precedence (§6.5-0017).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Comparator {
     /// An op-named refinement (§6.8-0005) OVERRIDES the declared class.
@@ -149,7 +149,7 @@ pub enum Comparator {
     ClassDefault(DeterminismClass),
 }
 
-/// Select the comparator under §6.8-0008's PRECEDENCE (§6.5-0011): an op-named refinement
+/// Select the comparator under §6.8-0008's PRECEDENCE (§6.5-0017): an op-named refinement
 /// overrides, and the declared `class` is only the DEFAULT the precedence falls back to — never
 /// the selector directly. A reader that applies a vector's `class` without this step mis-compares
 /// exactly the §6.8-0005 ops (a NaN-expected `carg` row compared bit-exact false-reds a conformant

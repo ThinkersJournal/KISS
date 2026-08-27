@@ -50,7 +50,7 @@ fn str_field(o: &Json, k: &str) -> Result<String, String> {
     field(o, k)?.as_str().map(|s| s.to_string()).ok_or_else(|| format!("`{k}` is not a string"))
 }
 
-/// The oracle-vector schemas and versions this build recognizes (§6.5-0011). RECOGNIZED-SETS,
+/// The oracle-vector schemas and versions this build recognizes (§6.5-0017). RECOGNIZED-SETS,
 /// not literal `==` comparisons: a future schema/version is then a DATA change here rather than a
 /// comparison added at some call site and forgotten. That is the shape of KISS #271 — a hardcoded
 /// required-key tuple whose new member was wired at the call site, so the gate silently stopped
@@ -61,15 +61,15 @@ const RECOGNIZED_VERSIONS: &[u64] = &[1];
 
 pub fn load(json_text: &str) -> Result<Corpus, String> {
     let root = parse(json_text)?;
-    // §6.5-0011: an unrecognized `schema` MUST typed-decline, never load-as-if-v1. Before this
+    // §6.5-0017: an unrecognized `schema` MUST typed-decline, never load-as-if-v1. Before this
     // clause the field was read and never validated — a `kiss-oracle-vectors-v99.json` ran as v1.
     let schema = str_field(&root, "schema")?;
     if !RECOGNIZED_SCHEMAS.contains(&schema.as_str()) {
         return Err(format!(
-            "unrecognized `schema` `{schema}` (§6.5-0011); recognized: {RECOGNIZED_SCHEMAS:?}"
+            "unrecognized `schema` `{schema}` (§6.5-0017); recognized: {RECOGNIZED_SCHEMAS:?}"
         ));
     }
-    // §6.5-0011: `schema_version` MUST be READ and GATED — a corpus freezes at a version (§8), and
+    // §6.5-0017: `schema_version` MUST be READ and GATED — a corpus freezes at a version (§8), and
     // reading the field without gating on it does not satisfy the clause (cf. §6.8-0009). Before
     // this clause the field was never read at all, so a `schema_version: 999` bundle ran as v1.
     let schema_version = field(&root, "schema_version")?
@@ -77,7 +77,7 @@ pub fn load(json_text: &str) -> Result<Corpus, String> {
         .ok_or("`schema_version` is not an integer")?;
     if !RECOGNIZED_VERSIONS.contains(&schema_version) {
         return Err(format!(
-            "unrecognized `schema_version` {schema_version} (§6.5-0011); recognized: {RECOGNIZED_VERSIONS:?}"
+            "unrecognized `schema_version` {schema_version} (§6.5-0017); recognized: {RECOGNIZED_VERSIONS:?}"
         ));
     }
     let ulp_metric = str_field(&root, "ulp_metric")?;

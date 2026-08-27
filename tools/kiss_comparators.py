@@ -44,7 +44,7 @@ SELECTS_ONLY = {
     "KISS-CONFORM-6.3-0002": "matrix metadata copied from the sidecar; names a class, defines none",
     "KISS-CONFORM-6.4-0001": "golden byte-vectors APPLY the byte-exact comparator of 6.8-0001",
     "KISS-CONFORM-6.5-0001": "oracle-differential harness applies the selected comparator",
-    "KISS-CONFORM-6.5-0011": "corpus envelope; requires selection under 6.8-0008 precedence, defines none",
+    "KISS-CONFORM-6.5-0017": "corpus envelope; requires selection under 6.8-0008 precedence, defines none",
     "KISS-CONFORM-6.8-0006": "selection rule (declared class -> comparator); defines none",
     "KISS-CONFORM-6.8-0008": "totality/unambiguity of selection; defines none",
     "KISS-CONFORM-6.8-0009": "restricts which comparator is admissible for POD wire fields",
