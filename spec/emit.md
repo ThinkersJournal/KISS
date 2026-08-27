@@ -244,9 +244,12 @@ roles:
 > **TIER 2 — numeric round-trip:** bit-identity of the computed result is claimed
 > ONLY SAME-LANGUAGE, ON-DEVICE — same source language, same target device — and only
 > for the exact-byte determinism class; ULP/tolerance and order-invariant/
-> nondeterministic ops are compared under their declared comparator, never for bit
-> identity. This tier is a strict, narrowly-scoped add-on to tier 1, never a
-> substitute for it.
+> nondeterministic ops are never claimed bit-identical. This tier is a strict,
+> narrowly-scoped add-on to tier 1, never a substitute for it.
+>
+> How a ULP/tolerance op's result is *evaluated* is KISS-Conform's, not this
+> sub-standard's — see §6.7-0002 on the verification mandate excised from that
+> clause, and on what its removal leaves unnamed.
 >
 > Numeric identity is NEVER claimed across languages. Cross-language round-trip is
 > TIER 1 (structural) ONLY — Slang `tanh` is not bit-identical to CUDA `tanh`, and
@@ -849,9 +852,31 @@ correspondence the sibling relies on).
   result MUST be claimed **only** same-source-language and on-device (same source
   language, same target device — determined per §6.7-0006) **and only** for the
   **exact-byte** determinism class; for an op of the `ULP/tolerance` or
-  `order-invariant/nondeterministic` class an implementation MUST compare under that
-  op's declared comparator and MUST NOT claim bit-identity. Tier 2 is a strict,
-  narrowly-scoped add-on to tier 1 and MUST NOT be treated as a substitute for it.
+  `order-invariant/nondeterministic` class an implementation MUST NOT claim
+  bit-identity. Tier 2 is a strict, narrowly-scoped add-on to tier 1 and MUST NOT be
+  treated as a substitute for it.
+
+  This clause restricts a **claim**. It states no verification method and MUST NOT be
+  read as sanctioning one: how a `ULP/tolerance` op's result is evaluated is
+  KISS-Conform's to perform, under **KISS-Ops §6.0-0003** — the clause that assigns
+  it. A previous revision of this clause additionally required such an op to
+  "compare under that op's declared comparator" — a **verification mandate inside a
+  claim-restriction clause**, legislating outside this sub-standard's subject, and in
+  direct conflict with KISS-Conform once **KISS-Ops §6.0-0003** anchors the class to
+  an audited wide-precision referent. It was excised rather than reworded: rewording
+  would have left the same clause legislating outside its subject, merely agreeing
+  with the new rule for as long as that rule held still.
+
+  **Consequence, stated rather than left to be inferred.** With the mandate gone, and
+  **the audited wide-precision referent that KISS-Ops §6.0-0003 requires not yet
+  existing**, an **equivalence check** — two artifacts of the *same*
+  computation compared against each other, which asks about no third thing and for
+  which a wide-precision referent is meaningless rather than merely absent — has **no
+  sanctioned form in this suite**. That is a known and accepted cost, not an oversight,
+  and it is recorded here because a practice that is unnameable by silence is
+  indistinguishable from one nobody considered. Implementations that perform such
+  checks today are not thereby non-conforming to this clause; they are performing an
+  activity this suite does not yet name.
   *Test:* `test_emit_roundtrip_tier2_numeric_same_language`.
 - **KISS-EMIT-6.7-0003** — **No cross-language numeric identity.** An implementation
   MUST NOT claim numeric bit-identity across source languages; a cross-language round-
@@ -864,8 +889,10 @@ correspondence the sibling relies on).
   decided by the imported KISS-Ops determinism/fidelity enum (§6.0-0003): an
   `exact-byte` op MAY be claimed at tier 2 (same-language on-device); a `ULP/tolerance`
   or `order-invariant/nondeterministic` op MUST NOT be claimed at tier 2 and stops at
-  tier 1 plus its declared comparator. An implementation MUST NOT select a tier by any
-  rule other than the op's imported determinism class. *Test:*
+  tier 1. An implementation MUST NOT select a tier by any rule other than the op's
+  imported determinism class. As in §6.7-0002, this clause decides WHICH CLAIM IS
+  ADMISSIBLE and states no verification method; the phrase "plus its declared
+  comparator" was excised with the same mandate for the same reason. *Test:*
   `test_emit_roundtrip_tier_selected_by_determinism_class`.
 - **KISS-EMIT-6.7-0005** — KISS-Emit and KISS-Consume MUST be treated as **DAG
   siblings** with **no** dependency edge between them: an implementation MUST NOT
