@@ -38,25 +38,17 @@ fn test_conform_oracle_vector_envelope() {
         "§6.5-0017: an unrecognized `schema_version` must decline, not load as if v1"
     );
 
-    // --- A MISSING required field (`schema_version`) MUST decline — it was never read before this
-    //     clause, so a bundle lacking it used to load silently.
-    let missing_version = arith().replace("\"schema_version\": 1,", "");
-    assert!(
-        corpus::load(&missing_version).is_err(),
-        "§6.5-0017: a bundle missing `schema_version` must decline"
-    );
-
-    // --- §6.5-0017 requires a reader to decline a bundle missing ANY required field, not only the
-    //     four the loader reads for value. One born-red control per field the loader did not
-    //     previously check — the fixture half of the loader's required-field enforcement (#340 shape).
-    for field in ["kiss_substandard", "spec_clause", "generator", "number_of_vectors"] {
-        let removed: String = arith()
-            .lines()
-            .filter(|l| !l.trim_start().starts_with(&format!("\"{field}\":")))
-            .collect::<Vec<_>>()
-            .join("\n");
+    // --- §6.5-0017: a reader MUST decline a bundle missing ANY required top-level field. Iterate the
+    //     loader's OWN `REQUIRED_TOP_FIELDS` — not a hand-list — so this born-red control covers all 8
+    //     and GROWS with the constant by construction: a 9th field gets a control automatically. A
+    //     private copy would drift from the list the first time it changes, in the green direction
+    //     (architect). Rename the key rather than delete the line, so the bundle stays valid JSON and
+    //     the decline comes from the required-field check, not a parse error — works for the multi-line
+    //     `vectors` field too.
+    for &field in corpus::REQUIRED_TOP_FIELDS {
+        let absent = arith().replace(&format!("\"{field}\":"), &format!("\"{field}__ABSENT\":"));
         assert!(
-            corpus::load(&removed).is_err(),
+            corpus::load(&absent).is_err(),
             "§6.5-0017: a bundle missing required field `{field}` must decline"
         );
     }

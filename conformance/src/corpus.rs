@@ -64,7 +64,7 @@ const RECOGNIZED_VERSIONS: &[u64] = &[1];
 /// adding one is a data change (#340: a clause requiring fields its own loader did not check).
 /// `schema`/`schema_version`/`ulp_metric`/`vectors` are additionally value/shape-validated below;
 /// `kiss_substandard`/`spec_clause`/`generator`/`number_of_vectors` are required PRESENT here.
-const REQUIRED_TOP_FIELDS: &[&str] = &[
+pub const REQUIRED_TOP_FIELDS: &[&str] = &[
     "schema", "schema_version", "kiss_substandard", "spec_clause",
     "generator", "number_of_vectors", "ulp_metric", "vectors",
 ];
