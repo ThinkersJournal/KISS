@@ -206,7 +206,7 @@ The complete pinned scalar dtype set (normative table in §6.1):
 
 Twenty-four dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
 no "etc.". (sk4: the two 8-bit MX scales `f8e8m0`/`f8e6m2` are additive; the FP8/complex
-respellings and the `s`→`i` integer renames are covered by §3.1.)
+respellings and the `s`→`i` integer renames are covered by umbrella §3.1.)
 
 ### 2.7 Readable catalog — the operand descriptor
 
@@ -448,30 +448,30 @@ where it fixes storage bytes.
 | `u32` | uint | 32 | ordinary unsigned 32-bit storage; container width 4 bytes (matches `i32`); index/address is an operand role owned by KISS-Ops, not a dtype class |
 | `u64` | uint | 64 | unsigned 64-bit |
 | `bool` | bool | 8 | 1-byte truth value; storage width equals `u8` |
-| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding (OCP OFP8, §6.1-0010). sk3 `e4m3fn` + the `f8` width prefix (§3.1.2) |
+| `f8e4m3fn` | float | 8 | FP8 E4M3 OCP finite (sign 1, exp 4, mantissa 3, bias 7); max finite ±448; no infinities; single NaN encoding (OCP OFP8, §6.1-0010). sk3 `e4m3fn` + the `f8` width prefix (umbrella §3.1.2) |
 | `f8e4m3fnuz` | float | 8 | FP8 E4M3 AMD `fnuz` variant (bias 8, no −0, no infinities); byte-incompatible with `f8e4m3fn`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e4m3fnuz` + `f8` prefix |
-| `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.1-0011). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, §3.1.5) |
+| `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.1-0011). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, umbrella §3.1.5) |
 | `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e5m2fnuz` + `f8` prefix |
-| `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.1-0013. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (§3.2). New at sk4 (additive) |
-| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.1-0013. A scale type, not an element value dtype (§3.2). New at sk4 (additive) |
+| `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.1-0013. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (umbrella §3.2). New at sk4 (additive) |
+| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.1-0013. A scale type, not an element value dtype (umbrella §3.2). New at sk4 (additive) |
 | `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
-| `c64` | complex | 64 | interleaved (re,im) pair of `f32`; 64 bits **total** (named by total width, §3.1.4). **sk4 meaning-flip:** this is the sk3 `c32`; the token `c64` denoted pair-of-`f64` at sk3 — the version prefix (§3.4) makes the reinterpretation loud, never silent |
-| `c128` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits **total** (named by total width, §3.1.4). This is the sk3 `c64` |
+| `c64` | complex | 64 | interleaved (re,im) pair of `f32`; 64 bits **total** (named by total width, umbrella §3.1.4). **sk4 meaning-flip:** this is the sk3 `c32`; the token `c64` denoted pair-of-`f64` at sk3 — the version prefix (umbrella §3.4) makes the reinterpretation loud, never silent |
+| `c128` | complex | 128 | interleaved (re,im) pair of `f64`; 128 bits **total** (named by total width, umbrella §3.1.4). This is the sk3 `c64` |
 
 - **KISS-CLASSIFY-6.1-0001** — The scalar dtype set MUST be **exactly** the
   twenty-four tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `i8`, `i16`, `u8`,
   `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`, `f8e5m2fnuz`,
   `f8e8m0`, `f8e6m2`, `i4`, `u4`, `b1`, `c64`, `c128`); an implementation MUST NOT recognize a
   twenty-fifth dtype token at this schema version and MUST NOT omit any of the twenty-four. The FP8
-  spellings are **width-prefixed and variant-explicit** (sk4): the `f8` width prefix (§3.1.2) plus,
-  where a layout admits multiple variants, a mandatory variant suffix (§3.1.5) — `f8e4m3fn` (OCP)
+  spellings are **width-prefixed and variant-explicit** (sk4): the `f8` width prefix (umbrella §3.1.2) plus,
+  where a layout admits multiple variants, a mandatory variant suffix (umbrella §3.1.5) — `f8e4m3fn` (OCP)
   with `f8e4m3fnuz` reserved, and `f8e5m2` (IEEE, no suffix) with `f8e5m2fnuz` reserved
   — byte-incompatible hardware variants MUST NOT share a token. The `f8e8m0`/`f8e6m2` **scale**
-  types are new at sk4 (additive; MX shared-exponent scales, §3.2), carried as sibling operands,
-  not element value dtypes. The complex tokens are named by **total** width (§3.1.4): `c64` =
-  pair-of-`f32` (the sk3 `c32`), `c128` = pair-of-`f64` (the sk3 `c64`); the version prefix (§3.4)
+  types are new at sk4 (additive; MX shared-exponent scales, umbrella §3.2), carried as sibling operands,
+  not element value dtypes. The complex tokens are named by **total** width (umbrella §3.1.4): `c64` =
+  pair-of-`f32` (the sk3 `c32`), `c128` = pair-of-`f64` (the sk3 `c64`); the version prefix (umbrella §3.4)
   makes this reinterpretation loud, never silent. In particular, no
   strict-precision float variant is a dtype: the dtype set is **pure storage**
   (§6.1-0005). A **reserved** spelling (`f8e4m3fnuz`, `f8e5m2fnuz`) is part of the
@@ -555,8 +555,8 @@ where it fixes storage bytes.
   `(real, imag)` pair of `f32` occupying 64 storage bits, and `c128` (sk3 `c64`) as an
   interleaved `(real, imag)` pair of `f64` occupying 128 storage bits; the real
   component MUST occupy the lower-addressed half. Complex tokens are named by **total**
-  width at sk4 (§3.1.4): the token `c64` denotes the 64-bit pair-of-`f32` (the sk3 `c32`),
-  and `c128` the 128-bit pair-of-`f64` (the sk3 `c64`); the version prefix (§3.4) makes
+  width at sk4 (umbrella §3.1.4): the token `c64` denotes the 64-bit pair-of-`f32` (the sk3 `c32`),
+  and `c128` the 128-bit pair-of-`f64` (the sk3 `c64`); the version prefix (umbrella §3.4) makes
   this reinterpretation loud. *Test:* `test_classify_complex_interleaved_layout`.
 - **KISS-CLASSIFY-6.1-0013** — The MX scale dtypes `f8e8m0` and `f8e6m2` (both new at
   sk4, additive) MUST use the OCP Microscaling (MX) scale encodings: `f8e8m0` is an
@@ -564,7 +564,7 @@ where it fixes storage bytes.
   **unsigned** 8-bit scale (0 sign, 6 exp, 2 mantissa), a finer-granularity sibling of
   `f8e8m0`. A scale carries **no sign bit**, so the width self-check is `exp + mantissa`
   (8+0 and 6+2, both 8). Both are **scale types** — the per-block shared scale of an
-  MX-encoded value operand, carried as a **sibling operand** (§3.2), never an element
+  MX-encoded value operand, carried as a **sibling operand** (umbrella §3.2), never an element
   value dtype. These are pinned format constants citing OCP-MX; their special values
   follow the OCP-MX definitions (not restated here), and the MX **block** structure
   (block size, scale placement) is an encoding-axis concern **outside** §6.1.
@@ -707,7 +707,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   token prefix `sk4` (§6.7-0002); a bump of this integer is required only when a
   predicate axis is added or altered in a non-additive way. (Version `4` supersedes
   version `3`: the sk4 dtype respellings — integer `i`-prefix, FP8 `f8`-prefix + mandatory
-  variant suffix, and the complex total-width meaning-flip (§6.1, §3.1) — together with the
+  variant suffix, and the complex total-width meaning-flip (§6.1, umbrella §3.1) — together with the
   new non-contraction precision coordinate `(acc + mp)` (§6.7-0012, §3.3), forced this
   non-additive bump while the sub-standard is UNFROZEN. Version `3` had superseded version
   `2` for the `gem` contraction field's non-additive growth to carry the precision/compute
@@ -1069,7 +1069,7 @@ form (§6.7-0011).
   contraction field (§6.7-0006) carries the weight, accumulator, and output dtype
   coordinates explicitly, so mixed-precision `gem` cells are distinguished in-key and no
   longer collide. (Agreeing secondary-operand dtypes for non-`gem` cells remains the
-  caller's responsibility outside the admissibility key; see §8.2 and the registration
+  caller's responsibility outside the admissibility key; see umbrella §8.2 and the registration
   obligation §6.6-0018.) *Test:* `test_classify_secondary_dtype_unkeyed`.
 - **KISS-CLASSIFY-6.6-0016** — The M, N, and K axis roles of a dense-contraction
   cell MUST be supplied by the caller as role hints (§6.6-0012); an implementation
@@ -1095,7 +1095,7 @@ form (§6.7-0011).
   tokens are byte-identical; such cells MUST be disambiguated out-of-band (outside the
   admissibility key) so that a consumer's byte-exact lookup (§6.6-0001) resolves to
   exactly one cell and neither implementation silently overwrites the other. (This is
-  the provider-side enforcement of the §8.2 caller-responsibility rule.) The
+  the provider-side enforcement of the umbrella §8.2 caller-responsibility rule.) The
   mixed-precision `gem` collision that formerly forced this out-of-band step — two GEMMs
   differing only in weight / accumulator / output dtype — is resolved in-key by the sk3
   contraction coordinates (§6.7-0006), so such `gem` cells are now distinct by their
@@ -1276,7 +1276,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   its compute dtype MUST carry an accumulator-dtype coordinate drawn from the closed §6.1
   dtype set — the non-contraction analogue of the contraction `<acc>`. When the coordinate
   is **absent**, the accumulator dtype MUST default to the compute dtype
-  (accumulator-dtype == compute-dtype, the §6.17-0005 diagonal), so every existing token is
+  (accumulator-dtype == compute-dtype, the KISS-Ops §6.17-0005 diagonal), so every existing token is
   unchanged in meaning and every kernel that never opts in behaves exactly as at this
   version. The **wire/codec realization** — the non-contraction optional-trailing precision
   field `<acc>/<mp>` and its byte-exact spelling — is **realized at sk4** by §6.7-0013 (the
@@ -1306,7 +1306,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   The `<mp>` coordinate extends the strict-vs-TF32 math-precision axis (§6.7-0006) to the
   non-contraction key, so it stops collapsing for reductions/scans. This field **declares** the
   accumulator/precision coordinate for identity; it does **not** pin bit-level determinism
-  (§6.17-0007 — float accumulation may remain order-invariant-nondeterministic). **Byte-stability:**
+  (KISS-Ops §6.17-0007 — float accumulation may remain order-invariant-nondeterministic). **Byte-stability:**
   every non-contraction token whose accumulator equals its compute dtype and whose `<mp>` is
   default is **byte-identical to the pre-sk4 codec** modulo the §6.1 dtype renames, so the sk4
   regen diff is exactly the cells whose accumulator/precision actually deviates. The rule is

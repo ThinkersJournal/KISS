@@ -11,7 +11,7 @@ This document is therefore normative **for the `vulkan:` namespace** and is
 referenced from the namespace registry
 ([`conformance/registry/namespaces.json`](../../conformance/registry/namespaces.json)),
 but it is not part of KISS-Classify's clause set and it freezes on its own axis
-(§8). Nothing here may contradict §6.8-0001, -0002, -0005, or the general
+(§8). Nothing here may contradict KISS-Classify §6.8-0001, -0002, -0005, or the general
 encoding rules; where it appears to, the KISS clause wins.
 
 Reference implementation:
@@ -61,7 +61,7 @@ vulkan:<subgroup>.<ops>.<arith>.<coop>.<coopvec>
 - **V-3.** Every set is emitted in the canonical order given below.
   Legal-but-non-canonical input — an unsorted set, a duplicate member, a
   leading zero, uppercase hex — MUST be **rejected with a typed decline**, not
-  normalized. Under §6.8-0002 two accepted spellings of one target would fail
+  normalized. Under KISS-Classify §6.8-0002 two accepted spellings of one target would fail
   to match each other, which is worse than accepting neither.
 
 ### 2.1 `<subgroup>` — the width the kernel is built for
@@ -434,14 +434,14 @@ at authoring time and no reconstruction is required.
 `s8`, `s16`, `s32`, `s64` become `i8`, `i16`, `i32`, `i64`. This is a
 **respelling**, so it bumps the vocabulary version by the rule above, and every
 previously-derivable token naming a signed-integer component type changes
-bytes. Under §6.8-0002 matching is byte-exact, so a version-1 token and its
+bytes. Under KISS-Classify §6.8-0002 matching is byte-exact, so a version-1 token and its
 version-2 equivalent **do not match**: any cache keyed on a version-1 token is
 stale and must be invalidated, not migrated. Token *length* is unchanged, since
 each name keeps its width.
 
 Adopted to align with the KISS-Classify §6.1 `structure_key` dtype set, which
 uses the `i` prefix, as part of the coordinated `sk4` schema event
-(maintainer-ratified, 2026-08-08). §6.1's set and this vocabulary remain
+(maintainer-ratified, 2026-08-08). KISS-Classify §6.1's set and this vocabulary remain
 **distinct axes** — a decoder never resolves a `target_capability` token
 against the dtype set — so this is an alignment of convention, not a merge of
 vocabularies.
@@ -452,7 +452,7 @@ look like oversights and are not:
 - **The `arith` field keeps `i8`.** It has always been `i8`, and it names the
   `shaderInt8` *capability*, not a component type. It is unrelated to this
   rename and must not be "made consistent" with anything.
-- **Unsigned types keep `u`.** `u8`/`u16`/`u32`/`u64` already match §6.1.
+- **Unsigned types keep `u`.** `u8`/`u16`/`u32`/`u64` already match KISS-Classify §6.1.
 
 For the record, since it will otherwise read as an inconsistency worth
 "fixing": version 1 spelled component types `s8`/`s32` because they transcribe
