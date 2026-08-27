@@ -87,6 +87,8 @@ retrieval.**
 |---|---|
 | my check examined nothing / passed vacuously | 1–10 |
 | my measurement could be cited for an adjacent question it never asked | **1** (name what the method did not examine — before anyone misreads it) |
+| I reported a zero and wrote down WHY — is the reason true, or only plausible? | **5(a)** (construct the defect the reason says cannot exist) |
+| my search found nothing — would a PERFECT implementation look any different to it? | **7** (a term that is an artifact of non-compliance cannot see compliance) |
 | my seed didn't apply, or applied and proved nothing | **9** |
 | my seed applied and went RED — for the wrong reason | **9** (second half) |
 | the check ran fine but on the wrong bytes / level / role / axis | **11** |
@@ -144,6 +146,77 @@ zero — with the structural reason. *Why:* two projects audited to zero and bot
 their components take no environment input, so the defect class has nowhere to live. **Immune is
 not the same as lucky**, and only the reason distinguishes them.
 
+**5(a). A stated reason is a HYPOTHESIS until a mutation tests it.** Convention 5 requires the
+reason to be **present**; nothing in it requires the reason to be **true**. Where the stated
+reason is structural — *"the defect class has nowhere to live"* — **construct the defect the
+reason says cannot exist and confirm the zero survives.** *Why:* an MLMF test asserted
+`report.is_empty()` on a GGUF fixture declaring **two 128-byte tensors and carrying zero bytes
+of tensor data**, under the comment *"Nothing is WRONG with this file, so nothing is
+reported."* Both tensors' declared ranges ran past the end of the file. The assertion was
+5-compliant on its face and **the reason was false**.
+
+**And 5 selects for the durable form of this defect, which is why the sub-clause is needed
+rather than a stricter reading of 5.** A bare `assert!(report.is_empty())` with no reason is
+5-**non**-compliant: it gets flagged, someone looks, and a false premise surfaces in a minute.
+**The same assertion with a rationale beside it is 5-compliant, passes, and nobody looks.** That
+is not a gap in 5's coverage — it is 5 working exactly as written and selecting for the wrong
+thing.
+
+**A cheap pre-filter, before any measurement: a structural reason must name what would have to
+CHANGE for the zero to become non-zero.** *"Nothing is wrong with this file"* is a **conclusion**
+— uncheckable without already knowing the answer, and it restates the assertion in prose.
+*"No tensor's declared range exceeds the file length"* is a **mechanism** — it names a quantity a
+reader can check against the fixture in seconds. If a reason does not name such a quantity, it is
+a restatement wearing a reason's clothes, and 5 cannot tell the two apart because both are prose
+sitting where a reason goes. This is checkable by a reader with no domain knowledge, which is a
+property 5 already has and worth preserving.
+
+**Why it survived, and why the author could not have caught it:** `mlmf-gguf` was the only
+backend. It kept a past-EOF descriptor and reported nothing; the test was written from that
+behaviour, so the assertion and the code agreed. **A single implementation cannot contradict a
+description written from it, and a test written from it is a description with a green tick.** The
+comment then answered the question for every later reader without checking it for any of them. It
+was found only when a **second backend** reached the same condition and did the opposite — omitted
+the tensor and reported it. **The seam had never ruled, so both were "correct".** The companion
+finding travelled the same way: a brief whose fifth success criterion was satisfiable by a trait's
+**default implementation** was caught by the implementer *executing* the specification, not by its
+author, who shipped it believing it sound. **The author is precisely who cannot see it — which is
+why this clause demands a mutation rather than a re-read.**
+
+**This composes what is already here rather than adding a fourth idea:** 5 requires the reason,
+**9** supplies the method (a seeded mutation must assert that it applied), and **15** supplies the
+discriminator (*only a MUTATION settles aboutness*). 15 already holds the machinery, scoped to
+clause-backing; this is the same discriminator applied to an **asserted absence**.
+
+**Citation — a recipe, not a number** (convention 17's rule, applied to this entry). Repo `mlmf`,
+fixed in `1cb7265`, `crates/mlmf-gguf/tests/authored.rs`, test
+`a_data_region_declared_past_the_end_of_the_file_still_opens`. To run the mutation this clause
+requires, at any commit after `1cb7265`:
+
+```
+cd C:\Projects\mlmf
+# crates/mlmf-gguf/src/tensors.rs — change the past-EOF guard:
+#     if end > file_len {     ->     if false {
+cargo test -p mlmf-gguf --no-fail-fast
+```
+
+Expected **red** — the assertion the old test could not make:
+
+```
+left:  []
+right: [... TensorDeclined { name: "blk.0.attn_q.weight",
+        reason: "declared offset 64 rebases to 192..256,
+                 past the end of the 200-byte file" } ...]
+```
+
+**And the positive control for the other direction**, without which a check that reports *every*
+tensor is indistinguishable from a working one until someone opens a normal model: change the same
+guard to `if end >= 0` and confirm a fitting-file test reddens with four spurious entries.
+
+**Not re-verified here.** The incident, the fixture and both mutations are first-hand to the MLMF
+lane at the commit above; this entry carries the recipe so a reader can run them rather than
+believe them.
+
 **6. Independence of runs is not independence of instruments.** Two people running the same check
 and agreeing have tested the check once. *Why:* a dtype lint reported CLEAN to its author and
 CLEAN to an independent reviewer while parsing one table concatenated with another and comparing
@@ -161,6 +234,15 @@ gets asked routinely; **"can that tool, in principle, see this?" does not** — 
 enforcer structurally cannot observe will be recorded wrong repeatedly, each time by a different
 reader acting in good faith. When the answer is no, the fix is a second instrument of the right
 class, not a weaker clause fitted to the instrument on hand.
+
+**The askable form, because the question above invites the wrong answer: what does a PERFECT
+implementation look like to this instrument? If the answer is “identical to an absent one,” the
+instrument is inverted.** *Why:* a portfolio sweep grepped a project's workflows for a `toolchain:`
+key, got zero, and reported that no MSRV job existed. **Two existed** — they read the version from
+`cargo metadata` at run time and never write it into the workflow, deliberately, so the promise and the
+gate cannot drift. **The search term was an artifact of NON-compliance, so perfect compliance was
+indistinguishable from absence**, and the report was a claim about the phrases the searcher
+thought of.
 
 **8. A round-trip proves internal consistency, not external agreement.** Encode-then-decode, or
 emit-then-parse, tells you an implementation agrees with *itself*. It cannot detect that the whole
