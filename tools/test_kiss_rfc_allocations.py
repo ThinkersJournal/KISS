@@ -12,6 +12,7 @@ SEEDED, and it is reported before the green.
 Run: python tools/test_kiss_rfc_allocations.py
 """
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -104,6 +105,53 @@ class RfcAllocationTest(unittest.TestCase):
         self.assertEqual(kt.check_rfc_collisions({"KISS-CONFORM-6.5-0011"},
                                                  str(pathlib.Path(tempfile.mkdtemp()) / "nope")),
                          [])
+
+    def test_the_gate_is_WIRED_not_merely_correct(self):
+        """END-TO-END through the tool, because every other control here calls
+        `check_rfc_collisions` DIRECTLY and none of them proves it is ever called (#344 review).
+
+        Delete the two-line dispatch in `main()` and all of those controls still pass while
+        the build stays green on a real collision. NINE CONTROLS VERIFYING A FUNCTION NOBODY
+        HAS PROVEN IS INVOKED — which is §6.8-0014's own E5 turned on this PR: *a gate that
+        can only fail for an adjacent reason satisfies the naming requirement and discharges
+        nothing.*
+
+        This runs `kiss_trace.py` as a subprocess against the real tree with a seeded
+        collision, so what is asserted is the EXIT CODE OF THE THING CI RUNS.
+        """
+        spec = HERE.parent / "spec" / "conform.md"
+        orig = spec.read_text(encoding="utf-8")
+        anchor = "- **KISS-CONFORM-6.5-0010**"
+        self.assertIn(anchor, orig, "seed anchor missing — refusing to report a result")
+        seeded = orig.replace(
+            anchor,
+            "- **KISS-CONFORM-6.5-0011** — a SEEDED clause on an ordinal the RFC holds.\n"
+            "  *Test:* `test_conform_seeded_collision`.\n" + anchor, 1)
+        self.assertNotEqual(seeded, orig, "seed did not apply")
+
+        def run():
+            return subprocess.run([sys.executable, str(HERE / "kiss_trace.py")],
+                                  capture_output=True, text=True, timeout=300)
+
+        try:
+            before = run()
+            self.assertEqual(before.returncode, 0,
+                             "the tree is not clean before seeding; every arm below is "
+                             "unreadable:\n" + before.stdout[-400:])
+            spec.write_text(seeded, encoding="utf-8")
+            after = run()
+        finally:
+            spec.write_text(orig, encoding="utf-8")
+            self.assertEqual(spec.read_text(encoding="utf-8"), orig, "spec restore FAILED")
+
+        self.assertEqual(after.returncode, 1,
+                         "a real RFC-held ordinal minted into spec/ did NOT red the tool — "
+                         "the check is correct and NOT WIRED:\n" + after.stdout[-500:])
+        self.assertIn("still allocated in", after.stdout,
+                      "the tool reddened, but not for this reason — a gate failing on an "
+                      "adjacent axis discharges nothing")
+        # and it must recover, so the red is attributable to the seed and nothing else
+        self.assertEqual(run().returncode, 0, "the tool did not return to green after restore")
 
     def test_the_live_tree_has_no_collision(self):
         """The real tree, and the reason the red above had to be seeded.
