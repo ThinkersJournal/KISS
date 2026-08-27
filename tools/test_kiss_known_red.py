@@ -18,6 +18,7 @@ Run: python tools/test_kiss_known_red.py
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,12 @@ STEMS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
 def run(*args):
     r = subprocess.run([sys.executable, TOOL, *args], capture_output=True, timeout=300,
                        env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-    return r.returncode, r.stdout.decode("utf-8", "replace")
+    out = r.stdout.decode("utf-8", "replace")
+    err = r.stderr.decode("utf-8", "replace")
+    # STDERR IS KEPT (#347 review). A harness that discards it asserts on a strictly
+    # smaller artefact than the one CI produces -- and the failures it will be used to
+    # diagnose are exactly the ones where a Python traceback IS the message.
+    return r.returncode, out + (("\n--- stderr ---\n" + err) if err.strip() else "")
 
 
 def all_backed_tree():
@@ -95,9 +101,15 @@ class KnownRedTest(unittest.TestCase):
         that accepted it would let the tolerance outlive its reason indefinitely.
         """
         spec, conf = all_backed_tree()
-        rc, out = run("--assert-known-red", "--spec-dir", spec, "--conformance-dir", conf)
-        self.assertEqual(rc, 1, "a PASSING strict was accepted as the tolerated red:\n" + out[-400:])
-        self.assertIn("TOLERANCE IS STALE", out)
+        try:
+            rc, out = run("--assert-known-red", "--spec-dir", spec, "--conformance-dir", conf)
+            self.assertEqual(rc, 1, "a PASSING strict was accepted as the tolerated red:\n" + out[-400:])
+            self.assertIn("TOLERANCE IS STALE", out)
+        finally:
+            # cleaned even when an assertion raises (#347 review) -- a failing run is
+            # exactly when the tree is most likely to be left behind, and least likely
+            # to be noticed.
+            shutil.rmtree(pathlib.Path(spec).parent, ignore_errors=True)
 
     def test_every_failure_site_names_itself(self):
         """The assertion is only as good as its coverage of the failure sites.
@@ -115,6 +127,26 @@ class KnownRedTest(unittest.TestCase):
             "`note_fail(\"<tag>\")`.")
         self.assertGreaterEqual(len(re.findall(r"note_fail\(", code)), 14,
                                 "failure sites went missing — the reason set has gone blind")
+
+    def test_an_INCONCLUSIVE_is_reported_not_silent(self):
+        """A DECLINE is a third state, not the absence of a reason (#347 review).
+
+        Without this, `--why-red` printed `<none>` while the tool exited 2 because the
+        ratchet DECLINED to answer — the instrument built to tell one red from another
+        having a state in which it explains nothing. That is the decline-vs-failure
+        collapse this PR exists to close, in the reporting half of the same PR.
+        """
+        rc, out = run("--why-red", "--ratchet")
+        self.assertEqual(rc, 0, out[-300:])
+        # ASSERT THE REASON-SET LINE ITSELF, not merely that the word appears (#347).
+        # The first version checked `assertIn("inconclusive", out)` and the explanatory
+        # line -- both of which survive dropping the decline from the set: the word is
+        # already in the pre-existing `RESULT: INCONCLUSIVE` text, and the explanation
+        # prints off `inconclusive` directly. Mutation-proven vacuous, then fixed.
+        reasons = next(l for l in out.splitlines() if "FAILURE REASONS:" in l)
+        self.assertIn("inconclusive", reasons,
+                      "a DECLINE is missing from the reason set: " + reasons)
+        self.assertIn("DECLINE, not a failure", out)
 
     def test_why_red_reports_without_gating(self):
         """The diagnostic arm exits 0 even on the live (red) tree, so it can be read anywhere."""

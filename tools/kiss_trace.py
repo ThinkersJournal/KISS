@@ -2290,9 +2290,19 @@ def main():
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
               f"{untested_n}\n          ({'/'.join(CLAIM_CATEGORIES)} are accounted for; "
               f"see the breakdown above).")
+    # An INCONCLUSIVE is a THIRD state, not the absence of a reason (#347 review). Without
+    # this, `--why-red` prints `<none>` while the tool exits 2 because the ratchet DECLINED
+    # to answer -- the instrument built to tell one red from another having a state where it
+    # explains nothing. That is the decline-vs-failure collapse this PR exists to close,
+    # inside the reporting half of the same PR.
+    reason_set = set(fail_reasons) | ({"inconclusive"} if inconclusive else set())
+
     if args.why_red:
         print("-" * 68)
-        print("  FAILURE REASONS: " + (", ".join(sorted(set(fail_reasons))) or "<none>"))
+        print("  FAILURE REASONS: " + (", ".join(sorted(reason_set)) or "<none>"))
+        if inconclusive:
+            print("  `inconclusive` is a DECLINE, not a failure: the check could not be made,")
+            print("  which is neither green nor a violation. See the run above for which one.")
         return 0
 
     if args.assert_known_red:
@@ -2300,9 +2310,14 @@ def main():
         # makes the run conclusion SUCCESS either way, so this is the only place the
         # distinction can be made -- and it is made in ONE run, never by comparing two
         # jobs, because two jobs on two checkouts is an inference rather than a check.
-        seen = set(fail_reasons)
+        seen = reason_set
         print("-" * 68)
         print("  FAILURE REASONS: " + (", ".join(sorted(seen)) or "<none>"))
+        if inconclusive and seen == {"strict_untested", "inconclusive"}:
+            print("  DECLINED, NOT CHARACTERIZED: a check could not be made, so whether the")
+            print("  tolerated red is the only red is UNKNOWN rather than confirmed. Refusing")
+            print("  the green rather than passing an unchecked condition.")
+            return 1
         if seen == {"strict_untested"}:
             print("  KNOWN RED: `strict` is failing for the documented reason (untested MUSTs)")
             print("  and for no other. The tolerance is intact.")
