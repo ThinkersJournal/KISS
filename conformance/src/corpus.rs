@@ -59,8 +59,25 @@ fn str_field(o: &Json, k: &str) -> Result<String, String> {
 const RECOGNIZED_SCHEMAS: &[&str] = &["kiss-oracle-vectors-v1.json"];
 const RECOGNIZED_VERSIONS: &[u64] = &[1];
 
+/// Every top-level field §6.5-0017 requires a bundle to carry. A SET, not scattered `str_field`
+/// calls, so the loader's enforcement matches the clause's required-field LIST by construction and
+/// adding one is a data change (#340: a clause requiring fields its own loader did not check).
+/// `schema`/`schema_version`/`ulp_metric`/`vectors` are additionally value/shape-validated below;
+/// `kiss_substandard`/`spec_clause`/`generator`/`number_of_vectors` are required PRESENT here.
+const REQUIRED_TOP_FIELDS: &[&str] = &[
+    "schema", "schema_version", "kiss_substandard", "spec_clause",
+    "generator", "number_of_vectors", "ulp_metric", "vectors",
+];
+
 pub fn load(json_text: &str) -> Result<Corpus, String> {
     let root = parse(json_text)?;
+    // §6.5-0017: a reader MUST typed-decline a bundle missing ANY required field, not only the four
+    // it happens to read for value below. Before this the loader checked presence only for those.
+    for f in REQUIRED_TOP_FIELDS {
+        if root.get(f).is_none() {
+            return Err(format!("missing required field `{f}` (§6.5-0017)"));
+        }
+    }
     // §6.5-0017: an unrecognized `schema` MUST typed-decline, never load-as-if-v1. Before this
     // clause the field was read and never validated — a `kiss-oracle-vectors-v99.json` ran as v1.
     let schema = str_field(&root, "schema")?;
@@ -132,6 +149,10 @@ mod tests {
     const SAMPLE: &str = r#"{
       "schema": "kiss-oracle-vectors-v1.json",
       "schema_version": 1,
+      "kiss_substandard": "OPS",
+      "spec_clause": "KISS-CONFORM-6.5-0008",
+      "generator": "test-fixture",
+      "number_of_vectors": 1,
       "ulp_metric": "integer totalOrder distance",
       "vectors": [
         {

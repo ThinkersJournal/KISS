@@ -46,6 +46,21 @@ fn test_conform_oracle_vector_envelope() {
         "§6.5-0017: a bundle missing `schema_version` must decline"
     );
 
+    // --- §6.5-0017 requires a reader to decline a bundle missing ANY required field, not only the
+    //     four the loader reads for value. One born-red control per field the loader did not
+    //     previously check — the fixture half of the loader's required-field enforcement (#340 shape).
+    for field in ["kiss_substandard", "spec_clause", "generator", "number_of_vectors"] {
+        let removed: String = arith()
+            .lines()
+            .filter(|l| !l.trim_start().starts_with(&format!("\"{field}\":")))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            corpus::load(&removed).is_err(),
+            "§6.5-0017: a bundle missing required field `{field}` must decline"
+        );
+    }
+
     // --- Comparator selection is under §6.8-0008 PRECEDENCE, not the declared `class` directly. A
     //     §6.8-0005 op takes the split refinement even against an exact-byte declaration; applying the
     //     class directly is the silent false-red hazard the clause closes.
