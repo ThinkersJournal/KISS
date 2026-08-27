@@ -243,7 +243,15 @@ pub fn check_derivability_witnesses(m: &Manifest) -> Result<(), ManifestDecline>
     }
     let entries = match m.raw.get("members").and_then(|j| j.as_arr()) {
         Some(e) => e,
-        None => return Ok(()), // `generated`: entries are the product space, witnessed per vector
+        // NO `members` -> `kind: generated`, whose entries are an open product space rather
+        // than a list. THIS CHECK SKIPS THEM ENTIRELY, and says so rather than claiming a
+        // coverage it does not have: an earlier comment here read "witnessed per vector",
+        // which describes a validation this function does not perform -- nothing inspects a
+        // witness field on `vectors`. That is the same defect as the resolvability comment
+        // below, and the same defect §6.8-0014 is about: a justification claiming more than
+        // its mechanism. Whether a generated vocabulary witnesses per vector, per field, or
+        // some other way is a real question and it is NOT settled here (#340 review).
+        None => return Ok(()),
     };
     for entry in entries {
         // The entry is identified as the MANIFEST identifies it, not by token alone: a
