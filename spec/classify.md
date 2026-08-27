@@ -1600,6 +1600,16 @@ separating a registered namespace from that namespace's capability-set token.
   > manifest, same name, valid once and vacuous once. **A maintainer building a witness gate
   > in good faith will accept a re-export precisely *because* it resolves.**
   >
+  > **A TRANSCRIBED ENTRY IS NOT A WITNESS-LESS ONE, and the two halves of this clause say
+  > where each concern lives.** The **witness list carries DERIVATION** — it must be
+  > upstream. The **named gate carries AUTHORITY-AGREEMENT** — it is where a restatement is
+  > legitimately checked against the authority it restates. So a vocabulary whose membership
+  > is hand-transcribed from this specification is **not** forbidden: the transcription is
+  > the **gate's** business, not the witness's. Read the other way, the causal test would
+  > appear to outlaw every transcribed vocabulary, which is not what it does — it declines to
+  > let the transcription stand *as its own derivation*, and pushes the check to where
+  > independence actually lives.
+  >
   > Stated here rather than as a MUST because **KISS cannot check it from the envelope
   > side**: direction is a fact about what generated what, and §6.8-0004 puts that out of
   > reach. It is the maintainer's, like the rest of the content half.
