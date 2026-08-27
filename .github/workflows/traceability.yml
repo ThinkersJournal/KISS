@@ -97,6 +97,8 @@ jobs:
       # until someone classifies it -- which is the whole point.
       - name: Comparator-blindness lint (blocking)
         run: python tools/kiss_comparators.py
+      - name: RFC clause-id allocation controls (#342)
+        run: python tools/test_kiss_rfc_allocations.py
       - name: Scoped-cite discrimination controls (16(e))
         run: python tools/test_kiss_scoped_cites.py
       # Convention 16(e) said this class was MECHANICALLY CHECKABLE and could have a
