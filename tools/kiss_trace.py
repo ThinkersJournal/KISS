@@ -1305,6 +1305,87 @@ def dup_scan(pairs, label, res):
             res.add(f"duplicate {label}: {cid} at lines {', '.join(map(str, lns))}")
 
 
+# --- RFC-allocated clause ids are TAKEN (#342) -----------------------------------------
+#
+# `dup_scan` above catches an id defined twice in one document. Clause ids are ALSO
+# allocated in `rfcs/`, and nothing reconciled the two — so an id drafted in an in-tree RFC
+# and not yet landed was invisible to the very gate that exists to prevent reuse.
+#
+#   AN ID REGISTER THAT DOES NOT READ THE REGISTER OF PENDING ALLOCATIONS IS A REGISTER OF
+#   HALF THE ALLOCATIONS.
+#
+# Caught live on #332: `spec/conform.md` defines §6.5-0001..-0010, an RFC allocates a
+# contiguous block of six (0011..0016), and a PR minted `KISS-CONFORM-6.5-0011` for a
+# DIFFERENT obligation. Every existing gate passed — the id is absent from `spec/`, so
+# append-only is satisfied, and the new clause has a test, so the trace gate is satisfied.
+#
+# THE CONSEQUENCE IS WORSE THAN ORDINARY REUSE. `§6.5-0011` is cited in prose by two shipped
+# tools with the RFC's meaning. Today it resolves to nothing and that is VISIBLE. After a
+# colliding merge it resolves to the WRONG clause, those citations become silently wrong,
+# and the dangling-citation check GOES QUIET because the id now exists — converting a
+# detectable defect into an undetectable one and silencing the gate that was catching it.
+RFC_DIRNAME = "rfcs"
+# An ALLOCATION is a drafted clause BLOCK, the same `- **ID** — ...` form the spec uses.
+# A bare mention of an id elsewhere in an RFC is a CITATION of a landed clause and reserves
+# NOTHING: measured, 32 ids are mentioned across `rfcs/` and only 10 are allocated. Keying
+# on mentions would reserve every id any RFC discusses.
+# Allocation uses the CANONICAL definition parser, not a parallel copy (#344 review).
+# The first draft wrote its own `- **ID**` regex with `\d+` where CLAUSE_ID requires
+# `\d{4}` -- so the gate's notion of ALLOCATED and the spec's notion of DEFINED were
+# different sets, and a collision between them would have been invisible in exactly the
+# direction this gate exists to catch. Worse, the control extracted with the private
+# copy: it would have passed while the gate was broken, because it was not exercising
+# the code that ships. Same object as a test that passes against a stub.
+RE_RFC_ALLOC = RE_DEF
+# A drafted id is released DELIBERATELY, never by absence — the same rule as an exclusion
+# list asserted empty rather than deleted. If an RFC's allocation lands or is abandoned,
+# that is an edit someone makes on purpose, not a silence anyone can produce by deleting.
+# Colon INSIDE or OUTSIDE the bold. The first draft accepted only the outside form while
+# the tool's own error message told authors to write the inside form -- the instruction
+# and the parser disagreeing, which is the defect this suite keeps finding one level up.
+# LINE-ANCHORED and MULTILINE (#344 review). Un-anchored, prose containing the marker
+# releases an allocation -- a quoted example, a changelog line, or a paragraph explaining
+# the gate. A GATE THAT CAN BE DISABLED BY DOCUMENTATION ABOUT THE GATE, in a repo that
+# writes a great deal of prose about its own gates.
+RE_RFC_RELEASE = re.compile(r"^\s*\*\*ALLOCATION (?:LANDED|RELEASED):?\*\*:?(.*)$", re.I | re.M)
+
+
+def rfc_allocations(rfc_dir):
+    """({id: [(file, line)]}, released_ids) from every `rfcs/**.md`."""
+    allocs, released = defaultdict(list), set()
+    if not os.path.isdir(rfc_dir):
+        return allocs, released
+    for dirpath, _dirs, files in os.walk(rfc_dir):
+        for fn in sorted(files):
+            if not fn.endswith(".md"):
+                continue
+            path = os.path.join(dirpath, fn)
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+            rel = os.path.relpath(path, os.path.dirname(rfc_dir)).replace(os.sep, "/")
+            for m in RE_RFC_ALLOC.finditer(text):
+                allocs[m.group(1)].append((rel, text[:m.start()].count("\n") + 1))
+            for m in RE_RFC_RELEASE.finditer(text):
+                released |= set(re.findall(CLAUSE_ID, m.group(1)))
+    return allocs, released
+
+
+def check_rfc_collisions(spec_ids, rfc_dir):
+    """Ids DEFINED in spec/ that an RFC still holds ALLOCATED. Returns [message]."""
+    allocs, released = rfc_allocations(rfc_dir)
+    out = []
+    for cid in sorted(set(spec_ids) & set(allocs)):
+        if cid in released:
+            continue  # released on purpose, in an edit someone made
+        where = "; ".join(f"{f}:{l}" for f, l in allocs[cid])
+        out.append(
+            f"{cid} is defined in spec/ AND still allocated in {where}. Either the RFC's "
+            "clause is the one that landed — in which case mark it `**ALLOCATION LANDED:** "
+            f"{cid}` in the RFC — or this is a COLLISION and the new clause needs the next "
+            "free ordinal. A drafted id is released deliberately, never by absence.")
+    return out
+
+
 def check_doc(res):
     # 1. id format + prefix
     for cid, ln in [(c, l) for c, l, _ in res.body] + [(c, l) for c, _, l in res.matrix]:
@@ -1497,6 +1578,13 @@ def main():
             parse(path, res)
             check_doc(res)
         results.append(res)
+
+    # #342: reconcile spec definitions against RFC allocations. Suite-wide because an
+    # allocation in one RFC can collide with a definition in any document.
+    _spec_ids = {c for r in results for c, _, _ in r.body}
+    _rfc_msgs = check_rfc_collisions(_spec_ids, os.path.join(root, RFC_DIRNAME))
+    for _m in _rfc_msgs:
+        results[0].add(_m)
 
     # suite-wide: every conformance test maps to exactly one clause, except a
     # Conform-owned cross-standard test cited by a deferring sub-standard clause.
