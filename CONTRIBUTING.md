@@ -86,6 +86,7 @@ retrieval.**
 | the thing that just happened | convention |
 |---|---|
 | my check examined nothing / passed vacuously | 1–10 |
+| my measurement could be cited for an adjacent question it never asked | **1** (name what the method did not examine — before anyone misreads it) |
 | my seed didn't apply, or applied and proved nothing | **9** |
 | my seed applied and went RED — for the wrong reason | **9** (second half) |
 | the check ran fine but on the wrong bytes / level / role / axis | **11** |
@@ -109,7 +110,11 @@ Coverage figures, audit counts, byte-match leg reports, "verified clean." *Why:*
 sweeps were reported as complete when each had searched one axis — one for dtype spellings but
 not version prefixes, another for an uppercase `SKIP` marker but not the lowercase idiom the
 project actually used. The second was wrong by 6.6×. **Composing the exclusion sentence is what
-surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0.
+surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0. The author-facing
+question — *what did my method not examine?* — is unbounded; a reader-facing one bounds it: *what
+adjacent claim does this evidence resemble an answer to?* State the exclusion for any such claim a
+good-faith reader could cite the measurement for — for a survey that tested only the importer
+premise of a two-part importer/emitter proposal, exactly one such adjacent claim.
 See `KISS-CONFORM-6.1-0011`.
 
 **2. A verification report names the exact command and flags that produced it, and reads the
