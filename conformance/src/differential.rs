@@ -50,10 +50,23 @@ pub fn corpus_f32(seed: u64, n: usize) -> Vec<f32> {
 }
 
 /// Two results **agree** iff both are NaN, or their bits are identical: exact-byte
-/// for finite/infinite values, with the standard NaN-equivalence relaxation. This
-/// is the right comparator for differencing op *semantics* — it still catches a
-/// propagate-vs-suppress bug (a NaN where a number is required, or vice versa),
-/// without being fragile to NaN payload choices.
+/// for finite/infinite values, with a NaN-equivalence relaxation that treats ANY NaN as
+/// equal to any NaN — payload and sign are NOT compared.
+///
+/// SCOPE — correct ONLY for the COMPUTED-NaN op class (`add` and the arithmetic/
+/// transcendental ops, §6.8-0010): the op GENERATES its NaN, so the payload is
+/// architectural, not semantic, and blindness to it is the right relaxation — it still
+/// catches a propagate-vs-suppress bug (a NaN where a number is required, or vice versa),
+/// which is the conformance-relevant fact there. `diff_binary` below (two freshly-computed
+/// results) is in scope.
+///
+/// It MUST NOT be used for a MOVED-NaN / exact-byte-payload op — `minmax` (its decomposition
+/// is a `select`), `select`, `gather` — whose NaN output is a MOVED input value that
+/// §6.8-0010(a) pins payload-included. Those need the exact-byte path
+/// (`compare(DeterminismClass::ExactByte, ..)`), never this relation: routing such a vector
+/// here makes it PASS regardless of whether the payload survived — a control that cannot
+/// fail. A pinned-vector runner (`run_binary`) MUST therefore select its comparator by op
+/// under §6.8-0008 precedence (KISS #339(a)) and never route a moved-NaN vector to `agree`.
 pub fn agree(x: f32, y: f32) -> bool {
     (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
 }
