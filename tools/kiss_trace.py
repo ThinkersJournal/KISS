@@ -1543,6 +1543,13 @@ def main():
                          "pass and not a violation -- re-run with --base-ref to get either.")
     ap.add_argument("--strict", action="store_true",
                     help="fail on ANY unbacked clause, ignoring the ledger (§6.2 verbatim)")
+    ap.add_argument("--assert-known-red", action="store_true",
+                    help="#343: implies --strict. Exit 0 ONLY if the failure is exactly the "
+                         "tolerated one (untested MUSTs). A different failure, or NO failure, "
+                         "exits 1 -- a tolerated red that stops being the tolerated red is news "
+                         "in both directions.")
+    ap.add_argument("--why-red", action="store_true",
+                    help="#343: print the set of failure reasons and exit 0. Diagnostic.")
     ap.add_argument("--freeze-ready", nargs="?", const="ALL", default=None,
                     metavar="SUB",
                     help="umbrella §5.3 condition 3: fail unless every clause of SUB "
@@ -1561,6 +1568,9 @@ def main():
                          "laundered regression, and a defaulted ref would silently compare "
                          "against a stale tree. Not consulted when the lint count is unchanged.")
     args = ap.parse_args()
+    if args.assert_known_red:
+        args.strict = True   # the tolerated red only exists in strict mode
+
 
     here = os.path.dirname(os.path.abspath(__file__))
     root = os.path.dirname(here)
@@ -1791,6 +1801,21 @@ def main():
 
     # ---- report ----
     total_clauses = 0
+    # #343: a tolerated failure and a NEW one must be different results.
+    # `strict` is expected to fail for ONE reason -- the ledger is not empty -- and
+    # `continue-on-error` makes the run conclusion SUCCESS regardless, so a crash, a parse
+    # error, or a new violation class looks identical to the tolerated state at every
+    # surface above the log. A PERMANENTLY-TOLERATED RED IS THE SAME OBJECT AS A DELETED
+    # EXCLUSION LIST UNLESS SOMETHING PINS WHAT IT IS TOLERATING.
+    #
+    # So every failure now names itself. `--why-red` prints the set; `--assert-known-red`
+    # asserts it is exactly the tolerated one.
+    fail_reasons = []
+
+    def note_fail(tag):
+        fail_reasons.append(tag)
+        return True
+
     any_fail = False
     # A REFUSAL is not a VIOLATION. --ratchet without --base-ref cannot characterize the
     # lint dimension, and declining to answer is correct -- but reporting that decline as
@@ -1806,7 +1831,7 @@ def main():
         n = len(res.clause_ids)
         total_clauses += n
         if res.violations:
-            any_fail = True
+            any_fail = note_fail("doc")
         note = "  (informative-only, as required)" if res.stem == "umbrella" and n == 0 and not res.violations else ""
         print(f"  [{'OK ' if not res.violations else 'FAIL'}] {res.stem:<9} {n:>4} clauses{note}")
         for v in res.violations:
@@ -1814,7 +1839,7 @@ def main():
     total_tests = len(test_to_clauses)
     print("-" * 68)
     if suite_violations:
-        any_fail = True
+        any_fail = note_fail("suite_wide")
         print("  SUITE-WIDE violations:")
         for v in suite_violations:
             print(f"          - {v}")
@@ -1825,7 +1850,7 @@ def main():
             print(f"          · {d}")
         print("-" * 68)
     if masked_forward:
-        any_fail = True
+        any_fail = note_fail("masked_forward")
         print(f"  MASKED FORWARD NAME: {len(masked_forward)} clause(s) are backed by REVERSE "
               f"citation but their §9 `*Test:*` names a test that does not exist — a false")
         print("  row nothing else can see (the `no such test` report is UNBACKED-only, #286):")
@@ -1838,7 +1863,7 @@ def main():
         print("    share in kiss_trace.py DECLARED_SHARES with a reason.")
         print("-" * 68)
     if proven_violations:
-        any_fail = True
+        any_fail = note_fail("proven_marker")
         print(f"  PROVEN MARKER (#278): {len(proven_violations)} `// Proven:` marker(s) do not earn")
         print("  the PROVEN tier — a proof claim missing its subject/ref, or asserted over a clause")
         print("  the proving test does not back, is rejected fail-closed (never silently counted):")
@@ -1949,14 +1974,14 @@ def main():
               f"backing may not have run.")
 
     if lint_label_unbacked:
-        any_fail = True
+        any_fail = note_fail("lint_label")
         print("-" * 68)
         print(f"  UNVERIFIED LINT LABEL: {len(lint_label_unbacked)} ledger clause(s) "
               f"claim a lint that does not declare them:")
         for cid in lint_label_unbacked[:6]:
             print(f"          - {cid}")
     if missing_note:
-        any_fail = True
+        any_fail = note_fail("unauditable_category")
         print("-" * 68)
         print(f"  UNAUDITABLE CATEGORY: {len(missing_note)} clause(s) are "
               f"{'/'.join(CLAIM_CATEGORIES)} with no note — a category that makes a CLAIM must say why:")
@@ -1964,7 +1989,7 @@ def main():
             print(f"          - {cid}")
 
     if dangling:
-        any_fail = True
+        any_fail = note_fail("dangling_citation")
         print("-" * 68)
         print(f"  DANGLING CITATION: {len(dangling)} clause ID(s) cited by a test do "
               f"not exist in spec/:")
@@ -2010,7 +2035,7 @@ def main():
             tot = sum(1 for c in clause_test if sub_of(c) == sub)
             traced = tot - len(miss)
             if miss:
-                any_fail = True
+                any_fail = note_fail("freeze_ready")
                 print(f"      [FAIL] {sub:<9} {traced:>3}/{tot:<4} traced — "
                       f"{len(miss)} clause(s) neither harness-tested nor lint-enforced")
                 for cid in miss[:3]:
@@ -2156,12 +2181,12 @@ def main():
                                     "arrival_recorded")
                      else ""))
         else:
-            any_fail = True
+            any_fail = note_fail("ratchet")
             print(f"  {headers[verdict]}")
             for ln in lines:
                 print(f"          {ln}")
         if floor_problems:
-            any_fail = True
+            any_fail = note_fail("floor_dimensions")
             print("  RATCHET: the floor file's DIMENSION SET is malformed (#271).")
             for ln in floor_problems:
                 print(f"          {ln}")
@@ -2191,7 +2216,7 @@ def main():
             if pverdict == "proven_at_floor":
                 print(f"  RATCHET: {plines[0]}")
             else:
-                any_fail = True
+                any_fail = note_fail("proven_ratchet")
                 print(f"  {pheaders[pverdict]}")
                 for ln in plines:
                     print(f"          {ln}")
@@ -2200,7 +2225,7 @@ def main():
         # document clause HAS a test (the lint), so strict gates on the rest.
         strict_miss = sorted(c for c in unbacked if not accounted(c))
         if strict_miss:
-            any_fail = True
+            any_fail = note_fail("strict_untested")
             print("-" * 68)
             print(f"  STRICT (§6.2 verbatim): {len(strict_miss)} normative MUSTs with no "
                   f"test and no lint ({len(lint_backed)} others are lint-enforced).")
@@ -2211,7 +2236,7 @@ def main():
                 print(f"          - ... and {len(strict_miss) - 8} more")
     else:
         if new_unbacked:
-            any_fail = True
+            any_fail = note_fail("regression_or_stale")
             print("-" * 68)
             print(f"  REGRESSION: {len(new_unbacked)} clause(s) name a test that does "
                   f"not exist and are not in the ledger:")
@@ -2221,7 +2246,7 @@ def main():
                 print(f"          - ... and {len(new_unbacked) - 8} more")
             print(f"    Write the test, or record it: python tools/kiss_trace.py --update-ledger")
         if stale:
-            any_fail = True
+            any_fail = note_fail("stale_ledger")
             print("-" * 68)
             print(f"  STALE LEDGER: {len(stale)} clause(s) are now backed (a harness "
                   f"test or a lint) but still listed as untested-in-ledger:")
@@ -2265,6 +2290,49 @@ def main():
         print(f"  NOTE:   the number that must reach 0 is the GENUINELY-UNTESTED count: "
               f"{untested_n}\n          ({'/'.join(CLAIM_CATEGORIES)} are accounted for; "
               f"see the breakdown above).")
+    # An INCONCLUSIVE is a THIRD state, not the absence of a reason (#347 review). Without
+    # this, `--why-red` prints `<none>` while the tool exits 2 because the ratchet DECLINED
+    # to answer -- the instrument built to tell one red from another having a state where it
+    # explains nothing. That is the decline-vs-failure collapse this PR exists to close,
+    # inside the reporting half of the same PR.
+    reason_set = set(fail_reasons) | ({"inconclusive"} if inconclusive else set())
+
+    if args.why_red:
+        print("-" * 68)
+        print("  FAILURE REASONS: " + (", ".join(sorted(reason_set)) or "<none>"))
+        if inconclusive:
+            print("  `inconclusive` is a DECLINE, not a failure: the check could not be made,")
+            print("  which is neither green nor a violation. See the run above for which one.")
+        return 0
+
+    if args.assert_known_red:
+        # THE TOLERATED RED IS `strict_untested` AND NOTHING ELSE. `continue-on-error`
+        # makes the run conclusion SUCCESS either way, so this is the only place the
+        # distinction can be made -- and it is made in ONE run, never by comparing two
+        # jobs, because two jobs on two checkouts is an inference rather than a check.
+        seen = reason_set
+        print("-" * 68)
+        print("  FAILURE REASONS: " + (", ".join(sorted(seen)) or "<none>"))
+        if inconclusive and seen == {"strict_untested", "inconclusive"}:
+            print("  DECLINED, NOT CHARACTERIZED: a check could not be made, so whether the")
+            print("  tolerated red is the only red is UNKNOWN rather than confirmed. Refusing")
+            print("  the green rather than passing an unchecked condition.")
+            return 1
+        if seen == {"strict_untested"}:
+            print("  KNOWN RED: `strict` is failing for the documented reason (untested MUSTs)")
+            print("  and for no other. The tolerance is intact.")
+            return 0
+        if not seen:
+            print("  THE TOLERANCE IS STALE: `strict` PASSED. That is news -- the untested")
+            print("  MUSTs are gone, so the continue-on-error tolerance should be removed in")
+            print("  the same change that earned it. Green is not the expected state here.")
+            return 1
+        print("  A DIFFERENT RED: `strict` is failing for reason(s) other than the documented")
+        print("  one: " + ", ".join(sorted(seen - {"strict_untested"})) + ".")
+        print("  A tolerated failure and a new one are different results, and this is the")
+        print("  surface that tells them apart -- the run conclusion cannot.")
+        return 1
+
     return 1 if any_fail else (2 if inconclusive else 0)
 
 
