@@ -36,6 +36,15 @@ pub enum ManifestDecline {
     EnumeratedMissingMembers,
     /// `kind: generated` producer check with no `vectors` array (§6.8-0013).
     GeneratedMissingVectors,
+    /// An entry carries no derivability witness, or an empty one (§6.8-0014).
+    /// Present-but-empty is the likelier defect: a generator emitting `[]` for an entry it
+    /// could not trace looks compliant to a presence check.
+    EntryMissingWitness { token: String },
+    /// A witness reference does not name its home, so it cannot be resolved (§6.8-0014).
+    WitnessNotResolvable { token: String, reference: String },
+    /// The manifest names no gate that evaluates its witnesses (§6.8-0014). A witness
+    /// nobody evaluates is a claim in the shape of a proof.
+    NoWitnessGate,
     /// `kind: generated` vector set does not cover this canonicalization concern (§6.8-0013).
     GeneratedVectorsMissingPin(&'static str),
     /// `namespace` is not a namespace whose registry status is `registered` (§6.8-0003, cited
@@ -208,4 +217,57 @@ fn str_field<'a>(doc: &'a Json, key: &'static str) -> Result<&'a str, ManifestDe
     doc.get(key)
         .and_then(|j| j.as_str())
         .ok_or(ManifestDecline::MissingField(key))
+}
+
+
+/// KISS-CLASSIFY-6.8-0014 — the derivability-witness ENVELOPE.
+///
+/// A separate checker rather than part of `parse`, for two reasons that happen to agree.
+/// It matches `check_generated_vector_coverage` (the production half is not owed by a
+/// parse-only consumer, §6.8-0012); and §6.8-0014 applies **from its schema version**, so
+/// an existing `kiss-namespace-vocabulary-v1` manifest must keep parsing unchanged and
+/// complies at its next `vocabulary_version` revision. Folding this into `parse` would
+/// re-issue both published manifests on the spot, which the clause forbids.
+///
+/// KISS checks the ENVELOPE ONLY: a witness is present, is a non-empty LIST, its entries
+/// are resolvable references, and a gate is named. Whether the witness actually produces
+/// the entry — and whether the named gate exists and runs — is the maintainer's to
+/// discharge. KISS has no device and no toolchain, and the vocabulary content is out of
+/// reach by §6.8-0004.
+pub fn check_derivability_witnesses(m: &Manifest) -> Result<(), ManifestDecline> {
+    // The gate is NAMED here, never contained: requiring co-location would assume one
+    // namespace's architecture, which §6.8-0008's own note forbids.
+    let gate = m.raw.get("witness_gate").and_then(|j| j.as_str());
+    if gate.map_or(true, |g| g.trim().is_empty()) {
+        return Err(ManifestDecline::NoWitnessGate);
+    }
+    let entries = match m.raw.get("members").and_then(|j| j.as_arr()) {
+        Some(e) => e,
+        None => return Ok(()), // `generated`: entries are the product space, witnessed per vector
+    };
+    for entry in entries {
+        // The entry is identified as the MANIFEST identifies it, not by token alone: a
+        // class-qualified vocabulary distinguishes `cuda:sm90` (admits under `<=`) from
+        // `cuda:sm90a` (`==`), and a witness bound to a flat token cannot say which it proves.
+        let token = entry.get("token").and_then(|j| j.as_str()).unwrap_or("<unnamed>");
+        let witness = entry.get("derivability_witness").and_then(|j| j.as_arr());
+        let refs = match witness {
+            Some(r) if !r.is_empty() => r,
+            // Present-but-empty is the same defect as absent, and is the likelier one: a
+            // generator that emits `[]` for an entry it could not trace looks compliant.
+            _ => return Err(ManifestDecline::EntryMissingWitness { token: token.to_string() }),
+        };
+        for r in refs {
+            // Resolvable means its HOME is nameable, not assumed:
+            // `unpopped-vocab::ArchSku::Sm90` resolves; a bare `ArchSku::Sm90` does not.
+            let s = r.as_str().unwrap_or("");
+            if s.trim().is_empty() || !s.contains("::") {
+                return Err(ManifestDecline::WitnessNotResolvable {
+                    token: token.to_string(),
+                    reference: s.to_string(),
+                });
+            }
+        }
+    }
+    Ok(())
 }
