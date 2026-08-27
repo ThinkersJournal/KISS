@@ -114,7 +114,7 @@ surfaces the gap**; a stated-scope 12 is worth more than an unscoped 0. The auth
 question — *what did my method not examine?* — is unbounded; a reader-facing one bounds it: *what
 adjacent claim does this evidence resemble an answer to?* State the exclusion for any such claim a
 good-faith reader could cite the measurement for — for a survey that tested only the importer
-premise of a two-part importer/emitter proposal, exactly one.
+premise of a two-part importer/emitter proposal, exactly one such adjacent claim.
 See `KISS-CONFORM-6.1-0011`.
 
 **2. A verification report names the exact command and flags that produced it, and reads the
