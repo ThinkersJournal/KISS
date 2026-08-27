@@ -1583,23 +1583,37 @@ separating a registered namespace from that namespace's capability-set token.
   > clause exists to make the omission **unrepresentable** rather than discouraged.
   >
   > **RESOLVABILITY AND INDEPENDENCE ARE DIFFERENT PROPERTIES, AND THE OBLIGATION ABOVE
-  > REACHES ONLY THE FIRST.** A witness naming a **re-export**, a **vendored copy**, or —
-  > worst — a construct in a file **generated from the manifest itself** satisfies every
-  > envelope check: it is present, non-empty, its home is perfectly nameable, and a gate is
-  > named. **A circular witness is self-satisfying** — structurally unable to fail, which is
-  > the exact class this clause exists to close. **A name that resolves to a DERIVATIVE of
-  > the authority does not discharge the obligation**, and a maintainer building a witness
-  > gate in good faith will accept a re-export precisely *because* it resolves.
+  > REACHES ONLY THE FIRST.** A witness MUST name a construct **causally UPSTREAM** of the
+  > entry — *with respect to the authority that entry is witnessed against*, because
+  > independence is relative, not absolute:
   >
-  > This is stated here rather than as a MUST because **KISS cannot check it from the
-  > envelope side**: circularity is a fact about what generated what, and §6.8-0004 puts
-  > that out of reach. It is the maintainer's, like the rest of the content half.
+  > - **UPSTREAM** — the construct actually **produces** the entry. *Valid.*
+  > - **LATERAL** — a re-export or vendored copy: same content, different name, **zero
+  >   derivation**. *Invalid — it restates the entry rather than deriving it.*
+  > - **DOWNSTREAM** — a construct in an artifact generated **from the manifest**.
+  >   *Invalid — circular, and a circular witness is self-satisfying.*
   >
-  > **The suite has a live instance of the same shape.** `source_commit` (#218) is a
+  > **The relativity is load-bearing and a flat rule gets it wrong.** One manifest can hold
+  > both: a witness for an entry's **token bytes** may legitimately name a foreign codec that
+  > genuinely emits them, while a witness for that entry's **membership** — whose authority
+  > is this specification's pinned seed — proves nothing by naming the same codec. Same
+  > manifest, same name, valid once and vacuous once. **A maintainer building a witness gate
+  > in good faith will accept a re-export precisely *because* it resolves.**
+  >
+  > Stated here rather than as a MUST because **KISS cannot check it from the envelope
+  > side**: direction is a fact about what generated what, and §6.8-0004 puts that out of
+  > reach. It is the maintainer's, like the rest of the content half.
+  >
+  > **Two live exhibits, both honest-intentioned, both degenerating to a stamp because no
+  > independence check gates them.** In this suite, `source_commit` (#218) is a
   > hand-maintained literal re-emitted into every artifact, so materially different corpora
-  > carry an identical stamp — it survived the decline set going 10 → 15 → 17 unchanged. It
-  > exists, it resolves, and it is **causally disconnected from what it claims**. A stamp
-  > proves BINDING, not CURRENCY; a witness naming a derivative proves the derivative.
+  > carry an identical stamp — it survived the decline set going 10 → 15 → 17 unchanged. And
+  > in the artifact class *this clause governs*: a published vocabulary manifest whose
+  > `generated_from` is a **single manifest-level string**, one hardcoded literal, **identical
+  > across every member**, with the only gate over it asserting the key is *present*. Both
+  > exist, both resolve, and both are **causally disconnected from what they claim**. A stamp
+  > proves BINDING, not CURRENCY; a witness naming a lateral or downstream construct proves
+  > that construct.
   >
   > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
   > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
