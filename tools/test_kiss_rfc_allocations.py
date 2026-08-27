@@ -77,6 +77,28 @@ class RfcAllocationTest(unittest.TestCase):
         self.assertEqual(kt.check_rfc_collisions({"KISS-CONFORM-6.5-0007"},
                                                  rfc_tree(draft=body)), [])
 
+    def test_PROSE_containing_the_marker_does_not_release(self):
+        """A gate that can be disabled by documentation about the gate (#344 review).
+
+        Un-anchored, a quoted example or an explanatory paragraph carrying the marker
+        mid-sentence turns the allocation off. This repo writes a great deal of prose
+        about its own gates, so the hole is not theoretical.
+        """
+        body = (ALLOC + "\nThe marker looks like this: write **ALLOCATION LANDED:** "
+                "KISS-CONFORM-6.5-0011 in the RFC when it lands.\n")
+        self.assertEqual(len(kt.check_rfc_collisions({"KISS-CONFORM-6.5-0011"},
+                                                     rfc_tree(draft=body))), 1,
+                         "prose containing the marker released a live allocation")
+
+    def test_the_allocation_parser_IS_the_production_one(self):
+        """Not merely equivalent — the same object.
+
+        A parallel copy drifts: the first draft's copy accepted non-4-digit ordinals
+        while CLAUSE_ID requires four, so `allocated` and `defined` were different sets
+        and a collision between them was invisible in the direction the gate exists for.
+        """
+        self.assertIs(kt.RE_RFC_ALLOC, kt.RE_DEF)
+
     def test_a_missing_rfcs_directory_is_not_a_violation(self):
         """A checkout without `rfcs/` reports nothing rather than crashing or blocking."""
         self.assertEqual(kt.check_rfc_collisions({"KISS-CONFORM-6.5-0011"},
@@ -90,10 +112,13 @@ class RfcAllocationTest(unittest.TestCase):
         RFC-held ordinal has been minted — read the message, it names the RFC and line.
         """
         root = HERE.parent
+        # THE PRODUCTION PARSER (#344 review). The first draft extracted with the gate's
+        # own allocation regex, so the control could pass while the gate was broken --
+        # it was not exercising the code that ships. `RE_DEF` is what defines a clause
+        # everywhere else in this tool, and `RE_RFC_ALLOC` is now an alias of it.
         spec_ids = set()
         for p in (root / "spec").rglob("*.md"):
-            spec_ids |= {m.group(1) for m in
-                         kt.RE_RFC_ALLOC.finditer(p.read_text(encoding="utf-8"))}
+            spec_ids |= set(kt.RE_DEF.findall(p.read_text(encoding="utf-8")))
         self.assertEqual(kt.check_rfc_collisions(spec_ids, str(root / "rfcs")), [])
         allocs, _released = kt.rfc_allocations(str(root / "rfcs"))
         self.assertTrue(allocs, "no RFC allocations found — the parse has gone blind")

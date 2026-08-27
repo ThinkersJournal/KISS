@@ -1329,14 +1329,25 @@ RFC_DIRNAME = "rfcs"
 # A bare mention of an id elsewhere in an RFC is a CITATION of a landed clause and reserves
 # NOTHING: measured, 32 ids are mentioned across `rfcs/` and only 10 are allocated. Keying
 # on mentions would reserve every id any RFC discusses.
-RE_RFC_ALLOC = re.compile(r"^- \*\*(KISS-[A-Z]+-\d+(?:\.\d+)*-\d+[a-z]?)\*\*", re.M)
+# Allocation uses the CANONICAL definition parser, not a parallel copy (#344 review).
+# The first draft wrote its own `- **ID**` regex with `\d+` where CLAUSE_ID requires
+# `\d{4}` -- so the gate's notion of ALLOCATED and the spec's notion of DEFINED were
+# different sets, and a collision between them would have been invisible in exactly the
+# direction this gate exists to catch. Worse, the control extracted with the private
+# copy: it would have passed while the gate was broken, because it was not exercising
+# the code that ships. Same object as a test that passes against a stub.
+RE_RFC_ALLOC = RE_DEF
 # A drafted id is released DELIBERATELY, never by absence — the same rule as an exclusion
 # list asserted empty rather than deleted. If an RFC's allocation lands or is abandoned,
 # that is an edit someone makes on purpose, not a silence anyone can produce by deleting.
 # Colon INSIDE or OUTSIDE the bold. The first draft accepted only the outside form while
 # the tool's own error message told authors to write the inside form -- the instruction
 # and the parser disagreeing, which is the defect this suite keeps finding one level up.
-RE_RFC_RELEASE = re.compile(r"\*\*ALLOCATION (?:LANDED|RELEASED):?\*\*:?(.*)", re.I)
+# LINE-ANCHORED and MULTILINE (#344 review). Un-anchored, prose containing the marker
+# releases an allocation -- a quoted example, a changelog line, or a paragraph explaining
+# the gate. A GATE THAT CAN BE DISABLED BY DOCUMENTATION ABOUT THE GATE, in a repo that
+# writes a great deal of prose about its own gates.
+RE_RFC_RELEASE = re.compile(r"^\s*\*\*ALLOCATION (?:LANDED|RELEASED):?\*\*:?(.*)$", re.I | re.M)
 
 
 def rfc_allocations(rfc_dir):
@@ -1355,7 +1366,7 @@ def rfc_allocations(rfc_dir):
             for m in RE_RFC_ALLOC.finditer(text):
                 allocs[m.group(1)].append((rel, text[:m.start()].count("\n") + 1))
             for m in RE_RFC_RELEASE.finditer(text):
-                released |= set(re.findall(r"KISS-[A-Z]+-\d+(?:\.\d+)*-\d+[a-z]?", m.group(1)))
+                released |= set(re.findall(CLAUSE_ID, m.group(1)))
     return allocs, released
 
 
