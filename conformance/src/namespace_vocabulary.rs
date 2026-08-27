@@ -258,8 +258,19 @@ pub fn check_derivability_witnesses(m: &Manifest) -> Result<(), ManifestDecline>
             _ => return Err(ManifestDecline::EntryMissingWitness { token: token.to_string() }),
         };
         for r in refs {
-            // Resolvable means its HOME is nameable, not assumed:
-            // `unpopped-vocab::ArchSku::Sm90` resolves; a bare `ArchSku::Sm90` does not.
+            // ENVELOPE ONLY: the reference must be non-empty and PATH-STRUCTURED. It does
+            // NOT verify that the leading segment names an artifact rather than a type --
+            // `ArchSku::Sm90` passes here and `unpopped-vocab::ArchSku::Sm90` passes here,
+            // and this check cannot tell them apart. An earlier comment claimed it could,
+            // naming the first as the counterexample: FALSE, it contains `::` and passes.
+            // That was a justification overstating its mechanism, which is the defect this
+            // clause is about, committed inside the clause's own enforcement.
+            //
+            // Distinguishing a crate from a type is not decidable from the envelope --
+            // `MyCrate::Thing` and `ArchSku::Sm90` are the same shape -- so whether the
+            // HOME is genuinely nameable is the maintainer's half, like the rest of the
+            // content obligations. §6.8-0014 states the obligation; this checks the part
+            // KISS can see.
             let s = r.as_str().unwrap_or("");
             if s.trim().is_empty() || !s.contains("::") {
                 return Err(ManifestDecline::WitnessNotResolvable {

@@ -299,6 +299,19 @@ fn test_namespace_vocabulary_derivability_witness() {
         Err(ManifestDecline::EntryMissingWitness { token: "cuda:sm80".to_string() })
     );
 
+    // THE LIMIT, ASSERTED RATHER THAN LEFT IMPLICIT (#340 review): the envelope check
+    // cannot tell an artifact-rooted path from a type-rooted one. Both pass. A comment
+    // here once claimed otherwise, naming `ArchSku::Sm90` as the counterexample -- it
+    // contains `::` and passes. Recorded as a control so the claim cannot drift back.
+    let mut typed = set_key(enum_fields(), "members",
+        "[{\"token\": \"cuda:sm80\", \"derivability_witness\": [\"ArchSku::Sm80\"]}]");
+    typed.push(witnessed[0]);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&typed)).unwrap()),
+        Ok(()),
+        "the envelope check does not distinguish a type-rooted path -- if this now declines,          the check gained a discrimination and the clause's limit note must be updated"
+    );
+
     // A reference that does not name its home is NOT resolvable.
     let mut unres = set_key(enum_fields(), "members",
                             "[{\"token\": \"cuda:sm80\", \"derivability_witness\": [\"Sm80\"]}]");

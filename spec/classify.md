@@ -1546,7 +1546,9 @@ separating a registered namespace from that namespace's capability-set token.
   namespace's vocabulary content (§6.8-0004). A witness reference MAY name a construct in
   **another artifact**, and the manifest MUST make it **resolvable** — its home nameable
   rather than assumed (`unpopped-vocab::ArchSku::Sm90` resolves; a bare `ArchSku::Sm90` does
-  not). The evaluating gate MAY live **outside** the artifact that emits the manifest; the
+  not). **Which of those two a reference is cannot be decided from the envelope** —
+  `MyCrate::Thing` and `ArchSku::Sm90` are the same shape — so this, like the rest of the
+  content half, is the maintainer's to discharge. The evaluating gate MAY live **outside** the artifact that emits the manifest; the
   manifest must NAME it, never contain it. A **compile-time binding** — a reference that fails
   to compile if the construct is renamed or removed — is a **conformant** witness evaluation,
   and a maintainer holding one is not required to add a runtime check. The witness is **not**
