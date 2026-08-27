@@ -97,6 +97,15 @@ jobs:
       # until someone classifies it -- which is the whole point.
       - name: Comparator-blindness lint (blocking)
         run: python tools/kiss_comparators.py
+      - name: Tolerated-red pin controls (#343)
+        run: python tools/test_kiss_known_red.py
+      # `strict` is continue-on-error BY DESIGN, so the run conclusion is SUCCESS even
+      # when it is red -- "main is green" and "strict is failing on main" are both true
+      # at once. This asserts the red is the DOCUMENTED one (untested MUSTs) and nothing
+      # else, in the BLOCKING job, so a NEW strict failure reds something that gates.
+      # It fails in both directions: strict PASSING means the tolerance is stale.
+      - name: The tolerated `strict` red is the KNOWN one (blocking)
+        run: python tools/kiss_trace.py --assert-known-red
       - name: RFC clause-id allocation controls (#342)
         run: python tools/test_kiss_rfc_allocations.py
       - name: Scoped-cite discrimination controls (16(e))
