@@ -193,12 +193,15 @@ fixed in `1cb7265`, `crates/mlmf-gguf/tests/authored.rs`, test
 `a_data_region_declared_past_the_end_of_the_file_still_opens`. To run the mutation this clause
 requires, at any commit after `1cb7265`:
 
+**Step 1 — edit, by hand.** In `crates/mlmf-gguf/src/tensors.rs`, change the past-EOF
+guard from `if end > file_len {` to `if false {`. **Step 2 — run, from the repository
+root, in any shell:**
+
 ```
-cd <mlmf-checkout>          # your local mlmf clone; no shell-specific syntax below
-# crates/mlmf-gguf/src/tensors.rs — change the past-EOF guard:
-#     if end > file_len {     ->     if false {
 cargo test -p mlmf-gguf --no-fail-fast
 ```
+
+**Step 3 — restore the guard.**
 
 Expected **red** — the assertion the old test could not make:
 
@@ -212,6 +215,18 @@ right: [... TensorDeclined { name: "blk.0.attn_q.weight",
 **And the positive control for the other direction**, without which a check that reports *every*
 tensor is indistinguishable from a working one until someone opens a normal model: change the same
 guard to `if end >= 0` and confirm a fitting-file test reddens with four spurious entries.
+
+**This citation carried two defects of its own, and both are instances of 5(a).** The
+first — a Windows path in a fenced block, with no shell stated and backslashes that bash
+eats — was found by a reviewer. The second, found only after the first was pointed out,
+is the worse one: **a comment describing a MANUAL SOURCE EDIT sat between two commands,
+as though pasting the block would apply it.** It never would — and on Windows the `cd`
+succeeds and `cargo test` then runs against **unmutated** source **and passes**. So the
+recipe's worst outcome was not a failed paste but **a GREEN RUN the reader would take as
+the mutation surviving**: the recipe for verifying a mutation would have manufactured the
+exact false pass this clause exists to catch. **The step form above is the fix** — the
+only fenced content is genuinely runnable as written, and *“from the repository root”*
+is prose, which is portable where a `cd` to anywhere is not.
 
 **Not re-verified here.** The incident, the fixture and both mutations are first-hand to the MLMF
 lane at the commit above; this entry carries the recipe so a reader can run them rather than
