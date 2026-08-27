@@ -1534,7 +1534,10 @@ separating a registered namespace from that namespace's capability-set token.
 - **KISS-CLASSIFY-6.8-0014** — Every **entry** of a vocabulary manifest MUST carry a
   **derivability witness**: a **non-empty list** of references to the source constructs that
   produce that entry. A manifest MUST additionally **name the gate** that evaluates its
-  witnesses. A reader MUST reject with a typed decline a manifest carrying an entry with no
+  witnesses, and that gate MUST be demonstrable as failing **for the reason this clause
+  names** — not merely demonstrable as failing. A gate that can only fail for an
+  **adjacent** reason satisfies the naming requirement and discharges nothing. A reader
+  MUST reject with a typed decline a manifest carrying an entry with no
   witness, a witness that is an empty list, or no named evaluating gate. The obligation
   **splits**, and the split is the whole design: KISS checks that a witness is **present, in
   an evaluable form rather than prose, and that a gate is named** — the **envelope**. Whether
@@ -1624,6 +1627,27 @@ separating a registered namespace from that namespace's capability-set token.
   > exist, both resolve, and both are **causally disconnected from what they claim**. A stamp
   > proves BINDING, not CURRENCY; a witness naming a lateral or downstream construct proves
   > that construct.
+  >
+  > **The causal test has now been run against three independent trees, and in every one
+  > the LATERAL construct is the ergonomic thing to reach for.** A generated-binding crate
+  > re-expresses an upstream registry's member — same content, different name, zero
+  > derivation — and it is the construct a maintainer's own code already imports. The
+  > upstream construct is the registry member itself, which nothing in their tree names.
+  > **That is why this is stated rather than left to judgement: the wrong answer is the
+  > convenient one.**
+  >
+  > **AND THE GATE CAN BE POINTED AT THE WRONG QUESTION, which a naming requirement cannot
+  > catch.** The clause already warns that a maintainer may comply with the wrong *direction*
+  > in good faith; the same mistake is available one level up, in the **gate**. A worked case:
+  > a freshness gate that regenerates the manifest and diffs it **can** fail — on drift — and
+  > **cannot** fail on non-derivability, because a phantom entry present in *both* the emitter
+  > and the manifest is not drift. Real, named, green, and irrelevant. The sharpest instance
+  > carries the obligation in its own name: a test called
+  > *`arith_names_are_derivable_from_the_device_not_merely_spellable`* that iterates the
+  > **device's** features and requires the vocabulary to spell each — direction A — while this
+  > clause's obligation is direction B, walking the **vocabulary** and asking whether each name
+  > is producible. **A test named for derivability, implementing reachability, passing with a
+  > phantom in the vocabulary.** Its own maintainer had not noticed until asked.
   >
   > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
   > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
