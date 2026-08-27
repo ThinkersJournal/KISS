@@ -1582,6 +1582,25 @@ separating a registered namespace from that namespace's capability-set token.
   > A rule that lives only in a comment is discharged by whoever happens to read it; this
   > clause exists to make the omission **unrepresentable** rather than discouraged.
   >
+  > **RESOLVABILITY AND INDEPENDENCE ARE DIFFERENT PROPERTIES, AND THE OBLIGATION ABOVE
+  > REACHES ONLY THE FIRST.** A witness naming a **re-export**, a **vendored copy**, or —
+  > worst — a construct in a file **generated from the manifest itself** satisfies every
+  > envelope check: it is present, non-empty, its home is perfectly nameable, and a gate is
+  > named. **A circular witness is self-satisfying** — structurally unable to fail, which is
+  > the exact class this clause exists to close. **A name that resolves to a DERIVATIVE of
+  > the authority does not discharge the obligation**, and a maintainer building a witness
+  > gate in good faith will accept a re-export precisely *because* it resolves.
+  >
+  > This is stated here rather than as a MUST because **KISS cannot check it from the
+  > envelope side**: circularity is a fact about what generated what, and §6.8-0004 puts
+  > that out of reach. It is the maintainer's, like the rest of the content half.
+  >
+  > **The suite has a live instance of the same shape.** `source_commit` (#218) is a
+  > hand-maintained literal re-emitted into every artifact, so materially different corpora
+  > carry an identical stamp — it survived the decline set going 10 → 15 → 17 unchanged. It
+  > exists, it resolves, and it is **causally disconnected from what it claims**. A stamp
+  > proves BINDING, not CURRENCY; a witness naming a derivative proves the derivative.
+  >
   > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
   > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
   > evaluated — a claim in the shape of a check, and this clause would have bought nothing.
