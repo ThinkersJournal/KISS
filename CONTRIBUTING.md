@@ -92,6 +92,7 @@ retrieval.**
 | the check ran fine but on the wrong bytes / level / role / axis | **11** |
 | I read an exit code, a return value, or a log line instead of the state | **11** (*level*) |
 | the check is correct but I asked it the wrong question | **14** |
+| my check asserts an outcome — could something else in the system produce it? | **18** |
 | my query returned NOTHING — is that an absence, or a broken query? | **14** (run a positive control) |
 | I truncated with `head`/a cap/a size limit — may I conclude absence? | **14** (**no** — positive findings only) |
 | my seed matched a DOCSTRING and left the code untouched | **9** (assert the file changed, not just that the pattern matched) |
@@ -755,6 +756,77 @@ it:** `conformance/tests/structure_key_vectors.rs`, the guard backing
 course."* **True, and unfalsifiable as written.** The strong form seeds the multi-line form and
 records that **the guard goes green while the defect stands** — which a skeptic checks in thirty
 seconds instead of taking on trust.
+
+**18. A check can pass because something ELSE guarantees its outcome.**
+Convention 11 catches a check pointed at the wrong representation; 14 catches a check asked the
+wrong question. This one catches a check on the right subject, asked a fair question, answered
+correctly — that **still cannot fail**, because the outcome it asserts has more than one
+sufficient cause and the change under test touches only one of them. The guard is not vacuous and
+not misaimed. It is **shadowed**: something else in the system holds its outcome up.
+
+- **A migration dropped exactly three foreign keys and kept five.** The guard against dropping too
+  many was *"deleting the grantor's account still removes their grants"* — a correct expectation,
+  correctly asserted. **It passes with the grantor key removed.** Deleting an account cascades to
+  its entities, and `grants.entity_id -> entities` removes the grant by a second independent path,
+  so breaking either mechanism leaves the other producing the asserted outcome. **A migration that
+  dropped every foreign key on the table would have passed that test.**
+
+**Why the neighbouring discriminators return clean — run them and see.** Convention 11 prescribes
+*measuring twice by different means*: here the outcome is **overdetermined**, so a second
+instrument confirms it harder. Convention 14 prescribes *naming what the check's answer is about
+and confirming that is what you wanted to know*: the answer is about whether deleting an account
+removes the grants, **which is what you wanted to know.** Both remedies are satisfied by a guard
+that cannot fail. The question that finds it is neither of theirs: **"what ELSE could produce this
+outcome?"**
+
+**And convention 9 would catch it — that is not the gap.** Seed the drop, watch the suite stay
+green, and 9 fires on *"the seed applied and proved nothing."* The method works. **The gap is
+retrieval: 9 requires having thought to seed, and nobody seeds a test that reads correct.** A
+method you must already suspect the defect to invoke is not an index entry.
+
+**The remedy is by construction: when a change is defined structurally, the check READS the
+structure.** `PRAGMA foreign_key_list` is a statement about the schema. A behavioural test is a
+statement about the schema **plus everything else that happens to be holding the outcome up**.
+Assert the resulting constraint set and there is nothing else for the assertion to be true
+because of.
+
+**Discrimination in both directions — this is what makes it a rule rather than a preference:**
+
+| mutation | signature |
+|---|---|
+| over-drop — also remove the grantor key | reddens **only** the structural guard |
+| under-drop — restore the grantee key | reddens the structural guard **plus three** behavioural tests |
+
+Two directions, two distinct signatures: the isolation argument run on the **remedy** rather than
+on the test.
+
+**The corollary is the general form, and it outlives the schema case: a gate can be perfectly
+discriminating in the direction it FAILS and undiscriminating in the direction it PASSES.** The
+guard above reddens correctly when both mechanisms are broken. **Verifying the failure mode tells
+you nothing about the pass mode** — they are different halves of one instrument, and the
+convention-9 practice of seeding a failure only ever exercises the first.
+
+**Generalisation past schemas:** any assertion on an outcome that more than one mechanism can
+produce, where the change is defined in terms of one of them. Cascading deletes are the obvious
+habitat — *"X disappears when Y is deleted"* wherever two paths reach X — but nothing about the
+shape is specific to databases.
+
+*Why, one instance rather than a crowd, and the warrant is different from convention 11's.*
+Convention 11 earns its place with *"four instances in one day, on four different axes"* — a
+**frequency** argument, where the count is what establishes a class. This is a **retrieval**
+argument: one instance, plus a demonstration that the existing entries, applied in good faith,
+return clean on it. A frequency argument needs a crowd; a retrieval argument needs one case and
+proof the index misses it.
+**FAM** (`https://github.com/ciresnave/FAM`, branch `main`, ref `c5e1436`) carries the migration at
+`src/db/schema.ts` (migration 10) and the guard at `src/db/__tests__/pending-grants.test.ts`.
+Reproduce, in a worktree at that ref: in migration 10's `grants_v10` definition, delete
+`REFERENCES accounts(id) ON DELETE CASCADE` from the `grantor_account_id` column, then run
+`bun run test src/db/__tests__/pending-grants.test.ts`. The structural guard reddens **alone** —
+that is the working remedy. Now restore the key, and instead replace that guard with the
+behavioural form (create a grant, `DELETE FROM accounts WHERE id = <grantor>`, assert the grant is
+gone) and re-apply the same mutation: **the suite stays green while the constraint the migration
+exists to keep is absent.** Note the invocation — `bun run test`, not bare `bun test`; Bun ignores
+`bunfig.toml`'s `[test] timeout` and the bare form fails on timeouts rather than on the property.
 
 If you propose normative text, follow the house style so it stays testable:
 
