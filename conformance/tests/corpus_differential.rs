@@ -70,6 +70,25 @@ fn minmax_bundle() -> Corpus {
 
 /// Evaluate one §6.13 minmax tie cell with the reference oracle at the cell's
 /// dtype, returning big-endian result bytes.
+/// bf16 minmax as a raw-bit SELECT (§6.13 decomposition, KISS-OPS-6.16-0009): the winning operand's
+/// EXACT bf16 bits, never a promote→compute→round value. Routing a MOVED operand through
+/// `f32_to_bf16` quiets a signaling NaN (it forces the quiet bit, fp.rs), violating §6.8-0010(a)
+/// (#354). The f32 promotion is used ONLY to order the operands; the RESULT bits come from the
+/// source. Correct for non-NaN too — the winner is already an exact bf16 value, nothing to round.
+fn bf16_minmax_select(op: &str, a: u16, b: u16) -> u16 {
+    let (af, bf) = (bf16_to_f32(a), bf16_to_f32(b));
+    let (a_nan, b_nan) = (af.is_nan(), bf.is_nan());
+    match op {
+        // NaN-propagating: a moved NaN wins; else the ordered pick, operand a on ties (§6.13).
+        "max_prop" => if a_nan { a } else if b_nan { b } else if af >= bf { a } else { b },
+        "min_prop" => if a_nan { a } else if b_nan { b } else if af <= bf { a } else { b },
+        // IEEE NaN-suppressing: a NaN yields the OTHER operand; else the ordered pick.
+        "fmax_ieee" => if a_nan { b } else if b_nan { a } else if af >= bf { a } else { b },
+        "fmin_ieee" => if a_nan { b } else if b_nan { a } else if af <= bf { a } else { b },
+        other => panic!("unknown minmax op `{other}`"),
+    }
+}
+
 fn eval_minmax(cell: &Cell) -> Vec<u8> {
     let op32: fn(f32, f32) -> f32 = match cell.op.as_str() {
         "max_prop" => max_prop,
@@ -97,10 +116,11 @@ fn eval_minmax(cell: &Cell) -> Vec<u8> {
             op64(a, b).to_bits().to_be_bytes().to_vec()
         }
         "bf16" => {
-            // promote -> compute -> round: the narrow-dtype leg of the vector set.
+            // §6.13 minmax is a raw-bit SELECT (KISS-OPS-6.16-0009): the winner's EXACT bf16 bits,
+            // NOT promote→compute→round, which quiets a moved sNaN via f32_to_bf16 (#354).
             let a = u16::from_be_bytes(cell.inputs[0].clone().try_into().unwrap());
             let b = u16::from_be_bytes(cell.inputs[1].clone().try_into().unwrap());
-            f32_to_bf16(op32(bf16_to_f32(a), bf16_to_f32(b))).to_be_bytes().to_vec()
+            bf16_minmax_select(&cell.op, a, b).to_be_bytes().to_vec()
         }
         other => panic!("unknown dtype `{other}`"),
     }
@@ -249,4 +269,76 @@ fn a_max_min_family_swap_reddens_every_cell() {
         "a max<->min swap over the TIE set must red NOTHING — operand `a` wins under both \
          cmp_ge and cmp_le on a tie, which is why the tie file cannot separate max from min"
     );
+}
+
+// ---- KISS-OPS-6.16-0009: bf16 minmax MOVES, it does not round (#354) ----------
+
+/// KISS-OPS-6.16-0009 born-red. A NaN-propagating bf16 minmax MOVES the operand's exact bits; a
+/// promote→compute→round path QUIETS a signaling NaN (`f32_to_bf16` forces the quiet bit). These 6
+/// cases red before the fix and green after; inline (not #329's corpus) so the fix does not depend
+/// on the corpus it unblocks. `a=7F81` is a bf16 sNaN — the move must preserve it, not quiet it to
+/// `7FC1`. Values are kiss-ref's CUDA-measured (sm_89) expectations.
+#[test]
+fn test_ops_bf16_minmax_moves_not_rounds() {
+    // Backs: KISS-OPS-6.16-0009 — reverse backing form. The clause is also forward-bound by the §9
+    // traceability row; this makes the test→clause link explicit for the backing-form scanner
+    // (convention 15: a MENTION in a doc comment/assert message is not a backing).
+    let cases: &[(&str, u16, u16, u16)] = &[
+        ("max_prop", 0x7F81, 0x3F80, 0x7F81), // sNaN a, 1.0 b → propagate sNaN a
+        ("min_prop", 0x7F81, 0x3F80, 0x7F81),
+        ("max_prop", 0x3F80, 0x7F81, 0x7F81), // sNaN b → propagate sNaN b
+        ("min_prop", 0x3F80, 0x7F81, 0x7F81),
+        ("max_prop", 0x7F81, 0x7FD2, 0x7F81), // both NaN, a (sNaN) wins → moved exactly
+        ("min_prop", 0x7F81, 0x7FD2, 0x7F81),
+    ];
+    for &(op, a, b, expected) in cases {
+        let got = bf16_minmax_select(op, a, b);
+        assert_eq!(
+            got, expected,
+            "{op}(bf16 {a:04X}, {b:04X}) must MOVE the sNaN exactly (got {got:04X}); a promote→round \
+             path quiets it to 7FC1, violating §6.8-0010(a) / KISS-OPS-6.16-0009"
+        );
+    }
+}
+
+/// Behaviour-preservation: for every NON-NaN bf16 pair the select is IDENTICAL to the old
+/// promote→compute→round path — the winner is an exact bf16 value, so `f32_to_bf16` is the identity
+/// on it and there is nothing to round. Exercised on subnormals and the ties-to-even boundary
+/// (architect): the two places a rounding difference could hide if the winner were ever a COMPUTED
+/// value (it is not). Doubles as a check that the select's ordering matches semantics::{max,min}_*.
+#[test]
+fn test_bf16_minmax_select_is_behaviour_preserving_for_non_nan() {
+    // Backs: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "no arithmetic → nothing to
+    // round" covers a non-NaN winner too: it is already an exact bf16 value. This demonstrates that
+    // arm (select == round-trip ⇒ the round was a no-op), which the NaN born-red does not cover.
+    let samples: &[u16] = &[
+        0x0000, 0x8000, // ±0
+        0x0001, 0x8001, // ± smallest subnormal
+        0x007F, 0x807F, // ± largest subnormal
+        0x0080, 0x8080, // ± smallest normal
+        0x3F7F, 0x3F80, 0x3F81, 0x4000, // 1.0-eps, 1.0, 1.0+eps, 2.0 (tie-boundary neighbours)
+        0x7F7F, 0xFF7F, // ± largest finite
+        0x7F80, 0xFF80, // ±inf (non-NaN)
+    ];
+    let old_round_trip = |op: &str, a: u16, b: u16| -> u16 {
+        let op32: fn(f32, f32) -> f32 = match op {
+            "max_prop" => max_prop,
+            "min_prop" => min_prop,
+            "fmax_ieee" => fmax_ieee,
+            "fmin_ieee" => fmin_ieee,
+            _ => unreachable!(),
+        };
+        f32_to_bf16(op32(bf16_to_f32(a), bf16_to_f32(b)))
+    };
+    for op in ["max_prop", "min_prop", "fmax_ieee", "fmin_ieee"] {
+        for &a in samples {
+            for &b in samples {
+                assert_eq!(
+                    bf16_minmax_select(op, a, b),
+                    old_round_trip(op, a, b),
+                    "non-NaN {op}(bf16 {a:04X}, {b:04X}): select must equal the old round-trip"
+                );
+            }
+        }
+    }
 }
