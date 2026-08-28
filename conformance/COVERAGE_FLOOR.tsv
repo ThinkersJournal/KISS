@@ -295,8 +295,10 @@
 # 381 would have been arithmetic on a stale base: main was already at 381 from #330, and this
 # branch adds a second clause. Re-derived with the tool below, per the standing rule that a
 # tool-derived value is RE-DERIVED at publication while an additive list may be unioned.
+# The tool reported "Set the floor to harness 382, lint 33, untested 495" -- 382, NOT the
+# 381 both sides of the conflict claimed. Pasted, not computed.
 # key	value
-harness	381
+harness	382
 lint	33
 untested	495
 proven	20
