@@ -1531,6 +1531,129 @@ separating a registered namespace from that namespace's capability-set token.
 > by an unrelated party, but a producer MUST NOT emit tokens under it. Note that
 > a namespace appearing in an *informative example* above is not thereby
 > registered — the registry is the authority, and the examples are prose.
+- **KISS-CLASSIFY-6.8-0014** — Every **entry** of a vocabulary manifest MUST carry a
+  **derivability witness**: a **non-empty list** of references to the source constructs that
+  produce that entry. A manifest MUST additionally **name the gate** that evaluates its
+  witnesses, and that gate MUST be demonstrable as failing **for the reason this clause
+  names** — not merely demonstrable as failing. A gate that can only fail for an
+  **adjacent** reason satisfies the naming requirement and discharges nothing. A reader
+  MUST reject with a typed decline a manifest carrying an entry with no
+  witness, a witness that is an empty list, or no named evaluating gate. The obligation
+  **splits**, and the split is the whole design: KISS checks that a witness is **present, in
+  an evaluable form rather than prose, and that a gate is named** — the **envelope**. Whether
+  the witness actually produces the entry, and whether the named gate exists and runs, is the
+  **maintainer's** to discharge, because KISS has no device, no toolchain, and no access to a
+  namespace's vocabulary content (§6.8-0004). A witness reference MAY name a construct in
+  **another artifact**, and the manifest MUST make it **resolvable** — its home nameable
+  rather than assumed (`unpopped-vocab::ArchSku::Sm90` resolves; a bare `ArchSku::Sm90` does
+  not). **Which of those two a reference is cannot be decided from the envelope** —
+  `MyCrate::Thing` and `ArchSku::Sm90` are the same shape — so this, like the rest of the
+  content half, is the maintainer's to discharge. The evaluating gate MAY live **outside** the artifact that emits the manifest; the
+  manifest must NAME it, never contain it. A **compile-time binding** — a reference that fails
+  to compile if the construct is renamed or removed — is a **conformant** witness evaluation,
+  and a maintainer holding one is not required to add a runtime check. The witness is **not**
+  anchored to `generated_from`, which names the **producer** of the bytes (§6.8-0011) and
+  answers a different question. This clause applies from its schema version: an existing
+  manifest complies at its next `vocabulary_version` revision and **MUST NOT** be re-issued
+  solely to satisfy it. *Test:*
+  `test_namespace_vocabulary_derivability_witness`.
+
+  > *Informative.* **A witness is an EXISTENCE PROOF, not a derivation specification.** It
+  > asserts that the named constructs produce the entry; it does not state how they combine,
+  > and no clause here requires a combinator. That is why the field is a **list**: Vulkane's
+  > `dot8` derives from **six** distinct struct members, and a single-string field would have
+  > forced it to name one of the six arbitrarily — a reference true of a construct and false
+  > of the entry. A single reference is a list of one. Read the other way, a later reader
+  > demanding a disjunction operator for `dot8` would turn a **reachability** field into a
+  > **semantics** field, which is not what was ratified.
+  >
+  > **An entry is identified by more than its token wherever the vocabulary distinguishes
+  > classes.** Baracuda's enumeration is class-qualified — `cuda:sm90` admits under `≤` and
+  > `cuda:sm90a` under `==` — so a witness attached to a flat token set cannot say which of
+  > two entries it proves. The witness binds to the entry as the manifest identifies it, not
+  > to the token alone.
+  >
+  > **THE DIRECTION IS THE POINT, and a maintainer can comply with the wrong one in good
+  > faith.** This clause says *every capability NAMED is REACHABLE*. It does not say *every
+  > input is handled* — the opposite direction, and the one a reachability guard usually
+  > implements. Baracuda's worked case: a manifest may list `Nextafter@f16` as supported while
+  > the implementation **declines** it, and a direction-A guard **still passes**, because
+  > declining cleanly is handling the input. The phantom entry survives every check its
+  > maintainer has.
+  >
+  > **And the rationale is often already written beside the place it was not applied.**
+  > Vulkane's `component()` mapped eleven base values as bare literals under a comment saying
+  > *"check by eye"*, while **the same file** derived the other five correctly and stated why.
+  > A rule that lives only in a comment is discharged by whoever happens to read it; this
+  > clause exists to make the omission **unrepresentable** rather than discouraged.
+  >
+  > **RESOLVABILITY AND INDEPENDENCE ARE DIFFERENT PROPERTIES, AND THE OBLIGATION ABOVE
+  > REACHES ONLY THE FIRST.** A witness MUST name a construct **causally UPSTREAM** of the
+  > entry — *with respect to the authority that entry is witnessed against*, because
+  > independence is relative, not absolute:
+  >
+  > - **UPSTREAM** — the construct actually **produces** the entry. *Valid.*
+  > - **LATERAL** — a re-export or vendored copy: same content, different name, **zero
+  >   derivation**. *Invalid — it restates the entry rather than deriving it.*
+  > - **DOWNSTREAM** — a construct in an artifact generated **from the manifest**.
+  >   *Invalid — circular, and a circular witness is self-satisfying.*
+  >
+  > **The relativity is load-bearing and a flat rule gets it wrong.** One manifest can hold
+  > both: a witness for an entry's **token bytes** may legitimately name a foreign codec that
+  > genuinely emits them, while a witness for that entry's **membership** — whose authority
+  > is this specification's pinned seed — proves nothing by naming the same codec. Same
+  > manifest, same name, valid once and vacuous once. **A maintainer building a witness gate
+  > in good faith will accept a re-export precisely *because* it resolves.**
+  >
+  > **A TRANSCRIBED ENTRY IS NOT A WITNESS-LESS ONE, and the two halves of this clause say
+  > where each concern lives.** The **witness list carries DERIVATION** — it must be
+  > upstream. The **named gate carries AUTHORITY-AGREEMENT** — it is where a restatement is
+  > legitimately checked against the authority it restates. So a vocabulary whose membership
+  > is hand-transcribed from this specification is **not** forbidden: the transcription is
+  > the **gate's** business, not the witness's. Read the other way, the causal test would
+  > appear to outlaw every transcribed vocabulary, which is not what it does — it declines to
+  > let the transcription stand *as its own derivation*, and pushes the check to where
+  > independence actually lives.
+  >
+  > Stated here rather than as a MUST because **KISS cannot check it from the envelope
+  > side**: direction is a fact about what generated what, and §6.8-0004 puts that out of
+  > reach. It is the maintainer's, like the rest of the content half.
+  >
+  > **Two live exhibits, both honest-intentioned, both degenerating to a stamp because no
+  > independence check gates them.** In this suite, `source_commit` (#218) is a
+  > hand-maintained literal re-emitted into every artifact, so materially different corpora
+  > carry an identical stamp — it survived the decline set going 10 → 15 → 17 unchanged. And
+  > in the artifact class *this clause governs*: a published vocabulary manifest whose
+  > `generated_from` is a **single manifest-level string**, one hardcoded literal, **identical
+  > across every member**, with the only gate over it asserting the key is *present*. Both
+  > exist, both resolve, and both are **causally disconnected from what they claim**. A stamp
+  > proves BINDING, not CURRENCY; a witness naming a lateral or downstream construct proves
+  > that construct.
+  >
+  > **The causal test has now been run against three independent trees, and in every one
+  > the LATERAL construct is the ergonomic thing to reach for.** A generated-binding crate
+  > re-expresses an upstream registry's member — same content, different name, zero
+  > derivation — and it is the construct a maintainer's own code already imports. The
+  > upstream construct is the registry member itself, which nothing in their tree names.
+  > **That is why this is stated rather than left to judgement: the wrong answer is the
+  > convenient one.**
+  >
+  > **AND THE GATE CAN BE POINTED AT THE WRONG QUESTION, which a naming requirement cannot
+  > catch.** The clause already warns that a maintainer may comply with the wrong *direction*
+  > in good faith; the same mistake is available one level up, in the **gate**. A worked case:
+  > a freshness gate that regenerates the manifest and diffs it **can** fail — on drift — and
+  > **cannot** fail on non-derivability, because a phantom entry present in *both* the emitter
+  > and the manifest is not drift. Real, named, green, and irrelevant. The sharpest instance
+  > carries the obligation in its own name: a test called
+  > *`arith_names_are_derivable_from_the_device_not_merely_spellable`* that iterates the
+  > **device's** features and requires the vocabulary to spell each — direction A — while this
+  > clause's obligation is direction B, walking the **vocabulary** and asking whether each name
+  > is producible. **A test named for derivability, implementing reachability, passing with a
+  > phantom in the vocabulary.** Its own maintainer had not noticed until asked.
+  >
+  > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
+  > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
+  > evaluated — a claim in the shape of a check, and this clause would have bought nothing.
 
 ### 6.9 Foundational independence and opaque carry
 
@@ -1771,6 +1894,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0011 | `test_namespace_vocabulary_freshness_provenance` |
 | KISS-CLASSIFY-6.8-0012 | `test_namespace_vocabulary_declarative_production_split` |
 | KISS-CLASSIFY-6.8-0013 | `test_namespace_vocabulary_generated_vectors_cover_canonicalization` |
+| KISS-CLASSIFY-6.8-0014 | `test_namespace_vocabulary_derivability_witness` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |

@@ -278,8 +278,27 @@
 # (495) UNCHANGED -- one new normative clause, tested not reclassified; total clauses 932 -> 933.
 # TOOL-DERIVED, NOT ARITHMETIC: `--ratchet --base-ref origin/main` reported "Set the floor to harness
 # 381, lint 33, untested 495" and that output is pasted here. proven UNCHANGED at 20 (no markers touched).
+#
+# harness 380 -> 381 by #228: KISS-CLASSIFY-6.8-0014 (the derivability witness) arrives
+# BACKED in the same PR, by test_namespace_vocabulary_derivability_witness. lint (33) and
+# untested (495) UNCHANGED -- the clause ships with its check, so nothing is reclassified.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main` reported
+# "Set the floor to harness 381, lint 33, untested 495" and that output is pasted here.
+#
+# The witness check is a SEPARATE function rather than part of `parse`, which is what keeps
+# this a +1 and not a re-issue of both published manifests: 6.8-0014 applies from its schema
+# version, and an existing v1 manifest must keep parsing unchanged.
+#
+# CONFLICT RESOLUTION (#228 rebased onto #330): both entries above are real and ADDITIVE --
+# each adds one backed clause. The prose is UNIONED; the NUMBER is not. Taking either side's
+# 381 would have been arithmetic on a stale base: main was already at 381 from #330, and this
+# branch adds a second clause. Re-derived with the tool below, per the standing rule that a
+# tool-derived value is RE-DERIVED at publication while an additive list may be unioned.
+# The tool reported "Set the floor to harness 382, lint 33, untested 495" -- 382, NOT the
+# 381 both sides of the conflict claimed. Pasted, not computed.
 # key	value
-harness	381
+harness	382
 lint	33
 untested	495
 proven	20

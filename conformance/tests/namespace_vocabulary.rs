@@ -243,3 +243,98 @@ fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
         Err(ManifestDecline::GeneratedVectorsMissingPin("order"))
     );
 }
+
+// ---- §6.8-0014: the derivability witness ----------------------------------------------------
+
+/// Backs: KISS-CLASSIFY-6.8-0014 — every entry carries a derivability witness, so a
+/// capability NAMED but UNREACHABLE is unrepresentable rather than merely discouraged.
+///
+/// KISS checks the ENVELOPE only: witness present, a non-empty LIST, references resolvable,
+/// a gate NAMED. Whether the witness produces the entry, and whether the named gate runs, is
+/// the maintainer's — KISS has no device, no toolchain, and §6.8-0004 puts the content out
+/// of reach. Every assertion below is on the envelope half.
+#[test]
+fn test_namespace_vocabulary_derivability_witness() {
+    // A witnessed entry, with a named gate. The reference names its HOME, which is what
+    // makes it resolvable: `unpopped-vocab::ArchSku::Sm90` resolves, a bare `ArchSku::Sm90`
+    // does not — both maintainers hit that from opposite sides.
+    let witnessed = vec![
+        ("witness_gate", "\"unpopped-vocab::tests::arch_sku_roundtrip\""),
+        ("members", "[{\"token\": \"cuda:sm80\", \
+                       \"derivability_witness\": [\"unpopped-vocab::ArchSku::Sm80\"]}]"),
+    ];
+    let ok = set_key(set_key(enum_fields(), "members", witnessed[1].1),
+                     "coverage_note", "\"synthetic\"");
+    let mut ok = ok;
+    ok.push(witnessed[0]);
+    let m = validate_envelope(&build_from(&ok)).unwrap();
+    assert_eq!(check_derivability_witnesses(&m), Ok(()));
+
+    // A LIST, and a single reference is a list of one. Vulkane's `dot8` derives from SIX
+    // distinct struct members; a single-string field would have forced it to name one of
+    // six arbitrarily — true of a construct, false of the entry.
+    let six = "[{\"token\": \"vulkan:dot8\", \"derivability_witness\": [\
+        \"v::F::a\",\"v::F::b\",\"v::F::c\",\"v::F::d\",\"v::F::e\",\"v::F::f\"]}]";
+    let mut multi = set_key(enum_fields(), "members", six);
+    multi.push(witnessed[0]);
+    assert_eq!(check_derivability_witnesses(&validate_envelope(&build_from(&multi)).unwrap()),
+               Ok(()));
+
+    // NO witness -> typed decline naming the entry.
+    let mut bare = set_key(enum_fields(), "members",
+                           "[{\"token\": \"cuda:sm80\", \"notes\": \"none\"}]");
+    bare.push(witnessed[0]);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&bare)).unwrap()),
+        Err(ManifestDecline::EntryMissingWitness { token: "cuda:sm80".to_string() })
+    );
+
+    // PRESENT-BUT-EMPTY is the same defect and the likelier one: a generator emitting `[]`
+    // for an entry it could not trace looks compliant to a presence check.
+    let mut empty = set_key(enum_fields(), "members",
+                            "[{\"token\": \"cuda:sm80\", \"derivability_witness\": []}]");
+    empty.push(witnessed[0]);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&empty)).unwrap()),
+        Err(ManifestDecline::EntryMissingWitness { token: "cuda:sm80".to_string() })
+    );
+
+    // THE LIMIT, ASSERTED RATHER THAN LEFT IMPLICIT (#340 review): the envelope check
+    // cannot tell an artifact-rooted path from a type-rooted one. Both pass. A comment
+    // here once claimed otherwise, naming `ArchSku::Sm90` as the counterexample -- it
+    // contains `::` and passes. Recorded as a control so the claim cannot drift back.
+    let mut typed = set_key(enum_fields(), "members",
+        "[{\"token\": \"cuda:sm80\", \"derivability_witness\": [\"ArchSku::Sm80\"]}]");
+    typed.push(witnessed[0]);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&typed)).unwrap()),
+        Ok(()),
+        "the envelope check does not distinguish a type-rooted path -- if this now declines,          the check gained a discrimination and the clause's limit note must be updated"
+    );
+
+    // A reference that does not name its home is NOT resolvable.
+    let mut unres = set_key(enum_fields(), "members",
+                            "[{\"token\": \"cuda:sm80\", \"derivability_witness\": [\"Sm80\"]}]");
+    unres.push(witnessed[0]);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&unres)).unwrap()),
+        Err(ManifestDecline::WitnessNotResolvable {
+            token: "cuda:sm80".to_string(),
+            reference: "Sm80".to_string()
+        })
+    );
+
+    // NO NAMED GATE -> decline. A witness nobody evaluates is a claim in the shape of a
+    // proof, and this clause would have bought nothing.
+    let nogate = set_key(enum_fields(), "members", witnessed[1].1);
+    assert_eq!(
+        check_derivability_witnesses(&validate_envelope(&build_from(&nogate)).unwrap()),
+        Err(ManifestDecline::NoWitnessGate)
+    );
+
+    // RETROACTIVITY (ruling 10): an existing v1 manifest still PARSES unchanged. The witness
+    // obligation is a separate checker precisely so an existing manifest is not re-issued
+    // solely to satisfy this clause — folding it into `parse` would do exactly that.
+    assert!(validate_envelope(&build_from(&enum_fields())).is_ok(),
+            "an existing witness-less manifest must still parse");
+}
