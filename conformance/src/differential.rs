@@ -66,8 +66,13 @@ pub fn corpus_f32(seed: u64, n: usize) -> Vec<f32> {
 /// need the exact-byte path (`compare_f32(DeterminismClass::ExactByte, ..)`), never this
 /// relation: routing such a vector here makes it PASS regardless of whether the payload OR
 /// SIGN survived — a control that cannot
-/// fail. A pinned-vector runner (`run_binary`) MUST therefore select its comparator by op
-/// under Conform §6.8-0008 precedence (KISS #339(a)) and never route a moved-NaN vector to `agree`.
+/// fail. `run_binary` is the §6.5-0001 ORACLE-DIFFERENTIAL runner and `agree()` is its
+/// §6.8-0010-refined comparator for a computed-NaN result — clause-correct because §6.5-0001's
+/// agreement relation is itself a value comparator (§6.8-0010), NOT a class that `comparator_for`
+/// can express (that model gap is KISS #352). `run_binary` carries no op (`Vector` has none) so it
+/// cannot select by op; instead a moved-NaN op MUST NOT ENTER its corpus — ASSERTED against the
+/// provenance tag in `run_binary` (#339(a)), not hoped. The PINNED-VECTOR path is
+/// `corpus_differential`, which routes selection through §6.8-0008 precedence.
 pub fn agree(x: f32, y: f32) -> bool {
     (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
 }

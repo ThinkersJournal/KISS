@@ -8,6 +8,14 @@ use crate::harness::corpus::Vector;
 use crate::structural::{compare_monoid_reduced_f32, Monoid};
 use crate::DeterminismClass;
 
+/// The moved-NaN ops (§6.8-0010(a)): their NaN output is a MOVED input value pinned payload AND
+/// sign, so it must compare exact-byte. `agree()` — `run_binary`'s §6.8-0010-refined comparator —
+/// is NaN-blind and would PASS such a vector regardless of payload/sign, a control that cannot
+/// fail. A SET so it grows with the spec's moved-NaN op list; matched against the vector's
+/// provenance tag because `Vector` carries no op field. The moved-NaN path is `corpus_differential`
+/// (§6.8-0008 precedence), never here (KISS #339(a); the model gap that forces the hand-roll is #352).
+const MOVED_NAN_OP_TAGS: &[&str] = &["max_prop", "min_prop", "fmax_ieee", "fmin_ieee", "select", "gather"];
+
 /// One caught divergence, reproducible by `index` into the corpus.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Divergence {
@@ -22,6 +30,19 @@ pub struct Divergence {
 /// vector's oracle `expected`. Returns every divergence (empty ⇒ conformant).
 pub fn run_binary(outputs: &[f32], corpus: &[Vector]) -> Vec<Divergence> {
     assert_eq!(outputs.len(), corpus.len(), "one output per corpus vector");
+    // #339(a) guard: run_binary is the §6.5-0001 COMPUTED-NaN oracle-differential and compares via
+    // agree() (§6.8-0010-refined). A moved-NaN op (§6.8-0010(a)) must NOT enter its corpus — agree()
+    // would pass it regardless of payload/sign. `Vector` has no op, so the invariant is asserted
+    // against the provenance tag; a moved-NaN op belongs on corpus_differential's precedence path.
+    // Asserted, not hoped — an invariant nothing checks is the thing this project refuses.
+    for v in corpus {
+        assert!(
+            !MOVED_NAN_OP_TAGS.iter().any(|tag| v.provenance.contains(tag)),
+            "moved-NaN op in run_binary's corpus (provenance `{}`): it must route through \
+             corpus_differential's §6.8-0008 precedence path, not agree() (§6.8-0010(a))",
+            v.provenance
+        );
+    }
     let mut out = Vec::new();
     for (i, (v, &actual)) in corpus.iter().zip(outputs).enumerate() {
         if !agree(v.expected, actual) {
@@ -124,5 +145,21 @@ mod tests {
             &tol,
         );
         assert_eq!(d2.len(), 1);
+    }
+
+    /// Born-red (#339(a)): a moved-NaN op MUST be refused entry to run_binary. `agree()` is
+    /// NaN-blind, so it would PASS such a vector regardless of payload/sign (§6.8-0010(a)) — a
+    /// control that cannot fail. The guard fires on the provenance tag; without it run_binary
+    /// silently accepts the wrong comparator. Proves the guard is not dead.
+    #[test]
+    #[should_panic(expected = "moved-NaN op in run_binary's corpus")]
+    fn a_moved_nan_op_is_refused_entry() {
+        let v = crate::harness::corpus::Vector {
+            a: 1.0,
+            b: 2.0,
+            expected: 2.0,
+            provenance: "oracle:KISS-OPS-6.13/semantics::max_prop",
+        };
+        let _ = run_binary(&[2.0], &[v]);
     }
 }
