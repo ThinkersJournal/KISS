@@ -12,16 +12,24 @@ fn minmax() -> String {
     std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-minmax-signed-zero.json"))
         .unwrap()
 }
+fn ordinary() -> String {
+    std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-minmax-ordinary.json"))
+        .unwrap()
+}
 
 #[test]
 fn test_conform_oracle_vector_envelope() {
-    // --- Convention 16: the two committed bundles MUST still validate under the new clause. If the
-    //     clause rejected an existing file, the clause would be wrong, not the file.
+    // --- Convention 16: every committed bundle MUST still validate under the new clause. If the
+    //     clause rejected an existing file, the clause would be wrong, not the file. #333 adds a
+    //     third committed bundle (ops-minmax-ordinary.json), so it joins the invariant here.
     let a = corpus::load(&arith()).expect("ops-arith.json validates under §6.5-0017");
     assert_eq!(a.schema, "kiss-oracle-vectors-v1.json");
     assert_eq!(a.schema_version, 1);
     let m = corpus::load(&minmax()).expect("ops-minmax-signed-zero.json validates under §6.5-0017");
     assert_eq!(m.schema_version, 1);
+    let o = corpus::load(&ordinary()).expect("ops-minmax-ordinary.json validates under §6.5-0017");
+    assert_eq!(o.schema_version, 1);
+    assert_eq!(o.vectors.len(), 24, "#333: 4 ops x 3 dtypes x 2 directions");
 
     // --- Unrecognized `schema` MUST typed-decline, not run as v1. Paired control: the real one loads.
     let bad_schema = arith().replace("kiss-oracle-vectors-v1.json", "kiss-oracle-vectors-v99.json");
@@ -67,9 +75,9 @@ fn test_conform_oracle_vector_envelope() {
         "an ordinary op falls to its declared class (the default)"
     );
 
-    // --- The invariance §6.5-0017 claims explicitly: every op in the two committed files falls to
+    // --- The invariance §6.5-0017 claims explicitly: every op in the committed files falls to
     //     ClassDefault, so routing selection through the precedence changes nothing for them today.
-    for cell in a.vectors.iter().chain(m.vectors.iter()) {
+    for cell in a.vectors.iter().chain(m.vectors.iter()).chain(o.vectors.iter()) {
         assert!(
             matches!(comparator_for(&cell.op, cell.class), Comparator::ClassDefault(_)),
             "committed op `{}` must fall to its declared class (no refinement in the current corpus)",

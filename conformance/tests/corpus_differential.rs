@@ -7,7 +7,7 @@ use kiss_conformance::semantics::{
     fmax_ieee, fmax_ieee_f64, fmin_ieee, fmin_ieee_f64, max_prop, max_prop_f64, min_prop,
     min_prop_f64,
 };
-use kiss_conformance::{compare, DeterminismClass};
+use kiss_conformance::{compare, comparator_for, Comparator, DeterminismClass};
 
 fn bundle() -> Corpus {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-arith.json")).unwrap();
@@ -147,5 +147,107 @@ fn a_b_biased_tie_max_is_caught() {
         caught,
         vec![(0x0000_0000, 0x8000_0000), (0x8000_0000, 0x0000_0000)],
         "the b-biased tie must fail exactly the (+0,-0) and (-0,+0) seam cells"
+    );
+}
+
+// ---- §6.13 minmax ORDINARY (strict-inequality) cells (#333) ------------------
+//
+// These SEPARATE max-family from min-family — the discrimination the two files
+// above cannot give: the tie set returns operand `a` under both cmp_ge and cmp_le
+// (so a max<->min swap is invisible), and the NaN set short-circuits before the
+// distinguishing branch. Every cell here is a STRICT inequality between two
+// non-NaN operands, so max returns the larger and min the smaller; swapping the
+// max/min family reddens every cell. Scope: separates max-from-min, NOT
+// prop-from-ieee (those agree on non-NaN; #329's NaN rows tell them apart).
+//
+// Two independent derivations agree on all 24 (including orientation — which
+// family returns the larger operand): these hand-derived (decomposition-traced)
+// cells and kiss-ref's blind eval_op (kiss-ref main @ ccf294b4, test minmax_ordinary_derive).
+
+fn ordinary_minmax_bundle() -> Corpus {
+    let text = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/corpus/ops-minmax-ordinary.json"
+    ))
+    .unwrap();
+    corpus::load(&text).unwrap()
+}
+
+/// Compare under §6.8-0008 PRECEDENCE — selection routed through `comparator_for`,
+/// never the declared class directly. For every minmax op this resolves to
+/// `ClassDefault(exact-byte)`, so it is behaviour-preserving today; it is the
+/// pattern #339(a) migrates the differential's three `compare(cell.class, ..)`
+/// sites onto, and it is correct the moment a §6.8-0005 refinement op is added.
+fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
+    match comparator_for(&cell.op, cell.class) {
+        Comparator::ClassDefault(class) => compare(class, actual, &cell.expected),
+        Comparator::OpNamedRefinement(name) => {
+            Err(format!("op-named refinement `{name}` is not part of this slice"))
+        }
+    }
+}
+
+/// All 24 strict-inequality cells pass against the reference oracle (same
+/// `eval_minmax` as the tie set — the difference is the DATA, which is where the
+/// max-from-min discrimination lives).
+#[test]
+fn reference_minmax_passes_every_ordinary_cell() {
+    let c = ordinary_minmax_bundle();
+    assert_eq!(c.vectors.len(), 24, "4 ops x 3 dtypes x 2 directions");
+    for cell in &c.vectors {
+        let actual = eval_minmax(cell);
+        compare_under_precedence(cell, &actual)
+            .unwrap_or_else(|e| panic!("tcId {} ({} {}): {e}", cell.tc_id, cell.op, cell.dtype));
+    }
+}
+
+/// TEETH — the discrimination this file exists to provide. An implementation that
+/// SWAPS the max/min family (min where the op says max, and vice versa) reddens on
+/// EVERY cell, because each is a strict inequality with distinct operands. The
+/// paired control proves the teeth come from the DATA, not the mutation: the SAME
+/// swap over the tie set reddens NOTHING (operand `a` wins under both comparisons),
+/// which is exactly why the tie file cannot separate max from min. The prop<->ieee
+/// axis is deliberately NOT tested here — those agree on non-NaN and are #329's.
+#[test]
+fn a_max_min_family_swap_reddens_every_cell() {
+    fn swap_family(op: &str) -> &str {
+        match op {
+            "max_prop" => "min_prop",
+            "min_prop" => "max_prop",
+            "fmax_ieee" => "fmin_ieee",
+            "fmin_ieee" => "fmax_ieee",
+            other => other,
+        }
+    }
+    fn swapped_eval(cell: &Cell) -> Vec<u8> {
+        let mut c2 = cell.clone();
+        c2.op = swap_family(cell.op.as_str()).to_string();
+        eval_minmax(&c2)
+    }
+
+    let ord = ordinary_minmax_bundle();
+    let reddened = ord
+        .vectors
+        .iter()
+        .filter(|&cell| compare_under_precedence(cell, &swapped_eval(cell)).is_err())
+        .count();
+    assert_eq!(
+        reddened,
+        ord.vectors.len(),
+        "every strict-inequality cell MUST red under a max<->min family swap — the \
+         discrimination the tie set (all `a`) and NaN set (short-circuit) cannot give"
+    );
+
+    // Paired control: the SAME swap over the TIE set reddens NOTHING, proving the
+    // teeth are in the strict-inequality DATA rather than the mutation.
+    let tie_reddened = minmax_bundle()
+        .vectors
+        .iter()
+        .filter(|&cell| compare_under_precedence(cell, &swapped_eval(cell)).is_err())
+        .count();
+    assert_eq!(
+        tie_reddened, 0,
+        "a max<->min swap over the TIE set must red NOTHING — operand `a` wins under both \
+         cmp_ge and cmp_le on a tie, which is why the tie file cannot separate max from min"
     );
 }

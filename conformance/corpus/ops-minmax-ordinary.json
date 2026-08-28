@@ -1,0 +1,711 @@
+{
+  "schema": "kiss-oracle-vectors-v1.json",
+  "kiss_substandard": "OPS",
+  "schema_version": 1,
+  "spec_clause": "KISS-CONFORM-6.5-0008",
+  "generator": "KISS 1, hand-derived (decomposition-traced) for #333; independently blind-verified by kiss-ref eval_op (kiss-ref main @ ccf294b47c30e94a510c01f84a659636c1cc378a, test minmax_ordinary_derive; agreement 24/24)",
+  "number_of_vectors": 24,
+  "byte_order": "hex is the value's bytes most-significant first, left to right",
+  "hex_encoding": "uppercase hex bytes; ' ' is a grouping mark",
+  "ulp_metric": "integer totalOrder distance",
+  "harness_rule": "comparison MUST be raw bits (class exact-byte). bf16 rows run promote->compute->round (exact widen to f32, f32 select, RNE round back); for these exact 1.0/2.0 operands no rounding occurs.",
+  "provenance_note": "non-normative: these vectors exist to SEPARATE max_prop from min_prop, the pair the tie-only signed-zero file and the short-circuiting NaN file both leave at zero discrimination (#333). Each is a STRICT inequality between two non-NaN operands, so it reaches the sole distinguishing branch of the \u00a76.13 decompositions (cmp_ge(a,b) for the max family, cmp_le(a,b) for the min family); a max op returns the larger operand and a min op the smaller, both directions, so swapping max<->min reddens. Two independent derivations agree on all 24, including which family returns the larger operand: these hand-derived (decomposition-traced) cells and kiss-ref's blind eval_op derivation (kiss-ref main @ ccf294b47c30e94a510c01f84a659636c1cc378a, test minmax_ordinary_derive). DISCRIMINATION SCOPE: this file separates max-from-min; it does NOT separate prop-from-ieee (which agree only on non-NaN and are told apart only by #329's NaN rows). Six op-pairs total; the corpus's per-pair discrimination is #240's clause question, not this file's.",
+  "vectors": [
+    {
+      "tcId": 1,
+      "op": "max_prop",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "40 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 2,
+      "op": "max_prop",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "40 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 3,
+      "op": "max_prop",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "40 00 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 4,
+      "op": "max_prop",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "40 00 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 5,
+      "op": "max_prop",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "40 00"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "40 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 6,
+      "op": "max_prop",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "40 00"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "40 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 7,
+      "op": "min_prop",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "3F 80 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 8,
+      "op": "min_prop",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "3F 80 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 9,
+      "op": "min_prop",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "3F F0 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 10,
+      "op": "min_prop",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "3F F0 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 11,
+      "op": "min_prop",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "40 00"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "3F 80"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 12,
+      "op": "min_prop",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "40 00"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "3F 80"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 13,
+      "op": "fmax_ieee",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "40 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 14,
+      "op": "fmax_ieee",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "40 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 15,
+      "op": "fmax_ieee",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "40 00 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 16,
+      "op": "fmax_ieee",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "40 00 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 17,
+      "op": "fmax_ieee",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "40 00"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "40 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 18,
+      "op": "fmax_ieee",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "40 00"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "40 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 19,
+      "op": "fmin_ieee",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "3F 80 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 20,
+      "op": "fmin_ieee",
+      "dtype": "f32",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f32",
+          "bits": "3F 80 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f32",
+          "bits": "40 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f32",
+        "bits": "3F 80 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 21,
+      "op": "fmin_ieee",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "3F F0 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 22,
+      "op": "fmin_ieee",
+      "dtype": "f64",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "f64",
+          "bits": "3F F0 00 00 00 00 00 00"
+        },
+        {
+          "role": "b",
+          "dtype": "f64",
+          "bits": "40 00 00 00 00 00 00 00"
+        }
+      ],
+      "expected": {
+        "dtype": "f64",
+        "bits": "3F F0 00 00 00 00 00 00"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 23,
+      "op": "fmin_ieee",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "40 00"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "3F 80"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    },
+    {
+      "tcId": 24,
+      "op": "fmin_ieee",
+      "dtype": "bf16",
+      "rounding": "roundTiesToEven",
+      "inputs": [
+        {
+          "role": "a",
+          "dtype": "bf16",
+          "bits": "3F 80"
+        },
+        {
+          "role": "b",
+          "dtype": "bf16",
+          "bits": "40 00"
+        }
+      ],
+      "expected": {
+        "dtype": "bf16",
+        "bits": "3F 80"
+      },
+      "class": "exact-byte",
+      "ulp_bound": 0,
+      "provenance": "decomposition-traced",
+      "tags": [
+        "strict-inequality",
+        "max-vs-min-discriminator"
+      ]
+    }
+  ]
+}
