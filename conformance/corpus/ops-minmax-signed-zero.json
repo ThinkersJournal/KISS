@@ -2,7 +2,7 @@
   "schema": "kiss-oracle-vectors-v1.json",
   "kiss_substandard": "OPS",
   "schema_version": 1,
-  "spec_clause": "KISS-OPS-6.13-0001",
+  "spec_clause": "KISS-CONFORM-6.5-0008",
   "generator": "hand-drafted by kiss-ref; cosigned kiss-ref + Baracuda (ThinkersJournal/KISS#74)",
   "number_of_vectors": 48,
   "byte_order": "hex is the value's bytes most-significant first, left to right",

@@ -272,8 +272,14 @@
 #
 # TOOL-DERIVED, NOT ARITHMETIC: `--ratchet --base-ref origin/main` reported "proven rose 10 -> 20:
 # 10 proof(s) earned. Bump the proven floor in this PR" and that output is pasted here.
+#
+# harness 380 -> 381 by #330: KISS-CONFORM-6.5-0017 (the oracle-vector envelope clause) arrives
+# BACKED in the same PR that earns it, by test_conform_oracle_vector_envelope. lint (33) and untested
+# (495) UNCHANGED -- one new normative clause, tested not reclassified; total clauses 932 -> 933.
+# TOOL-DERIVED, NOT ARITHMETIC: `--ratchet --base-ref origin/main` reported "Set the floor to harness
+# 381, lint 33, untested 495" and that output is pasted here. proven UNCHANGED at 20 (no markers touched).
 # key	value
-harness	380
+harness	381
 lint	33
 untested	495
 proven	20

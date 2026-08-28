@@ -39,7 +39,7 @@ fn main() {
     doc.push_str("  \"schema\": \"kiss-oracle-vectors-v1.json\",\n");
     doc.push_str("  \"kiss_substandard\": \"OPS\",\n");
     doc.push_str("  \"schema_version\": 1,\n");
-    doc.push_str("  \"spec_clause\": \"KISS-CONFORM-6.4-0002\",\n");
+    doc.push_str("  \"spec_clause\": \"KISS-CONFORM-6.5-0008\",\n");
     doc.push_str("  \"generator\": \"kiss_mint 0.1.0\",\n");
     doc.push_str(&format!("  \"number_of_vectors\": {},\n", cells.len()));
     doc.push_str("  \"byte_order\": \"hex is the value's bytes most-significant first, left to right\",\n");

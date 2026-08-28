@@ -12,6 +12,7 @@ use crate::{parse_hex, DeterminismClass};
 #[derive(Debug, Clone)]
 pub struct Corpus {
     pub schema: String,
+    pub schema_version: u64,
     pub ulp_metric: String,
     pub vectors: Vec<Cell>,
 }
@@ -49,16 +50,60 @@ fn str_field(o: &Json, k: &str) -> Result<String, String> {
     field(o, k)?.as_str().map(|s| s.to_string()).ok_or_else(|| format!("`{k}` is not a string"))
 }
 
+/// The oracle-vector schemas and versions this build recognizes (§6.5-0017). RECOGNIZED-SETS,
+/// not literal `==` comparisons: a future schema/version is then a DATA change here rather than a
+/// comparison added at some call site and forgotten. That is the shape of KISS #271 — a hardcoded
+/// required-key tuple whose new member was wired at the call site, so the gate silently stopped
+/// covering it; the fix was a set, not a name. The clause's "unrecognized `schema`/`schema_version`"
+/// language and this structure line up on purpose.
+const RECOGNIZED_SCHEMAS: &[&str] = &["kiss-oracle-vectors-v1.json"];
+const RECOGNIZED_VERSIONS: &[u64] = &[1];
+
+/// Every top-level field §6.5-0017 requires a bundle to carry. A SET, not scattered `str_field`
+/// calls, so the loader's enforcement matches the clause's required-field LIST by construction and
+/// adding one is a data change (#340: a clause requiring fields its own loader did not check).
+/// `schema`/`schema_version`/`ulp_metric`/`vectors` are additionally value/shape-validated below;
+/// `kiss_substandard`/`spec_clause`/`generator`/`number_of_vectors` are required PRESENT here.
+pub const REQUIRED_TOP_FIELDS: &[&str] = &[
+    "schema", "schema_version", "kiss_substandard", "spec_clause",
+    "generator", "number_of_vectors", "ulp_metric", "vectors",
+];
+
 pub fn load(json_text: &str) -> Result<Corpus, String> {
     let root = parse(json_text)?;
+    // §6.5-0017: a reader MUST typed-decline a bundle missing ANY required field, not only the four
+    // it happens to read for value below. Before this the loader checked presence only for those.
+    for f in REQUIRED_TOP_FIELDS {
+        if root.get(f).is_none() {
+            return Err(format!("missing required field `{f}` (§6.5-0017)"));
+        }
+    }
+    // §6.5-0017: an unrecognized `schema` MUST typed-decline, never load-as-if-v1. Before this
+    // clause the field was read and never validated — a `kiss-oracle-vectors-v99.json` ran as v1.
     let schema = str_field(&root, "schema")?;
+    if !RECOGNIZED_SCHEMAS.contains(&schema.as_str()) {
+        return Err(format!(
+            "unrecognized `schema` `{schema}` (§6.5-0017); recognized: {RECOGNIZED_SCHEMAS:?}"
+        ));
+    }
+    // §6.5-0017: `schema_version` MUST be READ and GATED — a corpus freezes at a version (§8), and
+    // reading the field without gating on it does not satisfy the clause (cf. §6.8-0009). Before
+    // this clause the field was never read at all, so a `schema_version: 999` bundle ran as v1.
+    let schema_version = field(&root, "schema_version")?
+        .as_u64()
+        .ok_or("`schema_version` is not an integer")?;
+    if !RECOGNIZED_VERSIONS.contains(&schema_version) {
+        return Err(format!(
+            "unrecognized `schema_version` {schema_version} (§6.5-0017); recognized: {RECOGNIZED_VERSIONS:?}"
+        ));
+    }
     let ulp_metric = str_field(&root, "ulp_metric")?;
     let raw = field(&root, "vectors")?.as_arr().ok_or("`vectors` is not an array")?;
     let mut vectors = Vec::with_capacity(raw.len());
     for (idx, v) in raw.iter().enumerate() {
         vectors.push(load_cell(v).map_err(|e| format!("vector[{idx}]: {e}"))?);
     }
-    Ok(Corpus { schema, ulp_metric, vectors })
+    Ok(Corpus { schema, schema_version, ulp_metric, vectors })
 }
 
 fn load_cell(v: &Json) -> Result<Cell, String> {
@@ -103,6 +148,11 @@ mod tests {
 
     const SAMPLE: &str = r#"{
       "schema": "kiss-oracle-vectors-v1.json",
+      "schema_version": 1,
+      "kiss_substandard": "OPS",
+      "spec_clause": "KISS-CONFORM-6.5-0008",
+      "generator": "test-fixture",
+      "number_of_vectors": 1,
       "ulp_metric": "integer totalOrder distance",
       "vectors": [
         {
