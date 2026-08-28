@@ -34,9 +34,9 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**380<!-- bound:harness --> of 932<!-- bound:clauses --> normative clauses (40.8%) are
+**381<!-- bound:harness --> of 933<!-- bound:clauses --> normative clauses (40.8%) are
 backed by executable code** — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 240<!-- bound:named --> are
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
@@ -51,7 +51,7 @@ The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not
 population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 538<!-- bound:test_fns --> test fns, **124<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 543<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. Closing that is cheap and is the first
 task below.
