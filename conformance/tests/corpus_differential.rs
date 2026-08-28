@@ -24,12 +24,11 @@ fn eval_add(cell: &Cell, f: impl Fn(f32, f32) -> f32) -> Vec<u8> {
 fn run_against(c: &Corpus, f: impl Fn(f32, f32) -> f32) -> Result<(), String> {
     for cell in &c.vectors {
         let actual = eval_add(cell, &f);
-        // Plan A is exact-byte only; the class dispatch is here for when ULP/split arrive.
-        match cell.class {
-            DeterminismClass::ExactByte => compare(cell.class, &actual, &cell.expected)
-                .map_err(|e| format!("tcId {}: {e}", cell.tc_id))?,
-            other => return Err(format!("tcId {}: class {other:?} not in Plan A", cell.tc_id)),
-        }
+        // §6.8-0008 precedence: selection via comparator_for, never cell.class directly (#339(a)).
+        // Exact-byte is Plan A; compare_under_precedence errors for a not-yet-supported class OR a
+        // §6.8-0005 refinement op — the "not in Plan A" guard reached THROUGH the precedence.
+        compare_under_precedence(cell, &actual)
+            .map_err(|e| format!("tcId {}: {e}", cell.tc_id))?;
     }
     Ok(())
 }
@@ -116,7 +115,7 @@ fn reference_minmax_passes_every_signed_zero_tie_cell() {
     for cell in &c.vectors {
         let actual = eval_minmax(cell);
         assert_eq!(cell.class, DeterminismClass::ExactByte, "tcId {}: tie cells are exact-byte", cell.tc_id);
-        compare(cell.class, &actual, &cell.expected)
+        compare_under_precedence(cell, &actual)
             .unwrap_or_else(|e| panic!("tcId {} ({} {}): {e}", cell.tc_id, cell.op, cell.dtype));
     }
 }
@@ -139,7 +138,7 @@ fn a_b_biased_tie_max_is_caught() {
         let a = f32::from_be_bytes(cell.inputs[0].clone().try_into().unwrap());
         let b = f32::from_be_bytes(cell.inputs[1].clone().try_into().unwrap());
         let actual = wrong(a, b).to_bits().to_be_bytes().to_vec();
-        if compare(cell.class, &actual, &cell.expected).is_err() {
+        if compare_under_precedence(cell, &actual).is_err() {
             caught.push((a.to_bits(), b.to_bits()));
         }
     }
@@ -175,9 +174,9 @@ fn ordinary_minmax_bundle() -> Corpus {
 
 /// Compare under §6.8-0008 PRECEDENCE — selection routed through `comparator_for`,
 /// never the declared class directly. For every minmax op this resolves to
-/// `ClassDefault(exact-byte)`, so it is behaviour-preserving today; it is the
-/// pattern #339(a) migrates the differential's three `compare(cell.class, ..)`
-/// sites onto, and it is correct the moment a §6.8-0005 refinement op is added.
+/// `ClassDefault(exact-byte)`, so it is behaviour-preserving today. #339(a) migrated
+/// every `compare(cell.class, ..)` site in this file onto it, so no site selects by the
+/// declared class directly; it is correct the moment a §6.8-0005 refinement op is added.
 fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
     match comparator_for(&cell.op, cell.class) {
         Comparator::ClassDefault(class) => compare(class, actual, &cell.expected),
