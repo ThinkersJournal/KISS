@@ -11,9 +11,11 @@ use crate::DeterminismClass;
 /// The moved-NaN ops (§6.8-0010(a)): their NaN output is a MOVED input value pinned payload AND
 /// sign, so it must compare exact-byte. `agree()` — `run_binary`'s §6.8-0010-refined comparator —
 /// is NaN-blind and would PASS such a vector regardless of payload/sign, a control that cannot
-/// fail. A SET so it grows with the spec's moved-NaN op list; matched against the vector's
-/// provenance tag because `Vector` carries no op field. The moved-NaN path is `corpus_differential`
-/// (§6.8-0008 precedence), never here (KISS #339(a); the model gap that forces the hand-roll is #352).
+/// fail. A SET so it grows with the spec's moved-NaN op list; matched by EXACT equality against the
+/// op — the final `::`-delimited segment of the provenance tag — because `Vector` carries no op field
+/// (a `contains` would both false-positive on a substring like `select` in a module path AND silently
+/// stop guarding if the format ever drifted). The moved-NaN path is `corpus_differential` (§6.8-0008
+/// precedence), never here (KISS #339(a); the model gap that forces the hand-roll is #352).
 const MOVED_NAN_OP_TAGS: &[&str] = &["max_prop", "min_prop", "fmax_ieee", "fmin_ieee", "select", "gather"];
 
 /// One caught divergence, reproducible by `index` into the corpus.
@@ -34,12 +36,22 @@ pub fn run_binary(outputs: &[f32], corpus: &[Vector]) -> Vec<Divergence> {
     // agree() (§6.8-0010-refined). A moved-NaN op (§6.8-0010(a)) must NOT enter its corpus — agree()
     // would pass it regardless of payload/sign. `Vector` has no op, so the invariant is asserted
     // against the provenance tag; a moved-NaN op belongs on corpus_differential's precedence path.
-    // Asserted, not hoped — an invariant nothing checks is the thing this project refuses.
+    // Asserted, not hoped — an invariant nothing checks is the thing this project refuses. The op is
+    // the final `::` segment matched EXACTLY, and an unrecognized format FAILS CLOSED so a provenance
+    // drift goes loud rather than silently disarming the guard (#353 review).
     for v in corpus {
+        let op = v.provenance.rsplit_once("::").map(|(_, op)| op).unwrap_or_else(|| {
+            panic!(
+                "run_binary corpus vector has an unrecognized provenance format `{}` (expected \
+                 `...::<op>`); the moved-NaN guard fails CLOSED rather than silently stop guarding \
+                 (§6.8-0010(a), #339(a))",
+                v.provenance
+            )
+        });
         assert!(
-            !MOVED_NAN_OP_TAGS.iter().any(|tag| v.provenance.contains(tag)),
-            "moved-NaN op in run_binary's corpus (provenance `{}`): it must route through \
-             corpus_differential's §6.8-0008 precedence path, not agree() (§6.8-0010(a))",
+            !MOVED_NAN_OP_TAGS.contains(&op),
+            "moved-NaN op `{op}` must route through corpus_differential's §6.8-0008 precedence path, \
+             not agree() (§6.8-0010(a)); provenance `{}`",
             v.provenance
         );
     }
@@ -152,13 +164,29 @@ mod tests {
     /// control that cannot fail. The guard fires on the provenance tag; without it run_binary
     /// silently accepts the wrong comparator. Proves the guard is not dead.
     #[test]
-    #[should_panic(expected = "moved-NaN op in run_binary's corpus")]
+    #[should_panic(expected = "must route through corpus_differential")]
     fn a_moved_nan_op_is_refused_entry() {
         let v = crate::harness::corpus::Vector {
             a: 1.0,
             b: 2.0,
             expected: 2.0,
             provenance: "oracle:KISS-OPS-6.13/semantics::max_prop",
+        };
+        let _ = run_binary(&[2.0], &[v]);
+    }
+
+    /// The guard's silent-degradation sibling (#353 review): if the provenance format ever drifts so
+    /// the op is no longer the final `::` segment, the guard must FAIL CLOSED, never silently stop
+    /// guarding. Goes red if the fail-closed arm is dropped or the match reverts to `contains`
+    /// (under `contains`, this unparseable string matches no tag and would pass — a silent inert guard).
+    #[test]
+    #[should_panic(expected = "unrecognized provenance format")]
+    fn an_unexpected_provenance_format_fails_closed() {
+        let v = crate::harness::corpus::Vector {
+            a: 1.0,
+            b: 2.0,
+            expected: 2.0,
+            provenance: "no_delimiter_here",
         };
         let _ = run_binary(&[2.0], &[v]);
     }
