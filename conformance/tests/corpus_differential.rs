@@ -162,7 +162,7 @@ fn a_b_biased_tie_max_is_caught() {
 //
 // Two independent derivations agree on all 24 (including orientation — which
 // family returns the larger operand): these hand-derived (decomposition-traced)
-// cells and kiss-ref's blind eval_op (kiss-ref PR #26, test minmax_ordinary_derive).
+// cells and kiss-ref's blind eval_op (kiss-ref main @ ccf294b4, test minmax_ordinary_derive).
 
 fn ordinary_minmax_bundle() -> Corpus {
     let text = std::fs::read_to_string(concat!(
