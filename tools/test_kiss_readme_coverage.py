@@ -16,6 +16,7 @@ Run: python tools/test_kiss_readme_coverage.py
 """
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import time
@@ -31,24 +32,49 @@ ACTUAL = {"harness": 380, "clauses": 932, "named": 240, "test_fns": 538,
           "uncited_tests": 124, "zero_coverage_subs": 0}
 
 
+_TMPDIRS = []
+
+
 def readme_with(body):
+    """A fixture README. The tree is registered for cleanup rather than leaked (#350)."""
     d = tempfile.mkdtemp()
+    _TMPDIRS.append(d)
     p = pathlib.Path(d) / "README.md"
     p.write_text(body, encoding="utf-8")
     return str(p)
 
 
+def tearDownModule():
+    for d in _TMPDIRS:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 class ReadmeBindingTest(unittest.TestCase):
     def test_an_agreeing_figure_is_quiet(self):
         """Control. Without it a lint hardcoded to report drift would pass every case below."""
-        bad, claimed, _ = rc.check(readme_with("harness <!-- bound:harness=380 -->\n"), ACTUAL)
+        bad, claimed, _ = rc.check(readme_with("harness 380<!-- bound:harness -->\n"), ACTUAL)
         self.assertEqual(bad, [])
         self.assertEqual(claimed, {"harness": 380})
 
     def test_a_DRIFTED_figure_is_caught(self):
         """The whole point: the README says one thing and the tree reports another."""
-        bad, _c, _a = rc.check(readme_with("harness <!-- bound:harness=379 -->\n"), ACTUAL)
+        bad, _c, _a = rc.check(readme_with("harness 379<!-- bound:harness -->\n"), ACTUAL)
         self.assertEqual(bad, [("harness", 379, 380)])
+
+    def test_the_marker_binds_the_VISIBLE_number(self):
+        """The #350 review's finding, kept as a control.
+
+        The first form put the value INSIDE the comment, so the bound value and the value
+        a reader sees were two objects — and editing the prose alone reported CLEAN. The
+        guard was invariant under the exact drift it exists to catch. With the marker as a
+        POINTER there is only one number, so there is no shadow for it to agree with.
+        """
+        bad, claimed, _ = rc.check(
+            readme_with("we have 999<!-- bound:harness --> clauses\n"), ACTUAL)
+        self.assertEqual(bad, [("harness", 999, 380)],
+                         "editing the visible number did not redden — the marker is "
+                         "carrying its own copy again")
+        self.assertEqual(claimed, {"harness": 999})
 
     def test_NO_bound_figures_is_a_VACUITY_not_a_pass(self):
         """A lint over an empty set passes for the wrong reason.
@@ -67,7 +93,7 @@ class ReadmeBindingTest(unittest.TestCase):
         Otherwise a typo in the key (`harnes=380`) would remove the figure from the gate
         while leaving it visible in the prose — the file looks bound and is not.
         """
-        bad, _c, _a = rc.check(readme_with("<!-- bound:harnes=380 -->\n"), ACTUAL)
+        bad, _c, _a = rc.check(readme_with("380<!-- bound:harnes -->\n"), ACTUAL)
         self.assertEqual(bad, [("harnes", 380, None)])
 
     def test_every_kiss_lint_answers_emit_coverage_CHEAPLY(self):

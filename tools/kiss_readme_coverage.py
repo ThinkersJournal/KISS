@@ -44,10 +44,15 @@ ROOT = os.path.dirname(HERE)
 README = os.path.join(ROOT, "conformance", "README.md")
 FLOOR = os.path.join(ROOT, "conformance", "COVERAGE_FLOOR.tsv")
 
-# Machine-readable anchors. The README carries the number INSIDE the marker so a reader sees
-# the figure in prose and the lint reads the same characters -- rather than a lint parsing
-# prose, which is how the §6.7-0008 correspondence table drifted.
-RE_BOUND = re.compile(r"<!--\s*bound:(?P<key>[a-z_]+)=(?P<val>[0-9]+)\s*-->")
+# THE MARKER IS A POINTER, NOT A COPY (#350 review). It follows the VISIBLE figure and
+# names which key that figure is; the lint reads the number a READER sees.
+#
+# The first version put the value inside the comment -- `<!-- bound:harness=380 -->` --
+# so the bound value and the visible value were TWO OBJECTS, and only one of them is what
+# a reader is misled by. Editing the prose to `999 of 932` and leaving the comment alone
+# reported CLEAN: the guard was INVARIANT UNDER THE EXACT DRIFT IT EXISTS TO CATCH.
+# Verified by seeding it, not by reading. With one number there is no shadow to agree with.
+RE_BOUND = re.compile(r"(?P<val>[0-9]+)\s*<!--\s*bound:(?P<key>[a-z_]+)\s*-->")
 
 
 def floor_values(path=FLOOR):
@@ -67,6 +72,18 @@ def derived():
     r = subprocess.run([sys.executable, os.path.join(HERE, "kiss_trace.py")],
                        capture_output=True, timeout=600)
     text = r.stdout.decode("utf-8", "replace")
+    err = r.stderr.decode("utf-8", "replace")
+    # FAIL CLOSED on a generator that did not produce an answer (#350 review). kiss_trace
+    # exits 1 when the tree has violations -- that is normal and its figures are still
+    # printed -- but a CRASH or a kill leaves partial output that parses to nothing, and the
+    # lint would then report "DRIFT: actual None" for every figure. A MALFORMED INSTRUMENT
+    # PRODUCING SOMETHING THAT PARSES AS AN ANSWER, and the failure wears the costume of a
+    # real finding, which is the expensive direction to be wrong in.
+    if "normative clauses" not in text:
+        raise RuntimeError(
+            "kiss_trace.py produced no figures (exit %d). This is a GENERATOR FAILURE, not "
+            "README drift -- do not update the README from it.\n--- stderr ---\n%s"
+            % (r.returncode, err[-800:] or "<empty>"))
     out = {}
     m = re.search(r"(\d+) normative clauses", text)
     if m:
@@ -131,7 +148,18 @@ def main():
     if "--emit-coverage" in sys.argv:
         return 0
 
-    bad, claimed, actual = check()
+    try:
+        bad, claimed, actual = check()
+    except RuntimeError as exc:
+        print("KISS conformance README — coverage figures bound to their generators")
+        print("=" * 68)
+        print("  UNVERIFIED: the generator did not answer, so the README could not be")
+        print("  checked. This is NOT drift and the figures below are not evidence:")
+        for ln in str(exc).splitlines():
+            print("          " + ln)
+        print("-" * 68)
+        print("  RESULT: VIOLATIONS FOUND")
+        return 1
     print("KISS conformance README — coverage figures bound to their generators")
     print("=" * 68)
     if bad is None:

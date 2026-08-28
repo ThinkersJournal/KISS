@@ -18,7 +18,12 @@ distinct from the specification text under `spec/`, which is CC0.
 §6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
 run** that is not one of the four modalities but exercises §6.5's differential on
 real silicon. Every golden vector is transcribed from the spec's own appendix.
-**538 test functions in the harness <!-- bound:test_fns=538 -->; 537 pass by default, 3 more on-device under `--features cuda`.** The discovered count is bound by `tools/kiss_readme_coverage.py`; the *passing* count is not, because reaching it requires executing the suite rather than reading it.
+**The harness runs by default and adds on-device cases under `--features cuda`.** No count
+is stated here: the number that PASSES cannot be reached without executing the suite, so it
+cannot be bound by a document lint — and an unbound figure in the file whose subject is
+bound figures is the defect this section exists to prevent. The conformance job reports it
+on every run, and the count of test functions the traceability tool DISCOVERS is bound
+below, where it sits beside the figure it is actually about.
 
 **Not implemented: modality 3 — the §6.6 structure-directed fuzzer**, which must
 generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
@@ -29,10 +34,10 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**380 of 932 normative clauses (40.8%) are backed by executable code**
-<!-- bound:harness=380 --><!-- bound:clauses=932 --> — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 240 are
-backed by NAME** <!-- bound:named=240 --> (the §9 row resolves to a real test fn) and the
+**380<!-- bound:harness --> of 932<!-- bound:clauses --> normative clauses (40.8%) are
+backed by executable code** — the figure the ratchet in
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 240<!-- bound:named --> are
+backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
 **That distinction is why this section's old figure was wrong in a way regenerating it
@@ -43,11 +48,11 @@ sentence describing two different measurements, agreeing with each other only be
 neither was checked.
 
 The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
-population: **493 genuinely untested** <!-- bound:untested_rows=493 -->, 33 enforced by a
+population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 538 test fns, **124 cite no clause at all**
-<!-- bound:uncited_tests=124 -->, so the traceability matrix cannot see them: real tests
+the harness one for exactly this reason. Of this crate's 538<!-- bound:test_fns --> test fns, **124<!-- bound:uncited_tests --> cite
+no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. Closing that is cheap and is the first
 task below.
 
@@ -171,7 +176,7 @@ default build and CI stay GPU-free.
 - **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
-  0 of 9 sub-standards are at 0.0% <!-- bound:zero_coverage_subs=0 --> — the lowest is
+  0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
   Synth at 31/130 and the highest Ops at 109/196; Announce is 42/76. Every one has a
   byte cross a process boundary.
 
