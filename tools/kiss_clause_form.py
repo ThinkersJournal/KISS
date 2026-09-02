@@ -71,6 +71,16 @@ def main():
             print(f"              ...{prev}")
             print(f"              -> {nxt}...")
     print("-" * 68)
+    # A lint that reports CLEAN on an empty population cannot tell "checked and
+    # fine" from "found nothing to check" -- and the second is what happens when
+    # spec/ moves, the glob breaks, or the metadata label is renamed. Exit 2 so a
+    # non-measurement can never be read as a pass. (Distinct from 1: "could not
+    # measure" and "measured a violation" need different responses.)
+    if total == 0:
+        print(f"  NO `{META}` blocks found under {spec}.")
+        print("  Either the spec moved, the glob is wrong, or the label was renamed.")
+        print("  RESULT: COULD NOT MEASURE")
+        return 2
     if bad:
         print(f"  {bad} of {total} `Normalizes:` blocks interrupt their own requirement.")
         print("  Move each to sit after the sentence it annotates (see #389).")

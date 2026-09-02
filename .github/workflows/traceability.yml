@@ -169,6 +169,10 @@ jobs:
       # reassembled KISS-CONFORM-6.8-0001 while quoting it (#389). All six placements
       # were uniform, so this was the house style rather than six accidents -- the
       # lint stops it re-establishing.
+      # OWN discrimination first: the lint must be shown to reject a split clause
+      # and to refuse an empty population, before its CLEAN means anything.
+      - name: Clause-form lint controls (0 clean / 1 broken / 2 could-not-measure)
+        run: python tools/test_kiss_clause_form.py
       - name: Clause form (a metadata block must not split a requirement)
         run: python tools/kiss_clause_form.py
       - name: Spec<->binding enumeration consistency (op-family set)
