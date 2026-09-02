@@ -297,8 +297,21 @@
 # tool-derived value is RE-DERIVED at publication while an additive list may be unioned.
 # The tool reported "Set the floor to harness 382, lint 33, untested 495" -- 382, NOT the
 # 381 both sides of the conflict claimed. Pasted, not computed.
+#
+# harness 382 -> 383 by #354: KISS-OPS-6.16-0009 (a select-decomposed op has nothing to round; a
+# bf16 minmax RESULT is the moved operand, payload+sign exact per §6.8-0010(a)) arrives BACKED in the
+# same PR that earns it, by test_ops_bf16_minmax_moves_not_rounds. This is the clause that fixes the
+# eval_minmax bf16 sNaN-quieting bug (#354) -- the oracle was FABRICATING bf16 minmax via
+# promote->compute->round instead of the §6.13 raw-bit select. lint (33) and untested (495) UNCHANGED
+# -- one new normative clause, tested not reclassified; total clauses 934 -> 935. proven UNCHANGED at 20.
+#
+# CONFLICT RESOLUTION (#354 rebased onto #228, main already at 382): SAME shape as #228->#330 above --
+# both additive, each a distinct new clause (6.8-0014 and 6.16-0009). My branch's original entry said
+# 381 -> 382 against the stale 5a3d889 base; main reached 382 meanwhile via #228, so the correct value
+# is 383, NOT 382. RE-DERIVED with the tool post-rebase, not by arithmetic: `--ratchet --base-ref
+# origin/main` reported "Set the floor to harness 383, lint 33, untested 495" and that output is pasted here.
 # key	value
-harness	382
+harness	383
 lint	33
 untested	495
 proven	20

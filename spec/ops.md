@@ -1476,6 +1476,17 @@ shared naming convention spelled identically in both foundational vocabularies.
   packing (`i4`/`u4`/`b1`, §6.16-0006) and complex storage (`c64`/`c128`, §6.16-0007) whose
   normative owner is Classify, this obligation is that the Ops restatement tracks the Classify
   owner, not a symmetric dual pinning. *Test:* `test_ops_dtype_layout_coversioned`.
+- **KISS-OPS-6.16-0009** — §6.16-0003's round-to-nearest-ties-even requirement governs an op that
+  **computes** a narrow-float result. An op whose §6.13 reference decomposition contains **no
+  arithmetic** — a comparison-and-`select`, as the NaN-propagating `max_prop`/`min_prop` are —
+  computes nothing, so there is nothing to round: its result is the **moved operand**, whose bits
+  (payload and sign included for a NaN) are preserved **exactly** per §6.8-0010(a). A
+  promote-to-`f32`-and-round-back implementation of such an op is therefore non-conforming for a
+  narrow float — it quiets a moved signaling NaN, the identical promotion hazard §6.9-0003 rejects
+  for `nextafter`; and `copysign` (§6.9-0002) is already specified as a raw-bit operation precisely
+  so a moved NaN's sign survives, a select-decomposed op being the same kind of move. This clause
+  clarifies the scope of §6.16-0003, which two independent readers had read as reaching NaN-payload
+  propagation — it does not. *Test:* `test_ops_bf16_minmax_moves_not_rounds`.
 
 ### 6.17 Compute-fidelity (math-precision) attribute
 
@@ -2606,6 +2617,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0006 | `test_ops_integer_dtype_tokens` |
 | KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
 | KISS-OPS-6.16-0008 | `test_ops_dtype_layout_coversioned` |
+| KISS-OPS-6.16-0009 | `test_ops_bf16_minmax_moves_not_rounds` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
 | KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
