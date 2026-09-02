@@ -1335,6 +1335,77 @@ def clause_terms(block):
     return out
 
 
+def _mentions(term, tokens):
+    """Does `term` occur in any token at an UNDERSCORE BOUNDARY or a string edge?
+
+    Exact-token equality was the first rule and it is wrong in one direction (#192): a
+    reverse-cited test is often named for the thing it tests -- `scatter_oob_writes_are_skipped`,
+    `e2_index_select_u32` -- so the clause's term is PRESENT but embedded, and the report
+    said "mentions NONE", which is FALSE.
+
+    Boundary-anchored rather than a bare substring, because a bare one over-matches in the
+    direction that shrinks the alarming bucket: `sort` inside `assert_sorted` is not a
+    mention of `sort`. Underscore is the component separator in every identifier here, so
+    the boundary IS the word boundary.
+
+    THE ASYMMETRY IS WHY THIS SURVIVED #367: §9-named tests are conventionally
+    `test_<sub>_<thing>` and never embed a clause identifier as a component, so exact
+    matching is correct on the NAMED tier and wrong on the CITED one. An instrument's
+    defects are visible only where its inputs differ from the ones it was developed against.
+    """
+    for tok in tokens:
+        i = tok.find(term)
+        while i != -1:
+            if (i == 0 or tok[i - 1] == "_") and (
+                    i + len(term) == len(tok) or tok[i + len(term)] == "_"):
+                return True
+            i = tok.find(term, i + 1)
+    return False
+
+
+def citing_tokens(cid, harness):
+    """Tokens of every test CARRYING A BACKING CITATION for `cid`, or None if there is none.
+
+    THE §9 ROW IS THE WRONG TEST HERE, and using it is the failure this function exists to
+    prevent. A CITED clause is backed by whichever test cites it, which is frequently not the
+    test the §9 matrix names -- reverse-only clauses have no §9-named test at all.
+
+    Getting it wrong fails in the REASSURING direction: a §9-named test usually DOES mention
+    its clause's terms, so comparing against it would report near-universal overlap and the
+    miss bucket would quietly approach zero.
+    """
+    toks, found = set(), False
+    for info in harness.values():
+        if cid in info["clauses"]:
+            toks |= info["tokens"]
+            found = True
+    return toks if found else None
+
+
+def about_bucket(terms, tokens):
+    """(bucket, matched) for one clause: 'hit' | 'miss' | 'unmeasurable'.
+
+    UNMEASURABLE is a clause naming no distinctive term at all -- it is not clean, and it is
+    not evidence of absence either.
+
+    NO PROSE/IDENTIFIER CLASSIFIER, deliberately, and the absence is a measured result rather
+    than an omission. A miss whose terms are `{each, yield}` is weakly informative, and it is
+    tempting to reclassify it -- but two candidate groundings were measured and BOTH fail:
+    corpus membership (the token set includes comment prose, so `normalizes` and `each` are
+    both "in corpus") and spec-side document frequency (prose words are as RARE as real
+    identifiers -- `exceed` 1, `s32` 1 -- while `structure_key` at 87 is the most common term
+    in the suite). Pure-alpha fails too: `relu`, `argmax`, `sort`, `bool` are all identifiers.
+
+    A row can be CORRECTLY COMPUTED AND UNINFORMATIVE. Reclassifying it would be adjusting a
+    number to match an intuition about what it ought to say. The report prints each miss row's
+    TERMS instead, so the reader who can judge it does the triage a classifier would do badly.
+    """
+    if not terms:
+        return "unmeasurable", set()
+    matched = {t for t in terms if _mentions(t, tokens)}
+    return ("hit" if matched else "miss"), matched
+
+
 def parse(path, res):
     text = open(path, encoding="utf-8").read()
 
@@ -1962,28 +2033,47 @@ def main():
     # it. What the split gives is a POPULATION -- the clauses where a name match is the only
     # evidence AND nothing in the test names the subject -- which is what #246's proposal 2
     # needs before anyone decides whether to make reverse citation mandatory.
-    about_hit, about_miss, about_noterms = [], [], []
-    for c in sorted(tier_named):
+    # ABOUTNESS SIGNAL over BOTH tiers (#246 for NAMED, #192 for CITED) -- REPORTED, NEVER
+    # GATED. For a NAMED clause the test is the §9 row; for a CITED clause it is THE TEST
+    # THAT CARRIES THE CITATION, which is often not the §9 row at all. Comparing a CITED
+    # clause against its §9 row would fail in the REASSURING direction, because a §9-named
+    # test usually does mention its clause's terms.
+    def _about(pop, test_of):
+        buckets = {"hit": [], "miss": [], "unmeasurable": []}
+        for c in sorted(pop):
+            toks = test_of(c)
+            if toks is None:
+                continue
+            b, _m = about_bucket(all_terms.get(c) or set(), toks)
+            buckets[b].append(c)
+        return buckets
+
+    def _named_tokens(c):
         t = clause_test.get(c)
-        terms = all_terms.get(c) or set()
-        toks = harness.get(t, {}).get("tokens") if t else None
-        if toks is None:
-            continue                      # no resolvable named test: not this axis's business
-        if not terms:
-            about_noterms.append(c)       # the clause names no distinctive term: UNMEASURABLE
-        elif terms & toks:
-            about_hit.append(c)
-        else:
-            about_miss.append(c)
-    n_about = len(about_hit) + len(about_miss) + len(about_noterms)
-    if n_about:
-        print(f"      — aboutness signal over those {len(tier_named)} NAMED (#246); REPORTS, never gates —")
-        print(f"          {len(about_hit):>4} the named test's text mentions a term the clause names")
-        print(f"          {len(about_miss):>4} it mentions NONE — a name match is the ONLY evidence")
-        print(f"          {len(about_noterms):>4} the clause names no distinctive term: UNMEASURABLE, not clean")
-        print("                 Neither direction is proof: zero overlap does not show a test is")
-        print("                 off-subject, and overlap does not show it is on-subject. This is a")
-        print("                 POPULATION to adjudicate, which is why it de-credits nothing.")
+        return harness.get(t, {}).get("tokens") if t else None
+
+    def _citing_tokens(c):
+        return citing_tokens(c, harness)
+
+    for label, pop, test_of, issue in (
+            ("NAMED", tier_named, _named_tokens, "#246"),
+            ("CITED", tier_cited, _citing_tokens, "#192")):
+        b = _about(pop, test_of)
+        n = sum(len(v) for v in b.values())
+        if not n:
+            continue
+        which = "§9-named test" if label == "NAMED" else "CITING test"
+        print(f"      — aboutness over the {len(pop)} {label} ({issue}); REPORTS, never gates —")
+        print(f"          {len(b['hit']):>4} the {which}'s text mentions a term the clause names")
+        print(f"          {len(b['miss']):>4} it mentions NONE — the citation is the only evidence")
+        print(f"          {len(b['unmeasurable']):>4} the clause names no distinctive term: UNMEASURABLE, not clean")
+        for c in b["miss"]:
+            terms = sorted(all_terms.get(c) or set())[:4]
+            print(f"                 {c:<26} terms {terms}")
+        print("                 Terms are printed so a reader can triage: a row whose terms are")
+        print("                 ordinary prose is CORRECTLY COMPUTED AND UNINFORMATIVE, and no")
+        print("                 classifier reclassifies it — two groundings were measured and")
+        print("                 both failed. Neither direction is proof, so this de-credits nothing.")
     print(f"      — by evidence strength (convention 15); NAMED+CITED partition the {len(backed)} backed —")
     print(f"          {len(tier_named):>4} NAMED   the §9 name matches a real fn, but NO backing-form citation")
     print(f"                 exists for the clause (by any test) — a name coincidence, not an asserted tie")
