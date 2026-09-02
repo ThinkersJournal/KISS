@@ -50,6 +50,13 @@ jobs:
       # a ratchet that cannot go red is the same defect as one that is always red.
       - name: Coverage ratchet discrimination controls
         run: python tools/test_kiss_ratchet.py
+      # The ratchet's CI STEP is shell inside YAML -- the least-tested code here: nothing
+      # imports it and its only execution is on a runner, where a mistake shows up as a
+      # confusing red rather than a failure. These controls EXTRACT the `run:` block and
+      # EXECUTE it under `bash -e` with git/python stubbed, so a decline, a violation and a
+      # failed base fetch are each proven distinguishable BY BEHAVIOUR, not by reading it.
+      - name: Ratchet CI-step behavioural controls (#338)
+        run: python tools/test_kiss_ratchet_step.py
       - name: Coverage ratchet (blocking)
         # The ratchet compares the lint SET against the PRE-change ledger read at a base ref,
         # so a lint->harness SUBSTITUTION and a constant-count swap can be told from a laundered
@@ -76,16 +83,25 @@ jobs:
           # exempt, so the code reaches `rc` and still propagates via the final `exit`.
           rc=0
           if [ -n "${{ github.base_ref }}" ]; then
-            git fetch --quiet origin "${{ github.base_ref }}"
+            # CHECKED (#338). An unchecked fetch fails SILENTLY and resurfaces several
+            # lines later as an exit-2 decline, where it is INDISTINGUISHABLE from the
+            # ancestor case -- so the one cause the old `case` line asserted was likeliest
+            # was also the one it could not tell apart from the others. Exit 3, its own
+            # code, because a base that could not be fetched is neither a floor violation
+            # nor a decline: the ratchet did not run at all.
+            if ! git fetch --quiet origin "${{ github.base_ref }}"; then
+              echo "::error title=Ratchet base fetch FAILED::could not fetch origin/${{ github.base_ref }} -- the ratchet DID NOT RUN. Not a floor violation and not a decline."
+              exit 3
+            fi
             python tools/kiss_trace.py --ratchet --base-ref "origin/${{ github.base_ref }}" || rc=$?
           else
             python tools/kiss_trace.py --ratchet --base-ref HEAD^ || rc=$?
           fi
           case $rc in
             0) echo "ratchet: exit 0 — CLEAN (at the floor)";;
-            1) echo "ratchet: exit 1 — VIOLATIONS FOUND: the floor moved. This is a real failure.";;
-            2) echo "ratchet: exit 2 — INCONCLUSIVE: the ratchet DECLINED to characterize the lint dimension. NOT a floor violation. Either no --base-ref was passed, OR one was passed and could not be read — an unfetched or unknown ref counts, and the fetch above is --quiet and unchecked, so that is the likelier cause HERE. Check the ref resolves before suspecting the ratchet. See #251.";;
-            *) echo "ratchet: exit $rc — unexpected";;
+            1) echo "::error title=Ratchet: FLOOR VIOLATION::exit 1 -- the floor moved. This is a real failure.";;
+            2) echo "::error title=Ratchet: DECLINED (not a violation)::exit 2 -- INCONCLUSIVE: the ratchet could not characterize the lint dimension. NOT a floor violation. THE RATCHET PRINTS THE SPECIFIC CAUSE ABOVE -- read it. This line deliberately does not guess: it cannot observe which cause occurred, and the one it used to name as likeliest was wrong in the incident that found this (#338). Run: python tools/kiss_trace.py --why-red -- for the reason set. See #251.";;
+            *) echo "::error title=Ratchet: unexpected exit::exit $rc -- not one of the three documented states.";;
           esac
           exit $rc
       - name: Comparator-blindness discrimination controls
