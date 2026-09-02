@@ -617,10 +617,18 @@ enum (§6.0). See umbrella §3 for the full statement.
 - **KISS-CONFORM-6.3-0010** — A published reference artifact MUST have a **declared
   normative surface**, and this specification declares it in **three parts** rather than
   two, because a consumer relies on more than the vectors and less than the whole file:
-  **(a) VECTOR CONTENT** — the entries of `positive_vectors` and `decline_vectors`, which a
-  conformant producer's output MUST reproduce **byte-exact per entry**, and which MUST be
-  **non-empty**: an empty vector array satisfies *present* while asserting nothing, so the
-  arrays are required to carry content rather than merely to exist; **(b) SCOPING
+  **(a) VECTOR CONTENT** — the entries of `positive_vectors`, `decline_vectors` and
+  `target_match_vectors`, each of which MUST be **non-empty**: an empty vector array
+  satisfies *present* while asserting nothing, so the arrays are required to carry content
+  rather than merely to exist. **The obligation each array places is on a DIFFERENT party,
+  and that split is normative**: a conformant **producer's** output MUST reproduce the
+  `positive_vectors` and `decline_vectors` entries **byte-exact per entry**, whereas
+  `target_match_vectors` binds a conformant **matcher**, which MUST return each entry's
+  pinned `expect_match` verdict for that entry's (`left`, `right`) pair (§6.8-0002). Its
+  token pairs are matcher **inputs, not outputs a producer is required to emit** — an entry
+  MAY carry a capability token that is **non-canonical** under the namespace vocabulary that
+  owns it, because byte-exact matching MUST NOT consult that vocabulary; requiring a
+  producer to emit such a token would make a conformant producer non-conformant; **(b) SCOPING
   DECLARATIONS** — the members a consumer reads to decide *what it is looking at and which
   runs apply*: the artifact `schema`, `structure_key_schema_version`, `token_prefix`, the
   dual dtype axes and `reserved_dtypes` **and the declared axis counts that must equal their array lengths**
