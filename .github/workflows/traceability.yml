@@ -164,6 +164,17 @@ jobs:
         run: python tools/kiss_cites.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
+      # A metadata block wedged inside a requirement is not a style defect: a phrase
+      # split across it is not findable as a string, and two readers silently
+      # reassembled KISS-CONFORM-6.8-0001 while quoting it (#389). All six placements
+      # were uniform, so this was the house style rather than six accidents -- the
+      # lint stops it re-establishing.
+      # OWN discrimination first: the lint must be shown to reject a split clause
+      # and to refuse an empty population, before its CLEAN means anything.
+      - name: Clause-form lint controls (0 clean / 1 broken / 2 could-not-measure)
+        run: python tools/test_kiss_clause_form.py
+      - name: Clause form (a metadata block must not split a requirement)
+        run: python tools/kiss_clause_form.py
       - name: Spec<->binding enumeration consistency (op-family set)
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency
