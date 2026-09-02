@@ -296,6 +296,31 @@ pub enum ContractDecline {
     UnknownDeterminismClass { got: String },
 }
 
+impl ContractDecline {
+    /// The STABLE wire spelling of this decline's CATEGORY — the token a foreign reader (§6.5,
+    /// KISS-CONTRACT-8-0005) diffs against in `contract_vectors.json`. It MUST NOT be the Rust
+    /// `Debug` form (`{:?}`): that couples the artifact's schema to internal identifiers and silently
+    /// re-spells when a variant gains a field (`MalformedHeader` → `MalformedHeader { .. }`). The
+    /// wire format of this artifact is a DECISION, pinned here and by `test_contract_decline_wire_tags`,
+    /// not a side effect of the type. The match is wildcard-free on purpose: a new variant fails to
+    /// compile until it is given a spelling. The payload (`got`/`declared`/`computed`) is
+    /// impl-derivable and intentionally omitted — the interop contract is the category, and every
+    /// decline vector is already keyed by its `name` and `doc_hex`.
+    pub fn wire_tag(&self) -> &'static str {
+        match self {
+            ContractDecline::NoMagic => "no-magic",
+            ContractDecline::MalformedHeader => "malformed-header",
+            ContractDecline::UnknownKind { .. } => "unknown-kind",
+            ContractDecline::UnknownVersion { .. } => "unknown-version",
+            ContractDecline::BadLength { .. } => "bad-length",
+            ContractDecline::BadChecksum { .. } => "bad-checksum",
+            ContractDecline::Headingless => "headingless",
+            ContractDecline::MissingGuaranteesClass => "missing-guarantees-class",
+            ContractDecline::UnknownDeterminismClass { .. } => "unknown-determinism-class",
+        }
+    }
+}
+
 /// The header-line essentials a successful read yields (§6.11-0002/-0003).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContractHeader {
@@ -638,6 +663,15 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
     )
 }
 
+/// Appendix C Semantics block (heading id 2) as transcribed text, for asserting the codec's
+/// rendering against the appendix (§6.11-0004/-0007): a one-node `machine-checkable-IR` DAG whose
+/// `op_dag` is `[Op{add; ; []}]`.
+pub const APPENDIX_C_SEMANTICS_GOLDEN: &str = "\
+[section:2:semantics]
+semantics_kind = machine-checkable-IR
+op_dag = [Op{add; ; []}]
+";
+
 /// The Appendix C Semantics block (heading id 2); `op_dag` rendered by the canonical serializer.
 pub fn appendix_c_semantics_block() -> Vec<u8> {
     render_block(
@@ -713,6 +747,7 @@ pub fn emit_contract_vectors_json() -> String {
     s.push_str("  \"spec_reference\": \"spec/contract.md Appendix C (informative) — the \u{00a7}2.5 strided add golden document under the \u{00a7}6.11 structured/text framing\",\n");
     s.push_str("  \"scope_note\": \"DIFFABLE, not COVERED: a foreign reader byte-diffs the golden document and each single-fault decline; this does NOT cover the untested KISS-Contract clauses.\",\n");
     s.push_str("  \"partial_note_16d\": \"Enforcement is PARTIAL and STATED here, not left to be discovered, on two axes. (i) Appendix C shows 3 of 7 blocks (header line + Identity + Semantics); these are rendered here, codec-generated. (ii) Blocks 4-7 have NO builder anywhere and Appendix C does not show them, yet Appendix C's own preamble promises 'the complete document (all seven blocks)' in the machine-readable golden-vector file. This artifact therefore only PARTIALLY fulfils that reference. Which way to close the gap (amend the preamble to match what exists, or author blocks 4-7) is a NORMATIVE decision, filed as its own issue.\",\n");
+    s.push_str("  \"expect_encoding\": \"each decline_vectors[].expect is the decline's STABLE category tag (kebab-case), pinned per variant by ContractDecline::wire_tag — NOT a Rust Debug string. A foreign reader matches the category; the impl-derived payload (declared/computed/got) is intentionally omitted.\",\n");
     s.push_str("  \"golden_document\": {\n");
     s.push_str("    \"blocks_shown\": 3,\n");
     s.push_str("    \"blocks_promised_by_appendix\": 7,\n");
@@ -725,7 +760,7 @@ pub fn emit_contract_vectors_json() -> String {
         s.push_str("    {\n");
         s.push_str(&format!("      \"name\": {},\n", jstr(nv.name)));
         s.push_str(&format!("      \"doc_hex\": {},\n", jstr(&hex(&nv.doc))));
-        s.push_str(&format!("      \"expect\": {}\n", jstr(&format!("{:?}", nv.expect))));
+        s.push_str(&format!("      \"expect\": {}\n", jstr(nv.expect.wire_tag())));
         s.push_str(&format!("    }}{comma}\n"));
     }
     s.push_str("  ]\n");

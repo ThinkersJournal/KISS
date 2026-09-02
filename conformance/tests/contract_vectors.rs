@@ -97,3 +97,37 @@ fn test_contract_vectors_carry_the_decline_set() {
         );
     }
 }
+
+/// The decline wire tags are the artifact's STABLE schema for `expect` — pinned per variant,
+/// decoupled from the Rust identifier so a variant gaining a field or being renamed cannot silently
+/// re-spell the foreign-reader artifact. The wildcard-free match in `wire_tag()` forces a NEW variant
+/// to be given a spelling (compile error otherwise); this test pins the spellings themselves and
+/// checks the emitted artifact carries only pinned tags — no `{:?}` Debug string leaks in.
+#[test]
+fn test_contract_decline_wire_tags() {
+    use kiss_conformance::contract::ContractDecline::*;
+    let pinned: &[(kiss_conformance::contract::ContractDecline, &str)] = &[
+        (NoMagic, "no-magic"),
+        (MalformedHeader, "malformed-header"),
+        (UnknownKind { got: "x".into() }, "unknown-kind"),
+        (UnknownVersion { got: "9".into() }, "unknown-version"),
+        (BadLength { declared: 1, actual: 2 }, "bad-length"),
+        (BadChecksum { declared: 1, computed: 2 }, "bad-checksum"),
+        (Headingless, "headingless"),
+        (MissingGuaranteesClass, "missing-guarantees-class"),
+        (UnknownDeterminismClass { got: "z".into() }, "unknown-determinism-class"),
+    ];
+    for (decline, tag) in pinned {
+        assert_eq!(decline.wire_tag(), *tag, "wire tag for {decline:?} is pinned");
+    }
+
+    // Every emitted decline vector's `expect` is its pinned tag — no Rust Debug string leaks in.
+    let json = contract::emit_contract_vectors_json();
+    for nv in contract::malformed_contract_vectors() {
+        assert!(
+            json.contains(&format!("\"expect\": \"{}\"", nv.expect.wire_tag())),
+            "artifact must carry the pinned wire tag for {:?}",
+            nv.expect
+        );
+    }
+}
