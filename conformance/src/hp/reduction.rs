@@ -103,7 +103,9 @@ fn bitlen_i64(k: i64) -> usize {
 
 /// Rescale an error of `count` ULPs measured at exponent `src_exp` into ULPs
 /// measured at exponent `dst_exp`, rounding **up** (a rigorous over-estimate).
-fn rescale_ulps(count: u128, src_exp: i32, dst_exp: i32) -> u128 {
+/// Public so the transcendental atoms (T5/T6) fold their sub-term errors onto the
+/// result ULP with the same rounding-up discipline the reduction uses.
+pub fn rescale_ulps(count: u128, src_exp: i32, dst_exp: i32) -> u128 {
     if count == 0 {
         return 0;
     }
