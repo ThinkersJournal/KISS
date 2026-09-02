@@ -115,6 +115,14 @@ jobs:
         run: python tools/kiss_comparators.py
       - name: README coverage-binding controls (#266)
         run: python tools/test_kiss_readme_coverage.py
+      # The NAMED tier is backed by ONE fact -- a fn of that name exists -- and nothing
+      # reads what it asserts, so a clause can name a test that passes while checking
+      # something else. These controls guard the signal that MEASURES that population.
+      # The signal never gates; the controls do, because the way it fails is silently:
+      # leave the clause's own *Test:* name in its term set and every clause "matches",
+      # reporting a clean result from a measure that ranges over nothing.
+      - name: NAMED-tier aboutness signal controls (#246)
+        run: python tools/test_kiss_aboutness.py
       # conformance/README.md's figures had aged apart from the ratcheted floor file in
       # the SAME directory -- 31 of 855 against harness 380 -- because one is maintained
       # by CI on every merge and the other by whoever last remembered. A number in a
