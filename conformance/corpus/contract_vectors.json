@@ -1,0 +1,80 @@
+{
+  "schema": "kiss-contract-vectors-v1.json",
+  "generated_from": "conformance/src/contract.rs::emit_contract_vectors_json (the reference codec)",
+  "spec_reference": "spec/contract.md Appendix C (informative) — the §2.5 strided add golden document under the §6.11 structured/text framing",
+  "scope_note": "DIFFABLE, not COVERED: a foreign reader byte-diffs the golden document and each single-fault decline; this does NOT cover the untested KISS-Contract clauses.",
+  "partial_note_16d": "Enforcement is PARTIAL and STATED here, not left to be discovered, on two axes. (i) Appendix C shows 3 of 7 blocks (header line + Identity + Semantics); these are rendered here, codec-generated. (ii) Blocks 4-7 have NO builder anywhere and Appendix C does not show them, yet Appendix C's own preamble promises 'the complete document (all seven blocks)' in the machine-readable golden-vector file. This artifact therefore only PARTIALLY fulfils that reference. Which way to close the gap (amend the preamble to match what exists, or author blocks 4-7) is a NORMATIVE decision, filed as its own issue.",
+  "golden_document": {
+    "blocks_shown": 3,
+    "blocks_promised_by_appendix": 7,
+    "byte_length": 364,
+    "bytes_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 33 32 30 20 63 72 63 33 32 3D 61 64 35 33 37 35 62 31 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A 6B 65 72 6E 65 6C 5F 6E 61 6D 65 20 3D 20 61 64 64 5F 66 33 32 5F 73 74 72 69 64 65 64 5F 73 6D 38 39 0A 72 65 76 69 73 69 6F 6E 5F 68 61 73 68 20 3D 20 34 3A 64 65 61 64 62 65 65 66 0A 61 63 63 65 70 74 5F 70 72 65 64 69 63 61 74 65 20 3D 20 62 69 6E 2F 66 33 32 2C 66 33 32 2C 66 33 32 2F 73 74 72 69 64 65 64 2F 63 75 64 61 3A 73 6D 38 39 0A 6F 70 5F 69 64 65 6E 74 69 74 79 20 3D 20 61 64 64 0A 74 61 72 67 65 74 5F 63 61 70 61 62 69 6C 69 74 79 20 3D 20 63 75 64 61 3A 73 6D 38 39 0A 5B 73 65 63 74 69 6F 6E 3A 32 3A 73 65 6D 61 6E 74 69 63 73 5D 0A 73 65 6D 61 6E 74 69 63 73 5F 6B 69 6E 64 20 3D 20 6D 61 63 68 69 6E 65 2D 63 68 65 63 6B 61 62 6C 65 2D 49 52 0A 6F 70 5F 64 61 67 20 3D 20 5B 4F 70 7B 61 64 64 3B 20 3B 20 5B 5D 7D 5D 0A"
+  },
+  "decline_vectors": [
+    {
+      "name": "magic replaced",
+      "doc_hex": "58 58 58 58 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "NoMagic"
+    },
+    {
+      "name": "input shorter than the magic",
+      "doc_hex": "4B 49 53",
+      "expect": "NoMagic"
+    },
+    {
+      "name": "header line never terminated (no LF anywhere)",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "CRLF header (LF-only is pinned)",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0D 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "header field dropped",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "len= is not decimal",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 61 62 63 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "crc32= is uppercase hex",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 44 45 41 44 42 45 45 46 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "unrecognized contract_kind",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 6B 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "UnknownKind { got: \"kiss-kontract\" }"
+    },
+    {
+      "name": "unsupported contract_version",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 32 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "UnknownVersion { got: \"2\" }"
+    },
+    {
+      "name": "declared length overstates the body",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 33 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "BadLength { declared: 73, actual: 72 }"
+    },
+    {
+      "name": "declared length is hostile (u64 near-max)",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 31 38 34 34 36 37 34 34 30 37 33 37 30 39 35 35 31 36 31 35 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 5B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "BadLength { declared: 18446744073709551615, actual: 72 }"
+    },
+    {
+      "name": "body byte flipped, declared length still correct",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 37 32 20 63 72 63 33 32 3D 66 34 63 64 33 33 34 36 0A 7B 73 65 63 74 69 6F 6E 3A 31 3A 69 64 65 6E 74 69 74 79 5D 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A 63 6F 6E 74 72 61 63 74 5F 76 65 72 73 69 6F 6E 20 3D 20 31 0A",
+      "expect": "BadChecksum { declared: 4107088710, computed: 4018800795 }"
+    },
+    {
+      "name": "headingless body (framing valid, no first section heading)",
+      "doc_hex": "4B 49 53 43 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 20 31 20 6C 65 6E 3D 33 30 20 63 72 63 33 32 3D 66 35 33 64 62 31 61 34 0A 63 6F 6E 74 72 61 63 74 5F 6B 69 6E 64 20 3D 20 6B 69 73 73 2D 63 6F 6E 74 72 61 63 74 0A",
+      "expect": "Headingless"
+    }
+  ]
+}
