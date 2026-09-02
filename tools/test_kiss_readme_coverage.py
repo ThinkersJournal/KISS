@@ -54,12 +54,12 @@ class ReadmeBindingTest(unittest.TestCase):
         """Control. Without it a lint hardcoded to report drift would pass every case below."""
         bad, claimed, _ = rc.check(readme_with("harness 380<!-- bound:harness -->\n"), ACTUAL)
         self.assertEqual(bad, [])
-        self.assertEqual(claimed, {"harness": 380})
+        self.assertEqual(claimed, [("harness", 380, 1)])
 
     def test_a_DRIFTED_figure_is_caught(self):
         """The whole point: the README says one thing and the tree reports another."""
         bad, _c, _a = rc.check(readme_with("harness 379<!-- bound:harness -->\n"), ACTUAL)
-        self.assertEqual(bad, [("harness", 379, 380)])
+        self.assertEqual(bad, [("harness", 379, 380, 1)])
 
     def test_the_marker_binds_the_VISIBLE_number(self):
         """The #350 review's finding, kept as a control.
@@ -71,10 +71,10 @@ class ReadmeBindingTest(unittest.TestCase):
         """
         bad, claimed, _ = rc.check(
             readme_with("we have 999<!-- bound:harness --> clauses\n"), ACTUAL)
-        self.assertEqual(bad, [("harness", 999, 380)],
+        self.assertEqual(bad, [("harness", 999, 380, 1)],
                          "editing the visible number did not redden — the marker is "
                          "carrying its own copy again")
-        self.assertEqual(claimed, {"harness": 999})
+        self.assertEqual(claimed, [("harness", 999, 1)])
 
     def test_NO_bound_figures_is_a_VACUITY_not_a_pass(self):
         """A lint over an empty set passes for the wrong reason.
@@ -94,7 +94,7 @@ class ReadmeBindingTest(unittest.TestCase):
         while leaving it visible in the prose — the file looks bound and is not.
         """
         bad, _c, _a = rc.check(readme_with("380<!-- bound:harnes -->\n"), ACTUAL)
-        self.assertEqual(bad, [("harnes", 380, None)])
+        self.assertEqual(bad, [("harnes", 380, None, 1)])
 
     def test_every_kiss_lint_answers_emit_coverage_CHEAPLY(self):
         """Closes the class, not the instance (#266).
@@ -141,6 +141,54 @@ class ReadmeBindingTest(unittest.TestCase):
         # vacuity above arriving through the real path instead of a fixture.
         n = int(out.split("figure(s) bound")[0].strip().split()[-1])
         self.assertGreaterEqual(n, 5, "the README lost its bindings: only %d figure(s)" % n)
+
+
+    def test_the_FIRST_of_two_copies_is_checked_too(self):
+        """#359, and the ORDER is the whole control.
+
+        `claimed` was a dict comprehension, so a repeated key kept the LAST occurrence.
+        That means a wrong SECOND copy was caught all along -- the silent case is a wrong
+        FIRST copy followed by a right one, which is what this fixture is. Under the old
+        code this returned CLEAN: a marker that looked bound and was never compared.
+
+        Getting this backwards would produce a control that passes before and after the
+        fix, which is the shape of a test that proves nothing.
+        """
+        bad, claimed, _ = rc.check(readme_with("""we say 999<!-- bound:harness --> up here
+and 380<!-- bound:harness --> down here
+"""), ACTUAL)
+        self.assertEqual(len(claimed), 2, "both occurrences must be collected: %r" % (claimed,))
+        self.assertEqual(bad, [("harness", 999, 380, 1)],
+                         "the FIRST copy was dropped before comparison — a repeated key is "
+                         "silently overwriting again: %r" % (bad,))
+
+    def test_two_copies_that_AGREE_are_legal(self):
+        """Paired control, and it is what stops the fix from becoming 'ban duplicates'.
+
+        A figure may honestly appear twice. Forbidding that would push authors back to
+        unbound prose, which is the disease this tool treats. Agreement is the requirement,
+        not uniqueness.
+        """
+        bad, claimed, _ = rc.check(readme_with("""380<!-- bound:harness --> backed
+restated: 380<!-- bound:harness --> backed
+"""), ACTUAL)
+        self.assertEqual(bad, [], "two AGREEING copies must be clean: %r" % (bad,))
+        self.assertEqual([(k, v) for k, v, _ln in claimed],
+                         [("harness", 380), ("harness", 380)])
+
+    def test_a_mismatch_names_the_LINE_so_the_stale_copy_can_be_found(self):
+        """With repeats legal, `harness is wrong` no longer identifies WHICH copy.
+
+        A message that names the key alone sends the reader to search the file for a figure
+        that may appear anywhere -- and the copy they find first may be the correct one.
+        """
+        bad, _c, _a = rc.check(readme_with("""intro line
+380<!-- bound:harness --> here is right
+padding
+999<!-- bound:harness --> here is wrong
+"""), ACTUAL)
+        self.assertEqual(bad, [("harness", 999, 380, 4)],
+                         "the mismatch must carry its line number: %r" % (bad,))
 
 
 if __name__ == "__main__":

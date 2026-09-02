@@ -113,8 +113,29 @@ def derived():
     return out
 
 
+def occurrences(text):
+    """[(key, value, line)] for EVERY marker — a list, never a dict (#359).
+
+    This was `{m.group("key"): int(m.group("val")) for m in ...}`, and a dict comprehension
+    SILENTLY DROPS every repeat: with the same key present twice, only the LAST occurrence
+    was ever compared. A duplicate marker LOOKED BOUND AND WAS NOT.
+
+    That is #350's review finding arriving through a second door. There the bound value and
+    the visible value were two objects because the value sat inside the comment; here they
+    diverge by MULTIPLICITY. Both fail in the same direction — the lint passes — which is
+    the direction nobody investigates.
+
+    A repeated key is NOT itself an error. A figure may honestly appear twice, and banning
+    that would push authors back to unbound prose, which is the disease this tool exists to
+    treat. Comparing EVERY occurrence against the tree makes agreement the requirement
+    instead of uniqueness.
+    """
+    return [(m.group("key"), int(m.group("val")), text.count("\n", 0, m.start()) + 1)
+            for m in RE_BOUND.finditer(text)]
+
+
 def check(readme=None, actual=None):
-    """[(key, readme_value, actual)] for every bound figure that disagrees.
+    """[(key, readme_value, actual, line)] for every bound OCCURRENCE that disagrees.
 
     `readme` / `actual` are injection points for the controls ONLY. The shipped path passes
     neither, so `main()` exercises the real README and the real recompute — a control that
@@ -122,15 +143,15 @@ def check(readme=None, actual=None):
     """
     with open(readme or README, encoding="utf-8") as fh:
         text = fh.read()
-    claimed = {m.group("key"): int(m.group("val")) for m in RE_BOUND.finditer(text)}
+    claimed = occurrences(text)
     if not claimed:
-        return None, {}, {}          # nothing bound: a vacuity, reported separately
+        return None, [], {}          # nothing bound: a vacuity, reported separately
     actual = dict(actual) if actual is not None else derived()
     fl = floor_values()
     if fl:
         actual["floor_harness"] = fl.get("harness")
         actual["floor_untested"] = fl.get("untested")
-    bad = [(k, v, actual.get(k)) for k, v in sorted(claimed.items()) if actual.get(k) != v]
+    bad = [(k, v, actual.get(k), ln) for k, v, ln in sorted(claimed) if actual.get(k) != v]
     return bad, claimed, actual
 
 
@@ -168,16 +189,24 @@ def main():
         print("-" * 68)
         print("  RESULT: VIOLATIONS FOUND")
         return 1
-    print(f"  {len(claimed):3d} figure(s) bound; recomputed from kiss_trace.py + COVERAGE_FLOOR.tsv")
-    for k in sorted(claimed):
-        mark = "ok " if claimed[k] == actual.get(k) else "DRIFT"
-        print(f"     [{mark}] {k:22s} README {claimed[k]:>5}   actual {actual.get(k)}")
+    seen = len({k for k, _v, _ln in claimed})
+    dup = len(claimed) - seen
+    print(f"  {len(claimed):3d} figure(s) bound ({seen} distinct); recomputed from "
+          f"kiss_trace.py + COVERAGE_FLOOR.tsv")
+    # EVERY occurrence is printed, with its line, not one row per key (#359). A per-key
+    # summary is what hid the defect: two markers collapsed into one row and the reader
+    # could not see that a second copy existed at all, let alone that it disagreed.
+    for k, v, ln in sorted(claimed):
+        mark = "ok " if v == actual.get(k) else "DRIFT"
+        print(f"     [{mark}] {k:22s} L{ln:<4d} README {v:>5}   actual {actual.get(k)}")
+    if dup:
+        print(f"  ({dup} repeated key(s) — legal, and every copy above was compared.)")
     if bad:
         print("-" * 68)
         print("  DRIFT: a README figure no longer matches what the tree reports. These")
         print("  numbers age silently — nothing else in the repository fails when they do:")
-        for k, was, now in bad:
-            print(f"          {k}: README says {was}, actual is {now}")
+        for k, was, now, ln in bad:
+            print(f"          line {ln}: {k} — README says {was}, actual is {now}")
         print("  Update the README (the number AND its `<!-- bound:… -->` marker together).")
     print("-" * 68)
     print("  RESULT: VIOLATIONS FOUND" if bad else "  RESULT: CLEAN")
