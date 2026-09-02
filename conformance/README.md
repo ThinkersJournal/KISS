@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**381<!-- bound:harness --> of 933<!-- bound:clauses --> normative clauses (40.8%) are
+**382<!-- bound:harness --> of 934<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -51,7 +51,7 @@ The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not
 population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 543<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 544<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. Closing that is cheap and is the first
 task below.
@@ -166,8 +166,8 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
-- **Phase 5 (next, cheap) — cite the clause in every test.** 95 of 128 test fns
-  cite no clause, so ~15% of the suite's real coverage is invisible to the matrix.
+- **Phase 5 (next, cheap) — cite the clause in every test.** The uncited test
+  fns counted above are real coverage that is invisible to the matrix.
   Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
   `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
   or name it in the comment above the test. `kiss_trace.py` reads both and will
