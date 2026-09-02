@@ -93,10 +93,27 @@ not agreed** — an omission is invisible, which is the same failure direction t
 rule worth writing down at all.
 
 Affectedness is usually **testable rather than judged**, so ask a question whose answer is a
-measurement and record it. For the narrow-float clauses that first used this process, the
-question was *"does your implementation compute bf16 or f8e5m2 min/max by promoting to f32
-and rounding back?"* — a yes means the clause changes that implementation's output, and a no
-closes the party out in one line.
+measurement and record it. Ask it **per clause, scoped to that clause's behaviour** — the two
+narrow-float clauses that first used this process needed two different questions, and the
+broader one would have been wrong for the narrower clause and vice versa:
+
+> **KISS-OPS-6.16-0009** — *"does your implementation compute bf16/f8e5m2 min/max by promoting
+> to f32 and rounding back?"*
+> **KISS-OPS-6.16-0010** — *"does your implementation perform narrow-float arithmetic by
+> promoting to f32, computing, and rounding back?"*
+
+A yes means the clause changes that implementation's output; a no closes the party out in one
+line. Note the second is strictly broader: an implementation that promotes for `add` but not
+for `min`/`max` answers **no** to the first and **yes** to the second. Reusing one clause's
+question for another **under-populates the affected set**, which is the failure this section
+exists to prevent.
+
+**When affectedness is NOT testable, ask rather than measure — and the trigger is precise.**
+A clause can forbid a *method* rather than an *output*: if **no input distinguishes a compliant
+implementation from a violating one**, no measurement can settle affectedness and the party
+must be asked directly. ⚠️ *"It looks untestable"* is **not** the trigger — that fires on a
+failure to find the discriminating input, not on the absence of one, and the input is often
+found by reading **why** the clause exists rather than what it forbids.
 
 **Record the asked-set alongside the agreed-set.** They are different, and only one of them
 is evidence. A party may also answer **not-a-party** on a measurement, which is a real answer
@@ -108,6 +125,12 @@ rewrites.
 on 2026-09-02 and are recorded verbatim on #370. They are transcribed rather than paraphrased
 because a rule about who may approve should not itself rest on someone's summary of what was
 said.*
+
+⚠️ *Limit, stated because this section's own thesis demands it: the quotations have been checked
+character-for-character against the record on #370, which is the coordinator's relay. That
+confirms fidelity **within the chain**. Nobody who has checked them was present when they were
+said, so fidelity **to the original utterance** is not established here. A grant that has been
+transcribed faithfully through one relay is still a grant known at one remove.*
 
 ## Maturity and the freeze gate (summary of umbrella §5)
 
