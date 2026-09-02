@@ -50,6 +50,22 @@ def tearDownModule():
 
 
 class ReadmeBindingTest(unittest.TestCase):
+    # ONE recompute for the whole class (#366 review). `derived()` shells out to
+    # kiss_trace.py at ~4.5 s a call, and the three figure-shape controls below each
+    # wanted it -- 13.5 s of the suite's runtime spent re-deriving an identical dict.
+    #
+    # Safe to share because it is READ-ONLY: no control mutates it, and none of them
+    # depends on the tree changing mid-suite. `_derived_once` is lazy rather than a
+    # setUpClass body so the controls that never touch it -- the fixture-driven ones,
+    # which are the majority -- still cost nothing.
+    _cache = {}
+
+    @property
+    def derived(self):
+        if "d" not in self._cache:
+            self._cache["d"] = rc.derived()
+        return self._cache["d"]
+
     def test_an_agreeing_figure_is_quiet(self):
         """Control. Without it a lint hardcoded to report drift would pass every case below."""
         bad, claimed, _ = rc.check(readme_with("harness 380<!-- bound:harness -->\n"), ACTUAL)
@@ -245,7 +261,7 @@ padding
         be "fixed" by editing the README to match nothing. This asserts the ORIGINAL seven
         survive the switch, so the flag cannot buy new keys at the cost of old ones.
         """
-        d = rc.derived()
+        d = self.derived
         for k in ("clauses", "harness", "named", "test_fns", "uncited_tests",
                   "untested_rows", "zero_coverage_subs"):
             self.assertIn(k, d, "the --report switch dropped %r" % k)
@@ -258,7 +274,7 @@ padding
         lap took under two hours. Deriving it from two figures that are themselves bound
         means it cannot drift away from them: there is no third source to disagree with.
         """
-        d = rc.derived()
+        d = self.derived
         self.assertEqual(d["unbacked_total"], d["clauses"] - d["harness"])
 
     def test_every_sub_standard_row_yields_BOTH_halves(self):
@@ -269,7 +285,7 @@ padding
         figure half-checked and still wrong, which is worse than unbound: it would carry a
         marker saying CI defends it.
         """
-        d = rc.derived()
+        d = self.derived
         subs = sorted(k[:-7] for k in d if k.endswith("_backed"))
         self.assertGreaterEqual(len(subs), 9, "sub-standard rows went missing: %r" % subs)
         for sub in subs:
