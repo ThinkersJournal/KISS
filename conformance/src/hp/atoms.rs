@@ -12,7 +12,7 @@
 //! rounds UP, so every bound here is a rigorous over-estimate.
 
 use super::reduction::{self, rescale_ulps};
-use super::{Atom, BigFloat, Evaluated};
+use super::{consts, Atom, BigFloat, Evaluated};
 
 /// Precision-floor guard (bits below the working ULP a term must fall before the
 /// series is truncated). The tail past that term is `< term·|r|/(1−|r|) < term`.
@@ -77,6 +77,90 @@ impl Atom for Exp {
         // together, so the ULP-COUNT `err_ulps` is unchanged.
         let val = s.ldexp(red.k as i32);
         let err_ulps = op_err.saturating_add(trunc_err).saturating_add(red_err);
+        Evaluated { val, err_ulps }
+    }
+}
+
+/// `log(x)` (natural log) for a positive finite `x`. Domain routing (x ≤ 0 → NaN,
+/// x = +0 → −Inf, +Inf → +Inf) is the semantics front door's job (T5).
+#[derive(Clone, Copy, Debug)]
+pub struct Log {
+    pub x: f64,
+}
+
+impl Atom for Log {
+    fn eval<const N: usize>(&self) -> Evaluated<N> {
+        // x = 2^e · m, m ∈ [√2/2, √2) EXACT ⇒ log(x) = e·ln2 + log(m).
+        let red = reduction::reduce_log::<N>(self.x);
+        let one = BigFloat::<N>::one();
+
+        // log(m) = 2·atanh(t), t = (m−1)/(m+1), |t| ≤ 0.172. m is EXACT, so t's
+        // only errors are the sub/add rounding + the div. Bound the propagation
+        // rigorously: |dt| ≤ |dnum|/|den| + |num|·|dden|/|den|² with |den| ≥ 1.7,
+        // |num| ≤ 0.5 ⇒ each ≤ its own rescaled ULP-count (round-up).
+        let (num, e_num) = red.m.sub(&one);
+        let (den, e_den) = red.m.add(&one);
+        let (t, e_t) = num.div(&den);
+        let err_t = e_t
+            .saturating_add(rescale_ulps(e_num, num.exp2(), t.exp2()))
+            .saturating_add(rescale_ulps(e_den, den.exp2(), t.exp2()));
+        let (t2, _e_t2) = t.mul(&t); // t²; its rounding is folded via the series ops
+
+        // Σ_{j≥0} t^(2j+1)/(2j+1) = atanh(t). Truncate when a term's MSB falls
+        // GUARD bits below the sum's LSB (sub-precision; the tail is smaller still).
+        let mut sum = t.clone();
+        let mut pow = t.clone(); // t^(2j+1)
+        let mut op_err: u128 = 0;
+        let mut acc_exp = sum.exp2();
+        let mut j: i64 = 1;
+        loop {
+            let (p_new, e_pm) = pow.mul(&t2); // t^(2j+1)
+            pow = p_new;
+            let (term, e_td) = pow.div_small((2 * j + 1) as u64);
+            let (sum_new, e_sa) = sum.add(&term);
+            if sum_new.exp2() != acc_exp {
+                op_err = rescale_ulps(op_err, acc_exp, sum_new.exp2());
+                acc_exp = sum_new.exp2();
+            }
+            op_err = op_err
+                .saturating_add(rescale_ulps(e_pm, pow.exp2(), acc_exp))
+                .saturating_add(rescale_ulps(e_td, term.exp2(), acc_exp))
+                .saturating_add(e_sa);
+            sum = sum_new;
+            if term.is_zero() || term.ebin() < sum.exp2() - SERIES_GUARD {
+                break;
+            }
+            j += 1;
+        }
+        // atanh derivative 1/(1−t²) ≤ 1.04 propagates err_t onto the sum; factor 2
+        // covers it. Plus the truncation tail (1 sub-precision ULP).
+        let sum_err = op_err
+            .saturating_add(rescale_ulps(2u128.saturating_mul(err_t), t.exp2(), sum.exp2()))
+            .saturating_add(1);
+
+        // log(m) = 2·sum: ldexp is EXACT (ULP-count preserved).
+        let logm = sum.ldexp(1);
+
+        if red.e == 0 {
+            // x ∈ [√2/2, √2): no octave term, val = log(m) directly.
+            return Evaluated { val: logm, err_ulps: sum_err };
+        }
+
+        // val = e·ln2 + log(m).
+        let (l2, err_l2) = consts::ln2::<N>();
+        let (kl2, e_kl2) = l2.mul_small_int(red.e as i64);
+        let (val, e_final) = kl2.add(&logm);
+        // kl2's error: the mul rounding (e_kl2 @ kl2.exp2()) + the ln2 truncation
+        // (|e|·err_l2 @ l2.exp2()), both rescaled to val.exp2(); plus log(m)'s
+        // error and the final add, all onto val.exp2().
+        let kl2_err = rescale_ulps(e_kl2, kl2.exp2(), val.exp2()).saturating_add(rescale_ulps(
+            (red.e.unsigned_abs() as u128).saturating_mul(err_l2),
+            l2.exp2(),
+            val.exp2(),
+        ));
+        let err_ulps = kl2_err
+            .saturating_add(rescale_ulps(sum_err, logm.exp2(), val.exp2()))
+            .saturating_add(e_final);
         Evaluated { val, err_ulps }
     }
 }
