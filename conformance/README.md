@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**383<!-- bound:harness --> of 935<!-- bound:clauses --> normative clauses are
+**383<!-- bound:harness --> of 936<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
