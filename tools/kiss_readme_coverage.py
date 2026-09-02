@@ -71,7 +71,12 @@ def floor_values(path=FLOOR):
 
 def derived():
     """Figures recomputed from the tool that CI already runs, never from prose."""
-    r = subprocess.run([sys.executable, os.path.join(HERE, "kiss_trace.py")],
+    # `--report` because the PER-SUB-STANDARD rows (#360) print only under it. Measured
+    # on this tree: 4568 ms with, 4674 ms without -- the flag adds no cost, it adds
+    # sections. `test_report_mode_still_yields_every_original_key` guards the switch,
+    # so a flag that changed the lines the regexes below read cannot silently drop a
+    # figure and leave it reported as `actual None`.
+    r = subprocess.run([sys.executable, os.path.join(HERE, "kiss_trace.py"), "--report"],
                        capture_output=True, timeout=600)
     text = r.stdout.decode("utf-8", "replace")
     err = r.stderr.decode("utf-8", "replace")
@@ -108,6 +113,21 @@ def derived():
         out["untested_rows"] = sum(1 for p in led.values() if p["category"] == "untested")
     except Exception:
         pass
+    # PER-SUB-STANDARD coverage (#360). These rows are the only statement of their
+    # measurement in the README, so unlike `(40.8%)` they cannot be deleted as derivable --
+    # they have to be bound. Two keys each, `<sub>_backed` / `<sub>_clauses`, so a figure
+    # written as `31/130` binds both halves: `109/196` was live in this file for weeks, and
+    # it was a MASH-UP -- 109 is CLASSIFY's clause total and 196 is OPS's. Binding only the
+    # numerator would have left that assembled figure half-checked and still wrong.
+    for m in re.finditer(r"^\s+([A-Z]+)\s+(\d+)/(\d+)\s+[\d.]+%", text, re.M):
+        sub = m.group(1).lower()
+        out[sub + "_backed"] = int(m.group(2))
+        out[sub + "_clauses"] = int(m.group(3))
+    # the burn-down size, DERIVED rather than parsed: it is `clauses - harness` by
+    # definition, and stating it as arithmetic over two already-bound figures means it
+    # cannot disagree with them. It aged twice in one night unbound (824 -> 552 -> 553).
+    if "clauses" in out and "harness" in out:
+        out["unbacked_total"] = out["clauses"] - out["harness"]
     # sub-standards with ZERO traced clauses — the `8 of 9 at 0.0%` claim
     zero = len([1 for ln in text.splitlines()
                 if re.search(r"\[FAIL\]\s+[A-Z]+\s+0/\d+", ln)])

@@ -47,7 +47,7 @@ heading asks how much of the spec is executable, which is the BACKED one.** A nu
 sentence describing two different measurements, agreeing with each other only because
 neither was checked.
 
-The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
+The remaining 552<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
 population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
@@ -74,8 +74,8 @@ python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
   the freeze. **Today: 0 of 9 sub-standards pass.**
 - **umbrella §8.1** — an implementation conforms "if and only if it passes the
   unmodified KISS-Conform suite for that sub-standard". Where there is no test there
-  is no suite, so a conformance claim to KISS-Synth — 31 of its 130 clauses
-  backed — rests on a suite that does not exercise the other 99.
+  is no suite, so a conformance claim to KISS-Synth — 31<!-- bound:synth_backed --> of its 130<!-- bound:synth_clauses -->
+  clauses backed — rests on a suite that does not exercise the other 99.
 
 Everywhere else the gap is a recorded, ratcheted debt: `UNBACKED.tsv` may only
 shrink, and `--strict` reports the live count on every PR.
@@ -174,11 +174,11 @@ default build and CI stay GPU-free.
   or name it in the comment above the test. `kiss_trace.py` reads both and will
   strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
   it is the cheapest coverage in the repo.
-- **Phase 6 — burn down `UNBACKED.tsv`.** 552 clauses, no executable test. Order
+- **Phase 6 — burn down `UNBACKED.tsv`.** 552<!-- bound:unbacked_total --> clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 31/130 and the highest Classify at 64/109; Announce is 36/76. Every one has a
+  Synth at 31<!-- bound:synth_backed -->/130<!-- bound:synth_clauses --> and the highest Classify at 64<!-- bound:classify_backed -->/109<!-- bound:classify_clauses -->; Announce is 36<!-- bound:announce_backed -->/76<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync

@@ -50,6 +50,22 @@ def tearDownModule():
 
 
 class ReadmeBindingTest(unittest.TestCase):
+    # ONE recompute for the whole class (#366 review). `derived()` shells out to
+    # kiss_trace.py at ~4.5 s a call, and the three figure-shape controls below each
+    # wanted it -- 13.5 s of the suite's runtime spent re-deriving an identical dict.
+    #
+    # Safe to share because it is READ-ONLY: no control mutates it, and none of them
+    # depends on the tree changing mid-suite. `_derived_once` is lazy rather than a
+    # setUpClass body so the controls that never touch it -- the fixture-driven ones,
+    # which are the majority -- still cost nothing.
+    _cache = {}
+
+    @property
+    def derived(self):
+        if "d" not in self._cache:
+            self._cache["d"] = rc.derived()
+        return self._cache["d"]
+
     def test_an_agreeing_figure_is_quiet(self):
         """Control. Without it a lint hardcoded to report drift would pass every case below."""
         bad, claimed, _ = rc.check(readme_with("harness 380<!-- bound:harness -->\n"), ACTUAL)
@@ -234,6 +250,50 @@ padding
         occ = rc.occurrences(chr(10).join(lines))
         self.assertEqual(occ, [("harness", 7, 3)])
         self.assertEqual(rc.occurrences("1<!-- bound:harness -->"), [("harness", 1, 1)])
+
+
+    def test_report_mode_still_yields_every_ORIGINAL_key(self):
+        """#360 switched `derived()` to `kiss_trace.py --report`, because the
+        per-sub-standard rows print only under that flag.
+
+        A flag that changed the lines the other regexes read would drop a figure silently:
+        `check()` reports a missing key as `actual None`, which renders as DRIFT and would
+        be "fixed" by editing the README to match nothing. This asserts the ORIGINAL seven
+        survive the switch, so the flag cannot buy new keys at the cost of old ones.
+        """
+        d = self.derived
+        for k in ("clauses", "harness", "named", "test_fns", "uncited_tests",
+                  "untested_rows", "zero_coverage_subs"):
+            self.assertIn(k, d, "the --report switch dropped %r" % k)
+            self.assertIsInstance(d[k], int)
+
+    def test_unbacked_total_is_the_bound_pair_and_cannot_disagree_with_it(self):
+        """`clauses - harness`, computed rather than parsed.
+
+        The figure aged TWICE in one night as prose -- 824 -> 552 -> 553 -- and the second
+        lap took under two hours. Deriving it from two figures that are themselves bound
+        means it cannot drift away from them: there is no third source to disagree with.
+        """
+        d = self.derived
+        self.assertEqual(d["unbacked_total"], d["clauses"] - d["harness"])
+
+    def test_every_sub_standard_row_yields_BOTH_halves(self):
+        """Two keys per row, not one.
+
+        `109/196` was live in this file for weeks and was a MASH-UP -- 109 is CLASSIFY's
+        clause total, 196 is OPS's. Binding only the numerator would have left an assembled
+        figure half-checked and still wrong, which is worse than unbound: it would carry a
+        marker saying CI defends it.
+        """
+        d = self.derived
+        subs = sorted(k[:-7] for k in d if k.endswith("_backed"))
+        self.assertGreaterEqual(len(subs), 9, "sub-standard rows went missing: %r" % subs)
+        for sub in subs:
+            self.assertIn(sub + "_clauses", d, "%s has a numerator and no denominator" % sub)
+            self.assertLessEqual(d[sub + "_backed"], d[sub + "_clauses"],
+                                 "%s: backed exceeds total — the halves are mismatched" % sub)
+        self.assertEqual(sum(d[s + "_clauses"] for s in subs), d["clauses"],
+                         "the per-sub clause totals do not sum to the whole")
 
 
 if __name__ == "__main__":
