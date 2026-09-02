@@ -54,6 +54,85 @@ jobs:
           name: runlist-windows
           path: runlist-windows.txt
 
+  # MSRV (#369). `rust-version` was DECLARED and never MEASURED -- nothing had ever built
+  # at the declared floor, so the number was unverified in BOTH directions. This is the
+  # first measurement, and it can come back wrong either way; rows 2 and 3 of the table in
+  # #369 are FINDINGS, not leg bugs. Do NOT bump the floor to whatever passes -- that
+  # ratifies an unmeasured number instead of measuring it.
+  #
+  # `test --no-run`, not `build`, and the reason is NOT the src/test line ratio: the
+  # question is whether `rust-version` promises what a CONSUMER needs to compile the crate
+  # as a dependency, or what someone needs to RUN the harness. Measured for KISS --
+  # `publish = false`, zero dependents machine-wide, and conformance/README.md documents
+  # the crate only as `cargo test` -- nothing consumes it as a library, so the tests are
+  # inside the promise. vulkane faces the same question and `build` is correct there.
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The declared rust-version is SUFFICIENT and NECESSARY (#369)
+        working-directory: conformance
+        shell: bash
+        run: |
+          # THE FLOOR IS READ FROM Cargo.toml, NEVER HARDCODED HERE. A literal would be a
+          # second copy of the declaration, free to drift from the thing it is meant to
+          # test -- and the drift would be silent, because a stale copy still builds.
+          #
+          # NOTE FOR A LATER SWEEP, and this is deliberate: grepping the workflows for the
+          # version number will NOT find this job. CONTRIBUTING.md records a portfolio
+          # sweep that grepped for `toolchain:`, got zero, and reported "no MSRV job"
+          # when two existed -- both reading the version dynamically. The search term was
+          # an artifact of NON-compliance. If you are looking for MSRV coverage, grep for
+          # `rust-version` or `cargo +`, which a compliant job cannot avoid.
+          FLOOR=$(sed -n 's/^rust-version *= *"\([0-9.]*\)".*/\1/p' Cargo.toml)
+          if [ -z "$FLOOR" ]; then
+            echo "::error title=MSRV leg error::no rust-version in conformance/Cargo.toml"
+            exit 3
+          fi
+          BELOW="${FLOOR%%.*}.$(( ${FLOOR#*.} - 1 ))"
+          echo "declared floor $FLOOR ; probing $BELOW below it"
+          rustup toolchain install "$FLOOR" --profile minimal >/dev/null
+          rustup toolchain install "$BELOW" --profile minimal >/dev/null
+
+          # THE TOOLCHAINS IDENTIFY THEMSELVES BEFORE ANY BUILD RESULT IS EVIDENCE.
+          # Otherwise "the floor is real" and "rustup could not install that toolchain"
+          # produce the same red -- and the leg that proves NECESSITY is the one most
+          # easily satisfied by nothing happening.
+          for T in "$FLOOR" "$BELOW"; do
+            if ! cargo "+$T" --version; then
+              echo "::error title=MSRV leg error::toolchain $T did not identify itself; this is NOT a finding"
+              exit 3
+            fi
+          done
+
+          # SUFFICIENCY: the crate must build at the declared floor.
+          if ! cargo "+$FLOOR" test --no-run --features cuda; then
+            echo "::error title=MSRV: floor TOO LOW::the crate does NOT build at the declared $FLOOR. This is a FINDING, not a broken check. Find the real floor and fix Cargo.toml -- do not bump to whatever passes."
+            exit 1
+          fi
+
+          # NECESSITY: one minor below must FAIL, and fail for the RIGHT REASON.
+          # --ignore-rust-version is MANDATORY or the check is CIRCULAR: without it cargo
+          # refuses the build because of the declared number itself, so the leg goes red
+          # for every crate on every repo whether or not the floor is real.
+          set +e
+          OUT=$(cargo "+$BELOW" test --no-run --features cuda --ignore-rust-version 2>&1)
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT" | tail -40
+          if [ "$RC" -eq 0 ]; then
+            echo "::error title=MSRV: floor TOO HIGH::the crate ALSO builds at $BELOW, so $FLOOR is a false promise excluding consumers who could have compiled. This is a FINDING, not a broken check."
+            exit 1
+          fi
+          # ONLY an E0658 feature gate counts. A leg accepting ANY non-zero exit reads
+          # "toolchain not installed", "failed to load manifest" and the circularity itself
+          # as "the floor is necessary" -- three ways to be green-looking-red.
+          if ! printf '%s\n' "$OUT" | grep -q 'error\[E0658\]'; then
+            echo "::error title=MSRV leg error::$BELOW failed, but NOT with error[E0658]. That is a leg error (toolchain, manifest or the circularity), NOT evidence the floor is necessary."
+            exit 3
+          fi
+          echo "MSRV: $FLOOR builds, $BELOW fails on a real feature gate -- the declaration is CORRECT."
+
   # Joins both legs' build artifacts against the clause matrix: every test that
   # backs a clause MUST be compiled by at least one leg. An audit that is not a
   # gate decays back to the state it found — this is what makes "does anything
