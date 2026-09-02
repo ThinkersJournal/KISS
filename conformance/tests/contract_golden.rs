@@ -7,79 +7,22 @@
 use kiss_conformance::assert_golden;
 use kiss_conformance::contract::*;
 
-// ---------------------------------------------------------------------------
-// Golden bytes transcribed from Contract Appendix C (LF line terminators).
-// ---------------------------------------------------------------------------
-
-/// Appendix C Identity block (§6.11-0004/-0005; heading id 1). Field lines in
-/// §6.3-0001 field-schema order; `revision_hash` in the `<n>:<hex>` opaque-blob
-/// form (§6.11-0001).
-const IDENTITY_GOLDEN: &str = "\
-[section:1:identity]
-contract_kind = kiss-contract
-contract_version = 1
-kernel_name = add_f32_strided_sm89
-revision_hash = 4:deadbeef
-accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
-op_identity = add
-target_capability = cuda:sm89
-";
-
-/// Appendix C Semantics block (§6.11-0004/-0007; heading id 2): a one-node
-/// `machine-checkable-IR` DAG whose `op_dag` is `[Op{add; ; []}]`.
-const SEMANTICS_GOLDEN: &str = "\
-[section:2:semantics]
-semantics_kind = machine-checkable-IR
-op_dag = [Op{add; ; []}]
-";
+// #349: the transcribed Appendix C goldens and their block builders are the LIBRARY's now, imported
+// here under their familiar local names. This file, contract_framing.rs, and the emitted
+// contract_vectors.json therefore share ONE builder and ONE transcription — a hand-transcribed copy
+// here would be exactly the duplication #349 exists to end (§6.5-0002: the golden's authority belongs
+// to the codec, not a test).
+use kiss_conformance::contract::{
+    appendix_c_golden_document as good_document, appendix_c_identity_block as identity_block,
+    appendix_c_semantics_block as semantics_block, APPENDIX_C_IDENTITY_GOLDEN as IDENTITY_GOLDEN,
+    APPENDIX_C_SEMANTICS_GOLDEN as SEMANTICS_GOLDEN,
+};
 
 /// Hex-encode a byte slice as the space-separated uppercase hex `assert_golden`
 /// expects, so a transcribed ASCII golden can be passed through the harness's
 /// clause-citing exact-byte comparator.
 fn to_golden_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
-}
-
-/// The Appendix C Identity block, emitted from field data in §6.3-0001 order.
-fn identity_block() -> Vec<u8> {
-    render_block(
-        1,
-        "identity",
-        &[
-            ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
-            ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
-            ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
-            ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
-            ("op_identity", Value::Str("add".into())),
-            ("target_capability", Value::Str("cuda:sm89".into())),
-        ],
-    )
-}
-
-/// The Appendix C Semantics block, with the `op_dag` rendered by the canonical
-/// serializer over the one-node `add` DAG.
-fn semantics_block() -> Vec<u8> {
-    render_block(
-        2,
-        "semantics",
-        &[
-            ("semantics_kind", Value::Str("machine-checkable-IR".into())),
-            ("op_dag", Value::Str(serialize_op_dag(&OpTree::leaf("add")))),
-        ],
-    )
-}
-
-/// A well-formed two-block document, for corruption in the negative vectors.
-fn good_document() -> Vec<u8> {
-    let mut body = identity_block();
-    body.extend_from_slice(&semantics_block());
-    Document {
-        contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
-        body,
-    }
-    .encode()
 }
 
 /// Enforces KISS-CONTRACT-6.11-0001 — the four value encodings and the exact

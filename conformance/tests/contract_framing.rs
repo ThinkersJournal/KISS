@@ -30,56 +30,9 @@ use kiss_conformance::contract::*;
 // Transcribed golden + block builders (Contract Appendix C; LF terminators).
 // ---------------------------------------------------------------------------
 
-/// Appendix C Identity block, transcribed verbatim (§6.11-0004/-0005; heading id
-/// 1). Field lines in §6.3-0001 field-schema order; `revision_hash` in the
-/// `<n>:<hex>` opaque-blob form (§6.11-0001).
-const IDENTITY_GOLDEN: &str = "\
-[section:1:identity]
-contract_kind = kiss-contract
-contract_version = 1
-kernel_name = add_f32_strided_sm89
-revision_hash = 4:deadbeef
-accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
-op_identity = add
-target_capability = cuda:sm89
-";
-
-/// The Appendix C Identity block, emitted from field data in §6.3-0001 order via
-/// the codec's `render_block`.
-fn identity_block() -> Vec<u8> {
-    render_block(
-        1,
-        "identity",
-        &[
-            ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
-            ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
-            ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
-            ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
-            ("op_identity", Value::Str("add".into())),
-            ("target_capability", Value::Str("cuda:sm89".into())),
-        ],
-    )
-}
-
-/// The Appendix C Semantics block; `op_dag` rendered by the canonical serializer.
-fn semantics_block() -> Vec<u8> {
-    render_block(
-        2,
-        "semantics",
-        &[
-            ("semantics_kind", Value::Str("machine-checkable-IR".into())),
-            ("op_dag", Value::Str(serialize_op_dag(&OpTree::leaf("add")))),
-        ],
-    )
-}
-
-/// The two-block Appendix C document body (Identity + Semantics).
-fn appendix_c_body() -> Vec<u8> {
-    let mut body = identity_block();
-    body.extend_from_slice(&semantics_block());
-    body
-}
+// Appendix C golden bytes + block builders were PROMOTED to the library
+// (conformance/src/contract.rs, #349) so the emitted contract_vectors.json and this
+// test share ONE builder. They arrive via the `contract::*` glob import above.
 
 /// A well-formed document over the given kind/version and the Appendix C body,
 /// with `len`/`crc32` made self-consistent by `Document::encode`.
@@ -461,7 +414,7 @@ fn test_contract_self_delimiting_document() {
 fn test_contract_identity_field_schema() {
     let contract = read_spec("contract.md");
     let spec_fields = field_list_ordered(clause_block(&contract, "KISS-CONTRACT-6.3-0001"));
-    let golden_keys = field_keys(IDENTITY_GOLDEN);
+    let golden_keys = field_keys(APPENDIX_C_IDENTITY_GOLDEN);
 
     assert_eq!(spec_fields.len(), 7, "KISS-CONTRACT-6.3-0001: §6.3-0001 must list exactly 7 Identity fields, got {spec_fields:?}");
     assert_eq!(golden_keys.len(), 7, "KISS-CONTRACT-6.3-0001: the Appendix C Identity golden must carry exactly 7 field lines, got {golden_keys:?}");
