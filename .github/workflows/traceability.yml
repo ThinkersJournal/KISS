@@ -100,7 +100,7 @@ jobs:
           case $rc in
             0) echo "ratchet: exit 0 — CLEAN (at the floor)";;
             1) echo "::error title=Ratchet: FLOOR VIOLATION::exit 1 -- the floor moved. This is a real failure.";;
-            2) echo "::error title=Ratchet: DECLINED (not a violation)::exit 2 -- INCONCLUSIVE: the ratchet could not characterize the lint dimension. NOT a floor violation. THE RATCHET PRINTS THE SPECIFIC CAUSE ABOVE -- read it. This line deliberately does not guess: it cannot observe which cause occurred, and the one it used to name as likeliest was wrong in the incident that found this (#338). Run kiss_trace.py --why-red for the reason set. See #251.";;
+            2) echo "::error title=Ratchet: DECLINED (not a violation)::exit 2 -- INCONCLUSIVE: the ratchet could not characterize the lint dimension. NOT a floor violation. THE RATCHET PRINTS THE SPECIFIC CAUSE ABOVE -- read it. This line deliberately does not guess: it cannot observe which cause occurred, and the one it used to name as likeliest was wrong in the incident that found this (#338). Run: python tools/kiss_trace.py --why-red -- for the reason set. See #251.";;
             *) echo "::error title=Ratchet: unexpected exit::exit $rc -- not one of the three documented states.";;
           esac
           exit $rc

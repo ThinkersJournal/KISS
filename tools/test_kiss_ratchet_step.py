@@ -28,6 +28,7 @@ is the same defect this file exists to catch, one level up.
 
 Run: python tools/test_kiss_ratchet_step.py
 """
+import os
 import pathlib
 import re
 import subprocess
@@ -58,12 +59,21 @@ def run_block(text=None, step=STEP):
     if j is None or not lines[j].strip().endswith("|"):
         raise AssertionError("step %r has no block `run: |`" % step)
     indent = len(lines[j]) - len(lines[j].lstrip())
-    out = []
+    body = []
     for l in lines[j + 1:]:
         if l.strip() and (len(l) - len(l.lstrip())) <= indent:
             break
-        out.append(l[indent + 2:] if len(l) > indent + 2 else "")
-    return "\n".join(out)
+        body.append(l)
+    # The block's own indent, MEASURED from its first non-empty line rather than assumed to
+    # be `indent + 2` (#358 review). A hardcoded step mis-dedents under any other valid YAML
+    # indentation -- and it does so SILENTLY, into a script that still parses, because
+    # leading whitespace is insignificant to bash. The controls would then all pass against
+    # something the runner never executes.
+    first = next((l for l in body if l.strip()), None)
+    if first is None:
+        raise AssertionError("step %r has an EMPTY `run:` block" % step)
+    off = len(first) - len(first.lstrip())
+    return "\n".join(l[off:] if len(l) > off else "" for l in body)
 
 
 def execute(base_ref="main", git_rc=0, py_rc=0):
@@ -75,12 +85,26 @@ def execute(base_ref="main", git_rc=0, py_rc=0):
         log.write_text("", encoding="utf-8")
         sh = d / "step.sh"
         sh.write_text('LOG="%s"\n' % log.as_posix() + PRELUDE + script + "\n", encoding="utf-8")
+        # The HOST's environment, with only the stub knobs added (#358 review). The first
+        # version pinned `PATH=/usr/bin:/bin`, which bought nothing -- `git` and `python` are
+        # shadowed by shell FUNCTIONS, not by PATH order -- while adding a way to fail on any
+        # host whose bash or coreutils live elsewhere.
+        #
+        # `bash` is deliberately NOT hardcoded to `/bin/bash`: that path does not exist as
+        # written on Windows, where this suite is also developed and run.
+        env = dict(os.environ)
+        env.update({"STUB_GIT_RC": str(git_rc), "STUB_PY_RC": str(py_rc),
+                    "LOG": log.as_posix()})
         # The runner's own invocation, reproduced: `-e` is what makes `|| rc=$?` load-bearing.
+        # `cwd` is pinned to the repo root. It is not load-bearing TODAY -- verified by
+        # running this suite from `tools/` and from `C:/`, both green, because the stubs are
+        # functions so the block's `python tools/kiss_trace.py` is only ever recorded as text
+        # and never resolved. It becomes load-bearing the moment a stub becomes a real
+        # process, which is the cheap kind of trap to remove before it is set.
         r = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail",
                             sh.as_posix()],
                            capture_output=True, text=True, timeout=120,
-                           env={"PATH": "/usr/bin:/bin", "STUB_GIT_RC": str(git_rc),
-                                "STUB_PY_RC": str(py_rc), "LOG": log.as_posix()})
+                           cwd=str(WF.parent.parent), env=env)
         calls = [l for l in log.read_text(encoding="utf-8").splitlines() if l.strip()]
     return r.returncode, r.stdout + r.stderr, calls
 
