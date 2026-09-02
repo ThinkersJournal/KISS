@@ -191,5 +191,50 @@ padding
                          "the mismatch must carry its line number: %r" % (bad,))
 
 
+    def test_repeated_KEYS_are_counted_not_repeated_OCCURRENCES(self):
+        """#361 review, and it is this file's own subject one level in.
+
+        `len(claimed) - len(set(keys))` is the OCCURRENCE SURPLUS. One key appearing three
+        times gives 2, while exactly ONE key repeats -- and the summary line says "repeated
+        key(s)". The arithmetic was right about a construct nobody had named, and the prose
+        beside it named a different one.
+
+        Three-of-one-key is the discriminating case: with two copies the two answers
+        COINCIDE at 1, so a fixture built from a single duplicated key cannot tell a correct
+        implementation from the wrong one.
+        """
+        three = [("harness", 1, 1), ("harness", 2, 2), ("harness", 3, 3)]
+        self.assertEqual(rc.repeated_keys(three), 1,
+                         "three copies of ONE key is ONE repeated key, not two")
+        two_keys = [("harness", 1, 1), ("harness", 1, 2), ("clauses", 9, 3), ("clauses", 9, 4)]
+        self.assertEqual(rc.repeated_keys(two_keys), 2)
+        self.assertEqual(rc.repeated_keys([("harness", 1, 1)]), 0)
+
+    def test_occurrences_of_one_key_are_ordered_by_LINE_not_by_VALUE(self):
+        """#361 review. `sorted(claimed)` orders on the raw tuple, whose SECOND element is
+        the value -- so two copies of one key sort by their numbers rather than by where
+        they appear, and a reader sent to "the first mismatch" finds the wrong copy.
+
+        The fixture puts the LARGER value on the EARLIER line, so value-order and
+        document-order disagree; sorting either way gives a different answer.
+        """
+        bad, _c, _a = rc.check(readme_with("""999<!-- bound:harness --> on line one
+padding
+111<!-- bound:harness --> on line three
+"""), ACTUAL)
+        self.assertEqual([(v, ln) for _k, v, _a, ln in bad], [(999, 1), (111, 3)],
+                         "occurrences must come out in DOCUMENT order: %r" % (bad,))
+
+    def test_line_numbers_survive_the_bisect_rewrite(self):
+        """The newline offsets are precomputed and bisected rather than recounted (#361
+        review). An off-by-one there would send every reader to the wrong line while every
+        other control still passed, because nothing else asserts a line number > 1.
+        """
+        lines = ["alpha", "beta", "7<!-- bound:harness --> here", "omega"]
+        occ = rc.occurrences(chr(10).join(lines))
+        self.assertEqual(occ, [("harness", 7, 3)])
+        self.assertEqual(rc.occurrences("1<!-- bound:harness -->"), [("harness", 1, 1)])
+
+
 if __name__ == "__main__":
     unittest.main()

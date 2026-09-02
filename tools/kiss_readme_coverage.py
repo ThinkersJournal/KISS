@@ -31,6 +31,8 @@ binds the STATIC count of discovered test fns and the README says which is which
 
 Run: python tools/kiss_readme_coverage.py
 """
+import bisect
+from collections import Counter
 import os
 import re
 import subprocess
@@ -130,8 +132,28 @@ def occurrences(text):
     treat. Comparing EVERY occurrence against the tree makes agreement the requirement
     instead of uniqueness.
     """
-    return [(m.group("key"), int(m.group("val")), text.count("\n", 0, m.start()) + 1)
+    # Newline offsets precomputed once and bisected, rather than re-counting from the start
+    # of the file for every match (#361 review). Measured on the live README -- 12 KB, 7
+    # markers -- the difference is 0.28 ms/call and irrelevant; at 200x the file and 200x
+    # the markers it is 907 ms vs 54 ms. The shape is quadratic, the cost today is not, and
+    # bisect is no harder to read, so this removes it before it is ever reached.
+    nl = [m.start() for m in re.finditer("\n", text)]
+    return [(m.group("key"), int(m.group("val")), bisect.bisect_left(nl, m.start()) + 1)
             for m in RE_BOUND.finditer(text)]
+
+
+def repeated_keys(claimed):
+    """How many KEYS appear more than once — NOT how many extra occurrences there are.
+
+    `len(claimed) - len(set(keys))` is the occurrence surplus: one key appearing three times
+    gives 2, while exactly ONE key repeats. The summary line says "repeated key(s)", so that
+    arithmetic ranged over something other than what the sentence claimed (#361 review).
+
+    THE SAME ERROR THIS FILE EXISTS TO CATCH, ONE LEVEL IN: the number was right about a
+    construct nobody had named, and the prose beside it named a different one. It is a
+    function rather than an inline expression so a control can assert it.
+    """
+    return sum(1 for n in Counter(k for k, _v, _ln in claimed).values() if n > 1)
 
 
 def check(readme=None, actual=None):
@@ -151,7 +173,10 @@ def check(readme=None, actual=None):
     if fl:
         actual["floor_harness"] = fl.get("harness")
         actual["floor_untested"] = fl.get("untested")
-    bad = [(k, v, actual.get(k), ln) for k, v, ln in sorted(claimed) if actual.get(k) != v]
+    # (key, LINE) -- not the bare tuple, whose second element is the VALUE, which would
+    # order two copies of one key by their numbers instead of by where they appear.
+    ordered = sorted(claimed, key=lambda t: (t[0], t[2]))
+    bad = [(k, v, actual.get(k), ln) for k, v, ln in ordered if actual.get(k) != v]
     return bad, claimed, actual
 
 
@@ -190,13 +215,19 @@ def main():
         print("  RESULT: VIOLATIONS FOUND")
         return 1
     seen = len({k for k, _v, _ln in claimed})
-    dup = len(claimed) - seen
+    # KEYS that repeat, not EXTRA OCCURRENCES (#361 review). `len(claimed) - seen`
+    # is the occurrence surplus: one key appearing three times gives 2, while exactly
+    # ONE key repeats -- the sentence said "repeated key(s)" and the arithmetic
+    # ranged over something else. The construct-vs-count error this PR is about,
+    # one level in: the arithmetic was right and its subject was not what the
+    # sentence claimed.
+    dup = repeated_keys(claimed)
     print(f"  {len(claimed):3d} figure(s) bound ({seen} distinct); recomputed from "
           f"kiss_trace.py + COVERAGE_FLOOR.tsv")
     # EVERY occurrence is printed, with its line, not one row per key (#359). A per-key
     # summary is what hid the defect: two markers collapsed into one row and the reader
     # could not see that a second copy existed at all, let alone that it disagreed.
-    for k, v, ln in sorted(claimed):
+    for k, v, ln in sorted(claimed, key=lambda t: (t[0], t[2])):
         mark = "ok " if v == actual.get(k) else "DRIFT"
         print(f"     [{mark}] {k:22s} L{ln:<4d} README {v:>5}   actual {actual.get(k)}")
     if dup:
