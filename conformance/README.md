@@ -18,7 +18,12 @@ distinct from the specification text under `spec/`, which is CC0.
 §6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
 run** that is not one of the four modalities but exercises §6.5's differential on
 real silicon. Every golden vector is transcribed from the spec's own appendix.
-**130 tests pass by default; 3 more on-device under `--features cuda`.**
+**The harness runs by default and adds on-device cases under `--features cuda`.** No count
+is stated here: the number that PASSES cannot be reached without executing the suite, so it
+cannot be bound by a document lint — and an unbound figure in the file whose subject is
+bound figures is the defect this section exists to prevent. The conformance job reports it
+on every run, and the count of test functions the traceability tool DISCOVERS is bound
+below, where it sits beside the figure it is actually about.
 
 **Not implemented: modality 3 — the §6.6 structure-directed fuzzer**, which must
 generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
@@ -29,12 +34,27 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**31 of 855 normative clauses (3.6%).** The other 824 name a conformance test that
-does not exist — see [`UNBACKED.tsv`](UNBACKED.tsv), which lists every one and is
-enforced as a ratchet by `tools/kiss_trace.py`. Of this crate's 131 test fns, 96
-cite no clause at all, so the traceability matrix cannot see them: they are real
-tests doing real work that no clause claims credit for. Closing that is cheap and
-is the first task below.
+**381<!-- bound:harness --> of 933<!-- bound:clauses --> normative clauses (40.8%) are
+backed by executable code** — the figure the ratchet in
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
+backed by NAME** (the §9 row resolves to a real test fn) and the
+rest **by CITATION** (some test carries a backing-form comment for the clause).
+
+**That distinction is why this section's old figure was wrong in a way regenerating it
+would not have fixed.** It read *31 of 855*, and the sentence beside it described the
+clauses that "name a conformance test that does not exist" — **the NAME metric — while the
+heading asks how much of the spec is executable, which is the BACKED one.** A number and a
+sentence describing two different measurements, agreeing with each other only because
+neither was checked.
+
+The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
+population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
+document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
+ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
+the harness one for exactly this reason. Of this crate's 543<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
+no clause at all**, so the traceability matrix cannot see them: real tests
+doing real work that no clause claims credit for. Closing that is cheap and is the first
+task below.
 
 `boundary_rounding.rs` (§6.5-0006/-0007) is the model to copy: it was added with the
 clause, under the name the clause names, so it counted the day it landed.
@@ -156,7 +176,8 @@ default build and CI stay GPU-free.
 - **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
-  8 of 9 sub-standards are at 0.0% — Announce/Synth in particular have never had a
+  0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
+  Synth at 31/130 and the highest Ops at 109/196; Announce is 42/76. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
