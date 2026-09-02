@@ -51,6 +51,49 @@ fn a_normalize_to_plus_zero_add_is_caught() {
     assert!(err.contains("tcId 2"), "the (-0)+(-0) cell is the one with teeth: {err}");
 }
 
+/// The non-NaN bf16 edge cases both behaviour-preservation blocks run over: ±0, the
+/// subnormal and normal boundaries, the ties-to-even neighbours around 1.0, ± largest
+/// finite, and ±inf.
+///
+/// Shared because the two blocks assert the SAME obligation over the SAME domain — that a
+/// raw-bit path and the promote→compute→round path agree wherever no NaN is involved (one
+/// for the minmax select, one for `neg`/`abs`/`copysign`). Sharing a fixture is only safe
+/// when the obligations coincide; where they do not — the signaling-NaN cases — the two
+/// blocks keep their own inputs, because a fixture carrying values irrelevant to its
+/// obligation is how a fixture stops discriminating.
+///
+/// ⚠️ NON-NaN is the contract, not a description: `BF16_NON_NAN_SAMPLES` is asserted
+/// NaN-free by `bf16_non_nan_samples_contain_no_nan`. Adding a NaN here would silently
+/// void BOTH blocks, whose whole claim is that the two paths agree OFF the NaN cases.
+const BF16_NON_NAN_SAMPLES: &[u16] = &[
+    0x0000, 0x8000, // ±0
+    0x0001, 0x8001, // ± smallest subnormal
+    0x007F, 0x807F, // ± largest subnormal
+    0x0080, 0x8080, // ± smallest normal
+    0x3F7F, 0x3F80, 0x3F81, 0x4000, // tie-boundary neighbours around 1.0
+    0x7F7F, 0xFF7F, // ± largest finite
+    0x7F80, 0xFF80, // ±inf
+];
+
+/// True iff `x` is any bf16 NaN (exponent all ones, mantissa non-zero). ±inf is NOT a NaN.
+fn bf16_is_nan(x: u16) -> bool {
+    (x & 0x7F80) == 0x7F80 && (x & 0x007F) != 0
+}
+
+/// The shared fixture's contract, enforced rather than described. Both consumers assert
+/// that a raw-bit path and a promote→round path AGREE; a NaN in this set would make that
+/// claim false and both blocks would red for a reason neither is about.
+#[test]
+fn bf16_non_nan_samples_contain_no_nan() {
+    for &x in BF16_NON_NAN_SAMPLES {
+        assert!(!bf16_is_nan(x), "BF16_NON_NAN_SAMPLES must be NaN-free; {x:04X} is a NaN");
+    }
+    // positive control: the predicate CAN fire, so the loop above is not vacuous.
+    assert!(bf16_is_nan(0x7F81), "control: 7F81 is a bf16 sNaN");
+    assert!(bf16_is_nan(0x7FC1), "control: 7FC1 is a bf16 qNaN");
+    assert!(!bf16_is_nan(0x7F80), "control: 7F80 is +inf, not a NaN");
+}
+
 // ---- §6.13 minmax signed-zero tie cells (issue #74) --------------------------
 //
 // HARNESS RULE: every cell is class exact-byte, i.e. compared on RAW BITS — a
@@ -311,15 +354,7 @@ fn test_bf16_minmax_select_is_behaviour_preserving_for_non_nan() {
     // Backs: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "no arithmetic → nothing to
     // round" covers a non-NaN winner too: it is already an exact bf16 value. This demonstrates that
     // arm (select == round-trip ⇒ the round was a no-op), which the NaN born-red does not cover.
-    let samples: &[u16] = &[
-        0x0000, 0x8000, // ±0
-        0x0001, 0x8001, // ± smallest subnormal
-        0x007F, 0x807F, // ± largest subnormal
-        0x0080, 0x8080, // ± smallest normal
-        0x3F7F, 0x3F80, 0x3F81, 0x4000, // 1.0-eps, 1.0, 1.0+eps, 2.0 (tie-boundary neighbours)
-        0x7F7F, 0xFF7F, // ± largest finite
-        0x7F80, 0xFF80, // ±inf (non-NaN)
-    ];
+    let samples: &[u16] = BF16_NON_NAN_SAMPLES;
     let old_round_trip = |op: &str, a: u16, b: u16| -> u16 {
         let op32: fn(f32, f32) -> f32 = match op {
             "max_prop" => max_prop,
@@ -461,15 +496,7 @@ fn test_ops_bf16_move_ops_preserve_snan_bits() {
 /// be an unbounded claim rather than one confined to signaling NaNs.
 #[test]
 fn test_bf16_move_ops_are_behaviour_preserving_for_non_nan() {
-    let samples: &[u16] = &[
-        0x0000, 0x8000, // ±0
-        0x0001, 0x8001, // ± smallest subnormal
-        0x007F, 0x807F, // ± largest subnormal
-        0x0080, 0x8080, // ± smallest normal
-        0x3F7F, 0x3F80, 0x3F81, 0x4000, // tie-boundary neighbours around 1.0
-        0x7F7F, 0xFF7F, // ± largest finite
-        0x7F80, 0xFF80, // ±inf
-    ];
+    let samples: &[u16] = BF16_NON_NAN_SAMPLES;
     for &x in samples {
         for op in ["neg", "abs"] {
             assert_eq!(
