@@ -43,6 +43,8 @@ import subprocess
 import tempfile
 import unittest
 
+import kiss_workflow as kw  # noqa: E402
+
 HERE = pathlib.Path(__file__).resolve().parent
 WF = HERE.parent / ".github" / "workflows" / "conformance.yml"
 STEP = "The declared rust-version is SUFFICIENT and NECESSARY (#369)"
@@ -65,25 +67,15 @@ E0658 = "error[E0658]: `round_ties_even` is unstable"
 
 
 def run_block(text=None, step=STEP):
-    """The step's `run:` script, dedented. Raises if the step or its block is missing."""
-    lines = (text if text is not None else WF.read_text(encoding="utf-8")).splitlines()
-    i = next((n for n, l in enumerate(lines) if l.strip() == "- name: " + step), None)
-    if i is None:
-        raise AssertionError("step %r not found in %s" % (step, WF))
-    j = next((n for n in range(i + 1, len(lines)) if lines[n].strip().startswith("run:")), None)
-    if j is None or not lines[j].strip().endswith("|"):
-        raise AssertionError("step %r has no block `run: |`" % step)
-    indent = len(lines[j]) - len(lines[j].lstrip())
-    body = []
-    for l in lines[j + 1:]:
-        if l.strip() and (len(l) - len(l.lstrip())) <= indent:
-            break
-        body.append(l)
-    first = next((l for l in body if l.strip()), None)
-    if first is None:
-        raise AssertionError("step %r has an EMPTY `run:` block" % step)
-    off = len(first) - len(first.lstrip())
-    return "\n".join(l[off:] if len(l) > off else "" for l in body)
+    """The step's `run:` script, dedented -- via the shared extractor.
+
+    ONE COPY (#372 review): this and the other workflow-step suite carried
+    identical extractors, and nothing would have failed if one were fixed and
+    the other not. A mis-extracted block still parses and still runs, so the
+    controls keep passing against a script the runner never sees.
+    """
+    return kw.run_block(text if text is not None else WF.read_text(encoding="utf-8"),
+                        step)
 
 
 def execute(floor='rust-version = "1.77"', id_rc=0, suf_rc=0, min_rc=1, min_out=E0658):
@@ -129,6 +121,26 @@ class MsrvStepTest(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("declared floor 1.82 ; probing 1.81", out,
                       "the probe did not follow the manifest — the floor is hardcoded")
+
+    def test_a_floor_carrying_a_PATCH_version_still_probes(self):
+        """#372 review, reproduced before fixing.
+
+        cargo accepts `rust-version = "1.77.0"`. `${FLOOR#*.}` yields `77.0`, and
+        `$(( 77.0 - 1 ))` is an arithmetic SYNTAX ERROR -- so the leg dies with a bash
+        error and produces NO verdict at all. Not a wrong answer: no answer, from a step
+        whose entire purpose is returning one of three.
+        """
+        rc, out = execute(floor='rust-version = "1.77.0"')
+        self.assertEqual(rc, 0, out)
+        self.assertIn("declared floor 1.77.0 ; probing 1.76", out)
+
+    def test_an_INDENTED_rust_version_is_still_read(self):
+        """TOML permits indentation under `[package]`. The first sed anchored `^rust-version`
+        and returned empty, which the guard turns into a LEG ERROR — honest, but it makes the
+        leg unrunnable on a manifest that is perfectly valid."""
+        rc, out = execute(floor='   rust-version   =   "1.79"')
+        self.assertEqual(rc, 0, out)
+        self.assertIn("declared floor 1.79 ; probing 1.78", out)
 
     def test_a_missing_rust_version_is_a_LEG_ERROR(self):
         rc, out = execute(floor="# no rust-version here")

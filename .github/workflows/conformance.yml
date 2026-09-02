@@ -84,12 +84,16 @@ jobs:
           # when two existed -- both reading the version dynamically. The search term was
           # an artifact of NON-compliance. If you are looking for MSRV coverage, grep for
           # `rust-version` or `cargo +`, which a compliant job cannot avoid.
-          FLOOR=$(sed -n 's/^rust-version *= *"\([0-9.]*\)".*/\1/p' Cargo.toml)
+          FLOOR=$(sed -n 's/^[[:space:]]*rust-version[[:space:]]*=[[:space:]]*"\([0-9.]*\)".*/\1/p' Cargo.toml)
           if [ -z "$FLOOR" ]; then
             echo "::error title=MSRV leg error::no rust-version in conformance/Cargo.toml"
             exit 3
           fi
-          BELOW="${FLOOR%%.*}.$(( ${FLOOR#*.} - 1 ))"
+          # `cut`, not ${FLOOR#*.}: cargo accepts a PATCH version, and "1.77.0" makes
+          # that expansion yield "77.0", which is an arithmetic SYNTAX ERROR -- the leg
+          # dies with a bash error rather than any verdict (#372 review, reproduced).
+          MINOR=$(echo "$FLOOR" | cut -d. -f2)
+          BELOW="${FLOOR%%.*}.$(( MINOR - 1 ))"
           echo "declared floor $FLOOR ; probing $BELOW below it"
           rustup toolchain install "$FLOOR" --profile minimal >/dev/null
           rustup toolchain install "$BELOW" --profile minimal >/dev/null
