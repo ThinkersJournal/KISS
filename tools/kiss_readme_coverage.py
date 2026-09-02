@@ -31,6 +31,8 @@ binds the STATIC count of discovered test fns and the README says which is which
 
 Run: python tools/kiss_readme_coverage.py
 """
+import bisect
+from collections import Counter
 import os
 import re
 import subprocess
@@ -113,8 +115,49 @@ def derived():
     return out
 
 
+def occurrences(text):
+    """[(key, value, line)] for EVERY marker — a list, never a dict (#359).
+
+    This was `{m.group("key"): int(m.group("val")) for m in ...}`, and a dict comprehension
+    SILENTLY DROPS every repeat: with the same key present twice, only the LAST occurrence
+    was ever compared. A duplicate marker LOOKED BOUND AND WAS NOT.
+
+    That is #350's review finding arriving through a second door. There the bound value and
+    the visible value were two objects because the value sat inside the comment; here they
+    diverge by MULTIPLICITY. Both fail in the same direction — the lint passes — which is
+    the direction nobody investigates.
+
+    A repeated key is NOT itself an error. A figure may honestly appear twice, and banning
+    that would push authors back to unbound prose, which is the disease this tool exists to
+    treat. Comparing EVERY occurrence against the tree makes agreement the requirement
+    instead of uniqueness.
+    """
+    # Newline offsets precomputed once and bisected, rather than re-counting from the start
+    # of the file for every match (#361 review). Measured on the live README -- 12 KB, 7
+    # markers -- the difference is 0.28 ms/call and irrelevant; at 200x the file and 200x
+    # the markers it is 907 ms vs 54 ms. The shape is quadratic, the cost today is not, and
+    # bisect is no harder to read, so this removes it before it is ever reached.
+    nl = [m.start() for m in re.finditer("\n", text)]
+    return [(m.group("key"), int(m.group("val")), bisect.bisect_left(nl, m.start()) + 1)
+            for m in RE_BOUND.finditer(text)]
+
+
+def repeated_keys(claimed):
+    """How many KEYS appear more than once — NOT how many extra occurrences there are.
+
+    `len(claimed) - len(set(keys))` is the occurrence surplus: one key appearing three times
+    gives 2, while exactly ONE key repeats. The summary line says "repeated key(s)", so that
+    arithmetic ranged over something other than what the sentence claimed (#361 review).
+
+    THE SAME ERROR THIS FILE EXISTS TO CATCH, ONE LEVEL IN: the number was right about a
+    construct nobody had named, and the prose beside it named a different one. It is a
+    function rather than an inline expression so a control can assert it.
+    """
+    return sum(1 for n in Counter(k for k, _v, _ln in claimed).values() if n > 1)
+
+
 def check(readme=None, actual=None):
-    """[(key, readme_value, actual)] for every bound figure that disagrees.
+    """[(key, readme_value, actual, line)] for every bound OCCURRENCE that disagrees.
 
     `readme` / `actual` are injection points for the controls ONLY. The shipped path passes
     neither, so `main()` exercises the real README and the real recompute — a control that
@@ -122,15 +165,18 @@ def check(readme=None, actual=None):
     """
     with open(readme or README, encoding="utf-8") as fh:
         text = fh.read()
-    claimed = {m.group("key"): int(m.group("val")) for m in RE_BOUND.finditer(text)}
+    claimed = occurrences(text)
     if not claimed:
-        return None, {}, {}          # nothing bound: a vacuity, reported separately
+        return None, [], {}          # nothing bound: a vacuity, reported separately
     actual = dict(actual) if actual is not None else derived()
     fl = floor_values()
     if fl:
         actual["floor_harness"] = fl.get("harness")
         actual["floor_untested"] = fl.get("untested")
-    bad = [(k, v, actual.get(k)) for k, v in sorted(claimed.items()) if actual.get(k) != v]
+    # (key, LINE) -- not the bare tuple, whose second element is the VALUE, which would
+    # order two copies of one key by their numbers instead of by where they appear.
+    ordered = sorted(claimed, key=lambda t: (t[0], t[2]))
+    bad = [(k, v, actual.get(k), ln) for k, v, ln in ordered if actual.get(k) != v]
     return bad, claimed, actual
 
 
@@ -168,16 +214,30 @@ def main():
         print("-" * 68)
         print("  RESULT: VIOLATIONS FOUND")
         return 1
-    print(f"  {len(claimed):3d} figure(s) bound; recomputed from kiss_trace.py + COVERAGE_FLOOR.tsv")
-    for k in sorted(claimed):
-        mark = "ok " if claimed[k] == actual.get(k) else "DRIFT"
-        print(f"     [{mark}] {k:22s} README {claimed[k]:>5}   actual {actual.get(k)}")
+    seen = len({k for k, _v, _ln in claimed})
+    # KEYS that repeat, not EXTRA OCCURRENCES (#361 review). `len(claimed) - seen`
+    # is the occurrence surplus: one key appearing three times gives 2, while exactly
+    # ONE key repeats -- the sentence said "repeated key(s)" and the arithmetic
+    # ranged over something else. The construct-vs-count error this PR is about,
+    # one level in: the arithmetic was right and its subject was not what the
+    # sentence claimed.
+    dup = repeated_keys(claimed)
+    print(f"  {len(claimed):3d} figure(s) bound ({seen} distinct); recomputed from "
+          f"kiss_trace.py + COVERAGE_FLOOR.tsv")
+    # EVERY occurrence is printed, with its line, not one row per key (#359). A per-key
+    # summary is what hid the defect: two markers collapsed into one row and the reader
+    # could not see that a second copy existed at all, let alone that it disagreed.
+    for k, v, ln in sorted(claimed, key=lambda t: (t[0], t[2])):
+        mark = "ok " if v == actual.get(k) else "DRIFT"
+        print(f"     [{mark}] {k:22s} L{ln:<4d} README {v:>5}   actual {actual.get(k)}")
+    if dup:
+        print(f"  ({dup} repeated key(s) — legal, and every copy above was compared.)")
     if bad:
         print("-" * 68)
         print("  DRIFT: a README figure no longer matches what the tree reports. These")
         print("  numbers age silently — nothing else in the repository fails when they do:")
-        for k, was, now in bad:
-            print(f"          {k}: README says {was}, actual is {now}")
+        for k, was, now, ln in bad:
+            print(f"          line {ln}: {k} — README says {was}, actual is {now}")
         print("  Update the README (the number AND its `<!-- bound:… -->` marker together).")
     print("-" * 68)
     print("  RESULT: VIOLATIONS FOUND" if bad else "  RESULT: CLEAN")
