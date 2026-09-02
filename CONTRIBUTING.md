@@ -55,6 +55,85 @@ An RFC moves through these states:
 This is the process the umbrella describes in §7.2: the GitHub issue tracker **is** the
 ThinkersJournal RFC directory of record.
 
+## Who approves normative text
+
+Step 3 above says merging the PR records acceptance. It does not say who may merge, and
+that had never been written down — the working convention lived only in contributors'
+memory, which is how a finished, reviewed, green PR can wait on a rule no document
+contains (#370).
+
+The maintainer settled it on 2026-09-02:
+
+> "For future normative text, if you, the KISS agent, and any agents that would be
+> affected by the normative text all agree that it is correct, I'm fine with it being
+> implemented without my involvement."
+
+and, asked specifically about a clause that makes an existing conformant implementation
+retroactively non-conforming:
+
+> "I'm fine with behavior changes in existing implementations if the involved agents
+> agree they are the correct changes to make in the long run."
+
+So a normative change needs **three classes of agreement**, and the maintainer is not one
+of them:
+
+1. the **portfolio coordinator**,
+2. the **KISS architect**,
+3. **every affected implementor** — anyone whose current output the change would make
+   non-conforming.
+
+Non-normative changes are unaffected and continue to merge on an ordinary reviewed-and-green
+basis. An author is never a signature on their own PR.
+
+### The affected-set is the load-bearing part
+
+"Every affected implementor agrees" is only as strong as the set of implementors actually
+asked. **Nothing in the rule constructs that set, and an implementor who is never asked has
+not agreed** — an omission is invisible, which is the same failure direction that made this
+rule worth writing down at all.
+
+Affectedness is usually **testable rather than judged**, so ask a question whose answer is a
+measurement and record it. Ask it **per clause, scoped to that clause's behaviour** — the two
+narrow-float clauses that first used this process needed two different questions, and the
+broader one would have been wrong for the narrower clause and vice versa:
+
+> **KISS-OPS-6.16-0009** — *"does your implementation compute bf16/f8e5m2 min/max by promoting
+> to f32 and rounding back?"*
+> **KISS-OPS-6.16-0010** — *"does your implementation perform narrow-float arithmetic by
+> promoting to f32, computing, and rounding back?"*
+
+A yes means the clause changes that implementation's output; a no closes the party out in one
+line. Note the second is strictly broader: an implementation that promotes for `add` but not
+for `min`/`max` answers **no** to the first and **yes** to the second. Reusing one clause's
+question for another **under-populates the affected set**, which is the failure this section
+exists to prevent.
+
+**When affectedness is NOT testable, ask rather than measure — and the trigger is precise.**
+A clause can forbid a *method* rather than an *output*: if **no input distinguishes a compliant
+implementation from a violating one**, no measurement can settle affectedness and the party
+must be asked directly. ⚠️ *"It looks untestable"* is **not** the trigger — that fires on a
+failure to find the discriminating input, not on the absence of one, and the input is often
+found by reading **why** the clause exists rather than what it forbids.
+
+**Record the asked-set alongside the agreed-set.** They evidence different things: the
+agreed-set is evidence that the parties agree, and the asked-set is evidence that the
+affected-set was **constructed rather than assumed**. A ratification recorded without the
+asked-set cannot be told apart from one where nobody looked. A party may also answer **not-a-party** on a measurement, which is a real answer
+and should carry the measurement that supports it — including any boundary the party will not
+sign for, such as behaviour produced by a third-party compiler it neither inspects nor
+rewrites.
+
+*Provenance: both quotations were relayed to the KISS architect by the portfolio coordinator
+on 2026-09-02 and are recorded verbatim on #370. They are transcribed rather than paraphrased
+because a rule about who may approve should not itself rest on someone's summary of what was
+said.*
+
+⚠️ *Limit, stated because this section's own thesis demands it: the quotations have been checked
+character-for-character against the record on #370, which is the coordinator's relay. That
+confirms fidelity **within the chain**. Nobody who has checked them was present when they were
+said, so fidelity **to the original utterance** is not established here. A grant that has been
+transcribed faithfully through one relay is still a grant known at one remove.*
+
 ## Maturity and the freeze gate (summary of umbrella §5)
 
 Each sub-standard is versioned independently and moves through maturity stages. Advancing
