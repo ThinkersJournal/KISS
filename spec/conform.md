@@ -921,9 +921,9 @@ enum (§6.0). See umbrella §3 for the full statement.
 - **KISS-CONFORM-6.8-0002** — The **ULP/tolerance** comparator MUST compare within the op's
   **declared per-target ULP** bound and MUST NOT be a byte compare across implementations or
   languages; it MUST apply to any op whose decomposition transitively contains a transcendental
-  **Normalizes:** numeric difference within the op's declared ULP/tolerance bound.
   atom, and KISS-Conform MUST NOT claim cross-language numeric identity for such an op. *Test:*
   `test_conform_ulp_comparator`.
+  **Normalizes:** numeric difference within the op's declared ULP/tolerance bound.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
   tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
@@ -938,15 +938,15 @@ enum (§6.0). See umbrella §3 for the full statement.
   **declared class** is order-invariant/nondeterministic — floating-point atomic-combine
   reductions/scatter (e.g. scatter atomic-add, scatter_add) are **illustrative** of that
   declared class, not an independent selector — and the tolerance used MUST be the one declared
-  **Normalizes:** bit differences arising from combine order, within the tolerance declared in the contract Guarantees.
   in the contract Guarantees, never an implementation-chosen implicit default. *Test:*
   `test_conform_nondeterministic_comparator`.
+  **Normalizes:** bit differences arising from combine order, within the tolerance declared in the contract Guarantees.
 - **KISS-CONFORM-6.8-0005** — For the complex-transcendental ops `carg`, `clog`, `csqrt`,
   `cexp`, KISS-Conform MUST apply the **split comparator**: an exact-bit comparator on the sign
   bit of every zero-valued result component combined with a ULP/tolerance comparator on the
   magnitude. The split comparator is a hybrid of the three canonical classes and MUST NOT be
-  **Normalizes:** numeric difference in the magnitude, within the ULP bound. Normalizes **nothing** on the sign bit of a zero-valued component.
   registered as a fourth enum member (§6.0-0001). *Test:* `test_conform_split_comparator`.
+  **Normalizes:** numeric difference in the magnitude, within the ULP bound. Normalizes **nothing** on the sign bit of a zero-valued component.
 - **KISS-CONFORM-6.8-0006** — The comparator MUST be **selected** by the clause's declared
   determinism/fidelity class travelling with the artifact — a provided kernel's contract
   Guarantees carries the class (KISS-SYNTH §6.5-0004) and each op advertises its class (KISS-OPS
@@ -1111,8 +1111,8 @@ enum (§6.0). See umbrella §3 for the full statement.
   two KISS-Ops op DAGs are equal iff, after resolving every non-primitive node to the primitive
   floor, placing nodes and edges in KISS-Ops canonical order, and normalizing
   commutative/associative operands, their **node sets, edge sets, and per-node OpAttrs byte
-  **Normalizes:** (1) non-primitive versus floor-resolved form; (2) node and edge order; (3) commutative/associative operand order.
   channels are identical**. *Test:* `test_conform_structural_dag_equality`.
+  **Normalizes:** (1) non-primitive versus floor-resolved form; (2) node and edge order; (3) commutative/associative operand order.
 - **KISS-CONFORM-6.9-0002** — The tier-1 round-trip comparator MUST be this **structural**
   comparator (owned by KISS-Conform), NOT a byte-compare of emitted source; a predicate tighter
   than structural op-DAG equality (for example byte-identity of emitted source across
