@@ -164,3 +164,68 @@ impl Atom for Log {
         Evaluated { val, err_ulps }
     }
 }
+
+/// Maclaurin `sin(r)` (`cos = false`) or `cos(r)` (`cos = true`) on |r| ≤ π/4.
+/// Terms are carried SIGNED (`term_j = term_{j-1}·(−r²)/den_j`), so a negative r
+/// is handled directly. Returns the value and its op-rounding `err_ulps` at the
+/// result's ULP (including the sub-precision truncation tail).
+fn maclaurin_trig<const N: usize>(r: &BigFloat<N>, cos: bool) -> (BigFloat<N>, u128) {
+    let (r2, _e_r2) = r.mul(r);
+    let neg_r2 = r2.neg();
+    let (mut sum, mut term) = if cos {
+        (BigFloat::<N>::one(), BigFloat::<N>::one())
+    } else {
+        (r.clone(), r.clone())
+    };
+    let mut op_err: u128 = 0;
+    let mut acc_exp = sum.exp2();
+    let mut j: i64 = 1;
+    loop {
+        // divisor: cos → (2j−1)(2j); sin → (2j)(2j+1).
+        let d = if cos { (2 * j - 1) * (2 * j) } else { (2 * j) * (2 * j + 1) };
+        let (t1, e1) = term.mul(&neg_r2);
+        let (t2, e2) = t1.div_small(d as u64);
+        term = t2;
+        let (s_new, e3) = sum.add(&term);
+        if s_new.exp2() != acc_exp {
+            op_err = rescale_ulps(op_err, acc_exp, s_new.exp2());
+            acc_exp = s_new.exp2();
+        }
+        op_err = op_err
+            .saturating_add(rescale_ulps(e1, t1.exp2(), acc_exp))
+            .saturating_add(rescale_ulps(e2, term.exp2(), acc_exp))
+            .saturating_add(e3);
+        sum = s_new;
+        if term.is_zero() || term.ebin() < sum.exp2() - SERIES_GUARD {
+            break;
+        }
+        j += 1;
+    }
+    (sum, op_err.saturating_add(1))
+}
+
+/// `sin(x)` for finite `x`. `NaN`/`±Inf` → `NaN` is the semantics front door (T6).
+#[derive(Clone, Copy, Debug)]
+pub struct Sin {
+    pub x: f64,
+}
+
+impl Atom for Sin {
+    fn eval<const N: usize>(&self) -> Evaluated<N> {
+        // reduce_trig works on |x|: octant = round(|x|·2/π) mod 8, r ∈ [−π/4, π/4].
+        let red = reduction::reduce_trig::<N>(self.x);
+        let q = red.octant % 4;
+        // sin(oct·π/2 + r): q=0 → sin r, 1 → cos r, 2 → −sin r, 3 → −cos r.
+        let use_cos = q == 1 || q == 3;
+        let (base, base_err) = maclaurin_trig::<N>(&red.r, use_cos);
+        // octant sign (q ∈ {2,3}) XOR sign(x) (sin is odd). `neg` preserves exp2,
+        // so `base_err` stays valid at `val.exp2()` without rescaling.
+        let negate = (q == 2 || q == 3) ^ self.x.is_sign_negative();
+        let val = if negate { base.neg() } else { base };
+        // reduction error δ on r: |d sin r| = |cos r|·|δ| ≤ |δ|, |d cos r| =
+        // |sin r|·|δ| ≤ 0.71·|δ|. Factor 2 covers both; rescale to val.exp2().
+        let red_err =
+            rescale_ulps(2u128.saturating_mul(red.err_ulps), red.r.exp2(), val.exp2());
+        Evaluated { val, err_ulps: base_err.saturating_add(red_err) }
+    }
+}
