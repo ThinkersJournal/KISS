@@ -86,9 +86,20 @@ two implementations *against each other* would only deepen the correlation and h
 
 The KISS-Umbrella §5.3 / KISS-Conform §8 freeze gate certifies **interop / wire / foreign-reader**:
 ≥2 structurally dissimilar implementations interoperate on the golden vectors, and a foreign reader
-parses the wire. It is **interop / implementable / unambiguous** only — there is deliberately **no
-numerical oracle-cross-check item at the gate.** Numerical truth lives entirely at the corpus + the
+parses the wire. The gate is **interop / implementable / unambiguous** only — there is deliberately
+**no numerical oracle-cross-check item at the gate.** Numerical truth lives entirely at the corpus + the
 KISS-Conform §6.5 oracle; it is not re-litigated at the freeze gate.
+
+**Condition 1 is counted PER FIELD, not per implementation** — and this is the half most easily lost
+when the gate is summarized. For each field of a golden vector, at least two parties must
+*independently derive* that field's value. A party that receives the value and reproduces it
+byte-exactly demonstrates **faithful passthrough** — real and testable, and *not* evidence of
+independent derivation. So a second implementation that derived most fields itself but took a handful
+from the reference **fails on exactly those fields**, and no passing differential would reveal which:
+byte-agreement is what interop *requires*, so agreement can never establish provenance. This is also
+the case a shared-lowering-code check cannot catch, because **a passed-through field has no lowering
+code to share.** A conformance report quoting a whole-vector count must state, per field, whether each
+party **derived** or **copied** it. (Normative text: KISS-Umbrella §5.3 Condition 1.)
 
 kiss-ref can serve as one *dissimilar implementation* for the interop/wire/foreign-reader axis. It
 must **not** be counted as an independent numerical check even though it looks like one (§3).
