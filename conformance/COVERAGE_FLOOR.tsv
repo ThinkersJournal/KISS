@@ -298,6 +298,12 @@
 # The tool reported "Set the floor to harness 382, lint 33, untested 495" -- 382, NOT the
 # 381 both sides of the conflict claimed. Pasted, not computed.
 #
+# CONFLICT RESOLUTION (#362 rebased onto #355): BOTH notes below are real and ADDITIVE --
+# #355 adds a BACKED clause (harness 382 -> 383); #362 adds an UNBACKED one (untested 495 ->
+# 496). Prose UNIONED. The NUMBERS are NOT taken from either side: #362's figures were derived
+# against harness 382 and main is now 383, so both sides are correct about their own tree and
+# neither about the merge result. RE-DERIVED with the tool below and pasted, never computed.
+
 # harness 382 -> 383 by #354: KISS-OPS-6.16-0009 (a select-decomposed op has nothing to round; a
 # bf16 minmax RESULT is the moved operand, payload+sign exact per §6.8-0010(a)) arrives BACKED in the
 # same PR that earns it, by test_ops_bf16_minmax_moves_not_rounds. This is the clause that fixes the
@@ -310,8 +316,22 @@
 # 381 -> 382 against the stale 5a3d889 base; main reached 382 meanwhile via #228, so the correct value
 # is 383, NOT 382. RE-DERIVED with the tool post-rebase, not by arithmetic: `--ratchet --base-ref
 # origin/main` reported "Set the floor to harness 383, lint 33, untested 495" and that output is pasted here.
+
+# #362 (KISS-OPS-6.16-0010, signaling-NaN-on-arithmetic for the narrow floats): untested
+# 495 -> 496. THE RATCHET CALLS THIS A REGRESSION and it is not one -- its message reads
+# "a clause lost its only backing", which is the OTHER way to reach this number. Here a
+# NEW normative clause arrives UNBACKED and is recorded honestly in UNBACKED.tsv rather
+# than credited to a test that does not exist. clauses 934 -> 935; harness UNCHANGED at
+# 382, which is the check that tells the two apart: a lost backing would have LOWERED it.
+#
+# The clause ships without its test deliberately. Backing it requires the CPU oracle to
+# implement narrow-float sNaN quieting, which is the same surface #354/#355 is fixing --
+# so the test lands with that work rather than racing it here.
+#
+# DERIVED BY THE TOOL: `--ratchet --base-ref origin/main` reported the 495 -> 496 rise;
+# harness/lint/proven re-read from the same run and unchanged.
 # key	value
 harness	383
 lint	33
-untested	495
+untested	496
 proven	20

@@ -1488,6 +1488,29 @@ shared naming convention spelled identically in both foundational vocabularies.
   clarifies the scope of §6.16-0003, which two independent readers had read as reaching NaN-payload
   propagation — it does not. *Test:* `test_ops_bf16_minmax_moves_not_rounds`.
 
+- **KISS-OPS-6.16-0010** — **What arithmetic does to a signaling NaN operand, for the float
+  dtypes §6.2-0001 delegates to this section.** §6.2-0001 pins the IEEE-754 float dtypes
+  (`f16`/`f32`/`f64`) to IEEE 754-2019, which settles the question for them: an arithmetic
+  operation on a signaling NaN delivers a **quiet** NaN. For `bf16`, `f8e4m3fn`, and
+  `f8e5m2` the same clause instead defers to "the encodings, rounding, saturation, and
+  NaN/infinity conventions pinned in §6.16" — and §6.16 pins encodings (§6.16-0003,
+  §6.16-0004, §6.16-0005) and rounding, and says nothing about what an operation **does**
+  with a signaling operand. For those three dtypes the question has had no answer.
+  For a compute dtype whose encoding admits a signaling NaN (`bf16`, `f8e5m2`), an op whose
+  §6.13 reference decomposition **contains arithmetic** MUST deliver a **quiet** NaN whenever
+  an operand contributing to the scalar result is a signaling NaN, and MUST NOT return that
+  operand's bits unchanged. `f8e4m3fn` has a **single NaN encoding** (§6.16-0004) and so
+  admits no signaling NaN at all: for it this obligation is **vacuous**, and an implementation
+  MUST NOT synthesize a quiet/signaling distinction the format cannot represent.
+  The obligation is on the **produced value only**. KISS models no IEEE exception flags
+  anywhere in the suite, so this clause does **not** require an invalid-operation signal —
+  nothing a conformance test can observe would distinguish one, and an obligation no
+  instrument can see is not a rule. The complement is unchanged and is the same rule read the
+  other way: an op whose §6.13 decomposition contains **no** arithmetic computes nothing and
+  **moves** its operand, preserving the signaling payload bit-for-bit (raw-bit `select`,
+  §6.5-0002). **The decomposition decides; the two consequences follow from it.**
+  *Test:* `test_ops_narrow_float_arith_quiets_snan`.
+
 ### 6.17 Compute-fidelity (math-precision) attribute
 
 KISS-Ops owns a second per-kernel attribute, **orthogonal** to the §6.0 determinism class:
@@ -2618,6 +2641,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0007 | `test_ops_complex_storage_layout` |
 | KISS-OPS-6.16-0008 | `test_ops_dtype_layout_coversioned` |
 | KISS-OPS-6.16-0009 | `test_ops_bf16_minmax_moves_not_rounds` |
+| KISS-OPS-6.16-0010 | `test_ops_narrow_float_arith_quiets_snan` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
 | KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
