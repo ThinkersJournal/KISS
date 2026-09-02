@@ -1321,7 +1321,14 @@ def clause_terms(block):
         # asserts the empty set rather than "does not contain the id".
         if RE_CLAUSE_ID.search(span):
             continue
-        for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]+", span):
+        # RE_WORD, the SAME constant the test side tokenizes with (used at collection).
+        # The two patterns were byte-identical, so this changes no result today -- the
+        # 15 is unaffected and was not re-derived on the strength of this edit. What it
+        # changes is the FAILURE MODE: nothing fails if a future edit alters one pattern
+        # and not the other, and the intersection would keep returning a number, just a
+        # wrong one -- and that number IS the deliverable. One constant makes the
+        # agreement structural instead of coincidental (#367 review).
+        for tok in RE_WORD.findall(span):
             t = tok.lower()
             if len(t) >= 3 and t not in ABOUT_STOP and t not in named:
                 out.add(t)
@@ -1974,9 +1981,9 @@ def main():
         print(f"          {len(about_hit):>4} the named test's text mentions a term the clause names")
         print(f"          {len(about_miss):>4} it mentions NONE — a name match is the ONLY evidence")
         print(f"          {len(about_noterms):>4} the clause names no distinctive term: UNMEASURABLE, not clean")
-        print(f"                 Neither direction is proof: zero overlap does not show a test is")
-        print(f"                 off-subject, and overlap does not show it is on-subject. This is a")
-        print(f"                 POPULATION to adjudicate, which is why it de-credits nothing.")
+        print("                 Neither direction is proof: zero overlap does not show a test is")
+        print("                 off-subject, and overlap does not show it is on-subject. This is a")
+        print("                 POPULATION to adjudicate, which is why it de-credits nothing.")
     print(f"      — by evidence strength (convention 15); NAMED+CITED partition the {len(backed)} backed —")
     print(f"          {len(tier_named):>4} NAMED   the §9 name matches a real fn, but NO backing-form citation")
     print(f"                 exists for the clause (by any test) — a name coincidence, not an asserted tie")
