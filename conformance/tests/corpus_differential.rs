@@ -342,3 +342,148 @@ fn test_bf16_minmax_select_is_behaviour_preserving_for_non_nan() {
         }
     }
 }
+
+// ---- §6.16-0009 reaches every NO-ARITHMETIC op, not only minmax (#390) -------
+//
+// The clause's TRIGGER is "an op whose §6.13 reference decomposition contains no
+// arithmetic"; `max_prop`/`min_prop` are its EXAMPLE, not its extent. `neg`, `abs` and
+// `copysign` are defined in §6.13 as raw-bit sign-bit operations ("clear the sign bit
+// (raw-bit); NaN payload preserved"), so the trigger reaches them and nothing asserted
+// it — a wrong-direction bf16 `neg` or `abs` was conforming by omission.
+//
+// ⚠️ The two most likely to be missed are `neg` and `abs`, and the reason is a label:
+// the §6.13 op table files both under family `arithmetic` while their SEMANTICS are
+// raw-bit. Reading the family column to find the clause's domain finds neither.
+
+/// bf16 `neg`/`abs` as the raw-bit moves §6.13 defines: the operand's bits with the sign
+/// bit flipped or cleared. Nothing is computed, so there is nothing to round.
+fn bf16_move_unary(op: &str, x: u16) -> u16 {
+    match op {
+        "neg" => x ^ 0x8000,
+        "abs" => x & 0x7FFF,
+        other => panic!("unknown move unary `{other}`"),
+    }
+}
+
+/// bf16 `copysign` (§6.9-0002): magnitude of `a`, sign bit of `b`, raw-bit — specified
+/// that way precisely so a moved NaN's sign survives.
+fn bf16_copysign(a: u16, b: u16) -> u16 {
+    (a & 0x7FFF) | (b & 0x8000)
+}
+
+/// The HAZARD path the clause names non-conforming: promote to `f32`, apply, round back.
+/// `f32_to_bf16` forces the quiet bit on a NaN (fp.rs), so a moved signaling NaN is
+/// quieted. This is fuel's `chassis/unary.rs` shape and it is here to be MEASURED, not
+/// used — the test asserts the two paths DISAGREE.
+fn bf16_promote_round_unary(op: &str, x: u16) -> u16 {
+    let v = bf16_to_f32(x);
+    f32_to_bf16(match op {
+        "neg" => -v,
+        "abs" => v.abs(),
+        other => panic!("unknown move unary `{other}`"),
+    })
+}
+
+fn bf16_promote_round_copysign(a: u16, b: u16) -> u16 {
+    f32_to_bf16(bf16_to_f32(a).copysign(bf16_to_f32(b)))
+}
+
+/// True iff `x` is a bf16 signaling NaN: exponent all ones, mantissa non-zero, quiet
+/// bit (mantissa MSB, 0x0040) CLEAR.
+fn bf16_is_snan(x: u16) -> bool {
+    (x & 0x7F80) == 0x7F80 && (x & 0x007F) != 0 && (x & 0x0040) == 0
+}
+
+/// Backs: KISS-OPS-6.16-0009 — the clause reaches `neg`/`abs`/`copysign`, not only minmax.
+///
+/// Two assertions per case, and the SECOND is the one with teeth. Asserting only that the
+/// raw-bit path preserves the bits would be near-tautological — `x ^ 0x8000` preserves a
+/// payload by construction, and a test that can only pass proves nothing about the clause.
+/// So each case also measures the promote→compute→round path and asserts it DIVERGES by
+/// quieting. That is the clause's own claim ("a promote-to-f32-and-round-back
+/// implementation of such an op is therefore non-conforming for a narrow float") made
+/// executable: the hazard is demonstrated on the same input, not assumed.
+#[test]
+fn test_ops_bf16_move_ops_preserve_snan_bits() {
+    // (op, a, b, required) — `b` is the sign donor for copysign, ignored by the unaries.
+    // 0x7F81 is a minimum-payload bf16 sNaN; 0x7FBF is a MAXIMUM-payload one (mantissa
+    // 0x3F, quiet bit still clear), present so the assertion covers payload bits beyond
+    // the LSB — a path that preserved only the low bit would pass on 0x7F81 alone.
+    let cases: &[(&str, u16, u16, u16)] = &[
+        ("neg", 0x7F81, 0, 0xFF81),      // +sNaN -> -sNaN, payload intact
+        ("neg", 0xFF81, 0, 0x7F81),      // and back
+        ("neg", 0x7FBF, 0, 0xFFBF),      // max payload
+        ("abs", 0x7F81, 0, 0x7F81),      // already positive: an exact identity move
+        ("abs", 0xFF81, 0, 0x7F81),      // sign cleared, payload intact
+        ("abs", 0xFFBF, 0, 0x7FBF),      // max payload
+        ("copysign", 0x7F81, 0x8000, 0xFF81), // sign taken from b
+        ("copysign", 0xFF81, 0x0000, 0x7F81),
+        ("copysign", 0x7FBF, 0x8000, 0xFFBF),
+    ];
+    for &(op, a, b, required) in cases {
+        assert!(bf16_is_snan(a), "fixture error: {a:04X} is not a bf16 sNaN");
+
+        let moved = if op == "copysign" { bf16_copysign(a, b) } else { bf16_move_unary(op, a) };
+        assert_eq!(
+            moved, required,
+            "{op}(bf16 {a:04X}, {b:04X}) must MOVE the operand's exact bits (got {moved:04X}, \
+             want {required:04X}): §6.13 defines it raw-bit, so §6.16-0009 leaves nothing to round"
+        );
+        // the moved result is still SIGNALING — the property a promotion destroys.
+        assert!(
+            bf16_is_snan(moved),
+            "{op}(bf16 {a:04X}) returned {moved:04X}, which is no longer a signaling NaN"
+        );
+
+        // ⚠️ TEETH: the promote→round path must DISAGREE, by quieting. If this ever stops
+        // holding, the case above has become unable to distinguish a conforming
+        // implementation from the one the clause names non-conforming.
+        let promoted =
+            if op == "copysign" { bf16_promote_round_copysign(a, b) } else { bf16_promote_round_unary(op, a) };
+        assert_ne!(
+            promoted, required,
+            "{op}(bf16 {a:04X}, {b:04X}): the promote-and-round path agreed with the required \
+             answer, so this case cannot tell the two implementations apart"
+        );
+        assert_eq!(
+            promoted & 0x0040,
+            0x0040,
+            "{op}(bf16 {a:04X}, {b:04X}): promote-and-round gave {promoted:04X}; the divergence \
+             this case pins is QUIETING, so the quiet bit must be the thing that differs"
+        );
+    }
+}
+
+/// Backs: KISS-OPS-6.16-0009 — the ORDINARY arm, mirroring the minmax behaviour-preservation
+/// test. For every NON-NaN bf16 the raw-bit move and the promote→round path AGREE, which is
+/// what makes the clause a scope clarification rather than a behaviour change: it bites
+/// exactly on the NaN payload, and nowhere else. Without this, "the two paths differ" would
+/// be an unbounded claim rather than one confined to signaling NaNs.
+#[test]
+fn test_bf16_move_ops_are_behaviour_preserving_for_non_nan() {
+    let samples: &[u16] = &[
+        0x0000, 0x8000, // ±0
+        0x0001, 0x8001, // ± smallest subnormal
+        0x007F, 0x807F, // ± largest subnormal
+        0x0080, 0x8080, // ± smallest normal
+        0x3F7F, 0x3F80, 0x3F81, 0x4000, // tie-boundary neighbours around 1.0
+        0x7F7F, 0xFF7F, // ± largest finite
+        0x7F80, 0xFF80, // ±inf
+    ];
+    for &x in samples {
+        for op in ["neg", "abs"] {
+            assert_eq!(
+                bf16_move_unary(op, x),
+                bf16_promote_round_unary(op, x),
+                "non-NaN {op}(bf16 {x:04X}): the raw-bit move must equal the round-trip"
+            );
+        }
+        for &b in samples {
+            assert_eq!(
+                bf16_copysign(x, b),
+                bf16_promote_round_copysign(x, b),
+                "non-NaN copysign(bf16 {x:04X}, {b:04X}): raw-bit must equal the round-trip"
+            );
+        }
+    }
+}
