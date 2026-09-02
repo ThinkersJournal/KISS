@@ -55,6 +55,60 @@ An RFC moves through these states:
 This is the process the umbrella describes in §7.2: the GitHub issue tracker **is** the
 ThinkersJournal RFC directory of record.
 
+## Who approves normative text
+
+Step 3 above says merging the PR records acceptance. It does not say who may merge, and
+that had never been written down — the working convention lived only in contributors'
+memory, which is how a finished, reviewed, green PR can wait on a rule no document
+contains (#370).
+
+The maintainer settled it on 2026-09-02:
+
+> "For future normative text, if you, the KISS agent, and any agents that would be
+> affected by the normative text all agree that it is correct, I'm fine with it being
+> implemented without my involvement."
+
+and, asked specifically about a clause that makes an existing conformant implementation
+retroactively non-conforming:
+
+> "I'm fine with behavior changes in existing implementations if the involved agents
+> agree they are the correct changes to make in the long run."
+
+So a normative change needs **three classes of agreement**, and the maintainer is not one
+of them:
+
+1. the **portfolio coordinator**,
+2. the **KISS architect**,
+3. **every affected implementor** — anyone whose current output the change would make
+   non-conforming.
+
+Non-normative changes are unaffected and continue to merge on an ordinary reviewed-and-green
+basis. An author is never a signature on their own PR.
+
+### The affected-set is the load-bearing part
+
+"Every affected implementor agrees" is only as strong as the set of implementors actually
+asked. **Nothing in the rule constructs that set, and an implementor who is never asked has
+not agreed** — an omission is invisible, which is the same failure direction that made this
+rule worth writing down at all.
+
+Affectedness is usually **testable rather than judged**, so ask a question whose answer is a
+measurement and record it. For the narrow-float clauses that first used this process, the
+question was *"does your implementation compute bf16 or f8e5m2 min/max by promoting to f32
+and rounding back?"* — a yes means the clause changes that implementation's output, and a no
+closes the party out in one line.
+
+**Record the asked-set alongside the agreed-set.** They are different, and only one of them
+is evidence. A party may also answer **not-a-party** on a measurement, which is a real answer
+and should carry the measurement that supports it — including any boundary the party will not
+sign for, such as behaviour produced by a third-party compiler it neither inspects nor
+rewrites.
+
+*Provenance: both quotations were relayed to the KISS architect by the portfolio coordinator
+on 2026-09-02 and are recorded verbatim on #370. They are transcribed rather than paraphrased
+because a rule about who may approve should not itself rest on someone's summary of what was
+said.*
+
 ## Maturity and the freeze gate (summary of umbrella §5)
 
 Each sub-standard is versioned independently and moves through maturity stages. Advancing
