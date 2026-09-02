@@ -983,14 +983,25 @@ enum (§6.0). See umbrella §3 for the full statement.
   operand a MUST for a decomposition containing arithmetic — so exempting the whole payload
   would leave that clause undetectable by any conformant harness. For a dtype whose encoding
   admits **no** signaling NaN (`f8e4m3fn`, single NaN encoding) the quietness comparison is
-  **vacuous**, and a comparator MUST NOT synthesize a distinction the format cannot represent. A result that is NaN where a finite
+  **vacuous**, and a comparator MUST NOT synthesize a distinction the format cannot represent.
+  ⚠️ A dtype that **admits** a signaling NaN but which no corpus vector or test ever supplies one to
+  is **affected-but-unexercised**: the obligation binds, nothing currently detects a violation, and
+  the implementation will neither fail nor report itself unaffected. That state is the one most
+  easily misfiled as *not affected*, and a conformance claim MUST NOT rest on it. A result that is NaN where a finite
   or infinite value is expected — or finite/infinite where NaN is expected — MUST be a
   **mismatch**; the disagreement about NaN-**ness** is the conformance-relevant fact. This
   refinement is scoped by the NaN's **provenance — computed versus moved — and by nothing else**;
-  it applies under **every** comparator, the exact-byte comparator (§6.8-0001) included, because a
-  computed NaN's payload is architectural regardless of which comparator is running. Scoping it by
-  comparator instead would make a conformant implementation's conformance depend on the platform it
-  is compared against rather than on its own behaviour. It MUST NOT relax, and does not apply to: **(a)** a **byte-preserving**
+  it applies under **every KISS-Conform comparator**, the exact-byte comparator (§6.8-0001)
+  included, because a computed NaN's payload is architectural regardless of which comparator is
+  running. Scoping it by comparator instead would make a conformant implementation's conformance
+  depend on the platform it is compared against rather than on its own behaviour. **The subject is
+  the conformance comparison of §6.5-0001 — an implementation's output against an independently
+  computed reference — and this clause says nothing about an implementation's own internal
+  self-consistency checks.** Those may legitimately be **stricter**: a comparison of two evaluations
+  by the **same** implementation on the **same** target has the same hardware minting the NaN both
+  times, so a payload difference there is not architectural licence but a real change of answer, and
+  an implementation is right to reject it bit-for-bit. **The exemption exists because no unique
+  correct payload exists ACROSS implementations, not because payloads are unimportant.** It MUST NOT relax, and does not apply to: **(a)** a **byte-preserving**
   result — a raw-bit permutation (`gather` / `scatter` / `flip`), a `select`, or a bitcast —
   whose NaN output is a **moved** input value rather than a computed one: the moved bytes,
   payload included, are the contract and MUST compare **exact-byte** (§6.8-0001); **(b)** a NaN
