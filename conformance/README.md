@@ -51,7 +51,7 @@ The remaining 553<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **494<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 551<!-- bound:test_fns --> test fns, **133<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 554<!-- bound:test_fns --> test fns, **134<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. Closing that is cheap and is the first
 task below.
