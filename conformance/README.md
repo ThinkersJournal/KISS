@@ -74,7 +74,8 @@ python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
   the freeze. **Today: 0 of 9 sub-standards pass.**
 - **umbrella §8.1** — an implementation conforms "if and only if it passes the
   unmodified KISS-Conform suite for that sub-standard". Where there is no test there
-  is no suite, so a conformance claim to KISS-Synth (0/130) is backed by nothing.
+  is no suite, so a conformance claim to KISS-Synth — 31 of its 130 clauses
+  backed — rests on a suite that does not exercise the other 99.
 
 Everywhere else the gap is a recorded, ratcheted debt: `UNBACKED.tsv` may only
 shrink, and `--strict` reports the live count on every PR.
@@ -173,11 +174,11 @@ default build and CI stay GPU-free.
   or name it in the comment above the test. `kiss_trace.py` reads both and will
   strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
   it is the cheapest coverage in the repo.
-- **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
+- **Phase 6 — burn down `UNBACKED.tsv`.** 552 clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 31/130 and the highest Ops at 109/196; Announce is 42/76. Every one has a
+  Synth at 31/130 and the highest Classify at 64/109; Announce is 36/76. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
