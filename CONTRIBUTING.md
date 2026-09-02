@@ -115,8 +115,10 @@ must be asked directly. ⚠️ *"It looks untestable"* is **not** the trigger �
 failure to find the discriminating input, not on the absence of one, and the input is often
 found by reading **why** the clause exists rather than what it forbids.
 
-**Record the asked-set alongside the agreed-set.** They are different, and only one of them
-is evidence. A party may also answer **not-a-party** on a measurement, which is a real answer
+**Record the asked-set alongside the agreed-set.** They evidence different things: the
+agreed-set is evidence that the parties agree, and the asked-set is evidence that the
+affected-set was **constructed rather than assumed**. A ratification recorded without the
+asked-set cannot be told apart from one where nobody looked. A party may also answer **not-a-party** on a measurement, which is a real answer
 and should carry the measurement that supports it — including any boundary the party will not
 sign for, such as behaviour produced by a third-party compiler it neither inspects nor
 rewrites.
