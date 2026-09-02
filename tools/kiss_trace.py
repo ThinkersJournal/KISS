@@ -237,6 +237,7 @@ def collect_proven(harness):
 
 # A Rust test function in the harness: `#[test]` (possibly with intervening
 # attributes such as `#[cfg(feature = "cuda")]` or `#[ignore]`) then `fn name(`.
+RE_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]+")
 RE_RUST_TEST = re.compile(
     r"#\[test\]\s*(?:#\[[^\]]*\]\s*)*fn\s+([a-z_][a-z0-9_]*)\s*\(", re.M)
 # A `#[cfg(feature = "...")]` gate anywhere in the attribute run before a test.
@@ -462,6 +463,11 @@ def discover_tests(conf_dir):
                     # reference worth flagging even though it backs nothing, #187/§3.3) and the
                     # citation audit (kiss_cites, which classifies the mentions). Splitting the
                     # two is the point of #187: credit is narrow, reference-hygiene is wide.
+                    # lowercase word tokens of the body AND its doc comment (#246).
+                    # The body alone would miss a test whose subject is named only in
+                    # the comment above it, which is a legitimate style here and would
+                    # read as a false negative.
+                    "tokens": {t.lower() for t in RE_WORD.findall(scope)},
                     "cited_raw": set(RE_CLAUSE_ID.findall(scope)),
                     # PROVEN markers (#278): {cid: (subject, ref)} of well-formed proof
                     # testimony, and the clause ids of any malformed `Proven:` (flagged,
@@ -1267,6 +1273,7 @@ class DocResult:
         self.stem = stem
         self.prefix = "KISS-" + stem.upper()
         self.body = []       # (clause_id, line, [tests])
+        self.terms = {}      # clause_id -> distinctive terms (#246)
         self.matrix = []     # (clause_id, test, line)
         self.violations = []
 
@@ -1276,6 +1283,49 @@ class DocResult:
     @property
     def clause_ids(self):
         return {c for c, _, _ in self.body} | {c for c, _, _ in self.matrix}
+
+
+# ABOUTNESS SIGNAL (#246). Binding is by NAME in both directions and reads no assertion, so
+# a clause can name a test that exists, compiles and passes while checking something else --
+# and be counted as backed. This does not close that; it MEASURES it, and never gates.
+#
+# The signal is deliberately the weakest defensible one: does the named test's text mention
+# any DISTINCTIVE TERM the clause names? Backticked identifiers are the spec's own way of
+# naming concrete artifacts (`bf16`, `structure_key`, `f8e4m3fn`), so they discriminate far
+# better than prose words.
+#
+# THE CLAUSE'S OWN `*Test:*` NAME IS EXCLUDED, and everything depends on it: that name is
+# backticked in the clause and is by construction present in the test, so leaving it in makes
+# EVERY clause overlap and the measure reports nothing while looking like it works. A signal
+# that cannot come out negative is not a signal.
+RE_TICK = re.compile(r"`([^`\n]{2,80})`")
+# words too common in this corpus to discriminate; a term that appears in most tests
+# separates nothing, and including them would inflate the overlap count silently.
+ABOUT_STOP = {
+    "test", "tests", "the", "and", "not", "for", "with", "must", "may", "shall", "kiss",
+    "true", "false", "none", "some", "self", "fn", "let", "use", "mod", "pub", "std",
+    "assert", "assert_eq", "vec", "str", "string", "usize", "u8", "u16", "u32", "u64",
+    "i8", "i16", "i32", "i64", "json", "rs", "md", "tsv", "toml",
+}
+
+
+def clause_terms(block):
+    """Distinctive backticked identifiers in a clause block, MINUS the test(s) it names."""
+    named = {t.lower() for t in RE_TEST.findall(block)}
+    out = set()
+    for m in RE_TICK.finditer(block):
+        span = m.group(1)
+        # A backticked CLAUSE ID is skipped WHOLE, not filtered afterwards: it tokenizes to
+        # `kiss` and the sub-standard (`ops`, `classify`), and a post-filter on the assembled
+        # id never sees those pieces. Caught by its own control, which is why the control
+        # asserts the empty set rather than "does not contain the id".
+        if RE_CLAUSE_ID.search(span):
+            continue
+        for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]+", span):
+            t = tok.lower()
+            if len(t) >= 3 and t not in ABOUT_STOP and t not in named:
+                out.add(t)
+    return out
 
 
 def parse(path, res):
@@ -1292,6 +1342,7 @@ def parse(path, res):
         end = next(b for b in boundaries if b > pos)
         block = text[pos:end]
         res.body.append((cid, lineno(pos), RE_TEST.findall(block)))
+        res.terms[cid] = clause_terms(block)
     for m in RE_MATRIX.finditer(text):
         res.matrix.append((m.group(1), m.group(2), lineno(m.start())))
 
@@ -1630,6 +1681,9 @@ def main():
     for res in results:
         for cid, t, _ in res.matrix:
             clause_test[cid] = t
+    all_terms = {}
+    for res in results:
+        all_terms.update(res.terms)
 
     # A clause is BACKED if executable code is tied to it, by either direction of
     # §6.1's bidirectional traceability:
@@ -1889,6 +1943,40 @@ def main():
     # one) — the label must name the relation because "cited by the named test" (125) and
     # "cited by any test" (139) are two defensible numbers for one word.
     tier_cited_other = len(tier_cited) - len(tier_cited_by_name)
+    # ABOUTNESS SIGNAL over the NAMED tier (#246) -- REPORTED, NEVER GATED.
+    #
+    # A NAMED clause is backed by exactly one fact: a fn of that name exists. Nothing has
+    # read what it asserts, so it may pass while checking something else. This partitions
+    # that tier by whether the named test's text even MENTIONS a distinctive term the clause
+    # names -- the weakest evidence of aboutness there is, and still more than a name match.
+    #
+    # IT CANNOT DE-CREDIT, and that is deliberate. A silent recognizer is not a finding:
+    # zero overlap does not prove a test is off-subject, and overlap does not prove it is on
+    # it. What the split gives is a POPULATION -- the clauses where a name match is the only
+    # evidence AND nothing in the test names the subject -- which is what #246's proposal 2
+    # needs before anyone decides whether to make reverse citation mandatory.
+    about_hit, about_miss, about_noterms = [], [], []
+    for c in sorted(tier_named):
+        t = clause_test.get(c)
+        terms = all_terms.get(c) or set()
+        toks = harness.get(t, {}).get("tokens") if t else None
+        if toks is None:
+            continue                      # no resolvable named test: not this axis's business
+        if not terms:
+            about_noterms.append(c)       # the clause names no distinctive term: UNMEASURABLE
+        elif terms & toks:
+            about_hit.append(c)
+        else:
+            about_miss.append(c)
+    n_about = len(about_hit) + len(about_miss) + len(about_noterms)
+    if n_about:
+        print(f"      — aboutness signal over those {len(tier_named)} NAMED (#246); REPORTS, never gates —")
+        print(f"          {len(about_hit):>4} the named test's text mentions a term the clause names")
+        print(f"          {len(about_miss):>4} it mentions NONE — a name match is the ONLY evidence")
+        print(f"          {len(about_noterms):>4} the clause names no distinctive term: UNMEASURABLE, not clean")
+        print(f"                 Neither direction is proof: zero overlap does not show a test is")
+        print(f"                 off-subject, and overlap does not show it is on-subject. This is a")
+        print(f"                 POPULATION to adjudicate, which is why it de-credits nothing.")
     print(f"      — by evidence strength (convention 15); NAMED+CITED partition the {len(backed)} backed —")
     print(f"          {len(tier_named):>4} NAMED   the §9 name matches a real fn, but NO backing-form citation")
     print(f"                 exists for the clause (by any test) — a name coincidence, not an asserted tie")
