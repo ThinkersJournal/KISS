@@ -910,8 +910,14 @@ enum (§6.0). See umbrella §3 for the full statement.
 
 - **KISS-CONFORM-6.8-0001** — The **exact-byte** comparator MUST be a bit/byte-identical
   compare (memcmp), and KISS-Conform MUST NOT relax a clause whose declared class is exact-byte
-  **Normalizes:** nothing. A bit/byte difference anywhere is a mismatch.
-  to a tolerance or order-invariant comparator. *Test:* `test_conform_exact_byte_comparator`.
+  to a tolerance or order-invariant comparator. The one exception is the computed-NaN refinement
+  of §6.8-0010, which is scoped by the NaN's **provenance** and therefore reaches this comparator
+  too: a NaN the op itself generated has an architectural payload, and comparing it byte-for-byte
+  would fail IEEE-754-conforming hardware. That is a **narrowing of what counts as a difference**,
+  not a relaxation to a tolerance or order-invariant comparator, and it leaves a **moved** NaN —
+  §6.8-0010(a) — compared exact-byte here as before.
+  **Normalizes:** nothing, except a **computed** NaN's payload and sign per §6.8-0010.
+  *Test:* `test_conform_exact_byte_comparator`.
 - **KISS-CONFORM-6.8-0002** — The **ULP/tolerance** comparator MUST compare within the op's
   **declared per-target ULP** bound and MUST NOT be a byte compare across implementations or
   languages; it MUST apply to any op whose decomposition transitively contains a transcendental
@@ -968,15 +974,34 @@ enum (§6.0). See umbrella §3 for the full statement.
   (oracle/golden) result value is **NaN and that NaN is *computed* by the op** — an arithmetic
   or transcendental result whose NaN the computation itself generates (`0.0/0.0`, `0.0·inf`,
   `sqrt` of a negative, `log` of a negative, `sin`/`tan` of a non-finite argument) —
-  the comparator MUST treat an observed result as matching **iff it is also NaN**. The NaN
-  **payload and sign bits MUST NOT be compared**, and a differing payload or sign MUST NOT fail
-  a conformant implementation: NaN payload/sign propagation is architectural, not semantic, and
-  KISS-Ops pins **no** canonical qNaN for a computed result. A result that is NaN where a finite
+  the comparator MUST treat an observed result as matching **iff it is also NaN and, where the
+  result dtype's encoding admits a signaling NaN, agrees in **quietness**. The NaN **payload
+  (excluding the quiet bit) and sign bits MUST NOT be compared**, and a differing payload or
+  sign MUST NOT fail a conformant implementation: NaN payload/sign propagation is architectural,
+  not semantic, and KISS-Ops pins **no** canonical qNaN for a computed result. The quiet bit is
+  **not** architectural — KISS-Ops §6.16-0010 makes delivering a **quiet** NaN on a signaling
+  operand a MUST for a decomposition containing arithmetic — so exempting the whole payload
+  would leave that clause undetectable by any conformant harness. For a dtype whose encoding
+  admits **no** signaling NaN (`f8e4m3fn`, single NaN encoding) the quietness comparison is
+  **vacuous**, and a comparator MUST NOT synthesize a distinction the format cannot represent.
+  ⚠️ A dtype that **admits** a signaling NaN but which no corpus vector or test ever supplies one to
+  is **affected-but-unexercised**: the obligation binds, nothing currently detects a violation, and
+  the implementation will neither fail nor report itself unaffected. That state is the one most
+  easily misfiled as *not affected*, and a conformance claim MUST NOT rest on it. A result that is NaN where a finite
   or infinite value is expected — or finite/infinite where NaN is expected — MUST be a
   **mismatch**; the disagreement about NaN-**ness** is the conformance-relevant fact. This
-  refinement applies under the **value comparators** — the oracle-differential agreement relation
-  (§6.5-0001) and the ULP/tolerance comparator (§6.8-0002), and the magnitude arm of the split
-  comparator (§6.8-0005). It MUST NOT relax, and does not apply to: **(a)** a **byte-preserving**
+  refinement is scoped by the NaN's **provenance — computed versus moved — and by nothing else**;
+  it applies under **every KISS-Conform comparator**, the exact-byte comparator (§6.8-0001)
+  included, because a computed NaN's payload is architectural regardless of which comparator is
+  running. Scoping it by comparator instead would make a conformant implementation's conformance
+  depend on the platform it is compared against rather than on its own behaviour. **The subject is
+  the conformance comparison of §6.5-0001 — an implementation's output against an independently
+  computed reference — and this clause says nothing about an implementation's own internal
+  self-consistency checks.** Those may legitimately be **stricter**: a comparison of two evaluations
+  by the **same** implementation on the **same** target has the same hardware minting the NaN both
+  times, so a payload difference there is not architectural licence but a real change of answer, and
+  an implementation is right to reject it bit-for-bit. **The exemption exists because no unique
+  correct payload exists ACROSS implementations, not because payloads are unimportant.** It MUST NOT relax, and does not apply to: **(a)** a **byte-preserving**
   result — a raw-bit permutation (`gather` / `scatter` / `flip`), a `select`, or a bitcast —
   whose NaN output is a **moved** input value rather than a computed one: the moved bytes,
   payload included, are the contract and MUST compare **exact-byte** (§6.8-0001); **(b)** a NaN
@@ -985,9 +1010,9 @@ enum (§6.0). See umbrella §3 for the full statement.
   signed-zero ties) and by the split comparator's zero-sign arm (§6.8-0005) — only NaN, never
   `±0.0`, is exempted from bit comparison. NaN **propagation semantics** — which NaN a
   propagating op yields (`max_prop` vs `fmax_ieee`) — remain pinned by the KISS-Ops §6.13
-  **Normalizes:** the payload and sign bits of a **computed** NaN. Normalizes **nothing** about NaN-ness itself.
-  decompositions and are unaffected by this comparison rule. *Test:*
-  `test_conform_nan_result_compares_by_nanness`.
+  decompositions and are unaffected by this comparison rule.
+  **Normalizes:** the payload (excluding the quiet bit) and sign bits of a **computed** NaN. Normalizes **nothing** about NaN-ness or quietness.
+  *Test:* `test_conform_nan_result_compares_by_nanness`.
 - **KISS-CONFORM-6.8-0011** — For an op with **more than one output**, KISS-Conform MUST
   select the comparator for **each output independently** from that output's **per-output**
   determinism/fidelity class (KISS-OPS §6.0-0007), never a single whole-op comparator. In
