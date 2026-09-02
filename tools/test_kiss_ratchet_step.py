@@ -35,6 +35,8 @@ import subprocess
 import tempfile
 import unittest
 
+import kiss_workflow as kw  # noqa: E402
+
 HERE = pathlib.Path(__file__).resolve().parent
 WF = HERE.parent / ".github" / "workflows" / "traceability.yml"
 STEP = "Coverage ratchet (blocking)"
@@ -50,30 +52,15 @@ python() { echo "python $*" >> "$LOG"; return ${STUB_PY_RC:-0}; }
 
 
 def run_block(text=None, step=STEP):
-    """The step's `run:` script, dedented. Raises if the step or its block is missing."""
-    lines = (text if text is not None else WF.read_text(encoding="utf-8")).splitlines()
-    i = next((n for n, l in enumerate(lines) if l.strip() == "- name: " + step), None)
-    if i is None:
-        raise AssertionError("step %r not found in %s" % (step, WF))
-    j = next((n for n in range(i + 1, len(lines)) if lines[n].strip().startswith("run:")), None)
-    if j is None or not lines[j].strip().endswith("|"):
-        raise AssertionError("step %r has no block `run: |`" % step)
-    indent = len(lines[j]) - len(lines[j].lstrip())
-    body = []
-    for l in lines[j + 1:]:
-        if l.strip() and (len(l) - len(l.lstrip())) <= indent:
-            break
-        body.append(l)
-    # The block's own indent, MEASURED from its first non-empty line rather than assumed to
-    # be `indent + 2` (#358 review). A hardcoded step mis-dedents under any other valid YAML
-    # indentation -- and it does so SILENTLY, into a script that still parses, because
-    # leading whitespace is insignificant to bash. The controls would then all pass against
-    # something the runner never executes.
-    first = next((l for l in body if l.strip()), None)
-    if first is None:
-        raise AssertionError("step %r has an EMPTY `run:` block" % step)
-    off = len(first) - len(first.lstrip())
-    return "\n".join(l[off:] if len(l) > off else "" for l in body)
+    """The step's `run:` script, dedented -- via the shared extractor.
+
+    ONE COPY (#372 review): this and the other workflow-step suite carried
+    identical extractors, and nothing would have failed if one were fixed and
+    the other not. A mis-extracted block still parses and still runs, so the
+    controls keep passing against a script the runner never sees.
+    """
+    return kw.run_block(text if text is not None else WF.read_text(encoding="utf-8"),
+                        step)
 
 
 def execute(base_ref="main", git_rc=0, py_rc=0):

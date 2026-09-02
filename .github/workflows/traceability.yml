@@ -57,6 +57,14 @@ jobs:
       # failed base fetch are each proven distinguishable BY BEHAVIOUR, not by reading it.
       - name: Ratchet CI-step behavioural controls (#338)
         run: python tools/test_kiss_ratchet_step.py
+      # The MSRV leg is shell inside YAML like the ratchet step, and its failure mode is
+      # worse: a necessity check is satisfiable by NOTHING HAPPENING. Three of the four
+      # ways to exit non-zero are the check failing to run, and a leg that accepts any
+      # non-zero exit reports all of them as "the floor is necessary". These controls
+      # execute the block with cargo/rustup stubbed and assert the VERDICT VOCABULARY:
+      # 0 correct · 1 a finding about the floor · 3 the check could not run.
+      - name: MSRV leg behavioural controls (#369)
+        run: python tools/test_kiss_msrv_step.py
       - name: Coverage ratchet (blocking)
         # The ratchet compares the lint SET against the PRE-change ledger read at a base ref,
         # so a lint->harness SUBSTITUTION and a constant-count swap can be told from a laundered
