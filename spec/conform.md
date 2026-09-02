@@ -910,14 +910,14 @@ enum (§6.0). See umbrella §3 for the full statement.
 
 - **KISS-CONFORM-6.8-0001** — The **exact-byte** comparator MUST be a bit/byte-identical
   compare (memcmp), and KISS-Conform MUST NOT relax a clause whose declared class is exact-byte
-  **Normalizes:** nothing, except a **computed** NaN's payload and sign per §6.8-0010.
   to a tolerance or order-invariant comparator. The one exception is the computed-NaN refinement
   of §6.8-0010, which is scoped by the NaN's **provenance** and therefore reaches this comparator
   too: a NaN the op itself generated has an architectural payload, and comparing it byte-for-byte
   would fail IEEE-754-conforming hardware. That is a **narrowing of what counts as a difference**,
   not a relaxation to a tolerance or order-invariant comparator, and it leaves a **moved** NaN —
-  §6.8-0010(a) — compared exact-byte here as before. *Test:*
-  `test_conform_exact_byte_comparator`.
+  §6.8-0010(a) — compared exact-byte here as before.
+  **Normalizes:** nothing, except a **computed** NaN's payload and sign per §6.8-0010.
+  *Test:* `test_conform_exact_byte_comparator`.
 - **KISS-CONFORM-6.8-0002** — The **ULP/tolerance** comparator MUST compare within the op's
   **declared per-target ULP** bound and MUST NOT be a byte compare across implementations or
   languages; it MUST apply to any op whose decomposition transitively contains a transcendental
@@ -1010,9 +1010,9 @@ enum (§6.0). See umbrella §3 for the full statement.
   signed-zero ties) and by the split comparator's zero-sign arm (§6.8-0005) — only NaN, never
   `±0.0`, is exempted from bit comparison. NaN **propagation semantics** — which NaN a
   propagating op yields (`max_prop` vs `fmax_ieee`) — remain pinned by the KISS-Ops §6.13
+  decompositions and are unaffected by this comparison rule.
   **Normalizes:** the payload (excluding the quiet bit) and sign bits of a **computed** NaN. Normalizes **nothing** about NaN-ness or quietness.
-  decompositions and are unaffected by this comparison rule. *Test:*
-  `test_conform_nan_result_compares_by_nanness`.
+  *Test:* `test_conform_nan_result_compares_by_nanness`.
 - **KISS-CONFORM-6.8-0011** — For an op with **more than one output**, KISS-Conform MUST
   select the comparator for **each output independently** from that output's **per-output**
   determinism/fidelity class (KISS-OPS §6.0-0007), never a single whole-op comparator. In
