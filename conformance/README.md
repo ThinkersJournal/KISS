@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**381<!-- bound:harness --> of 933<!-- bound:clauses --> normative clauses (40.8%) are
+**382<!-- bound:harness --> of 934<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -51,7 +51,7 @@ The remaining 552 are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not
 population: **493<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 543<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 544<!-- bound:test_fns --> test fns, **128<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. Closing that is cheap and is the first
 task below.
@@ -74,7 +74,8 @@ python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
   the freeze. **Today: 0 of 9 sub-standards pass.**
 - **umbrella §8.1** — an implementation conforms "if and only if it passes the
   unmodified KISS-Conform suite for that sub-standard". Where there is no test there
-  is no suite, so a conformance claim to KISS-Synth (0/130) is backed by nothing.
+  is no suite, so a conformance claim to KISS-Synth — 31 of its 130 clauses
+  backed — rests on a suite that does not exercise the other 99.
 
 Everywhere else the gap is a recorded, ratcheted debt: `UNBACKED.tsv` may only
 shrink, and `--strict` reports the live count on every PR.
@@ -166,18 +167,18 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
-- **Phase 5 (next, cheap) — cite the clause in every test.** 95 of 128 test fns
-  cite no clause, so ~15% of the suite's real coverage is invisible to the matrix.
+- **Phase 5 (next, cheap) — cite the clause in every test.** The uncited test
+  fns counted above are real coverage that is invisible to the matrix.
   Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
   `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
   or name it in the comment above the test. `kiss_trace.py` reads both and will
   strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
   it is the cheapest coverage in the repo.
-- **Phase 6 — burn down `UNBACKED.tsv`.** 824 clauses, no executable test. Order
+- **Phase 6 — burn down `UNBACKED.tsv`.** 552 clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 31/130 and the highest Ops at 109/196; Announce is 42/76. Every one has a
+  Synth at 31/130 and the highest Classify at 64/109; Announce is 36/76. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
