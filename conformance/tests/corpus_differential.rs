@@ -97,10 +97,24 @@ fn eval_minmax(cell: &Cell) -> Vec<u8> {
             op64(a, b).to_bits().to_be_bytes().to_vec()
         }
         "bf16" => {
-            // promote -> compute -> round: the narrow-dtype leg of the vector set.
+            // bf16 minmax is a SELECT (moves an exact input value), NOT promote→compute→round:
+            // f32_to_bf16 forces the quiet bit on any NaN (fp.rs), so routing a MOVED sNaN through it
+            // QUIETS it, violating §6.8-0010(a) — a moved NaN's payload+sign are exact (#354). Pick the
+            // winning operand by the op's §6.15 decomposition on the f32-promoted values (comparison
+            // only), and return its EXACT bf16 bits. Correct for non-NaN too: the winner is already an
+            // exact bf16 value, so there is nothing to round.
             let a = u16::from_be_bytes(cell.inputs[0].clone().try_into().unwrap());
             let b = u16::from_be_bytes(cell.inputs[1].clone().try_into().unwrap());
-            f32_to_bf16(op32(bf16_to_f32(a), bf16_to_f32(b))).to_be_bytes().to_vec()
+            let (af, bf) = (bf16_to_f32(a), bf16_to_f32(b));
+            let (a_nan, b_nan) = (af.is_nan(), bf.is_nan());
+            let winner = match cell.op.as_str() {
+                "max_prop" => if a_nan { a } else if b_nan { b } else if af >= bf { a } else { b },
+                "min_prop" => if a_nan { a } else if b_nan { b } else if af <= bf { a } else { b },
+                "fmax_ieee" => if a_nan { b } else if b_nan { a } else if af >= bf { a } else { b },
+                "fmin_ieee" => if a_nan { b } else if b_nan { a } else if af <= bf { a } else { b },
+                other => panic!("unknown minmax op `{other}`"),
+            };
+            winner.to_be_bytes().to_vec()
         }
         other => panic!("unknown dtype `{other}`"),
     }
@@ -248,5 +262,79 @@ fn a_max_min_family_swap_reddens_every_cell() {
         tie_reddened, 0,
         "a max<->min swap over the TIE set must red NOTHING — operand `a` wins under both \
          cmp_ge and cmp_le on a tie, which is why the tie file cannot separate max from min"
+    );
+}
+
+// ---- §6.13 minmax MOVED-NaN cells (§6.8-0010(a), #329) ------------------------
+//
+// 96 vectors from kiss-ref's `minmax_nan_corpus` generator (kiss-ref main @ c74e472;
+// baracuda CUDA sm_89, both arms, @ e31f47548af9): 4 ops × {f32,f64,bf16} × 8 NaN cases.
+// A minmax NaN output is a MOVED input value pinned payload AND sign (§6.8-0010(a)), so
+// class exact-byte compares every bit. The both-NaN rows carry DISTINCT payloads, so a
+// payload-blind path (`agree()`) would silently pass a wrong payload — which is why these
+// route through compare_under_precedence (§6.8-0008 precedence → exact-byte), never
+// `agree()`; the differ.rs #339(a) guard refuses a moved-NaN op from `run_binary` anyway.
+
+fn nan_minmax_bundle() -> Corpus {
+    let text = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/corpus/ops-minmax-nan.json"
+    ))
+    .unwrap();
+    corpus::load(&text).unwrap()
+}
+
+/// The cross-implementation differential: KISS's reference semantics (`eval_minmax`) must
+/// reproduce all 96 of kiss-ref's independently-derived, CUDA-measured moved-NaN values,
+/// bit-for-bit under exact-byte — two implementations agreeing on payload AND sign.
+#[test]
+fn reference_minmax_passes_every_nan_cell() {
+    let c = nan_minmax_bundle();
+    assert_eq!(c.vectors.len(), 96, "4 ops x 3 dtypes x 8 NaN cases");
+    let mut diverged = Vec::new();
+    for cell in &c.vectors {
+        let actual = eval_minmax(cell);
+        if compare_under_precedence(cell, &actual).is_err() {
+            let hex = |b: &[u8]| b.iter().map(|x| format!("{x:02X}")).collect::<Vec<_>>().join(" ");
+            eprintln!(
+                "DIVERGE tcId {} {} {} tags={:?} expected={} actual={}",
+                cell.tc_id, cell.op, cell.dtype, cell.tags, hex(&cell.expected), hex(&actual)
+            );
+            diverged.push(cell.dtype.clone());
+        }
+    }
+    let by_dtype = |dt: &str| diverged.iter().filter(|d| *d == dt).count();
+    assert!(
+        diverged.is_empty(),
+        "{}/{} diverge — f32:{} f64:{} bf16:{}",
+        diverged.len(), c.vectors.len(), by_dtype("f32"), by_dtype("f64"), by_dtype("bf16")
+    );
+}
+
+/// TEETH — a wrong NaN payload is caught. Flip the low payload byte of the reference result
+/// (a still-NaN, wrong-payload output on the NaN-expected rows) — exact-byte MUST red EVERY
+/// cell. The both-NaN distinct-payload rows are exactly where a NaN-blind comparator (`agree()`)
+/// would silently pass; asserting they exist keeps this from proving a vacuous point.
+#[test]
+fn a_wrong_nan_payload_is_caught() {
+    let c = nan_minmax_bundle();
+    assert!(
+        c.vectors.iter().any(|v| v.tags.iter().any(|t| t == "distinct-payload")),
+        "there must be both-NaN distinct-payload rows — the payload-blind discrimination cases"
+    );
+    let caught = c
+        .vectors
+        .iter()
+        .filter(|cell| {
+            let mut wrong = eval_minmax(cell);
+            let last = wrong.len() - 1;
+            wrong[last] ^= 0x01;
+            compare_under_precedence(cell, &wrong).is_err()
+        })
+        .count();
+    assert_eq!(
+        caught,
+        c.vectors.len(),
+        "exact-byte MUST red a wrong payload on EVERY cell — a NaN-blind comparator would pass the NaN rows"
     );
 }
