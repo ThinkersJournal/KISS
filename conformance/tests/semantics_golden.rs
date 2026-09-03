@@ -544,6 +544,59 @@ fn test_ops_abs_raw_bit() {
     assert_ne!(abs(-0.0).to_bits(), branch_abs.to_bits());
 }
 
+/// Enforces KISS-OPS-6.4-0003 — `neg` flips the sign bit as a RAW-BIT operation:
+/// `neg(-0.0)` is `+0.0`, `neg(+0.0)` is `-0.0`, and a NaN's payload survives with only
+/// the sign flipped. The sibling of `test_ops_abs_raw_bit`, which this mirrors.
+///
+/// ⚠️ THE OBVIOUS ASSERTION DOES NOT DISCRIMINATE. Rust's `-x` on `f32` already flips the
+/// sign bit, so `assert_eq!(neg(nan).to_bits(), …)` passes against the reference AND
+/// against a wrong implementation that happens to use native negation. Each case therefore
+/// also measures a PLAUSIBLE WRONG FORM on the same input and asserts it DIVERGES — and
+/// each wrong form is shown AGREEING on a neighbouring case first, so the divergence is
+/// attributable to the property under test rather than to the form being broken generally.
+///
+/// The narrow-float arm — promote-to-`f32`, negate, round back, which QUIETS a signaling
+/// NaN — is not repeated here: it is covered for `bf16` by
+/// `test_ops_bf16_move_ops_preserve_snan_bits` in `corpus_differential.rs` (#393), and the
+/// two blocks would otherwise carry the same fixtures.
+#[test]
+fn test_ops_neg_raw_bit() {
+    // KISS-OPS-6.4-0003
+    assert_eq!(neg(-0.0).to_bits(), 0x0000_0000, "neg(-0.0) flips the sign bit -> +0.0");
+    assert_eq!(neg(0.0).to_bits(), 0x8000_0000, "neg(+0.0) flips the sign bit -> -0.0");
+    assert_eq!(neg(-3.5).to_bits(), 3.5f32.to_bits());
+    assert_eq!(neg(3.5).to_bits(), (-3.5f32).to_bits());
+
+    // a payload NaN: ONLY the sign bit moves, the payload is kept -- in both directions,
+    // so a form that zeroed or canonicalized the payload fails whichever sign it is given.
+    let pos_nan = f32::from_bits(0x7F80_0001);
+    let neg_nan = f32::from_bits(0xFF80_0001);
+    assert!(pos_nan.is_nan() && neg_nan.is_nan());
+    assert_eq!(neg(pos_nan).to_bits(), 0xFF80_0001, "neg flips only the sign bit; payload preserved");
+    assert_eq!(neg(neg_nan).to_bits(), 0x7F80_0001, "and back, payload still preserved");
+
+    // WRONG FORM 1 -- `0.0 - x`, the classic. IEEE gives `(+0) - (+0) = +0`, so it AGREES
+    // on -0.0 and is WRONG on +0.0: it cannot produce a negative zero at all.
+    let sub_neg = |x: f32| 0.0f32 - x;
+    assert_eq!(sub_neg(-0.0).to_bits(), neg(-0.0).to_bits(), "the `0.0 - x` form agrees on -0.0");
+    assert_ne!(
+        neg(0.0).to_bits(),
+        sub_neg(0.0).to_bits(),
+        "the `0.0 - x` form returns +0.0 where the clause pins neg(+0.0) = -0.0"
+    );
+
+    // WRONG FORM 2 -- canonicalizing the NaN. Agrees on every finite input and drops the
+    // payload, which is exactly the entailment `by flipping the sign bit` carries and which
+    // "a NaN operand propagates a NaN" alone would NOT catch: a canonical NaN IS a NaN.
+    let canon_neg = |x: f32| if x.is_nan() { f32::NAN } else { -x };
+    assert_eq!(canon_neg(-3.5).to_bits(), neg(-3.5).to_bits(), "the canonicalizing form agrees on finites");
+    assert_ne!(
+        neg(pos_nan).to_bits(),
+        canon_neg(pos_nan).to_bits(),
+        "canonicalizing drops the NaN payload the clause requires preserved"
+    );
+}
+
 /// Enforces KISS-OPS-6.5-0002 — `select` moves the chosen arm as a RAW-BIT copy, so
 /// a chosen `-0.0` stays `-0.0` and a chosen signaling NaN keeps its payload and its
 /// signaling bit. Catches any arithmetic-carrying select (e.g. `cond*a+(1-cond)*b`):
