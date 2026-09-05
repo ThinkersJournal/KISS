@@ -1615,9 +1615,13 @@ def compute_evidence_tiers(backed, cited, proven=None):
       * proven_set ⊆ cited_set — a proof presupposes the citation; recording a proof for a
         NAMED-only clause means first MIGRATING it to cited (an evidence-adding move, never
         the bare-name→citation mass sweep that would inflate deliberateness without proof).
+        ⚠️ This one is enforced BELOW, by construction, so a control asserting it cannot
+        fail. The live control asserts the falsifiable neighbour instead: that no recorded
+        proof was silently DROPPED by that construction (#405).
 
-    `proven` is the set of clauses with a recorded proof; it defaults to empty because no
-    machine-readable proof record exists yet. Ruled #278: the record is a `// Proven:` marker
+    `proven` is the set of clauses with a recorded proof. It defaults to empty for callers
+    that do not supply one — NOT because no record exists: `collect_proven` builds it from the
+    `// Proven:` markers, and omitting it silently zeroes the tier (the #405 defect). Ruled #278: the record is a `// Proven:` marker
     at the test (carrying the mutation SUBJECT and a resolvable REF — the marker is TESTIMONY
     that a demonstration exists at a ref, not a live re-run), enforced by a 4th blocking
     ratchet dimension from 0. Step 2 supplies `proven` from those markers; this function and
