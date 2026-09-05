@@ -37,6 +37,20 @@ use kiss_conformance::hp::{Atom, BigFloat, Exp, FpClass, Log, Sin};
 
 type Ref = (f64, bool, i32, [u64; 4]); // (x, sign, ebin, 256-bit RNE mantissa MSW-first)
 
+/// Any legitimate err_ulps for these atoms is small (exp at |k|~1010 needs ~8232); a
+/// value at or above this ceiling is a SATURATED / overflowed bound — a degenerate
+/// value that makes the soundness check `|d| ≤ err_ulps` VACUOUSLY TRUE, so it must
+/// fail LOUD, not pass free. This guard — not the soundness assertion — is what
+/// actually caught the log-of-power-of-2 bug (err_ulps had saturated to u128::MAX,
+/// which the assertion is vacuously satisfied by; the first surfacing was in fact an
+/// accidental `err_ulps + 1` overflow, then this ceiling made it a deliberate red).
+const SANITY_CEILING: u128 = 1 << 16;
+
+// ⚠️ The corpus spans small→large arguments on purpose: the TIGHTEST bound (highest
+// d/err_ulps ratio) is NOT at the widest err_ulps. Measured — exp's max ratio is at
+// exp(-700) (err_ulps 4164), not the widest exp(700) (err_ulps 8232). Stated as a
+// caution beforehand, confirmed after. Do NOT "simplify" this to the large-argument
+// cases: that drops exactly where the bound bites.
 const EXP_CASES: &[Ref] = &[
     (1.0, false, 1, [0xADF85458A2BB4A9A, 0xAFDC5620273D3CF1, 0xD8B9C583CE2D3695, 0xA9E13641146433FC]),
     (-1.0, false, -2, [0xBC5AB1B16779BE35, 0x75BD8F0520A9F21B, 0xB5300B556AD8EE66, 0x604973A14A0FB5DB]),
@@ -82,9 +96,8 @@ fn check_one(name: &str, ev_val: &BigFloat<4>, err_ulps: u128, r: &Ref) -> Optio
         du <= err_ulps.saturating_add(1),
         "{name}({x}): UNSOUND — d={du} > err_ulps={err_ulps}+1 (err_ulps UNDER-states the true error)"
     );
-    // (2) MEANINGFUL — not vacuously large. Cap sits above the legitimate maximum
-    // (exp at |k|~1010 needs ~8232) and far below a saturated/overflowed bound.
-    assert!(err_ulps < (1u128 << 16), "{name}({x}): err_ulps={err_ulps} is vacuously large (bound overflowed?)");
+    // (2) MEANINGFUL — not vacuously large (a saturated bound makes (1) vacuous).
+    assert!(err_ulps < SANITY_CEILING, "{name}({x}): err_ulps={err_ulps} is vacuously large (bound saturated/overflowed?)");
     // (3) COMPARATOR TEETH — a bound one ULP below the measured distance MUST flag.
     if du > 0 {
         assert!(
@@ -130,4 +143,38 @@ fn sin_err_ulps_is_sound() {
         let ev = Sin { x }.eval::<4>();
         (ev.val, ev.err_ulps)
     });
+}
+
+/// ⚠️ The vacuous-bound bug found in Log (err_ulps → u128::MAX for m == 1 exactly)
+/// is a CLASS, not a one-off: any atom whose reduction can yield a zero-valued
+/// intermediate with a degenerate exponent can drive `rescale_ulps` past its
+/// 128-bit shift and saturate. This sweeps the obvious zero-intermediate inputs
+/// across ALL atoms — exp(0) (k=0, r=0), sin(±0) (octant 0, r=0), log(1) (t=0) —
+/// which the small→large stress corpora above deliberately do NOT contain, and
+/// asserts none produces a saturated (vacuous) bound. Values are checked too, so a
+/// bound that is fine but a result that is wrong cannot pass.
+#[test]
+fn zero_intermediate_inputs_do_not_saturate_err() {
+    let exp0 = Exp { x: 0.0 }.eval::<4>();
+    let sin0 = Sin { x: 0.0 }.eval::<4>();
+    let sin_neg0 = Sin { x: -0.0 }.eval::<4>();
+    let log1 = Log { x: 1.0 }.eval::<4>();
+    for (name, err) in [
+        ("exp(0)", exp0.err_ulps),
+        ("sin(0)", sin0.err_ulps),
+        ("sin(-0)", sin_neg0.err_ulps),
+        ("log(1)", log1.err_ulps),
+    ] {
+        eprintln!("{name}: err_ulps={err}");
+        assert!(
+            err < SANITY_CEILING,
+            "{name}: err_ulps={err} SATURATED — vacuous bound, same class as the log(2) bug"
+        );
+    }
+    // Values (the atom must be right, not merely non-saturated): exp(0)=1, sin(±0)=±0.
+    assert_eq!(exp0.val.ebin(), 0, "exp(0) = 1 (ebin 0)");
+    assert!(!exp0.val.sign, "exp(0) = +1");
+    assert!(sin0.val.is_zero() && !sin0.val.sign, "sin(0) = +0");
+    assert!(sin_neg0.val.is_zero() && sin_neg0.val.sign, "sin(-0) = -0 (odd)");
+    assert!(log1.val.is_zero(), "log(1) = 0");
 }
