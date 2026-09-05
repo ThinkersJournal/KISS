@@ -11,6 +11,8 @@
 //! `>=` / `<=` is `cmp_ge` / `cmp_le`; the branch structure mirrors the §6.15
 //! `select(...)` decomposition one-for-one.
 
+use crate::hp::{round_atom_to_f32, round_atom_to_f64, Exp, Log, Sin};
+
 /// `max_prop` — NaN-**propagating** maximum (`torch.maximum`). §6.15:
 /// `select(cmp_ne(a,a), a, select(cmp_ne(b,b), b, select(cmp_ge(a,b), a, b)))`.
 pub fn max_prop(a: f32, b: f32) -> f32 {
@@ -320,4 +322,98 @@ pub fn tanh_literal_ref(x: f32) -> f32 {
 /// within the op's declared ULP elsewhere.
 pub fn tanh_refined(x: f32) -> f32 {
     x.tanh()
+}
+
+// ---------------------------------------------------------------------------
+// Transcendental FRONT DOOR (Plan-B T5/T6). The wide-precision correctly-rounded
+// atoms (`hp::Exp/Log/Sin`) assume a finite in-range argument. These entry points
+// are where a transcendental's NaN is DECIDED (minted vs propagated) and where the
+// domain / over-underflow extremes route to `±Inf`/`±0`/`NaN` before the atom sees
+// them; every other finite input delegates to the atom, whose Ziv round already
+// maps value overflow → Inf and underflow → subnormal/0. These are the correctly-
+// rounded references, distinct from the libm-backed `pow`/`tanh` above.
+// ---------------------------------------------------------------------------
+
+/// `exp(x)` at f64, correctly rounded. `NaN → NaN`, `+Inf → +Inf`, `-Inf → +0`;
+/// `x ≥ 710` overflows to `+Inf` and `x ≤ -746` underflows to `+0` (both extremes
+/// also keep `reduce_exp`'s `|k|` in range). Every finite x in between delegates to
+/// the atom, whose round resolves the true over/underflow boundary itself.
+pub fn exp_f64(x: f64) -> f64 {
+    if x.is_nan() {
+        return f64::NAN;
+    }
+    if x == f64::INFINITY {
+        return f64::INFINITY;
+    }
+    if x == f64::NEG_INFINITY || x <= -746.0 {
+        return 0.0;
+    }
+    if x >= 710.0 {
+        return f64::INFINITY;
+    }
+    f64::from_bits(round_atom_to_f64(&Exp { x }).bits)
+}
+
+/// `exp(x)` at f32 — as [`exp_f64`] with the f32 over/underflow clamps.
+pub fn exp(x: f32) -> f32 {
+    if x.is_nan() {
+        return f32::NAN;
+    }
+    if x == f32::INFINITY {
+        return f32::INFINITY;
+    }
+    if x == f32::NEG_INFINITY || x <= -105.0 {
+        return 0.0;
+    }
+    if x >= 89.0 {
+        return f32::INFINITY;
+    }
+    f32::from_bits(round_atom_to_f32(&Exp { x: x as f64 }).bits as u32)
+}
+
+/// `log(x)` (natural log) at f64, correctly rounded. `NaN → NaN`, `x < 0 → NaN`,
+/// `-Inf → NaN`, `±0 → -Inf`, `+Inf → +Inf`; positive finite delegates to the atom.
+pub fn log_f64(x: f64) -> f64 {
+    if x.is_nan() || x < 0.0 {
+        return f64::NAN;
+    }
+    if x == 0.0 {
+        return f64::NEG_INFINITY;
+    }
+    if x == f64::INFINITY {
+        return f64::INFINITY;
+    }
+    f64::from_bits(round_atom_to_f64(&Log { x }).bits)
+}
+
+/// `log(x)` at f32.
+pub fn log(x: f32) -> f32 {
+    if x.is_nan() || x < 0.0 {
+        return f32::NAN;
+    }
+    if x == 0.0 {
+        return f32::NEG_INFINITY;
+    }
+    if x == f32::INFINITY {
+        return f32::INFINITY;
+    }
+    f32::from_bits(round_atom_to_f32(&Log { x: x as f64 }).bits as u32)
+}
+
+/// `sin(x)` at f64, correctly rounded. `NaN → NaN`, `±Inf → NaN` (both MINT a NaN —
+/// sin has no limit at infinity); every finite x delegates to the atom (Payne–Hanek
+/// covers the whole finite f64 range).
+pub fn sin_f64(x: f64) -> f64 {
+    if x.is_nan() || x.is_infinite() {
+        return f64::NAN;
+    }
+    f64::from_bits(round_atom_to_f64(&Sin { x }).bits)
+}
+
+/// `sin(x)` at f32.
+pub fn sin(x: f32) -> f32 {
+    if x.is_nan() || x.is_infinite() {
+        return f32::NAN;
+    }
+    f32::from_bits(round_atom_to_f32(&Sin { x: x as f64 }).bits as u32)
 }
