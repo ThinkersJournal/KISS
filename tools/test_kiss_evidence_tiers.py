@@ -4,8 +4,8 @@ The single `backed` count spans three strengths of evidence (convention 15): a n
 coincidence (NAMED), a human-asserted citation (CITED, deliberateness), and a
 mutation-verified backing (PROVEN, aboutness). `compute_evidence_tiers` partitions
 `backed` into NAMED + CITED and carves PROVEN as a subset of CITED. These controls pin
-the two invariants the report rests on — the partition and the subset — and drive the
-real function main() calls, not a copy.
+the invariants the report rests on — the partition, and a NON-EMPTY PROVEN inside
+CITED — and drive the real function main() calls, not a copy.
 
 Run: python tools/test_kiss_evidence_tiers.py
 """
@@ -85,18 +85,56 @@ def _load_live():
         for cid in info["clauses"]:
             cited[cid].add(tname)
     backed = {c for c, t in clause_test.items() if t in harness or c in cited}
-    return backed, cited
+    # The PROVEN set the live tree actually carries. `collect_proven` is the function
+    # that PRODUCES this argument, and omitting it was the defect (#405): the default
+    # is None -> empty, so every downstream assertion about PROVEN passed by default.
+    proven_map, _violations = kt.collect_proven(harness)
+    return backed, cited, set(proven_map)
 
 
 def test_live_tiers_partition_the_backed_set():
-    """On the real tree: NAMED + CITED partition backed, PROVEN ⊆ CITED. Reddens if a
-    future change makes the tiers overlap or leaves a backed clause in neither."""
-    backed, cited = _load_live()
-    named, cited_set, proven_set = kt.compute_evidence_tiers(backed, cited)
+    """On the real tree: NAMED + CITED partition backed, PROVEN is non-empty and no
+    recorded proof was silently dropped. Reddens if a future change makes the tiers overlap, leaves a backed clause
+    in neither, or lets a proof exist for a clause nothing cites.
+
+    ⚠️ THE LIVE PROVEN SET IS PASSED, NOT DEFAULTED (#405). This call previously omitted
+    the third argument, so `proven_set` was the empty default and BOTH assertions about
+    it were vacuous: `empty <= anything` holds, and `empty == set()` compares the default
+    to itself. The docstring advertised a live PROVEN check the code did not perform."""
+    backed, cited, proven = _load_live()
+    named, cited_set, proven_set = kt.compute_evidence_tiers(backed, cited, proven=proven)
     assert named | cited_set == backed, "live: named union cited != backed"
     assert named & cited_set == set(), "live: named intersect cited overlap"
-    assert proven_set <= cited_set, "live: proven not-subset-of cited"
-    assert proven_set == set(), "live: PROVEN is non-empty but no proof mechanism exists yet"
+    # ⚠️ NON-EMPTINESS GUARDS THE SUBSET CHECK. `proven_set <= cited_set` is satisfied by
+    # an EMPTY proven set, so without this the subset assertion silently reverts to the
+    # defect above the moment PROVEN is empty for any reason.
+    #
+    # If PROVEN is ever legitimately empty -- every proof retired under the sanctioned
+    # drop rule -- this assertion is a PROMPT, not a false alarm: the subset check has
+    # gone vacuous and must be REPLACED, never merely deleted.
+    assert proven_set, (
+        "live: PROVEN is EMPTY, so the drop check below compares two empty sets and "
+        "asserts nothing. If the emptiness is real (all proofs retired), replace this "
+        "control rather than delete it -- a set comparison over two empty sets is "
+        "check-shaped and reports success.")
+    # ⚠️ NOT `proven_set <= cited_set`. That direction is UNFALSIFIABLE here:
+    # `compute_evidence_tiers` drops any proven element not in cited_set, so the subset
+    # holds "by construction rather than by the caller's discipline" (its own docstring).
+    # Asserting it would be a tautology wearing a control's clothes -- verified: injecting
+    # a proof for a clause nothing cites leaves that assertion GREEN.
+    #
+    # The falsifiable neighbour is the DROP: a `// Proven:` marker for an uncited clause
+    # vanishes silently at this layer, so the tree's proof record and the counted set
+    # would disagree with nothing reporting it. That is what this asserts.
+    dropped = proven - proven_set
+    assert not dropped, (
+        f"live: {len(dropped)} recorded proof(s) were SILENTLY DROPPED because their clause "
+        f"is not CITED -- e.g. {sorted(dropped)[:3]}. A `// Proven:` marker for an uncited "
+        f"clause disappears here without reporting; migrate the clause to CITED or remove "
+        f"the marker.")
+    # NO COUNT IS ASSERTED HERE. The number is COVERAGE_FLOOR.tsv's ratchet dimension;
+    # a hand-written count in a second place is the count-valued-floor defect (two
+    # parties each legitimately moving it leave a figure neither holds).
 
 
 def main():
@@ -104,8 +142,8 @@ def main():
              if k.startswith("test_") and callable(v)]
     for t in tests:
         t()
-    print(f"ok - {len(tests)} controls pass: NAMED+CITED partition backed, PROVEN subset-of CITED, "
-          f"proof record empty until the #278 marker mechanism lands (step 2)")
+    print(f"ok - {len(tests)} controls pass: NAMED+CITED partition backed, and the LIVE "
+          f"PROVEN set is non-empty and no recorded proof was silently dropped")
     return 0
 
 
