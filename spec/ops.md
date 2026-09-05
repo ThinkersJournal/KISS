@@ -763,8 +763,9 @@ wrapping two's-complement per §6.2-0002):
   zero MUST be treated as target-defined (target-UB), not pinned by KISS-Ops. *Test:*
   `test_ops_div_float_only`.
 - **KISS-OPS-6.4-0003** — `neg` MUST compute `-x` by flipping the sign bit for float
-  dtypes such that `neg(-0.0)` yields `+0.0` and a NaN operand propagates a NaN, and by
-  two's-complement negation for integer dtypes. *Test:* `test_ops_neg_integer`.
+  dtypes such that `neg(-0.0)` yields `+0.0` and a NaN operand's payload is preserved
+  (the result is a NaN with the same payload, sign flipped), and by
+  two's-complement negation for integer dtypes. *Test:* `test_ops_neg_raw_bit`.
 - **KISS-OPS-6.4-0004** — `abs` MUST compute `|x|` by clearing the sign bit as a raw-bit
   operation for float dtypes such that `abs(-0.0)` yields `+0.0` and a NaN operand's
   payload is preserved (the result is a NaN with the same payload, sign cleared), and by
@@ -2562,7 +2563,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.3-0005 | `test_ops_floor_ops_justified_atoms` |
 | KISS-OPS-6.4-0001 | `test_ops_add_sub_mul_wrapping` |
 | KISS-OPS-6.4-0002 | `test_ops_div_float_only` |
-| KISS-OPS-6.4-0003 | `test_ops_neg_integer` |
+| KISS-OPS-6.4-0003 | `test_ops_neg_raw_bit` |
 | KISS-OPS-6.4-0004 | `test_ops_abs_raw_bit` |
 | KISS-OPS-6.4-0005 | `test_ops_int_neg_abs_wrap` |
 | KISS-OPS-6.5-0001 | `test_ops_select_order` |
