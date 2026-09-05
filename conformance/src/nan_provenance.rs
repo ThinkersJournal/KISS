@@ -17,7 +17,11 @@
 //! a conformant `f8e4m3fn` implementation. So the COMPUTED arm is
 //! `is-NaN ∧ (admits_snan(dtype) ⟹ quiet(actual) == quiet(expected))`.
 //!
-//! Bytes are big-endian at the dtype's native width (as the corpus stores them).
+//! Bytes are big-endian at the dtype's NATIVE width (as the corpus stores them), and
+//! a MOVED comparison is exact-byte at that STORAGE width — NOT widened to f32. Why
+//! not just widen? Widening to compare would introduce the very promote step
+//! §6.16-0009 forbids (bf16→f32 quiets a moved sNaN), so the comparator would be
+//! performing the exact defect it exists to detect.
 
 /// Which side of the moved/computed split a NaN output falls on. Carried per row
 /// (a Cell field); a NaN output with no provenance is rejected at load, so this is
