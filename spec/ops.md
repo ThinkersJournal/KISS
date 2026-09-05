@@ -1487,7 +1487,8 @@ shared naming convention spelled identically in both foundational vocabularies.
   §6.9-0003 rejects for `nextafter`.
   **The predicate is the op's RESULT, not a lookup**: it reaches an op with **no §6.13 reference
   decomposition at all**, because §6.13 decomposes only non-primitive ops and every primitive-floor
-  atom (§6.3-0001) has none. So this clause reaches the comparison-and-`select` minmax family
+  atom (§6.3-0001) has none. Being **indifferent to whether a decomposition exists**, it reaches
+  both kinds: the comparison-and-`select` minmax family
   (`max_prop`/`min_prop`, which do decompose) **and** the primitive sign-bit atoms `neg` (§6.4-0003),
   `abs` (§6.4-0004) and `copysign` (§6.9-0002), which do not. It does **not** reach `floor`, `ceil`,
   `trunc` or `round_even`: those compute an integral value that is no operand's bits, and
