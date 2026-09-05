@@ -241,12 +241,52 @@ fn ordinary_minmax_bundle() -> Corpus {
 /// every `compare(cell.class, ..)` site in this file onto it, so no site selects by the
 /// declared class directly; it is correct the moment a §6.8-0005 refinement op is added.
 fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
+    // Per-row NaN-output provenance (§6.8-0010(a) MOVED / §6.16-0010 COMPUTED) takes
+    // precedence when the expected output is a NaN. The load-time biconditional
+    // guarantees `nan_provenance` is Some EXACTLY then, so a Some routes here — this
+    // is the wiring that makes a quietness violation FAIL a conformance run (before
+    // this, the comparator existed but nothing called it — #352 present-but-inert).
+    if let Some(prov) = cell.nan_provenance {
+        return kiss_conformance::nan_provenance::compare_nan_output(&cell.dtype, actual, &cell.expected, prov);
+    }
     match comparator_for(&cell.op, cell.class) {
         Comparator::ClassDefault(class) => compare(class, actual, &cell.expected),
         Comparator::OpNamedRefinement(name) => {
             Err(format!("op-named refinement `{name}` is not part of this slice"))
         }
     }
+}
+
+/// END-TO-END wiring proof (architect step 4): a conformance RUN routed through
+/// `compare_under_precedence` can now FAIL on a quietness violation — the thing
+/// "all tests pass" would NOT distinguish from the unwired (present-but-inert) state.
+/// A COMPUTED-NaN bf16 cell (expected quiet) is compared against an sNaN actual: the
+/// integrated path must red. Its MOVED sibling (a select) still bit-compares.
+#[test]
+fn a_conformance_run_can_now_fail_on_a_quietness_violation() {
+    use kiss_conformance::nan_provenance::NanProvenance;
+    // A COMPUTED-NaN bf16 cell: expected a QUIET NaN (0x7FC1).
+    let computed = Cell {
+        tc_id: 1,
+        op: "exp".into(),
+        dtype: "bf16".into(),
+        rounding: "roundTiesToEven".into(),
+        inputs: vec![vec![0x7F, 0x81]],
+        expected: vec![0x7F, 0xC1],
+        class: DeterminismClass::UlpTolerance,
+        ulp_bound: 0,
+        provenance: "oracle".into(),
+        tags: vec![],
+        has_certificate: false,
+        certificate_precision_bits: None,
+        nan_provenance: Some(NanProvenance::Computed),
+    };
+    // Conformant actual (a quiet NaN, any payload) passes end-to-end.
+    assert!(compare_under_precedence(&computed, &[0x7F, 0xC5]).is_ok(), "quiet computed NaN passes");
+    // ⚠️ THE PROOF: an sNaN actual (quiet bit dropped) FAILS the run via the wired path.
+    let red = compare_under_precedence(&computed, &[0x7F, 0x81]);
+    assert!(red.is_err(), "a quietness violation MUST fail the conformance run (wiring proof)");
+    assert!(red.unwrap_err().contains("quietness"), "the failure is the quietness rule, via compare_nan_output");
 }
 
 /// All 24 strict-inequality cells pass against the reference oracle (same
