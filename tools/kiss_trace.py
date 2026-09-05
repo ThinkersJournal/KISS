@@ -2187,7 +2187,12 @@ def main():
 
     if args.report:
         print("-" * 68)
-        print("  Executable coverage by sub-standard:")
+        print("  Executable coverage by sub-standard — HARNESS-BACKED ONLY:")
+        print("  (a lint-enforced clause is NOT counted here. The FREEZE READINESS")
+        print("  block below counts harness UNION lint, so its per-sub numbers are")
+        print("  HIGHER by exactly that sub-standard's lint-enforced count. Two")
+        print("  populations, two figures: neither is `the coverage of X` without")
+        print("  naming which.)")
         per = defaultdict(lambda: [0, 0])
         for c, t in clause_test.items():
             per[sub_of(c)][1] += 1
@@ -2225,7 +2230,7 @@ def main():
             traced = tot - len(miss)
             if miss:
                 any_fail = note_fail("freeze_ready")
-                print(f"      [FAIL] {sub:<9} {traced:>3}/{tot:<4} traced — "
+                print(f"      [FAIL] {sub:<9} {traced:>3}/{tot:<4} traced (harness+lint) — "
                       f"{len(miss)} clause(s) neither harness-tested nor lint-enforced")
                 for cid in miss[:3]:
                     base, note = cat_of[cid]
@@ -2234,7 +2239,7 @@ def main():
                     print(f"                 ... and {len(miss) - 3} more")
             else:
                 ready += 1
-                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced — may freeze on §5.3 cond. 3")
+                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced (harness+lint) — may freeze on §5.3 cond. 3")
         print()
         print(f"      {ready} of {len(targets)} sub-standard(s) satisfy §5.3 condition 3.")
         if any_fail:
