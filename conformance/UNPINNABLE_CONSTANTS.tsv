@@ -1,0 +1,13 @@
+# Constants NO test can pin, with the reason. The sweep (tools/kiss_constant_sweep.py)
+# reports these separately and never as findings.
+#
+# ⚠️ AN UNGUARDED CONSTANT IS NOT AUTOMATICALLY A DEFECT. A value that is reserved and
+# never emitted has no observable behaviour to assert, so a golden for it would pin a byte
+# no conformant producer ever writes. Merging the two categories inflates the finding rate
+# -- measured in the #409 Phase 0 sample, where TAG_REDUCE alone would have inflated one
+# clause's rate by a third.
+#
+# A row here is a CLAIM that requires a reason a reader can check. It is not an opt-out.
+#
+# path	constant	reason
+conformance/src/shape_expr.rs	TAG_REDUCE	KISS-OPS-6.20-0005 states this tag is "reserved -- never emitted, no consumer". Nothing emits it, so no test can observe its value; a golden would assert a byte no conformant producer writes.
