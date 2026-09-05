@@ -253,3 +253,37 @@ jobs:
       - name: Freeze readiness (umbrella §5.3 condition 3)
         if: always()
         run: python tools/kiss_trace.py --freeze-ready
+      # ⚠️ ADVISORY BY DESIGN (#407). This reports CANDIDATES to adjudicate, not defects:
+      # a surviving phrase may be an unrelated legitimate use of the same words. It lives
+      # in the continue-on-error job for that reason.
+      #
+      # THREE STATES, and the case below keeps them distinct because Actions collapses
+      # every non-zero into "failed": 0 CLEAN · 1 CANDIDATES · 2 COULD NOT MEASURE.
+      # ⚠️ A 2 is the scanner REFUSING to answer -- its positive control failed, or the
+      # base ref was unusable -- and must never read as "no orphans found". Candidates
+      # exit 0 (advisory); a refusal exits 1, because a broken instrument is not advice.
+      - name: Orphaned prose citations (#407, advisory)
+        if: always()
+        run: |
+          # `|| rc=$?` is load-bearing under `bash -e`, exactly as in the ratchet step.
+          rc=0
+          if [ -n "${{ github.base_ref }}" ]; then
+            # CHECKED: an unchecked fetch fails silently and resurfaces as an exit-2
+            # refusal, where it is indistinguishable from a broken control.
+            if ! git fetch --quiet origin "${{ github.base_ref }}"; then
+              echo "::error::could not fetch base ${{ github.base_ref }} -- this is NOT a clean scan"
+              exit 1
+            fi
+            BASE="origin/${{ github.base_ref }}"
+          else
+            BASE="HEAD^"
+          fi
+          python tools/kiss_orphaned_citations.py --base-ref "$BASE" || rc=$?
+          case $rc in
+            0) echo "CLEAN: no wording this change removes is still quoted." ;;
+            1) echo "::warning::orphaned-citation CANDIDATES above. Adjudicate each -- update the citation, or confirm it does not refer to the removed wording. This does not block." ;;
+            2) echo "::error::the scanner COULD NOT MEASURE. This is a REFUSAL, not a clean result -- its positive control failed or the base ref was unusable."
+               exit 1 ;;
+            *) echo "::error::unexpected exit $rc from the orphaned-citation scanner."
+               exit 1 ;;
+          esac
