@@ -359,6 +359,124 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
     ]
 }
 
+/// One KISS-CLASSIFY-6.8-0002 **match vector**: an ordered pair of `target_capability`
+/// tokens and the verdict a byte-exact matcher MUST return for them.
+///
+/// The other §6.8 obligations are pinned by vectors whose CONTENT is checked, so a
+/// re-generation reds when they drift. -0002 had no vector at all: a consumer asserting
+/// it could only assert a PARAPHRASE of the clause, which rots silently when the clause
+/// moves and is exactly as green as a live check while doing so.
+///
+/// `axis` names the forbidden matching logic the pair would fool. Byte-exactness is
+/// **vocabulary-blind** by construction — a matcher must answer these without consulting
+/// any namespace document — so the `ordering` and `subset` rows deliberately carry a
+/// right-hand side that is NON-CANONICAL under `spec/namespaces/vulkan.md` V-3. That is
+/// the point: a matcher that had to know it was non-canonical in order to decline it
+/// would be consulting the vocabulary, which §6.8-0002 forbids.
+pub struct MatchVector {
+    pub name: &'static str,
+    pub clause: &'static str,
+    pub axis: &'static str,
+    pub note: &'static str,
+    pub left: &'static str,
+    pub right: &'static str,
+    pub expect_match: bool,
+}
+
+/// The §6.8-0002 match set: every forbidden logic the clause NAMES — ordering, subset,
+/// prefix, feature-implication — plus the case axis §6.8-0005 ties to it, plus one
+/// equal-pair CONTROL per namespace.
+///
+/// ⚠️ The controls are per-NAMESPACE, not one for the set. `target_axis_note` invites a
+/// consumer to scope whole namespaces out as capability EXCLUSIONS; a single control
+/// would live in one of them, and a consumer excluding that namespace would be left with
+/// none. A matcher that answers `no-match` for EVERYTHING then passes every remaining row
+/// — the vacuous-pass shape, reintroduced by the exclusion mechanism rather than by the
+/// vector set.
+///
+/// `ordering` and `subset` are only expressible against a namespace whose capability-set
+/// juxtaposes members (§6.8-0006). `cuda:` capability-sets are atomic, so the cuda rows
+/// cannot reach those two axes at all; vulkan's `ops-` field is a fixed-width juxtaposed
+/// set (`spec/namespaces/vulkan.md` V-5), which is what makes `ops-abr` vs `ops-bar` a
+/// reordering and `ops-abr` vs `ops-ab` a proper subset rather than two unrelated strings.
+pub fn target_match_vectors() -> Vec<MatchVector> {
+    const VK: &str = "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none";
+    vec![
+        MatchVector {
+            name: "equal_control_cuda",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "control",
+            note: "byte-equal targets MUST match -- without this row a matcher that answers no-match for everything passes every discriminating pair below",
+            left: "cuda:sm89",
+            right: "cuda:sm89",
+            expect_match: true,
+        },
+        MatchVector {
+            name: "prefix_right_shorter",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "prefix",
+            note: "right is a proper prefix of left: a prefix matcher wrongly matches",
+            left: "cuda:sm89",
+            right: "cuda:sm8",
+            expect_match: false,
+        },
+        MatchVector {
+            name: "prefix_left_shorter",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "prefix",
+            note: "left is a proper prefix of right -- the same defect in the other direction, which a one-sided starts_with test misses",
+            left: "cuda:sm89",
+            right: "cuda:sm890",
+            expect_match: false,
+        },
+        MatchVector {
+            name: "feature_implication",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "feature-implication",
+            note: "ordinal near-miss: a matcher treating a later architecture as satisfying an earlier one (sm90 implies sm89) wrongly matches. cuda.md is explicit that these are different cells, not a range",
+            left: "cuda:sm89",
+            right: "cuda:sm90",
+            expect_match: false,
+        },
+        MatchVector {
+            name: "case_fold",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "case",
+            note: "capability-side case difference: matching is case-SENSITIVE (KISS-CLASSIFY-6.8-0005 ties the charset rule to this clause). The namespace is held equal so the row isolates the case axis and does not also change the namespace",
+            left: "cuda:sm89",
+            right: "cuda:SM89",
+            expect_match: false,
+        },
+        MatchVector {
+            name: "equal_control_vulkan",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "control",
+            note: "the vulkan-side control -- present so a consumer excluding the cuda namespace is not left with only no-match rows",
+            left: VK,
+            right: VK,
+            expect_match: true,
+        },
+        MatchVector {
+            name: "member_ordering",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "ordering",
+            note: "same ops- MEMBERS {a,b,r}, different order (abr vs bar): a matcher that decodes the juxtaposed set and compares it as a SET wrongly matches. The right side is non-canonical under vulkan V-3 and a byte-exact matcher must decline it WITHOUT knowing that",
+            left: VK,
+            right: "vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none",
+            expect_match: false,
+        },
+        MatchVector {
+            name: "member_subset",
+            clause: "KISS-CLASSIFY-6.8-0002",
+            axis: "subset",
+            note: "right's ops- members {a,b} are a proper SUBSET of left's {a,b,r}: a subset/capability-satisfaction matcher wrongly matches",
+            left: VK,
+            right: "vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none",
+            expect_match: false,
+        },
+    ]
+}
+
 /// One decline vector: a malformed (or wrong-schema, or reserved) input and the typed
 /// [`KeyDecline`] the reference reader answers it with. The emitted artifact records
 /// the codec's LIVE `from_token` result; `expected` is cross-checked against it in the
@@ -700,6 +818,64 @@ pub fn emit_reference_vectors_json() -> String {
     for (i, ns) in namespaces.iter().enumerate() {
         let comma = if i + 1 < namespaces.len() { "," } else { "" };
         s.push_str(&format!("    {}{}\n", json_str(ns), comma));
+    }
+    s.push_str("  ],\n");
+    // §6.8-0002 match axis. Each row is an ORDERED PAIR of capability tokens plus the
+    // verdict a byte-exact matcher MUST return. The tokens are emitted HERE by the codec
+    // from a fixed carrier key that differs ONLY in field 3, so a consumer gets both the
+    // capability-level pair (to run its matcher on) and the structure_key-level pair (to
+    // check its own verbatim carriage against).
+    let mv = target_match_vectors();
+    s.push_str("  \"target_match_note\": \"KISS-CLASSIFY-6.8-0002 pairs. `expect_match` is the verdict a BYTE-EXACT matcher must return for (`left`, `right`); `axis` names the forbidden logic the pair would fool. Matching is VOCABULARY-BLIND: the ordering/subset rows carry a right-hand side that is non-canonical under spec/namespaces/vulkan.md V-3, and a conformant matcher declines them WITHOUT consulting any namespace document -- needing to know it was non-canonical in order to decline it would itself violate this clause. `left_token`/`right_token` are the SAME carrier structure_key differing only in field 3, so a consumer can check verbatim carriage on the same rows. WHAT THIS SET DOES NOT ESTABLISH: passing it does not show a consumer DERIVES the capability suffix -- the suffix is a pass-through field (see coverage_note (e)); and the equal-pair CONTROLS are per-NAMESPACE on purpose, because target_axis_note lets a consumer exclude a whole namespace, which would otherwise strip the only control and leave a matcher that answers no-match for everything passing every remaining row.\",\n");
+    s.push_str("  \"target_match_vectors\": [\n");
+    for (i, m) in mv.iter().enumerate() {
+        let comma = if i + 1 < mv.len() { "," } else { "" };
+        // GENERATION-TIME GUARDS, both fail-closed:
+        //  (1) arity/namespace -- the same gate the positives get, so a match row cannot
+        //      publish a suffix malformed under the vocabulary that owns it (#200). It is
+        //      deliberately silent on CANONICITY, which is what lets the ordering row exist.
+        //  (2) round-trip -- the target must embed as ONE unambiguous field and survive
+        //      parse byte-identically. This is the §6.8-0002 reduction itself (byte-exact
+        //      token matching reduces to byte-exact target matching) enforced on the way
+        //      out, and it is what a bespoke charset check would only approximate: a row
+        //      carrying `|`, `;`, `/` or whitespace (§6.8-0005) cannot round-trip and is
+        //      therefore unpublishable rather than silently mangled.
+        let tok: Vec<String> = [m.left, m.right].into_iter().map(|tgt| {
+            validate_target_token(tgt);
+            let t = key("bin", "f32", tgt, WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None).to_token();
+            match from_token(&t) {
+                Ok(k) if k.target == tgt => {}
+                Ok(k) => panic!(
+                    "match vector `{}`: target `{}` did not survive round-trip (got `{}`)",
+                    m.name, tgt, k.target
+                ),
+                Err(e) => panic!(
+                    "match vector `{}`: carrier token for target `{}` does not parse ({e:?}) -- the target is not embeddable as a single field (KISS-CLASSIFY-6.8-0005)",
+                    m.name, tgt
+                ),
+            }
+            t
+        }).collect();
+        // the verdict must BE byte-exactness, not a hand-set opinion of it: a row whose
+        // expect_match disagrees with `left == right` is a wrong row, and publishing one
+        // would teach consumers the opposite of the clause.
+        assert_eq!(
+            m.expect_match,
+            m.left == m.right,
+            "match vector `{}`: expect_match={} contradicts byte-exact equality of its own pair",
+            m.name, m.expect_match
+        );
+        s.push_str("    {\n");
+        s.push_str(&format!("      \"clause\": {},\n", json_str(m.clause)));
+        s.push_str(&format!("      \"name\": {},\n", json_str(m.name)));
+        s.push_str(&format!("      \"axis\": {},\n", json_str(m.axis)));
+        s.push_str(&format!("      \"note\": {},\n", json_str(m.note)));
+        s.push_str(&format!("      \"left\": {},\n", json_str(m.left)));
+        s.push_str(&format!("      \"right\": {},\n", json_str(m.right)));
+        s.push_str(&format!("      \"expect_match\": {},\n", m.expect_match));
+        s.push_str(&format!("      \"left_token\": {},\n", json_str(&tok[0])));
+        s.push_str(&format!("      \"right_token\": {}\n", json_str(&tok[1])));
+        s.push_str(&format!("    }}{}\n", comma));
     }
     s.push_str("  ],\n");
     s.push_str("  \"mapping_guard_note\": \"The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.\",\n");

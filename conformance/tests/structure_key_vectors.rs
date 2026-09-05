@@ -628,8 +628,11 @@ fn gem_weight_role_vector_discriminates_in_bytes() {
 fn test_reference_artifact_normative_surface_is_declared() {
     use kiss_conformance::json::Json;
 
-    // (a) VECTOR CONTENT — reproduced byte-exact per entry by a conformant producer.
-    const VECTOR_CONTENT: &[&str] = &["positive_vectors", "decline_vectors"];
+    // (a) VECTOR CONTENT — non-empty, and normative. The obligation differs by array:
+    // positives/declines bind a PRODUCER (reproduce byte-exact per entry);
+    // target_match_vectors binds a MATCHER (return each entry's pinned expect_match).
+    const VECTOR_CONTENT: &[&str] =
+        &["positive_vectors", "decline_vectors", "target_match_vectors"];
     // (b) SCOPING DECLARATIONS — read to decide what this is and which runs apply.
     const SCOPING: &[&str] = &[
         "schema",
@@ -653,6 +656,7 @@ fn test_reference_artifact_normative_surface_is_declared() {
         "mapping_guard_note",
         "namespace_vocabulary_note",
         "target_axis_note",
+        "target_match_note",
     ];
 
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
@@ -777,4 +781,208 @@ fn test_published_vector_counts_are_not_a_conformance_surface() {
          belongs in a consumer's own tree, not in the reference suite that defines the rule.",
         offenders.join("\n  ")
     );
+}
+
+// ============================================================================
+// KISS-CLASSIFY-6.8-0002 — the match vectors, and proof that they discriminate
+// ============================================================================
+
+/// One parsed `target_match_vectors` row.
+struct MatchRow {
+    name: String,
+    axis: String,
+    left: String,
+    right: String,
+    expect_match: bool,
+    left_token: String,
+    right_token: String,
+}
+
+fn match_rows(doc: &kiss_conformance::json::Json) -> Vec<MatchRow> {
+    let f = |o: &kiss_conformance::json::Json, k: &str| -> String {
+        o.get(k)
+            .and_then(|j| j.as_str())
+            .unwrap_or_else(|| panic!("match vector row is missing string member `{k}`"))
+            .to_string()
+    };
+    doc.get("target_match_vectors")
+        .and_then(|j| j.as_arr())
+        .expect("artifact must carry a `target_match_vectors` array")
+        .iter()
+        .map(|o| MatchRow {
+            name: f(o, "name"),
+            axis: f(o, "axis"),
+            left: f(o, "left"),
+            right: f(o, "right"),
+            expect_match: match o.get("expect_match") {
+                Some(kiss_conformance::json::Json::Bool(b)) => *b,
+                _ => panic!("match vector row `{}` has no boolean `expect_match`", f(o, "name")),
+            },
+            left_token: f(o, "left_token"),
+            right_token: f(o, "right_token"),
+        })
+        .collect()
+}
+
+/// The capability-set suffix (everything after the first colon).
+fn cap_of(t: &str) -> &str {
+    t.split_once(':').map(|(_, c)| c).unwrap_or(t)
+}
+
+/// The juxtaposed `ops-` members of a vulkan capability-set, if it has that shape.
+/// Returns `None` for a capability-set that does not juxtapose (every `cuda:` token),
+/// which is why the cuda rows cannot reach the ordering/subset axes.
+fn ops_members(t: &str) -> Option<(Vec<char>, Vec<&str>)> {
+    let fields: Vec<&str> = cap_of(t).split('.').collect();
+    if fields.len() != 5 {
+        return None;
+    }
+    let ops = fields[1].strip_prefix("ops-")?;
+    Some((ops.chars().collect(), fields))
+}
+
+/// Backs: KISS-CLASSIFY-6.8-0002 — the published match vectors are not merely PRESENT,
+/// they CATCH every forbidden matching logic the clause names.
+///
+/// ⚠️ A vector set that is only present is a paraphrase with extra steps. This test
+/// implements each wrong matcher the clause forbids and asserts the set disagrees with it
+/// on at least one row, so "the vectors cover -0002" is demonstrated in bytes rather than
+/// asserted in prose. The byte-exact reference matcher must agree with EVERY row; each
+/// wrong matcher must be caught by at least one.
+///
+/// MEASURED REDUNDANCY (seeded mutation, this branch) — recorded because it means
+/// "the set catches matcher X" is NOT evidence that row X is load-bearing:
+///   * `capability-subset` is caught by `member_ordering` as well as `member_subset`,
+///     and NECESSARILY so: a permutation is an improper subset of itself, so any
+///     ordering row also fools a subset matcher.
+///   * `feature-implication` is caught by `prefix_left_shorter` as well as its own row
+///     (`sm890` parses as 890, and 890 >= 89 satisfies an implication matcher).
+///   * `prefix` needs BOTH prefix rows neutralized before it goes uncaught — one row
+///     alone survives, which is why the two directions are separate rows.
+/// Each row is nonetheless load-bearing through the AXIS assertion above: deleting one
+/// reds with "no row exercises the `<axis>` axis", verified by dropping each in turn.
+#[test]
+fn test_target_match_vectors_catch_every_forbidden_matcher() {
+    let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
+        .expect("the emitted artifact must be valid JSON");
+    let rows = match_rows(&doc);
+    assert!(rows.len() >= 6, "the match set must carry the clause's axes plus controls");
+
+    // (1) the published tokens are the SAME carrier differing ONLY in field 3, cross-checked
+    // by this test's OWN split rather than by re-running the emitter's derivation — so a
+    // to_token that mangled the target, or a row whose token pair differs somewhere else,
+    // fails here instead of passing against itself.
+    for r in &rows {
+        let lf: Vec<&str> = r.left_token.split('|').collect();
+        let rf: Vec<&str> = r.right_token.split('|').collect();
+        assert_eq!(lf.len(), rf.len(), "row `{}`: token pair has different field counts", r.name);
+        assert_eq!(lf[3], r.left, "row `{}`: left_token field 3 is not `left` verbatim", r.name);
+        assert_eq!(rf[3], r.right, "row `{}`: right_token field 3 is not `right` verbatim", r.name);
+        for (i, (a, b)) in lf.iter().zip(rf.iter()).enumerate() {
+            if i != 3 {
+                assert_eq!(a, b, "row `{}`: token pair differs in field {i}, not only in the target", r.name);
+            }
+        }
+        // the token-level verdict must equal the target-level one: this IS the reduction
+        // §6.8-0002 rests on (byte-exact token matching reduces to byte-exact target matching).
+        assert_eq!(
+            r.left_token == r.right_token,
+            r.left == r.right,
+            "row `{}`: token equality disagrees with target equality",
+            r.name
+        );
+    }
+
+    // (2) every forbidden logic the clause NAMES has a row, plus the case axis §6.8-0005
+    // ties to it. Absence here means the clause moved and the set did not follow.
+    let axes: HashSet<&str> = rows.iter().map(|r| r.axis.as_str()).collect();
+    for want in ["prefix", "subset", "ordering", "feature-implication", "case", "control"] {
+        assert!(axes.contains(want), "KISS-CLASSIFY-6.8-0002: no row exercises the `{want}` axis");
+    }
+
+    // (3) the matchers. `byte_exact` is the conformant one; the rest are the defects.
+    let byte_exact = |a: &str, b: &str| a == b;
+    let always_match = |_: &str, _: &str| true;
+    let always_no_match = |_: &str, _: &str| false;
+    let prefix = |a: &str, b: &str| a.starts_with(b) || b.starts_with(a);
+    let case_fold = |a: &str, b: &str| a.eq_ignore_ascii_case(b);
+    // a "later architecture satisfies an earlier one" matcher, the shape cuda.md forbids.
+    let implication = |a: &str, b: &str| {
+        let num = |t: &str| cap_of(t).strip_prefix("sm").and_then(|n| n.parse::<u32>().ok());
+        match (num(a), num(b)) {
+            (Some(x), Some(y)) => y >= x,
+            _ => a == b,
+        }
+    };
+    // a matcher that DECODES the juxtaposed set and compares it as an unordered set.
+    let as_set = |a: &str, b: &str| match (ops_members(a), ops_members(b)) {
+        (Some((mut x, fa)), Some((mut y, fb))) => {
+            x.sort_unstable();
+            y.sort_unstable();
+            x == y && fa[0] == fb[0] && fa[2..] == fb[2..]
+        }
+        _ => a == b,
+    };
+    // a capability-SATISFACTION matcher: right's members are a subset of left's.
+    let subset = |a: &str, b: &str| match (ops_members(a), ops_members(b)) {
+        (Some((x, fa)), Some((y, fb))) => {
+            y.iter().all(|m| x.contains(m)) && fa[0] == fb[0] && fa[2..] == fb[2..]
+        }
+        _ => a == b,
+    };
+
+    // the conformant matcher agrees with EVERY row — if it did not, a row is wrong.
+    for r in &rows {
+        assert_eq!(
+            byte_exact(&r.left, &r.right),
+            r.expect_match,
+            "row `{}`: byte-exact matching disagrees with the row's own pinned verdict",
+            r.name
+        );
+    }
+
+    // ...and every forbidden matcher is CAUGHT by at least one row. This is the assertion
+    // that makes the set an instrument rather than a decoration.
+    let wrong: [(&str, &dyn Fn(&str, &str) -> bool); 7] = [
+        ("always-match", &always_match),
+        ("always-no-match", &always_no_match),
+        ("prefix", &prefix),
+        ("case-folding", &case_fold),
+        ("feature-implication", &implication),
+        ("set-equality (ordering-blind)", &as_set),
+        ("capability-subset", &subset),
+    ];
+    for (label, m) in wrong {
+        let caught: Vec<&str> = rows
+            .iter()
+            .filter(|r| m(&r.left, &r.right) != r.expect_match)
+            .map(|r| r.name.as_str())
+            .collect();
+        assert!(
+            !caught.is_empty(),
+            "KISS-CLASSIFY-6.8-0002: the `{label}` matcher passes EVERY published row -- \
+             the set does not discriminate it, so a consumer running these vectors would \
+             report green with that defect in place"
+        );
+    }
+
+    // (4) ⚠️ the per-NAMESPACE control obligation, demonstrated rather than described.
+    // `target_axis_note` invites a consumer to exclude whole namespaces. Excluding one must
+    // NOT strip the set's only equal-pair row, because an always-no-match matcher passes
+    // every discriminating row and is caught ONLY by a control.
+    let namespaces: HashSet<&str> =
+        rows.iter().map(|r| r.left.split(':').next().unwrap_or("")).collect();
+    assert!(namespaces.len() >= 2, "the set must span more than one namespace to test exclusion");
+    for excluded in &namespaces {
+        let kept: Vec<&MatchRow> = rows
+            .iter()
+            .filter(|r| r.left.split(':').next().unwrap_or("") != *excluded)
+            .collect();
+        assert!(
+            kept.iter().any(|r| always_no_match(&r.left, &r.right) != r.expect_match),
+            "KISS-CLASSIFY-6.8-0002: with the `{excluded}` namespace excluded, an \
+             always-no-match matcher passes every remaining row -- the surviving subset \
+             has no control. Each namespace needs its own equal-pair row."
+        );
+    }
 }

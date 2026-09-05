@@ -529,7 +529,7 @@ fn test_classify_mask_hex_lowercase() {
 // KISS-CLASSIFY-6.8-0002 — target_capability matching is byte-exact
 // ============================================================================
 
-/// KISS-CLASSIFY-6.8-0002: two `target_capability` tokens match iff byte-exact on
+/// Backs: KISS-CLASSIFY-6.8-0002 — two `target_capability` tokens match iff byte-exact on
 /// the full string — no ordering, subset, prefix, case, or feature-implication
 /// logic. The codec carries the target VERBATIM into field 3, so byte-exact token
 /// matching reduces to byte-exact target matching.
