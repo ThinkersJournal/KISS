@@ -105,6 +105,11 @@ fn check_one(name: &str, ev_val: &BigFloat<4>, err_ulps: u128, r: &Ref) -> Optio
             "{name}({x}): comparator control failed — dist_gt_err did not flag a bound below d"
         );
     }
+    // Print the RAW distance and err_ulps, not just a rounded ratio: a permille that
+    // rounds to 0 cannot distinguish a TIGHT bound (~1e-3 permille) from an ABSURD one
+    // (a saturated err ~1e-38 permille) — "~0" is exactly what hid the log(2) bug in
+    // the first summary. err_ulps printed whole is unmissable when it saturates.
+    eprintln!("{name}({x}): d={du} err_ulps={err_ulps}");
     (err_ulps >= 8).then(|| du.saturating_sub(1).saturating_mul(1000) / err_ulps)
 }
 
@@ -112,12 +117,15 @@ fn run(name: &str, cases: &[Ref], eval: impl Fn(f64) -> (BigFloat<4>, u128)) {
     let mut max = 0u128;
     for r in cases {
         let (val, err) = eval(r.0);
-        let p = check_one(name, &val, err, r);
-        eprintln!("{name}({}): err_ulps={err} tightness={p:?} permille", r.0);
-        if let Some(p) = p {
+        if let Some(p) = check_one(name, &val, err, r) {
             max = max.max(p);
         }
     }
+    // Pre-registered expectation WITH a resolution floor: the bounds are deliberate
+    // over-estimates, so a LOW ratio (single-digit-to-low-hundreds permille) is
+    // expected and confirms the construction; ~0 permille (d≈0 vs a real err) is fine
+    // too; but a SATURATED err is a distinct outcome, caught by SANITY_CEILING, not
+    // absorbed into "low". "I predicted low, it's low, fine" is the trap — say how low.
     eprintln!("{name}: MAX tightness = {max} permille (d/err_ulps × 1000; a FINDING, not a claim)");
 }
 
