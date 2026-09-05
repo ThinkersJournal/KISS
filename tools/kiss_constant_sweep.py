@@ -129,13 +129,23 @@ def apply_and_verify(path, idx, old_line, new_line):
 
 
 def run_suite(timeout):
+    """The EXIT CODE is ground truth; the regex only NAMES things.
+
+    An earlier version classified purely by scraping `---- <name> stdout ----` and returned
+    UNGUARDED when it found none. That is this tool's own failure mode inside it: a cargo run
+    that fails WITHOUT producing that pattern -- a harness binary aborting, a doc-test
+    failure, a link error that is not `error[E` -- yields no matches and would have been
+    reported as a FINDING. A false UNGUARDED is the one verdict this sweep must never invent.
+    """
     r = subprocess.run(["cargo", "test"], capture_output=True, text=True,
                        cwd=os.path.join(ROOT, "conformance"), timeout=timeout)
     out = r.stdout + r.stderr
     if "error[E" in out or "could not compile" in out:
         return "INVALID", []
     red = sorted(set(re.findall(r"^---- (\S+) stdout ----", out, re.M)))
-    return ("GUARDED" if red else "UNGUARDED"), red
+    if r.returncode == 0:
+        return ("INCONSISTENT", red) if red else ("UNGUARDED", [])
+    return ("GUARDED", red) if red else ("GUARDED-UNNAMED", ["exit %d, no test name parsed" % r.returncode])
 
 
 def main(argv=None):
@@ -144,6 +154,19 @@ def main(argv=None):
     ap.add_argument("--timeout", type=int, default=1800)
     ap.add_argument("--limit", type=int, default=0, help="stop after N constants (0 = all)")
     args = ap.parse_args(argv)
+
+    # ⚠️ PRE-FLIGHT. This sweep WRITES SOURCE FILES and restores them from memory. On a
+    # dirty tree a crash mid-run makes its damage indistinguishable from the user's edits.
+    _dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True,
+                            text=True, cwd=ROOT).stdout
+    _tracked = [ln for ln in _dirty.splitlines() if ln.strip() and not ln.startswith("??")]
+    if _tracked:
+        print("REFUSING TO RUN: %d modified tracked file(s). This sweep edits source in" % len(_tracked))
+        print("place and restores it; a dirty tree makes its damage indistinguishable from")
+        print("your edits. Commit or stash first.")
+        for ln in _tracked[:5]:
+            print("   %s" % ln)
+        return 2
 
     consts = discover(args.only)
     unpinnable = load_unpinnable()
@@ -171,7 +194,12 @@ def main(argv=None):
     for rel, idx, name, ty, val, alt in todo:
         full = os.path.join(ROOT, rel)
         old_line = io.open(full, encoding="utf-8").read().split("\n")[idx]
-        new_line = old_line.replace("= " + val, "= " + alt, 1)
+        # ⚠️ REBUILT FROM THE MATCH, not string-replaced: the discovery regex accepts
+        # any spacing around `:` and `=`, so `pub const A:u8=0x05;` is DISCOVERED and a
+        # `"= " + val` replace silently fails on it -- a constant skipped rather than
+        # measured. Coverage lost quietly, which is the shape this tool hunts.
+        _m = RE_CONST.match(old_line)
+        new_line = (old_line[:_m.start(3)] + alt + old_line[_m.end(3):]) if _m else old_line
         if new_line == old_line:
             results.append((rel, name, val, "NOT-APPLIED", ["value not substitutable in place"]))
             continue
@@ -189,7 +217,8 @@ def main(argv=None):
                                     ("%d red" % len(red)) if verdict == "GUARDED" else
                                     (red[0][:44] if red else "")))
 
-    guarded = [r for r in results if r[3] == "GUARDED"]
+    guarded = [r for r in results if r[3] in ("GUARDED", "GUARDED-UNNAMED")]
+    odd = [r for r in results if r[3] in ("GUARDED-UNNAMED", "INCONSISTENT")]
     invalid = [r for r in results if r[3] == "INVALID"]
     notapplied = [r for r in results if r[3] == "NOT-APPLIED"]
     ung = [r for r in results if r[3] == "UNGUARDED"]
@@ -197,7 +226,11 @@ def main(argv=None):
     ung_live = [r for r in ung if (r[0], r[1]) not in unpinnable]
 
     print("-" * 74)
-    print("  GUARDED                       %d" % len(guarded))
+    print("  GUARDED                       %d  (incl. %d reddened-but-unnamed)"
+          % (len(guarded), len([r for r in results if r[3] == "GUARDED-UNNAMED"])))
+    if odd:
+        print("  ⚠️ %d run(s) classified BY EXIT CODE -- output unparseable for test" % len(odd))
+        print("     names. Counted as GUARDED, never as a finding.")
     print("  UNGUARDED, declared unpinnable %d   (not findings -- reason on file)" % len(ung_declared))
     print("  UNGUARDED, LIVE                %d   <-- the findings" % len(ung_live))
     print("  NOT-APPLIED                    %d   (not a result)" % len(notapplied))
