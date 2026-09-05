@@ -351,9 +351,10 @@ fn test_ops_bf16_minmax_moves_not_rounds() {
 /// value (it is not). Doubles as a check that the select's ordering matches semantics::{max,min}_*.
 #[test]
 fn test_bf16_minmax_select_is_behaviour_preserving_for_non_nan() {
-    // Backs: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "no arithmetic → nothing to
-    // round" covers a non-NaN winner too: it is already an exact bf16 value. This demonstrates that
-    // arm (select == round-trip ⇒ the round was a no-op), which the NaN born-red does not cover.
+    // Backs: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "the result is the
+    // operand's bits, with at most a sign-bit edit" covers a non-NaN winner too: the chosen operand
+    // is already an exact bf16 value, so there is nothing to round. This demonstrates that arm
+    // (select == round-trip ⇒ the round was a no-op), which the NaN born-red does not cover.
     let samples: &[u16] = BF16_NON_NAN_SAMPLES;
     let old_round_trip = |op: &str, a: u16, b: u16| -> u16 {
         let op32: fn(f32, f32) -> f32 = match op {
