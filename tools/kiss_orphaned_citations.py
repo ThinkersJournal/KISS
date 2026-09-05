@@ -52,7 +52,16 @@ QUOTE_PATTERNS = (
 MIN_WORDS = 4
 
 # Directories whose contents are not prose citations of anything.
-SKIP_DIRS = {".git", "target", "node_modules", "__pycache__", ".github/workflows"}
+#
+# ⚠️ `.github/workflows` WAS listed here and that was wrong twice over, in ways that
+# cancelled. Wrong in INTENT: workflow comments are dense prose citation -- MEASURED, 17
+# citable phrases in traceability.yml and 11 in conformance.yml -- and they quote clause
+# text and rationale, which is exactly what this scanner is for. And wrong in EFFECT: the
+# path match below used `lstrip("./")`, which strips leading DOTS as well as slashes, so
+# `.github/workflows` became `github/workflows` and never matched. The scanner was doing
+# the right thing BY ACCIDENT. Entry removed so the behaviour is deliberate, and the
+# matching fixed so a path-qualified entry actually works if one is added.
+SKIP_DIRS = {".git", "target", "node_modules", "__pycache__"}
 TEXT_EXT = {".rs", ".md", ".py", ".toml", ".yml", ".yaml", ".tsv", ".json"}
 
 
@@ -91,21 +100,21 @@ def removed_lines(base_ref):
 def tree_files():
     for dirpath, dirnames, filenames in os.walk(ROOT):
         rel = os.path.relpath(dirpath, ROOT).replace("\\", "/")
+        prefix = "" if rel == "." else rel + "/"
         dirnames[:] = [d for d in dirnames
-                       if d not in SKIP_DIRS and f"{rel}/{d}".lstrip("./") not in SKIP_DIRS]
+                       if d not in SKIP_DIRS and (prefix + d) not in SKIP_DIRS]
         for fn in filenames:
             if os.path.splitext(fn)[1] in TEXT_EXT:
                 yield os.path.join(dirpath, fn)
 
 
 def survivors(phrase, corpus):
-    """(path, lineno) for every surviving occurrence of `phrase` in the tree."""
-    hits = []
-    for path, lines in corpus:
-        for n, line in enumerate(lines, 1):
-            if phrase in line:
-                hits.append((os.path.relpath(path, ROOT).replace("\\", "/"), n))
-    return hits
+    """(path, lineno) for every surviving occurrence of `phrase` in the tree.
+
+    `corpus` carries paths already relative to ROOT -- computed once at load rather than
+    per hit, so the search does no path work at all (review suggestion, #408)."""
+    return [(rel, n) for rel, lines in corpus
+            for n, line in enumerate(lines, 1) if phrase in line]
 
 
 def load_corpus():
@@ -113,7 +122,8 @@ def load_corpus():
     for path in tree_files():
         try:
             with open(path, encoding="utf-8") as fh:
-                corpus.append((path, fh.read().splitlines()))
+                rel = os.path.relpath(path, ROOT).replace("\\", "/")
+                corpus.append((rel, fh.read().splitlines()))
         except (OSError, UnicodeDecodeError):
             continue
     return corpus
@@ -131,7 +141,7 @@ def control_phrase(corpus):
     It is a control the search CAN fail: the phrase is known to be in the corpus, so an
     empty result means `survivors` is broken, which is exactly what it is here to catch.
     """
-    for path, lines in sorted(corpus):
+    for _rel, lines in sorted(corpus):
         for line in lines:
             for _kind, phrase in extract_phrases(line):
                 return phrase

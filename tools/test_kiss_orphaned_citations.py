@@ -51,6 +51,32 @@ def test_extraction_finds_both_quote_forms_and_drops_short_ones():
     assert "x" not in got, "a one-token phrase must never be extracted"
 
 
+def test_a_PATH_QUALIFIED_skip_entry_actually_skips():
+    """⚠️ BORN-RED FOR A BUG THIS FILE SHIPPED (#408 review). The walk matched a
+    path-qualified entry with `lstrip("./")`, which strips leading DOTS as well as
+    slashes -- so `.github/workflows` became `github/workflows` and never matched. No
+    entry with a dot could ever take effect, and nothing said so.
+
+    The `.github/workflows` entry has since been REMOVED (workflow comments are prose
+    citation and should be scanned), so this control uses a dot-prefixed entry of its own
+    to pin the MATCHING, independently of what the live set happens to contain."""
+    with tempfile.TemporaryDirectory() as tmp:
+        os.makedirs(os.path.join(tmp, ".hidden", "inner"))
+        with open(os.path.join(tmp, ".hidden", "inner", "x.md"), "w", encoding="utf-8") as fh:
+            fh.write("a phrase that should not be scanned at all\n")
+        with open(os.path.join(tmp, "kept.md"), "w", encoding="utf-8") as fh:
+            fh.write("a phrase that SHOULD be scanned\n")
+        old_root, old_skip = oc.ROOT, oc.SKIP_DIRS
+        oc.ROOT, oc.SKIP_DIRS = tmp, {".hidden/inner"}
+        try:
+            seen = {rel for rel, _lines in oc.load_corpus()}
+        finally:
+            oc.ROOT, oc.SKIP_DIRS = old_root, old_skip
+        assert "kept.md" in seen, f"the un-skipped file must be scanned: {seen}"
+        assert not any(s.startswith(".hidden/inner") for s in seen), (
+            f"a dot-prefixed path-qualified skip entry did not take effect: {seen}")
+
+
 # ----------------------------------------------------------------- born-red --
 
 def _mk_repo(tmp):
