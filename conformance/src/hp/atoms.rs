@@ -101,42 +101,55 @@ impl Atom for Log {
         let (num, e_num) = red.m.sub(&one);
         let (den, e_den) = red.m.add(&one);
         let (t, e_t) = num.div(&den);
-        let err_t = e_t
-            .saturating_add(rescale_ulps(e_num, num.exp2(), t.exp2()))
-            .saturating_add(rescale_ulps(e_den, den.exp2(), t.exp2()));
-        let (t2, _e_t2) = t.mul(&t); // t²; its rounding is folded via the series ops
 
-        // Σ_{j≥0} t^(2j+1)/(2j+1) = atanh(t). Truncate when a term's MSB falls
-        // GUARD bits below the sum's LSB (sub-precision; the tail is smaller still).
-        let mut sum = t.clone();
-        let mut pow = t.clone(); // t^(2j+1)
-        let mut op_err: u128 = 0;
-        let mut acc_exp = sum.exp2();
-        let mut j: i64 = 1;
-        loop {
-            let (p_new, e_pm) = pow.mul(&t2); // t^(2j+1)
-            pow = p_new;
-            let (term, e_td) = pow.div_small((2 * j + 1) as u64);
-            let (sum_new, e_sa) = sum.add(&term);
-            if sum_new.exp2() != acc_exp {
-                op_err = rescale_ulps(op_err, acc_exp, sum_new.exp2());
-                acc_exp = sum_new.exp2();
+        // m == 1 exactly (x is an exact power of two) ⇒ t == 0 ⇒ log(m) = 0 with NO
+        // series error. Short-circuit here: a zero-valued t/num carries a degenerate
+        // exponent that would drive rescale_ulps past its 128-bit shift and return
+        // u128::MAX — a VACUOUS bound (found by the err_ulps soundness test on log(2)).
+        let (sum, sum_err) = if t.is_zero() {
+            (t.clone(), 0u128)
+        } else {
+            // t's only errors are the sub/add rounding + the div. Bound the
+            // propagation rigorously: |dt| ≤ |dnum|/|den| + |num|·|dden|/|den|² with
+            // |den| ≥ 1.7, |num| ≤ 0.5 ⇒ each ≤ its own rescaled ULP-count (round-up).
+            let err_t = e_t
+                .saturating_add(rescale_ulps(e_num, num.exp2(), t.exp2()))
+                .saturating_add(rescale_ulps(e_den, den.exp2(), t.exp2()));
+            let (t2, _e_t2) = t.mul(&t); // t²; its rounding is folded via the series ops
+
+            // Σ_{j≥0} t^(2j+1)/(2j+1) = atanh(t). Truncate when a term's MSB falls
+            // GUARD bits below the sum's LSB (sub-precision; the tail is smaller still).
+            let mut sum = t.clone();
+            let mut pow = t.clone(); // t^(2j+1)
+            let mut op_err: u128 = 0;
+            let mut acc_exp = sum.exp2();
+            let mut j: i64 = 1;
+            loop {
+                let (p_new, e_pm) = pow.mul(&t2); // t^(2j+1)
+                pow = p_new;
+                let (term, e_td) = pow.div_small((2 * j + 1) as u64);
+                let (sum_new, e_sa) = sum.add(&term);
+                if sum_new.exp2() != acc_exp {
+                    op_err = rescale_ulps(op_err, acc_exp, sum_new.exp2());
+                    acc_exp = sum_new.exp2();
+                }
+                op_err = op_err
+                    .saturating_add(rescale_ulps(e_pm, pow.exp2(), acc_exp))
+                    .saturating_add(rescale_ulps(e_td, term.exp2(), acc_exp))
+                    .saturating_add(e_sa);
+                sum = sum_new;
+                if term.is_zero() || term.ebin() < sum.exp2() - SERIES_GUARD {
+                    break;
+                }
+                j += 1;
             }
-            op_err = op_err
-                .saturating_add(rescale_ulps(e_pm, pow.exp2(), acc_exp))
-                .saturating_add(rescale_ulps(e_td, term.exp2(), acc_exp))
-                .saturating_add(e_sa);
-            sum = sum_new;
-            if term.is_zero() || term.ebin() < sum.exp2() - SERIES_GUARD {
-                break;
-            }
-            j += 1;
-        }
-        // atanh derivative 1/(1−t²) ≤ 1.04 propagates err_t onto the sum; factor 2
-        // covers it. Plus the truncation tail (1 sub-precision ULP).
-        let sum_err = op_err
-            .saturating_add(rescale_ulps(2u128.saturating_mul(err_t), t.exp2(), sum.exp2()))
-            .saturating_add(1);
+            // atanh derivative 1/(1−t²) ≤ 1.04 propagates err_t onto the sum; factor 2
+            // covers it. Plus the truncation tail (1 sub-precision ULP).
+            let sum_err = op_err
+                .saturating_add(rescale_ulps(2u128.saturating_mul(err_t), t.exp2(), sum.exp2()))
+                .saturating_add(1);
+            (sum, sum_err)
+        };
 
         // log(m) = 2·sum: ldexp is EXACT (ULP-count preserved).
         let logm = sum.ldexp(1);
