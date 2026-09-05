@@ -24,19 +24,40 @@ import re
 import subprocess
 import sys
 
+# ⚠️ REFUSE TO RUN UNDER -O RATHER THAN WORK AROUND IT. `python -O` strips `assert`,
+# so every control below would pass having checked nothing -- MEASURED: with a defect
+# seeded into kiss_trace.py this suite exits 1 normally and 0 under -O. Converting each
+# assert to `if ...: raise` (the reviewer's suggestion) fixes the asserts that exist
+# today and silently loses the next one added. This makes the degenerate mode
+# unrepresentable instead, and covers every assert in the file including future ones.
+if not __debug__:
+    raise SystemExit(
+        "refusing to run under -O/PYTHONOPTIMIZE: `assert` is stripped, so these "
+        "controls would report success having verified nothing")
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-RE_REPORT_ROW = re.compile(r"^\s+([A-Z]+)\s+(\d+)/(\d+)\s+\d+\.\d+%", re.M)
-RE_FREEZE_ROW = re.compile(r"^\s+\[(?:FAIL|\s*OK\s*)\]\s+([A-Z]+)\s+(\d+)/(\d+)\s+traced", re.M)
+RE_REPORT_ROW = re.compile(r"^\s+([A-Z][A-Z0-9_]*)\s+(\d+)/(\d+)\s+[\d.]+%", re.M)
+RE_FREEZE_ROW = re.compile(r"^\s+\[(?:FAIL|\s*OK\s*)\]\s+([A-Z][A-Z0-9_]*)\s+(\d+)/(\d+)\s+traced", re.M)
 RE_LINT_TOTAL = re.compile(r"^\s+(\d+)\s+lint:", re.M)
 
 
 def _run(*args):
+    """Run the tool and PROVE it ran. An empty parse and a crashed process produce the
+    same downstream symptom -- no rows -- so the two are separated HERE, at the source.
+    The exit code is not pinned to 0: `--freeze-ready` exits 1 by design while any
+    sub-standard is incomplete, so a verdict of 0 or 1 is "ran", and anything else
+    (a traceback, exit 2) is "did not"."""
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     r = subprocess.run([sys.executable, os.path.join(HERE, "kiss_trace.py"), *args],
                        capture_output=True, text=True, cwd=ROOT, env=env, timeout=600)
-    return r.stdout + r.stderr
+    out = r.stdout + r.stderr
+    if r.returncode not in (0, 1) or "Traceback (most recent call last)" in out:
+        raise AssertionError(
+            f"kiss_trace.py {' '.join(args)} did not RUN (exit {r.returncode}); a parse of "
+            f"its output would measure a crash, not a coverage figure:\n{out[-600:]}")
+    return out
 
 
 def test_the_two_published_tables_reconcile_by_the_lint_count():
@@ -49,8 +70,15 @@ def test_the_two_published_tables_reconcile_by_the_lint_count():
     assert rb, "no rows parsed from --report; the table shape changed"
     assert fz, "no rows parsed from --freeze-ready; the table shape changed"
 
-    shared = sorted(set(rb) & set(fz))
-    assert len(shared) >= 9, f"expected the nine sub-standards, matched {shared}"
+    # ⚠️ SET EQUALITY, not intersection. An intersection silently EXCLUDES a row either
+    # table dropped -- a new sub-standard the row regex fails to match would vanish from
+    # the reconciliation while the remaining nine still summed correctly.
+    assert set(rb) == set(fz), (
+        f"the two tables cover different sub-standards: only in --report {sorted(set(rb) - set(fz))}, "
+        f"only in --freeze-ready {sorted(set(fz) - set(rb))}. A row missing from one table would be "
+        f"silently excluded from the reconciliation below.")
+    shared = sorted(rb)
+    assert len(shared) >= 9, f"expected at least the nine sub-standards, matched {shared}"
 
     total_gap = 0
     for sub in shared:
