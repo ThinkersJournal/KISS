@@ -1478,16 +1478,36 @@ shared naming convention spelled identically in both foundational vocabularies.
   normative owner is Classify, this obligation is that the Ops restatement tracks the Classify
   owner, not a symmetric dual pinning. *Test:* `test_ops_dtype_layout_coversioned`.
 - **KISS-OPS-6.16-0009** — §6.16-0003's round-to-nearest-ties-even requirement governs an op that
-  **computes** a narrow-float result. An op whose §6.13 reference decomposition contains **no
-  arithmetic** — a comparison-and-`select`, as the NaN-propagating `max_prop`/`min_prop` are —
-  computes nothing, so there is nothing to round: its result is the **moved operand**, whose bits
-  (payload and sign included for a NaN) are preserved **exactly** per §6.8-0010(a). A
-  promote-to-`f32`-and-round-back implementation of such an op is therefore non-conforming for a
-  narrow float — it quiets a moved signaling NaN, the identical promotion hazard §6.9-0003 rejects
-  for `nextafter`; and `copysign` (§6.9-0002) is already specified as a raw-bit operation precisely
-  so a moved NaN's sign survives, a select-decomposed op being the same kind of move. This clause
-  clarifies the scope of §6.16-0003, which two independent readers had read as reaching NaN-payload
-  propagation — it does not. *Test:* `test_ops_bf16_minmax_moves_not_rounds`.
+  **computes** a narrow-float result. This clause governs an op that does not: one whose **result is
+  the operand's bits, with at most a sign-bit edit**. Such an op computes nothing, so there is
+  nothing to round, and its result's bits (payload and sign included for a NaN) are preserved
+  **exactly** per §6.8-0010(a) — subject only to that sign-bit edit where the op's own definition
+  specifies one. A promote-to-`f32`-and-round-back implementation of such an op is therefore
+  non-conforming for a narrow float: it quiets a moved signaling NaN, the identical promotion hazard
+  §6.9-0003 rejects for `nextafter`.
+  **The predicate is the op's RESULT, not a lookup**: it reaches an op with **no §6.13 reference
+  decomposition at all**, because §6.13 decomposes only non-primitive ops and every primitive-floor
+  atom (§6.3-0001) has none. So this clause reaches the comparison-and-`select` minmax family
+  (`max_prop`/`min_prop`, which do decompose) **and** the primitive sign-bit atoms `neg` (§6.4-0003),
+  `abs` (§6.4-0004) and `copysign` (§6.9-0002), which do not. It does **not** reach `floor`, `ceil`,
+  `trunc` or `round_even`: those compute an integral value that is no operand's bits, and
+  §6.7-0002 governs them.
+  ⚠️ **"At most" is load-bearing and MUST NOT be simplified to "with a sign-bit edit."** A
+  select-decomposed op edits **no** bits on the arm that returns an operand: `relu`'s non-negative
+  arm returns its input unchanged, and a `select` returns whichever operand it chose. Reading the
+  predicate as *requiring* a sign edit would drop exactly those arms — the ones where the obligation
+  is strongest, because nothing at all should happen to the bits.
+  *Test:* `test_ops_bf16_minmax_moves_not_rounds`.
+
+  > *Informative.* The superseded trigger asked whether an op's "§6.13 reference decomposition
+  > contains no arithmetic." That predicate is **vacuously true on every primitive-floor atom**,
+  > which has no decomposition to contain anything — so it could not separate `abs` from `floor`,
+  > and it was wrong in **both** directions at once while reading as coverage. It failed to reach
+  > the narrow sign ops it should have governed, and it silently condemned the rounding ops it
+  > should never have reached. Neither miss surfaced as a failure, because a trigger nobody can
+  > apply is a trigger nobody applies literally. Keying on the **result** rather than on a lookup
+  > is what removes that: the property is readable off the op's own definition, for an atom and a
+  > non-primitive alike.
 
 - **KISS-OPS-6.16-0010** — **What arithmetic does to a signaling NaN operand, for the float
   dtypes §6.2-0001 delegates to this section.** §6.2-0001 pins the IEEE-754 float dtypes
