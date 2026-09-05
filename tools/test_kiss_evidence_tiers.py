@@ -16,6 +16,15 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kiss_trace as kt  # noqa: E402
 
+# ⚠️ REFUSE TO RUN UNDER -O. `python -O` strips `assert`, so every control below would
+# pass having checked nothing -- the exact defect this file exists to fix, one layer out.
+# One guard covers every assert including future ones; converting each `assert` to
+# `if ...: raise` fixes today's and silently loses the next one added.
+if not __debug__:
+    raise SystemExit(
+        "refusing to run under -O/PYTHONOPTIMIZE: `assert` is stripped, so these "
+        "controls would report success having verified nothing")
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
@@ -112,7 +121,13 @@ def test_live_tiers_partition_the_backed_set():
     # If PROVEN is ever legitimately empty -- every proof retired under the sanctioned
     # drop rule -- this assertion is a PROMPT, not a false alarm: the subset check has
     # gone vacuous and must be REPLACED, never merely deleted.
-    assert proven_set, (
+    # ⚠️ ON `proven`, THE INPUT -- NOT on the filtered `proven_set`. Both catch the
+    # vacuous case, but they MISATTRIBUTE it differently: if the tree records proofs and
+    # every one is dropped, `proven_set` is empty while PROVEN is not, and asserting on
+    # the filtered set would report "PROVEN is EMPTY" -- false, and it would send the
+    # reader looking for missing markers instead of missing citations. Asserting on the
+    # input leaves that case to the drop check below, which names it correctly.
+    assert proven, (
         "live: PROVEN is EMPTY, so the drop check below compares two empty sets and "
         "asserts nothing. If the emptiness is real (all proofs retired), replace this "
         "control rather than delete it -- a set comparison over two empty sets is "
