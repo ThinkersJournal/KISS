@@ -244,13 +244,39 @@ fn test_consume_determinism_class_exact_byte() {
         "KISS-CONSUME-6.0-0001: the imported determinism enum drifted from the canonical KISS-Ops set"
     );
     let p = plain(block).to_lowercase();
+    // ⚠️ SEARCH OUTSIDE THE ENUM LISTING (#417). The clause QUOTES the canonical enum
+    // `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`, and the assertion
+    // ABOVE requires that listing to be present and exact. So every substring the next two
+    // assertions look for -- "exact-byte", "tolerance", "order-invariant" -- is supplied by
+    // text this test itself guarantees, and a search over the whole block CANNOT FAIL.
+    //
+    // MEASURED before this fix: deleting the clause's entire central obligation --
+    // "MUST evaluate each such clause with a byte-exact comparator and MUST NOT apply
+    // tolerance or order-invariant comparison" -- left this test GREEN. Two assertions
+    // that could not fail, sitting beside one that KILLs, which is what made the test read
+    // as rigorous.
+    //
+    // Stripping the braced listing leaves the clause's OWN prose, over which the same
+    // assertions are falsifiable.
+    let outside_enum = {
+        let mut t = p.clone();
+        while let (Some(a), Some(b)) = (t.find('{'), t.find('}')) {
+            if a >= b {
+                break;
+            }
+            t.replace_range(a..=b, " ");
+        }
+        t
+    };
     assert!(
-        p.contains("exact byte") || p.contains("exact-byte"),
-        "KISS-CONSUME-6.0-0001: the clause does not select the exact-byte determinism class"
+        outside_enum.contains("exact byte") || outside_enum.contains("exact-byte"),
+        "KISS-CONSUME-6.0-0001: the clause does not SELECT the exact-byte determinism class          in its own prose (the enum listing does not count -- it is required separately)"
     );
     assert!(
-        p.contains("must not") && p.contains("tolerance") && p.contains("order-invariant"),
-        "KISS-CONSUME-6.0-0001: the clause does not forbid the tolerance / order-invariant comparators"
+        outside_enum.contains("must not")
+            && outside_enum.contains("tolerance")
+            && outside_enum.contains("order-invariant"),
+        "KISS-CONSUME-6.0-0001: the clause does not FORBID the tolerance / order-invariant          comparators in its own prose (the enum listing does not count)"
     );
     assert!(
         p.contains("owned by kiss-ops") && p.contains("re-forked"),
