@@ -1,0 +1,39 @@
+{
+  "schema": "kiss-announce-vectors-v1.json",
+  "generated_from": "conformance/src/announce.rs::emit_announce_vectors_json (the reference codec)",
+  "spec_reference": "spec/announce.md §2.5 worked handshake example (informative) + the §6.1/§6.3/§6.4 framing clauses",
+  "scope_note": "DIFFABLE, not COVERED: a foreign reader byte-diffs each frame's exact wire bytes (endianness, field width, padding) against its own encoder; this does NOT cover the untested KISS-Announce clauses or the reader/decline paths.",
+  "population": "the FIVE §2.5 worked-example POSITIVE frames only: the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from §2.5 — that is the burn-down this artifact makes measurable, not part of it.",
+  "frames": [
+    {
+      "name": "reference_envelope",
+      "clause": "KISS-ANNOUNCE-6.1-0002",
+      "byte_length": 56,
+      "bytes_hex": "53 45 41 4D 01 00 00 00 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3F 00 00 00 03 00 00 00"
+    },
+    {
+      "name": "availability_list",
+      "clause": "KISS-ANNOUNCE-6.3-0005",
+      "byte_length": 89,
+      "bytes_hex": "53 41 56 4C 01 00 00 00 02 00 00 00 03 00 00 00 AA BB CC 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 02 00 00 00 DE AD 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22"
+    },
+    {
+      "name": "cyrq_request",
+      "clause": "KISS-ANNOUNCE-6.4-0001",
+      "byte_length": 44,
+      "bytes_hex": "43 59 52 51 03 00 00 00 AA BB CC 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11"
+    },
+    {
+      "name": "crsp_response",
+      "clause": "KISS-ANNOUNCE-6.4-0004",
+      "byte_length": 53,
+      "bytes_hex": "43 52 53 50 03 00 00 00 AA BB CC 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 05 00 00 00 DE AD BE EF 01"
+    },
+    {
+      "name": "cdec_response",
+      "clause": "KISS-ANNOUNCE-6.4-0007",
+      "byte_length": 48,
+      "bytes_hex": "43 44 45 43 03 00 00 00 AA BB CC 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 06 00 00 00"
+    }
+  ]
+}

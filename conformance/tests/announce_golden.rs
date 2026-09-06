@@ -5,10 +5,13 @@
 use kiss_conformance::announce::*;
 use kiss_conformance::{assert_golden, hex};
 
-/// The Announce §2.5 reference envelope: version 1, one profile {1}, capabilities
-/// = EXT bits 0–5 | FEAT bit 32 | FEAT bit 33 = 0x0000_0003_0000_003F.
+/// The Announce §2.5 reference envelope — the SINGLE definition now lives in the library
+/// (`announce::reference_envelope`), which is also what `emit_announce_vectors_json` renders into
+/// the machine-readable artifact; this test then asserts that one builder against the §2.5
+/// appendix hex below (appendix-agreement). One source, not three (was also copied in
+/// announce_frames.rs — the #469 g1_region shadowing hazard).
 fn reference() -> Envelope {
-    Envelope { envelope_version: 1, profiles: vec![1], capabilities: 0x0000_0003_0000_003F }
+    kiss_conformance::announce::reference_envelope()
 }
 
 // Built from labeled fields so each boundary is exact (§6.1 layout, 56 bytes).
@@ -144,13 +147,7 @@ fn reject_non_ascending_profiles() {
 /// spec-derived (no transcribed golden exists for these frames) but every field
 /// width/order/endianness is pinned verbatim by §6.3-0011/0012/0005.
 fn reference_list() -> AvailabilityList {
-    AvailabilityList {
-        list_version: 1,
-        records: vec![
-            AvailabilityRecord { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] },
-            AvailabilityRecord { structure_key: vec![0xDE, 0xAD], revision_hash: [0x22; 32] },
-        ],
-    }
+    kiss_conformance::announce::reference_availability_list()
 }
 
 // Built from labeled fields so each boundary is exact (§6.3 framing).
@@ -227,9 +224,9 @@ fn test_announce_availability_framing() {
     assert_eq!(decode_availability_list(&b), Ok(reference_list()));
 }
 
-/// A reference echoed identity block: structure_key AA BB CC, revision present.
+/// A reference echoed identity block — single definition in the library.
 fn reference_identity() -> Identity {
-    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    kiss_conformance::announce::reference_identity()
 }
 
 // The identity block (§6.4-0011), reused by CYRQ/CRSP/CDEC goldens.
