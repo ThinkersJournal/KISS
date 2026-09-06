@@ -37,6 +37,34 @@ fn test_shape_expr_serialization_golden() {
     assert_golden("KISS-OPS-6.20-0005", "rope_half_div",
         &half.encode(),
         "08 03 00 02 00 FF 09 00 03 02 00 00 00 00 00 00 00");
+
+    // The remaining ARITHMETIC tags. Div above already demonstrates the nested
+    // u16-LE length-prefix discipline, so Add/Sub/Mul add no new SHAPE -- what they
+    // add is their TAG BYTE, which nothing pinned (#422): all three could be changed
+    // to any other value with zero tests red anywhere in the repository. On a
+    // byte-deterministic freeze surface that is silent wire divergence, not a red
+    // anyone interprets -- a producer and a consumer either side of the change
+    // disagree about what an `Add` node is and both stay internally consistent.
+    //
+    // ⚠️ THESE BYTES ARE DERIVED FROM THE CLAUSE, NOT PASTED FROM THE ENCODER.
+    // §6.20-0005 pins `Add=0x05`, `Sub=0x06`, `Mul=0x07`, and the body is the same
+    // (child-len, child) pair sequence as Div: 03 00 | 02 00 FF | 09 00 | 03 <i64 LE 2>.
+    // A golden copied from the implementation's own output asserts only that it still
+    // does what it did; one derived from the specified grammar asserts the grammar.
+    for (tag, name, mk) in [
+        (0x05u8, "add_extent_const", Dim::Add as fn(Box<Dim>, Box<Dim>) -> Dim),
+        (0x06u8, "sub_extent_const", Dim::Sub as fn(Box<Dim>, Box<Dim>) -> Dim),
+        (0x07u8, "mul_extent_const", Dim::Mul as fn(Box<Dim>, Box<Dim>) -> Dim),
+    ] {
+        let e = mk(
+            Box::new(Dim::Extent { operand: 0, axis: LAST }),
+            Box::new(Dim::Const(2)),
+        );
+        let expected = format!(
+            "{tag:02X} 03 00 02 00 FF 09 00 03 02 00 00 00 00 00 00 00"
+        );
+        assert_golden("KISS-OPS-6.20-0005", name, &e.encode(), &expected);
+    }
 }
 
 // ---- §6.20-0009 WithDim — experimental extension (umbrella §6.4, issue #80) ---
