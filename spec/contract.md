@@ -1062,6 +1062,22 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   MUST NOT reject a v1 kernel for not carrying it, and the §6.6-0006 grammar MUST remain
   **thread-index-free** in v1 (no per-thread index symbol). *Test:*
   `test_contract_reserved_tile_mapping`.
+- **KISS-CONTRACT-6.6-0009** — The §6.6-0006 expression grammar's **division semantics** MUST be
+  pinned, because the grammar's *bytes* are determinism-class exact-byte (§6.0-0001) while its
+  *evaluated value* is what a consumer launches with: (a) the binary `/` MUST **truncate toward
+  zero** — the quotient's magnitude is `|a| / |b|` rounded down and its sign is the sign of `a·b`,
+  so `-7 / 2` is `-3` and never `-4`; (b) `ceil_div(a, b)` MUST be the **true ceiling** of `a / b`,
+  so `ceil_div(-10, 4)` is `-2` and never `-1`, and its divisor MUST be **positive** — a zero or
+  negative divisor is outside its domain and MUST be a typed decline, never a silently chosen
+  rounding; (c) a **zero divisor** for `/` MUST be a typed decline; and (d) the single quotient
+  that is unrepresentable in the evaluation type — `i64::MIN / -1` — MUST be a typed decline
+  rather than a wrapped value. An implementation MUST NOT evaluate `/` as Euclidean or flooring
+  division, and MUST NOT spell `ceil_div` as the truncating `(a + b - 1) / b`, which is not the
+  ceiling for a negative dividend. **`/` truncates because every target language the suite lowers
+  to does** — C, CUDA, SPIR-V and Rust all truncate — **so a specification pinning Euclidean `/`
+  would put every backend in violation of a rule invented in a document**; the rule is chosen from
+  portability, not from the reference implementation's behaviour, and happens to match it.
+  *Test:* `test_contract_division_semantics_are_pinned`.
 
 ### 6.7 Capabilities section
 
@@ -1625,6 +1641,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.6-0006 | `test_contract_dispatch_expressions_machine_evaluable` |
 | KISS-CONTRACT-6.6-0007 | `test_contract_dispatch_optional` |
 | KISS-CONTRACT-6.6-0008 | `test_contract_reserved_tile_mapping` |
+| KISS-CONTRACT-6.6-0009 | `test_contract_division_semantics_are_pinned` |
 | KISS-CONTRACT-6.7-0001 | `test_contract_capabilities_field_schema` |
 | KISS-CONTRACT-6.7-0002 | `test_contract_capabilities_accept_matches_identity` |
 | KISS-CONTRACT-6.7-0003 | `test_contract_capabilities_is_envelope` |
