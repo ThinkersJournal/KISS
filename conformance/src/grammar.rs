@@ -635,6 +635,32 @@ fn count_nodes(n: &Node) -> usize {
     }
 }
 
+/// One golden region vector as a JSON object, indented for the `vectors` array.
+///
+/// Extracted so the generator reads as "header, then the vectors" rather than as one long
+/// sequence of pushes — a real unit (it renders exactly one vector) rather than a block moved out
+/// to satisfy a line count.
+fn render_vector(id: &str, desc: &str, region: &Region) -> String {
+    let jstr = crate::json::escape_string;
+    let bytes = encode(region).expect("a golden region vector must encode");
+    let mut v = String::from("    {\n");
+    v.push_str(&format!("      \"id\": {},\n", jstr(id)));
+    v.push_str(&format!("      \"description\": {},\n", jstr(desc)));
+    v.push_str(&format!("      \"n_inputs\": {},\n", region.n_inputs));
+    v.push_str(&format!("      \"ops_version\": {},\n", jstr(&region.ops_version)));
+    v.push_str(&format!(
+        "      \"classify_version\": {},\n",
+        jstr(&region.classify_version)
+    ));
+    v.push_str(&format!("      \"root_kind\": {},\n", jstr(node_kind(&region.root))));
+    v.push_str(&format!("      \"node_count\": {},\n", count_nodes(&region.root)));
+    v.push_str(&format!("      \"extract_count\": {},\n", region.extracts.len()));
+    v.push_str(&format!("      \"wire_bytes\": {},\n", bytes.len()));
+    v.push_str(&format!("      \"wire_hex\": {}\n", jstr(&compact_hex(&bytes))));
+    v.push_str("    }");
+    v
+}
+
 /// Emit `conformance/corpus/grammar_vectors.json` — the machine-readable golden REGION vector
 /// set, generated from this codec.
 ///
@@ -667,37 +693,12 @@ pub fn emit_grammar_vectors_json() -> String {
     s.push_str("  \"unrendered_vectors\": [\"G2\", \"G3\", \"G5\"],\n");
     s.push_str("  \"vectors\": [\n");
     let regions = golden_regions();
-    for (i, (id, desc, region)) in regions.iter().enumerate() {
-        let bytes = encode(region).expect("a golden region vector must encode");
-        s.push_str("    {\n");
-        s.push_str(&format!("      \"id\": {},\n", jstr(id)));
-        s.push_str(&format!("      \"description\": {},\n", jstr(desc)));
-        s.push_str(&format!("      \"n_inputs\": {},\n", region.n_inputs));
-        s.push_str(&format!(
-            "      \"ops_version\": {},\n",
-            jstr(&region.ops_version)
-        ));
-        s.push_str(&format!(
-            "      \"classify_version\": {},\n",
-            jstr(&region.classify_version)
-        ));
-        s.push_str(&format!(
-            "      \"root_kind\": {},\n",
-            jstr(node_kind(&region.root))
-        ));
-        s.push_str(&format!(
-            "      \"node_count\": {},\n",
-            count_nodes(&region.root)
-        ));
-        s.push_str(&format!("      \"extract_count\": {},\n", region.extracts.len()));
-        s.push_str(&format!("      \"wire_bytes\": {},\n", bytes.len()));
-        s.push_str(&format!("      \"wire_hex\": {}\n", jstr(&compact_hex(&bytes))));
-        s.push_str(if i + 1 == regions.len() {
-            "    }\n"
-        } else {
-            "    },\n"
-        });
-    }
+    let rendered: Vec<String> = regions
+        .iter()
+        .map(|(id, desc, region)| render_vector(id, desc, region))
+        .collect();
+    s.push_str(&rendered.join(",\n"));
+    s.push('\n');
     s.push_str("  ]\n");
     s.push_str("}\n");
     s
