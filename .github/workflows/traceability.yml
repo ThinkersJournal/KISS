@@ -193,6 +193,14 @@ jobs:
         run: python tools/test_kiss_clause_form.py
       - name: Clause form (a metadata block must not split a requirement)
         run: python tools/kiss_clause_form.py
+      # Clause POSITION: no existing gate reads a clause's placement against its heading -- the
+      # matrix compares membership (a separate list) and the body lints check shape/wording. A
+      # normative clause landed past the appendices with six gates green (#486). Born-red first:
+      # the check must be shown to flag a clause moved out of its section before its CLEAN counts.
+      - name: Clause-position lint controls (born-red + clean-on-live)
+        run: python tools/test_kiss_clause_position.py
+      - name: Clause position (a clause must sit under its own section heading)
+        run: python tools/kiss_clause_position.py
       - name: Spec<->binding enumeration consistency (op-family set)
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency
