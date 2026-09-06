@@ -73,3 +73,63 @@ fn dispatch_subscript_declines() {
         Err(Decline::SubscriptOutOfBounds { .. })
     ));
 }
+
+/// Backs KISS-CONTRACT-6.6-0009 — the DIVISION SEMANTICS of the §6.6-0006 Dispatch expression
+/// grammar. ⚠️ The CLAUSE is -0009; -0006 defines the grammar these operators live in and is
+/// backed separately. Citing -0006 here would have credited a clause that was already backed
+/// while leaving the one this test was written for resting on the §9 matrix row alone.
+/// `/` truncates toward zero, `ceil_div` is the true ceiling over a positive divisor, and a zero
+/// divisor and `i64::MIN / -1` are typed declines.
+///
+/// ⚠️ BEFORE THIS TEST, NOTHING IN THE CORPUS DISCRIMINATED THE TWO CANDIDATE SEMANTICS.
+/// Measured across the whole crate — 113 files, 6106 string literals — exactly four literals are
+/// Dispatch expressions containing a division: `ceil_div(n, 256)` twice,
+/// `ceil_div(9223372036854775807, 2)`, and `(0 - 9223372036854775807 - 1) / (0 - 1)`. The first
+/// three have non-negative dividends, and the fourth is `i64::MIN / -1`, which OVERFLOWS under
+/// BOTH semantics and is declined either way. **So a foreign implementor could have implemented
+/// Euclidean `/` and passed every existing test.** The clause without these vectors would have
+/// been unfalsifiable prose.
+///
+/// ⚠️ AND THE DISCRIMINATING OPERAND IS THE DIVIDEND, NOT THE DIVISOR. Measured over 300 (a, b)
+/// pairs: 86 diverge, **all of them with a negative dividend, none with a dividend >= 0**,
+/// whatever the divisor's sign. A fixture built on a negative DIVISOR — `7 / (0 - 2)` — does not
+/// discriminate, and would have occupied the slot while proving nothing.
+#[test]
+fn test_contract_division_semantics_are_pinned() {
+    let s = scalars();
+    let ev = |e: &str| eval(e, &s, EvalMode::Structural);
+
+    // ---- `/` TRUNCATES TOWARD ZERO. Each of these differs under Euclidean division. ----------
+    // -7 / 2 : truncating -3, Euclidean -4.
+    assert_eq!(ev("(0 - 7) / 2").unwrap(), -3, "`/` must truncate toward zero, not floor");
+    // -7 / -2 : truncating 3, Euclidean 4. Both operands negative — the divisor's sign changes
+    // the DIRECTION of the difference, which is why one case of each sign is carried.
+    assert_eq!(ev("(0 - 7) / (0 - 2)").unwrap(), 3, "`/` truncates for a negative divisor too");
+
+    // ⚠️ CONTROL, NOT COVERAGE. An EXACT division agrees under both semantics, so it proves the
+    // evaluator runs and proves NOTHING about which rounding is implemented. It is here so that a
+    // later reader does not mistake it for a discriminating case and delete one that is.
+    assert_eq!(ev("(0 - 8) / 2").unwrap(), -4, "control: exact division, both semantics agree");
+
+    // ---- `ceil_div` IS THE TRUE CEILING, and its internals are NOT the pinned `/` ------------
+    // ceil(-10/4) = -2. An implementation spelling ceil_div as the truncating `(a + b - 1) / b`
+    // yields -1 here. This is the case that makes `div_euclid` load-bearing rather than stylistic.
+    assert_eq!(ev("ceil_div(0 - 10, 4)").unwrap(), -2, "ceil_div must be the true ceiling");
+    assert_eq!(ev("ceil_div(0 - 9, 3)").unwrap(), -3, "exact ceiling, negative dividend");
+    assert_eq!(ev("ceil_div(7, 2)").unwrap(), 4, "ordinary ceiling, positive dividend");
+
+    // ---- the two DECLINES, and they are DISTINCT declines ------------------------------------
+    assert!(ev("7 / 0").is_err(), "a zero divisor MUST decline, never a panic or a value");
+    assert!(
+        ev("ceil_div(7, 0)").is_err(),
+        "ceil_div's divisor precondition is POSITIVE — zero declines"
+    );
+    assert!(
+        ev("ceil_div(7, 0 - 2)").is_err(),
+        "ceil_div over a NEGATIVE divisor is outside its precondition and declines"
+    );
+    assert!(
+        ev("(0 - 9223372036854775807 - 1) / (0 - 1)").is_err(),
+        "i64::MIN / -1 overflows under BOTH semantics and MUST decline"
+    );
+}

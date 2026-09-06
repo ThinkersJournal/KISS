@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**386<!-- bound:harness --> of 940<!-- bound:clauses --> normative clauses are
+**387<!-- bound:harness --> of 941<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 238<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -51,7 +51,7 @@ The remaining 554<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **495<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 684<!-- bound:test_fns --> test fns, **255<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 685<!-- bound:test_fns --> test fns, **255<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
