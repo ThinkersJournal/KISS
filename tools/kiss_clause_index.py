@@ -48,7 +48,15 @@ def build(root):
     # RAISES on a missing spec file rather than returning a sentinel: a sentinel gave the
     # caller a second REFUSED route, and a test covering one route made the other look
     # covered. One way to fail is one way to test.
+    #
+    # DUPLICATES ARE REFUSED, NOT DEDUPLICATED. `defs[cid] = ...` keeps the LAST copy and
+    # drops the first silently, which would defeat the very invariant this tool exports --
+    # "exactly one definition and one matrix row per clause". Worse, the SET check below
+    # cannot see it: two definitions of one id collapse to one key, so `defs` and `matrix`
+    # still match and the index looks complete. The asymmetry check is blind to duplication
+    # by construction, so duplication needs its own detector.
     defs, matrix, stems = {}, {}, []
+    dupes = []
     for stem in kt.SPECS:
         path = os.path.join(str(root), SPEC_SUBDIR, stem + ".md")
         if not os.path.exists(path):
@@ -57,9 +65,15 @@ def build(root):
         kt.parse(path, res)
         stems.append(stem)
         for cid, ln, tests in res.body:
+            if cid in defs:
+                dupes.append(f"{cid}: defined twice (lines {defs[cid][0]} and {ln})")
             defs[cid] = (ln, tests)
         for cid, test, _ln in res.matrix:
+            if cid in matrix:
+                dupes.append(f"{cid}: two matrix rows (`{matrix[cid]}` and `{test}`)")
             matrix[cid] = test
+    if dupes:
+        raise ValueError("duplicate clause ids in the corpus: " + "; ".join(sorted(dupes)))
     return defs, matrix, stems
 
 

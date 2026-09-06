@@ -83,3 +83,53 @@ def test_an_unreadable_corpus_REFUSES_and_does_not_emit_an_empty_index():
 def test_the_three_verdicts_have_distinct_exit_codes():
     """0 / 1 / 2 must stay distinct so 'could not measure' never reads as 'measured clean'."""
     assert len({0, 1, 2}) == 3
+
+
+def test_a_DUPLICATE_definition_is_REFUSED_even_when_the_index_would_look_correct():
+    """⚠️ THE ORDER-SENSITIVE CASE, and the reason a naive duplicate fixture is not enough.
+
+    `defs[cid] = ...` keeps the LAST copy. Seed the duplicate so the SURVIVING copy is the
+    true one and the emitted index is byte-identical to a clean run, exit 0 -- the corpus is
+    corrupt and every output signal reads fine.
+
+    The asymmetry check cannot see it either: two definitions of one id collapse to ONE key,
+    so `defs` and `matrix` still match exactly. Duplication is invisible to a set comparison
+    BY CONSTRUCTION, which is why it needs its own detector.
+
+    Seeded WRONG-COPY-FIRST for exactly that reason: a fixture whose duplicate lands LAST is
+    caught by the buggy code too, and would pass against the defect."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _tree_copy(tmp)
+        p = root / "spec" / "ops.md"
+        t = io.open(p, encoding="utf-8").read()
+        real = "- **KISS-OPS-6.19-0005** —"
+        assert t.count(real) == 1, "fixture anchor must be unique"
+        decoy = "- **KISS-OPS-6.19-0005** — **Decoy.** *Test:* `decoy_never_runs`.\n\n"
+        t = t.replace(real, decoy + real, 1)
+        io.open(p, "w", encoding="utf-8", newline="\n").write(t)
+
+        rc, out, err = _run(root)
+        assert rc == 2, (
+            f"a duplicated definition must REFUSE (rc=2), got rc={rc}. Note the emitted index "
+            f"is correct here -- that is the point: {len([l for l in out.splitlines() if l.startswith('KISS-')])} rows"
+        )
+        assert "KISS-OPS-6.19-0005" in err, "the refusal must NAME the duplicated id"
+        assert "defined twice" in err, "the refusal must say WHAT is wrong, not merely refuse"
+
+
+def test_a_DUPLICATE_matrix_row_is_REFUSED():
+    """The other half. Two rows for one clause is the §9 matrix's own 'exactly one row per
+    clause' invariant being violated, and it collapses to one key just as silently."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _tree_copy(tmp)
+        p = root / "spec" / "ops.md"
+        t = io.open(p, encoding="utf-8").read()
+        real = "| KISS-OPS-6.19-0005 |"
+        assert t.count(real) == 1, "fixture anchor must be unique"
+        t = t.replace(real, "| KISS-OPS-6.19-0005 | `decoy_never_runs` |\n" + real, 1)
+        io.open(p, "w", encoding="utf-8", newline="\n").write(t)
+
+        rc, _out, err = _run(root)
+        assert rc == 2, f"a duplicated matrix row must REFUSE (rc=2), got rc={rc}"
+        assert "KISS-OPS-6.19-0005" in err, "the refusal must NAME the duplicated id"
+        assert "two matrix rows" in err, "the refusal must say WHAT is wrong"
