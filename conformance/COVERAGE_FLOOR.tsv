@@ -330,8 +330,35 @@
 #
 # DERIVED BY THE TOOL: `--ratchet --base-ref origin/main` reported the 495 -> 496 rise;
 # harness/lint/proven re-read from the same run and unchanged.
+
+# #416 (KISS-OPS-6.16-0011, WHERE the move obligation attaches): untested 496 -> 497.
+# SAME SHAPE AS #362 DIRECTLY ABOVE, and for the same reason: a NEW normative clause
+# arrives UNBACKED and is recorded in UNBACKED.tsv rather than credited to a test that
+# does not exist. harness UNCHANGED at 383 -- the discriminator #362 names: a clause that
+# LOST its only backing would have lowered harness. clauses 936 -> 937. lint (33) and
+# proven (20) UNCHANGED.
+#
+# WHY IT SHIPS WITHOUT ITS TEST -- and this is a harness LIMIT, not a deferral of effort.
+# The clause's subject is a FUSED op (a fold plus an epilogue). The suite has no path that
+# EVALUATES one: conformance/src/decomp_grammar.rs validates scalar-body GRAMMAR
+# (`parse_scalar_body`) and never evaluates; the §6.16-0009 backing test
+# (test_ops_bf16_minmax_moves_not_rounds) is a scalar PAIR select. Measured on this branch:
+# 0 hits for `post`/`epilogue` as an evaluated construct in conformance/src (14 total hits,
+# all prose or the unrelated `post-v1`). Control: the same sweep finds the reduce/decomp
+# machinery that DOES exist. So there is presently nothing for a vector to observe, which
+# is exactly what the clause's own last sentence says the boundary is.
+#
+# NOTED AS A PATTERN, not hidden: this is the SECOND §6.16 classification clause to land
+# unbacked (-0010 is the first, above). Both name aspirational tests. A §9 matrix row is a
+# POINTER, and #386/#387 measured pointer inaccuracy at ~50%; two in one section is worth a
+# follow-up that either earns both tests or reclassifies them, rather than a third.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main` (origin/main
+# verified current against `git ls-remote`, HEAD 0 commits behind) reported
+# "RATCHET: at the floor - harness 383, lint 33, untested 497; lint set matches the base."
+# and that output is pasted here.
 # key	value
 harness	383
 lint	33
-untested	496
+untested	497
 proven	20
