@@ -30,10 +30,15 @@ fn block(id: u8, name: &str, fields: &[(&str, &str)]) -> Vec<u8> {
     render_block(id, name, &vals)
 }
 
-/// The four schema arms shared across the flat-field-schema sections. `parse` is the SHIPPED
-/// per-section reader; `forbidden` is the section's own MUST-NOT field (the discriminate arm).
+/// The shared signature of the per-section readers (§6.5/6.7/6.9-0001).
+type SectionParser = fn(&[u8]) -> Result<Vec<(String, String)>, SectionDecline>;
+
+/// The FIELD-SCHEMA arms shared across the flat-field-schema sections: round-trip, plus the
+/// missing / wrong-order / unknown / forbidden declines. `parse` is the SHIPPED per-section reader;
+/// `forbidden` is the section's own MUST-NOT field (the discriminate arm). Block-structure declines
+/// (a malformed line, a bad heading) are asserted by [`assert_structural_declines`], called at the end.
 fn assert_schema_arms(
-    parse: fn(&[u8]) -> Result<Vec<(String, String)>, SectionDecline>,
+    parse: SectionParser,
     id: u8,
     name: &str,
     fields: &[(&str, &str)],
@@ -81,6 +86,14 @@ fn assert_schema_arms(
         forbidden.0
     );
 
+    // block-structure declines (a malformed line, a bad heading) — asserted in the helper below.
+    assert_structural_declines(parse, id, name, fields);
+}
+
+/// The BLOCK-STRUCTURE decline arms, shared with [`assert_schema_arms`]: a field line without a
+/// ` = ` separator (§6.11-0001) and a mismatched section heading. Split out so each helper keeps a
+/// single, legible responsibility (and stays under the file's per-function length limit).
+fn assert_structural_declines(parse: SectionParser, id: u8, name: &str, fields: &[(&str, &str)]) {
     // decline — a MALFORMED field line (no ` = ` separator), §6.11-0001. Corrupt the first field
     // line of an otherwise-valid block: the ONLY difference from the round-trip arm is the removed
     // separator, so a parser that failed to detect it would return Ok and this exact-payload
