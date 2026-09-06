@@ -462,6 +462,143 @@ pub fn parse_guarantees_class(body: &[u8]) -> Result<crate::DeterminismClass, Co
     Err(ContractDecline::MissingGuaranteesClass)
 }
 
+// ---------------------------------------------------------------------------
+// Per-section field-schema readers (§6.5-0001 / §6.7-0001 / §6.9-0001).
+//
+// These sections' field-line schemas were verified only as PROSE (a spec-text test reads the
+// clause and checks its field list) and no test ever built one of these blocks and parsed it —
+// their byte form fell through because the golden renders 3 of 7 blocks (#365). These readers add
+// the missing production parse path (the established per-section shape, cf. parse_guarantees_class),
+// and the byte tests exercise THESE, never a test-only parser.
+// ---------------------------------------------------------------------------
+
+/// A typed decline from validating a contract section's field schema. Never a panic. Deliberately
+/// NOT part of the foreign-reader [`ContractDecline`] / `wire_tag` set — so `contract_vectors.json`
+/// (#365) and its interop surface are untouched.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SectionDecline {
+    /// The block does not begin with `[section:<id>:<name>]`.
+    BadHeading,
+    /// A line that is not a `key = value` field line (§6.11-0001).
+    MalformedLine(String),
+    /// A required field is absent (§6.x-0001 "MUST carry exactly the fields …").
+    MissingField(String),
+    /// A field not in the section's schema (§6.x-0001 "exactly the fields …").
+    UnknownField(String),
+    /// The fields are present but not in the pinned §6.11-0005 order.
+    WrongOrder,
+    /// A field the section MUST NOT carry (an independent `target` in Interface §6.5-0001; a
+    /// `count_unit`/`in_place`/`alignment_bytes` in Capabilities §6.5-0001; `audited_status` in
+    /// Provenance §6.9-0001) — the section-specific misplacement each clause forbids.
+    ForbiddenField(String),
+}
+
+/// Validate a single section block's field lines against a pinned schema: exactly `expected` keys,
+/// in that order, and none from `forbidden`. Line-anchored heading (a heading string inside a
+/// field value cannot false-open the block); stops at the next `[section:` heading if a whole body
+/// is passed. Shared by the per-section readers below.
+fn parse_section_block(
+    block: &[u8],
+    id: u8,
+    name: &str,
+    expected: &[&str],
+    forbidden: &[&str],
+) -> Result<Vec<(String, String)>, SectionDecline> {
+    let text = std::str::from_utf8(block).map_err(|_| SectionDecline::BadHeading)?;
+    let mut lines = text.lines();
+    match lines.next() {
+        Some(h) if h == format!("[section:{id}:{name}]") => {}
+        _ => return Err(SectionDecline::BadHeading),
+    }
+    let mut fields: Vec<(String, String)> = Vec::new();
+    for line in lines {
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with("[section:") {
+            break; // next section — this block ended
+        }
+        match line.split_once(" = ") {
+            Some((k, v)) => fields.push((k.to_string(), v.to_string())),
+            None => return Err(SectionDecline::MalformedLine(line.to_string())),
+        }
+    }
+    // A MUST-NOT field is the section-specific misplacement (checked before "unknown" so it gets
+    // its own decline), then any other out-of-schema key, then completeness, then order.
+    for (k, _) in &fields {
+        if forbidden.contains(&k.as_str()) {
+            return Err(SectionDecline::ForbiddenField(k.clone()));
+        }
+        if !expected.contains(&k.as_str()) {
+            return Err(SectionDecline::UnknownField(k.clone()));
+        }
+    }
+    let keys: Vec<&str> = fields.iter().map(|(k, _)| k.as_str()).collect();
+    for e in expected {
+        if !keys.contains(e) {
+            return Err(SectionDecline::MissingField((*e).to_string()));
+        }
+    }
+    if keys != expected {
+        return Err(SectionDecline::WrongOrder);
+    }
+    Ok(fields)
+}
+
+/// The Interface section's field schema (§6.5-0001), in the pinned §6.11-0005 order.
+pub const INTERFACE_FIELDS: [&str; 7] = [
+    "entry_point",
+    "rank",
+    "positional_signature",
+    "launch_scalars",
+    "count_unit",
+    "in_place",
+    "alignment_bytes",
+];
+/// The Capabilities section's field schema (§6.7-0001), in the pinned §6.11-0005 order.
+pub const CAPABILITIES_FIELDS: [&str; 8] = [
+    "accept_predicate",
+    "supported_dtype_set",
+    "awkward_layout_strategy",
+    "in_place_eligible_variants",
+    "index_width",
+    "determinism_class",
+    "precision_class",
+    "cost",
+];
+/// The Provenance section's field schema (§6.9-0001), in the pinned §6.11-0005 order.
+pub const PROVENANCE_FIELDS: [&str; 5] = [
+    "kernel_source",
+    "revision_base",
+    "revision_hash",
+    "cost_provenance",
+    "negotiation_metadata",
+];
+
+/// Read + validate an Interface section block (§6.5-0001). Forbids an independent `target` field
+/// (the target is the Identity `target_capability`, §6.3-0007 / §6.5-0003).
+pub fn parse_interface_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(block, 3, "interface", &INTERFACE_FIELDS, &["target"])
+}
+
+/// Read + validate a Capabilities section block (§6.7-0001). Forbids the Interface-only fields
+/// `count_unit` / `in_place` / `alignment_bytes` (§6.5-0001: they MUST NOT live in Capabilities).
+pub fn parse_capabilities_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(
+        block,
+        5,
+        "capabilities",
+        &CAPABILITIES_FIELDS,
+        &["count_unit", "in_place", "alignment_bytes"],
+    )
+}
+
+/// Read + validate a Provenance section block (§6.9-0001). Forbids `audited_status` (a derived
+/// Guarantees field, §6.8-0001/-0008 — it MUST NOT live in Provenance).
+pub fn parse_provenance_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(block, 7, "provenance", &PROVENANCE_FIELDS, &["audited_status"])
+}
+
 /// Parse exactly 8 lowercase-hex digits into a `u32` (the `crc32=` field form).
 fn parse_crc_hex(s: &str) -> Option<u32> {
     if s.len() == 8 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) {
