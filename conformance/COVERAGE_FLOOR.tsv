@@ -395,8 +395,26 @@
 # 497 -> 498 rise; RE-DERIVED after #437 (KISS-OPS-6.16-0011) merged and moved main's floor
 # to 497 -- the original 496 -> 497 here was correct against the OLD base and became stale the
 # moment #437 landed. Taken from the tool on the post-rebase base, never incremented.
+# harness 383 -> 384, untested 499 -> 498 by BACKING KISS-OPS-6.16-0010 (narrow-float arithmetic
+# QUIETS a signaling NaN) with test_ops_narrow_float_arith_quiets_snan -- the CONVERSE of -0009, and
+# the first `untested` DECREASE earned by a written test on this branch. ⚠️ The -0010 note far above
+# ("ships without its test ... backing it requires the CPU oracle to implement narrow-float sNaN
+# quieting, the #354/#355 surface") is STALE: MEASURED 2026-09-06, the composed oracle
+# (promote -> f32 op -> round back) quiets TODAY -- both the f32 op and f32_to_bf16/f32_to_e5m2 force
+# the quiet bit. -0010 governs bf16/f8e5m2 (admit an sNaN); f8e4m3fn is vacuous (single NaN,
+# §6.16-0004); f16/f32/f64 are settled by §6.2-0001/IEEE and are not -0010's subject. Enforcement is
+# compare_nan_output COMPUTED (#352): a propagating impl (returns the sNaN) reds against the quiet
+# expected. proven UNCHANGED at 20 (mutation demonstrated in-PR, not recorded as a // Proven: marker).
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet` on the rebased tree (planb onto origin/main,
+# 0 behind / 23 ahead) reported "Set the floor to harness 384, untested 498"; that output is pasted
+# here. ⚠️ `--ratchet --base-ref origin/main` CRASHES on this Windows host -- UnicodeDecodeError: the
+# tool reads the base floor via `git show` as cp1252 and chokes on a § / emoji byte (a TOOL BUG, not
+# a floor fact; Linux CI runs --base-ref). lint (33) is UNCHANGED and this change moves no clause
+# lint<->harness, so the un-diffed lint SET (the INCONCLUSIVE the absent --base-ref reports) is benign
+# for this change; clauses 939 (unchanged -- -0010 already existed, now backed not added).
 # key	value
-harness	383
+harness	384
 lint	33
-untested	499
+untested	498
 proven	20

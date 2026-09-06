@@ -31,6 +31,11 @@ pub struct Cell {
     pub tags: Vec<String>,
     pub has_certificate: bool,
     pub certificate_precision_bits: Option<u64>,
+    /// Per-row NaN-OUTPUT provenance (§6.8-0010(a) MOVED / §6.16-0010 COMPUTED),
+    /// distinct from `provenance` (value admissibility). `Some` iff `expected`
+    /// decodes to a NaN — enforced by the load-time biconditional in `load_cell`,
+    /// so a NaN output with unknown provenance cannot exist in a loaded corpus.
+    pub nan_provenance: Option<crate::nan_provenance::NanProvenance>,
 }
 
 fn class_from_str(s: &str) -> Result<DeterminismClass, String> {
@@ -123,10 +128,39 @@ fn load_cell(v: &Json) -> Result<Cell, String> {
         .iter()
         .filter_map(|t| t.as_str().map(|s| s.to_string()))
         .collect();
+    let dtype = str_field(v, "dtype")?;
+
+    // Per-row NaN-output provenance (§6.8-0010(a)/§6.16-0010).
+    let nan_provenance = match v.get("nan_provenance").and_then(|x| x.as_str()) {
+        None => None,
+        Some("moved") => Some(crate::nan_provenance::NanProvenance::Moved),
+        Some("computed") => Some(crate::nan_provenance::NanProvenance::Computed),
+        Some(other) => {
+            return Err(format!("`nan_provenance` must be \"moved\" or \"computed\", got `{other}`"));
+        }
+    };
+    // The BICONDITIONAL, both arms: a NaN `expected` MUST carry a provenance, and a
+    // non-NaN `expected` MUST NOT. An untested arm turns it into an implication; both
+    // together make "NaN output with unknown provenance" unrepresentable in any
+    // corpus that loads (§6.8-0010/§6.16-0010).
+    match (crate::nan_provenance::is_nan(&dtype, &expected), nan_provenance.is_some()) {
+        (true, false) => {
+            return Err(
+                "a NaN `expected` output MUST carry `nan_provenance` (moved|computed) — §6.8-0010/§6.16-0010".into(),
+            );
+        }
+        (false, true) => {
+            return Err(
+                "`nan_provenance` is set on a non-NaN `expected` output, where it has no meaning".into(),
+            );
+        }
+        _ => {}
+    }
+
     Ok(Cell {
         tc_id: field(v, "tcId")?.as_u64().ok_or("`tcId` is not an integer")?,
         op: str_field(v, "op")?,
-        dtype: str_field(v, "dtype")?,
+        dtype,
         rounding: str_field(v, "rounding")?,
         inputs,
         expected,
@@ -138,6 +172,7 @@ fn load_cell(v: &Json) -> Result<Cell, String> {
         certificate_precision_bits: v.get("certificate")
             .and_then(|c| c.get("stabilized_precision_bits"))
             .and_then(|n| n.as_u64()),
+        nan_provenance,
     })
 }
 
@@ -192,5 +227,46 @@ mod tests {
     fn rejects_reference_observed_provenance() {
         let bad = SAMPLE.replace("\"oracle\"", "\"reference-observed\"");
         assert!(load(&bad).is_err(), "reference-observed is circular (§6.5-0003)");
+    }
+
+    const EXPECTED_ZERO: &str = "\"expected\": {\"dtype\":\"f32\",\"bits\":\"00 00 00 00\"}";
+    const EXPECTED_QNAN: &str = "\"expected\": {\"dtype\":\"f32\",\"bits\":\"7F C0 00 00\"}";
+    const ADD_PROV: &str = "\"provenance\": \"oracle\",";
+    const ADD_PROV_NAN: &str = "\"provenance\": \"oracle\", \"nan_provenance\": \"computed\",";
+
+    #[test]
+    fn nan_output_without_provenance_is_declined() {
+        // §6.8-0010/§6.16-0010 biconditional ARM 1: a NaN `expected` MUST carry provenance.
+        let bad = SAMPLE.replace(EXPECTED_ZERO, EXPECTED_QNAN);
+        let e = load(&bad).unwrap_err();
+        assert!(e.contains("nan_provenance"), "a NaN output without provenance must decline: {e}");
+    }
+
+    #[test]
+    fn provenance_on_a_non_nan_output_is_declined() {
+        // biconditional ARM 2 (the arm an implication would silently drop): a non-NaN
+        // `expected` MUST NOT carry provenance.
+        let bad = SAMPLE.replace(ADD_PROV, ADD_PROV_NAN);
+        let e = load(&bad).unwrap_err();
+        assert!(e.contains("non-NaN"), "provenance on a non-NaN output must decline: {e}");
+    }
+
+    #[test]
+    fn nan_output_with_provenance_loads() {
+        // the valid pairing — NaN expected + provenance — loads and carries it.
+        let good = SAMPLE.replace(EXPECTED_ZERO, EXPECTED_QNAN).replace(ADD_PROV, ADD_PROV_NAN);
+        let c = load(&good).expect("a NaN output with provenance must load");
+        assert_eq!(
+            c.vectors[0].nan_provenance,
+            Some(crate::nan_provenance::NanProvenance::Computed)
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_nan_provenance_token() {
+        let bad = SAMPLE
+            .replace(EXPECTED_ZERO, EXPECTED_QNAN)
+            .replace(ADD_PROV, "\"provenance\": \"oracle\", \"nan_provenance\": \"maybe\",");
+        assert!(load(&bad).is_err(), "an unknown nan_provenance token must decline");
     }
 }

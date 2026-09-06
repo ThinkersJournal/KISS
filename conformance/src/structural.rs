@@ -373,8 +373,21 @@ pub fn reassoc_bound_f32(n_addends: usize, abs_sum: f32) -> f32 {
 /// relies on this comparator SHOULD declare an output-range guarantee that precludes
 /// order-dependent overflow (or accept that such inputs are out of scope).
 pub fn order_invariant_agree(a: f32, b: f32, abs_tol: f32, rel_tol: f32) -> bool {
-    if a.is_nan() && b.is_nan() {
-        return true;
+    if a.is_nan() || b.is_nan() {
+        // An order-invariant (reassociated) result is a Sum/Prod/atomic-add — an ARITHMETIC
+        // fold, so a NaN here is COMPUTED (§6.16-0011 routes an arithmetic fold to §6.16-0010):
+        // NaN-ness AND quietness must agree (payload/sign uncompared); a one-sided NaN is a
+        // mismatch. Routed through the one provenance mechanism so this arm cannot be
+        // quietness-blind — this surface is the §5.3 foreign-kernel differential (#434). Before
+        // this, `a.is_nan() && b.is_nan()` returned `true` unconditionally, accepting a
+        // signaling NaN where the oracle produced a quiet one.
+        return crate::nan_provenance::compare_nan_output(
+            "f32",
+            &a.to_be_bytes(),
+            &b.to_be_bytes(),
+            crate::nan_provenance::NanProvenance::Computed,
+        )
+        .is_ok();
     }
     if a.is_infinite() || b.is_infinite() {
         // An infinity only agrees with the identical signed infinity; a tolerance

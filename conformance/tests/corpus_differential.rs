@@ -241,12 +241,52 @@ fn ordinary_minmax_bundle() -> Corpus {
 /// every `compare(cell.class, ..)` site in this file onto it, so no site selects by the
 /// declared class directly; it is correct the moment a §6.8-0005 refinement op is added.
 fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
+    // Per-row NaN-output provenance (§6.8-0010(a) MOVED / §6.16-0010 COMPUTED) takes
+    // precedence when the expected output is a NaN. The load-time biconditional
+    // guarantees `nan_provenance` is Some EXACTLY then, so a Some routes here — this
+    // is the wiring that makes a quietness violation FAIL a conformance run (before
+    // this, the comparator existed but nothing called it — #352 present-but-inert).
+    if let Some(prov) = cell.nan_provenance {
+        return kiss_conformance::nan_provenance::compare_nan_output(&cell.dtype, actual, &cell.expected, prov);
+    }
     match comparator_for(&cell.op, cell.class) {
         Comparator::ClassDefault(class) => compare(class, actual, &cell.expected),
         Comparator::OpNamedRefinement(name) => {
             Err(format!("op-named refinement `{name}` is not part of this slice"))
         }
     }
+}
+
+/// END-TO-END wiring proof (architect step 4): a conformance RUN routed through
+/// `compare_under_precedence` can now FAIL on a quietness violation — the thing
+/// "all tests pass" would NOT distinguish from the unwired (present-but-inert) state.
+/// A COMPUTED-NaN bf16 cell (expected quiet) is compared against an sNaN actual: the
+/// integrated path must red. Its MOVED sibling (a select) still bit-compares.
+#[test]
+fn a_conformance_run_can_now_fail_on_a_quietness_violation() {
+    use kiss_conformance::nan_provenance::NanProvenance;
+    // A COMPUTED-NaN bf16 cell: expected a QUIET NaN (0x7FC1).
+    let computed = Cell {
+        tc_id: 1,
+        op: "exp".into(),
+        dtype: "bf16".into(),
+        rounding: "roundTiesToEven".into(),
+        inputs: vec![vec![0x7F, 0x81]],
+        expected: vec![0x7F, 0xC1],
+        class: DeterminismClass::UlpTolerance,
+        ulp_bound: 0,
+        provenance: "oracle".into(),
+        tags: vec![],
+        has_certificate: false,
+        certificate_precision_bits: None,
+        nan_provenance: Some(NanProvenance::Computed),
+    };
+    // Conformant actual (a quiet NaN, any payload) passes end-to-end.
+    assert!(compare_under_precedence(&computed, &[0x7F, 0xC5]).is_ok(), "quiet computed NaN passes");
+    // ⚠️ THE PROOF: an sNaN actual (quiet bit dropped) FAILS the run via the wired path.
+    let red = compare_under_precedence(&computed, &[0x7F, 0x81]);
+    assert!(red.is_err(), "a quietness violation MUST fail the conformance run (wiring proof)");
+    assert!(red.unwrap_err().contains("quietness"), "the failure is the quietness rule, via compare_nan_output");
 }
 
 /// All 24 strict-inequality cells pass against the reference oracle (same
@@ -342,6 +382,89 @@ fn test_ops_bf16_minmax_moves_not_rounds() {
              path quiets it to 7FC1, violating §6.8-0010(a) / KISS-OPS-6.16-0009"
         );
     }
+}
+
+// ---- KISS-OPS-6.16-0010: narrow-float ARITHMETIC quiets a signaling NaN (#362) --------------
+
+/// KISS-OPS-6.16-0010 born-red — the CONVERSE of -0009. An op whose §6.13 decomposition contains
+/// ARITHMETIC must deliver a QUIET NaN for a signaling operand; it must NOT preserve the signaling
+/// bit that -0009 requires for a MOVE. ⚠️ Two adjacent obligations, OPPOSITE verdicts on the same
+/// sNaN input: -0009 (a bf16 minmax MOVE) preserves 0x7F81 exactly; -0010 (bf16 arithmetic) quiets
+/// it to 0x7FC1. The narrow-arith oracle is promote → f32 op → round back (measured to quiet: both
+/// the f32 op and the round-back set the quiet bit). A propagating impl that returns the sNaN
+/// unchanged is a violation, caught by `compare_nan_output` COMPUTED (a signaling actual vs a quiet
+/// expected reds). §6.16-0010's floor-file note that backing needs the #354/#355 surface is STALE —
+/// the composed oracle quiets today (measured 2026-09-06). Scope: -0010 governs the narrow floats
+/// §6.2-0001 defers to §6.16 (bf16, f8e5m2 admit an sNaN; f8e4m3fn's single NaN makes it vacuous);
+/// f16/f32/f64 are settled directly by §6.2-0001/IEEE and are not -0010's subject.
+#[test]
+fn test_ops_narrow_float_arith_quiets_snan() {
+    // Backs: KISS-OPS-6.16-0010 — reverse backing form (convention 15: a mention in a comment or
+    // assert message is not a backing).
+    use kiss_conformance::fp::{e4m3_to_f32, e5m2_to_f32, f32_to_e4m3, f32_to_e5m2};
+    use kiss_conformance::nan_provenance::{compare_nan_output, is_nan, NanProvenance::Computed};
+    use kiss_conformance::semantics::{add, div, mul, sub};
+
+    let bf16_arith = |op: &str, a: u16, b: u16| -> u16 {
+        let (fa, fb) = (bf16_to_f32(a), bf16_to_f32(b));
+        f32_to_bf16(match op {
+            "add" => add(fa, fb),
+            "sub" => sub(fa, fb),
+            "mul" => mul(fa, fb),
+            _ => div(fa, fb),
+        })
+    };
+    let e5m2_arith = |op: &str, a: u8, b: u8| -> u8 {
+        let (fa, fb) = (e5m2_to_f32(a), e5m2_to_f32(b));
+        f32_to_e5m2(match op {
+            "add" => add(fa, fb),
+            "sub" => sub(fa, fb),
+            "mul" => mul(fa, fb),
+            _ => div(fa, fb),
+        })
+    };
+
+    // bf16: sNaN 0x7F81, 1.0 = 0x3F80. Every arithmetic op, sNaN in EITHER operand, yields QUIET.
+    for op in ["add", "sub", "mul", "div"] {
+        for (a, b) in [(0x7F81u16, 0x3F80u16), (0x3F80, 0x7F81)] {
+            let out = bf16_arith(op, a, b).to_be_bytes().to_vec();
+            assert!(is_nan("bf16", &out), "bf16 {op}({a:04X},{b:04X}) must be a NaN");
+            assert!(
+                compare_nan_output("bf16", &out, &0x7FC0u16.to_be_bytes(), Computed).is_ok(),
+                "bf16 {op}({a:04X},{b:04X}) must deliver a QUIET NaN (§6.16-0010)"
+            );
+            assert!(
+                compare_nan_output("bf16", &0x7F81u16.to_be_bytes(), &out, Computed).is_err(),
+                "an impl PROPAGATING the bf16 sNaN (returns 0x7F81) must be caught (§6.16-0010)"
+            );
+        }
+    }
+
+    // f8e5m2: sNaN 0x7D, 1.0. Same obligation.
+    let one_e5 = f32_to_e5m2(1.0);
+    for op in ["add", "sub", "mul", "div"] {
+        let out = vec![e5m2_arith(op, 0x7D, one_e5)];
+        assert!(is_nan("f8e5m2", &out), "e5m2 {op}(sNaN,1) must be a NaN");
+        assert!(
+            compare_nan_output("f8e5m2", &out, &[0x7E], Computed).is_ok(),
+            "e5m2 {op}(sNaN,1) must deliver a QUIET NaN (§6.16-0010)"
+        );
+        assert!(
+            compare_nan_output("f8e5m2", &[0x7D], &out, Computed).is_err(),
+            "an impl PROPAGATING the e5m2 sNaN (returns 0x7D) must be caught (§6.16-0010)"
+        );
+    }
+
+    // f8e4m3fn: single NaN encoding (§6.16-0004) → the quietness obligation is VACUOUS. -0010 still
+    // reaches it (arithmetic on its NaN yields its NaN), but only is-NaN is representable; a
+    // quietness distinction MUST NOT be synthesized, so COMPUTED accepts any NaN here.
+    let one_e4 = f32_to_e4m3(1.0);
+    let out_e4 = vec![f32_to_e4m3(add(e4m3_to_f32(0x7F), e4m3_to_f32(one_e4)))];
+    assert!(is_nan("f8e4m3fn", &out_e4), "e4m3 add(NaN,1) must be a NaN");
+    assert!(
+        compare_nan_output("f8e4m3fn", &out_e4, &[0x7F], Computed).is_ok(),
+        "e4m3 quietness is vacuous — COMPUTED accepts any NaN (§6.16-0004)"
+    );
 }
 
 /// Behaviour-preservation: for every NON-NaN bf16 pair the select is IDENTICAL to the old
