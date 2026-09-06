@@ -1266,6 +1266,23 @@ def _utf8_child_env():
 
     So the fix belongs at the WRITER, not the reader: make the child emit UTF-8 rather than
     make the parent tolerate whatever it emits.
+
+    AND WHY THE GUARD BELOW SCANS FOR U+FFFD RATHER THAN CATCHING UnicodeDecodeError,
+    which is the obvious and idiomatic alternative and does NOT work here. MEASURED:
+
+        subprocess.run(..., errors="strict")   on a child emitting bare 0xA7
+        -> Exception in thread Thread-1 (_readerthread): UnicodeDecodeError
+        -> subprocess.run RETURNS NORMALLY:  returncode 0,  stdout None
+
+    The decode happens on subprocess's READER THREAD, so there is no exception to catch at
+    the call site; the caller gets `stdout=None` and dies one line later on `.splitlines()`
+    -- which is #444 verbatim, the crash this module was fixed for. Worse, where a broad
+    `except Exception` is in scope the tool is silently SKIPPED, contributing no coverage and
+    changing the ratchet's lint SET with no diagnostic at all.
+
+    Recorded here because a reviewer suggested exactly this on #470, correctly on general
+    principle, and a decline with no reason attached guarantees the next reader suggests it
+    again.
     """
     env = dict(os.environ)
     env["PYTHONUTF8"] = "1"            # PEP 540 UTF-8 mode: stdout/stderr become UTF-8
