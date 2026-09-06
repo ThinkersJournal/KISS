@@ -1251,6 +1251,45 @@ def write_ledger(path, unbacked, prior=None):
                 fh.write(f"{cid}\t{test}\tuntested\t{note}\n")
 
 
+def _utf8_child_env():
+    """Environment for a child `kiss_*.py`, forcing its stdout to UTF-8.
+
+    ⚠️ THE PARENT'S DECODING IS NOT ENOUGH, AND FIXING ONLY THE PARENT MADE THINGS WORSE.
+    On Windows a child Python encodes stdout with the locale codec (cp1252), so a section sign
+    leaves as a bare 0xA7. Before #445 the parent read with `text=True` -- also cp1252 -- and
+    the two wrong ends CANCELLED: the round-trip was correct by accident. #445 made the parent
+    explicitly UTF-8 (correctly, for the git-reading paths it was fixing) and thereby broke the
+    cancellation, and `errors="replace"` converted the breakage into silent substitution.
+
+    MEASURED: kiss_wire / kiss_tables / kiss_ops --emit-coverage each emit ~10 bare 0xA7 bytes;
+    with PYTHONUTF8=1 the same child emits 0xC2 0xA7 and the bare-0xA7 count is 0.
+
+    So the fix belongs at the WRITER, not the reader: make the child emit UTF-8 rather than
+    make the parent tolerate whatever it emits.
+
+    AND WHY THE GUARD BELOW SCANS FOR U+FFFD RATHER THAN CATCHING UnicodeDecodeError,
+    which is the obvious and idiomatic alternative and does NOT work here. MEASURED:
+
+        subprocess.run(..., errors="strict")   on a child emitting bare 0xA7
+        -> Exception in thread Thread-1 (_readerthread): UnicodeDecodeError
+        -> subprocess.run RETURNS NORMALLY:  returncode 0,  stdout None
+
+    The decode happens on subprocess's READER THREAD, so there is no exception to catch at
+    the call site; the caller gets `stdout=None` and dies one line later on `.splitlines()`
+    -- which is #444 verbatim, the crash this module was fixed for. Worse, where a broad
+    `except Exception` is in scope the tool is silently SKIPPED, contributing no coverage and
+    changing the ratchet's lint SET with no diagnostic at all.
+
+    Recorded here because a reviewer suggested exactly this on #470, correctly on general
+    principle, and a decline with no reason attached guarantees the next reader suggests it
+    again.
+    """
+    env = dict(os.environ)
+    env["PYTHONUTF8"] = "1"            # PEP 540 UTF-8 mode: stdout/stderr become UTF-8
+    env["PYTHONIOENCODING"] = "utf-8"  # for interpreters predating PEP 540
+    return env
+
+
 def discover_lint_coverage(tools_dir):
     """The clauses each document lint declares it enforces: {clause_id: (tool, note)}.
 
@@ -1271,11 +1310,22 @@ def discover_lint_coverage(tools_dir):
         try:
             out = subprocess.run(
                 [sys.executable, os.path.join(tools_dir, fn), "--emit-coverage"],
-                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=120, env=_utf8_child_env())
         except Exception:
             continue
         if out.returncode != 0:
             continue
+        # ⚠️ A DECODE SUBSTITUTION HERE IS SILENT DATA LOSS, NOT A COSMETIC DEFECT.
+        # `errors="replace"` turns an undecodable byte into U+FFFD and returns success, so a
+        # mis-encoded child looks like a working one whose notes happen to contain a strange
+        # character -- and those notes are written straight into UNBACKED.tsv. Measured on
+        # Windows: 45 of 67 section signs in the ledger destroyed by one `--update-ledger`.
+        if "�" in out.stdout:
+            raise RuntimeError(
+                f"{fn} --emit-coverage produced bytes that are not valid UTF-8; decoding "
+                f"substituted U+FFFD. The child's stdout encoding is wrong (see "
+                f"_utf8_child_env). REFUSING rather than writing mangled notes to the ledger.")
         for line in out.stdout.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
