@@ -1676,19 +1676,22 @@ separating a registered namespace from that namespace's capability-set token.
 - **KISS-CLASSIFY-6.8-0016** — **A threshold vector carries the boundary it pins.** §6.8-0013
   requires each length-conditional `threshold` be presented *at* and *immediately across* its
   boundary, *"at the exact byte count that flips them"* — a property of the **byte counts**, which
-  a vector carrying only `pins`/`input`/`output` does not record. The strongest check that field
-  set supports is **adjacency**, and adjacency does not establish straddling: inputs of 3 and 4
-  bytes are adjacent and both far below a 512-byte boundary, so a check built on it would report
-  the requirement satisfied while asserting something strictly weaker than the clause says. A
+  §6.8-0013 nowhere requires a vector to record. The strongest check available without them is
+  **adjacency**, and adjacency does not establish straddling: enumerations of 3 and 4 bytes are
+  adjacent and both far below a 512-byte boundary, so a check built on it would report the
+  requirement satisfied while asserting something strictly weaker than the clause says. A
   `threshold`-tagged vector MUST therefore carry **`threshold_of`**, naming the length-conditional
-  field whose boundary it pins, and **`bytes`**, the length of its `input` measured against that
-  boundary — `threshold_of` because §6.8-0013 says *each* such field and a namespace may have more
-  than one, so a single per-manifest boundary cannot express them. A reader MUST reject with a
-  typed decline a manifest in which, for any value of `threshold_of`, the `threshold` vectors do
-  not include a pair whose `bytes` are **N and N+1**, **or** in which that pair's two `output`
-  values are **equal**. The second condition is what makes the first mean anything: a declared
-  boundary that flips no behaviour is a wrong boundary, and requiring the outputs to **differ**
-  checks the declaration against the vectors rather than trusting it. Together they establish what
+  field whose boundary it pins, and **`enumeration_bytes`**, the byte length of the canonical
+  enumeration string this vector presents against that boundary. `threshold_of` is required
+  because §6.8-0013 says *each* such field and a namespace may have more than one, so a single
+  per-manifest boundary cannot express them; the length is named `enumeration_bytes` rather than
+  a bare `bytes` because a vector may also carry the length of a §6.8-0007 `digest_input`, and an
+  unqualified name cannot say which of the two it measures. A reader MUST reject with a typed
+  decline a manifest in which, for any value of `threshold_of`, the `threshold` vectors do not
+  include a pair whose `enumeration_bytes` are **N and N+1**, **or** in which that pair's two
+  emitted **`token`** values are **equal**. The second condition is what makes the first mean
+  anything: a declared boundary that flips no behaviour is a wrong boundary, and requiring the
+  two tokens to **differ** checks the declaration against the vectors rather than trusting it. Together they establish what
   adjacency alone cannot — that the pair sits **on** the boundary, not merely next to each other.
   *Test:* `test_namespace_vocabulary_threshold_pair_straddles_its_boundary`.
 
