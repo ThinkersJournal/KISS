@@ -241,6 +241,25 @@ pub fn compare_f32(class: DeterminismClass, actual: f32, expected: f32, ulp_boun
 ///   (b) a component whose expected magnitude is π (a ±π branch endpoint) MUST
 ///       match its **sign** exactly;
 ///   (c) any other component is compared under ULP-tolerance within `ulp_bound`.
+///   (c') a component that is a NaN on either side is a COMPUTED NaN (a complex
+///        transcendental mints NaNs at branch cuts/poles), routed through
+///        `nan_provenance::compare_nan_output`: both-NaN match iff their QUIETNESS agrees
+///        (§6.16-0010; payload+sign uncompared), a one-sided NaN is a mismatch.
+///
+/// NaN / signed-zero VERDICTS, stated (not left implied) so #20 can pin them — per
+/// component; the pair verdict is their AND (any component's mismatch fails the pair):
+///   - one-sided NaN  -> MISMATCH. AGREES with kiss-ref `diff.rs`'s ulp-distance choice
+///     (one-NaN -> `u64::MAX` -> exceeds any bound). Two independent implementations
+///     agreeing is evidence to PIN it (#20).
+///   - both-NaN       -> match iff QUIETNESS agrees. This is the §6.16-0010 refinement;
+///     `diff.rs`'s ulp-distance choice (both-NaN -> 0, an UNCONDITIONAL match) is
+///     quietness-BLIND and predates it. kiss-ref's own NaN-provenance comparator (their
+///     PR #39) compares quietness, so the divergence is with the ulp-distance FUNCTION,
+///     not kiss-ref's NaN path.
+///   - +/-0 component -> EXACT-BYTE (arm (a)): a sign-of-zero flip is a MISMATCH. This
+///     DIVERGES from `diff.rs` choice 4 (+/-0 -> distance 1, which a >=1-ULP bound
+///     ACCEPTS) and sides with §6.8-0010(a)/§6.16-0009 sign handling. A POLICY choice for
+///     #20, not a corollary of total-order adjacency — recorded here, not ruled.
 pub fn compare_c32_transcendental(
     actual: [f32; 2],
     expected: [f32; 2],
@@ -264,15 +283,19 @@ pub fn compare_c32_transcendental(
                 ));
             }
         } else if a.is_nan() || e.is_nan() {
-            // (c') Computed-NaN component (Conform §6.8-0010): the magnitude arm
-            // compares by NaN-**ness** — both NaN match (payload/sign not compared),
-            // a one-sided NaN is a mismatch. The zero-sign and ±π arms above stay
-            // bit/sign-exact, so this only relaxes the ordinary ULP-tolerance lane.
-            if !(a.is_nan() && e.is_nan()) {
-                return Err(format!(
-                    "{lane}: computed-NaN mismatch, exactly one side is NaN (actual {a}, expected {e})"
-                ));
-            }
+            // (c') Computed-NaN component (§6.8-0010 / §6.16-0010): a complex transcendental
+            // MINTS NaNs at branch cuts and poles, so a NaN component is COMPUTED. It compares
+            // by NaN-**ness** AND — where the dtype admits a signaling NaN (f32 does) — by
+            // QUIETNESS; payload and sign stay uncompared. One-sided NaN is a mismatch. Routed
+            // through the one provenance mechanism so no lane can be quietness-blind (#434); the
+            // zero-sign and ±π arms above stay bit/sign-exact.
+            crate::nan_provenance::compare_nan_output(
+                "f32",
+                &a.to_be_bytes(),
+                &e.to_be_bytes(),
+                crate::nan_provenance::NanProvenance::Computed,
+            )
+            .map_err(|why| format!("{lane}: {why}"))?;
         } else {
             // (c) ULP-tolerance on an ordinary component.
             let d = ulp_distance_f32(a, e);

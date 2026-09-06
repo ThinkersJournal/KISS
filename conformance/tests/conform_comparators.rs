@@ -82,6 +82,14 @@ fn test_conform_nan_result_compares_by_nanness() {
         compare_c32_transcendental([nan_a, 1.0], [5.0, 1.0], 2).is_err(),
         "one-sided NaN component must mismatch under the split comparator"
     );
+    // §6.16-0010 quietness reaches the split comparator's NaN arm too (#434): a SIGNALING
+    // component where a QUIET one is expected mismatches (payload/sign still uncompared). Born-red
+    // — under the old NaN-ness-only arm this passed. (`snan` is the signaling NaN defined above;
+    // the two-quiet-NaNs match is the control at the top of this block.)
+    assert!(
+        compare_c32_transcendental([snan, 1.0], [nan_a, 1.0], 2).is_err(),
+        "split comparator: a signaling NaN component where a quiet one is expected must mismatch (§6.16-0010)"
+    );
 
     // ---- the exemption MUST NOT leak: exact-byte still distinguishes payloads ---
     // A byte-preserving result (gather/scatter/flip/select/bitcast) carries a MOVED
