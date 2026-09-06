@@ -951,15 +951,48 @@ KISS-Consume carries the two umbrella version axes (umbrella §5.1) and does not
 ### 8.2 Maturity & freeze gate
 
 KISS-Consume is at maturity stage **Draft**. It advances Draft → Frozen only through the umbrella
-freeze gate (umbrella §5.3): at least two structurally dissimilar lifters interoperate on the golden
-lift/refusal vectors — authored in the input structure graph of §6.1-0004 so a single vector is
-feedable to both — a non-native foreign reader reproduces or parses the exact recorded
-residue/refusal tokens under the residue-entry schema of §6.3-0008, and the KISS-Consume KISS-Conform
-suite exists and passes with complete bidirectional clause-to-test traceability. The **KISS-Conform
+freeze gate (umbrella §5.3), whose three conditions are stated normatively as §8.2-0001 … §8.2-0003
+below — **the clauses are the obligations; this paragraph does not restate them**. The **KISS-Conform
 AUDIT role signs the freeze transition**, not the authoring editor. The remaining open questions of
 Appendix D — in particular the shared-pen risk on the identical round-trip wording (§6.6) and the
 residue re-evaluation workflow across op-set bumps — should be resolved before freeze; the declared
 round-trip subset advertisement (§7.2-0001), previously an open question, was pinned in this revision.
+
+Every other sub-standard carries its freeze gate as numbered clauses; carrying it only as prose left
+KISS-Consume's gate outside the clause↔test matrix entirely — **uncounted rather than merely
+untested**, so `--freeze-ready` could report this sub-standard satisfying umbrella §5.3 condition 3
+without its own freeze gate ever having appeared in a traceability figure (#461).
+
+**Scope of this clause set, stated rather than left to be inferred.** These clauses carry the three
+umbrella §5.3 **MUST** conditions, and **no obligation beyond them except where a cited clause is
+itself declared authoritative** — §8.2-0002's byte list is KISS-CONFORM §8-0006's, which says of
+itself that "this superset governs where umbrella §5.3 enumerates fewer" (six fields against
+§5.3's three). Naming the narrower list would under-specify what a foreign reader must check.
+Two things in the paragraph above are
+deliberately NOT clauses: the **AUDIT-role signature**, whose wording is under review across all
+nine sub-standards (#467/#462) and which this document must not fix a third spelling of while that
+is open; and the Appendix-D items that *"should be resolved before freeze"*, which are a SHOULD and
+would be miscounted as a MUST. **Both therefore remain prose and remain uncounted, and that is a
+known remainder rather than a completed job.**
+
+- **KISS-CONSUME-8.2-0001** — KISS-Consume MUST NOT advance Draft → Frozen until **≥2 structurally
+  dissimilar lifters** have interoperated on the **golden lift/refusal vectors**, which MUST be
+  authored in the input structure graph of §6.1-0004 so that a single vector is feedable to both
+  (umbrella §5.3 condition 1). Two lifters sharing a recognition front-end do not count as
+  dissimilar — **an illustration of condition 1, not a substitute for it**: condition 1 is counted
+  **per field**, requires two parties to **independently derive** each field's value, and excludes
+  faithful passthrough, shared lowering code, and two values tracing to a single authored source,
+  because *"the question is provenance, not equality"*. An implementation satisfying only the
+  front-end case can still fail condition 1. *Test:* `test_consume_freeze_gate_two_lifters`.
+- **KISS-CONSUME-8.2-0002** — KISS-Consume MUST NOT advance Draft → Frozen until a **non-native
+  foreign reader**, written outside the reference language, reproduces or parses the **exact recorded
+  residue/refusal tokens** under the residue-entry schema of §6.3-0008 (umbrella §5.3 condition 2,
+  and the authoritative field list of KISS-CONFORM §8-0006). *Test:*
+  `test_consume_freeze_gate_foreign_reader`.
+- **KISS-CONSUME-8.2-0003** — KISS-Consume MUST NOT advance Draft → Frozen until this
+  sub-standard's KISS-Conform suite **exists and passes** with complete bidirectional
+  clause-to-test traceability (umbrella §5.3 condition 3). *Test:*
+  `test_consume_freeze_gate_conform_suite_passes`.
 
 ---
 
@@ -1030,6 +1063,9 @@ any normative MUST without a mapped test and on any test citing a retired or non
 | KISS-CONSUME-7.2-0001 | `test_consume_declared_subset_advertised` |
 | KISS-CONSUME-8.1-0001 | `test_consume_version_bump_rule` |
 | KISS-CONSUME-8.1-0002 | `test_consume_residue_opset_relative` |
+| KISS-CONSUME-8.2-0001 | `test_consume_freeze_gate_two_lifters` |
+| KISS-CONSUME-8.2-0002 | `test_consume_freeze_gate_foreign_reader` |
+| KISS-CONSUME-8.2-0003 | `test_consume_freeze_gate_conform_suite_passes` |
 | KISS-CONSUME-9.1-0001 | `test_consume_claim_prerequisite_closed` |
 | KISS-CONSUME-9.1-0002 | `test_consume_out_of_claim_declines_cleanly` |
 

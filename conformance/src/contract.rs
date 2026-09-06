@@ -719,9 +719,12 @@ pub fn appendix_c_golden_document() -> Vec<u8> {
 ///        fulfils that reference. Closing it (amend the promise vs author 4-7) is a NORMATIVE decision,
 ///        filed as its own issue.
 pub fn emit_contract_vectors_json() -> String {
-    fn hex(bytes: &[u8]) -> String {
-        bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
-    }
+    // ⚠️ `crate::hex`, not a private re-implementation of it. This function was byte-for-byte
+    // the same as the public helper — same {b:02X}, same join(" ") — so it was a THIRD copy of a
+    // format the crate already owns (#466 found g1_region defined three times for the same
+    // reason). Removing it changes no emitted byte, which is asserted below by regenerating the
+    // artifact rather than inferred from the tests passing.
+    let hex = crate::hex;
     // ⚠️ ONE escaper, in `json`, not a private copy per generator — see json::escape_string for
     // why: the private copies had already diverged, and neither escaped the C0 controls RFC 8259
     // requires.

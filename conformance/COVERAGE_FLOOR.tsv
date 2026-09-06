@@ -482,8 +482,46 @@
 #
 # DERIVED BY THE TOOL: `--ratchet --base-ref origin/main` on the rebased head reported "the floor
 # is STALE - coverage improved past it. Set the floor to harness 387, lint 33, untested 497."
+#
+# ⚠️ #461: `untested +3`, `clauses +3`, `harness UNCHANGED` — AND THE LEDGER GETTING WORSE HERE
+# IS THE CORRECT OUTCOME. READ THIS BEFORE READING THE NUMBER.
+#
+# KISS-Consume's freeze gate existed only as a PROSE paragraph in §8.2. Every other sub-standard
+# carries its gate as numbered clauses. Prose is not a clause, so consume's gate had no id, no §9
+# matrix row and no ledger entry: it was UNCOUNTED, not merely untested. `--freeze-ready` could
+# therefore report KISS-Consume satisfying umbrella §5.3 condition 3 without its own freeze gate
+# ever having appeared in a traceability figure — whereas the other eight must discharge theirs.
+#
+# Transcribing umbrella §5.3's three MUST conditions into KISS-CONSUME-8.2-0001..-0003 changes NO
+# OBLIGATION -- they were already normative prose; they are now countable. So:
+#
+#   THIS IS NOT A REGRESSION AND NOT NEW DEBT. THE DEBT ALREADY EXISTED AND WAS INVISIBLE.
+#   The figure was always this bad; three rows of it are now on the books.
+#
+# The ratchet reached the same conclusion unaided: "untested rose 497 -> 500 (+3). TWO causes reach
+# this number: a clause LOST its only backing, or 3 new clause(s) ARRIVED unbacked and the floor was
+# not bumped. harness is UNCHANGED, so this is the ARRIVAL case, not a loss." That discrimination is
+# why `harness` is ratcheted separately.
+#
+# DELTAS, NOT ABSOLUTES: this branch has been re-derived five times against a moving main, and an
+# absolute ages into a measurement of a tree that no longer exists.
+#
+#   untested   +3   the three arriving gate clauses, none backed
+#   clauses    +3
+#   harness     0 · lint 0 · proven 0
+#
+# ⚠️ THE SIGNATURE CLAUSE WAS DROPPED FROM THIS SET, DELIBERATELY. A fourth clause (the AUDIT-role
+# signature) was drafted and REMOVED after review: #467 is open resolving that wording across all
+# nine sub-standards, and consume.md ALREADY carries the contradiction on main (line 959 "not the
+# authoring editor" vs line 1052 "jointly with the editor"). Adding a third spelling while the
+# question is open would have planted the very defect #467 exists to remove. The obligation stays
+# prose and stays uncounted; a known remainder, recorded here rather than discovered later.
+#
+# ⚠️ THE THREE ARE DELIBERATELY UNBACKED and that is the honest state: they are CHECKLIST gates,
+# human-signed in every one of the other eight sub-standards too. Backing them is not a test anyone
+# can write today; counting them is.
 # key	value
 harness	387
 lint	33
-untested	497
+untested	500
 proven	20

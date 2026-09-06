@@ -226,6 +226,9 @@ KISS-CONSUME-6.6-0002	test_consume_roundtrip_tier2_numeric_same_language_ondevic
 KISS-CONSUME-6.6-0003	test_consume_roundtrip_no_cross_language_numeric	untested	
 KISS-CONSUME-6.6-0006	test_consume_roundtrip_whole_kernel_aggregation	untested	
 KISS-CONSUME-7.2-0001	test_consume_declared_subset_advertised	untested	
+KISS-CONSUME-8.2-0001	test_consume_freeze_gate_two_lifters	untested	
+KISS-CONSUME-8.2-0002	test_consume_freeze_gate_foreign_reader	untested	
+KISS-CONSUME-8.2-0003	test_consume_freeze_gate_conform_suite_passes	untested	
 KISS-CONSUME-9.1-0002	test_consume_out_of_claim_declines_cleanly	untested	
 KISS-CONTRACT-6.0-0001	test_contract_determinism_class_exact_byte	untested	
 KISS-CONTRACT-6.1-0005	test_contract_opaque_length_delimited_over_announce	untested	
