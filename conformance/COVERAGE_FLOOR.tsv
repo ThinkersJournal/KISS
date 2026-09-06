@@ -457,8 +457,33 @@
 # FIGURES DELIBERATELY WRITTEN AS A DELTA, NOT ABSOLUTES: this branch has been re-derived four
 # times as main moved, and an absolute here reads as a measurement of a tree that no longer
 # exists. The absolute values live in the key/value block below, which the generator writes.
+#
+# #455 (KISS-CONTRACT-6.6-0009, the Dispatch grammar's division semantics): harness +1, clauses
+# +1, untested UNCHANGED. The clause arrives BACKED in the same commit that states it, which is
+# the shape `boundary_rounding.rs` is held up as the model for -- it counted the day it landed.
+#
+#   harness    +1   KISS-CONTRACT-6.6-0009, backed by test_contract_division_semantics_are_pinned
+#   clauses    +1
+#   untested    0   nothing arrives unbacked and nothing loses a backing
+#   lint 0 · proven 0
+#
+# ⚠️ THE VECTOR IS THE DELIVERABLE, NOT THE CLAUSE, AND THE MEASUREMENT SAYS WHY. Before this,
+# NOTHING in the corpus discriminated truncating from Euclidean `/`. Measured across the whole
+# crate -- 113 files, 6106 string literals -- exactly four literals are Dispatch expressions
+# containing a division, three have non-negative dividends, and the fourth is `i64::MIN / -1`,
+# which OVERFLOWS under BOTH semantics and is declined either way. A foreign implementor could
+# have implemented Euclidean `/` and passed every existing test. A clause pinning `/` without a
+# discriminating vector would have been unfalsifiable prose.
+#
+# ⚠️ AND THE DISCRIMINATING OPERAND IS THE DIVIDEND, NOT THE DIVISOR: over 300 (a,b) pairs, 86
+# diverge and ALL have a negative dividend; none with a dividend >= 0, whatever the divisor's
+# sign. A fixture built on a negative DIVISOR (`7 / (0 - 2)`) does not discriminate and would
+# have occupied the slot while proving nothing.
+#
+# DERIVED BY THE TOOL: `--ratchet --base-ref origin/main` on the rebased head reported "the floor
+# is STALE - coverage improved past it. Set the floor to harness 387, lint 33, untested 497."
 # key	value
-harness	386
+harness	387
 lint	33
 untested	497
 proven	20
