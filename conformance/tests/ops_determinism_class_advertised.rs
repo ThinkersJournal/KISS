@@ -18,7 +18,7 @@ fn body_with_class(token: &str) -> Vec<u8> {
     b
 }
 
-// Enforces KISS-OPS-7.4-0001: the advertised class is read from the canonical
+// Enforces: KISS-OPS-7.4-0001: the advertised class is read from the canonical
 // enum and an off-enum token is rejected, never re-forked into a new class.
 #[test]
 fn test_ops_determinism_class_advertised() {

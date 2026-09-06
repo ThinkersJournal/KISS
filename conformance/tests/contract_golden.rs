@@ -25,7 +25,7 @@ fn to_golden_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
 }
 
-/// Enforces KISS-CONTRACT-6.11-0001 — the four value encodings and the exact
+/// Enforces: KISS-CONTRACT-6.11-0001 — the four value encodings and the exact
 /// `<key> = <value>` spacing. TEETH: a `key=value` emitter with no spaces around
 /// `=`; an `[a,b]` array emitter with no space after the comma; an uppercase or
 /// wrong-count opaque-blob emitter.
@@ -56,7 +56,7 @@ fn test_contract_text_field_encoding() {
     assert_eq!(Value::Int(-5).render(), "-5");
 }
 
-/// Enforces KISS-CONTRACT-6.11-0002 — the pinned header line
+/// Enforces: KISS-CONTRACT-6.11-0002 — the pinned header line
 /// `KISC kiss-contract 1 len=<N> crc32=<HHHHHHHH>\n`: 4-byte magic `KISC`
 /// (`0x4B 0x49 0x53 0x43`), single-space separators, `len=<N>` decimal body
 /// length, `crc32=<HHHHHHHH>` 8 lowercase hex digits, then a single LF. TEETH: a
@@ -110,7 +110,7 @@ fn test_contract_document_header_line() {
     assert!(crc_hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
 }
 
-/// Enforces KISS-CONTRACT-6.11-0005 — within a section block the field lines
+/// Enforces: KISS-CONTRACT-6.11-0005 — within a section block the field lines
 /// appear in the exact field-schema order (§6.3-0001 for Identity). The emitted
 /// Identity block is compared byte-for-byte to the Appendix C golden. TEETH: a
 /// HashMap-backed emitter whose field order is nondeterministic (any permutation
@@ -126,7 +126,7 @@ fn test_contract_document_field_order() {
     );
 }
 
-/// Enforces KISS-CONTRACT-6.11-0007 — the `op_dag` array in KISS-Grammar
+/// Enforces: KISS-CONTRACT-6.11-0007 — the `op_dag` array in KISS-Grammar
 /// canonical node order: every child strictly earlier than its parent, each
 /// node's `child_edges` referencing strictly-earlier indices, the **root last**.
 /// The one-node `add` DAG is compared to the Appendix C Semantics golden; a
@@ -167,7 +167,7 @@ fn test_contract_text_op_dag() {
     assert_eq!(serialize_op_dag(&gather), "[Op{gather; axis=k, oob=clamp; []}]");
 }
 
-/// Enforces KISS-CONTRACT-6.1-0002 — a reader MUST fail loudly with a typed
+/// Enforces: KISS-CONTRACT-6.1-0002 — a reader MUST fail loudly with a typed
 /// decline on: no magic, an absent/malformed header line, an unrecognized
 /// `contract_kind`, or a checksum that does not validate; it MUST NOT repair,
 /// skip, or import a headingless/magic-less block. TEETH: a tolerant reader that
@@ -219,7 +219,7 @@ fn test_contract_reject_malformed_header() {
     }
 }
 
-/// Enforces KISS-CONTRACT-6.1-0004 — on any rejection the reader returns a typed
+/// Enforces: KISS-CONTRACT-6.1-0004 — on any rejection the reader returns a typed
 /// decline and MUST NOT panic, read out of bounds, or allocate on an unchecked
 /// declared length. TEETH: a reader that runs `Vec::with_capacity(declared_len)`
 /// before bounds-checking (a huge declared length would OOM/abort instead of

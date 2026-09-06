@@ -1,7 +1,7 @@
 #![cfg(windows)]
 //! Differential-conformance harness — increment 1.
 //!
-//! Backs KISS-CONFORM-6.13-0006 (the atomized harness-ownership obligation):
+//! Backs: KISS-CONFORM-6.13-0006 (the atomized harness-ownership obligation):
 //! KISS-Conform owns an independent CPU-oracle differential harness sharing no
 //! lowering module with the impls under test (the Rust `semantics` oracle vs two
 //! foreign C kernels), and its KISS-Ops freeze-gate proves ≥2 dissimilar

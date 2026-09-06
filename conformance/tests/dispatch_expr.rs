@@ -1,5 +1,5 @@
 //! KISS-Conform tests for the Contract §6.6-0006 Dispatch expression grammar.
-//! Backs KISS-CONTRACT-6.6-0006 (the pinned machine-evaluable expression grammar,
+//! Backs: KISS-CONTRACT-6.6-0006 (the pinned machine-evaluable expression grammar,
 //! incl. the element-subscript operator resolving issue #43).
 
 use kiss_conformance::dispatch_expr::*;
@@ -74,7 +74,7 @@ fn dispatch_subscript_declines() {
     ));
 }
 
-/// Backs KISS-CONTRACT-6.6-0009 — the DIVISION SEMANTICS of the §6.6-0006 Dispatch expression
+/// Backs: KISS-CONTRACT-6.6-0009 — the DIVISION SEMANTICS of the §6.6-0006 Dispatch expression
 /// grammar. ⚠️ The CLAUSE is -0009; -0006 defines the grammar these operators live in and is
 /// backed separately. Citing -0006 here would have credited a clause that was already backed
 /// while leaving the one this test was written for resting on the §9 matrix row alone.

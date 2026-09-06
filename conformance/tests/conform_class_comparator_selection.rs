@@ -8,7 +8,7 @@ use kiss_conformance::harness::advertised::select_and_compare_reduced;
 use kiss_conformance::structural::{reassoc_bound_f32, Monoid};
 use kiss_conformance::DeterminismClass;
 
-// Enforces KISS-CONFORM-6.13-0006b: comparator selected from the advertised class.
+// Enforces: KISS-CONFORM-6.13-0006b: comparator selected from the advertised class.
 #[test]
 fn test_conform_ops_class_comparator_selection() {
     // A legitimately reassociated Sum result: true sum 1e8, one order lands 1e8+8.
