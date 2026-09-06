@@ -444,8 +444,21 @@
 # to 384/498) -- the pre-rebase derivation of 385/497 was correct against the OLD base and
 # became stale the moment #446 landed. A predicted 497 was circulating; the tool says 496 and
 # the tool is the authority.
+
+# #441 (KISS-CLASSIFY-6.8-0017, a manifest MUST be sufficient on its own): untested +1.
+# harness UNCHANGED -- the ARRIVAL case, which the ratchet now says in words rather than
+# reporting "a clause lost its only backing" (#445).
+#
+# STATED LIMIT, WITH ITS DATE: as measured 2026-09-06, no reader in conformance/ parses a
+# manifest's sufficiency declaration, so this clause has nothing to bind to yet. RE-MEASURE
+# BEFORE CITING THIS -- KISS-OPS-6.16-0010 sat unbacked since #362 on a note that had already
+# stopped being true, and nobody re-ran it.
+#
+# FIGURES DELIBERATELY WRITTEN AS A DELTA, NOT ABSOLUTES: this branch has been re-derived four
+# times as main moved, and an absolute here reads as a measurement of a tree that no longer
+# exists. The absolute values live in the key/value block below, which the generator writes.
 # key	value
 harness	386
 lint	33
-untested	496
+untested	497
 proven	20

@@ -1695,6 +1695,27 @@ separating a registered namespace from that namespace's capability-set token.
   adjacency alone cannot — that the pair sits **on** the boundary, not merely next to each other.
   *Test:* `test_namespace_vocabulary_threshold_pair_straddles_its_boundary`.
 
+- **KISS-CLASSIFY-6.8-0017** — **A vocabulary manifest MUST be sufficient on its own.** A party
+  other than the maintainer MUST be able to produce byte-identical tokens for every target the
+  manifest describes **from the manifest alone** — without reading the maintainer's source, its
+  published documentation, or any artifact the manifest does not name. This is umbrella §5.3's
+  foreign-reader condition applied per namespace, and it is what makes §6.8-0002's byte-exact
+  matching decidable *between parties*: KISS pins the envelope and the digest (§6.8-0001,
+  §6.8-0007), the namespace pins everything else, and this clause states where "everything else"
+  must be written down. It **subsumes rather than enumerates** — field order, separators,
+  escaping, the enumerate-versus-digest threshold (§6.8-0007), and any future per-namespace
+  choice are all covered without KISS naming them, because a manifest a second party cannot
+  reproduce from is insufficient whatever the missing piece was. A maintainer MUST NOT rely on a
+  published grammar, a source comment, or a README to supply what the manifest omits: those age
+  **independently** of the manifest, and a reader has no way to tell which is current. The
+  obligation **splits**, exactly as §6.8-0014's does — the manifest MUST **name** its sufficiency
+  demonstration (the reproducing party, and the artifact reproduced), which KISS can check;
+  whether that demonstration was real is the **maintainer's** to discharge, because KISS has no
+  access to a namespace's vocabulary content (§6.8-0004). A manifest naming no demonstration is
+  recorded as **unexercised**, never as sufficient — an untested claim of self-sufficiency is the
+  one this clause exists to stop, since a maintainer cannot detect what only they know.
+  *Test:* `test_namespace_vocabulary_manifest_sufficiency_named`.
+
 ### 6.9 Foundational independence and opaque carry
 
 - **KISS-CLASSIFY-6.9-0001** — KISS-Classify MUST NOT depend on KISS-Ops or on any
@@ -1952,6 +1973,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0014 | `test_namespace_vocabulary_derivability_witness` |
 | KISS-CLASSIFY-6.8-0015 | `test_namespace_vocabulary_omits_matches_absent_pins` |
 | KISS-CLASSIFY-6.8-0016 | `test_namespace_vocabulary_threshold_pair_straddles_its_boundary` |
+| KISS-CLASSIFY-6.8-0017 | `test_namespace_vocabulary_manifest_sufficiency_named` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |
