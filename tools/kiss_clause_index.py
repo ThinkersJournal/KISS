@@ -93,7 +93,7 @@ def main(argv):
               f"read {len(defs)} vs {len(matrix)})", file=sys.stderr)
         return 1
 
-    print(f"clause_id\tsub_standard\tsection\tnamed_test")
+    print("clause_id\tsub_standard\tsection\tnamed_test")
     for cid in sorted(defs):
         m = kt.RE_IDPART.match(cid)
         sub, section = (m.group(1), m.group(2)) if m else ("", "")

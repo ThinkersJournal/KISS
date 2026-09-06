@@ -8,7 +8,7 @@ clause definitions and §9 matrix rows before emitting.
 These controls prove that assertion can FAIL. An emitter whose completeness check has never
 been observed failing is the artifact this repo has spent a day finding.
 """
-import io, os, subprocess, sys, tempfile, shutil, pathlib
+import io, subprocess, sys, tempfile, shutil, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TOOL = str(ROOT / "tools" / "kiss_clause_index.py")
