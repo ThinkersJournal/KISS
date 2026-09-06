@@ -358,6 +358,21 @@
 # "RATCHET: at the floor - harness 383, lint 33, untested 497; lint set matches the base."
 # and that output is pasted here.
 # #415 (KISS-CLASSIFY-6.8-0015, an exemption is DECLARED not narrated): untested 497 -> 498.
+# #415 (KISS-CLASSIFY-6.8-0016, a threshold vector carries the boundary it pins): untested
+# 498 -> 499. SECOND clause on this same branch, so the branch moves the floor by TWO. Added
+# after KISS 2 measured that item 1 of #415 is NOT buildable against the current vector schema:
+# a vector carries `pins`/`input`/`output` and no byte count, so the strongest check available
+# is ADJACENCY, and adjacency does not establish straddling (3 and 4 bytes are adjacent and both
+# far below a 512-byte boundary). They raised it rather than shipping a check weaker than its
+# clause -- the same call I asked them to make on -0015, made again unprompted.
+#
+# FOLDED INTO THIS BRANCH rather than opened as a third PR, deliberately: it is the same clause
+# (-0013), the same "make the claim structured" remedy, and a third branch would have been a
+# third participant in the shared-counter collision this PR is already sequencing around.
+#
+# harness UNCHANGED at 383. clauses 938 -> 939.
+#
+# #415 (KISS-CLASSIFY-6.8-0015, an exemption is DECLARED not narrated): untested 496 -> 497.
 # THIRD instance of the same shape as #362 and #416 above -- a NEW normative clause arrives
 # UNBACKED and is recorded in UNBACKED.tsv rather than credited to a test that does not exist.
 # harness UNCHANGED at 383 is the discriminator: a clause that LOST its only backing would
@@ -383,5 +398,5 @@
 # key	value
 harness	383
 lint	33
-untested	498
+untested	499
 proven	20

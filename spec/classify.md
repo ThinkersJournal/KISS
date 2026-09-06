@@ -1672,6 +1672,25 @@ separating a registered namespace from that namespace's capability-set token.
   content (§6.8-0004) and so cannot know whether a field is genuinely length-conditional.
   *Test:* `test_namespace_vocabulary_omits_matches_absent_pins`.
 
+- **KISS-CLASSIFY-6.8-0016** — **A threshold vector carries the boundary it pins.** §6.8-0013
+  requires each length-conditional `threshold` be presented *at* and *immediately across* its
+  boundary, *"at the exact byte count that flips them"* — a property of the **byte counts**, which
+  a vector carrying only `pins`/`input`/`output` does not record. The strongest check that field
+  set supports is **adjacency**, and adjacency does not establish straddling: inputs of 3 and 4
+  bytes are adjacent and both far below a 512-byte boundary, so a check built on it would report
+  the requirement satisfied while asserting something strictly weaker than the clause says. A
+  `threshold`-tagged vector MUST therefore carry **`threshold_of`**, naming the length-conditional
+  field whose boundary it pins, and **`bytes`**, the length of its `input` measured against that
+  boundary — `threshold_of` because §6.8-0013 says *each* such field and a namespace may have more
+  than one, so a single per-manifest boundary cannot express them. A reader MUST reject with a
+  typed decline a manifest in which, for any value of `threshold_of`, the `threshold` vectors do
+  not include a pair whose `bytes` are **N and N+1**, **or** in which that pair's two `output`
+  values are **equal**. The second condition is what makes the first mean anything: a declared
+  boundary that flips no behaviour is a wrong boundary, and requiring the outputs to **differ**
+  checks the declaration against the vectors rather than trusting it. Together they establish what
+  adjacency alone cannot — that the pair sits **on** the boundary, not merely next to each other.
+  *Test:* `test_namespace_vocabulary_threshold_pair_straddles_its_boundary`.
+
 ### 6.9 Foundational independence and opaque carry
 
 - **KISS-CLASSIFY-6.9-0001** — KISS-Classify MUST NOT depend on KISS-Ops or on any
@@ -1913,6 +1932,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0013 | `test_namespace_vocabulary_generated_vectors_cover_canonicalization` |
 | KISS-CLASSIFY-6.8-0014 | `test_namespace_vocabulary_derivability_witness` |
 | KISS-CLASSIFY-6.8-0015 | `test_namespace_vocabulary_omits_matches_absent_pins` |
+| KISS-CLASSIFY-6.8-0016 | `test_namespace_vocabulary_threshold_pair_straddles_its_boundary` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |
