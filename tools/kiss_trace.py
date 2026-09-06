@@ -1661,8 +1661,11 @@ def compute_masked_forward(clause_test, harness, cited):
     fix depends on).
 
     A clause whose named test is absent AND uncited is UNBACKED, not masked: its
-    aspirational name is correct by design (the 553 that must never be flagged), so it is
-    deliberately excluded here. This function is the instrument the born-red control in
+    aspirational name is correct by design (the UNBACKED LEDGER POPULATION, which must
+    never be flagged), so it is deliberately excluded here. The count is not written
+    here on purpose — `conformance/UNBACKED.tsv` is the population and
+    `kiss_trace.py --report` prints it. A literal here would age exactly as the
+    README's did before it was bound. This function is the instrument the born-red control in
     test_kiss_masked_forward.py drives — main() must call it, not inline the logic, or the
     control would prove a copy rather than the detector (#279)."""
     masked = {}
@@ -1868,7 +1871,8 @@ def main():
     # §9 row is a false artifact. The `no such test` report fires only for UNBACKED clauses
     # (`new_unbacked`), so reverse backing MASKS the dead row — it is invisible to every other
     # check. For an UNBACKED clause the aspirational name is correct by design and is NOT a
-    # defect (that is the 553 that must never be flagged); a BACKED clause with a dead row is.
+    # defect (that is the UNBACKED LEDGER POPULATION, which must never be flagged); a BACKED
+    # clause with a dead row is.
     # Fix: point the §9 row at the real backing test, or DECLARE a same-standard share
     # (`DECLARED_SHARES`). Once the rows are true this set is EMPTY and the detector never fires
     # in normal operation — so its only evidence of function is the born-red control in

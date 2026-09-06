@@ -58,8 +58,9 @@ def test_detector_reports_all_backers_not_just_the_first():
 
 
 def test_detector_ignores_an_unbacked_fictional_name():
-    """The 553 that must NEVER be flagged: a fictional name on an UNBACKED clause (uncited)
-    is correct-by-design aspiration, not a masked row. Absent from harness AND uncited."""
+    """The UNBACKED LEDGER POPULATION, which must NEVER be flagged: a fictional name on an
+    UNBACKED clause (uncited) is correct-by-design aspiration, not a masked row. Absent from
+    harness AND uncited. The count lives in conformance/UNBACKED.tsv, not in this docstring."""
     clause_test = {"KISS-OPS-6.99-0002": "test_aspirational"}
     harness = {"test_something_else": {"clauses": set()}}
     cited = {}                                              # nobody cites it
@@ -175,7 +176,8 @@ def main():
     for t in tests:
         t()
     print(f"ok - {len(tests)} controls pass: detector fires on a masked name, ignores the "
-          f"aspirational 553, and the allow-list accepts only the exact declared share")
+          f"aspirational unbacked population, and the allow-list accepts only the exact "
+          f"declared share")
     return 0
 
 
