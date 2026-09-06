@@ -310,9 +310,10 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
 
     // `threshold` — §6.8-0016. The clause requires each length-conditional field to be
     // presented "at and immediately across" its boundary, "at the exact byte count that
-    // flips them". That is a property of BYTE COUNTS, which a vector carrying only
-    // `pins`/`input`/`output` does not record, so the vector now carries `threshold_of`
-    // (which field's boundary it pins) and `bytes` (its input length).
+    // flips them". That is a property of BYTE COUNTS, which §6.8-0013 nowhere requires a
+    // vector to record -- it mandates `pins` and the `vectors` array and nothing else. So the
+    // vector carries `threshold_of` (which field's boundary it pins) and `enumeration_bytes`
+    // (the length of the canonical enumeration string it presents against that boundary).
     //
     // ⚠️ ADJACENCY ALONE IS STRICTLY WEAKER THAN THE CLAUSE AND MUST NOT BE MISTAKEN FOR
     // IT. Inputs of 3 and 4 bytes are adjacent and both sit far below a 512-byte
@@ -332,15 +333,23 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
             .get("threshold_of")
             .and_then(|j| j.as_str())
             .ok_or(ManifestDecline::ThresholdVectorMissingField("threshold_of"))?;
-        let bytes = v
-            .get("bytes")
+        // ⚠️ `enumeration_bytes`, NOT a bare `bytes` (#447). A vector may ALSO carry the
+        // length of a §6.8-0007 `digest_input`, and an unqualified name cannot say which of
+        // the two lengths it measures. `token` rather than `output` for the same reason of
+        // accuracy: these are capability tokens, and it is what the sole external
+        // implementation emits.
+        let enumeration_bytes = v
+            .get("enumeration_bytes")
             .and_then(|j| j.as_u64())
-            .ok_or(ManifestDecline::ThresholdVectorMissingField("bytes"))?;
-        let output = v
-            .get("output")
+            .ok_or(ManifestDecline::ThresholdVectorMissingField("enumeration_bytes"))?;
+        let token = v
+            .get("token")
             .and_then(|j| j.as_str())
-            .ok_or(ManifestDecline::ThresholdVectorMissingField("output"))?;
-        by_field.entry(field).or_default().push((bytes, output));
+            .ok_or(ManifestDecline::ThresholdVectorMissingField("token"))?;
+        by_field
+            .entry(field)
+            .or_default()
+            .push((enumeration_bytes, token));
     }
     for (field, rows) in by_field {
         // ⚠️ EVERY pair is examined rather than consecutive entries of a sorted list:

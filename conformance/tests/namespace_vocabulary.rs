@@ -56,7 +56,7 @@ fn gen_fields() -> Vec<(&'static str, &'static str)> {
             "vectors",
             "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"}, \
               {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"}, \
-              {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"input\": \"at-512\", \"output\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"input\": \"at-513\", \"output\": \"digest\"}, \
+              {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"}, \
               {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,c\"}]",
         ),
     ]
@@ -84,7 +84,7 @@ fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
     let differing = set_key(
         gen_fields(),
         "vectors",
-        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"input\": \"at-512\", \"output\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"input\": \"at-513\", \"output\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,d\"}]",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,d\"}]",
     );
     assert_eq!(
         check_generated_vector_coverage(&validate_envelope(&build_from(&differing)).unwrap()),
@@ -97,7 +97,7 @@ fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
     let near_miss = set_key(
         gen_fields(),
         "vectors",
-        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"input\": \"at-512\", \"output\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"input\": \"at-513\", \"output\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,c \"}]",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,c \"}]",
     );
     assert_eq!(
         check_generated_vector_coverage(&validate_envelope(&build_from(&near_miss)).unwrap()),
@@ -121,7 +121,7 @@ fn test_namespace_vocabulary_digest_input_malformed_is_not_mismatched() {
     let no_input = set_key(
         gen_fields(),
         "vectors",
-        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"input\": \"at-512\", \"output\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"input\": \"at-513\", \"output\": \"digest\"},           {\"pins\": \"digest_input\", \"output\": \"a,b,c\"}]",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"},           {\"pins\": \"digest_input\", \"output\": \"a,b,c\"}]",
     );
     assert_eq!(
         check_generated_vector_coverage(&validate_envelope(&build_from(&no_input)).unwrap()),
@@ -133,7 +133,7 @@ fn test_namespace_vocabulary_digest_input_malformed_is_not_mismatched() {
     let no_output = set_key(
         gen_fields(),
         "vectors",
-        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"input\": \"at-512\", \"output\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"input\": \"at-513\", \"output\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\"}]",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\"}]",
     );
     assert_eq!(
         check_generated_vector_coverage(&validate_envelope(&build_from(&no_output)).unwrap()),
@@ -537,8 +537,8 @@ fn test_namespace_vocabulary_threshold_pair_straddles_its_boundary() {
     // N and N+1 with DIFFERENT outputs -> the pair sits on the boundary. Accepted.
     assert_eq!(
         check(
-            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"output\": \"inline\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"output\": \"digest\"}"
+            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"}"
         ),
         Ok(())
     );
@@ -547,8 +547,8 @@ fn test_namespace_vocabulary_threshold_pair_straddles_its_boundary() {
     // An adjacency-only check accepts this; the clause does not.
     assert_eq!(
         check(
-            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 3, \"output\": \"inline\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 4, \"output\": \"inline\"}"
+            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 3, \"token\": \"inline\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 4, \"token\": \"inline\"}"
         ),
         Err(ManifestDecline::ThresholdPairDoesNotFlip { field: "blob".to_string() }),
         "an adjacent pair that flips nothing declares a boundary that is not there"
@@ -557,20 +557,24 @@ fn test_namespace_vocabulary_threshold_pair_straddles_its_boundary() {
     // a pair that flips but is NOT adjacent establishes nothing about WHERE the boundary is.
     assert_eq!(
         check(
-            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 100, \"output\": \"inline\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"output\": \"digest\"}"
+            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 100, \"token\": \"inline\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"digest\"}"
         ),
         Err(ManifestDecline::ThresholdPairNotAdjacent { field: "blob".to_string() })
     );
 
     // the two carried fields are each required, and named individually.
     assert_eq!(
-        check("{\"pins\": \"threshold\", \"bytes\": 512, \"output\": \"inline\"}"),
+        check("{\"pins\": \"threshold\", \"enumeration_bytes\": 512, \"token\": \"inline\"}"),
         Err(ManifestDecline::ThresholdVectorMissingField("threshold_of"))
     );
     assert_eq!(
-        check("{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"output\": \"inline\"}"),
-        Err(ManifestDecline::ThresholdVectorMissingField("bytes"))
+        check("{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"token\": \"inline\"}"),
+        Err(ManifestDecline::ThresholdVectorMissingField("enumeration_bytes"))
+    );
+    assert_eq!(
+        check("{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512}"),
+        Err(ManifestDecline::ThresholdVectorMissingField("token"))
     );
 
     // ⚠️ PER-FIELD, because §6.8-0013 says EACH length-conditional field and a namespace may
@@ -578,10 +582,10 @@ fn test_namespace_vocabulary_threshold_pair_straddles_its_boundary() {
     // every threshold vector into one set would find an adjacent flipping pair and accept.
     assert_eq!(
         check(
-            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"output\": \"inline\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"output\": \"digest\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"name\", \"bytes\": 8, \"output\": \"short\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"name\", \"bytes\": 64, \"output\": \"long\"}"
+            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"inline\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"name\", \"enumeration_bytes\": 8, \"token\": \"short\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"name\", \"enumeration_bytes\": 64, \"token\": \"long\"}"
         ),
         Err(ManifestDecline::ThresholdPairNotAdjacent { field: "name".to_string() }),
         "each threshold_of must straddle its own boundary; one good field does not cover another"
@@ -603,11 +607,30 @@ fn test_namespace_vocabulary_threshold_pair_straddles_its_boundary() {
     // the pair, which is the only arrangement that separates the two implementations.
     assert_eq!(
         check(
-            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 512, \"output\": \"digest\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"output\": \"digest\"}, \
-             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"bytes\": 513, \"output\": \"inline\"}"
+            "{\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 512, \"token\": \"digest\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"digest\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"blob\", \"enumeration_bytes\": 513, \"token\": \"inline\"}"
         ),
         Ok(()),
         "a shared byte count must not hide the adjacent partner that flips"
+    );
+
+    // ⚠️ THE REAL EXTERNAL MANIFEST, AND THE REASON THE KEY NAMES ARE WHAT THEY ARE (#447).
+    // vulkane published `kiss-vulkan-vocab` 0.4.1 with `kind: generated` and both threshold
+    // straddle pairs -- correct in substance, and the FIRST version of this clause would have
+    // DECLINED it, because that version invented `bytes`/`output` without checking the one
+    // implementation that exists. A reader is not conformant because it enforces a clause; it
+    // is conformant when it accepts the manifests the clause is about.
+    //
+    // Two `threshold_of` values, each straddling its own boundary, tokens differing across it.
+    assert_eq!(
+        check(
+            "{\"pins\": \"threshold\", \"threshold_of\": \"coop\", \"enumeration_bytes\": 512, \"token\": \"enumerated\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"coop\", \"enumeration_bytes\": 513, \"token\": \"digested\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"coopvec\", \"enumeration_bytes\": 512, \"token\": \"enumerated\"}, \
+             {\"pins\": \"threshold\", \"threshold_of\": \"coopvec\", \"enumeration_bytes\": 513, \"token\": \"digested\"}"
+        ),
+        Ok(()),
+        "the published kiss-vulkan-vocab 0.4.1 straddle pairs must be ACCEPTED"
     );
 }
