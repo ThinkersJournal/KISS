@@ -544,3 +544,183 @@ pub fn decode(bytes: &[u8]) -> Result<ParsedRegion, DecodeDecline> {
     }
     Ok(ParsedRegion { n_inputs, ops_version, classify_version, nodes, extracts })
 }
+
+// ---- Appendix A.1 golden region vectors: the CANONICAL builders ---------------------------
+//
+// ⚠️ THESE LIVE IN THE LIBRARY, NOT IN A TEST, AND THAT IS THE POINT. Before this, `g1_region()`
+// was defined THREE times -- in `grammar_golden.rs`, `grammar_canonical.rs` and `grammar_tag.rs`.
+// Measured at the time of consolidation: all three were identical in substance (the only textual
+// difference was a trailing comma), so this is a LIVE HAZARD being closed, not a live defect being
+// repaired. Three copies of a golden vector drift silently and nothing compares them; one copy
+// cannot.
+//
+// The artifact generator below and every grammar test now read the SAME region from here, so a
+// change to the golden shape reaches the emitted bytes and every assertion at once.
+
+/// Appendix A.1 vector **G1** — the three-input elementwise fusion of §2.3, `out = (a * b) + c`.
+/// `n_inputs = 3`, five canonical nodes, root `add` with interior `mul`.
+pub fn g1_region() -> Region {
+    Region::new(
+        3,
+        "1",
+        "1",
+        Node::op(
+            "add",
+            vec![
+                Node::op("mul", vec![Node::Bind(0), Node::Bind(1)]),
+                Node::Bind(2),
+            ],
+        ),
+    )
+}
+
+/// Appendix A.1 vector **G4** — the repeated-bind / structural-dedup vector, `out = a + a`,
+/// `n_inputs = 1`. The same input is bound twice, so the node table carries one `Bind(0)`.
+pub fn g4_region() -> Region {
+    Region::new(1, "1", "1", Node::op("add", vec![Node::Bind(0), Node::Bind(0)]))
+}
+
+/// The golden region vectors this codec can render, as `(id, description, region)`.
+///
+/// ⚠️ TWO OF THE FIVE, AND THE ARTIFACT SAYS SO RATHER THAN LEAVING IT TO BE DISCOVERED.
+/// `spec/grammar.md` Appendix A.1 declares G1..G5. G2 (the load-bearing `gather` of §2.4), G3
+/// (tag-equality / default-attribute) and G5 (DAG-shared-target extract) have **no builder
+/// anywhere in this crate** -- measured: zero references to `g2_region`/`g3_region`/`g5_region`
+/// and no `G2_/G3_/G5_GOLDEN` constant. Rendering them is a separate piece of work; claiming
+/// them here would be the defect this artifact exists to remove.
+pub fn golden_regions() -> Vec<(&'static str, &'static str, Region)> {
+    vec![
+        (
+            "G1",
+            "three-input elementwise fusion (§2.3), out = (a * b) + c",
+            g1_region(),
+        ),
+        (
+            "G4",
+            "repeated-bind / structural dedup, out = a + a",
+            g4_region(),
+        ),
+    ]
+}
+
+// ---- artifact-rendering helpers (module level, not nested in the generator) ----------------
+
+/// Contiguous LOWERCASE hex — the artifact's wire-form spelling.
+///
+/// ⚠️ DELIBERATELY NOT `crate::hex`, WHICH IS A DIFFERENT FORMAT. `crate::hex` renders
+/// space-separated UPPERCASE (the spec's Appendix-E display convention, "bytes on the wire, left
+/// to right"). This is the machine-readable form, and the suite's own byte conventions pin
+/// lowercase (KISS-CONTRACT §6.11-0003 "8 lowercase hex digits", §6.11-0010 "lowercase hex
+/// digits"). Two formats, two functions, both named — never one function with a flag.
+fn compact_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The node's wire CATEGORY.
+///
+/// ⚠️ AN EXPLICIT VOCABULARY, NEVER RUST'S `Debug`. `{:?}` renders a variant name that is an
+/// implementation detail: renaming the enum would silently rewrite the artifact, and a foreign
+/// reader would be parsing Rust's formatting rather than a declared vocabulary.
+fn node_kind(n: &Node) -> &'static str {
+    match n {
+        Node::Bind(_) => "bind",
+        Node::Op { .. } => "op",
+    }
+}
+
+fn count_nodes(n: &Node) -> usize {
+    match n {
+        Node::Bind(_) => 1,
+        Node::Op { operands, .. } => 1 + operands.iter().map(count_nodes).sum::<usize>(),
+    }
+}
+
+/// One golden region vector as a JSON object, indented for the `vectors` array.
+///
+/// Extracted so the generator reads as "header, then the vectors" rather than as one long
+/// sequence of pushes — a real unit (it renders exactly one vector) rather than a block moved out
+/// to satisfy a line count.
+fn render_vector(id: &str, desc: &str, region: &Region) -> String {
+    let jstr = crate::json::escape_string;
+    let bytes = encode(region).expect("a golden region vector must encode");
+    let mut v = String::from("    {\n");
+    v.push_str(&format!("      \"id\": {},\n", jstr(id)));
+    v.push_str(&format!("      \"description\": {},\n", jstr(desc)));
+    v.push_str(&format!("      \"n_inputs\": {},\n", region.n_inputs));
+    v.push_str(&format!("      \"ops_version\": {},\n", jstr(&region.ops_version)));
+    v.push_str(&format!(
+        "      \"classify_version\": {},\n",
+        jstr(&region.classify_version)
+    ));
+    v.push_str(&format!("      \"root_kind\": {},\n", jstr(node_kind(&region.root))));
+    v.push_str(&format!("      \"node_count\": {},\n", count_nodes(&region.root)));
+    v.push_str(&format!("      \"extract_count\": {},\n", region.extracts.len()));
+    v.push_str(&format!("      \"wire_bytes\": {},\n", bytes.len()));
+    v.push_str(&format!("      \"wire_hex\": {}\n", jstr(&compact_hex(&bytes))));
+    v.push_str("    }");
+    v
+}
+
+/// Emit `conformance/corpus/grammar_vectors.json` — the machine-readable golden REGION vector
+/// set, generated from this codec.
+///
+/// A LIBRARY generator, never a test helper (the `emit_contract_vectors_json` / `#365` pattern):
+/// a generator that lives in a test cannot be run to refresh the artifact, and the committed file
+/// then becomes the only copy of a value nothing derives.
+///
+/// ⚠️ WHY THIS ARTIFACT EXISTS AT ALL. `KISS-GRAMMAR-8-0005` requires a foreign reader **written
+/// outside the reference language** to consume the region wire form. Before this, the golden bytes
+/// existed only as prose in an informative appendix and as a Rust `const` -- **a foreign reader can
+/// consume neither.** This file is what §8-0004/-0005 give such a reader to reproduce FROM.
+pub fn emit_grammar_vectors_json() -> String {
+    // ⚠️ ONE escaper, in `json`, not a private copy per generator — see json::escape_string for
+    // why: the private copies had already diverged, and neither escaped the C0 controls RFC 8259
+    // requires.
+    let jstr = crate::json::escape_string;
+
+    let mut s = String::new();
+    s.push_str("{\n");
+    s.push_str("  \"schema\": \"kiss-grammar-region-vectors-v1\",\n");
+    s.push_str("  \"generated_from\": \"conformance/src/grammar.rs::emit_grammar_vectors_json (the region codec)\",\n");
+    s.push_str("  \"spec_source\": \"spec/grammar.md Appendix A.1\",\n");
+    s.push_str("  \"clause\": \"KISS-GRAMMAR-6.8-0001\",\n");
+    s.push_str("  \"freeze_gate\": \"KISS-GRAMMAR-8-0004 / -0005 (umbrella §5.3)\",\n");
+    s.push_str("  \"coverage_note\": ");
+    s.push_str(&jstr(COVERAGE_NOTE));
+    s.push_str(",\n");
+    s.push_str("  \"declared_appendix_vectors\": [\"G1\", \"G2\", \"G3\", \"G4\", \"G5\"],\n");
+    s.push_str("  \"rendered_vectors\": [\"G1\", \"G4\"],\n");
+    s.push_str("  \"unrendered_vectors\": [\"G2\", \"G3\", \"G5\"],\n");
+    s.push_str("  \"vectors\": [\n");
+    let regions = golden_regions();
+    let rendered: Vec<String> = regions
+        .iter()
+        .map(|(id, desc, region)| render_vector(id, desc, region))
+        .collect();
+    s.push_str(&rendered.join(",\n"));
+    s.push('\n');
+    s.push_str("  ]\n");
+    s.push_str("}\n");
+    s
+}
+
+/// The artifact's stated population. ⚠️ PARTIAL AND STATED, NOT LEFT TO BE DISCOVERED --
+/// the 16(d) principle, and the same discipline the `structure_key_vectors` coverage note uses.
+const COVERAGE_NOTE: &str = "This artifact carries the region WIRE FORM of the Appendix A.1 \
+golden vectors this codec can build: G1 and G4. It is generated from conformance/src/grammar.rs, \
+and conformance/tests/grammar_vectors.rs asserts (a) the committed file is byte-identical to a \
+fresh generation, so a stale artifact fails CI, and (b) the rendered bytes agree with the \
+hand-maintained hex in spec/grammar.md Appendix A.1 -- which is the binding that did not exist \
+before: the goldens were a Rust `const` with no tie to the spec, so the two could diverge \
+silently. WHAT THIS DOES NOT CARRY, each with a different reason so a reader knows what to do \
+next: (i) G2, G3 and G5 are DECLARED in Appendix A.1 and have no builder in this crate, so they \
+are named in `unrendered_vectors` rather than omitted quietly -- rendering them needs the gather, \
+default-attribute and extract shapes built, not a wider corpus. (ii) The op vocabulary is NOT \
+exercised: G1 and G4 place `add`, `mul` and (via G2, absent) `gather`, so a divergence on any \
+other KISS-Ops op name is invisible to a byte-match against this set -- op-name agreement is a \
+different instrument's job. (iii) The declared KISS-Classify op-CATEGORY set has 24 members and \
+no region vector here places any of them; a kernel class absent from every corpus in the suite \
+is invisible to this artifact exactly as it is to the others, which is a coverage question owned \
+upstream and not closed by generating this file. So 'the byte-match passed' means the region wire \
+FORM agrees for the two shapes rendered -- not that the op vocabulary agrees, and not that the \
+corpus spans the domain.";

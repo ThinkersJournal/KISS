@@ -17,6 +17,10 @@
 //! cites its single KISS-Grammar clause id in the doc-comment and body.
 
 use kiss_conformance::grammar::*;
+// The Appendix A.1 golden regions (`g1_region`, `g4_region`) are defined ONCE, in
+// `kiss_conformance::grammar`, and reach here through the `grammar::*` import. They were
+// previously re-defined in this file and two others; three copies of a golden vector drift
+// silently and nothing compares them (#466).
 use kiss_conformance::opattrs;
 
 // ---------------------------------------------------------------------------
@@ -24,15 +28,6 @@ use kiss_conformance::opattrs;
 // ---------------------------------------------------------------------------
 
 /// Appendix A.1 vector G1: `out = (a*b) + c`, n_inputs = 3, node_count = 5.
-fn g1_region() -> Region {
-    Region::new(
-        3,
-        "1",
-        "1",
-        Node::op("add", vec![Node::op("mul", vec![Node::Bind(0), Node::Bind(1)]), Node::Bind(2)]),
-    )
-}
-
 /// The default `(data, *)` operand-role entry.
 fn data_star() -> RoleEntry {
     RoleEntry::default_entry()

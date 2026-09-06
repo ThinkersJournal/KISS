@@ -722,21 +722,10 @@ pub fn emit_contract_vectors_json() -> String {
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
     }
-    fn jstr(s: &str) -> String {
-        let mut o = String::from("\"");
-        for c in s.chars() {
-            match c {
-                '"' => o.push_str("\\\""),
-                '\\' => o.push_str("\\\\"),
-                '\n' => o.push_str("\\n"),
-                '\r' => o.push_str("\\r"),
-                '\t' => o.push_str("\\t"),
-                c => o.push(c),
-            }
-        }
-        o.push('"');
-        o
-    }
+    // ⚠️ ONE escaper, in `json`, not a private copy per generator — see json::escape_string for
+    // why: the private copies had already diverged, and neither escaped the C0 controls RFC 8259
+    // requires.
+    let jstr = crate::json::escape_string;
 
     let doc = appendix_c_golden_document();
     let negatives = malformed_contract_vectors();
