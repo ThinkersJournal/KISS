@@ -129,6 +129,16 @@ pub fn compare_nan_output(
             if l.single_nan_encoding {
                 // Vacuous quietness: f8e4m3fn cannot represent the distinction. is-NaN
                 // is the whole obligation — MUST NOT synthesize a quiet/signaling split.
+                //
+                // ⚠️ ASYMMETRIC PROTECTION. This short-circuit's real protective value is
+                // against a BYTE/SIGN tightening: f8e4m3fn's two NaN encodings (0x7F, 0xFF)
+                // differ, so an exact-byte comparison would falsely reject the conformant pair
+                // — and the over-enforcement pin CATCHES that (its `is_ok` reds). It gives NO
+                // protection against a QUIETNESS tightening: both encodings are S.1111.111, so
+                // `quiet_set` reads 1 for BOTH and `quiet==quiet` passes vacuously — removing
+                // this guard and comparing quietness is invisible to the pin (verified: the pin
+                // stays green). Keep the guard regardless: it states the invariant at the site,
+                // and a future single-NaN format whose sole NaN is NOT quiet would need it.
                 return Ok(());
             }
             let (Some(ab), Some(eb)) = (bits_be(&l, actual), bits_be(&l, expected)) else {

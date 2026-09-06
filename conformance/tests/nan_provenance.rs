@@ -69,11 +69,19 @@ fn moved_nan_born_red_bf16() {
 
 /// f8e4m3fn OVER-ENFORCEMENT PIN: f8e4m3fn has a SINGLE NaN encoding (§6.16-0004),
 /// admits no sNaN, so the COMPUTED quietness obligation is VACUOUS — is-NaN is the
-/// whole test and any two NaNs (either sign) match. This is the ONLY test that reds
-/// if someone "tightens" the COMPUTED arm to compare quietness/sign/bytes for
-/// f8e4m3fn — the COMPUTED born-red above is on bf16 (admits sNaN) and stays GREEN
-/// through that regression. Deliberate vacuity, PINNED (the "NARROW OVERRIDE — do
-/// not simplify" shape, as a test rather than a comment).
+/// whole test and any two NaNs (either sign) match.
+///
+/// ⚠️ WHAT THIS PIN CATCHES, AND WHAT IT CANNOT. It reds if someone tightens the
+/// COMPUTED arm to compare BYTES or SIGN for f8e4m3fn: the two NaN encodings 0x7F and
+/// 0xFF differ, so an exact-byte/sign comparison rejects the pair and the `is_ok`
+/// assertions below red. It does NOT catch a tightening that compares QUIETNESS —
+/// both encodings are S.1111.111, so the quiet bit reads 1 for BOTH and `quiet==quiet`
+/// passes vacuously. Verified: with the vacuity short-circuit removed so f8e4m3fn
+/// falls through to the quietness check, this pin stays GREEN. A quietness tightening
+/// is invisible HERE because this format cannot represent the distinction; the
+/// COMPUTED born-red that guards quietness is on bf16 (which admits sNaN) and stays
+/// GREEN through a byte/sign regression. Deliberate vacuity, PINNED (the "NARROW
+/// OVERRIDE — do not simplify" shape, as a test rather than a comment).
 #[test]
 fn f8e4m3fn_computed_arm_accepts_any_nan_over_enforcement_pin() {
     assert!(!admits_snan("f8e4m3fn"), "f8e4m3fn admits no sNaN (§6.16-0004)");
