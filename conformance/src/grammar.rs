@@ -580,6 +580,67 @@ pub fn g4_region() -> Region {
     Region::new(1, "1", "1", Node::op("add", vec![Node::Bind(0), Node::Bind(0)]))
 }
 
+/// `spec/grammar.md`, baked in at COMPILE time.
+///
+/// ⚠️ `include_str!`, NOT a runtime read, and the distinction is load-bearing. The generator must
+/// emit byte-identical output wherever it runs, so it cannot depend on a file being findable at
+/// runtime; and it must not depend on a HAND-COPIED list, which is the defect this replaces. A
+/// compile-time include is both: derived from the document, and fixed at build time.
+/// (`namespace_vocabulary.rs` includes the registry the same way.)
+const GRAMMAR_SPEC: &str = include_str!("../../spec/grammar.md");
+
+/// Every golden region vector Appendix A.1 DECLARES, derived from the appendix itself.
+///
+/// ⚠️ THIS WAS A HAND-TYPED LIST AND THAT WAS THE DEFECT. The first version of this artifact wrote
+/// `["G1","G2","G3","G4","G5"]` as a literal and computed nothing from it, so **if Appendix A.1
+/// gained a G6, nothing would notice** — a hand-maintained list guarding against a
+/// hand-maintenance failure, which has exactly one failure mode and it is the one it guards
+/// against. The generator could only ever report what it RENDERED; the "declared" set was a
+/// qualitative claim with no failure state (baracuda's accumulate-on-execution shape).
+///
+/// Now the declared set is read out of the appendix and `unrendered` is the DIFFERENCE, so a new
+/// appendix vector appears in `unrendered_vectors` on the next generation without anyone editing
+/// this file.
+pub fn declared_appendix_vectors() -> Vec<String> {
+    let start = match GRAMMAR_SPEC.find("## Appendix A") {
+        Some(i) => i,
+        None => panic!(
+            "spec/grammar.md has no `## Appendix A` — the declared-vector derivation cannot run, \
+             and an EMPTY declared set would silently read as 'nothing is unrendered'"
+        ),
+    };
+    let rest = &GRAMMAR_SPEC[start..];
+    // ⚠️ NO `rest[3..]` OFFSET. A byte-index skip panics on a short slice and on a
+    // non-char boundary, and it bought nothing: `rest` begins at "## Appendix A" with NO
+    // leading newline, so the search below cannot match the current heading anyway.
+    let end = rest.find("
+## ").unwrap_or(rest.len());
+    let appendix = &rest[..end];
+
+    let mut out: Vec<String> = Vec::new();
+    let mut rem = appendix;
+    while let Some(i) = rem.find("*Vector ") {
+        let tail = &rem[i + "*Vector ".len()..];
+        let id: String = tail
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        if !id.is_empty() && !out.contains(&id) {
+            out.push(id);
+        }
+        rem = tail;
+    }
+    // ⚠️ A DERIVATION THAT FINDS NOTHING MUST NOT READ AS "NOTHING IS DECLARED". If the appendix's
+    // vector-heading form changes, an empty result would make `unrendered_vectors` empty too and
+    // the artifact would claim complete coverage of a set it never found.
+    assert!(
+        !out.is_empty(),
+        "no `*Vector <id>` headings found in spec/grammar.md Appendix A — the derivation is \
+         broken, and an empty declared set would report the artifact as covering everything"
+    );
+    out
+}
+
 /// The golden region vectors this codec can render, as `(id, description, region)`.
 ///
 /// ⚠️ TWO OF THE FIVE, AND THE ARTIFACT SAYS SO RATHER THAN LEAVING IT TO BE DISCOVERED.
@@ -688,9 +749,38 @@ pub fn emit_grammar_vectors_json() -> String {
     s.push_str("  \"coverage_note\": ");
     s.push_str(&jstr(COVERAGE_NOTE));
     s.push_str(",\n");
-    s.push_str("  \"declared_appendix_vectors\": [\"G1\", \"G2\", \"G3\", \"G4\", \"G5\"],\n");
-    s.push_str("  \"rendered_vectors\": [\"G1\", \"G4\"],\n");
-    s.push_str("  \"unrendered_vectors\": [\"G2\", \"G3\", \"G5\"],\n");
+    // ⚠️ DERIVED, and `unrendered` is the DIFFERENCE rather than a second hand-typed list.
+    let declared = declared_appendix_vectors();
+    let rendered: Vec<String> = golden_regions().iter().map(|(id, _, _)| id.to_string()).collect();
+    // A rendered id the appendix does not declare is a RAISE, not a silent extra row: it means the
+    // codec is emitting a vector the spec does not name, which no count would reveal.
+    for r in &rendered {
+        assert!(
+            declared.contains(r),
+            "golden_regions() renders `{r}`, which spec/grammar.md Appendix A does not declare — \
+             the artifact must not carry a vector the specification does not name"
+        );
+    }
+    let unrendered: Vec<String> = declared
+        .iter()
+        .filter(|d| !rendered.contains(d))
+        .cloned()
+        .collect();
+    let json_list = |v: &[String]| {
+        v.iter()
+            // ⚠️ THE CRATE'S ESCAPER, not a hand-rolled quote. The ids are alphanumeric
+            // today, so this changes no byte -- which is exactly when a hand-rolled quote is
+            // easiest to leave in. Two private JSON escapers had already diverged here once.
+            .map(|x| crate::json::escape_string(x))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    s.push_str(&format!(
+        "  \"declared_appendix_vectors\": [{}],\n",
+        json_list(&declared)
+    ));
+    s.push_str(&format!("  \"rendered_vectors\": [{}],\n", json_list(&rendered)));
+    s.push_str(&format!("  \"unrendered_vectors\": [{}],\n", json_list(&unrendered)));
     s.push_str("  \"vectors\": [\n");
     let regions = golden_regions();
     let rendered: Vec<String> = regions
