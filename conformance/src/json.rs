@@ -183,6 +183,40 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+
+    /// RFC 8259 §7 — every C0 control is escaped, not just the five with short forms.
+    ///
+    /// ⚠️ BORN-RED AGAINST THE DEFECT THAT WAS ACTUALLY SHIPPED. The two private `jstr` copies
+    /// this replaces escaped `"`/`\`/`\n` (and, in only one of them, `\r`/`\t`) and passed every
+    /// other control character through verbatim — producing JSON that in-tree readers accept
+    /// because they wrote it, and a conformant foreign parser rejects. Since these artifacts exist
+    /// precisely FOR a foreign reader (KISS-*-8-0005), that is the reader who would have found it.
+    /// The `\u{01}` case below fails against either private version.
+    #[test]
+    fn test_json_escape_string_covers_every_c0_control() {
+        assert_eq!(escape_string("a\"b"), "\"a\\\"b\"");
+        assert_eq!(escape_string("a\\b"), "\"a\\\\b\"");
+        assert_eq!(escape_string("a\nb"), "\"a\\nb\"");
+        assert_eq!(escape_string("a\rb"), "\"a\\rb\"");
+        assert_eq!(escape_string("a\tb"), "\"a\\tb\"");
+        assert_eq!(escape_string("a\u{08}b"), "\"a\\bb\"");
+        assert_eq!(escape_string("a\u{0C}b"), "\"a\\fb\"");
+        // ⚠️ the arm both shipped copies lacked: a control with no short form.
+        assert_eq!(escape_string("a\u{01}b"), "\"a\\u0001b\"");
+        assert_eq!(escape_string("a\u{1F}b"), "\"a\\u001fb\"");
+        // NO control character may survive unescaped — the universal form, so a future
+        // short-form arm cannot regress one of them silently.
+        for c in (0u32..0x20).filter_map(char::from_u32) {
+            let out = escape_string(&c.to_string());
+            assert!(
+                !out.chars().any(|x| (x as u32) < 0x20),
+                "U+{:04X} survived unescaped: {out:?}",
+                c as u32
+            );
+        }
+        // ordinary text is untouched apart from the quotes
+        assert_eq!(escape_string("plain"), "\"plain\"");
+    }
     use super::*;
 
     #[test]
@@ -200,4 +234,42 @@ mod tests {
     fn rejects_trailing_garbage() {
         assert!(parse("{} x").is_err());
     }
+}
+
+/// Render `s` as a JSON string literal, quotes included, per RFC 8259 §7.
+///
+/// ⚠️ ONE COPY, BECAUSE THERE WERE ABOUT TO BE THREE. Both artifact generators
+/// (`contract::emit_contract_vectors_json`, `grammar::emit_grammar_vectors_json`) carried a
+/// private `jstr` helper, and the second was copied from the first INCOMPLETELY — it dropped the
+/// `\r` and `\t` arms. A reviewer caught it; nothing in the tree could have, because two private
+/// copies of an escaper have nothing to compare against.
+///
+/// ⚠️ AND BOTH COPIES WERE INCOMPLETE IN THE SAME WAY: RFC 8259 requires EVERY control character
+/// below `0x20` to be escaped, not just the five with short forms. A description or coverage note
+/// containing a `0x01` would have produced INVALID JSON that a foreign reader — the party these
+/// artifacts exist for — would reject, while every in-tree test kept passing, because the in-tree
+/// reader is the one that wrote it.
+///
+/// Measured at the time of hoisting: no artifact string contains a control character, so this
+/// changes no committed bytes. It removes a latent defect, not a live one.
+pub fn escape_string(s: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 2);
+    o.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            '\u{08}' => o.push_str("\\b"),
+            '\u{0C}' => o.push_str("\\f"),
+            // Every remaining C0 control MUST be escaped (RFC 8259 §7); the short forms above
+            // are the only ones with a two-character spelling.
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
 }

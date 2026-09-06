@@ -622,19 +622,10 @@ pub fn emit_grammar_vectors_json() -> String {
             .collect::<Vec<_>>()
             .join("")
     }
-    fn jstr(s: &str) -> String {
-        let mut o = String::from("\"");
-        for c in s.chars() {
-            match c {
-                '"' => o.push_str("\\\""),
-                '\\' => o.push_str("\\\\"),
-                '\n' => o.push_str("\\n"),
-                c => o.push(c),
-            }
-        }
-        o.push('"');
-        o
-    }
+    // ⚠️ ONE escaper, in `json`, not a private copy per generator — see json::escape_string for
+    // why: the private copies had already diverged, and neither escaped the C0 controls RFC 8259
+    // requires.
+    let jstr = crate::json::escape_string;
     // ⚠️ An explicit wire CATEGORY, never Rust's `Debug`. `{:?}` renders a variant name that is
     // an implementation detail: renaming the enum silently rewrites the artifact, and a foreign
     // reader would be parsing Rust's formatting rather than a declared vocabulary.
