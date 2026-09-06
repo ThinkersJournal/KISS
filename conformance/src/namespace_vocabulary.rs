@@ -13,7 +13,7 @@
 //! [`check_generated_vector_coverage`] is the production half only a producer runs.
 
 use crate::json::{self, Json};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 /// The schema id every manifest carries (§6.8-0008).
 pub const MANIFEST_SCHEMA: &str = "kiss-namespace-vocabulary-v1";
@@ -52,6 +52,27 @@ pub enum ManifestDecline {
     /// digest comparison would accept two colliding strings, which is precisely the
     /// disagreement the clause forbids.
     DigestInputNotIdentical,
+    /// `omits` declares a pin the manifest actually SUPPLIES (§6.8-0015). An
+    /// over-declaration conceals a present-but-unclaimed pin exactly as an
+    /// under-declaration conceals a missing one, which is why the clause requires the
+    /// declared set and the absent set to agree in BOTH directions.
+    OmitsDeclaresASuppliedPin(&'static str),
+    /// `omits` names something that is not a required pin (§6.8-0015). "Exactly the
+    /// required pins it does not supply" is not satisfied by a set containing anything
+    /// else — a typo'd entry would otherwise silently exempt nothing.
+    OmitsNamesANonRequiredPin { got: String },
+    /// A `threshold` vector does not carry the field §6.8-0016 requires. Named
+    /// individually: a vector missing `bytes` and one missing `threshold_of` are
+    /// different authoring mistakes and a reader that conflates them points at neither.
+    ThresholdVectorMissingField(&'static str),
+    /// For some `threshold_of`, no two `threshold` vectors have byte counts N and N+1
+    /// (§6.8-0016). Vectors far apart on either side of a boundary demonstrate nothing
+    /// about where it is.
+    ThresholdPairNotAdjacent { field: String },
+    /// An adjacent pair exists but produces the SAME `output` (§6.8-0016). A declared
+    /// boundary that flips no behaviour is a wrong boundary; this is the condition that
+    /// makes adjacency mean anything.
+    ThresholdPairDoesNotFlip { field: String },
     /// `namespace` is not a namespace whose registry status is `registered` (§6.8-0003, cited
     /// by §6.8-0008). An envelope naming an unregistered or reserved namespace is declined:
     /// otherwise validation passes while violating the clause it implements.
@@ -203,16 +224,46 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
         .iter()
         .filter_map(|v| v.get("pins").and_then(|j| j.as_str()))
         .collect();
-    let exempt: HashSet<&str> = m
+    // ⚠️ `omits` IS THE SPEC'S NAME (§6.8-0015). This field was called `pins_exempt`
+    // here, and that name appears NOWHERE in the spec — measured at origin/main, 0 hits
+    // across `spec/`, control: `coverage_note` 4 hits. It was invented by this reader
+    // before §6.8-0013's prose-only exemption was made structural.
+    //
+    // Renamed rather than dual-read, because honouring BOTH would leave a bypass of the
+    // very check -0015 mandates: a manifest could claim exemption under the unspecified
+    // name and never be measured against the equality obligation below.
+    let omits: HashSet<&str> = m
         .raw
-        .get("pins_exempt")
+        .get("omits")
         .and_then(|j| j.as_arr())
         .map(|a| a.iter().filter_map(|j| j.as_str()).collect())
         .unwrap_or_default();
     for pin in GENERATED_PINS {
         let exemptible = !NON_EXEMPTIBLE_PINS.contains(&pin);
-        if !present.contains(pin) && !(exemptible && exempt.contains(pin)) {
+        if !present.contains(pin) && !(exemptible && omits.contains(pin)) {
             return Err(ManifestDecline::GeneratedVectorsMissingPin(pin));
+        }
+    }
+
+    // §6.8-0015: the declared `omits` set and the set actually absent from `vectors` must
+    // be equal IN EITHER DIRECTION.
+    //
+    // ⚠️ ONLY ONE DIRECTION IS NEW CODE, AND SAYING SO IS THE POINT. The loop above
+    // already rejects a pin that is absent and NOT declared (it is an uncovered required
+    // pin), so `absent ⊆ declared` was enforced before this clause existed — under a
+    // different code, for a different reason. What nothing checked is the converse:
+    // `declared ⊆ absent`, a manifest declaring a pin omitted while supplying it. The
+    // clause's "in either direction" is completed here, not implemented here.
+    for pin in GENERATED_PINS {
+        if omits.contains(pin) && present.contains(pin) {
+            return Err(ManifestDecline::OmitsDeclaresASuppliedPin(pin));
+        }
+    }
+    for entry in &omits {
+        if !GENERATED_PINS.contains(entry) {
+            return Err(ManifestDecline::OmitsNamesANonRequiredPin {
+                got: (*entry).to_string(),
+            });
         }
     }
 
@@ -254,6 +305,74 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
             (Some(_), Some(_)) => return Err(ManifestDecline::DigestInputNotIdentical),
             (None, _) => return Err(ManifestDecline::MissingField("input")),
             (_, None) => return Err(ManifestDecline::MissingField("output")),
+        }
+    }
+
+    // `threshold` — §6.8-0016. The clause requires each length-conditional field to be
+    // presented "at and immediately across" its boundary, "at the exact byte count that
+    // flips them". That is a property of BYTE COUNTS, which a vector carrying only
+    // `pins`/`input`/`output` does not record, so the vector now carries `threshold_of`
+    // (which field's boundary it pins) and `bytes` (its input length).
+    //
+    // ⚠️ ADJACENCY ALONE IS STRICTLY WEAKER THAN THE CLAUSE AND MUST NOT BE MISTAKEN FOR
+    // IT. Inputs of 3 and 4 bytes are adjacent and both sit far below a 512-byte
+    // boundary; a check satisfied by that reports the requirement met while asserting
+    // something the clause does not say. The pair's outputs must also DIFFER — that is
+    // what places the pair ON the boundary rather than merely next to each other, and it
+    // checks the declaration against the vectors instead of trusting it.
+    //
+    // `threshold_of` is per-vector because §6.8-0013 says EACH such field and a namespace
+    // may have more than one, so a single per-manifest boundary cannot express them.
+    let mut by_field: BTreeMap<&str, Vec<(u64, &str)>> = BTreeMap::new();
+    for v in vectors {
+        if v.get("pins").and_then(|j| j.as_str()) != Some("threshold") {
+            continue;
+        }
+        let field = v
+            .get("threshold_of")
+            .and_then(|j| j.as_str())
+            .ok_or(ManifestDecline::ThresholdVectorMissingField("threshold_of"))?;
+        let bytes = v
+            .get("bytes")
+            .and_then(|j| j.as_u64())
+            .ok_or(ManifestDecline::ThresholdVectorMissingField("bytes"))?;
+        let output = v
+            .get("output")
+            .and_then(|j| j.as_str())
+            .ok_or(ManifestDecline::ThresholdVectorMissingField("output"))?;
+        by_field.entry(field).or_default().push((bytes, output));
+    }
+    for (field, rows) in by_field {
+        // ⚠️ EVERY pair is examined rather than consecutive entries of a sorted list:
+        // two vectors may share a byte count, and a sorted-neighbour scan would step over
+        // the adjacent partner of a duplicate and report NOT-ADJACENT for a manifest that
+        // is adjacent. n is a handful of vectors; the quadratic form is the honest one.
+        //
+        // ⚠️ AND THE FLIP IS EXISTENTIAL, NOT UNIVERSAL. Requiring every adjacent pair to
+        // differ would decline a conformant manifest that also carries vectors at 20/21,
+        // both far above the boundary and legitimately equal. The manifest must EXHIBIT
+        // the flip, not consist only of it.
+        let mut adjacent = false;
+        let mut flips = false;
+        for (b1, o1) in &rows {
+            for (b2, o2) in &rows {
+                if *b2 == b1 + 1 {
+                    adjacent = true;
+                    if o1 != o2 {
+                        flips = true;
+                    }
+                }
+            }
+        }
+        if !adjacent {
+            return Err(ManifestDecline::ThresholdPairNotAdjacent {
+                field: field.to_string(),
+            });
+        }
+        if !flips {
+            return Err(ManifestDecline::ThresholdPairDoesNotFlip {
+                field: field.to_string(),
+            });
         }
     }
     Ok(())
