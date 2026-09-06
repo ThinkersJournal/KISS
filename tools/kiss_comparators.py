@@ -50,7 +50,6 @@ SELECTS_ONLY = {
     "KISS-CONFORM-6.8-0009": "restricts which comparator is admissible for POD wire fields",
     "KISS-CONFORM-6.8-0011": "multi-output application rule; defines no relation",
     "KISS-CONFORM-6.8-0012": "the declaration obligation itself",
-    "KISS-CONFORM-6.8-0013": "the exhibition obligation; requires a demonstration, defines no relation",
     "KISS-CONFORM-6.9-0002": "requires the tier-1 comparator BE the structural one",
     "KISS-CONFORM-6.9-0003": "applies the structural comparator to a named round-trip",
     "KISS-CONFORM-6.12-0002": "consumer-verify runs under the declared-precision comparator",
@@ -63,7 +62,6 @@ SELECTS_ONLY = {
     "KISS-CONFORM-6.13-0017": "OWNS and applies the structural comparator; 6.9-0001 defines it",
     "KISS-CONFORM-7.3-0001": "forbids adding a comparator to the enum; defines none",
     "KISS-CONFORM-8-0007": "reference implementation runs the same suite; defines none",
-    "KISS-CONFORM-8-0010": "freeze-gate wording referencing comparator selection; defines none",
 }
 
 
@@ -231,11 +229,36 @@ def unbound_dimensions(clause_body, path=BLINDNESS_TEST):
 
 
 def clause_bodies(text):
-    """(clause_id, body) for every clause, body running to the next clause."""
-    marks = [(m.group(1), m.start()) for m in RE_CLAUSE.finditer(text)]
-    for i, (cid, start) in enumerate(marks):
-        end = marks[i + 1][1] if i + 1 < len(marks) else len(text)
-        yield cid, text[start:end]
+    """(clause_id, body) for every clause.
+
+    A body runs to the next clause OR to the end of its own indented continuation,
+    whichever comes first. The second bound is what makes the LAST clause in a
+    document mean anything: without it its "body" swallows every following section,
+    appendix and closing note, and the clause is flagged for words it does not
+    contain.
+
+    That bug was live and MASKED. `KISS-CONFORM-8-0010` sat in SELECTS_ONLY with a
+    reason describing text it does not contain -- it was simply the last clause and
+    had swallowed the rest of conform.md. The exclusion suppressed the symptom, so
+    the defect surfaced only when a NEW clause became last and inherited the swallow:
+    exactly the "an exclusion exempts the WRONG clause later" hazard this module's own
+    test warns about, arriving from the direction that test does not look.
+    """
+    lines = text.split("\n")
+    starts = {}
+    for m in RE_CLAUSE.finditer(text):
+        starts[text[: m.start()].count("\n")] = m.group(1)
+    for i in sorted(starts):
+        j = i + 1
+        while j < len(lines):
+            if lines[j].startswith("  "):
+                j += 1
+                continue
+            if lines[j].strip() == "" and j + 1 < len(lines) and lines[j + 1].startswith("  "):
+                j += 1
+                continue
+            break
+        yield starts[i], "\n".join(lines[i:j])
 
 
 def scan(path=DOC):
