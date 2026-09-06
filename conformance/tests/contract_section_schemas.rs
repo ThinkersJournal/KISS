@@ -11,10 +11,11 @@
 //! readers in `kiss_conformance::contract`, never a test-only parser (a test-side parser agreeing
 //! with a test-side emitter proves only that one author wrote both — the census defect one level up).
 //!
-//! The four arms per section (#489's template):
+//! The arms per section (#489's template, extended):
 //!   round-trip   build the block, parse it back, assert the fields round-trip;
-//!   byte-pin     the emitted block equals the exact expected bytes;
-//!   decline      a missing field / a wrong field ORDER / an unknown field each decline;
+//!   byte-pin     the emitted block equals the exact expected bytes (in each per-section test);
+//!   decline      a missing field / a wrong field ORDER / an unknown field / a MALFORMED line
+//!                (no ` = `) / a mismatched section HEADING each decline;
 //!   discriminate the section's OWN MUST-NOT field — the plausible wrong impl each clause forbids.
 
 use kiss_conformance::contract::{
@@ -78,6 +79,29 @@ fn assert_schema_arms(
         Err(SectionDecline::ForbiddenField(forbidden.0.to_string())),
         "{name}: the forbidden field {:?} must decline",
         forbidden.0
+    );
+
+    // decline — a MALFORMED field line (no ` = ` separator), §6.11-0001. Corrupt the first field
+    // line of an otherwise-valid block: the ONLY difference from the round-trip arm is the removed
+    // separator, so a parser that failed to detect it would return Ok and this exact-payload
+    // assertion would fail — the arm discriminates, it does not merely pass.
+    let malformed = String::from_utf8(block(id, name, fields))
+        .expect("block is valid utf-8")
+        .replacen(" = ", " ", 1) // the first ` = ` is the first field line's separator
+        .into_bytes();
+    assert_eq!(
+        parse(&malformed),
+        Err(SectionDecline::MalformedLine(format!("{} {}", fields[0].0, fields[0].1))),
+        "{name}: a field line without ` = ` must decline"
+    );
+
+    // decline — a mismatched section HEADING: the right fields under the WRONG section number
+    // (`[section:<id+1>:<name>]` fed to a reader that expects `<id>`), the section-transposition
+    // mistake a heading-blind parser would accept.
+    assert_eq!(
+        parse(&block(id.wrapping_add(1), name, fields)),
+        Err(SectionDecline::BadHeading),
+        "{name}: a mismatched section heading must decline"
     );
 }
 
