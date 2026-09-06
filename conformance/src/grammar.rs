@@ -603,6 +603,38 @@ pub fn golden_regions() -> Vec<(&'static str, &'static str, Region)> {
     ]
 }
 
+// ---- artifact-rendering helpers (module level, not nested in the generator) ----------------
+
+/// Contiguous LOWERCASE hex — the artifact's wire-form spelling.
+///
+/// ⚠️ DELIBERATELY NOT `crate::hex`, WHICH IS A DIFFERENT FORMAT. `crate::hex` renders
+/// space-separated UPPERCASE (the spec's Appendix-E display convention, "bytes on the wire, left
+/// to right"). This is the machine-readable form, and the suite's own byte conventions pin
+/// lowercase (KISS-CONTRACT §6.11-0003 "8 lowercase hex digits", §6.11-0010 "lowercase hex
+/// digits"). Two formats, two functions, both named — never one function with a flag.
+fn compact_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The node's wire CATEGORY.
+///
+/// ⚠️ AN EXPLICIT VOCABULARY, NEVER RUST'S `Debug`. `{:?}` renders a variant name that is an
+/// implementation detail: renaming the enum would silently rewrite the artifact, and a foreign
+/// reader would be parsing Rust's formatting rather than a declared vocabulary.
+fn node_kind(n: &Node) -> &'static str {
+    match n {
+        Node::Bind(_) => "bind",
+        Node::Op { .. } => "op",
+    }
+}
+
+fn count_nodes(n: &Node) -> usize {
+    match n {
+        Node::Bind(_) => 1,
+        Node::Op { operands, .. } => 1 + operands.iter().map(count_nodes).sum::<usize>(),
+    }
+}
+
 /// Emit `conformance/corpus/grammar_vectors.json` — the machine-readable golden REGION vector
 /// set, generated from this codec.
 ///
@@ -615,32 +647,10 @@ pub fn golden_regions() -> Vec<(&'static str, &'static str, Region)> {
 /// existed only as prose in an informative appendix and as a Rust `const` -- **a foreign reader can
 /// consume neither.** This file is what §8-0004/-0005 give such a reader to reproduce FROM.
 pub fn emit_grammar_vectors_json() -> String {
-    fn hex(bytes: &[u8]) -> String {
-        bytes
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<Vec<_>>()
-            .join("")
-    }
     // ⚠️ ONE escaper, in `json`, not a private copy per generator — see json::escape_string for
     // why: the private copies had already diverged, and neither escaped the C0 controls RFC 8259
     // requires.
     let jstr = crate::json::escape_string;
-    // ⚠️ An explicit wire CATEGORY, never Rust's `Debug`. `{:?}` renders a variant name that is
-    // an implementation detail: renaming the enum silently rewrites the artifact, and a foreign
-    // reader would be parsing Rust's formatting rather than a declared vocabulary.
-    fn node_kind(n: &Node) -> &'static str {
-        match n {
-            Node::Bind(_) => "bind",
-            Node::Op { .. } => "op",
-        }
-    }
-    fn count_nodes(n: &Node) -> usize {
-        match n {
-            Node::Bind(_) => 1,
-            Node::Op { operands, .. } => 1 + operands.iter().map(count_nodes).sum::<usize>(),
-        }
-    }
 
     let mut s = String::new();
     s.push_str("{\n");
@@ -681,7 +691,7 @@ pub fn emit_grammar_vectors_json() -> String {
         ));
         s.push_str(&format!("      \"extract_count\": {},\n", region.extracts.len()));
         s.push_str(&format!("      \"wire_bytes\": {},\n", bytes.len()));
-        s.push_str(&format!("      \"wire_hex\": {}\n", jstr(&hex(&bytes))));
+        s.push_str(&format!("      \"wire_hex\": {}\n", jstr(&compact_hex(&bytes))));
         s.push_str(if i + 1 == regions.len() {
             "    }\n"
         } else {

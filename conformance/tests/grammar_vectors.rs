@@ -72,15 +72,26 @@ fn appendix_hex(md: &str, marker: &str) -> String {
     out
 }
 
-fn artifact_hex(json: &str, id: &str) -> String {
-    // Minimal, dependency-free: find the `"id": "<id>"` object and take its `wire_hex`.
-    let key = format!("\"id\": \"{id}\"");
-    let i = json.find(&key).unwrap_or_else(|| panic!("vector {id} absent from the artifact"));
-    let tail = &json[i..];
-    let h = tail.find("\"wire_hex\": \"").expect("wire_hex follows id");
-    let from = i + h + "\"wire_hex\": \"".len();
-    let len = json[from..].find('"').expect("wire_hex is terminated");
-    json[from..from + len].to_string()
+fn artifact_hex(json_text: &str, id: &str) -> String {
+    // ⚠️ PARSED, NOT SLICED. A hand-rolled string search is sensitive to whitespace and field
+    // order, so a reformatting of the generator's output would redden these tests while the DATA
+    // was still correct — a false red that trains people to edit the test. The crate already has
+    // a parser; using it makes the assertion about the data rather than about the layout.
+    let doc = kiss_conformance::json::parse(json_text).expect("the artifact must be valid JSON");
+    let vectors = doc
+        .get("vectors")
+        .and_then(|v| v.as_arr())
+        .expect("the artifact carries a `vectors` array");
+    for v in vectors {
+        if v.get("id").and_then(|j| j.as_str()) == Some(id) {
+            return v
+                .get("wire_hex")
+                .and_then(|j| j.as_str())
+                .expect("each vector carries `wire_hex`")
+                .to_string();
+        }
+    }
+    panic!("vector {id} absent from the artifact");
 }
 
 /// (1) FRESHNESS — the committed artifact is byte-identical to a fresh generation. If this fails,
