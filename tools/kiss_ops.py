@@ -386,14 +386,26 @@ COVERS = [
 
 
 def read_corpus_floor(path):
-    """Read CORPUS_COVERAGE_FLOOR.tsv → {declared, total}. `#` comments and blanks ignored."""
+    """Read CORPUS_COVERAGE_FLOOR.tsv → {declared, total}. `#` comments and blanks ignored.
+
+    The floor is hand-edited, so a dropped tab or a non-integer value raises a ValueError that
+    NAMES the offending `path:lineno` and its content — not a bare `int('')` crash that leaves
+    whoever edited the floor guessing (#468). Opened via a context manager (no leaked descriptor).
+    """
     out = {}
-    for line in open(path, encoding="utf-8"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        k, _, val = line.partition("\t")
-        out[k.strip()] = int(val.strip())
+    with open(path, encoding="utf-8") as f:
+        for lineno, raw in enumerate(f, 1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "\t" not in line:
+                raise ValueError(f"{path}:{lineno}: expected 'key<TAB>int', no tab found: {line!r}")
+            k, _, val = line.partition("\t")
+            k, val = k.strip(), val.strip()
+            try:
+                out[k] = int(val)
+            except ValueError:
+                raise ValueError(f"{path}:{lineno}: value for {k!r} is not an integer: {val!r}") from None
     return out
 
 
@@ -436,6 +448,10 @@ def corpus_coverage_ratchet(spec_dir, floor_path):
         print(f"  RESULT: FATAL — missing floor {floor_path}")
         return 1
     floor = read_corpus_floor(floor_path)
+    missing = [k for k in ("declared", "total") if k not in floor]
+    if missing:
+        print(f"  RESULT: FATAL — {floor_path} is missing required key(s): {', '.join(missing)}")
+        return 1
     ok, verdict, lines = classify_corpus_coverage(
         floor["declared"], floor["total"], cov["declared"], cov["total"])
     print("KISS-Ops corpus op-coverage ratchet (#459)")
@@ -445,6 +461,29 @@ def corpus_coverage_ratchet(spec_dir, floor_path):
     print("-" * 68)
     print(f"  RESULT: {'CLEAN' if ok else 'VIOLATIONS FOUND'} (verdict: {verdict})")
     return 0 if ok else 1
+
+
+def emit_manifest_artifact(args, spec_dir):
+    """Emit conformance/corpus/op_manifest.json (the §6.5-0008 coverage source) — to stdout with
+    --stdout, else to the file — and return a process exit code. Extracted from main() so the
+    dispatcher stays a dispatcher, peer to corpus_coverage_ratchet."""
+    import json as _json
+    manifest = build_manifest(spec_dir)
+    text = _json.dumps(manifest, indent=2) + "\n"
+    if args.stdout:
+        # Bytes, not text: `sys.stdout.write` newline-translates on Windows, so
+        # the stdout path emitted CRLF while the file path below (which pins the
+        # newline explicitly) emitted LF — the SAME generator producing two
+        # different artifacts by platform and by output path. A byte-compare gate
+        # against either one then fails on the other (#162).
+        sys.stdout.buffer.write(text.encode("utf-8"))
+    else:
+        out_path = os.path.join(os.path.dirname(spec_dir), "conformance", "corpus", "op_manifest.json")
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        print(f"wrote {out_path}")
+    return 0
 
 
 def main():
@@ -468,22 +507,7 @@ def main():
         return corpus_coverage_ratchet(spec_dir, floor_path)
 
     if args.emit_manifest:
-        import json as _json
-        manifest = build_manifest(spec_dir)
-        text = _json.dumps(manifest, indent=2) + "\n"
-        if args.stdout:
-            # Bytes, not text: `sys.stdout.write` newline-translates on Windows, so
-            # the stdout path emitted CRLF while the file path below (which pins the
-            # newline explicitly) emitted LF — the SAME generator producing two
-            # different artifacts by platform and by output path. A byte-compare gate
-            # against either one then fails on the other (#162).
-            sys.stdout.buffer.write(text.encode("utf-8"))
-        else:
-            out_path = os.path.join(os.path.dirname(spec_dir), "conformance", "corpus", "op_manifest.json")
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            open(out_path, "w", encoding="utf-8", newline="\n").write(text)
-            print(f"wrote {out_path}")
-        return 0
+        return emit_manifest_artifact(args, spec_dir)
 
     if args.emit_coverage:
         for cid, note in COVERS:
