@@ -1536,14 +1536,17 @@ shared naming convention spelled identically in both foundational vocabularies.
 - **KISS-OPS-6.16-0011** — **Where the move obligation attaches.** §6.16-0009 governs the
   value that reaches the op's **observable output**, never an internal intermediate. For a fused
   or multi-stage op — a reduction carrying a `post` expression, a row-reduction carrying an
-  epilogue — trace from the fold to the output: if **every** transformation between them is a
-  move (bit-preserving with at most a sign-bit edit), §6.16-0009 governs the whole op and the
-  output's bits are preserved exactly; if **any** is arithmetic, the output is a **computed**
-  value and §6.16-0010 governs instead. An implementation MUST NOT classify such an op by its
-  access variant or by its fold operator alone: a max-reduction under an arithmetic epilogue is
-  a computed op, and a sum-reduction whose epilogue is itself a pure move is not. A conformance
-  vector observes an op's **output**, so an obligation attached to an unobservable intermediate
-  could not be tested by any vector; this clause states the boundary the suite can reach.
+  epilogue — trace the whole path from the op's inputs to that output, **the fold itself
+  included**: if **every** transformation on the path is a move (bit-preserving with at most a
+  sign-bit edit), §6.16-0009 governs the whole op and the output's bits are preserved exactly;
+  if **any** is arithmetic, the output is a **computed** value and §6.16-0010 governs instead.
+  An implementation MUST NOT classify such an op by its access variant, by its fold operator
+  alone, or by its epilogue alone — **both** directions fail. A **max**-reduction under an
+  arithmetic epilogue is a **computed** op, though its fold is a move; and a **sum**-reduction
+  is a **computed** op even when its epilogue is a pure move, because the fold is itself one of
+  the transformations traced. A conformance vector observes an op's **output**, so an obligation
+  attached to an unobservable intermediate could not be tested by any vector; this clause states
+  the boundary the suite can reach.
   *Test:* `test_ops_move_attaches_to_observable_output`.
 
 ### 6.17 Compute-fidelity (math-precision) attribute
