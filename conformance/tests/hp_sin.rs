@@ -30,6 +30,10 @@ const SIN_ANCHORS: &[(f64, u64, u32)] = &[
     (100.0, 0xBFE03425B78C4DB8, 0xBF01A12E),
     (6.283185307179586, 0xBCB1A62633145C07, 0xA58D3132),   // sin(2π) ≈ -2.4e-16
 ];
+// NB: the deep-cancellation OCTANT-5 case (x = 6381956970095103·2^797) is NOT in this const array —
+// its exact f64 needs `f64::from_bits`, which is const-stable only since Rust 1.83 while the crate's
+// MSRV is 1.77 (a const literal for a 2^849 value is impractical). It lives in the test below, where
+// `from_bits` is a non-const call and covers the same f64+f32 obligations plus the discrimination.
 
 #[test]
 fn sin_f64_matches_oracle_anchors() {
@@ -51,4 +55,32 @@ fn sin_f32_matches_oracle_anchors() {
             "sin({x}) f32: got 0x{got:08X}, want 0x{want32:08X} (oracle: MPFR≡Arb≡mpmath)"
         );
     }
+}
+
+/// KISS-OPS §6.15 sin argument reduction — the deep-cancellation worst case DISCRIMINATES a wide
+/// (Payne–Hanek) reduction from a naive one, which is the point of carrying it. x =
+/// 6381956970095103·2^797 sits ≈2^-61 past a multiple of π/2 (octant 5). The atom, using the
+/// 2304-bit 2/π table, returns the 3-oracle-agreed sin ≈ 1.0; a plausible-but-wrong
+/// `sin(fmod(x, 2π))` (double-precision argument reduction — what a lesser implementation writes)
+/// loses all significance and lands FAR from 1.0. A named, wrong implementation this anchor kills.
+#[test]
+fn sin_deep_cancellation_reddens_naive_reduction() {
+    let x = f64::from_bits(0x7506AC5B262CA1FF); // 6381956970095103 · 2^797 (exact); |x mod π/2| ≈ 2^-61
+    let atom = round_atom_to_f64(&Sin { x }).bits;
+    assert_eq!(atom, 0x3FF0000000000000, "Payne–Hanek atom: sin(deep-cancellation x) rounds to 1.0 (f64)");
+    // f32 too — same obligation the const anchor array would carry (3-oracle agreed: MPFR≡Arb≡mpmath).
+    let atom32 = round_atom_to_f32(&Sin { x }).bits as u32;
+    assert_eq!(atom32, 0x3F800000, "Payne–Hanek atom: sin(deep-cancellation x) rounds to 1.0 (f32)");
+
+    // The naive reduction a lesser impl uses, computed here to SHOW the anchor discriminates:
+    // fmod(x, 2π) in f64 keeps only ~2 bits of the ~849-bit argument, so sin of it is unrelated to
+    // the true value. Assert it is CATASTROPHICALLY wrong (far from 1.0), not a last-bit diff —
+    // robust to libm variation in the exact wrong value, which is not the point.
+    let naive = (x % (2.0 * std::f64::consts::PI)).sin();
+    assert_ne!(naive.to_bits(), atom, "naive fmod-2π must differ from the correct result");
+    assert!(
+        (naive - 1.0).abs() > 0.5,
+        "naive fmod-2π reduction is catastrophically wrong ({naive}), not within tolerance of 1.0 — \
+         the correctly-rounded sin only a wide reduction reaches"
+    );
 }
