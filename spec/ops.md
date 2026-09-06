@@ -1533,6 +1533,19 @@ shared naming convention spelled identically in both foundational vocabularies.
   §6.5-0002). **The decomposition decides; the two consequences follow from it.**
   *Test:* `test_ops_narrow_float_arith_quiets_snan`.
 
+- **KISS-OPS-6.16-0011** — **Where the move obligation attaches.** §6.16-0009 governs the
+  value that reaches the op's **observable output**, never an internal intermediate. For a fused
+  or multi-stage op — a reduction carrying a `post` expression, a row-reduction carrying an
+  epilogue — trace from the fold to the output: if **every** transformation between them is a
+  move (bit-preserving with at most a sign-bit edit), §6.16-0009 governs the whole op and the
+  output's bits are preserved exactly; if **any** is arithmetic, the output is a **computed**
+  value and §6.16-0010 governs instead. An implementation MUST NOT classify such an op by its
+  access variant or by its fold operator alone: a max-reduction under an arithmetic epilogue is
+  a computed op, and a sum-reduction whose epilogue is itself a pure move is not. A conformance
+  vector observes an op's **output**, so an obligation attached to an unobservable intermediate
+  could not be tested by any vector; this clause states the boundary the suite can reach.
+  *Test:* `test_ops_move_attaches_to_observable_output`.
+
 ### 6.17 Compute-fidelity (math-precision) attribute
 
 KISS-Ops owns a second per-kernel attribute, **orthogonal** to the §6.0 determinism class:
@@ -2664,6 +2677,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.16-0008 | `test_ops_dtype_layout_coversioned` |
 | KISS-OPS-6.16-0009 | `test_ops_bf16_minmax_moves_not_rounds` |
 | KISS-OPS-6.16-0010 | `test_ops_narrow_float_arith_quiets_snan` |
+| KISS-OPS-6.16-0011 | `test_ops_move_attaches_to_observable_output` |
 | KISS-OPS-6.17-0001 | `test_ops_math_precision_enum` |
 | KISS-OPS-6.17-0002 | `test_ops_math_precision_bit_stable` |
 | KISS-OPS-6.17-0003 | `test_ops_math_precision_reduced` |
