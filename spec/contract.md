@@ -572,9 +572,19 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `1`; a reader conforming to this schema version MUST accept a contract whose
-  `contract_version` is exactly `1` (UTF-8, byte-exact) and MUST reject, with a typed decline,
-  any other `contract_version` value (§6.1-0003). *Test:* `test_contract_version_value_pinned`.
+  token `1`, and a contract conforming to this schema version MUST carry exactly that token
+  (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
+  a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
+  reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
+  §8-0007, which additionally requires rejecting one below the reader's declared **retirement
+  floor**. A reader MUST declare the set of `contract_version` values it supports; it MUST reject
+  any value outside that set, and MUST NOT reject a value inside it **solely** because that value
+  is not the reader's own newest. A reader MUST NOT accept a version merely because it is
+  **lower** than one it supports: §8-0002 admits schema changes that are not additive — a field
+  schema, the identity compatibility table, the `audited_status` derivation rule — so a newer
+  reader has no general license to read an older document, and a maximum-version gate would let
+  it **misread** rather than decline. Support is declared and enumerated, never inferred from an
+  ordering. *Test:* `test_contract_version_value_pinned`.
 
 ### 6.2 The universal required core and contract existence
 
