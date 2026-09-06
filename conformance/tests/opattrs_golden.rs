@@ -547,7 +547,6 @@ fn test_ops_opattrs_window_vector_accepts_exactly_max_rank() {
     assert_eq!(v.len(), 1 + 4 * MAX_RANK as usize, "u8 count then count x u32 LE");
 }
 
-
 /// KISS-OPS-6.19-0011 (`test_ops_opattrs_version_binding`): the pinned `MAX_RANK` and
 /// `MAX_OPERANDS` constants (§6.19-0037) are SHARED anchors — defined once for the
 /// OpAttrs channel (`opattrs`) and once for the Classify `structure_key` schema — and
