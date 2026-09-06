@@ -171,30 +171,40 @@ fn move_edit(op: &str, a: &[u8], b: Option<&[u8]>) -> Vec<u8> {
     out
 }
 
-/// One sign-edit MOVE cell. The output is exact-byte class; a NaN output carries `nan_provenance:
-/// moved` (the biconditional pairs it with the NaN), a finite output carries none.
-fn move_cell(tc: u32, op: &str, dtype: &str, a: &[u8], b: Option<&[u8]>, tags: &str) -> String {
-    let expected = move_edit(op, a, b);
-    let inputs = match b {
-        Some(bb) => format!(
+/// Emit one MOVE cell (exact-byte class). A NaN output carries `nan_provenance: moved` (the
+/// biconditional pairs it with the NaN); a finite output carries none. `inputs` is 1 (role `x`)
+/// or 2 (roles `a`,`b`). Shared by the sign-edit and selection minters.
+fn emit_cell(tc: u32, op: &str, dtype: &str, inputs: &[&[u8]], expected: &[u8], tags: &str) -> String {
+    let inputs_json = match inputs {
+        [x] => format!("[{{\"role\":\"x\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]", hex(x)),
+        [a, b] => format!(
             "[{{\"role\":\"a\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}, \
              {{\"role\":\"b\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]",
             hex(a),
-            hex(bb)
+            hex(b)
         ),
-        None => format!("[{{\"role\":\"x\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]", hex(a)),
+        _ => panic!("a cell has 1 or 2 inputs"),
     };
-    let prov = if is_nan(dtype, &expected) { " \"nan_provenance\": \"moved\"," } else { "" };
-    let prec = if a.len() == 2 { 16 } else { 8 };
+    let prov = if is_nan(dtype, expected) { " \"nan_provenance\": \"moved\"," } else { "" };
+    let prec = if inputs[0].len() == 2 { 16 } else { 8 };
     format!(
         "    {{\"tcId\": {tc}, \"op\": \"{op}\", \"dtype\": \"{dtype}\", \"rounding\": \"roundTiesToEven\", \
-         \"inputs\": {inputs}, \
+         \"inputs\": {inputs_json}, \
          \"expected\": {{\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}, \
          \"class\": \"exact-byte\", \"ulp_bound\": 0, \"provenance\": \"oracle\", \
          \"tags\": [{tags}],{prov} \
          \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": {prec}}}}}",
-        hex(&expected)
+        hex(expected)
     )
+}
+
+/// One sign-edit MOVE cell (neg/abs/copysign), expected computed by the raw-bit sign edit.
+fn move_cell(tc: u32, op: &str, dtype: &str, a: &[u8], b: Option<&[u8]>, tags: &str) -> String {
+    let expected = move_edit(op, a, b);
+    match b {
+        Some(bb) => emit_cell(tc, op, dtype, &[a, bb], &expected, tags),
+        None => emit_cell(tc, op, dtype, &[a], &expected, tags),
+    }
 }
 
 fn narrow_move_nan_doc() -> String {
@@ -254,6 +264,76 @@ fn narrow_move_nan_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
 }
 
+// ---- narrow-float SELECTION MOVE bundle (§6.16-0009/-0011/§6.15, increment 2) --------------
+//
+// min/max is NOT a uniform family (corrected after Baracuda's sm_89 probe):
+//   - PROPAGATING (max_prop/min_prop): the NaN operand is selected → MOVED, payload+sign exact.
+//   - IEEE (fmax_ieee/fmin_ieee): NaN-SUPPRESSING → returns the OTHER operand; the NaN is
+//     discarded, not moved, so the SURVIVOR's bits are the obligation (a payload-preservation
+//     vector here would over-constrain a conforming impl).
+//   - both-NaN under an IEEE arm: `f{max,min}_ieee(a,b)` returns `b` (§6.15 decomposition) — the
+//     one case a NaN survives; the oracle authors it, not assumed equal to prop.
+// Every cell here has a NaN operand, so the §6.15 NaN arm decides and no value comparison runs.
+
+/// The raw-bit SELECTION oracle: which operand's bits move to the output (NaN arm only).
+fn select_move(op: &str, a: &[u8], b: &[u8], dtype: &str) -> Vec<u8> {
+    let (an, bn) = (is_nan(dtype, a), is_nan(dtype, b));
+    let pick: &[u8] = match op {
+        "max_prop" | "min_prop" => {
+            if an { a } else if bn { b } else { panic!("select cell needs a NaN operand") }
+        }
+        "fmax_ieee" | "fmin_ieee" => {
+            if an { b } else if bn { a } else { panic!("select cell needs a NaN operand") }
+        }
+        _ => panic!("unknown select op {op}"),
+    };
+    pick.to_vec()
+}
+
+fn select_cell(tc: u32, op: &str, dtype: &str, a: &[u8], b: &[u8], tags: &str) -> String {
+    let expected = select_move(op, a, b, dtype);
+    emit_cell(tc, op, dtype, &[a, b], &expected, tags)
+}
+
+fn narrow_select_nan_doc() -> String {
+    struct D {
+        name: &'static str,
+        bytes: usize,
+        snan: u16,      // signaling NaN (or the sole NaN for f8e4m3fn)
+        qnan_rich: u16, // quiet NaN, rich payload (or the neg NaN for f8e4m3fn)
+        one: u16,       // a representable finite (1.0), the non-NaN operand
+    }
+    let dtypes = [
+        D { name: "bf16", bytes: 2, snan: 0x7F81, qnan_rich: 0x7FD5, one: f32_to_bf16(1.0) },
+        D { name: "f16", bytes: 2, snan: 0x7C01, qnan_rich: 0x7E55, one: 0x3C00 },
+        D { name: "f8e5m2", bytes: 1, snan: 0x7D, qnan_rich: 0x7F, one: f32_to_e5m2(1.0) as u16 },
+        D { name: "f8e4m3fn", bytes: 1, snan: 0x7F, qnan_rich: 0xFF, one: f32_to_e4m3(1.0) as u16 },
+    ];
+    let bytes_of = |val: u16, n: usize| -> Vec<u8> {
+        if n == 2 { val.to_be_bytes().to_vec() } else { vec![val as u8] }
+    };
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for d in &dtypes {
+        let nan = bytes_of(d.snan, d.bytes);
+        let other = bytes_of(d.qnan_rich, d.bytes);
+        let one = bytes_of(d.one, d.bytes);
+        // PROPAGATING: the NaN moves, both operand positions.
+        for op in ["max_prop", "min_prop"] {
+            cells.push(select_cell(tc, op, d.name, &nan, &one, "\"moved-nan\",\"select-propagate\",\"6.16-0009\"")); tc += 1;
+            cells.push(select_cell(tc, op, d.name, &one, &nan, "\"moved-nan\",\"select-propagate\",\"6.16-0009\"")); tc += 1;
+        }
+        // IEEE: suppress the NaN, return the finite survivor (both positions).
+        for op in ["fmax_ieee", "fmin_ieee"] {
+            cells.push(select_cell(tc, op, d.name, &nan, &one, "\"moved-survivor\",\"select-ieee-suppress\",\"6.15\"")); tc += 1;
+            cells.push(select_cell(tc, op, d.name, &one, &nan, "\"moved-survivor\",\"select-ieee-suppress\",\"6.15\"")); tc += 1;
+            // both-NaN: returns b (the second operand) — distinct payloads so the survivor is observable.
+            cells.push(select_cell(tc, op, d.name, &nan, &other, "\"moved-nan\",\"select-ieee-both-nan\",\"6.15\"")); tc += 1;
+        }
+    }
+    bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
+}
+
 /// Assemble a bundle document from its cells. Header strings are shared across bundles so the
 /// arith bundle regenerates byte-for-byte.
 fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String {
@@ -285,4 +365,5 @@ fn main() {
     write_bundle("/corpus/ops-arith.json", &arith_doc());
     write_bundle("/corpus/ops-transcendental-nan.json", &transcendental_nan_doc());
     write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());
+    write_bundle("/corpus/ops-narrow-select-nan.json", &narrow_select_nan_doc());
 }
