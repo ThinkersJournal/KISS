@@ -1,0 +1,37 @@
+{
+  "schema": "kiss-grammar-region-vectors-v1",
+  "generated_from": "conformance/src/grammar.rs::emit_grammar_vectors_json (the region codec)",
+  "spec_source": "spec/grammar.md Appendix A.1",
+  "clause": "KISS-GRAMMAR-6.8-0001",
+  "freeze_gate": "KISS-GRAMMAR-8-0004 / -0005 (umbrella §5.3)",
+  "coverage_note": "This artifact carries the region WIRE FORM of the Appendix A.1 golden vectors this codec can build: G1 and G4. It is generated from conformance/src/grammar.rs, and conformance/tests/grammar_vectors.rs asserts (a) the committed file is byte-identical to a fresh generation, so a stale artifact fails CI, and (b) the rendered bytes agree with the hand-maintained hex in spec/grammar.md Appendix A.1 -- which is the binding that did not exist before: the goldens were a Rust `const` with no tie to the spec, so the two could diverge silently. WHAT THIS DOES NOT CARRY, each with a different reason so a reader knows what to do next: (i) G2, G3 and G5 are DECLARED in Appendix A.1 and have no builder in this crate, so they are named in `unrendered_vectors` rather than omitted quietly -- rendering them needs the gather, default-attribute and extract shapes built, not a wider corpus. (ii) The op vocabulary is NOT exercised: G1 and G4 place `add`, `mul` and (via G2, absent) `gather`, so a divergence on any other KISS-Ops op name is invisible to a byte-match against this set -- op-name agreement is a different instrument's job. (iii) The declared KISS-Classify op-CATEGORY set has 24 members and no region vector here places any of them; a kernel class absent from every corpus in the suite is invisible to this artifact exactly as it is to the others, which is a coverage question owned upstream and not closed by generating this file. So 'the byte-match passed' means the region wire FORM agrees for the two shapes rendered -- not that the op vocabulary agrees, and not that the corpus spans the domain.",
+  "declared_appendix_vectors": ["G1", "G2", "G3", "G4", "G5"],
+  "rendered_vectors": ["G1", "G4"],
+  "unrendered_vectors": ["G2", "G3", "G5"],
+  "vectors": [
+    {
+      "id": "G1",
+      "description": "three-input elementwise fusion (§2.3), out = (a * b) + c",
+      "n_inputs": 3,
+      "ops_version": "1",
+      "classify_version": "1",
+      "root_kind": "op",
+      "node_count": 5,
+      "extract_count": 0,
+      "wire_bytes": 79,
+      "wire_hex": "4b47524d010003000000010031010031050000000002000000000000000000010000000103006d756c0000000000020001000000020000000103006164640100000000020000000000030000000000"
+    },
+    {
+      "id": "G4",
+      "description": "repeated-bind / structural dedup, out = a + a",
+      "n_inputs": 1,
+      "ops_version": "1",
+      "classify_version": "1",
+      "root_kind": "op",
+      "node_count": 3,
+      "extract_count": 0,
+      "wire_bytes": 48,
+      "wire_hex": "4b47524d0100010000000100310100310200000000000000000103006164640100000000020000000000000000000000"
+    }
+  ]
+}

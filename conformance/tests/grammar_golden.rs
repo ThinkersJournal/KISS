@@ -3,6 +3,10 @@
 //! (`out=(a*b)+c`, n_inputs=3) and G4 (`out=a+a`, n_inputs=1).
 
 use kiss_conformance::grammar::*;
+// The Appendix A.1 golden regions (`g1_region`, `g4_region`) are defined ONCE, in
+// `kiss_conformance::grammar`, and reach here through the `grammar::*` import. They were
+// previously re-defined in this file and two others; three copies of a golden vector drift
+// silently and nothing compares them (#466).
 use kiss_conformance::{assert_golden, parse_hex};
 
 const G1_GOLDEN: &str = concat!(
@@ -18,14 +22,6 @@ const G4_GOLDEN: &str = concat!(
     "01 03 00 61 64 64 01 00 00 00 00 02 00 00 00 00 00 00 00 00 00 ",
     "00 00",
 );
-fn g1_region() -> Region {
-    Region::new(3, "1", "1", Node::op("add", vec![
-        Node::op("mul", vec![Node::Bind(0), Node::Bind(1)]), Node::Bind(2)]))
-}
-fn g4_region() -> Region {
-    Region::new(1, "1", "1", Node::op("add", vec![Node::Bind(0), Node::Bind(0)]))
-}
-
 /// KISS-GRAMMAR-6.8-0001 — region serialization field order, incl. the trailing
 /// empty `extract_count`. Teeth: an impl that omits the trailing `00 00`
 /// extract_count for an empty extract list (2 bytes short) fails the golden.
