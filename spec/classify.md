@@ -1496,7 +1496,7 @@ separating a registered namespace from that namespace's capability-set token.
   digest (the *same* byte string measured against the threshold, so a producer may
   disagree about *whether* to digest but never about *what* is digested). A namespace with
   no length-conditional field omits `threshold`/`digest_input` and states so in its
-  `coverage_note`. *Test:*
+  `coverage_note`; §6.8-0015 pins **how** that statement is made. *Test:*
   `test_namespace_vocabulary_generated_vectors_cover_canonicalization`.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
@@ -1654,6 +1654,23 @@ separating a registered namespace from that namespace's capability-set token.
   > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
   > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
   > evaluated — a claim in the shape of a check, and this clause would have bought nothing.
+
+- **KISS-CLASSIFY-6.8-0015** — **An exemption is declared, not narrated.** §6.8-0013 lets a
+  namespace with no length-conditional field omit `threshold`/`digest_input` and *"state so in
+  its `coverage_note`"*. A `coverage_note` is **free prose**: a reader can check that it is
+  **present** and can never check that it **says so**, so as written the exemption is
+  **self-granting** — a note saying anything at all discharges it, including a note that says
+  nothing relevant. A manifest claiming that exemption MUST therefore carry a machine-readable
+  **`omits`** list naming exactly the required pins it does not supply, and a reader MUST
+  reject with a typed decline any manifest whose declared `omits` set differs from the set
+  actually absent from its `vectors` — in **either** direction, since an over-declaration
+  conceals a pin that is present-but-unclaimed exactly as an under-declaration conceals one
+  that is missing. The `coverage_note` remains, carries the human reason, and carries **no
+  obligation**. This is §6.8-0014's **envelope** split applied to the exemption: KISS checks
+  that the claim is **present and in an evaluable form rather than prose**, while whether the
+  reason is a good one stays the maintainer's — KISS cannot read a namespace's vocabulary
+  content (§6.8-0004) and so cannot know whether a field is genuinely length-conditional.
+  *Test:* `test_namespace_vocabulary_omits_matches_absent_pins`.
 
 ### 6.9 Foundational independence and opaque carry
 
@@ -1895,6 +1912,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0012 | `test_namespace_vocabulary_declarative_production_split` |
 | KISS-CLASSIFY-6.8-0013 | `test_namespace_vocabulary_generated_vectors_cover_canonicalization` |
 | KISS-CLASSIFY-6.8-0014 | `test_namespace_vocabulary_derivability_witness` |
+| KISS-CLASSIFY-6.8-0015 | `test_namespace_vocabulary_omits_matches_absent_pins` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |

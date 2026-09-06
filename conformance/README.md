@@ -178,7 +178,7 @@ default build and CI stay GPU-free.
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 31<!-- bound:synth_backed -->/130<!-- bound:synth_clauses --> and the highest Classify at 64<!-- bound:classify_backed -->/109<!-- bound:classify_clauses -->; Announce is 36<!-- bound:announce_backed -->/76<!-- bound:announce_clauses -->. Every one has a
+  Synth at 31<!-- bound:synth_backed -->/130<!-- bound:synth_clauses --> and the highest Classify at 64<!-- bound:classify_backed -->/110<!-- bound:classify_clauses -->; Announce is 36<!-- bound:announce_backed -->/76<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
