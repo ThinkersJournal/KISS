@@ -238,11 +238,9 @@ fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
     );
 
     // ... and `dedup` is NOT exemptible either, mirroring the `order` case below.
-    let mut bad_dedup = set_key(
-        gen_fields(),
-        "vectors",
-        "[{\"pins\": \"order\"}, {\"pins\": \"threshold\"}, {\"pins\": \"digest_input\"}]",
-    );
+    // reuses `no_dedup`'s vector set rather than restating it (review suggestion):
+    // the two cases differ ONLY in the `pins_exempt` field below.
+    let mut bad_dedup = no_dedup.clone();
     bad_dedup.push(("pins_exempt", "[\"dedup\"]"));
     assert_eq!(
         check_generated_vector_coverage(&validate_envelope(&build_from(&bad_dedup)).unwrap()),
