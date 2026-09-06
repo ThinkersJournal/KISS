@@ -486,7 +486,7 @@ fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
     }
 }
 
-/// KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
+/// Backs KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
 ///
 /// `decline_wire_kinds_are_injective` asserts pairwise distinctness over
 /// `all_decline_wire_kinds()` — the `KeyDecline` enum's wire strings. That is a
