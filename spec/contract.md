@@ -694,8 +694,9 @@ outer length-prefix (§6.1-0005).
   §6.5), and a reader MUST NOT assume `kernel_name` equals `entry_point`. *Test:*
   `test_contract_kernel_name_distinct`.
 - **KISS-CONTRACT-6.3-0011** — The Identity `target_capability` is the **single normative
-  authority** for the compilation target. When the `accept_predicate` `structure_key` embeds a
-  target component (§6.3-0002), that component MUST equal the `target_capability` byte-for-byte;
+  authority** for the compilation target. The `accept_predicate` `structure_key` carries a target
+  component by definition (§6.3-0002), and that component MUST equal the `target_capability`
+  byte-for-byte;
   a reader that detects a `structure_key` target component disagreeing with `target_capability`
   MUST reject the contract with a typed decline, and MUST source the target solely from
   `target_capability` (§6.3-0007, §6.5-0003), never from a second target value that could
@@ -710,11 +711,7 @@ are **owned upstream and referenced, not defined here**: the cell op-category to
 op-family set**, each spelled verbatim exactly as its owning vocabulary pins it and versioned
 there (KISS-Classify / KISS-Ops respectively); on any divergence the upstream set governs, and
 a member added upstream reaches this table only through a contract-schema bump that adds a row
-(§8-0002). For reference, at this schema version the KISS-Classify cell op-category set is
-`{elementwise-unary, elementwise-binary, elementwise-ternary, reduction, scan, contraction,
-normalization, softmax, indexing, embedding, shape/layout}` and the KISS-Ops op-family set is
-`{arithmetic, rounding, transcendental, binary_math, bitwise, logical, activation, minmax,
-select, comparison, reduction, scan, contraction, normalization, gather_scatter, shape}`. The
+(§8-0002). The
 family checked is the KISS-Ops op family of the op the `op_identity` names (the Semantics DAG
 root's op, §6.3-0003 / §6.4-0002); for a **fusion**, that is the family of the fusion **root**
 op, not of an interior node — which is why the `contraction`, `normalization`, and `softmax`
@@ -962,8 +959,10 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   those arrays from `rank` alone. The per-operand base offset `off{i}` (§6.5-0004a class 4)
   is a **single scalar** value per operand — one linear base offset, not a rank-length array —
   and a consumer MUST NOT size it from `rank`. An implementation MUST NOT require a consumer to
-  recover `rank` by parsing the `accept_predicate` bytes (§6.3-0002 forbids reinterpreting
-  them). *Test:* `test_contract_rank_declared`.
+  recover `rank` by parsing the `accept_predicate` bytes: a consumer MUST NOT be made to
+  depend on another token's internal structure to size its own arrays. (§6.3-0002 forbids
+  **re-encoding, truncating or reinterpreting** the token — it does not forbid INSPECTING a
+  component, and §6.3-0006 and §6.3-0011 require exactly that.) *Test:* `test_contract_rank_declared`.
 - **KISS-CONTRACT-6.5-0013** — The Interface MUST carry an explicit scalar-op-param **count**
   and a per-param **dtype list** fixing the number and order of the `param{i}` launch scalars
   (§6.5-0004a class 8), and MUST carry, for a data-dependent read, an **index-operand
