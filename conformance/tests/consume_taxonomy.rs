@@ -260,14 +260,33 @@ fn test_consume_determinism_class_exact_byte() {
     // assertions are falsifiable.
     let outside_enum = {
         let mut t = p.clone();
-        while let (Some(a), Some(b)) = (t.find('{'), t.find('}')) {
-            if a >= b {
-                break;
+        // ⚠️ The closing brace is found RELATIVE TO THE OPENING ONE. Searching for both
+        // from the start and bailing when `a >= b` meant a stray `}` BEFORE the first `{`
+        // aborted the strip entirely -- leaving `outside_enum` equal to the whole block,
+        // which silently restores the very tautology this extraction exists to remove.
+        // The tautology would have moved from the assertion into the extraction feeding it.
+        while let Some(a) = t.find('{') {
+            match t[a..].find('}') {
+                Some(rel) => t.replace_range(a..=a + rel, " "),
+                None => break, // an unbalanced `{` with no closer: nothing more to strip
             }
-            t.replace_range(a..=b, " ");
         }
         t
     };
+    // ⚠️ AND THE EXTRACTION ASSERTS ITS OWN SUCCESS. A strip that silently does nothing
+    // returns the full block and every assertion below reverts to searching text the enum
+    // supplies -- passing for the old, vacuous reason. A surviving brace means the
+    // extraction failed, and that must be LOUD rather than a quiet return to tautology.
+    // The property is that no enum MEMBER survives -- not that no brace character does.
+    // A first version asserted `!contains('{') && !contains('}')` and false-alarmed on a
+    // stray unmatched `}` even though the listing HAD been stripped correctly: an
+    // over-broad self-check that reports a defect where there is none.
+    for member in &ops {
+        assert!(
+            !outside_enum.contains(&member.to_lowercase()),
+            "KISS-CONSUME-6.0-0001: the enum member {member:?} survived the strip, so the              assertions below would search text the enum listing supplies and could not              fail -- the tautology this extraction exists to remove has moved into the              extraction itself"
+        );
+    }
     assert!(
         outside_enum.contains("exact byte") || outside_enum.contains("exact-byte"),
         "KISS-CONSUME-6.0-0001: the clause does not SELECT the exact-byte determinism class          in its own prose (the enum listing does not count -- it is required separately)"
