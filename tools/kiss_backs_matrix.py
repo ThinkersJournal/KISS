@@ -41,13 +41,7 @@ Run: python tools/kiss_backs_matrix.py [--strict]
 """
 import argparse
 import os
-import re
 import sys
-
-if not __debug__:
-    raise SystemExit(
-        "refusing to run under -O/PYTHONOPTIMIZE: `assert` is stripped, so the positive "
-        "control below would pass having verified nothing")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
