@@ -194,3 +194,69 @@ fn test_grammar_golden_regions_are_singly_defined() {
         assert_eq!(hex, artifact_hex(&json, id), "builder and artifact disagree for {id}");
     }
 }
+
+/// ⚠️ THE DECLARED SET IS DERIVED FROM THE APPENDIX, NOT TYPED — and this is the test that makes
+/// that claim falsifiable.
+///
+/// The first version of this artifact hand-wrote `declared_appendix_vectors` as a literal. That is
+/// baracuda's accumulate-on-execution shape: the generator could only ever report what it
+/// RENDERED, and the "declared" list beside it was a qualitative claim with **no failure state** —
+/// **if Appendix A.1 gained a G6, nothing would notice.** A hand-maintained list guarding against a
+/// hand-maintenance failure has exactly one failure mode and it is the one it guards against.
+///
+/// This test reads the appendix INDEPENDENTLY of the library's parser and requires the two to
+/// agree, so a change to either side that the other does not follow reddens.
+#[test]
+fn test_grammar_declared_vectors_are_derived_from_the_appendix() {
+    let md = read_spec();
+    // An independent scan: find Appendix A, then every `*Vector <id>` heading in it.
+    let start = md.find("## Appendix A").expect("spec/grammar.md must carry Appendix A");
+    let rest = &md[start..];
+    let end = rest[3..].find("\n## ").map(|i| i + 3).unwrap_or(rest.len());
+    let appendix = &rest[..end];
+    let mut expected: Vec<String> = Vec::new();
+    for part in appendix.split("*Vector ").skip(1) {
+        let id: String = part.chars().take_while(|c| c.is_ascii_alphanumeric()).collect();
+        if !id.is_empty() && !expected.contains(&id) {
+            expected.push(id);
+        }
+    }
+    // ⚠️ The independent scan must itself find something, or this test agrees with the library by
+    // both finding nothing — two broken parsers reading as consensus.
+    assert!(
+        expected.len() >= 2,
+        "the test's own appendix scan found {} vector(s); it cannot validate the library's \
+         derivation by agreeing with it on an empty set",
+        expected.len()
+    );
+
+    assert_eq!(
+        grammar::declared_appendix_vectors(),
+        expected,
+        "the library's derived declared-vector set disagrees with an independent scan of \
+         spec/grammar.md Appendix A"
+    );
+
+    // ...and the emitted artifact carries the derived set, not a literal.
+    let json = grammar::emit_grammar_vectors_json();
+    for id in &expected {
+        assert!(
+            json.contains(&format!("\"{id}\"")),
+            "Appendix A declares {id}; the artifact must name it as rendered or unrendered"
+        );
+    }
+}
+
+/// ⚠️ AN UNDECLARED RENDERED VECTOR IS A RAISE, NOT AN EXTRA ROW. If the codec renders a vector the
+/// appendix does not name, no count reveals it — the artifact simply carries one more entry. The
+/// generator asserts instead, so the artifact cannot claim a vector the specification does not.
+#[test]
+fn test_grammar_rendered_vectors_are_all_declared() {
+    let declared = grammar::declared_appendix_vectors();
+    for (id, _desc, _region) in grammar::golden_regions() {
+        assert!(
+            declared.contains(&id.to_string()),
+            "golden_regions() renders `{id}`, which Appendix A does not declare"
+        );
+    }
+}
