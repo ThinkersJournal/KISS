@@ -1496,7 +1496,8 @@ separating a registered namespace from that namespace's capability-set token.
   digest (the *same* byte string measured against the threshold, so a producer may
   disagree about *whether* to digest but never about *what* is digested). A namespace with
   no length-conditional field omits `threshold`/`digest_input` and states so in its
-  `coverage_note`; §6.8-0015 pins **how** that statement is made. *Test:*
+  `coverage_note` in the form §6.8-0015 requires — that clause states the requirement and
+  carries its own separate test. *Test:*
   `test_namespace_vocabulary_generated_vectors_cover_canonicalization`.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
