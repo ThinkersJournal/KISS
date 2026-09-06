@@ -259,6 +259,51 @@ fn test_conform_comparator_selection_rule() {
     // order-invariant) → one of the asserts fails.
 }
 
+/// KISS-OPS-6.16-0011 + §6.16-0010 applied to the reduction comparators: §6.16-0011 traces the
+/// fold to the observable output — an ARITHMETIC fold (Sum/Prod, AtomicAdd, the OrderInvariant
+/// class) is COMPUTED, so a NaN result compares by NaN-ness AND QUIETNESS (payload/sign waived);
+/// a pure Max/Min fold is a MOVE, so its NaN is compared EXACT-BYTE (payload included). This is
+/// the first real application of §6.16-0011, and it convicted `order_invariant_agree`'s old
+/// unconditional both-NaN match — live on the §5.3 foreign-kernel differential (harness/differ).
+#[test]
+fn test_conform_reduction_nan_quietness_by_fold_class() {
+    let qnan = f32::from_bits(0x7FC0_0000); // quiet
+    let qnan_b = f32::from_bits(0x7FC0_5678); // quiet, different payload
+    let snan = f32::from_bits(0x7F80_0001); // signaling (quiet bit clear, payload nonzero)
+    assert!(snan.is_nan() && (snan.to_bits() >> 22) & 1 == 0, "0x7F800001 is a signaling NaN");
+
+    // COMPUTED (Sum = arithmetic fold): a signaling NaN where the oracle produced a quiet one
+    // MUST mismatch (§6.16-0010). BORN-RED — the old both-NaN→true accepted it.
+    assert!(
+        compare_monoid_reduced_f32(Monoid::Sum, snan, qnan, 1e30, 1e30).is_err(),
+        "a Sum reduction (COMPUTED) returning signaling-where-quiet must mismatch (§6.16-0010)"
+    );
+    assert!(
+        compare_scattered_f32(Combine::AtomicAdd, &[snan], &[qnan], 1e30, 1e30).is_err(),
+        "an AtomicAdd scatter (COMPUTED) must reject signaling-where-quiet"
+    );
+    // COMPUTED still WAIVES payload/sign: two quiet NaNs (different payloads) match.
+    assert!(
+        compare_monoid_reduced_f32(Monoid::Sum, qnan, qnan_b, 1e30, 1e30).is_ok(),
+        "a Sum reduction (COMPUTED) waives NaN payload — two quiet NaNs match"
+    );
+
+    // MOVED (Max = pure fold): exact-byte, so it distinguishes the FULL payload. The move-vs-mint
+    // contrast — Max pins every NaN bit, Sum waives payload but pins quietness.
+    assert!(
+        compare_monoid_reduced_f32(Monoid::Max, snan, qnan, 0.0, 0.0).is_err(),
+        "a Max reduction (MOVED) compares NaN bytes exactly — signaling vs quiet mismatches"
+    );
+    assert!(
+        compare_monoid_reduced_f32(Monoid::Max, qnan, qnan_b, 0.0, 0.0).is_err(),
+        "a Max reduction (MOVED) distinguishes NaN payloads (exact-byte)"
+    );
+    assert!(
+        compare_monoid_reduced_f32(Monoid::Max, snan, snan, 0.0, 0.0).is_ok(),
+        "a Max reduction (MOVED) matches an identical NaN — a clean move"
+    );
+}
+
 /// KISS-CONFORM-6.8-0009 — the exact-byte comparator is the only admissible one for
 /// the exact-byte class; the "order-invariant-in-value" families (max/min monoid
 /// reductions, assign/atomic-max/atomic-min scatter) CARRY exact-byte, and the
