@@ -15,24 +15,28 @@ use crate::hp::{round_atom_to_f32, round_atom_to_f64, Exp, Log, Sin};
 
 /// `max_prop` — NaN-**propagating** maximum (`torch.maximum`). §6.15:
 /// `select(cmp_ne(a,a), a, select(cmp_ne(b,b), b, select(cmp_ge(a,b), a, b)))`.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn max_prop(a: f32, b: f32) -> f32 {
     if a != a { a } else if b != b { b } else if a >= b { a } else { b }
 }
 
 /// `min_prop` — NaN-**propagating** minimum (`torch.minimum`). §6.15:
 /// `select(cmp_ne(a,a), a, select(cmp_ne(b,b), b, select(cmp_le(a,b), a, b)))`.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn min_prop(a: f32, b: f32) -> f32 {
     if a != a { a } else if b != b { b } else if a <= b { a } else { b }
 }
 
 /// `fmax_ieee` — NaN-**suppressing** maximum (IEEE-754 maxNum). §6.15:
 /// `select(cmp_ne(a,a), b, select(cmp_ne(b,b), a, select(cmp_ge(a,b), a, b)))`.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn fmax_ieee(a: f32, b: f32) -> f32 {
     if a != a { b } else if b != b { a } else if a >= b { a } else { b }
 }
 
 /// `fmin_ieee` — NaN-**suppressing** minimum (IEEE-754 minNum). §6.15:
 /// `select(cmp_ne(a,a), b, select(cmp_ne(b,b), a, select(cmp_le(a,b), a, b)))`.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn fmin_ieee(a: f32, b: f32) -> f32 {
     if a != a { b } else if b != b { a } else if a <= b { a } else { b }
 }
@@ -43,21 +47,25 @@ pub fn fmin_ieee(a: f32, b: f32) -> f32 {
 // generalizes. Branch structure is identical to the f32 forms above.
 
 /// `max_prop` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn max_prop_f64(a: f64, b: f64) -> f64 {
     if a != a { a } else if b != b { b } else if a >= b { a } else { b }
 }
 
 /// `min_prop` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn min_prop_f64(a: f64, b: f64) -> f64 {
     if a != a { a } else if b != b { b } else if a <= b { a } else { b }
 }
 
 /// `fmax_ieee` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn fmax_ieee_f64(a: f64, b: f64) -> f64 {
     if a != a { b } else if b != b { a } else if a >= b { a } else { b }
 }
 
 /// `fmin_ieee` at `f64` — the §6.13 decomposition, `f64` compute dtype.
+#[allow(clippy::eq_op)] // `a != a` renders §6.15's cmp_ne(a,a) is-NaN primitive verbatim, not a typo
 pub fn fmin_ieee_f64(a: f64, b: f64) -> f64 {
     if a != a { b } else if b != b { a } else if a <= b { a } else { b }
 }

@@ -16,6 +16,9 @@
 use kiss_conformance::hp::{round_atom_to_f32, round_atom_to_f64, Exp};
 
 /// (x, f64 bits, f32 bits) — oracle-agreed (MPFR ≡ Arb ≡ mpmath).
+// anchor INPUTS are exact f64 evaluation points (here ln2); deliberately literal so the whole
+// oracle-agreed table is ONE self-contained record, not std::consts-derived (clippy::approx_constant).
+#[allow(clippy::approx_constant)]
 const EXP_ANCHORS: &[(f64, u64, u32)] = &[
     (0.0, 0x3FF0000000000000, 0x3F800000),               // exp(0) = 1 exactly
     (1.0, 0x4005BF0A8B145769, 0x402DF854),               // e

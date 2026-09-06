@@ -11,6 +11,9 @@
 use kiss_conformance::hp::{round_atom_to_f32, round_atom_to_f64, Log};
 
 /// (x, f64 bits, f32 bits) of ln(x) — oracle-agreed.
+// anchor INPUTS are exact f64 evaluation points (e, √2, 1/√2); deliberately literal so the whole
+// oracle-agreed table is ONE self-contained record, not std::consts-derived (clippy::approx_constant).
+#[allow(clippy::approx_constant)]
 const LOG_ANCHORS: &[(f64, u64, u32)] = &[
     (1.0, 0x0000000000000000, 0x00000000),               // log(1) = +0 exactly
     (2.0, 0x3FE62E42FEFA39EF, 0x3F317218),               // ln2

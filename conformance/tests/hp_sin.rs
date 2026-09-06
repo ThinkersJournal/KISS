@@ -13,6 +13,9 @@
 use kiss_conformance::hp::{round_atom_to_f32, round_atom_to_f64, Sin};
 
 /// (x, f64 bits, f32 bits) of sin(x) — oracle-agreed.
+// anchor INPUTS are exact f64 evaluation points (π/2, π/4, π, 2π); deliberately literal so the whole
+// oracle-agreed table is ONE self-contained record, not std::consts-derived (clippy::approx_constant).
+#[allow(clippy::approx_constant)]
 const SIN_ANCHORS: &[(f64, u64, u32)] = &[
     (0.0, 0x0000000000000000, 0x00000000),               // sin(0) = +0
     (0.5, 0x3FDEAEE8744B05F0, 0x3EF57744),
