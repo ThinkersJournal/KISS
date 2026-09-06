@@ -106,6 +106,42 @@ fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
     );
 }
 
+/// Enforces KISS-CLASSIFY-6.8-0013 — a MALFORMED digest_input vector and a MISMATCHED one
+/// are different conditions and must not share a decline code.
+///
+/// ⚠️ A review flagged the two `DigestInputNotIdentical` arms as redundant and prescribed
+/// collapsing them into a wildcard. The redundancy was real; the remedy would have made
+/// the conflation PERMANENT. A vector missing `input` was being told "your digest_input is
+/// not identical" -- false, and it points the author at a comparison rather than at the
+/// absent field. Same axis as #420's `UnsupportedDtype` collapsing spec-illegal with
+/// not-yet-implemented, one level down.
+#[test]
+fn test_namespace_vocabulary_digest_input_malformed_is_not_mismatched() {
+    // a `digest_input` vector with NO `input` field: MALFORMED, not mismatched.
+    let no_input = set_key(
+        gen_fields(),
+        "vectors",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"input\": \"at-512\", \"output\": \"inline\"},           {\"pins\": \"digest_input\", \"output\": \"a,b,c\"}]",
+    );
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&no_input)).unwrap()),
+        Err(ManifestDecline::MissingField("input")),
+        "a digest_input vector with no `input` is MALFORMED -- it must not be reported as a          byte mismatch, which would send the author to a comparison instead of the field"
+    );
+
+    // ... and with no `output`, naming the OTHER field rather than a generic decline.
+    let no_output = set_key(
+        gen_fields(),
+        "vectors",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"input\": \"at-512\", \"output\": \"inline\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\"}]",
+    );
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&no_output)).unwrap()),
+        Err(ManifestDecline::MissingField("output")),
+        "the absent field must be NAMED, not folded into a shared code"
+    );
+}
+
 // ---- §6.8-0008: envelope shape --------------------------------------------------------------
 
 #[test]

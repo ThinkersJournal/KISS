@@ -236,10 +236,24 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
         }
         let measured = v.get("input").and_then(|j| j.as_str());
         let declared = v.get("output").and_then(|j| j.as_str());
+        // ⚠️ MALFORMED AND MISMATCHED ARE DIFFERENT CONDITIONS AND GET DIFFERENT CODES.
+        // A first version returned `DigestInputNotIdentical` from both a genuine byte
+        // mismatch AND a vector missing a field -- so a manifest whose vector has no
+        // `input` was told "your digest_input is not identical", which is false and points
+        // the author at a comparison instead of at the absent field.
+        //
+        // A review flagged the two arms as REDUNDANT (they returned the same value) and
+        // prescribed collapsing them into a wildcard. That is right about the smell and
+        // wrong about the cure: collapsing MERGES the two conditions permanently and adds
+        // a `_` arm that swallows any future shape silently. The redundancy was the
+        // SYMPTOM; the under-differentiation was the defect.
+        //
+        // Exhaustive with no wildcard, so a new variant cannot fall through unnoticed.
         match (measured, declared) {
             (Some(m), Some(d)) if m.as_bytes() == d.as_bytes() => {}
             (Some(_), Some(_)) => return Err(ManifestDecline::DigestInputNotIdentical),
-            _ => return Err(ManifestDecline::DigestInputNotIdentical),
+            (None, _) => return Err(ManifestDecline::MissingField("input")),
+            (_, None) => return Err(ManifestDecline::MissingField("output")),
         }
     }
     Ok(())
