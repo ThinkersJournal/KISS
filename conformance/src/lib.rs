@@ -201,19 +201,23 @@ pub fn compare_f32(class: DeterminismClass, actual: f32, expected: f32, ulp_boun
             }
         }
         DeterminismClass::UlpTolerance => {
-            // Computed-NaN result comparison (Conform §6.8-0010): under the value
-            // comparator a computed NaN compares by NaN-**ness** — two NaNs match
-            // whatever their payload/sign, and a one-sided NaN (NaN where a finite
-            // or infinite value is expected, or vice versa) is a mismatch. The
-            // exact-byte arm above is the moved/POD domain and still bit-compares.
+            // Computed-NaN result comparison (§6.8-0010 / §6.16-0010): under the value
+            // comparator a computed NaN compares by NaN-**ness** AND — where the dtype admits a
+            // signaling NaN (f32 does) — by QUIETNESS; payload and sign are uncompared, and a
+            // one-sided NaN (NaN where a finite or infinite value is expected, or vice versa) is
+            // a mismatch. Routed through the one provenance mechanism so this arm cannot be
+            // quietness-blind (#434 site 1); the exact-byte arm above is the moved/POD domain and
+            // still bit-compares. This arm is not reached by a live conformance run (corpus NaN
+            // cells route to `compare_nan_output` first), but `compare_f32` is a public comparator
+            // with this direct contract, kept consistent with `agree`/`compare_c32_transcendental`/
+            // the reduction comparators.
             if actual.is_nan() || expected.is_nan() {
-                return if actual.is_nan() && expected.is_nan() {
-                    Ok(())
-                } else {
-                    Err(format!(
-                        "computed-NaN mismatch: exactly one side is NaN (actual {actual}, expected {expected})"
-                    ))
-                };
+                return crate::nan_provenance::compare_nan_output(
+                    "f32",
+                    &actual.to_be_bytes(),
+                    &expected.to_be_bytes(),
+                    crate::nan_provenance::NanProvenance::Computed,
+                );
             }
             let d = ulp_distance_f32(actual, expected);
             if d <= ulp_bound {

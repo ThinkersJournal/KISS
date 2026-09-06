@@ -64,6 +64,15 @@ fn test_conform_nan_result_compares_by_nanness() {
     assert!(compare_f32(ulp, nan_a, 5.0, 2).is_err(), "NaN where a finite value is expected must mismatch (ULP)");
     assert!(compare_f32(ulp, 5.0, nan_a, 2).is_err(), "finite where NaN is expected must mismatch (ULP)");
     assert!(compare_f32(ulp, nan_a, f32::INFINITY, 2).is_err(), "NaN vs infinity must mismatch (ULP)");
+    // §6.16-0010 quietness reaches the ULP/tolerance NaN arm too (#434 site 1): a SIGNALING
+    // result where a QUIET one is expected mismatches (payload/sign still uncompared). Born-red —
+    // under the old NaN-ness-only arm this passed. This arm is not reached by a live conformance
+    // run (corpus NaN cells route to compare_nan_output first), but compare_f32 is a public
+    // comparator with this direct contract, kept consistent with agree/c32/the reductions.
+    assert!(
+        compare_f32(ulp, snan, nan_a, 2).is_err(),
+        "signaling where quiet is expected must mismatch under ULP/tolerance (§6.16-0010)"
+    );
     // ordinary finite ULP behaviour is unchanged.
     assert!(compare_f32(ulp, 1.0, 1.0, 0).is_ok());
     assert!(compare_f32(ulp, 1.0, 2.0, 0).is_err());
