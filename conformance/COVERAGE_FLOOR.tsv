@@ -413,8 +413,39 @@
 # a floor fact; Linux CI runs --base-ref). lint (33) is UNCHANGED and this change moves no clause
 # lint<->harness, so the un-diffed lint SET (the INCONCLUSIVE the absent --base-ref reports) is benign
 # for this change; clauses 939 (unchanged -- -0010 already existed, now backed not added).
+#
+# #415 items 1 and 3 BUILT (KISS-CLASSIFY-6.8-0015 `omits`, -0016 threshold straddle):
+# harness 384 -> 386, untested 498 -> 496. Both clauses move untested -> harness. lint (33)
+# and proven (20) UNCHANGED; no clause arrives, so this is a pure earn, not a substitution
+# and not a re-categorisation.
+#
+# THE OWED CHECK, DISCHARGED. The -0015 note upstream says the clause "is EXPECTED TO BE
+# SHORT-LIVED ... if it is still `untested` in a week, that is a lapse rather than a limit."
+# It was untested for about four hours. The tool's STALE LEDGER block named both ids as
+# now-enforced before the ledger was refreshed, which is the evidence they MOVED rather than
+# being reclassified around: harness rose by exactly the two that left untested.
+#
+# -0016 IS THE CLAUSE THAT ANSWERED A REFUSAL. Item 1 was reported un-buildable because a
+# vector carried `pins`/`input`/`output` and no byte count, so the strongest available check
+# was ADJACENCY, and adjacency does not establish straddling. -0016 added `threshold_of` and
+# `enumeration_bytes`, and the check now requires an N / N+1 pair whose `token` values DIFFER.
+# The clause's own counter-example -- 3 and 4 bytes, adjacent, both far below a 512-byte
+# boundary -- is a test row that must decline.
+#
+# ⚠️ THE KEY NAMES MOVED TWICE. #442 settled the spelling so the implementation would not pin
+# the wrong name; #447 then renamed two of the three an hour later (`bytes` ->
+# `enumeration_bytes`, `output` -> `token`) after vulkane's published kiss-vulkan-vocab 0.4.1
+# showed the first spelling would have DECLINED the only conformant manifest that exists.
+# Those four threshold vectors are now a test row asserting Ok(()).
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main` on the rebased
+# head reported "Set the floor to harness 386, lint 33, untested 496." and that output is
+# pasted here. RE-DERIVED after this branch was rebased onto #446 (which moved main's floor
+# to 384/498) -- the pre-rebase derivation of 385/497 was correct against the OLD base and
+# became stale the moment #446 landed. A predicted 497 was circulating; the tool says 496 and
+# the tool is the authority.
 # key	value
-harness	384
+harness	386
 lint	33
-untested	498
+untested	496
 proven	20
