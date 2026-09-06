@@ -32,10 +32,14 @@ import re
 import sys
 
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
-SECNUM = re.compile(r"^(?:§\s*)?(\d+(?:\.\d+)?)\b")
+# `\.\d+)*` — ARBITRARY depth, not two levels: a heading `### 6.19.1` or a clause id
+# `KISS-CONFORM-1.1.1-0001` must not be silently missed or truncated to `6.19` (a false absence
+# in the census / a mis-tracked section). Today's clause ids are two-level and the deeper `6.19.x`
+# headings are `####` sub-parts (not section-tracked), but the regex must not go blind if that changes.
+SECNUM = re.compile(r"^(?:§\s*)?(\d+(?:\.\d+)*)\b")
 # A clause DEFINITION: a bullet whose first token is the bolded id, followed by an em/en dash.
 # Excludes matrix rows (`| KISS-… |`) and prose cross-refs (`§6.6-0007`, bare `KISS-…`).
-CLAUSE_DEF = re.compile(r"^-\s+\*\*(KISS-[A-Z]+-(\d+(?:\.\d+)?)-\d+[a-z]?)\*\*\s*[—–-]")
+CLAUSE_DEF = re.compile(r"^-\s+\*\*(KISS-[A-Z]+-(\d+(?:\.\d+)*)-\d+[a-z]?)\*\*\s*[—–-]")
 
 
 def _is_under(current, sec):
