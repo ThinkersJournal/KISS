@@ -158,8 +158,14 @@ Four families of "obvious" ops split into non-mergeable pairs precisely because 
 edge-case behavior differs and real workloads depend on the difference:
 
 - **`max_prop` / `min_prop`** (NaN-*propagating*, matching `torch.maximum` /
-  `torch.minimum`) versus **`fmax_ieee` / `fmin_ieee`** (IEEE-754 `maxNum` /
-  `minNum`, NaN-*suppressing*, returning the non-NaN operand). Four distinct ops.
+  `torch.minimum` **on NaN propagation** — the axis these ops are pinned against;
+  ±0 parity with torch is **not** claimed here) versus **`fmax_ieee` / `fmin_ieee`**
+  (NaN-*suppressing*, returning the non-NaN operand). Four distinct ops.
+  ⚠️ **`fmax_ieee` / `fmin_ieee` are named for the NaN-suppressing BEHAVIOUR, not for
+  a citation.** They are **not** IEEE 754-2019 `maximumNumber` / `minimumNumber`, which
+  order `-0.0 < +0.0`; KISS pins **operand `a` on a ±0 tie** (§6.15-0001). The earlier
+  754-2008 `maxNum` / `minNum` were **withdrawn** in the 2019 revision, so neither
+  spelling is cited: the semantics are stated here and in §6.15-0001 directly.
 - **`relu`** is `x<0 ? 0 : x` — NaN-*propagating* and `-0.0`-preserving (matching
   `torch.relu`). It is **not** `max(x,0)`, which would scrub NaN and normalize `-0.0`
   to `+0.0`.
@@ -394,8 +400,8 @@ reader holding only KISS-Ops plus the umbrella.
   signed zero and NaN payloads (quiet and signaling) are preserved.
 - **NaN-propagating** — an op that returns a NaN when any operand contributing to the
   result is NaN.
-- **NaN-suppressing** — an op (IEEE `maxNum`/`minNum` family) that returns the non-NaN
-  operand when exactly one operand is NaN.
+- **NaN-suppressing** — an op that returns the non-NaN operand when exactly one operand
+  is NaN (`fmax_ieee` / `fmin_ieee`, §6.15-0001).
 - **Declared ULP** — a per-target accuracy bound (in units in the last place) declared
   by a kernel's contract for a transcendental atom, no looser than the §6.8 ceiling;
   the semantics is "the named function to within the declared ULP," not bit identity.
@@ -457,9 +463,12 @@ reader holding only KISS-Ops plus the umbrella.
 ## 4. Normative References
 
 - **RFC 2119 / RFC 8174** — normative keyword interpretation (uppercase only).
-- **IEEE 754-2019** — floating-point arithmetic, comparison predicates, `maxNum` /
-  `minNum`, rounding-direction attributes, signed zero, quiet/signaling NaN, and
-  subnormals. The per-op float semantics of §6 are pinned against this reference for the
+- **IEEE 754-2019** — floating-point arithmetic, comparison predicates,
+  rounding-direction attributes, signed zero, quiet/signaling NaN, and
+  subnormals. ⚠️ **Not** cited for min/max: 754-2019 **withdrew** 754-2008's `maxNum` /
+  `minNum` and its replacements `maximumNumber` / `minimumNumber` order `-0.0 < +0.0`,
+  which KISS does not (§6.15-0001 pins operand `a` on a ±0 tie). The four KISS minmax
+  ops are defined by §6.15-0001 and their §6.13 decompositions, not by reference. The per-op float semantics of §6 are pinned against **IEEE 754-2019** for the
   IEEE-754 dtypes (`f16`, `f32`, `f64`) only; `bf16` and the FP8 formats
   `f8e4m3fn` / `f8e5m2` are **not** IEEE-754 formats and are pinned explicitly in §6.16.
 - **Open Compute Project (OCP) 8-bit Floating Point Specification (OFP8), FP8 formats
@@ -1370,7 +1379,17 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 - **KISS-OPS-6.15-0001** — `max_prop` and `min_prop` (NaN-propagating) and `fmax_ieee`
   and `fmin_ieee` (NaN-suppressing, returning the non-NaN operand when exactly one operand
   is NaN) MUST be four distinct ops; an implementation MUST NOT merge, alias, or
-  substitute one for another. *Test:* `max_propagates_nan_but_fmax_suppresses_it`.
+  substitute one for another. ⚠️ On a **±0 tie** all four MUST return **operand `a`** —
+  the §6.13 decompositions share the innermost `cmp_ge(a,b) → a` / `cmp_le(a,b) → a`
+  select, and `cmp_ge`/`cmp_le` are both true when the operands differ only in zero sign,
+  so no op in this family is `b`-biased on a tie. **These ops are therefore NOT IEEE
+  754-2019 `maximumNumber` / `minimumNumber`, which order `-0.0 < +0.0`.** The tie is **fixed by the §6.13
+  decompositions themselves** — no separate rule is needed for it — and is additionally
+  pinned bit-for-bit by the 48 signed-zero tie oracle vectors of
+  `conformance/corpus/ops-minmax-signed-zero.json` (KISS-CONFORM §6.5-0008), whose own
+  harness rule is that comparison **MUST be raw bits**: ⚠️ a value compare of
+  `0.0 == -0.0` **passes vacuously** and is not a conformance check.
+  *Test:* `max_propagates_nan_but_fmax_suppresses_it`.
 - **KISS-OPS-6.15-0002** — `relu` MUST be NaN-propagating and `-0.0`-preserving per its
   decomposition `select(cmp_lt(x, const(0)), const(0), x)`; an implementation MUST NOT
   implement `relu` as `max(x, 0)`, which would scrub a NaN input and normalize `-0.0` to
@@ -2846,9 +2865,10 @@ pointwise-semantics difference — while `relu` versus `fmax_ieee(x, const(0))` 
 **semantic** separation in the NaN arm (`fmax_ieee(NaN, 0)` scrubs the NaN to `0` where
 `relu(NaN)` stays NaN through the `select` else arm). That is why `relu` is pinned to
 `select` rather than lowered to whichever `max` a backend happens to supply. The `±0`
-tie behavior of all four minmax ops is pinned bit-for-bit by the §6.13 signed-zero tie
-conformance vectors (raw-bit comparison — a value compare of `0.0 == -0.0` passes
-vacuously).
+tie behavior of all four minmax ops follows from the §6.13 decompositions above, and is
+pinned bit-for-bit by the 48 signed-zero tie oracle vectors of
+`conformance/corpus/ops-minmax-signed-zero.json` (KISS-CONFORM §6.5-0008) — raw-bit
+comparison, because a value compare of `0.0 == -0.0` passes vacuously.
 
 **A.4 The min/max quartet on a NaN operand.** With `a = NaN`, `b = 3.0`: `max_prop(a,b) =
 NaN` (propagate); `fmax_ieee(a,b) = 3.0` (suppress); `min_prop(a,b) = NaN`; `fmin_ieee(a,b)
