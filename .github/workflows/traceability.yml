@@ -195,6 +195,12 @@ jobs:
         run: |
           python tools/kiss_ops.py --emit-manifest
           git diff --exit-code conformance/corpus/op_manifest.json
+      # #459: the corpus op-coverage SHORTFALL (declared/derived-total) must be a visible,
+      # non-decreasing number, not an invisible 1-of-106 that a stalled rollout hides. Ratchets
+      # `declared` against CORPUS_COVERAGE_FLOOR.tsv; a deviation in either direction fails, with a
+      # message naming which of loss / progress / domain-move it is.
+      - name: Corpus op-coverage ratchet (#459)
+        run: python tools/kiss_ops.py --corpus-coverage
       # The lints' OWN tests. Six test_*.py files sat in tools/ with no CI path;
       # one of them (test_kiss_ops_manifest.py) was RED on main, catching #154 in
       # silence. A test nobody runs is not coverage.

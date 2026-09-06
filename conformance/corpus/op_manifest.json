@@ -122,5 +122,9 @@
   ],
   "declared_coverage_set": [
     "add"
-  ]
+  ],
+  "coverage": {
+    "declared": 1,
+    "total": 106
+  }
 }
