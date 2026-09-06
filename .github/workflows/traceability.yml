@@ -162,6 +162,15 @@ jobs:
         run: python tools/test_kiss_cites.py
       - name: Citation audit (reports; does not gate)
         run: python tools/kiss_cites.py
+      # #479: `kiss_cites` audits the REVERSE direction and states its own exemption --
+      # "forward-backed clauses are out of scope by construction". True, and incomplete: for
+      # those, a citation can name the WRONG clause and nothing compares it to the §9 matrix.
+      # Measured: a miscitation to an already-backed clause leaves the ledger BYTE-IDENTICAL,
+      # and one to an uncovered clause is reported as "coverage improved past the floor".
+      - name: Backs-vs-matrix discrimination controls (#479)
+        run: python tools/test_kiss_backs_matrix.py
+      - name: Backs vs §9 matrix disagreement (reports; does not gate)
+        run: python tools/kiss_backs_matrix.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       # A metadata block wedged inside a requirement is not a style defect: a phrase

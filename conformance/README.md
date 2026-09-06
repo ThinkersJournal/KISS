@@ -36,7 +36,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 **387<!-- bound:harness --> of 944<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 238<!-- bound:named --> are
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 237<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
