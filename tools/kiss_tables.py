@@ -16,7 +16,7 @@ list at seventeen tokens. A markdown check finds that class of drift the moment
 it lands, at the PR, instead of years later by inspection.
 
 THE DTYPE SET was the first enumeration checked; the lint now also covers the
-determinism / MathPrecision / refusal / seven-section / reduce_axes / FEAT enums
+determinism / MathFidelity / refusal / seven-section / reduce_axes / FEAT enums
 and the dtype bit-LAYOUT agreement (Ops §6.16 <-> Classify §6.1). The dtype set's owner and
 single source of truth is KISS-CLASSIFY-6.1-0001, whose own words are "The scalar
 dtype set MUST be **exactly** the twenty tokens in the table above (...)". This
@@ -191,9 +191,9 @@ def check(spec_dir):
     # of the enum across the suite must carry EXACTLY the canonical member set.
     violations += check_determinism_enum(spec_dir)
 
-    # (5) the compute-fidelity (MathPrecision) enum — owned by KISS-OPS-6.17-0001,
+    # (5) the compute-fidelity (MathFidelity) enum — owned by KISS-OPS-6.17-0001,
     # same import-never-re-fork rule as the determinism enum.
-    violations += check_mathprecision_enum(spec_dir)
+    violations += check_mathfidelity_enum(spec_dir)
 
     # (6) the KISS-Consume refusal taxonomy — owned by KISS-CONSUME-6.4-0001.
     violations += check_refusal_taxonomy(spec_dir)
@@ -249,11 +249,11 @@ def check_determinism_enum(spec_dir):
     return out
 
 
-# The canonical compute-fidelity (MathPrecision) enum owned by KISS-OPS-6.17-0001.
-MATHPRECISION_MEMBERS = {"bit-stable", "reduced-mantissa-permitted"}
+# The canonical compute-fidelity (MathFidelity) enum owned by KISS-OPS-6.17-0001.
+MATHFIDELITY_MEMBERS = {"bit-stable", "reduced-mantissa-permitted"}
 
 
-def check_mathprecision_enum(spec_dir):
+def check_mathfidelity_enum(spec_dir):
     """Every `{...}` form containing `bit-stable`, anywhere in the suite, MUST carry
     exactly the two canonical members — Contract/Consume/Emit/Synth import this enum
     "verbatim, never re-forked", so a downstream copy that renames or adds a value is
@@ -271,27 +271,27 @@ def check_mathprecision_enum(spec_dir):
                        " ".join(m.group(0)[1:-1].split())) if t.strip()}
             if stem == "ops":
                 owner_seen = True
-            if members != MATHPRECISION_MEMBERS:
-                miss = sorted(MATHPRECISION_MEMBERS - members)
-                extra = sorted(members - MATHPRECISION_MEMBERS)
+            if members != MATHFIDELITY_MEMBERS:
+                miss = sorted(MATHFIDELITY_MEMBERS - members)
+                extra = sorted(members - MATHFIDELITY_MEMBERS)
                 parts = []
                 if miss:
                     parts.append(f"missing {miss}")
                 if extra:
                     parts.append(f"unexpected {extra}")
-                out.append(f"{stem}.md MathPrecision enum re-forked: {'; '.join(parts)} "
+                out.append(f"{stem}.md MathFidelity enum re-forked: {'; '.join(parts)} "
                            f"(vs KISS-OPS-6.17-0001 owner)")
     if not owner_seen:
-        out.append("KISS-OPS-6.17-0001 owner: no canonical MathPrecision enum found in ops.md")
+        out.append("KISS-OPS-6.17-0001 owner: no canonical MathFidelity enum found in ops.md")
     # the owner's count word `two-member` must equal the member-set size
     ops = os.path.join(spec_dir, "ops.md")
     if os.path.exists(ops):
         otext = open(ops, encoding="utf-8").read()
         m = re.search(r"the\s+([a-z]+)-member enum `\{[^}]*bit-stable", otext)
         words = {"two": 2, "three": 3}
-        if m and words.get(m.group(1)) not in (None, len(MATHPRECISION_MEMBERS)):
+        if m and words.get(m.group(1)) not in (None, len(MATHFIDELITY_MEMBERS)):
             out.append(f"§6.17-0001 says '{m.group(1)}-member' but the enum has "
-                       f"{len(MATHPRECISION_MEMBERS)} members")
+                       f"{len(MATHFIDELITY_MEMBERS)} members")
     return out
 
 
@@ -609,7 +609,7 @@ COVERS = [
     ("KISS-OPS-6.0-0001",
      "a sub-standard re-forks the determinism/fidelity enum instead of importing it"),
     ("KISS-OPS-6.17-0001",
-     "a sub-standard re-forks the compute-fidelity (MathPrecision) enum instead of importing it"),
+     "a sub-standard re-forks the compute-fidelity (MathFidelity) enum instead of importing it"),
     ("KISS-CONSUME-6.4-0001",
      "a refusal-taxonomy restatement drops/renames one of the four categories"),
     ("KISS-CONTRACT-6.2-0001",
@@ -654,7 +654,7 @@ def main():
     print("=" * 68)
     print(f"  dtype set (owner KISS-CLASSIFY-6.1-0001): {len(auth)} tokens")
     print(f"    {' '.join(auth)}")
-    print("  + determinism, MathPrecision, refusal-taxonomy and seven-section-core enums")
+    print("  + determinism, MathFidelity, refusal-taxonomy and seven-section-core enums")
     print("-" * 68)
     if violations:
         print(f"  DRIFT — {len(violations)} enumeration(s) disagree with the owner:")

@@ -114,7 +114,7 @@ token and in an operand descriptor), and, for sub-byte and complex types, its
   not a dtype.** For example, whether a `f32` multiply-add must be bit-stable
   full-precision or may use a reduced-mantissa reduction (e.g. TF32-style tensor
   math) is a *numeric-fidelity* fact, not a byte-layout fact; it is owned by
-  KISS-Ops as a `MathPrecision`-style fidelity attribute (alongside the Ops-owned
+  KISS-Ops as a `MathFidelity`-style fidelity attribute (alongside the Ops-owned
   determinism/fidelity enum) and surfaced in a kernel's KISS-Contract guarantees.
   Classify therefore carries **one** binary32 storage dtype, `f32`, and defines no
   strict-precision variant; a kernel that needs bit-stable compute states that
@@ -506,7 +506,7 @@ where it fixes storage bytes.
   token; equivalently, the closed twenty-two-token set (§6.1-0001) contains no such
   token and the dtype record carries no precision field. Compute precision — whether
   a computation must be bit-stable full-precision or may use a reduced-mantissa
-  reduction — is a **KISS-Ops fidelity attribute** (a `MathPrecision`-style attribute
+  reduction — is a **KISS-Ops fidelity attribute** (a `MathFidelity`-style attribute
   alongside the KISS-Ops-owned determinism/fidelity enum), surfaced in a kernel's
   KISS-Contract guarantees, and MUST NOT be inferred from or attached to a Classify
   dtype token. *Test:* `test_classify_dtypes_are_pure_storage`.
@@ -1228,7 +1228,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   weight, accumulator, and output dtype tokens `<wdt>`/`<acc>`/`<out>`, each from the
   closed §6.1 set (`<wdt>` is the dtype of the caller-designated **weight operand**,
   §6.6-0019, not the operand at any fixed position); and the math-precision code `<mp>` ∈ `{st, rm}` (`st` = bit-stable,
-  `rm` = reduced-mantissa-permitted, resolving to the KISS-Ops MathPrecision value of
+  `rm` = reduced-mantissa-permitted, resolving to the KISS-Ops MathFidelity value of
   KISS-OPS §6.17 per `(primary_dtype, target)` — on an `f32` primary at `cuda:sm80+`,
   `rm` is TF32, §6.17-0006). `<mp>` codes MUST NOT begin with `b` (reserved for the
   batch coordinate), so the geometry and precision groups never collide in spelling. The
@@ -1913,7 +1913,7 @@ reference-crate *semver*. They move independently. A third, Classify-local handl
 > **(8.1 — RESOLVED)** Compute precision is **not** a dtype. The dtype set is pure
 > storage; there is no strict-precision float variant. Whether a computation must be
 > bit-stable full-precision or may use a reduced-mantissa reduction is a **KISS-Ops
-> fidelity attribute** (a `MathPrecision`-style attribute alongside the KISS-Ops
+> fidelity attribute** (a `MathFidelity`-style attribute alongside the KISS-Ops
 > determinism/fidelity enum), surfaced in a kernel's KISS-Contract guarantees
 > (§6.1-0005). **(8.2 — RESOLVED)** Index-only-ness is an **operand role**, not a
 > dtype class. `u32` is an ordinary storage dtype (§6.1-0006); the index/address

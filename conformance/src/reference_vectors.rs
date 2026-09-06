@@ -170,7 +170,7 @@ fn key_acc_mp(
 
 /// A dense `f32/f32/f32`, bit-stable, non-batched contraction group of the given
 /// M/N/K size classes — the common precision-group shape.
-fn ctr(m: SizeClass, n: SizeClass, k: SizeClass, batch: Option<SizeClass>, wdt: &str, acc: &str, out: &str, mp: MathPrecision) -> Contraction {
+fn ctr(m: SizeClass, n: SizeClass, k: SizeClass, batch: Option<SizeClass>, wdt: &str, acc: &str, out: &str, mp: MathFidelity) -> Contraction {
     Contraction {
         m, n, k, k_div: DivBucket::D16, batch,
         wdt: wdt.to_string(), acc: acc.to_string(), out: out.to_string(), mp,
@@ -271,21 +271,21 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             name: "dense_contraction_cuda",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "dense gem, f32 weight/acc/out, bit-stable (ctll/.../st)",
-            key: key("gem", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::Stable))),
+            key: key("gem", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
             token: "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "dense_contraction_vulkan_target",
             clause: "KISS-CLASSIFY-6.8",
             note: "same gem cell on a vulkan capability-set target",
-            key: key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::Stable))),
+            key: key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
             token: "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "gem_batched_cell",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "batched gem carries the b<class> coordinate (cmll/.../bm/...)",
-            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Medium, SizeClass::Large, SizeClass::Large, Some(SizeClass::Medium), "f32", "f32", "f32", MathPrecision::Stable))),
+            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Medium, SizeClass::Large, SizeClass::Large, Some(SizeClass::Medium), "f32", "f32", "f32", MathFidelity::Stable))),
             token: "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
         },
         PositiveVector {
@@ -297,63 +297,63 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
                    names the scale f8e8m0. wdt/acc/out are distinct (i4/f32/bf16) so a \
                    positional resolution yields DIFFERENT BYTES -- do not flatten to \
                    uniform dtypes; that silently destroys the discriminator.",
-            key: key("gem", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, derive_weight_dtype(&["i4", "f8e8m0", "bf16"], 0), "f32", "bf16", MathPrecision::Stable))),
+            key: key("gem", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, derive_weight_dtype(&["i4", "f8e8m0", "bf16"], 0), "f32", "bf16", MathFidelity::Stable))),
             token: "sk4|gem|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
         },
         PositiveVector {
             name: "simt_f32",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
-            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::Stable))),
+            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
             token: "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "tf32",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "TF32, reduced-mantissa mp=rm (same shape as simt_f32, distinct token)",
-            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathPrecision::ReducedMantissa))),
+            key: key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::ReducedMantissa))),
             token: "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm",
         },
         PositiveVector {
             name: "mixed_fp8_e4m3_x_e5m2_f32",
             clause: "KISS-CLASSIFY-6.6-0018",
             note: "mixed-precision FP8: e4m3 x e5m2 -> f32, f32 acc",
-            key: key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e5m2", "f32", "f32", MathPrecision::Stable))),
+            key: key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e5m2", "f32", "f32", MathFidelity::Stable))),
             token: "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st",
         },
         PositiveVector {
             name: "mixed_fp8_e4m3_x_e4m3_f16",
             clause: "KISS-CLASSIFY-6.6-0018",
             note: "mixed-precision FP8: e4m3 x e4m3 -> f16, f32 acc (distinct token from the e5m2 cell)",
-            key: key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e4m3fn", "f32", "f16", MathPrecision::Stable))),
+            key: key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e4m3fn", "f32", "f16", MathFidelity::Stable))),
             token: "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st",
         },
         PositiveVector {
             name: "noncontraction_acc_mp_field",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
-            key: key_acc_mp("red", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::Stable })),
+            key: key_acc_mp("red", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable })),
             token: "sk4|red|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st",
         },
         PositiveVector {
             name: "noncontraction_scan_mp_only",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "scan cell, accumulator == compute (f32) but mp deviates (rm): |-|f32/rm",
-            key: key_acc_mp("scn", "f32", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None, Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::ReducedMantissa })),
+            key: key_acc_mp("scn", "f32", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
             token: "sk4|scn|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm",
         },
         PositiveVector {
             name: "noncontraction_acc_deviating_f64",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
-            key: key_acc_mp("red", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f64".to_string(), mp: MathPrecision::Stable })),
+            key: key_acc_mp("red", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f64".to_string(), mp: MathFidelity::Stable })),
             token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st",
         },
         PositiveVector {
             name: "noncontraction_reduction_mp_only",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
-            key: key_acc_mp("red", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::ReducedMantissa })),
+            key: key_acc_mp("red", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
             token: "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm",
         },
     ]

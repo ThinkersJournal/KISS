@@ -445,7 +445,7 @@ foundational vocabularies mean the ops and the contract format frames the docume
 - **determinism/fidelity enum** — the single canonical KISS-Ops enum `{exact-byte,
   ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), imported verbatim;
   selects which round-trip tier is claimable per op (§6.6).
-- **MathPrecision attribute** — the KISS-Ops compute-fidelity enum `{bit-stable,
+- **MathFidelity attribute** — the KISS-Ops compute-fidelity enum `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17), imported verbatim; surfaced in the produced
   contract's Guarantees section, never re-forked.
 - **artifact** — the built, callable kernel binary/object (the first element of a provision
@@ -482,7 +482,7 @@ foundational vocabularies mean the ops and the contract format frames the docume
   (KISS-OPS §6.3, the termination guarantee); the per-op semantics, the op-name→**op-family**
   classification used by the wrong-op-class category (KISS-OPS §6.1-0003 / §2.7), the single
   canonical **determinism/fidelity enum** `{exact-byte, ULP/tolerance,
-  order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), and the **MathPrecision** attribute
+  order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), and the **MathFidelity** attribute
   `{bit-stable, reduced-mantissa-permitted}` (KISS-OPS §6.17) are **imported verbatim, never
   re-forked**. KISS-Consume re-defines no op and no op meaning.
 - **KISS-Classify** (by version) — DAG edge labeled **STRUCTURAL**, **upstream** dependency:

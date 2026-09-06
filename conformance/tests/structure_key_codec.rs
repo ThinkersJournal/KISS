@@ -444,7 +444,7 @@ fn test_classify_token_roundtrip() {
         Some(Contraction {
             m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
             batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-            mp: MathPrecision::Stable,
+            mp: MathFidelity::Stable,
         }),
     ));
     // gem WITH the batch coordinate + a mixed precision group + reduced-mantissa mp.
@@ -453,7 +453,7 @@ fn test_classify_token_roundtrip() {
         Some(Contraction {
             m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D8,
             batch: Some(SizeClass::Medium), wdt: "f8e5m2".to_string(), acc: "f32".to_string(),
-            out: "f16".to_string(), mp: MathPrecision::ReducedMantissa,
+            out: "f16".to_string(), mp: MathFidelity::ReducedMantissa,
         }),
     ));
 

@@ -1,5 +1,10 @@
 # RFC: Derive what is duplicated; prove that instruments can fail
 
+> **⚠️ Terminology note (post-dates this RFC):** the KISS-Ops `MathPrecision` attribute this RFC
+> references was renamed to **`MathFidelity`** (#414) to remove a name collision with
+> unpopped-vocab's dtype-shaped `MathPrecision`. This RFC keeps its original spelling as a
+> point-in-time record.
+
 | | |
 |---|---|
 | **Status** | **Draft** — awaiting maintainer ratification |

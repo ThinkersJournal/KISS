@@ -27,7 +27,7 @@
 | Steward | ThinkersJournal |
 | Reference seed crate(s) | a kernel-generation reference crate — **`unpopped`**, with its vocabulary crate `unpopped-vocab` and its IR→Slang emitter `unpopped-slang`, which demonstrates an emitter whose surface spellings differ from a C-family emitter's (crate names given in Appendix A as non-normative provenance). This crate is *a* reference implementation with no privilege. **Two limits on reading it as an exemplar.** It **does not today emit a KISS-Contract** — it emits a consumer-specific contract format — so it seeds the lowering partition of §6.2–§6.5 and is **not** an exemplar of the §6.6 contract-pairing obligation. And its `Backend` trait is a **lowering** interface, narrower than this document's **emitter**, which per the Tier row above owns contract production; mapping the one onto the other silently omits obligations §6 places on the emitter. |
 | DAG position | **Protocol tier.** Depends **STRUCTURALLY** on KISS-Ops (the lowering source is a KISS-Ops op definition), KISS-Classify (the specialization-cell identity is a `structure_key`), and KISS-Contract (the emitter's output is described by a contract). It is a **sibling** of KISS-Consume (the inverse recognition direction): the two share the round-trip of §6.7 but neither depends on the other. Not a root; nothing in the suite depends on KISS-Emit except KISS-Conform (test dependency). |
-| Upstream edges | KISS-Ops (**STRUCTURAL** — the normative lowering source is a KISS-Ops **OpDef**, resolvable to the KISS-Ops primitive floor; the determinism/fidelity enum and the MathPrecision attribute the emitted kernel declares are imported verbatim from KISS-Ops, never re-forked); KISS-Classify (**STRUCTURAL** — the second half of the normative input is a KISS-Classify `structure_key` specialization-cell identity, carried verbatim; the emitted kernel's operand descriptors and `target_capability` are Classify vocabulary); KISS-Contract (**STRUCTURAL** — the emitter's output is described by a seven-section KISS-Contract, whose Interface + Dispatch pin the emitted ABI and whose Guarantees declare the emitted kernel's fidelity) |
+| Upstream edges | KISS-Ops (**STRUCTURAL** — the normative lowering source is a KISS-Ops **OpDef**, resolvable to the KISS-Ops primitive floor; the determinism/fidelity enum and the MathFidelity attribute the emitted kernel declares are imported verbatim from KISS-Ops, never re-forked); KISS-Classify (**STRUCTURAL** — the second half of the normative input is a KISS-Classify `structure_key` specialization-cell identity, carried verbatim; the emitted kernel's operand descriptors and `target_capability` are Classify vocabulary); KISS-Contract (**STRUCTURAL** — the emitter's output is described by a seven-section KISS-Contract, whose Interface + Dispatch pin the emitted ABI and whose Guarantees declare the emitted kernel's fidelity) |
 | Downstream edges | KISS-Conform (test dependency — Conform tests this sub-standard, resolves the emitted kernel's Semantics DAG to the primitive floor as the oracle, and runs the round-trip of §6.7 under the determinism-class comparators). KISS-Emit has **no** other downstream edge. |
 | Spec license | CC0 1.0 Universal (public-domain dedication) |
 | Reference-crate license | MIT-OR-Apache-2.0 |
@@ -35,7 +35,7 @@
 > **Edge-label note (informative).** All three KISS-Emit upstream edges are
 > **STRUCTURAL**: KISS-Emit parses the internal structure of a KISS-Ops op
 > definition (its name, OpAttrs channel, reference decomposition, determinism class,
-> and MathPrecision attribute), of a KISS-Classify `structure_key` / operand
+> and MathFidelity attribute), of a KISS-Classify `structure_key` / operand
 > descriptor / `target_capability`, and of the KISS-Contract seven-section document
 > its output is described by. The labels reconcile with the umbrella §2.2 edge
 > table, which lists **KISS-Ops → KISS-Emit**, **KISS-Classify → KISS-Emit**, and
@@ -271,7 +271,7 @@ statements semantically identical via an enumerated clause-correspondence table.
 ### 2.7 A worked emit — a strided binary `add` on `f32`, target `cuda:sm89`
 
 Input: the KISS-Ops `OpDef` for `add` (a primitive-floor arithmetic atom, determinism
-class `exact-byte`, MathPrecision `bit-stable`) paired with the KISS-Classify
+class `exact-byte`, MathFidelity `bit-stable`) paired with the KISS-Classify
 `structure_key` for the cell `sk4|bin|f32|cuda:sm89|ix32|grid|r2|…` (three `f32`
 operands, strided). The emitter produces:
 
@@ -284,7 +284,7 @@ operands, strided). The emitter produces:
   the body carried any) the spelling of every constant and special float value by its
   bit pattern.
 - **Output** — an artifact plus the KISS-Contract of §2.5/§2.7 of the KISS-Contract
-  sub-standard, whose Guarantees declare determinism `exact-byte` and MathPrecision
+  sub-standard, whose Guarantees declare determinism `exact-byte` and MathFidelity
   `bit-stable`. Because `add` is `exact-byte`, tier-2 numeric round-trip is claimable
   **same-language on-device**; across languages only tier-1 structural equality holds.
 
@@ -318,7 +318,7 @@ provision answers a build failure as a typed decline that KISS-Synth surfaces as
 ### 2.10 Terms are joined, not restated
 
 KISS-Emit references the KISS-Ops op names, OpAttrs channel, reference decompositions,
-primitive floor, the determinism/fidelity enum, and the MathPrecision attribute by
+primitive floor, the determinism/fidelity enum, and the MathFidelity attribute by
 name; the KISS-Classify `structure_key`, operand descriptors, canonical operand order,
 and `target_capability` by name/structure; and the KISS-Contract seven-section document
 (Identity, Semantics, Interface, Dispatch, Capabilities, Guarantees, Provenance) by
@@ -456,7 +456,7 @@ named language family; this note records only *why* the criterion exists.
 - **determinism / fidelity enum** — the single canonical KISS-Ops enum `{exact-byte,
   ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), imported
   verbatim (§6.0-0003). Selects which round-trip tier is claimable per op (§6.7).
-- **MathPrecision attribute** — the KISS-Ops compute-fidelity enum `{bit-stable,
+- **MathFidelity attribute** — the KISS-Ops compute-fidelity enum `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17), imported verbatim (§6.0-0002),
   orthogonal to the determinism class and **not** a dtype (§6.0-0004); declared in the
   emitted kernel's contract Guarantees.
@@ -527,7 +527,7 @@ named language family; this note records only *why* the criterion exists.
   op-DAG ordering and commutativity/associativity canonicalization** used by the
   tier-1 comparator (§6.7-0007) are owned by KISS-Ops; and the single canonical
   **determinism/fidelity enum** `{exact-byte, ULP/tolerance,
-  order-invariant/nondeterministic}` (KISS-OPS §6.0-0001) and the **MathPrecision**
+  order-invariant/nondeterministic}` (KISS-OPS §6.0-0001) and the **MathFidelity**
   attribute `{bit-stable, reduced-mantissa-permitted}` (KISS-OPS §6.17) are imported
   **verbatim**. KISS-Emit re-defines none of them and defines no op meaning.
 - **KISS-Classify** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
@@ -602,7 +602,7 @@ selects the correct comparator. See umbrella §3 for the full statement.
   **exact byte compare**; KISS-Conform MUST evaluate each such clause with a byte-exact
   comparator and MUST NOT apply tolerance or order-invariant comparison. *Test:*
   `test_emit_determinism_class_exact_byte`.
-- **KISS-EMIT-6.0-0002** — The MathPrecision compute-fidelity attribute `{bit-stable,
+- **KISS-EMIT-6.0-0002** — The MathFidelity compute-fidelity attribute `{bit-stable,
   reduced-mantissa-permitted}` an emitted kernel declares MUST be imported **verbatim**
   from KISS-Ops (KISS-OPS §6.17); KISS-Emit MUST NOT re-spell or fork it. *Test:*
   `test_emit_mathprecision_imported_verbatim`.
@@ -611,7 +611,7 @@ selects the correct comparator. See umbrella §3 for the full statement.
   of an emitted kernel is **owned by KISS-Ops** (KISS-OPS §6.0-0001) and MUST be
   imported by KISS-Emit **verbatim**; KISS-Emit MUST NOT define, re-spell, or fork this
   enum. *Test:* `test_emit_determinism_enum_imported_verbatim`.
-- **KISS-EMIT-6.0-0004** — KISS-Emit MUST treat the MathPrecision attribute as
+- **KISS-EMIT-6.0-0004** — KISS-Emit MUST treat the MathFidelity attribute as
   **orthogonal** to the determinism class and MUST NOT treat it as a dtype. *Test:*
   `test_emit_mathprecision_orthogonal_not_dtype`.
 
@@ -797,7 +797,7 @@ selects the correct comparator. See umbrella §3 for the full statement.
   accompanying contract. *Test:* `test_emit_output_has_contract`.
 - **KISS-EMIT-6.6-0002** — The emitted kernel's **fidelity** MUST be declared in its
   contract **Guarantees** section: the determinism class (the imported KISS-Ops enum,
-  §6.0-0003) and the MathPrecision attribute (§6.0-0002) MUST both be present there.
+  §6.0-0003) and the MathFidelity attribute (§6.0-0002) MUST both be present there.
   *Test:* `test_emit_fidelity_declared_in_guarantees`.
 - **KISS-EMIT-6.6-0003** — The emitter's output MUST be the ordered pair
   `{artifact, contract}` (the artifact first, the contract second), and this output
@@ -813,7 +813,7 @@ selects the correct comparator. See umbrella §3 for the full statement.
   a machine-checkable IR Semantics it did not derive from the `OpDef`. *Test:*
   `test_emit_generated_semantics_is_machine_checkable`.
 - **KISS-EMIT-6.6-0005** — An emitter MUST NOT declare the emitted kernel's fidelity
-  (determinism class or MathPrecision) anywhere the KISS-Contract schema does not home
+  (determinism class or MathFidelity) anywhere the KISS-Contract schema does not home
   it; the Guarantees section of §6.6-0002 is the only home. *Test:*
   `test_emit_fidelity_not_declared_off_schema`.
 - **KISS-EMIT-6.6-0006** — The artifact's ABI MUST be the ABI the accompanying
@@ -1236,7 +1236,7 @@ Every decision lands in exactly one set: the four structural decisions and the (
 infix operator on the driver side, everything else emitter-supplied, and anything not
 enumerated on the driver side emitter-supplied by the closure rule (§6.2-0004),
 disjoint by §6.2-0001. The emitted contract's Guarantees declare determinism
-`exact-byte`, MathPrecision `bit-stable`; tier-2 numeric round-trip is claimable
+`exact-byte`, MathFidelity `bit-stable`; tier-2 numeric round-trip is claimable
 same-language on-device (§6.7-0002/-0006), tier-1 structural across languages
 (§6.7-0001/-0003).
 

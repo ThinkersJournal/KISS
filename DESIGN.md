@@ -68,7 +68,7 @@ from the property this section describes, and closing it is the pre-1.0 priority
 
 Numeric reproducibility is a *property of an op's semantics*, so KISS-Ops owns the
 single canonical determinism/fidelity enum (`exact-byte` / `ULP-tolerance` /
-`order-invariant`) and the compute-fidelity (MathPrecision) attribute; the protocol
+`order-invariant`) and the compute-fidelity (MathFidelity) attribute; the protocol
 tier imports them. Ownership sits in a foundational vocabulary deliberately: if a
 protocol-tier sub-standard owned the enum, a foundational vocabulary would have to
 import *upward* from it, inverting the dependency DAG. Each numeric clause declares

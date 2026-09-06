@@ -90,7 +90,7 @@ fn ops_determinism_enum() -> BTreeSet<String> {
         .collect()
 }
 
-/// The KISS-Ops-owned canonical MathPrecision enum (KISS-Ops §6.17) — see
+/// The KISS-Ops-owned canonical MathFidelity enum (KISS-Ops §6.17) — see
 /// [`ops_determinism_enum`] for why this is a reference constant, not an Ops re-read.
 fn ops_mathprecision_enum() -> BTreeSet<String> {
     ["bit-stable", "reduced-mantissa-permitted"]
@@ -188,7 +188,7 @@ fn test_emit_determinism_class_exact_byte() {
     );
 }
 
-/// KISS-EMIT-6.0-0002 — the MathPrecision compute-fidelity attribute
+/// KISS-EMIT-6.0-0002 — the MathFidelity compute-fidelity attribute
 /// `{bit-stable, reduced-mantissa-permitted}` is imported VERBATIM from KISS-Ops
 /// §6.17. Teeth: the two enum SETS (Emit's and Ops') must be equal — same members,
 /// same spelling. A silent re-spell or fork fails.
@@ -200,16 +200,16 @@ fn test_emit_mathprecision_imported_verbatim() {
     assert_eq!(
         ops_mp.len(),
         2,
-        "KISS-EMIT-6.0-0002: KISS-Ops §6.17 MathPrecision must be a 2-member enum, found {ops_mp:?}"
+        "KISS-EMIT-6.0-0002: KISS-Ops §6.17 MathFidelity must be a 2-member enum, found {ops_mp:?}"
     );
     assert_eq!(
         emit_mp, ops_mp,
-        "KISS-EMIT-6.0-0002: KISS-Emit MathPrecision {emit_mp:?} is not the verbatim KISS-Ops set {ops_mp:?}"
+        "KISS-EMIT-6.0-0002: KISS-Emit MathFidelity {emit_mp:?} is not the verbatim KISS-Ops set {ops_mp:?}"
     );
     for m in ["bit-stable", "reduced-mantissa-permitted"] {
         assert!(
             ops_mp.contains(m),
-            "KISS-EMIT-6.0-0002: canonical MathPrecision member `{m}` missing"
+            "KISS-EMIT-6.0-0002: canonical MathFidelity member `{m}` missing"
         );
     }
 }
@@ -241,10 +241,10 @@ fn test_emit_determinism_enum_imported_verbatim() {
     }
 }
 
-/// KISS-EMIT-6.0-0004 — MathPrecision is ORTHOGONAL to the determinism class and is
-/// NOT a dtype. Teeth: no MathPrecision enum member appears as a token in the
+/// KISS-EMIT-6.0-0004 — MathFidelity is ORTHOGONAL to the determinism class and is
+/// NOT a dtype. Teeth: no MathFidelity enum member appears as a token in the
 /// KISS-Ops §6.16 dtype set — the intersection of the two SETS is empty. This guards
-/// exactly the anti-pattern §6.17 warns against: MathPrecision re-modeled as a
+/// exactly the anti-pattern §6.17 warns against: MathFidelity re-modeled as a
 /// strict-precision (`f32s`) dtype.
 #[test]
 fn test_emit_mathprecision_orthogonal_not_dtype() {
@@ -257,20 +257,20 @@ fn test_emit_mathprecision_orthogonal_not_dtype() {
         "KISS-EMIT-6.0-0004: parsed only {} dtypes from §6.16 — parser drift, check would be vacuous",
         dtypes.len()
     );
-    assert!(!mp.is_empty(), "KISS-EMIT-6.0-0004: MathPrecision enum came back empty");
+    assert!(!mp.is_empty(), "KISS-EMIT-6.0-0004: MathFidelity enum came back empty");
     let overlap: Vec<_> = mp.intersection(&dtypes).cloned().collect();
     assert!(
         overlap.is_empty(),
-        "KISS-EMIT-6.0-0004: MathPrecision member(s) {overlap:?} also appear as dtypes — not orthogonal"
+        "KISS-EMIT-6.0-0004: MathFidelity member(s) {overlap:?} also appear as dtypes — not orthogonal"
     );
     let block = norm(clause_block(&emit, "KISS-EMIT-6.0-0004")).to_lowercase();
     assert!(
         block.contains("orthogonal"),
-        "KISS-EMIT-6.0-0004: the clause does not state MathPrecision is orthogonal"
+        "KISS-EMIT-6.0-0004: the clause does not state MathFidelity is orthogonal"
     );
     assert!(
         block.contains("dtype"),
-        "KISS-EMIT-6.0-0004: the clause does not state MathPrecision is not a dtype"
+        "KISS-EMIT-6.0-0004: the clause does not state MathFidelity is not a dtype"
     );
 }
 

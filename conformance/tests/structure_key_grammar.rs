@@ -451,7 +451,7 @@ fn test_classify_secondary_dtype_unkeyed() {
             wdt: "f8e5m2".to_string(),
             acc: "f32".to_string(),
             out: "f16".to_string(),
-            mp: MathPrecision::Stable,
+            mp: MathFidelity::Stable,
         }),
     );
     let gt = gem.to_token();
