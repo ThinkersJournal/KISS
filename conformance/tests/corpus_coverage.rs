@@ -6,6 +6,20 @@ fn read(p: &str) -> String {
     std::fs::read_to_string(format!("{}/{p}", env!("CARGO_MANIFEST_DIR"))).unwrap()
 }
 
+/// The committed corpus op-coverage floor (#459). Mirrors the numerator floor the full ratchet
+/// (`kiss_ops.py --corpus-coverage`) enforces, so a coverage LOSS reds in the cargo job too.
+fn read_corpus_floor() -> usize {
+    for line in read("CORPUS_COVERAGE_FLOOR.tsv").lines() {
+        let line = line.trim();
+        if let Some((k, v)) = line.split_once('\t') {
+            if k.trim() == "declared" {
+                return v.trim().parse().expect("floor `declared` is an integer");
+            }
+        }
+    }
+    panic!("CORPUS_COVERAGE_FLOOR.tsv has no `declared` row");
+}
+
 #[test]
 fn test_conform_oracle_vector_coverage_complete() {
     // §6.5-0008: every op in the manifest's declared coverage set MUST appear in the
@@ -16,7 +30,19 @@ fn test_conform_oracle_vector_coverage_complete() {
         .as_arr().unwrap().iter().filter_map(|j| j.as_str()).collect();
     let covered: std::collections::BTreeSet<&str> =
         corpus.vectors.iter().map(|c| c.op.as_str()).collect();
-    assert!(!declared.is_empty(), "§6.5-0008: declared_coverage_set is empty — coverage check would be vacuous");
+    // #459: a FLOOR-AWARE guard, not the old `!declared.is_empty()` — which was degenerate-blind
+    // (n=1 passes emptiness while being as vacuous as 0 over the derived op domain). The full
+    // fraction ratchet (declared/derived-total, with regression/stale/domain-moved verdicts) is
+    // `kiss_ops.py --corpus-coverage`; this mirrors its numerator floor so a coverage LOSS reds
+    // here too. The floor MUST be ≥ 1, which subsumes the old emptiness check.
+    let floor = read_corpus_floor();
+    assert!(floor >= 1, "#459: the corpus-coverage floor must be ≥ 1 (a 0 floor is the vacuity the ratchet forbids)");
+    assert!(
+        declared.len() >= floor,
+        "§6.5-0008 / #459: declared coverage {} is below the committed floor {} \
+         (CORPUS_COVERAGE_FLOOR.tsv) — an op lost its oracle-vector coverage",
+        declared.len(), floor
+    );
     for op in &declared {
         assert!(covered.contains(op), "§6.5-0008: declared op `{op}` has no oracle vectors");
     }
