@@ -1,5 +1,10 @@
 # RFC: `sk3` — GEMM precision/compute coordinates in the `structure_key`
 
+> **⚠️ Terminology note (post-dates this RFC):** the KISS-Ops attribute this RFC calls
+> `MathPrecision` was renamed to **`MathFidelity`** (#414) to remove a name collision with
+> unpopped-vocab's dtype-shaped `MathPrecision`. The `<mp>` wire codes `st`/`rm` are unchanged.
+> This RFC keeps its original spelling as a point-in-time record.
+
 | | |
 |---|---|
 | **Status** | **Accepted (2026-07-21).** All field-level review folded; the §6.17 input-rounding pin (the required change) signed off by Baracuda (cosignatory + provider) and **kiss-ref (reference-evaluator) firsthand, no caveats** (§4.3); Fuel cosignatory accepted the sk3 direction/grammar. Maintainer-authorized to adopt on kiss-ref's firsthand sign-off. The concrete clause edits below are approved for application to the spec/codec (a separate implementation step); RFC pending merge to main. |

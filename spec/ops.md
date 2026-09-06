@@ -91,7 +91,7 @@ KISS-Ops owns four things:
    justified as not further decomposable in-standard.
 
 KISS-Ops also owns two attributes that live alongside the op semantics: the **compute-
-fidelity (MathPrecision) attribute** (`{bit-stable, reduced-mantissa-permitted}`, §6.17),
+fidelity (MathFidelity) attribute** (`{bit-stable, reduced-mantissa-permitted}`, §6.17),
 orthogonal to the determinism class and the home of compute precision now that storage
 dtypes are pure byte layout; and the **complex-arithmetic op family** for `c64`/`c128`
 (§6.18), every member non-primitive over the real floor (no new axiom), pinned to ISO
@@ -411,7 +411,7 @@ reader holding only KISS-Ops plus the umbrella.
   canonical enum is **owned by KISS-Ops** (the computation-vocabulary root) and imported
   downstream by KISS-Conform and KISS-Synth; it is defined once here (§6.0) and never
   re-forked.
-- **Compute-fidelity (MathPrecision) attribute** — a two-member enum
+- **Compute-fidelity (MathFidelity) attribute** — a two-member enum
   `{bit-stable, reduced-mantissa-permitted}` owned by KISS-Ops (§6.17), orthogonal to the
   determinism class, recording whether an op's floating-point arithmetic is computed at
   full storage precision with each atom rounding independently (**bit-stable**) or MAY use
@@ -496,7 +496,7 @@ reader holding only KISS-Ops plus the umbrella.
 - **KISS-Contract** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
   consumer: the contract semantics field carries the KISS-Ops op DAG, and the per-target
   declared ULP of each transcendental atom (bounded by the §6.8 ceiling); the contract's
-  guarantees section surfaces the KISS-Ops-owned compute-fidelity (MathPrecision) attribute
+  guarantees section surfaces the KISS-Ops-owned compute-fidelity (MathFidelity) attribute
   (§6.17), imported from KISS-Ops, not re-forked.
 - **KISS-Synth/Provision** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
   consumer: the fully-resolved decomposition is the oracle for verification under the
@@ -1398,7 +1398,7 @@ shared naming convention spelled identically in both foundational vocabularies.
 |---|---|---|---|
 | `f16` | 16 | float | IEEE-754 binary16 (1 sign, 5 exp, 10 mantissa), bias 15 |
 | `bf16` | 16 | float | bfloat16 (1 sign, 8 exp, 7 mantissa), bias 127; the binary32 exponent range with a truncated mantissa; **not** an IEEE-754 format |
-| `f32` | 32 | float | IEEE-754 binary32 storage; **pure storage** — compute fidelity is the MathPrecision attribute (§6.17), not a dtype property |
+| `f32` | 32 | float | IEEE-754 binary32 storage; **pure storage** — compute fidelity is the MathFidelity attribute (§6.17), not a dtype property |
 | `f64` | 64 | float | IEEE-754 binary64 (1 sign, 11 exp, 52 mantissa), bias 1023 |
 | `i8` | 8 | int | signed 8-bit two's-complement |
 | `i16` | 16 | int | signed 16-bit two's-complement |
@@ -1428,7 +1428,7 @@ shared naming convention spelled identically in both foundational vocabularies.
 - **KISS-OPS-6.16-0002** — `f16`, `f32`, and `f64` MUST use their IEEE 754-2019 encodings
   (binary16 / binary32 / binary64), including the standard inf/NaN encodings, signed zero,
   and subnormals; the storage dtype set carries **no** compute-precision distinction (there
-  is no strict-precision float dtype) — compute fidelity is the MathPrecision attribute
+  is no strict-precision float dtype) — compute fidelity is the MathFidelity attribute
   (§6.17). *Test:* `test_ops_ieee754_dtype_encodings`.
 - **KISS-OPS-6.16-0003** — `bf16` MUST be encoded as a 1-sign / 8-exp / 7-mantissa format
   (bias 127) with the binary32 exponent range and a truncated mantissa; it is **not** an
@@ -1552,24 +1552,24 @@ shared naming convention spelled identically in both foundational vocabularies.
 ### 6.17 Compute-fidelity (math-precision) attribute
 
 KISS-Ops owns a second per-kernel attribute, **orthogonal** to the §6.0 determinism class:
-the **compute-fidelity (MathPrecision) attribute**, a two-member enum
+the **compute-fidelity (MathFidelity) attribute**, a two-member enum
 `{bit-stable, reduced-mantissa-permitted}`. It records whether a target computes an op's
 floating-point arithmetic at full storage precision with each atom rounding independently
 (**bit-stable**) or MAY use a reduced-mantissa fast path (**reduced-mantissa-permitted**,
 e.g. a TF32-style multiply). This attribute is the home of the compute-precision meaning
 formerly (mis)modeled as a strict-precision float dtype: storage dtypes (§6.16) are pure
 byte layout and carry no compute-precision meaning; compute precision is this attribute.
-A determinism class selects a comparator; the MathPrecision attribute constrains per-atom
+A determinism class selects a comparator; the MathFidelity attribute constrains per-atom
 mantissa width. The attribute is defined once here and imported by KISS-Contract, which
 surfaces it in a kernel's guarantees section.
 
-- **KISS-OPS-6.17-0001** — KISS-Ops MUST own a single compute-fidelity (MathPrecision)
+- **KISS-OPS-6.17-0001** — KISS-Ops MUST own a single compute-fidelity (MathFidelity)
   attribute drawn from the two-member enum `{bit-stable, reduced-mantissa-permitted}`,
   defined once here and imported (not re-forked) by KISS-Contract as a kernel guarantee;
   this attribute MUST be distinct from and orthogonal to the §6.0 determinism/fidelity
   class. **The default value of the attribute is `bit-stable`**: a computation is
   bit-stable unless a reduced-mantissa variant is **explicitly requested**, so a cell
-  (op or kernel) that names no MathPrecision value MUST be treated as bit-stable. This
+  (op or kernel) that names no MathFidelity value MUST be treated as bit-stable. This
   default is a property of the **cell's compute semantics**, not of any wire spelling —
   KISS-Classify spells the two values `st`/`rm` (§6.7-0006) and its non-contraction
   precision field is emitted only against this default (§6.7-0013), but the default
@@ -1587,16 +1587,16 @@ surfaces it in a kernel's guarantees section.
   fewer than 10 explicit mantissa bits** (the pinned floor, so "reduced-mantissa" is a
   quantified bound and not an open-ended adjective — a target MUST NOT round inputs below
   this floor) and the result stays within the op's declared determinism class (§6.0); a
-  kernel's contract MUST advertise the MathPrecision value so a consumer knows whether
+  kernel's contract MUST advertise the MathFidelity value so a consumer knows whether
   bit-stable reproduction is guaranteed. *Test:* `test_ops_math_precision_reduced`.
-- **KISS-OPS-6.17-0004** — The MathPrecision attribute MUST be carried as a kernel-level
+- **KISS-OPS-6.17-0004** — The MathFidelity attribute MUST be carried as a kernel-level
   (contract-guarantee) attribute and MAY be **refined per op** where a kernel guarantees a
   finer value for some ops than kernel-wide (recovering the per-operand granularity
   formerly modeled by a strict-precision dtype); it MUST NOT be encoded into the storage
   dtype set of §6.16, and a storage dtype MUST NOT carry a compute-precision distinction
   (there is no strict-precision float dtype in this version). *Test:*
   `test_ops_math_precision_not_dtype`.
-- **KISS-OPS-6.17-0005** — MathPrecision MUST be verified as follows, so it is testable for
+- **KISS-OPS-6.17-0005** — MathFidelity MUST be verified as follows, so it is testable for
   every determinism class: for an **exact-byte** or **ULP/tolerance** op, **bit-stable** is
   verified directly under the op's own comparator (each atom at full storage-precision
   rounding), and **reduced-mantissa-permitted** is verified by detecting a per-atom multiply
@@ -1609,7 +1609,7 @@ surfaces it in a kernel's guarantees section.
   and reduced-mantissa-permitted is verified by the same per-atom mantissa-width probe. The
   attribute therefore constrains per-atom mantissa width independently of reduction order.
   *Test:* `test_ops_math_precision_order_invariant_scope`.
-- **KISS-OPS-6.17-0006** — For each MathPrecision value, §6.17 MUST pin the exact
+- **KISS-OPS-6.17-0006** — For each MathFidelity value, §6.17 MUST pin the exact
   input-rounding applied to each operand before compute, as
   `(retained_mantissa_bits, rounding_mode)`, precise enough for a spec-derived reference
   to (a) derive the accuracy bound (`u = 2^−(retained_mantissa_bits + 1)`) and (b)
@@ -1654,7 +1654,7 @@ surfaces it in a kernel's guarantees section.
   every off-diagonal (wider-accumulator) cell is a **distinct** tolerance-cell compared
   against its own per-cell reference (§6.17-0009), never against the diagonal cell and never
   across accumulator widths — the accumulator width is a determinism-class axis orthogonal
-  to the MathPrecision `<mp>` attribute (§6.17-0001). *Test:*
+  to the MathFidelity `<mp>` attribute (§6.17-0001). *Test:*
   `test_ops_accumulator_tolerance_cell_class`.
 - **KISS-OPS-6.17-0009** — The **reference value** of a (compute-dtype S, accumulator-dtype
   A) reduction/scan/contraction tolerance-cell (§6.17-0008) MUST be the §6.17-0005-ordered
@@ -2551,7 +2551,7 @@ evaluates the pinned semantics of every primitive-floor op (§6.3) exactly as pi
 decomposition every claimed non-primitive op (§6.13–§6.14, including the §6.18 complex
 family), (c) declines cleanly (never panics) on unrecognized ops (`u32` is an ordinary
 dtype and is not declined), and (d) passes the KISS-Conform suite for KISS-Ops at that
-version. The compute-fidelity (MathPrecision) attribute (§6.17) is advertised per kernel
+version. The compute-fidelity (MathFidelity) attribute (§6.17) is advertised per kernel
 and surfaced as a KISS-Contract guarantee; the complex ops carry the determinism classes
 of §6.18-0014.
 
@@ -2887,7 +2887,7 @@ first), and the values output is not consumed — only the index vector is.
   primitive op's meaning (§6.13).
 - **Scalar-source leaf** — `input(i)`, `const(bits)`, `param(i)`, `coord(axis)`,
   `reduced(stage)`, `extent(axis)`, `reduced_count` (§6.12).
-- **Compute-fidelity (MathPrecision) attribute** — the `{bit-stable,
+- **Compute-fidelity (MathFidelity) attribute** — the `{bit-stable,
   reduced-mantissa-permitted}` enum owned by KISS-Ops (§6.17), orthogonal to the determinism
   class; the home of compute precision now that storage dtypes are pure byte layout.
 - **Complex op family** — the §6.18 ops over `c64`/`c128` (`cadd`, `csub`, `cneg`, `cconj`,
@@ -2916,7 +2916,7 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
 1. **`f32` versus `f32s` (resolved 2026-07-12).** Ratified: strict-precision float is
    **not** a dtype. `f32s` is removed from the dtype set; the Classify dtype set is pure
    storage (byte layout only). Compute precision moves to KISS-Ops as the compute-fidelity
-   (MathPrecision) attribute `{bit-stable, reduced-mantissa-permitted}` (§6.17), surfaced in
+   (MathFidelity) attribute `{bit-stable, reduced-mantissa-permitted}` (§6.17), surfaced in
    a kernel's KISS-Contract guarantees. `f32` is now pure binary32 storage with no
    compute-precision meaning (§6.16-0002). The **reduced-mantissa floor** of 10 explicit
    mantissa bits (§6.17-0003) and the per-op-vs-per-kernel granularity and

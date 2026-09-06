@@ -86,7 +86,7 @@ RE_CODE_TOK = re.compile(r'=\s*"([^"]+)"')
 # RANGE onto one token; an enum of declared alternatives does not, and forcing it into the
 # declaration would claim a blindness the key does not have.
 NON_BUCKET = {
-    "MathPrecision": "declared attribute (st/rm), not a bucketing of any continuum",
+    "MathFidelity": "declared attribute (st/rm), not a bucketing of any continuum",
 }
 
 # Index width is derived as a &'static str pair rather than a `code_enum!`, so the scan above

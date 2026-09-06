@@ -27,7 +27,7 @@
 | Steward | ThinkersJournal |
 | Reference seed crate(s) | a kernel-provision/JIT reference crate (`baracuda-kernelgen` provision path, project/crate name given in Appendix A as non-normative provenance); this crate is *a* conformant implementation with no privilege. |
 | DAG position | **Protocol tier.** Depends (structurally) on KISS-Announce, KISS-Contract, and KISS-Ops; tested downstream by KISS-Conform. Depends on **none** of KISS-Consume or KISS-Emit. Not a root. |
-| Upstream edges | KISS-Announce (**STRUCTURAL** — the provision request reuses the KISS-Announce contract-query request frame `CYRQ` verbatim and the typed decline reuses the Announce decline frame `CDEC` and the pinned decline-code enum verbatim; the `{artifact, contract}` provision success is carried in KISS-Synth's own provision-success frame `PRSP` (the artifact's wire home), which encloses a length-delimited contract payload byte-identical to what the Announce contract-response frame `CRSP` carries; provision IS the KISS-Announce contract-query generalized so the response may include a freshly built artifact); KISS-Contract (**STRUCTURAL** — provision returns `{artifact, contract}`, and the provided kernel's fidelity is exactly the contract Guarantees); KISS-Ops (**STRUCTURAL** — the determinism/fidelity enum and the MathPrecision attribute are imported verbatim, and the resolved Semantics op DAG down to the primitive floor is the verification oracle) |
+| Upstream edges | KISS-Announce (**STRUCTURAL** — the provision request reuses the KISS-Announce contract-query request frame `CYRQ` verbatim and the typed decline reuses the Announce decline frame `CDEC` and the pinned decline-code enum verbatim; the `{artifact, contract}` provision success is carried in KISS-Synth's own provision-success frame `PRSP` (the artifact's wire home), which encloses a length-delimited contract payload byte-identical to what the Announce contract-response frame `CRSP` carries; provision IS the KISS-Announce contract-query generalized so the response may include a freshly built artifact); KISS-Contract (**STRUCTURAL** — provision returns `{artifact, contract}`, and the provided kernel's fidelity is exactly the contract Guarantees); KISS-Ops (**STRUCTURAL** — the determinism/fidelity enum and the MathFidelity attribute are imported verbatim, and the resolved Semantics op DAG down to the primitive floor is the verification oracle) |
 | Downstream edges | KISS-Conform (test dependency — depends on and tests KISS-Synth; owns the fuzz/negative-vector modality that exercises the never-panic decline taxonomy) |
 | Spec license | CC0 1.0 Universal (public-domain dedication) |
 | Reference-crate license | MIT-OR-Apache-2.0 |
@@ -40,7 +40,7 @@
 > reuses the internal structure of the KISS-Announce contract-query request/decline
 > frames (it does not merely carry an opaque Announce token — it IS the Announce
 > contract-query, generalized), imports the KISS-Ops determinism/fidelity enum and
-> MathPrecision attribute by their exact spelling, and returns a KISS-Contract document
+> MathFidelity attribute by their exact spelling, and returns a KISS-Contract document
 > as the second half of its response. The one wire artifact KISS-Synth contributes of
 > its own is the provision-success frame `PRSP` — the artifact's wire home, which has
 > no upstream owner — and even that encloses a contract payload byte-identical to the
@@ -100,7 +100,7 @@ sub-standard reuses); the per-kernel *contract* format (that is KISS-Contract, w
 provision returns and never re-defines); the *data* vocabulary (`structure_key`,
 operand descriptors, `target_capability` are KISS-Classify, carried opaquely through
 the Announce contract-query); the *computation* vocabulary, per-op semantics, the
-determinism/fidelity enum, or the MathPrecision attribute (those are KISS-Ops,
+determinism/fidelity enum, or the MathFidelity attribute (those are KISS-Ops,
 imported verbatim, never re-forked); the recognition/lift direction (KISS-Consume) or
 the generation/lower direction (KISS-Emit) — a JIT builder is a KISS-Emit emitter
 *reached through* provision, and a provider's own kernel-decomposer is a KISS-Consume
@@ -219,7 +219,7 @@ frame: it is exactly the accompanying contract's **Guarantees** section. The sin
 canonical **determinism/fidelity enum** `{exact-byte, ULP/tolerance,
 order-invariant/nondeterministic}` (that literal spelling, verbatim) is **owned by
 KISS-Ops** (`KISS-OPS-6.0-0001`) and imported by KISS-Synth, never re-forked. So is the
-orthogonal **MathPrecision attribute** `{bit-stable, reduced-mantissa-permitted}`
+orthogonal **MathFidelity attribute** `{bit-stable, reduced-mantissa-permitted}`
 (KISS-Ops §6.17). The determinism class of the provided kernel selects which
 KISS-Conform comparator applies when a consumer verifies it: `exact-byte` → a byte
 comparator; `ULP/tolerance` → the declared-ULP comparator; `order-invariant/
@@ -247,7 +247,7 @@ strided cell.
    `artifact_format_tag`, the `u64`-framed artifact bytes, then the `u32`-framed opaque
    contract document whose Semantics is a one-node `add` DAG, whose Interface is the
    strided positional signature, and whose Guarantees declare determinism class
-   `exact-byte`, MathPrecision `bit-stable`.
+   `exact-byte`, MathFidelity `bit-stable`.
 
 Had the provider already held the kernel, the consumer would have sent the identical
 `CYRQ` request and received the identical `PRSP` response (echoing the same held
@@ -319,7 +319,7 @@ and KISS-Consume:
 KISS-Synth references the KISS-Classify `structure_key` and `target_capability`, the
 KISS-Contract seven-section document and its `revision_hash` Identity field, the
 KISS-Announce handshake envelope / availability list / contract-query frames / decline
-enum, and the KISS-Ops determinism/fidelity enum and MathPrecision attribute — all by
+enum, and the KISS-Ops determinism/fidelity enum and MathFidelity attribute — all by
 name/structure. It re-defines none of them and defines no op meaning, no data noun, no
 contract section, and no wire envelope of its own **except the provision-success frame
 that is the artifact's wire home** (the artifact has no owner upstream): Synth carries
@@ -393,7 +393,7 @@ the identities and the built artifact, the upstream sub-standards mean them.
   ULP/tolerance, order-invariant/nondeterministic}`, that literal spelling verbatim.
   **Owned by KISS-Ops** (`KISS-OPS-6.0-0001`), **imported** verbatim by KISS-Synth,
   never re-forked. Selects the KISS-Conform comparator.
-- **MathPrecision attribute** — the compute-fidelity enum `{bit-stable,
+- **MathFidelity attribute** — the compute-fidelity enum `{bit-stable,
   reduced-mantissa-permitted}`. Owned by KISS-Ops (§6.17), imported verbatim.
   Orthogonal to the determinism class and NOT a dtype. Surfaced in the contract
   Guarantees.
@@ -457,7 +457,7 @@ the identities and the built artifact, the upstream sub-standards mean them.
   kernel carries one (`KISS-CONTRACT-6.2-0001` requires it of every kernel, and this
   sub-standard requires it of every **provided** kernel). The provided kernel's fidelity
   is exactly the contract Guarantees section (`KISS-CONTRACT-6.8`), which surfaces the
-  imported determinism class and MathPrecision attribute; the returned artifact's ABI is
+  imported determinism class and MathFidelity attribute; the returned artifact's ABI is
   described by the contract Interface + Dispatch sections (`KISS-CONTRACT-6.5` / `6.6`);
   the contract's self-delimiting inner framing fails loudly independently of the outer
   length prefix (`KISS-CONTRACT-6.1-0005`); the required-core content-validity clauses —
@@ -468,7 +468,7 @@ the identities and the built artifact, the upstream sub-standards mean them.
 - **KISS-Ops** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
   dependency: the single canonical determinism/fidelity enum `{exact-byte,
   ULP/tolerance, order-invariant/nondeterministic}` (`KISS-OPS-6.0-0001`) and the
-  MathPrecision attribute `{bit-stable, reduced-mantissa-permitted}` (KISS-Ops §6.17)
+  MathFidelity attribute `{bit-stable, reduced-mantissa-permitted}` (KISS-Ops §6.17)
   are **imported verbatim** and never re-forked; the resolved Semantics op DAG down to
   the KISS-Ops primitive floor (§6.3) is the verification oracle under the op's declared
   determinism class. KISS-Synth defines no op meaning and no determinism vocabulary of
@@ -740,7 +740,7 @@ correct comparator. See umbrella §3 for the full statement.
   handshake. *Test:* `test_synth_no_withhold_pending_verify`.
 - **KISS-SYNTH-6.4-0004** — A consumer SHOULD verify a received artifact against its
   contract's declared Guarantees — the determinism class, the ULP/tolerance bound, the
-  MathPrecision attribute, and the accept-predicate (`structure_key`) — before trusting
+  MathFidelity attribute, and the accept-predicate (`structure_key`) — before trusting
   it, reusing the KISS-Conform oracle-differential harness and determinism-class
   comparators; this is a consumer-behavior obligation owned by KISS-Conform (a SHOULD),
   and this sub-standard SHALL NOT restate it as a wire MUST. *Test:*
@@ -762,15 +762,15 @@ correct comparator. See umbrella §3 for the full statement.
   determinism vocabulary. *Test:* `test_synth_determinism_enum_not_reforked`.
 - **KISS-SYNTH-6.5-0002b** — A downstream copy MUST NOT override the KISS-Ops definition
   of the determinism/fidelity enum. *Test:* `test_synth_determinism_enum_no_override`.
-- **KISS-SYNTH-6.5-0003** — The MathPrecision attribute `{bit-stable,
+- **KISS-SYNTH-6.5-0003** — The MathFidelity attribute `{bit-stable,
   reduced-mantissa-permitted}` MUST be imported **verbatim** from KISS-Ops (§6.17) and
   surfaced in the returned contract's Guarantees. *Test:*
   `test_synth_mathprecision_imported`.
-- **KISS-SYNTH-6.5-0003a** — KISS-Synth MUST NOT re-fork the MathPrecision attribute.
+- **KISS-SYNTH-6.5-0003a** — KISS-Synth MUST NOT re-fork the MathFidelity attribute.
   *Test:* `test_synth_mathprecision_not_reforked`.
-- **KISS-SYNTH-6.5-0003b** — KISS-Synth MUST NOT treat the MathPrecision attribute as a
+- **KISS-SYNTH-6.5-0003b** — KISS-Synth MUST NOT treat the MathFidelity attribute as a
   dtype. *Test:* `test_synth_mathprecision_not_dtype`.
-- **KISS-SYNTH-6.5-0003c** — KISS-Synth MUST NOT conflate the MathPrecision attribute with
+- **KISS-SYNTH-6.5-0003c** — KISS-Synth MUST NOT conflate the MathFidelity attribute with
   the determinism class (they are orthogonal). *Test:*
   `test_synth_mathprecision_not_conflated`.
 - **KISS-SYNTH-6.5-0004** — The determinism class carried in the provided kernel's
@@ -1199,7 +1199,7 @@ KISS-Conform per umbrella §3.3). Clause IDs are mirrored in the machine-readabl
 - **Steward:** ThinkersJournal hosts the spec, the extension/decline-code registry
   (PR-gated; note that the handshake envelope, capability bitset, and decline-code enum are
   owned by KISS-Announce, the contract format by KISS-Contract, and the determinism/
-  MathPrecision vocabulary by KISS-Ops — not by a KISS-Synth registry, though the `PRSP`
+  MathFidelity vocabulary by KISS-Ops — not by a KISS-Synth registry, though the `PRSP`
   provision-success frame and the `artifact_format_tag` registry are KISS-Synth's own),
   and the conformance registry; it free-certifies self-certified implementations on request
   as resources permit.
@@ -1232,7 +1232,7 @@ freshly assigned 32-byte `revision_hash`, per §6.3-0006 / §6.3-0006a), a 4-byt
 `artifact_format_tag` naming the artifact's format/target family, a `u64` artifact
 byte-length + the freshly-built artifact bytes, then a `u32` contract byte-length + the
 opaque KISS-Contract document (a one-node `add` Semantics DAG, determinism class
-`exact-byte`, MathPrecision `bit-stable`). The **same** `CYRQ` request answered from cache
+`exact-byte`, MathFidelity `bit-stable`). The **same** `CYRQ` request answered from cache
 (a hit) yields the **same** `PRSP` response (echoing the same held `revision_hash`), the
 golden vector for `test_synth_hit_and_miss_same_protocol`. A separate vector pairs this
 `PRSP` frame against a bare `CRSP` contract-only response over the same identity to fix the
@@ -1311,7 +1311,7 @@ KISS-Conform test. KISS-Synth owns the kernel-provision protocol: a consumer ask
 for a kernel by identity and receives `{artifact, contract}`, the provider building it on a
 cache miss (JIT = the build-on-miss branch of the one request/response). It is the
 generalization of the KISS-Announce contract-query, returns the KISS-Contract document, and
-imports the KISS-Ops determinism/fidelity enum and MathPrecision attribute verbatim —
+imports the KISS-Ops determinism/fidelity enum and MathFidelity attribute verbatim —
 depending structurally on KISS-Announce, KISS-Contract, and KISS-Ops, and on neither
 KISS-Consume nor KISS-Emit. Every returned kernel carries its contract; every failure is a
 typed decline, never a panic. Project and product names appear only in non-normative

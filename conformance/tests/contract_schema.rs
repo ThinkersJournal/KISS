@@ -175,7 +175,7 @@ fn ops_determinism_enum() -> BTreeSet<String> {
         .collect()
 }
 
-/// The KISS-Ops MathPrecision attribute set, as a reference CONSTANT — same
+/// The KISS-Ops MathFidelity attribute set, as a reference CONSTANT — same
 /// no-reverse-bind discipline as `ops_determinism_enum`.
 fn ops_math_precision_enum() -> BTreeSet<String> {
     ["bit-stable", "reduced-mantissa-permitted"]
@@ -369,23 +369,40 @@ fn test_contract_capabilities_determinism_from_ops() {
     );
 }
 
-/// KISS-CONTRACT-6.8-0004 — the `math_precision` is the KISS-Ops MathPrecision
+/// KISS-CONTRACT-6.8-0004 — the `math_precision` is the KISS-Ops MathFidelity
 /// attribute `{bit-stable, reduced-mantissa-permitted}` spelled verbatim. The
 /// §6.8-0004 enum is compared against a reference CONSTANT (same no-reverse-bind
 /// discipline as the accepted §6.8-0003 determinism lint — the constant is NOT a
 /// KISS-Ops §6.17 clause-read).
 ///
 /// TEETH: re-fork/re-spell a member (`bit_stable`, `reduced_mantissa`) in §6.8-0004
-/// → the parsed set ≠ the canonical constant.
+/// → the parsed set ≠ the canonical constant. And (iii, #414) name the CARRIER: the
+/// clause must say `MathFidelity` and MUST NOT say the colliding `MathPrecision` —
+/// a two-way discrimination that reds against the dtype-shaped decoy AND the decoy's name.
 #[test]
 fn test_contract_math_precision_imported() {
     let contract = read_spec("contract.md");
-    let parsed = enum_set(clause_block(&contract, "KISS-CONTRACT-6.8-0004"));
+    let block = clause_block(&contract, "KISS-CONTRACT-6.8-0004");
+    let parsed = enum_set(block);
     let canonical = ops_math_precision_enum();
     assert_eq!(canonical.len(), 2, "KISS-CONTRACT-6.8-0004: the canonical math_precision enum must have 2 members");
     assert_eq!(
         parsed, canonical,
         "KISS-CONTRACT-6.8-0004: §6.8-0004's math_precision enum {parsed:?} is not the verbatim canonical set {canonical:?} (a member was re-forked/re-spelled)"
+    );
+    // (iii) #414 — pin the CARRIER NAME, not only the values. The decoy is unpopped-vocab's
+    // dtype-shaped `MathPrecision`; a clause naming it walks the implementer into
+    // `use ..::MathPrecision`, which resolves to the decoy with no diagnostic. §6.8-0004 must
+    // name the renamed, non-colliding `MathFidelity` and MUST NOT name `MathPrecision`. This
+    // reds against BOTH a dtype-shaped enum (the set check above) AND the colliding name.
+    assert!(
+        block.contains("MathFidelity"),
+        "KISS-CONTRACT-6.8-0004 must name the KISS-Ops `MathFidelity` carrier (#414 rename)"
+    );
+    assert!(
+        !block.contains("MathPrecision"),
+        "KISS-CONTRACT-6.8-0004 must NOT name `MathPrecision`: it collides with unpopped-vocab's \
+         dtype-shaped enum, so `use ..::MathPrecision` resolves to the decoy the clause forbids (#414)"
     );
 }
 

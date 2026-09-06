@@ -110,7 +110,7 @@ class DeclarationCompletenessTest(unittest.TestCase):
     CODEC = """
 code_enum!(Alpha { A1 = "a1", A2 = "a2" });
 code_enum!(Beta { B1 = "b1", B2 = "b2" });
-code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
+code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
 """
 
     def _codec(self, td):
@@ -131,14 +131,14 @@ code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
             self.assertEqual(kc.undeclared_buckets(body, self._codec(td)), [])
 
     def test_a_non_bucket_alphabet_is_not_demanded(self):
-        """MathPrecision is a declared attribute, not a bucketing of a continuum.
+        """MathFidelity is a declared attribute, not a bucketing of a continuum.
 
         Demanding it would make the clause claim a blindness the key does not have —
         the false-disclaimer direction, which is worse than the omission this catches.
         """
         with tempfile.TemporaryDirectory() as td:
             body = "declares `a1` and `b2` and never mentions st/rm."
-            self.assertNotIn("MathPrecision", kc.undeclared_buckets(body, self._codec(td)))
+            self.assertNotIn("MathFidelity", kc.undeclared_buckets(body, self._codec(td)))
 
     def test_presence_is_by_TOKEN_not_by_type_name(self):
         """Naming the type without a token does not tell the reader WHICH values collide."""

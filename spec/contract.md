@@ -27,7 +27,7 @@
 | Steward | ThinkersJournal |
 | Reference seed crate(s) | a contract-emission reference crate (`baracuda-kernelgen`, project/crate name given in Appendix A as non-normative provenance); this crate is *a* conformant implementation with no privilege. |
 | DAG position | **Middle tier.** Depends (structurally) on KISS-Classify, KISS-Ops, and KISS-Grammar; consumed opaquely by KISS-Announce (the contract-query payload), and structurally by KISS-Synth/Provision, KISS-Consume, and KISS-Emit. Not a root. |
-| Upstream edges | KISS-Classify (**STRUCTURAL** — the Identity accept-predicate is a `structure_key` and the Identity `target_capability` is a Classify namespaced descriptor (referenced, not re-pinned, by the Interface for entry-point selection); the Interface operand descriptors are Classify vocabulary); KISS-Ops (**STRUCTURAL** — the Semantics op DAG's nodes are KISS-Ops op names carrying the KISS-Ops OpAttrs channel, and the Guarantees determinism class and MathPrecision attribute are imported from KISS-Ops); KISS-Grammar (**STRUCTURAL**, present only when a contract names an advertisable op — the Identity `op_identity` field is then a full KISS-Grammar advertisable-op tag and the Semantics DAG's non-primitive nodes MAY correspond to advertisable ops (reconstructed as tags over each node's bare op name); a contract with no advertisable-op name carries a bare KISS-Ops op DAG as its Semantics and the bare op name of that DAG's root as its `op_identity` instead, and KISS-Grammar is not required for every kernel) |
+| Upstream edges | KISS-Classify (**STRUCTURAL** — the Identity accept-predicate is a `structure_key` and the Identity `target_capability` is a Classify namespaced descriptor (referenced, not re-pinned, by the Interface for entry-point selection); the Interface operand descriptors are Classify vocabulary); KISS-Ops (**STRUCTURAL** — the Semantics op DAG's nodes are KISS-Ops op names carrying the KISS-Ops OpAttrs channel, and the Guarantees determinism class and MathFidelity attribute are imported from KISS-Ops); KISS-Grammar (**STRUCTURAL**, present only when a contract names an advertisable op — the Identity `op_identity` field is then a full KISS-Grammar advertisable-op tag and the Semantics DAG's non-primitive nodes MAY correspond to advertisable ops (reconstructed as tags over each node's bare op name); a contract with no advertisable-op name carries a bare KISS-Ops op DAG as its Semantics and the bare op name of that DAG's root as its `op_identity` instead, and KISS-Grammar is not required for every kernel) |
 | Downstream edges | KISS-Announce (**OPAQUE** — carries the contract document as an uninterpreted, length-delimited contract-query payload); KISS-Synth/Provision (**STRUCTURAL** — provision returns `{artifact, contract}`); KISS-Consume (**STRUCTURAL** — lifting produces a contract's Semantics field and residue); KISS-Emit (**STRUCTURAL** — the emitter's output is described by a contract); KISS-Conform (test dependency) |
 | Spec license | CC0 1.0 Universal (public-domain dedication) |
 | Reference-crate license | MIT-OR-Apache-2.0 |
@@ -36,7 +36,7 @@
 > **Edge-label note (informative).** All three KISS-Contract upstream edges are
 > **STRUCTURAL**: KISS-Contract parses the internal structure of a KISS-Classify
 > `structure_key` / operand descriptor / `target_capability`, of a KISS-Ops op
-> definition (its name, OpAttrs channel, determinism class, MathPrecision
+> definition (its name, OpAttrs channel, determinism class, MathFidelity
 > attribute, and reference decomposition), and of a KISS-Grammar advertisable-op
 > tag and region. The labels reconcile with the umbrella §2.2 edge table, which
 > lists **KISS-Classify → KISS-Contract**, **KISS-Ops → KISS-Contract**, and
@@ -86,7 +86,7 @@ seven things and nothing else:
    `structure_key`.
 
 6. **Guarantees** — the unified numeric-guarantee block: the precision reference
-   function **named**, per-backend ULP tiers, the determinism class and MathPrecision
+   function **named**, per-backend ULP tiers, the determinism class and MathFidelity
    attribute (imported from KISS-Ops), bit-stability, and the **audited status
    derived** from those declared guarantees (its single home), not authored as a constant.
 
@@ -223,7 +223,7 @@ strided cell. Its contract carries:
 - **Capabilities:** `accept_predicate = structure_key`; determinism class `exact-byte`;
   precision class `correctly-rounded`; cost class `elementwise`, cost `1 * n`.
 - **Guarantees:** reference function `add` (IEEE-754); ULP tier 0 (correctly rounded);
-  determinism `exact-byte`; MathPrecision `bit-stable`; bit-stable on same hardware;
+  determinism `exact-byte`; MathFidelity `bit-stable`; bit-stable on same hardware;
   `audited_status` **derived** here from those guarantees.
 - **Provenance:** kernel source (generator), revision base + `revision_hash`,
   `cost_provenance = declared`, negotiation metadata (empty).
@@ -282,7 +282,7 @@ enclosing frame.
 KISS-Contract references the KISS-Classify dtype tokens, operand descriptors,
 `structure_key`, and `target_capability` by name/structure; the KISS-Ops op names,
 OpAttrs channel, reference decompositions, primitive floor, determinism class,
-precision-class token set, and MathPrecision attribute by name; and the KISS-Grammar
+precision-class token set, and MathFidelity attribute by name; and the KISS-Grammar
 advertisable-op tag and region by name. It re-defines none of them and defines no op
 meaning: Contract carries the identities and the ABI, the foundational vocabularies
 mean them.
@@ -373,7 +373,7 @@ mean them.
   declared determinism class, declared precision/ULP class, cost class and cost
   expressions (§6.7).
 - **Guarantees section** — the unified numeric-guarantee block: named reference function,
-  per-backend ULP tiers, determinism class, MathPrecision attribute, bit-stability, the
+  per-backend ULP tiers, determinism class, MathFidelity attribute, bit-stability, the
   **derived** `audited_status` (its single home, §6.8-0008/-0009/-0010), and cost provenance
   (§6.8).
 - **reference_function** — the NAMED KISS-Ops function precision is measured against.
@@ -384,7 +384,7 @@ mean them.
   token set imported verbatim from KISS-Ops, mapped to a per-backend ULP tier by the
   KISS-Ops precision-class↔ULP-tier correspondence (KISS-OPS §6.8); `correctly-rounded`
   and `bit-reproducible` map to ULP tier 0 (§6.7-0005).
-- **MathPrecision attribute** — the KISS-Ops compute-fidelity attribute `{bit-stable,
+- **MathFidelity attribute** — the KISS-Ops compute-fidelity attribute `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17), imported from KISS-Ops, orthogonal to the
   determinism class, and **not** a dtype.
 - **cost_provenance** — the provenance of the Capabilities cost model, `declared` or
@@ -445,7 +445,7 @@ mean them.
   guarantee) are owned by KISS-Ops; the Guarantees **determinism class** (the single
   canonical enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`,
   KISS-OPS §6.0-0001), the closed **precision-class** token set and its ULP-tier
-  correspondence (KISS-OPS §6.8), and the **MathPrecision** attribute `{bit-stable,
+  correspondence (KISS-OPS §6.8), and the **MathFidelity** attribute `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17) are imported verbatim. KISS-Contract
   re-defines none of them and defines no op meaning.
 - **KISS-Grammar** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
@@ -1152,7 +1152,7 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001),
   spelled verbatim and imported from KISS-Ops; an implementation MUST NOT re-fork or re-spell
   the enum. *Test:* `test_contract_determinism_class_imported`.
-- **KISS-CONTRACT-6.8-0004** — The `math_precision` MUST be the KISS-Ops MathPrecision
+- **KISS-CONTRACT-6.8-0004** — The `math_precision` MUST be the KISS-Ops MathFidelity
   attribute `{bit-stable, reduced-mantissa-permitted}` (KISS-OPS §6.17), imported from
   KISS-Ops and orthogonal to the determinism class; an implementation MUST NOT re-fork it,
   MUST NOT model it as a dtype, and MUST NOT infer it from a KISS-Classify dtype token. *Test:*
@@ -1166,7 +1166,7 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   identity/lookup, the contract declares it as a guarantee). An implementation MUST NOT
   declare an `accumulation_type` outside the closed set, and MUST NOT let
   `accumulation_type` and the key's `<acc>` disagree. This is a guarantee-only surface: it
-  does not restate the KISS-Ops MathPrecision or determinism facts, which live in their own
+  does not restate the KISS-Ops MathFidelity or determinism facts, which live in their own
   fields (§6.8-0003/-0004). *Test:* `test_contract_accumulation_type_matches_key_acc`.
 - **KISS-CONTRACT-6.8-0012** — The **declared tolerance** for an accumulator-keyed
   reduction/scan/contraction tolerance-cell `(S, A)` (KISS-OPS §6.17-0008, where `S` is the
@@ -1747,7 +1747,7 @@ contract vector for `test_contract_seven_section_core`, `test_contract_identity_
 `test_contract_positional_signature_complete`, `test_contract_launch_scalar_pinned_order`, and
 `test_contract_determinism_class_imported` — a `machine-checkable-IR` Semantics (a one-node `add`
 DAG), a strided Interface carrying per-operand extents and signed strides plus `n`, `rank = 1`,
-`count_unit = elements`, `in_place = none`, determinism class `exact-byte`, MathPrecision
+`count_unit = elements`, `in_place = none`, determinism class `exact-byte`, MathFidelity
 `bit-stable`. Its rendering as a structured/text document under the §6.11 framing is Appendix C. The `gather` contract
 of §2.6 is the golden vector for `test_contract_node_carries_opattrs`,
 `test_contract_op_identity_carries_distinguishing_attrs`, `test_contract_index_operand_typed`, and

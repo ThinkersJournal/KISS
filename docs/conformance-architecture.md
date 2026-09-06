@@ -136,7 +136,7 @@ sources feeding one classifier:
    behaves like the transcendental region: tolerance, not bit-exact.
 
 A pending sk3 requirement follows (kiss-ref's reference-impl-role stake): `KISS-OPS-6.17`
-MathPrecision must pin the exact input-rounding each `<mp>` value implies, and each `(acc, mp)` cell
+MathFidelity must pin the exact input-rounding each `<mp>` value implies, and each `(acc, mp)` cell
 must be classified **bit-reproducible → golden** vs **nondeterministic → declared-tolerance**,
 precisely enough for a spec-derived reference to reproduce mixed-precision GEMM. This is the agenda
 D6 reproducibility-scope axis; the codec/key-spelling half is out of the reference-impl lane.

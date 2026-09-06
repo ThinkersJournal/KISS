@@ -69,7 +69,7 @@ code_enum!(SizeClass { Tiny = "t", Small = "s", Medium = "m", Large = "l" });
 // sk3: the math-precision code in the gem contraction field. Codes never begin with
 // `b` — that prefix is reserved for the conditionally-present batch coordinate — so
 // the geometry and precision groups never collide in spelling.
-code_enum!(MathPrecision { Stable = "st", ReducedMantissa = "rm" });
+code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
 
 /// Derive an operand's vector-access width from its innermost-active-axis facts
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
@@ -153,7 +153,7 @@ pub enum Reduce {
 /// sk3 grows it from `c<m><n><k>/<kdiv>` to
 /// `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`: a geometry group
 /// (`m`/`n`/`k`, `k_div`, and the conditionally-present `batch` size-class) followed
-/// by a precision group (weight / accumulator / output dtypes + the MathPrecision
+/// by a precision group (weight / accumulator / output dtypes + the MathFidelity
 /// code, in input→compute→output dataflow order). `batch` is present IFF the cell is
 /// batched — a non-batched cell omits it entirely, so a non-batched token carries no
 /// batch coordinate at all (the general optional-coordinate rule).
@@ -173,13 +173,13 @@ pub struct Contraction {
     /// Output dtype token, from the closed §6.1 set.
     pub out: String,
     /// Math-precision code (`st` bit-stable / `rm` reduced-mantissa).
-    pub mp: MathPrecision,
+    pub mp: MathFidelity,
 }
 
 /// The **default** math-precision of a non-contraction cell (§6.7-0013): the value
 /// the pre-sk4 non-contraction key collapsed to. `<mp>` deviates from it only for
 /// `rm` (reduced-mantissa), so an absent `(acc+mp)` field means bit-stable `st`.
-pub const ACC_MP_DEFAULT_MP: MathPrecision = MathPrecision::Stable;
+pub const ACC_MP_DEFAULT_MP: MathFidelity = MathFidelity::Stable;
 
 /// The optional **non-contraction** precision field (§6.7-0013, sk4), realizing the
 /// §6.7-0012 forward requirement. Present at most for a **non-`gem`** cell whose
@@ -202,7 +202,7 @@ pub struct AccMp {
     pub acc: String,
     /// Math-precision code, extending the §6.7-0006 strict-vs-TF32 axis to the
     /// non-contraction key. Its default is [`ACC_MP_DEFAULT_MP`] (`st`).
-    pub mp: MathPrecision,
+    pub mp: MathFidelity,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -491,7 +491,7 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
             return Err(KeyDecline::UnknownDtype);
         }
     }
-    let mp = MathPrecision::parse(parts[rest + 3]).ok_or(KeyDecline::BadContractionField)?;
+    let mp = MathFidelity::parse(parts[rest + 3]).ok_or(KeyDecline::BadContractionField)?;
     Ok(Contraction {
         m,
         n,
@@ -523,7 +523,7 @@ fn parse_acc_mp(field: &str, compute_dtype: &str) -> Result<AccMp, KeyDecline> {
     if !DTYPES.contains(&acc) {
         return Err(KeyDecline::UnknownDtype);
     }
-    let mp = MathPrecision::parse(parts[1]).ok_or(KeyDecline::BadAccMpField)?;
+    let mp = MathFidelity::parse(parts[1]).ok_or(KeyDecline::BadAccMpField)?;
     // rule (d): reject the all-default form — a canonical producer omits the field
     // entirely (rule c), so its presence with both slots at default is invalid.
     if acc == compute_dtype && mp == ACC_MP_DEFAULT_MP {

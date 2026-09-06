@@ -154,7 +154,7 @@ fn a1_dense_contraction_cuda() {
     let c = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathPrecision::Stable,
+        mp: MathFidelity::Stable,
     };
     let k = key("gem", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
     assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
@@ -165,7 +165,7 @@ fn a1_dense_contraction_vulkan_target() {
     let c = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathPrecision::Stable,
+        mp: MathFidelity::Stable,
     };
     let k = key("gem", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
     assert_token("KISS-CLASSIFY-6.8", &k, "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
@@ -185,7 +185,7 @@ fn sk4_gem_batched_cell() {
         m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: Some(SizeClass::Medium),
         wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathPrecision::Stable,
+        mp: MathFidelity::Stable,
     };
     let k = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
     assert_token(
@@ -206,8 +206,8 @@ fn sk4_simt_f32_vs_tf32_distinct_by_mp() {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(), mp,
     };
-    let simt = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathPrecision::Stable)));
-    let tf32 = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathPrecision::ReducedMantissa)));
+    let simt = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathFidelity::Stable)));
+    let tf32 = key("gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathFidelity::ReducedMantissa)));
     assert_token(
         "KISS-CLASSIFY-6.7-0006",
         &simt,
@@ -232,13 +232,13 @@ fn sk4_mixed_precision_fp8_disambiguated() {
     let e4m3_f8e5m2_f32 = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f8e5m2".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathPrecision::Stable,
+        mp: MathFidelity::Stable,
     };
     // E4M3 x E4M3 -> F16, f32 acc, bit-stable.
     let e4m3_e4m3_f16 = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f8e4m3fn".to_string(), acc: "f32".to_string(), out: "f16".to_string(),
-        mp: MathPrecision::Stable,
+        mp: MathFidelity::Stable,
     };
     let a = key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_f8e5m2_f32));
     let b = key("gem", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_e4m3_f16));
@@ -304,7 +304,7 @@ fn sk4_contraction_precision_group_declines() {
 fn test_classify_noncontraction_acc_mp_field() {
     let k = key_acc_mp(
         "red", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing,
-        Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::Stable }),
+        Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable }),
     );
     assert_token(
         "KISS-CLASSIFY-6.7-0013",
@@ -324,7 +324,7 @@ fn test_classify_noncontraction_acc_mp_field() {
 fn sk4_noncontraction_acc_mp_deviating_precision_only() {
     let k = key_acc_mp(
         "scn", "f32", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None,
-        Some(AccMp { acc: "f32".to_string(), mp: MathPrecision::ReducedMantissa }),
+        Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa }),
     );
     assert_token(
         "KISS-CLASSIFY-6.7-0013",
