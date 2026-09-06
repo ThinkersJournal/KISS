@@ -1713,6 +1713,20 @@ separating a registered namespace from that namespace's capability-set token.
   standard library. This obligation binds every implementation uniformly; the
   reference implementation holds no exemption. *Test:* `test_classify_zero_dependency`.
 
+  > *Informative — where the consequences of this constraint are pinned.* This clause
+  > states what an implementation may not REACH FOR; it does not choose the primitives
+  > that replace them, and a reader looking here for those will not find them. The
+  > digest a namespace uses when a capability-set is too long to enumerate is pinned in
+  > full by **§6.8-0007** — FNV-1a 64-bit, its two constants, its output width, and its
+  > algorithm marker — precisely so that "standard library only" does not leave each
+  > implementer to pick a hash. ⚠️ **This pointer exists because its absence was
+  > measured**: the maintainer of the `vulkan:` namespace searched this clause for a
+  > digest pin, correctly found none, filed the gap, and had meanwhile implemented
+  > FNV-1a 64 with byte-identical constants and marker — conformant to a clause they
+  > never found. A pin nobody can reach from the constraint that motivates it is
+  > reimplemented from scratch by everyone who needs it, and is only conformant by luck.
+
+
 ---
 
 ## 7. Capability, Profile & Extension model
