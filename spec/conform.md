@@ -226,7 +226,7 @@ structure padding, field offsets, magic, and token spellings byte-for-byte again
 golden vectors, and reports every ambiguity that let it drift; and only when **≥2
 structurally dissimilar implementations** (distinct codebases, disjoint lowering-module
 manifests) interoperate on the golden vectors. The KISS-Conform **AUDIT role signs** the
-Draft→Frozen transition — not the authoring editor — and the **reference implementation
+Draft→Frozen transition — not the authoring editor alone — and the **reference implementation
 runs the same public, unmodified suite with no exemption**. Two process guards make this
 real: oracle-independence (vectors derive from the §6 semantics tables, carry an
 `oracle`-derivation provenance tag, and the vector author must not read reference-impl
@@ -357,8 +357,9 @@ manifest from KISS-Emit. It re-defines none of them: Conform tests them.
   objective, checkable items that gate a sub-standard's Draft→Frozen transition; signed by
   the AUDIT role, with the reference impl running the unmodified public suite with no
   exemption (§8, umbrella §5.3).
-- **AUDIT role** — the KISS-Conform role that signs a maturity transition (not the
-  authoring/design editor); attempts a second dissimilar implementation from the document
+- **AUDIT role** — the KISS-Conform role that co-signs a maturity transition with the
+  sub-standard's editor-of-record (umbrella §7.1), never the authoring/design editor
+  alone; attempts a second dissimilar implementation from the document
   alone and reports every ambiguity (umbrella §5.3, §7.3).
 - **Wire/ABI schema version** — the version axis Conform keys conformance on (umbrella
   §5.1): the KISS-Announce envelope version, the KISS-Classify `structure_key` version, the
@@ -1481,7 +1482,10 @@ version)`; the reference **crate** carries an ordinary semver that moves on any 
   bidirectional traceability; the CPU oracle reproduces the pinned results (**circularity check
   clean** by provenance tag, §6.5-0003); and negative/decline coverage passes (never-panic fuzz
   clean within the pinned time/memory bounds, §6.7-0004). The transition MUST be **signed by the
-  KISS-Conform AUDIT role**, not the authoring editor. *Test:*
+  KISS-Conform AUDIT role** **jointly with the sub-standard's editor-of-record** (umbrella
+  §7.1), and never by the authoring editor alone. ⚠️ Both signatures are REQUIRED: *"not the
+  authoring editor alone"* forbids an editor-only signature and is satisfied by an AUDIT-only one,
+  which is the excluded-editor reading this clause rejects. *Test:*
   `test_conform_freeze_gate_checklist` (checklist gate; AUDIT-signed).
 - **KISS-CONFORM-8-0007** — The **reference implementation** MUST run the **same public,
   unmodified** canonical KISS-Conform suite every other implementation runs, with **no exemption,
@@ -1677,7 +1681,8 @@ applies reflexively to itself, umbrella §3.3).
   freeze-gate checklist or the comparator-selection rule is coordinated across all affected parties
   as a numbered RFC before it is wired.
 - **AUDIT role separation:** the KISS-Conform **AUDIT role** signs every maturity transition
-  across the suite (not the authoring/design editor), attempts a second dissimilar implementation
+  across the suite (jointly with the editor-of-record, never the authoring/design editor alone),
+  attempts a second dissimilar implementation
   from the document alone, and reports every ambiguity as a numbered RFC (umbrella §5.3, §7.3;
   design charter §5, informative). For KISS-Conform's own freeze, the AUDIT role MUST be
   independent of KISS-Conform's authoring editor (§8-0009).

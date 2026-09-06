@@ -1042,7 +1042,8 @@ bump rule table (below) states, per kind of change, which axis moves.
   consumer** has certified the round-trip of §6.7 against an emitter's output. *Test:*
   `test_emit_freeze_precondition_second_consumer_roundtrip`.
 - **KISS-EMIT-8.2-0004** — The Draft → Frozen transition MUST be signed by the
-  KISS-Conform AUDIT role, not the authoring editor alone. *Test:*
+  KISS-Conform AUDIT role **jointly with the editor-of-record** (umbrella §7.1), and never by the
+  authoring editor alone — both signatures are required. *Test:*
   `test_emit_freeze_signed_by_audit_role`.
 
 ---
@@ -1172,7 +1173,7 @@ Four governance facts are specific to KISS-Emit and recorded here by reference:
   cross-standard document lint (§6.7-0008), which reads both sub-standards' texts, not by
   a runtime emitter test.
 - **Freeze signing.** The Draft → Frozen transition is signed by the KISS-Conform AUDIT
-  role, not the authoring editor (§8.2-0004), and only after the §8.2 preconditions (the
+  role, not the authoring editor alone (§8.2-0004), and only after the §8.2 preconditions (the
   completed recorded neutrality audit, a demonstrated differing-surface-spelling emitter,
   and a second-consumer round-trip certification) are met on top of the umbrella §5.3
   gate.

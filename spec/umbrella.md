@@ -245,7 +245,8 @@ A sub-standard advances Draft → Frozen only when all three conditions are met 
 2. **A non-native foreign reader consumes the wire.** A reader written outside the reference language reproduces or parses the exact bytes, with endianness, pointer width, and structure padding checked (the adversarial-outsider checklist).
 3. **The sub-standard's KISS-Conform suite exists and passes**, with complete bidirectional clause-to-test traceability.
 
-The **KISS-Conform AUDIT role signs the freeze transition** — not the authoring/design role. "Frozen" means "has a passing conformance gate and a demonstrated second dissimilar implementation from the document alone," never merely "the authors declared it stable." A sub-standard citing this gate refers to it as "umbrella §5.3" so the reference resolves from the public documents alone.
+The **KISS-Conform AUDIT role signs the freeze transition**, jointly with the sub-standard's
+editor-of-record (§7.1) and never the authoring role alone. "Frozen" means "has a passing conformance gate and a demonstrated second dissimilar implementation from the document alone," never merely "the authors declared it stable." A sub-standard citing this gate refers to it as "umbrella §5.3" so the reference resolves from the public documents alone.
 
 ---
 

@@ -953,7 +953,7 @@ KISS-Consume carries the two umbrella version axes (umbrella §5.1) and does not
 KISS-Consume is at maturity stage **Draft**. It advances Draft → Frozen only through the umbrella
 freeze gate (umbrella §5.3), whose three conditions are stated normatively as §8.2-0001 … §8.2-0003
 below — **the clauses are the obligations; this paragraph does not restate them**. The **KISS-Conform
-AUDIT role signs the freeze transition**, not the authoring editor. The remaining open questions of
+AUDIT role signs the freeze transition**, not the authoring editor alone (umbrella §7.3). The remaining open questions of
 Appendix D — in particular the shared-pen risk on the identical round-trip wording (§6.6) and the
 residue re-evaluation workflow across op-set bumps — should be resolved before freeze; the declared
 round-trip subset advertisement (§7.2-0001), previously an open question, was pinned in this revision.
