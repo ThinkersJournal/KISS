@@ -610,7 +610,11 @@ pub fn declared_appendix_vectors() -> Vec<String> {
         ),
     };
     let rest = &GRAMMAR_SPEC[start..];
-    let end = rest[3..].find("\n## ").map(|i| i + 3).unwrap_or(rest.len());
+    // ⚠️ NO `rest[3..]` OFFSET. A byte-index skip panics on a short slice and on a
+    // non-char boundary, and it bought nothing: `rest` begins at "## Appendix A" with NO
+    // leading newline, so the search below cannot match the current heading anyway.
+    let end = rest.find("
+## ").unwrap_or(rest.len());
     let appendix = &rest[..end];
 
     let mut out: Vec<String> = Vec::new();
@@ -764,7 +768,10 @@ pub fn emit_grammar_vectors_json() -> String {
         .collect();
     let json_list = |v: &[String]| {
         v.iter()
-            .map(|x| format!("\"{x}\""))
+            // ⚠️ THE CRATE'S ESCAPER, not a hand-rolled quote. The ids are alphanumeric
+            // today, so this changes no byte -- which is exactly when a hand-rolled quote is
+            // easiest to leave in. Two private JSON escapers had already diverged here once.
+            .map(|x| crate::json::escape_string(x))
             .collect::<Vec<_>>()
             .join(", ")
     };

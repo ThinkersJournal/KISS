@@ -212,7 +212,11 @@ fn test_grammar_declared_vectors_are_derived_from_the_appendix() {
     // An independent scan: find Appendix A, then every `*Vector <id>` heading in it.
     let start = md.find("## Appendix A").expect("spec/grammar.md must carry Appendix A");
     let rest = &md[start..];
-    let end = rest[3..].find("\n## ").map(|i| i + 3).unwrap_or(rest.len());
+    // ⚠️ NO `rest[3..]` OFFSET. A byte-index skip panics on a short slice and on a
+    // non-char boundary, and it bought nothing: `rest` begins at "## Appendix A" with NO
+    // leading newline, so the search below cannot match the current heading anyway.
+    let end = rest.find("
+## ").unwrap_or(rest.len());
     let appendix = &rest[..end];
     let mut expected: Vec<String> = Vec::new();
     for part in appendix.split("*Vector ").skip(1) {
