@@ -1708,12 +1708,55 @@ separating a registered namespace from that namespace's capability-set token.
   reproduce from is insufficient whatever the missing piece was. A maintainer MUST NOT rely on a
   published grammar, a source comment, or a README to supply what the manifest omits: those age
   **independently** of the manifest, and a reader has no way to tell which is current. The
-  obligation **splits**, exactly as §6.8-0014's does — the manifest MUST **name** its sufficiency
-  demonstration (the reproducing party, and the artifact reproduced), which KISS can check;
-  whether that demonstration was real is the **maintainer's** to discharge, because KISS has no
-  access to a namespace's vocabulary content (§6.8-0004). A manifest naming no demonstration is
-  recorded as **unexercised**, never as sufficient — an untested claim of self-sufficiency is the
-  one this clause exists to stop, since a maintainer cannot detect what only they know.
+  obligation **splits**, exactly as §6.8-0014's does — KISS checks that the claim is *made*, in a
+  form it can read; whether the demonstration was real is the **maintainer's** to discharge,
+  because KISS has no access to a namespace's vocabulary content (§6.8-0004). A manifest MUST
+  therefore carry a **`sufficiency`** object with a **`status`** of exactly `demonstrated` or
+  `unexercised`; when `demonstrated`, it MUST also carry **`reproduced_by`** naming the party
+  that performed the reproduction, **`artifact`** naming what was reproduced,
+  **`vocabulary_version`** — the §6.8-0008 integer the reproduction was performed **against** —
+  and **`guessed`**, an array naming each thing the reproducing party had to supply **from
+  outside the manifest** in order to finish. A reader MUST reject with a typed decline a manifest
+  whose `sufficiency` is absent, whose `status` is **absent** or is any other token, or which
+  claims `demonstrated` without all five. ⚠️ The absent-`status` arm is stated **separately
+  from the wrong-token arm on purpose**: an enumeration of wrong values does not reach a value
+  that is not there, and reading the two as one is how this clause came to mandate a field it
+  never named. ⚠️ **`guessed` MAY be empty and MUST still be present**:
+  an empty array is the strong claim that nothing was supplied, and it is a claim a reader is
+  entitled to see **made**. A byte-identical reproduction that required guesses is **not** the
+  same result as one that required none, and a two-state `status` records them identically —
+  **the residue is what a demonstration is FOR.** An item the manifest states, or that its own
+  established conventions entail, is **not** guessed even if the reproducing party did not at
+  first connect it; only what the manifest does not supply belongs in this array. ⚠️ But an
+  item excluded on that ground MUST be named in **`derived`**, a companion array — likewise
+  required iff `demonstrated`, likewise possibly empty — whose every entry names the item **and
+  where in the manifest the derivation is available**. Left silent, the exclusion is
+  unfalsifiable **and its incentive runs the wrong way**: calling an item derived flatters the
+  manifest and the reproducing party at once. *"It was entailed"* is not a claim a reader can
+  check; *"it appears in these three places"* is. ⚠️ Together the two arrays are the
+  reproducing party's statement of **everything they had to determine beyond what the manifest
+  states**, so an item in **neither** is an assertion that **the manifest determined it**. KISS
+  cannot check that completeness — it has no access to a namespace's vocabulary (§6.8-0004) and
+  cannot know what a reproduction required — and a further field purporting to check it would be
+  **a claim wearing a check's clothes**, which is worse than the gap it covers. Stating the
+  obligation makes an omission **assertive rather than silent**; it does not make it verifiable,
+  and this clause does not pretend otherwise. ⚠️ And a
+  guess that turned out **right** MUST be listed: it was still not obtained from the manifest,
+  and **the next reader may guess differently** — the array records what the document failed to
+  determine, not what the reproduction got wrong. ⚠️ A
+  demonstration whose `sufficiency.vocabulary_version` differs from the manifest's own MUST be
+  read as **`unexercised`**, not as `demonstrated` and not as malformed: the vocabulary has moved
+  since it was reproduced, and **the fields added since are precisely the ones no foreign reader
+  has tried**. A `demonstrated` that cannot go stale is a `demonstrated` that is always true.
+  ⚠️ A reader MUST also reject a `reproduced_by` naming the same producer as the manifest's
+  `generated_from`: a maintainer reproducing their own manifest demonstrates nothing this clause
+  asks for, since the whole point is a party who does not already know what the manifest omits —
+  **and a self-reproduction passes for exactly that reason**. That check is not airtight (a
+  maintainer may name a proxy) and it is not aimed at deceit: it catches the honest case, where
+  the only party present writes themselves in without noticing the circularity. The
+  `unexercised` state is **declared, never inferred from absence** — §6.8-0015's reason: an
+  absent field cannot be told apart from a forgotten one, and *"we have not done this yet"* is a
+  claim a reader is entitled to see made rather than deduced.
   *Test:* `test_namespace_vocabulary_manifest_sufficiency_named`.
 
 ### 6.9 Foundational independence and opaque carry
