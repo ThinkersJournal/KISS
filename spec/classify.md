@@ -1718,7 +1718,11 @@ separating a registered namespace from that namespace's capability-set token.
   and **`guessed`**, an array naming each thing the reproducing party had to supply **from
   outside the manifest** in order to finish. A reader MUST reject with a typed decline a manifest
   whose `sufficiency` is absent, whose `status` is **absent** or is any other token, or which
-  claims `demonstrated` without all five. ⚠️ The absent-`status` arm is stated **separately
+  claims `demonstrated` without **every one of `reproduced_by`, `artifact`,
+  `vocabulary_version`, `vectors_digest`, `guessed` and `derived`**. ⚠️ The companions are
+  **enumerated here rather than counted**: a bare number must be hand-bumped by every later
+  amendment that adds a key, and the amendment that forgets leaves a reader implementing the
+  rejection against a stale total — accepting a manifest that is missing one. ⚠️ The absent-`status` arm is stated **separately
   from the wrong-token arm on purpose**: an enumeration of wrong values does not reach a value
   that is not there, and reading the two as one is how this clause came to mandate a field it
   never named. ⚠️ **`guessed` MAY be empty and MUST still be present**:
@@ -1743,11 +1747,43 @@ separating a registered namespace from that namespace's capability-set token.
   and this clause does not pretend otherwise. ⚠️ And a
   guess that turned out **right** MUST be listed: it was still not obtained from the manifest,
   and **the next reader may guess differently** — the array records what the document failed to
-  determine, not what the reproduction got wrong. ⚠️ A
-  demonstration whose `sufficiency.vocabulary_version` differs from the manifest's own MUST be
-  read as **`unexercised`**, not as `demonstrated` and not as malformed: the vocabulary has moved
-  since it was reproduced, and **the fields added since are precisely the ones no foreign reader
-  has tried**. A `demonstrated` that cannot go stale is a `demonstrated` that is always true.
+  determine, not what the reproduction got wrong. A `demonstrated` block MUST also carry
+  **`vectors_digest`**, identifying the `vectors` array it was reproduced against. ⚠️ It uses
+  §6.8-0007's **algorithm and constants** (FNV-1a 64-bit, offset basis `0xcbf29ce484222325`,
+  prime `0x100000001b3`, sixteen lowercase hex digits) and **defines its own input here**, because
+  §6.8-0007's input is *"the canonical enumeration string it **replaces**"* — **the `vectors`
+  array replaces nothing, so that clause does not range over it and citing it for the input would
+  name bytes no clause defines.** The digested bytes are the **`vectors_digest_input`**, whose
+  construction the namespace MUST pin in `declarative` and MAY additionally carry; a reader MUST
+  be able to **rebuild** it from `vectors` by that pinned construction and compare byte-exact, so
+  a producer may disagree about **whether** the digest is current but never about **what** was
+  digested (§6.8-0013's guard, applied one level up). The pinned construction MUST state its
+  **character encoding**, and MUST be defined over **the keys each vector actually carries**
+  rather than a fixed template: vectors legitimately differ in key-set — a vector pinning a
+  digest carries no `token` at all — so a template-driven construction is not merely lossy but
+  **undefined** for those entries, and silently digests a shorter list. ⚠️ The construction MUST **exclude every
+  `note`**: a note is prose, a prose correction changes nothing a producer must produce, and a
+  currency check that goes stale on a typo **trains its reader to re-run for nothing and then to
+  stop believing it** — a detector that fires on healthy input is worse than none, because it
+  consumes the attention the true positive needs. ⚠️ The **pin** is the load-bearing half and the
+  carry is not: a carried input alone proves only that some string digests to the recorded value,
+  **never that the string corresponds to the `vectors` array beside it**. A reader who can rebuild
+  has no use for the copy; a reader who cannot rebuild is not helped by one, because they cannot
+  check that it corresponds. Requiring the carry would restate the bulk of the artifact inside the
+  artifact to certify the artifact — **and §6.8-0007 exists precisely because a digest replaces a
+  long enumeration**, so mandating both would invert the clause this borrows its algorithm from. ⚠️ A demonstration whose `sufficiency.vocabulary_version` **or**
+  `sufficiency.vectors_digest` differs from the manifest's own MUST be read as **`unexercised`**,
+  not as `demonstrated` and not as malformed: the artifact has moved since it was reproduced, and
+  **what changed is precisely what no foreign reader has tried**. A `demonstrated` that cannot go
+  stale is a `demonstrated` that is always true. ⚠️ **Both are required because they answer
+  different questions and each is blind to the other's case.** For `kind: generated` the
+  **`vectors` array is the normative contract** (§6.8-0013), and it can move while
+  `vocabulary_version` does not — a vector added to pin a token that was **always legal**
+  changes the contract without changing the language, so an integer-only check reads a
+  never-reproduced vector set as current. Conversely a vocabulary that gains a token **without**
+  gaining a vector leaves the digest unchanged while the manifest's coverage of its own domain
+  silently drops. **`vectors_digest` answers *did what I reproduced change*; `vocabulary_version`
+  answers *did what the vectors must cover change*.**
   ⚠️ A reader MUST also reject a `reproduced_by` naming the same producer as the manifest's
   `generated_from`: a maintainer reproducing their own manifest demonstrates nothing this clause
   asks for, since the whole point is a party who does not already know what the manifest omits —
