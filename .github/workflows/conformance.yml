@@ -35,6 +35,72 @@ jobs:
           name: runlist-ubuntu
           path: runlist-ubuntu.txt
 
+  # KISS was the ONLY Rust repo in this portfolio without a clippy gate -- measured
+  # 2026-09-06 with an is-this-a-Rust-repo control, after a first census miscounted a
+  # TypeScript project as a missing gate. Eight of eight other Rust repos gate clippy.
+  #
+  # ⚠️ WHAT THIS GATES, STATED EXACTLY: clippy's DENY-BY-DEFAULT lints (the correctness
+  # group). `-D warnings` is deliberately NOT set. That is not laxness -- it is the only
+  # honest option tonight, for a reason worth recording:
+  #
+  #   "how many clippy warnings does this crate have" HAS NO SINGLE ANSWER.
+  #   Measured on main 30bdb4c, three defensible instruments, three numbers:
+  #       grep -c '^warning:'                       70   ⚠️ 19 are cargo's own
+  #                                                      "(lib) generated N warnings"
+  #                                                      SUMMARY lines, not diagnostics
+  #       the same, summary lines excluded          51   text output DEDUPLICATES
+  #                                                      across compilation units
+  #       --message-format=json, coded warnings     65   JSON does NOT deduplicate
+  #
+  # A ceiling on an ambiguous number is a worse ratchet than no ceiling: the first person
+  # to change how it is counted either breaks a green build or silently raises the bar.
+  # COVERAGE_FLOOR.tsv works because `harness`/`untested` have one definition each. This
+  # does not, yet. So the gate rests on the ONE unambiguous signal -- clippy's exit code --
+  # and the counts are PRINTED rather than asserted, so the burn-down surface is visible
+  # without being load-bearing.
+  #
+  # The 16 `eq_op` errors that blocked this gate until #446 are suppressed at source with
+  # a justification (`a != a` renders §6.15's cmp_ne(a,a) verbatim; `.is_nan()` would be
+  # equivalent behaviour in a different expression and would break the one-for-one
+  # auditability against the clause). ⚠️ And that 16 was a FLOOR, not a count -- clippy
+  # ABORTS at the first error, so nothing behind them was visible until they were cleared.
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clippy correctness lints (deny-by-default group) -- BLOCKING
+        working-directory: conformance
+        run: cargo clippy --all-targets --all-features
+      # Reported, never asserted. If this number is ever gated, gate ONE of the three
+      # instruments above and say in the workflow which one -- a bare number here would
+      # age into a claim about the present that nothing re-derives.
+      #
+      # ⚠️ THIS RUNS CLIPPY A SECOND TIME AND THAT IS SAFE -- MEASURED, not assumed.
+      # A review on #457 held that cargo's diagnostic caching would make the second run
+      # SILENT, zeroing the census. Tested under the CI condition (`cargo clean` first,
+      # so run 1 is a real cold compile): run 2 emitted 626 lines and the census reported
+      # the same 70/19/51 as a warm run. Cargo REPLAYS cached diagnostics.
+      #
+      # ⚠️ AND THE STEPS STAY SEPARATE DELIBERATELY. Combining them would pipe the gate
+      # through `tee`, and a pipeline's exit status is `tee`'s, not clippy's, unless
+      # `set -o pipefail` is set -- making the blocking signal depend on a shell option
+      # inside a `run:` block rather than on the command. The blocking step above is a
+      # bare `run:` with no pipe, no redirection and no shell logic, so ITS EXIT CODE IS
+      # THE GATE AND NOTHING CAN MASK IT. This repo has been bitten twice by the inverse:
+      # `gh pr merge ... | tail -3` reported tail's status as gh's, and a captured
+      # pipeline lost a git failure because command substitution overwrites PIPESTATUS.
+      - name: Warning census (reported, NOT gated)
+        working-directory: conformance
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --all-targets --all-features 2>&1 | tee /tmp/clippy.txt >/dev/null
+          all=$(grep -c '^warning:' /tmp/clippy.txt || true)
+          sums=$(grep -c '^warning: .* generated .* warning' /tmp/clippy.txt || true)
+          echo "warning lines (incl. cargo summaries): $all"
+          echo "cargo per-unit summary lines:          $sums"
+          echo "diagnostics (summaries excluded):      $((all - sums))"
+
   windows-test:
     runs-on: windows-latest
     steps:
