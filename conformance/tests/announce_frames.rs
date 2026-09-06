@@ -19,10 +19,11 @@
 
 use kiss_conformance::announce::*;
 
-/// The Announce §2.5 reference envelope: version 1, one profile {1}, capabilities
-/// = EXT bits 0–5 | FEAT bit 32 | FEAT bit 33 = 0x0000_0003_0000_003F.
+/// The Announce §2.5 reference envelope — single definition in the library
+/// (`announce::reference_envelope`), the same builder the golden artifact renders. Was a third
+/// copy of these bytes (with announce_golden.rs); consolidated so no copy can drift (#469).
 fn reference() -> Envelope {
-    Envelope { envelope_version: 1, profiles: vec![1], capabilities: 0x0000_0003_0000_003F }
+    reference_envelope()
 }
 
 /// A maximally-populated envelope: all 16 profile slots live + ascending, and a

@@ -396,3 +396,85 @@ pub fn negotiate(local: &Envelope, remote: &Envelope) -> Result<u16, AnnounceDec
         .max()
         .ok_or(AnnounceDecline::NoMutualProfile)
 }
+
+// ---- Golden handshake-frame reference builders + the machine-readable artifact -------------
+//
+// The §2.5 worked-example handshake frames are built ONCE, here in the library, so the golden
+// bytes have a SINGLE definition (KISS-Conform §4.3): `announce_golden.rs` asserts them against the
+// §2.x appendix hex (appendix-agreement), `announce_frames.rs` reuses the envelope, and
+// `emit_announce_vectors_json` renders them into the foreign-reader artifact. Before this, the
+// reference envelope was defined in BOTH test files — the shadowing hazard #469 hit with g1_region.
+
+/// §6.1-0002 reference envelope: version 1, one profile {1}, caps EXT[0..5]|FEAT[32]|FEAT[33].
+pub fn reference_envelope() -> Envelope {
+    Envelope { envelope_version: 1, profiles: vec![1], capabilities: 0x0000_0003_0000_003F }
+}
+
+/// §6.3-0005 reference availability list: two records (keys AA BB CC / DE AD).
+pub fn reference_availability_list() -> AvailabilityList {
+    AvailabilityList {
+        list_version: 1,
+        records: vec![
+            AvailabilityRecord { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] },
+            AvailabilityRecord { structure_key: vec![0xDE, 0xAD], revision_hash: [0x22; 32] },
+        ],
+    }
+}
+
+/// §6.4-0011 reference identity block, echoed by CYRQ/CRSP/CDEC: key AA BB CC, revision present.
+pub fn reference_identity() -> Identity {
+    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+}
+
+/// §6.4-0001 reference contract-query request.
+pub fn reference_cyrq() -> QueryRequest {
+    QueryRequest { identity: reference_identity() }
+}
+
+/// §6.4-0004 reference contract response (5-byte payload).
+pub fn reference_crsp() -> ContractResponse {
+    ContractResponse { identity: reference_identity(), payload: vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01] }
+}
+
+/// §6.4-0007 reference decline response (decline_code UNKNOWN_REVISION).
+pub fn reference_cdec() -> DeclineResponse {
+    DeclineResponse { identity: reference_identity(), decline_code: decline_code::UNKNOWN_REVISION }
+}
+
+/// Emit `conformance/corpus/announce_vectors.json` — the machine-readable golden vector set for the
+/// KISS-Announce wire handshake, generated from THIS module (the reference codec), mirroring
+/// `contract::emit_contract_vectors_json`. A foreign (non-Rust) reader byte-diffs each frame against
+/// its own encoder to check endianness, field width and structure padding — the §5.3 condition-2
+/// obligation a Markdown appendix cannot be executed against.
+pub fn emit_announce_vectors_json() -> String {
+    fn hexs(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
+    }
+    let frames: [(&str, &str, Vec<u8>); 5] = [
+        ("reference_envelope", "KISS-ANNOUNCE-6.1-0002", reference_envelope().encode()),
+        ("availability_list", "KISS-ANNOUNCE-6.3-0005", reference_availability_list().encode()),
+        ("cyrq_request", "KISS-ANNOUNCE-6.4-0001", reference_cyrq().encode()),
+        ("crsp_response", "KISS-ANNOUNCE-6.4-0004", reference_crsp().encode()),
+        ("cdec_response", "KISS-ANNOUNCE-6.4-0007", reference_cdec().encode()),
+    ];
+    let mut s = String::new();
+    s.push_str("{\n");
+    s.push_str("  \"schema\": \"kiss-announce-vectors-v1.json\",\n");
+    s.push_str("  \"generated_from\": \"conformance/src/announce.rs::emit_announce_vectors_json (the reference codec)\",\n");
+    s.push_str("  \"spec_reference\": \"spec/announce.md \u{00a7}2.5 worked handshake example (informative) + the \u{00a7}6.1/\u{00a7}6.3/\u{00a7}6.4 framing clauses\",\n");
+    s.push_str("  \"scope_note\": \"DIFFABLE, not COVERED: a foreign reader byte-diffs each frame's exact wire bytes (endianness, field width, padding) against its own encoder; this does NOT cover the untested KISS-Announce clauses or the reader/decline paths.\",\n");
+    s.push_str("  \"population\": \"the FIVE \u{00a7}2.5 worked-example POSITIVE frames only: the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from \u{00a7}2.5 — that is the burn-down this artifact makes measurable, not part of it.\",\n");
+    s.push_str("  \"frames\": [\n");
+    for (i, (name, clause, bytes)) in frames.iter().enumerate() {
+        let comma = if i + 1 < frames.len() { "," } else { "" };
+        s.push_str("    {\n");
+        s.push_str(&format!("      \"name\": \"{name}\",\n"));
+        s.push_str(&format!("      \"clause\": \"{clause}\",\n"));
+        s.push_str(&format!("      \"byte_length\": {},\n", bytes.len()));
+        s.push_str(&format!("      \"bytes_hex\": \"{}\"\n", hexs(bytes)));
+        s.push_str(&format!("    }}{comma}\n"));
+    }
+    s.push_str("  ]\n");
+    s.push_str("}\n");
+    s
+}
