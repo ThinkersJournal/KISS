@@ -983,13 +983,18 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 
 ### 6.6 Dispatch section
 
-- **KISS-CONTRACT-6.6-0001** — The Dispatch section is **optional** (§6.6-0007). A kernel that
+- **KISS-CONTRACT-6.6-0001** — The Dispatch section is **always present** (§6.11-0004 requires all
+  seven section blocks); what is optional is its launch **geometry** (§6.6-0007). A kernel that
   **declares** launch geometry MUST carry the launch model as exactly the fields
   `{invocation_domain, workgroup_sizing, count_to_grid, thread_mapping, addressing_rule}`,
   serialized in that order (§6.11-0005), and MUST NOT declare that geometry "provider-internal"
   or omit any of these fields, since a consumer launches the kernel from this section; but a
-  **geometry-agnostic** kernel (§6.6-0007) MAY instead declare **no** Dispatch section (an
-  explicit absent sentinel), and a consumer MUST NOT require the geometry fields for it. *Test:*
+  **geometry-agnostic** kernel (§6.6-0007) MAY instead carry, as the section's sole field line, the
+  carried sentinel `dispatch_model = geometry-agnostic` in place of the five fields, and a consumer
+  MUST NOT require the geometry fields for it. The Dispatch section thus carries **exactly one of
+  two** alternatives — the five geometry fields in the order above, or the single
+  `dispatch_model = geometry-agnostic` line — and a reader MUST reject anything else, including a
+  proper subset of the five fields and `dispatch_model` alongside any geometry field. *Test:*
   `test_contract_dispatch_field_schema`.
 - **KISS-CONTRACT-6.6-0002** — The `invocation_domain` MUST declare the iteration/index frame
   derived from the operand extents (the widest-rank iteration frame) as a machine-evaluable
@@ -1044,14 +1049,16 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
 - **KISS-CONTRACT-6.6-0007** — A **geometry-agnostic** kernel — one launched grid-stride from a
   host-computed launch dimension (`Dim3`) whose element→thread mapping is not consumer-visible —
-  MAY declare **no** Dispatch section: the section is carried as an explicit **absent sentinel**,
-  and KISS-Conform MUST accept a contract with an absent Dispatch section and MUST NOT require any
-  of the five geometry fields for it. Launch geometry is then the **executor's**, not the
+  carries a Dispatch section whose sole field line is the **carried sentinel**
+  `dispatch_model = geometry-agnostic` in place of the five geometry fields. The Dispatch section is
+  still **present** — §6.11-0004 requires all seven section blocks — so it is the section's
+  *content* that is the sentinel, never the section that is absent. KISS-Conform MUST accept this
+  sentinel Dispatch section and MUST NOT require any of the five geometry fields for it. Launch geometry is then the **executor's**, not the
   contract's — the consumer launches the kernel with its own `Dim3` under the grid-stride semantic
   (§6.6-0004), needing no declared geometry (this is KISS's answer to the "a kernel contract should
   not declare launch geometry" objection, PRIOR-ART §5.1). A contract MUST NOT carry a **partial**
-  Dispatch section: it declares either all five fields (§6.6-0001) or the absent sentinel, never a
-  subset. *Test:* `test_contract_dispatch_optional`.
+  Dispatch section: it declares either all five fields (§6.6-0001) or the carried sentinel line,
+  never a subset and never both. *Test:* `test_contract_dispatch_optional`.
 - **KISS-CONTRACT-6.6-0008** — KISS-Contract **reserves** — as a **named post-v1 extension**, NOT
   required for v1 conformance — a **richer thread-mapping form** for launches whose element→thread
   mapping is neither grid-stride nor thread-index-free (e.g. a pinned-tile / warp-lane→output-tile
@@ -1380,7 +1387,11 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   decline per §6.1-0006). A field the field-schema clause marks **optional** (such as the
   Semantics `human_annotation`, pinned last in §6.4-0001) MAY be absent; when absent its line is
   omitted, and when present it MUST occupy its pinned position — its absence is **not** a
-  field-order or missing-field decline. *Test:* `test_contract_document_field_order`.
+  field-order or missing-field decline. A field-schema clause MAY instead pin **alternative**
+  field-line sets — exactly one of which MUST be present (the Dispatch section's five-geometry-fields
+  form versus its `dispatch_model = geometry-agnostic` sentinel, §6.6-0001/§6.6-0007); a reader
+  matches the block against each alternative and declines only if it matches none. *Test:*
+  `test_contract_document_field_order`.
 - **KISS-CONTRACT-6.11-0006** — The `positional_signature` value MUST be encoded as an array
   (§6.11-0001) of argument descriptors in the pinned order of §6.5-0004a / §6.5-0004d, each
   descriptor being the parenthesized tuple `(<arg_kind>, <launch_class>, <arg_name>,
