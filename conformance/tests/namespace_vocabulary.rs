@@ -62,6 +62,50 @@ fn gen_fields() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
+/// Enforces KISS-CLASSIFY-6.8-0013 — the `digest_input` CONTENT obligation: "the SAME
+/// byte string measured against the threshold, so a producer may disagree about WHETHER
+/// to digest but never about WHAT is digested".
+///
+/// ⚠️ THIS WAS UNIMPLEMENTED, NOT MERELY UNTESTED (#415/#432). `check_generated_vector_
+/// coverage` compared `pins` TAG STRINGS against a required set and never opened a vector,
+/// so a vector tagged `digest_input` whose two byte strings DIFFERED satisfied the clause.
+/// A better test could not have closed that — there was nothing to discriminate.
+///
+/// ⚠️ AND THE COMPARISON IS ON BYTES, NEVER ON DIGESTS. Two different byte strings whose
+/// digests collide would pass a digest comparison, and the clause deliberately says "the
+/// same byte string" rather than "the same digest".
+#[test]
+fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
+    // the well-formed manifest declares the same string on both sides -> covered.
+    let ok = validate_envelope(&build_from(&gen_fields())).unwrap();
+    assert_eq!(check_generated_vector_coverage(&ok), Ok(()));
+
+    // a `digest_input` vector whose measured and declared strings DIFFER -> typed decline.
+    let differing = set_key(
+        gen_fields(),
+        "vectors",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"input\": \"at-512\", \"output\": \"inline\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,d\"}]",
+    );
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&differing)).unwrap()),
+        Err(ManifestDecline::DigestInputNotIdentical),
+        "a digest_input vector whose two byte strings differ MUST decline"
+    );
+
+    // ⚠️ AND A ONE-BYTE DIFFERENCE MUST DECLINE TOO -- the check is byte identity, not
+    // similarity, and a near-miss is exactly what a digest comparison would let through.
+    let near_miss = set_key(
+        gen_fields(),
+        "vectors",
+        "[{\"pins\": \"order\", \"input\": \"b,a\", \"output\": \"a,b\"},           {\"pins\": \"dedup\", \"input\": \"a,a\", \"output\": \"a\"},           {\"pins\": \"threshold\", \"input\": \"at-512\", \"output\": \"inline\"},           {\"pins\": \"digest_input\", \"input\": \"a,b,c\", \"output\": \"a,b,c \"}]",
+    );
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&near_miss)).unwrap()),
+        Err(ManifestDecline::DigestInputNotIdentical),
+        "a trailing-space difference is still a different byte string"
+    );
+}
+
 // ---- §6.8-0008: envelope shape --------------------------------------------------------------
 
 #[test]

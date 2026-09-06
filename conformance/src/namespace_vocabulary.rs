@@ -47,6 +47,11 @@ pub enum ManifestDecline {
     NoWitnessGate,
     /// `kind: generated` vector set does not cover this canonicalization concern (§6.8-0013).
     GeneratedVectorsMissingPin(&'static str),
+    /// A `digest_input` vector whose measured byte string and declared digest input are
+    /// not the SAME byte string (§6.8-0013). Compared as bytes, never as digests: a
+    /// digest comparison would accept two colliding strings, which is precisely the
+    /// disagreement the clause forbids.
+    DigestInputNotIdentical,
     /// `namespace` is not a namespace whose registry status is `registered` (§6.8-0003, cited
     /// by §6.8-0008). An envelope naming an unregistered or reserved namespace is declined:
     /// otherwise validation passes while violating the clause it implements.
@@ -208,6 +213,33 @@ pub fn check_generated_vector_coverage(m: &Manifest) -> Result<(), ManifestDecli
         let exemptible = !NON_EXEMPTIBLE_PINS.contains(&pin);
         if !present.contains(pin) && !(exemptible && exempt.contains(pin)) {
             return Err(ManifestDecline::GeneratedVectorsMissingPin(pin));
+        }
+    }
+
+    // ⚠️ THE TAG IS NOT THE OBLIGATION (#415). Everything above compares `pins` STRINGS
+    // against a required set and never opens a vector, so a vector tagged
+    // `{"pins": "digest_input"}` with arbitrary contents satisfied the whole clause. The
+    // content obligations below are what §6.8-0013 actually says.
+    //
+    // `digest_input` — "the SAME byte string measured against the threshold, so a producer
+    // may disagree about WHETHER to digest but never about WHAT is digested". The vector
+    // records the byte string measured (`input`) and the one declared as fed to the digest
+    // (`output`); the clause requires them to be the same STRING.
+    //
+    // ⚠️ COMPARED AS BYTES, NOT AS DIGESTS. Two different byte strings whose digests
+    // collide would pass a digest comparison, and the clause deliberately says "the same
+    // byte string" rather than "the same digest" — comparing digests would test the thing
+    // the clause declined to say.
+    for v in vectors {
+        if v.get("pins").and_then(|j| j.as_str()) != Some("digest_input") {
+            continue;
+        }
+        let measured = v.get("input").and_then(|j| j.as_str());
+        let declared = v.get("output").and_then(|j| j.as_str());
+        match (measured, declared) {
+            (Some(m), Some(d)) if m.as_bytes() == d.as_bytes() => {}
+            (Some(_), Some(_)) => return Err(ManifestDecline::DigestInputNotIdentical),
+            _ => return Err(ManifestDecline::DigestInputNotIdentical),
         }
     }
     Ok(())
