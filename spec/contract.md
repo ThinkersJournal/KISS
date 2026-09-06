@@ -579,10 +579,10 @@ outer length-prefix (§6.1-0005).
   §8-0007, which additionally requires rejecting one below the reader's declared **retirement
   floor**. A reader MUST declare the set of `contract_version` values it supports; it MUST reject
   any value outside that set, and MUST NOT reject a value inside it **solely** because that value
-  is not the reader's own newest. ⚠️ A reader MUST NOT accept a version merely because it is
+  is not the reader's own newest. A reader MUST NOT accept a version merely because it is
   **lower** than one it supports: §8-0002 admits schema changes that are not additive — a field
   schema, the identity compatibility table, the `audited_status` derivation rule — so a newer
-  reader has no general licence to read an older document, and a maximum-version gate would let
+  reader has no general license to read an older document, and a maximum-version gate would let
   it **misread** rather than decline. Support is declared and enumerated, never inferred from an
   ordering. *Test:* `test_contract_version_value_pinned`.
 
