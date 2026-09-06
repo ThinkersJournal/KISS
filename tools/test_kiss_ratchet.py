@@ -166,7 +166,7 @@ ran = []  # every control that executed — asserted against a pinned count so a
           # that ran half the controls are otherwise the same exit code). This file is the
           # instrument that proves the instrument, so a silent skip here is the worst place.
 
-EXPECTED_CONTROLS = 55
+EXPECTED_CONTROLS = 59
 
 
 def check(name, cond, detail=""):
@@ -283,6 +283,37 @@ def main():
     v, _ = cr({"harness": 3, "lint": 0, "untested": 0}, {"harness": 2, "lint": 0, "untested": 0},
               [], ["A", "B"], None)
     check("git-free regression still fires", v == "regression", f"got {v}")
+
+    # ------------------------------------------------------------------ #446
+    # THE REGRESSION MESSAGE MUST NAME BOTH CAUSES, AND THE DISCRIMINATOR.
+    #
+    # It read "a clause lost its only backing" -- ONE of the two ways to reach a positive
+    # `untested` delta. The other is N new clauses ARRIVING unbacked with the floor not
+    # bumped, which is what this repo produces every time a normative clause lands testless.
+    # The wording sent the reader hunting for a removed backing that never existed.
+    #
+    # META: every existing control here pins the VERDICT and none pinned the REASON, which is
+    # exactly why the message could be false for this long. A verdict can be right for a
+    # reason that is a lie, and a test that reads only the verdict cannot tell.
+    v, lines = cr({"harness": 3, "lint": 0, "untested": 0},
+                  {"harness": 3, "lint": 0, "untested": 2}, [], ["A", "B"], [])
+    msg = " ".join(lines)
+    check("arrival-shaped rise is a regression", v == "regression", f"got {v}")
+    check("the message names the ARRIVAL cause, not only a loss",
+          "ARRIVED unbacked" in msg,
+          f"the reason given for the red omits the cause that actually produced it: {msg}")
+    check("the message names harness as the discriminator, and reads it",
+          "harness is UNCHANGED at 3" in msg,
+          f"harness separates arrival from loss and the message must SAY which it is: {msg}")
+
+    # The LOSS case must NOT claim arrival: harness moved, so the discriminator points the
+    # other way. Without this the fix could hard-code the arrival wording and still pass above.
+    v, lines = cr({"harness": 3, "lint": 0, "untested": 0},
+                  {"harness": 2, "lint": 0, "untested": 1}, [], ["A", "B"], [])
+    msg = " ".join(lines)
+    check("loss-shaped rise does NOT assert the arrival case",
+          "harness is UNCHANGED" not in msg and "harness also moved (3 -> 2)" in msg,
+          f"a genuine lost backing was described as an arrival: {msg}")
 
     # COMPLETED SUBSTITUTION (#223): the floor is already bumped to POST (h+N / l−N), so counts
     # are AT the floor while the base ledger still shows the moved clause as lint. The old

@@ -624,12 +624,12 @@ def base_ledger_all_ids(ledger_path, base_ref):
     ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
     try:
         top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if top.returncode != 0:
             return None
         rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
         out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return None
     if out.returncode != 0:
@@ -648,12 +648,12 @@ def base_spec_clause_ids(spec_dir, stem, base_ref):
     base_dir = os.path.dirname(os.path.abspath(spec_path))
     try:
         top = subprocess.run(["git", "-C", base_dir, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if top.returncode != 0:
             return None
         rel = os.path.relpath(spec_path, top.stdout.strip()).replace(os.sep, "/")
         out = subprocess.run(["git", "-C", base_dir, "show", f"{base_ref}:{rel}"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return None
     if out.returncode != 0:
@@ -668,7 +668,7 @@ def _in_git_repo(path):
     comparison (#213). Only a genuinely git-less checkout is exempt, and it must say so."""
     try:
         out = subprocess.run(["git", "-C", path, "rev-parse", "--is-inside-work-tree"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return False
     return out.returncode == 0 and out.stdout.strip() == "true"
@@ -708,13 +708,13 @@ def base_is_current(ledger_path, base_ref):
     ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
     try:
         r = subprocess.run(["git", "-C", ledger_dir, "merge-base", "--is-ancestor",
-                            base_ref, "HEAD"], capture_output=True, text=True, timeout=30)
+                            base_ref, "HEAD"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if r.returncode not in (0, 1):
             return None
         if r.returncode == 0:
             return True
         c = subprocess.run(["git", "-C", ledger_dir, "rev-list", "--count",
-                            f"HEAD..{base_ref}"], capture_output=True, text=True, timeout=30)
+                            f"HEAD..{base_ref}"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         # A count we could not read is UNKNOWABLE, not zero. Returning 0 here would claim
         # "moved 0 commit(s) ahead" -- a distance that cannot occur for a non-ancestor -- and
         # 0 is falsy, so a truthiness-testing caller would read the stale base as current.
@@ -742,12 +742,12 @@ def base_ledger_lint(ledger_path, base_ref):
     ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
     try:
         top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if top.returncode != 0:
             return None
         rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
         out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return None
     if out.returncode != 0:
@@ -763,12 +763,12 @@ def base_ledger_decredited(ledger_path, base_ref):
     ledger_dir = os.path.dirname(os.path.abspath(ledger_path))
     try:
         top = subprocess.run(["git", "-C", ledger_dir, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if top.returncode != 0:
             return None
         rel = os.path.relpath(ledger_path, top.stdout.strip()).replace(os.sep, "/")
         out = subprocess.run(["git", "-C", ledger_dir, "show", f"{base_ref}:{rel}"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return None
     if out.returncode != 0:
@@ -788,12 +788,12 @@ def base_floor_harness(floor_path, base_ref):
     floor_dir = os.path.dirname(os.path.abspath(floor_path))
     try:
         top = subprocess.run(["git", "-C", floor_dir, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         if top.returncode != 0:
             return None
         rel = os.path.relpath(floor_path, top.stdout.strip()).replace(os.sep, "/")
         out = subprocess.run(["git", "-C", floor_dir, "show", f"{base_ref}:{rel}"],
-                             capture_output=True, text=True, timeout=30)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     except Exception:
         return None
     if out.returncode != 0:
@@ -806,6 +806,32 @@ def base_floor_harness(floor_path, base_ref):
         if len(parts) >= 2 and parts[0].strip() == "harness" and parts[1].strip().isdigit():
             return int(parts[1].strip())
     return None
+
+
+def _untested_rose(floor, live, delta):
+    """The `untested` regression line — naming BOTH causes, and the discriminator between them.
+
+    It used to read "a clause lost its only backing", which is ONE of the two ways to reach a
+    positive delta. The other is `delta` new clause(s) arriving UNBACKED with the floor not
+    bumped — and that is the one this repository actually produces, every time a normative
+    clause lands testless. The old wording sent the reader hunting through recent diffs for a
+    removed backing that never existed.
+
+    `harness` separates them and costs nothing to print: a LOST backing lowers it; clauses
+    ARRIVING unbacked leave it untouched. That discriminator is already the one every floor
+    note in COVERAGE_FLOOR.tsv cites by hand — it simply was not in the message.
+
+    Nothing asserted on this string, which is why it stayed wrong: the ratchet tests all pin
+    the VERDICT (`v == "regression"`) and never the reason given for it. A verdict can be
+    right for a reason that is false.
+    """
+    hint = ("harness is UNCHANGED at %d, so this is the ARRIVAL case, not a loss."
+            % live["harness"]) if live["harness"] == floor["harness"] else (
+           "harness also moved (%d -> %d), so read the harness line below with this one."
+            % (floor["harness"], live["harness"]))
+    return (f"untested rose {floor['untested']} -> {live['untested']} (+{delta}). TWO causes "
+            f"reach this number: a clause LOST its only backing, or {delta} new clause(s) "
+            f"ARRIVED unbacked and the floor was not bumped. " + hint)
 
 
 def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=None,
@@ -880,8 +906,7 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
                 "ledger. Re-run in a git checkout with --base-ref <base>."])
         reg = []
         if untested_delta > 0:
-            reg.append(f"untested rose {floor['untested']} -> {live['untested']}: a clause lost "
-                       "its only backing.")
+            reg.append(_untested_rose(floor, live, untested_delta))
         if harness_delta < 0:
             reg.append(f"harness fell {floor['harness']} -> {live['harness']}: a behavioral "
                        "backing disappeared.")
@@ -1001,8 +1026,7 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
 
     reg = []
     if untested_delta > 0:
-        reg.append(f"untested rose {floor['untested']} -> {live['untested']}: a clause lost its "
-                   "only backing.")
+        reg.append(_untested_rose(floor, live, untested_delta))
     if left_lost:
         reg.append(f"{len(left_lost)} clause(s) left the lint set without gaining a harness test "
                    f"— documentary coverage lost: {', '.join(sorted(left_lost))}.")
@@ -1247,7 +1271,7 @@ def discover_lint_coverage(tools_dir):
         try:
             out = subprocess.run(
                 [sys.executable, os.path.join(tools_dir, fn), "--emit-coverage"],
-                capture_output=True, text=True, timeout=120)
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
         except Exception:
             continue
         if out.returncode != 0:
