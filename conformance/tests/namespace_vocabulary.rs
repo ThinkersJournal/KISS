@@ -222,6 +222,31 @@ fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
         Err(ManifestDecline::GeneratedVectorsMissingPin("order"))
     );
 
+    // ⚠️ MISSING `dedup` MUST DECLINE TOO, and this was unexercised (#415). The test
+    // presented only an `order`-less set, so `dedup` could be DROPPED from GENERATED_PINS
+    // entirely -- or made exemptible -- and nothing reddened. Measured: both mutations were
+    // NO-OPs. `order` and `dedup` are the two NON-EXEMPTIBLE pins, so each needs its own
+    // case; a single case for one of them leaves the other free.
+    let no_dedup = set_key(
+        gen_fields(),
+        "vectors",
+        "[{\"pins\": \"order\"}, {\"pins\": \"threshold\"}, {\"pins\": \"digest_input\"}]",
+    );
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&no_dedup)).unwrap()),
+        Err(ManifestDecline::GeneratedVectorsMissingPin("dedup"))
+    );
+
+    // ... and `dedup` is NOT exemptible either, mirroring the `order` case below.
+    // reuses `no_dedup`'s vector set rather than restating it (review suggestion):
+    // the two cases differ ONLY in the `pins_exempt` field below.
+    let mut bad_dedup = no_dedup.clone();
+    bad_dedup.push(("pins_exempt", "[\"dedup\"]"));
+    assert_eq!(
+        check_generated_vector_coverage(&validate_envelope(&build_from(&bad_dedup)).unwrap()),
+        Err(ManifestDecline::GeneratedVectorsMissingPin("dedup"))
+    );
+
     // a namespace with NO length-conditional field exempts threshold+digest_input and covers with
     // order+dedup alone.
     let mut exempt = set_key(gen_fields(), "vectors", "[{\"pins\": \"order\"}, {\"pins\": \"dedup\"}]");

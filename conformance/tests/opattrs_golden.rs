@@ -511,6 +511,42 @@ fn test_ops_opattrs_reduce_axes_classify_reconciliation() {
     assert_eq!(classify_reduce_field(Reduce::None), "-");
 }
 
+/// Enforces KISS-OPS-6.19-0037 — the window/permutation vector arm of the range rule:
+/// "a conforming encoder MUST NOT emit ... a window/permutation vector whose element
+/// count exceeds `MAX_RANK`".
+///
+/// ⚠️ THIS ARM WAS UNGUARDED. Measured in the #409 audit: loosening the bound from 8 to 99
+/// reddened NOTHING across the entire suite, so the constant could be raised twelvefold
+/// and the repository would not notice. The clause's other three arms (`axis`,
+/// `index_operand`, and the subset-mask position via the §6.19-0020 reserved band) each
+/// had a test; this one did not.
+///
+/// ⚠️ AND THE GUARD IS AN ENCODER-SIDE PANIC, NOT THE READER-SIDE TYPED DECLINE THE CLAUSE
+/// ASKS FOR. There is no reader for a window vector — `decode_gather` is the only decode
+/// entry point in this module — so "a reader MUST reject any such out-of-range field with
+/// a typed decline" has nothing to reject with. Pinning the encoder guard is what can be
+/// done without a ruling; whether the clause wants a reader built, or wants amending to
+/// name the encoder guard, is left open on the issue.
+#[test]
+#[should_panic(expected = "window vector longer than MAX_RANK")]
+fn test_ops_opattrs_window_vector_bounded_by_max_rank() {
+    // MAX_RANK + 1 elements: the first count the clause forbids.
+    let too_many: Vec<u32> = (0..=(MAX_RANK as u32)).collect();
+    assert_eq!(too_many.len(), MAX_RANK as usize + 1, "fixture must exceed MAX_RANK by exactly one");
+    let _ = window_param_vector(&too_many);
+}
+
+/// Enforces KISS-OPS-6.19-0037 — the paired positive: MAX_RANK elements exactly is ACCEPTED, so the test above pins a
+/// boundary rather than a blanket refusal. Without this, narrowing the bound to any
+/// smaller number would still satisfy the should_panic.
+#[test]
+fn test_ops_opattrs_window_vector_accepts_exactly_max_rank() {
+    let at_limit: Vec<u32> = (0..(MAX_RANK as u32)).collect();
+    let v = window_param_vector(&at_limit);
+    assert_eq!(v[0] as usize, MAX_RANK as usize, "count byte must be the element count");
+    assert_eq!(v.len(), 1 + 4 * MAX_RANK as usize, "u8 count then count x u32 LE");
+}
+
 /// KISS-OPS-6.19-0011 (`test_ops_opattrs_version_binding`): the pinned `MAX_RANK` and
 /// `MAX_OPERANDS` constants (§6.19-0037) are SHARED anchors — defined once for the
 /// OpAttrs channel (`opattrs`) and once for the Classify `structure_key` schema — and
