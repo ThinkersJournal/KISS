@@ -28,6 +28,18 @@ fn test_conform_nan_result_compares_by_nanness() {
     assert!(agree(nan_a, nan_neg), "NaN sign bit must not be compared for a computed result");
     assert!(agree(f32::NAN, nan_b), "the canonical NaN and a payload-carrying NaN match");
 
+    // §6.16-0010 (KISS #388) — QUIETNESS is compared where the format admits a signaling NaN,
+    // and f32 does. A SIGNALING result where the oracle produced a QUIET one DISAGREES; this is
+    // the born-red on the FOREIGN-kernel surface (`agree` is the oracle-differential, the one
+    // that certifies someone else's kernel — a blind accept here passed a non-conformant kernel).
+    // Payload and sign stay uncompared.
+    let snan = f32::from_bits(0x7F80_1234); // exp all-1, quiet bit CLEAR, payload nonzero => sNaN
+    let snan2 = f32::from_bits(0x7F80_5678);
+    assert!(snan.is_nan() && (snan.to_bits() >> 22) & 1 == 0, "0x7F801234 is a signaling NaN");
+    assert!(!agree(nan_a, snan), "signaling where quiet is expected MUST mismatch (§6.16-0010)");
+    assert!(!agree(snan, nan_a), "quiet where signaling is expected MUST mismatch");
+    assert!(agree(snan, snan2), "two signaling NaNs (differing payload) match: quietness agrees, payload uncompared");
+
     // one-sided NaN is a MISMATCH — the disagreement about NaN-ness is exactly the
     // conformance-relevant fact (a propagate-vs-suppress bug must still be caught).
     assert!(!agree(nan_a, 5.0), "NaN where a finite value is expected must mismatch");

@@ -49,9 +49,11 @@ pub fn corpus_f32(seed: u64, n: usize) -> Vec<f32> {
     v
 }
 
-/// Two results **agree** iff both are NaN, or their bits are identical: exact-byte
-/// for finite/infinite values, with a NaN-equivalence relaxation that treats ANY NaN as
-/// equal to any NaN — payload and sign are NOT compared.
+/// Two results **agree** iff their bits are identical (finite/infinite), or both are NaN
+/// AND agree in QUIETNESS where the dtype admits a signaling NaN (§6.16-0010, KISS #388):
+/// f32 admits one, so a quiet result and a signaling result DISAGREE, while payload and
+/// sign are still NOT compared. (Before #388 this treated any NaN as equal to any NaN — a
+/// signaling-vs-quiet disagreement, the §6.16-0010 violation, slipped through.)
 ///
 /// SCOPE — correct ONLY for the COMPUTED-NaN op class (`add` and the arithmetic/
 /// transcendental ops, Conform §6.8-0010): the op GENERATES its NaN, so the payload and sign
@@ -73,8 +75,26 @@ pub fn corpus_f32(seed: u64, n: usize) -> Vec<f32> {
 /// cannot select by op; instead a moved-NaN op MUST NOT ENTER its corpus — ASSERTED against the
 /// provenance tag in `run_binary` (#339(a)), not hoped. The PINNED-VECTOR path is
 /// `corpus_differential`, which routes selection through §6.8-0008 precedence.
-pub fn agree(x: f32, y: f32) -> bool {
-    (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
+pub fn agree(oracle: f32, candidate: f32) -> bool {
+    // `agree` is the COMPUTED-NaN comparator by contract (moved-NaN ops are excluded from
+    // `run_binary`'s corpus, asserted #339(a)). §6.16-0010 (KISS #388) refined §6.8-0010: a
+    // computed NaN must match in NaN-**ness** AND — where the dtype admits a signaling NaN,
+    // which f32 does — in QUIETNESS (payload and sign still uncompared). The NaN case is routed
+    // through the ONE provenance mechanism so quietness and the f8e4m3fn-style vacuity rule
+    // cannot be skipped HERE — and here matters most: this is the oracle-differential, the one
+    // surface that certifies a FOREIGN kernel, so a blind accept passes a non-conformant kernel
+    // (a signaling NaN where the oracle produced a quiet one). KISS #434 tracks the remaining
+    // NaN-comparison sites; this is the priority one.
+    if oracle.is_nan() || candidate.is_nan() {
+        return crate::nan_provenance::compare_nan_output(
+            "f32",
+            &candidate.to_be_bytes(),
+            &oracle.to_be_bytes(),
+            crate::nan_provenance::NanProvenance::Computed,
+        )
+        .is_ok();
+    }
+    oracle.to_bits() == candidate.to_bits()
 }
 
 /// One divergence found by the differential runner.
