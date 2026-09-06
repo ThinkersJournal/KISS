@@ -50,3 +50,40 @@ fn log_f32_matches_oracle_anchors() {
         );
     }
 }
+
+/// KISS-OPS §6.15 log argument reduction — reduce_log's SUBNORMAL branch (frexp pre-scales a
+/// subnormal by 2^54 then corrects the exponent) is otherwise dead in tests, and it DISCRIMINATES a
+/// correct decompose from a naive one. For x = 2^-1074 (smallest positive f64, exponent field 0) a
+/// plausible-but-wrong impl that reads the exponent field directly WITHOUT a subnormal special-case
+/// takes e = 0 − 1023 = −1023 (ignoring the 51-bit leading-zero shift) and returns log ≈ −709
+/// instead of the correct ≈ −744.44 — off by ~35 = 51·ln2. The atom (frexp subnormal branch)
+/// returns the 3-oracle value (MPFR ≡ Arb ≡ mpmath). Values live here, not in the const array:
+/// a subnormal's exact f64 needs `f64::from_bits`, const-stable only since Rust 1.83 (MSRV 1.77).
+#[test]
+fn log_subnormal_reddens_naive_decompose() {
+    // Smallest subnormal 2^-1074 (extreme leading-zero shift) and largest subnormal (full mantissa).
+    for (xbits, want64, want32) in [
+        (0x0000_0000_0000_0001u64, 0xC087_4385_446D_71C3u64, 0xC43A_1C2Au32),
+        (0x000F_FFFF_FFFF_FFFFu64, 0xC086_232B_DD7A_BCD2u64, 0xC431_195Fu32),
+    ] {
+        let x = f64::from_bits(xbits);
+        assert!(x.is_subnormal(), "0x{xbits:016X} must be subnormal");
+        let g64 = round_atom_to_f64(&Log { x }).bits;
+        assert_eq!(g64, want64, "log(0x{xbits:016X}) f64: got 0x{g64:016X}, want 0x{want64:016X}");
+        let g32 = round_atom_to_f32(&Log { x }).bits as u32;
+        assert_eq!(g32, want32, "log(0x{xbits:016X}) f32: got 0x{g32:08X}, want 0x{want32:08X}");
+    }
+
+    // The discrimination, made explicit: a naive exp-field decompose (no subnormal branch) on
+    // 2^-1074 is catastrophically wrong, so the subnormal branch is what pins the correct value.
+    let x = f64::from_bits(1); // 2^-1074
+    let correct = f64::from_bits(round_atom_to_f64(&Log { x }).bits);
+    let ef = ((x.to_bits() >> 52) & 0x7FF) as i32; // 0 for a subnormal
+    let naive_e = ef - 1023; // −1023, ignoring the leading-zero shift a subnormal branch corrects
+    let naive_m = f64::from_bits((x.to_bits() & 0x000F_FFFF_FFFF_FFFF) | 0x3FF0_0000_0000_0000);
+    let naive_log = naive_e as f64 * std::f64::consts::LN_2 + naive_m.ln();
+    assert!(
+        (naive_log - correct).abs() > 1.0,
+        "naive exp-field decompose (no subnormal branch) is catastrophically wrong: {naive_log} vs {correct}"
+    );
+}
