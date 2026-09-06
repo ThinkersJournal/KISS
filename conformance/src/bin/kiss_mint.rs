@@ -1,11 +1,16 @@
-//! kiss_mint — mints the frozen oracle-vector corpus from the reference oracle. Two bundles:
+//! kiss_mint — mints the frozen oracle-vector corpus from the reference oracle. Three bundles:
 //!   corpus/ops-arith.json              — Plan A slice: exact-byte `add` cells (incl. the
 //!                                        signed-zero distinctions), provenance `oracle`.
 //!   corpus/ops-transcendental-nan.json — T9/#352: transcendental COMPUTED-NaN cells — a
 //!                                        computed NaN must be QUIET (§6.16-0010 / §6.8-0010).
-//! Both are the Wycheproof-shaped JSON of
+//!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
+//!                                        a moved NaN's bits (payload + post-edit sign) survive
+//!                                        EXACTLY (no decline member; the vector is the enforcement).
+//! All are the Wycheproof-shaped JSON of
 //! docs/superpowers/specs/2026-07-19-kiss-oracle-vector-corpus-design.md §4.
 
+use kiss_conformance::fp::{f32_to_bf16, f32_to_e4m3, f32_to_e5m2};
+use kiss_conformance::nan_provenance::is_nan;
 use kiss_conformance::{hex, semantics};
 
 const GENERATOR: &str = "kiss_mint 0.1.0";
@@ -136,6 +141,119 @@ fn transcendental_nan_doc() -> String {
     bundle_doc("OPS", "KISS-CONFORM-6.8-0010", &cells)
 }
 
+// ---- narrow-float sign-edit MOVE bundle (§6.16-0009/-0011, increment 1) --------------------
+//
+// A narrow-float neg/abs/copysign MOVES its operand's bits with a single sign-bit edit — every
+// other bit, a moved NaN's payload included, survives EXACTLY (§6.16-0009). There is NO decline
+// member: a conforming impl spells the op raw-bit, it does not refuse, so the vector IS the
+// enforcement (Unpopped's fp8 defect + Baracuda's sm_89 hardware, independently). The bit the
+// discrimination turns on: a promote-through-f32 impl QUIETS a signaling NaN (and a canonicalizing
+// one drops a rich payload), so its output differs from these exact-byte expecteds.
+//
+// POPULATION / LIMITS (stated, not omitted): f16 is authored (raw-bit needs no conversion) though
+// the promote-through-f32 demo cannot run for it (fp has no f16<->f32); f8e4m3fn has a single NaN
+// encoding (§6.16-0004) so it carries no payload and the MOVE is non-discriminating — authored for
+// completeness, vacuous. Selection ops (min/max) are increment 2.
+
+/// The raw-bit MOVE oracle: the sign bit is the MSB of big-endian byte 0 for every narrow float
+/// here. neg flips it, abs clears it, copysign takes `a`'s magnitude and `b`'s sign.
+fn move_edit(op: &str, a: &[u8], b: Option<&[u8]>) -> Vec<u8> {
+    let mut out = a.to_vec();
+    match op {
+        "neg" => out[0] ^= 0x80,
+        "abs" => out[0] &= 0x7F,
+        "copysign" => {
+            out[0] &= 0x7F;
+            out[0] |= b.expect("copysign needs b")[0] & 0x80;
+        }
+        _ => panic!("unknown sign-edit op {op}"),
+    }
+    out
+}
+
+/// One sign-edit MOVE cell. The output is exact-byte class; a NaN output carries `nan_provenance:
+/// moved` (the biconditional pairs it with the NaN), a finite output carries none.
+fn move_cell(tc: u32, op: &str, dtype: &str, a: &[u8], b: Option<&[u8]>, tags: &str) -> String {
+    let expected = move_edit(op, a, b);
+    let inputs = match b {
+        Some(bb) => format!(
+            "[{{\"role\":\"a\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}, \
+             {{\"role\":\"b\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]",
+            hex(a),
+            hex(bb)
+        ),
+        None => format!("[{{\"role\":\"x\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]", hex(a)),
+    };
+    let prov = if is_nan(dtype, &expected) { " \"nan_provenance\": \"moved\"," } else { "" };
+    let prec = if a.len() == 2 { 16 } else { 8 };
+    format!(
+        "    {{\"tcId\": {tc}, \"op\": \"{op}\", \"dtype\": \"{dtype}\", \"rounding\": \"roundTiesToEven\", \
+         \"inputs\": {inputs}, \
+         \"expected\": {{\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}, \
+         \"class\": \"exact-byte\", \"ulp_bound\": 0, \"provenance\": \"oracle\", \
+         \"tags\": [{tags}],{prov} \
+         \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": {prec}}}}}",
+        hex(&expected)
+    )
+}
+
+fn narrow_move_nan_doc() -> String {
+    struct D {
+        name: &'static str,
+        bytes: usize,
+        nans: &'static [(&'static str, u16)],
+    }
+    // Payloads: a signaling NaN, a quiet NaN with a RICH payload, and a negative NaN — so a
+    // quieting impl reds the signaling cell and a canonicalizing/truncating impl reds the rich one.
+    let dtypes = [
+        D { name: "bf16", bytes: 2, nans: &[("snan", 0x7F81), ("qnan-rich", 0x7FD5), ("neg-qnan-rich", 0xFFD5)] },
+        D { name: "f16", bytes: 2, nans: &[("snan", 0x7C01), ("qnan-rich", 0x7E55), ("neg-qnan-rich", 0xFE55)] },
+        D { name: "f8e5m2", bytes: 1, nans: &[("snan", 0x7D), ("qnan-rich", 0x7F), ("neg-snan", 0xFD)] },
+        // f8e4m3fn: single NaN encoding (S.1111.111) — 0x7F / 0xFF, no payload variety.
+        D { name: "f8e4m3fn", bytes: 1, nans: &[("nan", 0x7F), ("neg-nan", 0xFF)] },
+    ];
+    let bytes_of = |val: u16, n: usize| -> Vec<u8> {
+        if n == 2 { val.to_be_bytes().to_vec() } else { vec![val as u8] }
+    };
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for d in &dtypes {
+        for (pname, val) in d.nans {
+            let a = bytes_of(*val, d.bytes);
+            let tags = format!("\"moved-nan\",\"sign-edit\",\"{pname}\",\"6.16-0009\"");
+            cells.push(move_cell(tc, "neg", d.name, &a, None, &tags));
+            tc += 1;
+            cells.push(move_cell(tc, "abs", d.name, &a, None, &tags));
+            tc += 1;
+        }
+        // copysign: the first NaN's magnitude with a negative sign source (sign bit only).
+        let nan0 = bytes_of(d.nans[0].1, d.bytes);
+        let neg_sign = bytes_of(if d.bytes == 2 { 0x8000 } else { 0x80 }, d.bytes);
+        cells.push(move_cell(
+            tc,
+            "copysign",
+            d.name,
+            &nan0,
+            Some(&neg_sign),
+            "\"moved-nan\",\"sign-edit\",\"copysign-neg\",\"6.16-0009\"",
+        ));
+        tc += 1;
+    }
+    // Finite negative controls: neg(1.0) — a finite passes a promote-through-f32 impl too, so the
+    // set does not red on everything. Encodings for convertible dtypes come from the fp oracle
+    // (guaranteed representable); f16's is the standard binary16 1.0 (no fp f16 conversion exists).
+    for (name, a) in [
+        ("bf16", f32_to_bf16(1.0).to_be_bytes().to_vec()),
+        ("f8e5m2", vec![f32_to_e5m2(1.0)]),
+        ("f8e4m3fn", vec![f32_to_e4m3(1.0)]),
+        ("f16", 0x3C00u16.to_be_bytes().to_vec()),
+    ] {
+        cells.push(move_cell(tc, "neg", name, &a, None, "\"finite-control\",\"sign-edit\",\"6.16-0009\""));
+        tc += 1;
+    }
+    bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
+}
+
 /// Assemble a bundle document from its cells. Header strings are shared across bundles so the
 /// arith bundle regenerates byte-for-byte.
 fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String {
@@ -166,4 +284,5 @@ fn write_bundle(rel_path: &str, doc: &str) {
 fn main() {
     write_bundle("/corpus/ops-arith.json", &arith_doc());
     write_bundle("/corpus/ops-transcendental-nan.json", &transcendental_nan_doc());
+    write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());
 }
