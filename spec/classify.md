@@ -1496,7 +1496,8 @@ separating a registered namespace from that namespace's capability-set token.
   digest (the *same* byte string measured against the threshold, so a producer may
   disagree about *whether* to digest but never about *what* is digested). A namespace with
   no length-conditional field omits `threshold`/`digest_input` and states so in its
-  `coverage_note`. *Test:*
+  `coverage_note` in the form §6.8-0015 requires — that clause states the requirement and
+  carries its own separate test. *Test:*
   `test_namespace_vocabulary_generated_vectors_cover_canonicalization`.
 
 > **Informative examples.** Well-formed `target_capability` tokens include
@@ -1654,6 +1655,42 @@ separating a registered namespace from that namespace's capability-set token.
   > **The named gate must be DEMONSTRATED to fail.** Corrupt or remove one witness and the
   > gate must redden. A gate nobody has seen fail is the same object as the witness nobody
   > evaluated — a claim in the shape of a check, and this clause would have bought nothing.
+
+- **KISS-CLASSIFY-6.8-0015** — **An exemption is declared, not narrated.** §6.8-0013 lets a
+  namespace with no length-conditional field omit `threshold`/`digest_input` and *"state so in
+  its `coverage_note`"*. A `coverage_note` is **free prose**: a reader can check that it is
+  **present** and can never check that it **says so**, so as written the exemption is
+  **self-granting** — a note saying anything at all discharges it, including a note that says
+  nothing relevant. A manifest claiming that exemption MUST therefore carry a machine-readable
+  **`omits`** list naming exactly the required pins it does not supply, and a reader MUST
+  reject with a typed decline any manifest whose declared `omits` set differs from the set
+  actually absent from its `vectors` — in **either** direction, since an over-declaration
+  conceals a pin that is present-but-unclaimed exactly as an under-declaration conceals one
+  that is missing. The `coverage_note` remains, carries the human reason, and carries **no
+  obligation**. This is §6.8-0014's **envelope** split applied to the exemption: KISS checks
+  that the claim is **present and in an evaluable form rather than prose**, while whether the
+  reason is a good one stays the maintainer's — KISS cannot read a namespace's vocabulary
+  content (§6.8-0004) and so cannot know whether a field is genuinely length-conditional.
+  *Test:* `test_namespace_vocabulary_omits_matches_absent_pins`.
+
+- **KISS-CLASSIFY-6.8-0016** — **A threshold vector carries the boundary it pins.** §6.8-0013
+  requires each length-conditional `threshold` be presented *at* and *immediately across* its
+  boundary, *"at the exact byte count that flips them"* — a property of the **byte counts**, which
+  a vector carrying only `pins`/`input`/`output` does not record. The strongest check that field
+  set supports is **adjacency**, and adjacency does not establish straddling: inputs of 3 and 4
+  bytes are adjacent and both far below a 512-byte boundary, so a check built on it would report
+  the requirement satisfied while asserting something strictly weaker than the clause says. A
+  `threshold`-tagged vector MUST therefore carry **`threshold_of`**, naming the length-conditional
+  field whose boundary it pins, and **`bytes`**, the length of its `input` measured against that
+  boundary — `threshold_of` because §6.8-0013 says *each* such field and a namespace may have more
+  than one, so a single per-manifest boundary cannot express them. A reader MUST reject with a
+  typed decline a manifest in which, for any value of `threshold_of`, the `threshold` vectors do
+  not include a pair whose `bytes` are **N and N+1**, **or** in which that pair's two `output`
+  values are **equal**. The second condition is what makes the first mean anything: a declared
+  boundary that flips no behaviour is a wrong boundary, and requiring the outputs to **differ**
+  checks the declaration against the vectors rather than trusting it. Together they establish what
+  adjacency alone cannot — that the pair sits **on** the boundary, not merely next to each other.
+  *Test:* `test_namespace_vocabulary_threshold_pair_straddles_its_boundary`.
 
 ### 6.9 Foundational independence and opaque carry
 
@@ -1895,6 +1932,8 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0012 | `test_namespace_vocabulary_declarative_production_split` |
 | KISS-CLASSIFY-6.8-0013 | `test_namespace_vocabulary_generated_vectors_cover_canonicalization` |
 | KISS-CLASSIFY-6.8-0014 | `test_namespace_vocabulary_derivability_witness` |
+| KISS-CLASSIFY-6.8-0015 | `test_namespace_vocabulary_omits_matches_absent_pins` |
+| KISS-CLASSIFY-6.8-0016 | `test_namespace_vocabulary_threshold_pair_straddles_its_boundary` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |

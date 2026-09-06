@@ -357,8 +357,46 @@
 # verified current against `git ls-remote`, HEAD 0 commits behind) reported
 # "RATCHET: at the floor - harness 383, lint 33, untested 497; lint set matches the base."
 # and that output is pasted here.
+# #415 (KISS-CLASSIFY-6.8-0015, an exemption is DECLARED not narrated): untested 497 -> 498.
+# #415 (KISS-CLASSIFY-6.8-0016, a threshold vector carries the boundary it pins): untested
+# 498 -> 499. SECOND clause on this same branch, so the branch moves the floor by TWO. Added
+# after KISS 2 measured that item 1 of #415 is NOT buildable against the current vector schema:
+# a vector carries `pins`/`input`/`output` and no byte count, so the strongest check available
+# is ADJACENCY, and adjacency does not establish straddling (3 and 4 bytes are adjacent and both
+# far below a 512-byte boundary). They raised it rather than shipping a check weaker than its
+# clause -- the same call I asked them to make on -0015, made again unprompted.
+#
+# FOLDED INTO THIS BRANCH rather than opened as a third PR, deliberately: it is the same clause
+# (-0013), the same "make the claim structured" remedy, and a third branch would have been a
+# third participant in the shared-counter collision this PR is already sequencing around.
+#
+# harness UNCHANGED at 383. clauses 938 -> 939.
+#
+# #415 (KISS-CLASSIFY-6.8-0015, an exemption is DECLARED not narrated): untested 496 -> 497.
+# THIRD instance of the same shape as #362 and #416 above -- a NEW normative clause arrives
+# UNBACKED and is recorded in UNBACKED.tsv rather than credited to a test that does not exist.
+# harness UNCHANGED at 383 is the discriminator: a clause that LOST its only backing would
+# have lowered it. clauses 937 -> 938. lint (33) and proven (20) UNCHANGED.
+#
+# WHY IT SHIPS WITHOUT ITS TEST, and this one is a SEQUENCING choice rather than a harness
+# limit. The check is buildable today -- `check_generated_vector_coverage` must compare a
+# manifest's declared `omits` set against the set actually absent from its `vectors`. It is
+# not built here because the clause fixes the SPELLING of a required field (`omits`), and an
+# implementation written against an unsettled field name would pin the wrong one. The clause
+# lands first so the name is settled; the check follows in the same lane already holding the
+# adjacent #415 work (the threshold/digest_input content checks).
+#
+# ⚠️ EXPECTED TO BE SHORT-LIVED. Unlike -0010 and -0011 above, nothing structural prevents
+# this clause being backed -- no missing evaluator, no comparator signature gap. If it is
+# still `untested` in a week, that is a lapse rather than a limit, and this note is the
+# record that says so.
+#
+# DERIVED BY THE TOOL, NOT BY ARITHMETIC: `--ratchet --base-ref origin/main` reported the
+# 497 -> 498 rise; RE-DERIVED after #437 (KISS-OPS-6.16-0011) merged and moved main's floor
+# to 497 -- the original 496 -> 497 here was correct against the OLD base and became stale the
+# moment #437 landed. Taken from the tool on the post-rebase base, never incremented.
 # key	value
 harness	383
 lint	33
-untested	497
+untested	499
 proven	20
