@@ -72,6 +72,16 @@ fn test_contract_dispatch_optional() {
     );
     let doc_with = b"[section:1:identity]\nname = k\n[section:4:dispatch]\ndispatch_model = geometry-agnostic\n[section:5:capabilities]\ncost = 1\n";
     assert_eq!(parse_dispatch_from_document(doc_with), Ok(DispatchModel::GeometryAgnostic));
+    // the heading search is LINE-ANCHORED: `[section:4:dispatch]` occurring INSIDE a field value is
+    // not a section heading. An unanchored `find` would match it here and then mis-parse; the
+    // anchored search correctly reports the section absent.
+    let doc_in_value =
+        b"[section:1:identity]\nname = see [section:4:dispatch] in the docs\n[section:5:capabilities]\ncost = 1\n";
+    assert_eq!(
+        parse_dispatch_from_document(doc_in_value),
+        Err(DispatchDecline::MissingSection),
+        "an unanchored heading search would falsely match `[section:4:dispatch]` inside a field value"
+    );
 
     // The two pre-existing non-vacuous enum-level assertions stay: a full declaration validates,
     // and a partial one (an empty field) is rejected (§6.6-0007 no-partial).

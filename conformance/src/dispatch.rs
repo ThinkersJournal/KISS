@@ -117,13 +117,25 @@ impl DispatchModel {
 /// sentinel line. A proper subset, a wrong order, an unknown field, `dispatch_model` beside a
 /// geometry field, or a bad sentinel value each declines — never a panic (§6.6-0007's no-partial).
 pub fn parse_dispatch_block(block: &[u8]) -> Result<DispatchModel, DispatchDecline> {
+    let fields = parse_dispatch_fields(block)?;
+    if fields.iter().any(|(k, _)| k == "dispatch_model") {
+        parse_sentinel_arm(&fields)
+    } else {
+        parse_geometry_arm(&fields)
+    }
+}
+
+/// Parse a Dispatch block's heading + `key = value` field lines into ordered `(key, value)` pairs.
+/// The `key = value` form is pinned by §6.11-0001 (one space, ASCII `=`, one space); a line not in
+/// that exact form declines `MalformedLine` rather than being leniently repaired — leniency would
+/// accept input the spec pins as malformed.
+fn parse_dispatch_fields(block: &[u8]) -> Result<Vec<(String, String)>, DispatchDecline> {
     let text = std::str::from_utf8(block).map_err(|_| DispatchDecline::BadHeading)?;
     let mut lines = text.lines();
     match lines.next() {
         Some(h) if h == format!("[section:{DISPATCH_SECTION_ID}:{DISPATCH_SECTION_NAME}]") => {}
         _ => return Err(DispatchDecline::BadHeading),
     }
-    // Parse the remaining non-empty lines as `key = value` field lines, in order.
     let mut fields: Vec<(String, String)> = Vec::new();
     for line in lines {
         if line.is_empty() {
@@ -137,26 +149,28 @@ pub fn parse_dispatch_block(block: &[u8]) -> Result<DispatchModel, DispatchDecli
     if fields.is_empty() {
         return Err(DispatchDecline::Empty);
     }
-    let has_sentinel = fields.iter().any(|(k, _)| k == "dispatch_model");
-    let has_geometry = fields.iter().any(|(k, _)| GEOMETRY_FIELD_KEYS.contains(&k.as_str()));
-    if has_sentinel {
-        if has_geometry {
-            return Err(DispatchDecline::SentinelWithGeometry);
-        }
-        // the sentinel arm: exactly one field, `dispatch_model = geometry-agnostic`.
-        if fields.len() != 1 || fields[0].0 != "dispatch_model" {
-            return Err(DispatchDecline::UnknownField(
-                fields.iter().find(|(k, _)| k != "dispatch_model").map(|(k, _)| k.clone())
-                    .unwrap_or_default(),
-            ));
-        }
-        if fields[0].1 != GEOMETRY_AGNOSTIC_SENTINEL {
-            return Err(DispatchDecline::BadSentinelValue(fields[0].1.clone()));
-        }
-        return Ok(DispatchModel::GeometryAgnostic);
+    Ok(fields)
+}
+
+/// The `dispatch_model = geometry-agnostic` arm (§6.6-0007): exactly one field, that key, that value.
+fn parse_sentinel_arm(fields: &[(String, String)]) -> Result<DispatchModel, DispatchDecline> {
+    if fields.iter().any(|(k, _)| GEOMETRY_FIELD_KEYS.contains(&k.as_str())) {
+        return Err(DispatchDecline::SentinelWithGeometry);
     }
-    // the geometry arm: exactly the five keys, in the pinned order.
-    for (k, _) in &fields {
+    if fields.len() != 1 || fields[0].0 != "dispatch_model" {
+        return Err(DispatchDecline::UnknownField(
+            fields.iter().find(|(k, _)| k != "dispatch_model").map(|(k, _)| k.clone()).unwrap_or_default(),
+        ));
+    }
+    if fields[0].1 != GEOMETRY_AGNOSTIC_SENTINEL {
+        return Err(DispatchDecline::BadSentinelValue(fields[0].1.clone()));
+    }
+    Ok(DispatchModel::GeometryAgnostic)
+}
+
+/// The five-geometry-field arm (§6.6-0001): exactly the five keys, in the pinned order.
+fn parse_geometry_arm(fields: &[(String, String)]) -> Result<DispatchModel, DispatchDecline> {
+    for (k, _) in fields {
         if !GEOMETRY_FIELD_KEYS.contains(&k.as_str()) {
             return Err(DispatchDecline::UnknownField(k.clone()));
         }
@@ -182,14 +196,19 @@ pub fn parse_dispatch_block(block: &[u8]) -> Result<DispatchModel, DispatchDecli
 /// a silently-accepted geometry-agnostic kernel (the old absent reading).
 pub fn parse_dispatch_from_document(body: &[u8]) -> Result<DispatchModel, DispatchDecline> {
     let text = std::str::from_utf8(body).map_err(|_| DispatchDecline::BadHeading)?;
-    let heading = format!("[section:{DISPATCH_SECTION_ID}:{DISPATCH_SECTION_NAME}]");
-    let start = match text.find(&heading) {
-        Some(i) => i,
-        None => return Err(DispatchDecline::MissingSection),
+    let heading_line = format!("[section:{DISPATCH_SECTION_ID}:{DISPATCH_SECTION_NAME}]\n");
+    // LINE-ANCHORED: the heading line is at body start or immediately after an LF, so the search
+    // cannot match `[section:4:dispatch]` occurring inside a field value.
+    let start = if text.starts_with(&heading_line) {
+        0
+    } else if let Some(i) = text.find(&format!("\n{heading_line}")) {
+        i + 1
+    } else {
+        return Err(DispatchDecline::MissingSection);
     };
-    // the block ends at the next section heading (line-anchored) or end of body.
-    let rest = &text[start + heading.len()..];
-    let end = rest.find("\n[section:").map(|i| start + heading.len() + i).unwrap_or(text.len());
+    // the block ends at the next line-anchored section heading, or end of body.
+    let after = start + heading_line.len();
+    let end = text[after..].find("\n[section:").map(|i| after + i).unwrap_or(text.len());
     parse_dispatch_block(text[start..end].as_bytes())
 }
 
