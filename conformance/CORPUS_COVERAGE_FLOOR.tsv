@@ -1,0 +1,34 @@
+# KISS-Conform — the CORPUS op-coverage ratchet floor (#459).
+#
+# `python tools/kiss_ops.py --corpus-coverage` compares the DERIVED coverage fraction against
+# these two numbers and fails on ANY deviation. It is the COVERAGE_FLOOR pattern applied to the
+# oracle-vector corpus: the clause-coverage ratchet (COVERAGE_FLOOR.tsv) tracks how much of the
+# SPEC is executable; this tracks how much of the OP DOMAIN the corpus actually mints vectors for.
+#
+# WHY IT EXISTS: build_manifest derives the full op domain (all_ops ∪ transcendental_atoms) and
+# publishes a `declared_coverage_set` that a staged rollout grows one slice at a time. The set was
+# ONE op ("add") against a 106-op domain, and nothing stated the fraction or stopped it standing
+# still — a legitimate staged rollout and a stalled one are indistinguishable without a visible,
+# ratcheted denominator. The old vacuity guard tested `declared` for EMPTY, which n=1 passes while
+# being as vacuous as zero over 106 subjects. (#459; KISS 2 measured it, architect ruled it.)
+#
+#   declared   ops in declared_coverage_set (the NUMERATOR)   MUST NOT decrease
+#   total      |all_ops ∪ atoms| (the DERIVED denominator)    a domain move updates it, not a regression
+#
+# A DEVIATION IN EITHER DIRECTION FAILS, and the message names WHICH of three causes:
+#   * declared DOWN            -> regression: an op lost its oracle-vector coverage.
+#   * declared UP              -> stale floor: burn-down progress; bump `declared` in this PR.
+#   * declared held, total ±   -> denominator-moved: ops.md changed the domain; update `total`.
+# `declared` is the discriminator: a coverage LOSS lowers it; the domain moving does not.
+#
+# ⚠️ MEASURED, not the relay: the op domain is 106 (all_ops), and the 9 transcendental atoms are a
+# SUBSET of all_ops (verified: atan/atan2/cos/erf/exp/lgamma/log/sin/sqrt are all in all_ops), so
+# |all_ops ∪ atoms| = 106 — NOT 115. The "106 ops + 9 atoms = 115" framing double-counts the atoms.
+# The denominator is the DERIVED union, so it is correct regardless of that overlap.
+#
+# This file is COMMITTED and edited by hand (like COVERAGE_FLOOR.tsv): a floor the tool rewrites is
+# a state derived from the run, not a decision, and would silently absorb a regression.
+#
+# key	value
+declared	1
+total	106
