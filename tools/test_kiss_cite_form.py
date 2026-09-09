@@ -63,6 +63,35 @@ class CiteForm(unittest.TestCase):
         self.assertEqual(len(sites), 1)
         self.assertFalse(sites[0][4])
 
+    def test_born_red_space_before_the_colon_is_MATCHED_and_flagged(self):
+        """The Codacy #501 finding, and the sharpest of the four: `Backs : KISS-X`.
+
+        The first version's separator was `(:?\s*)`, which cannot match this AT ALL --
+        so the site was invisible to the lint while `kiss_trace`'s `[:\s]*` matched it and
+        CREDITED it. A lint policing citation form, blind to a citation form the tracer accepts.
+
+        This control asserts BOTH halves, and the first is the one that was broken: the site
+        must be FOUND (len == 1), then judged non-canonical. Asserting only the verdict would
+        pass trivially on an extractor that finds nothing."""
+        sites = self.scan(["/// Backs : KISS-CONTRACT-6.6-0009"])
+        self.assertEqual(len(sites), 1,
+                         "MATCH half: the tracer credits this form, so the lint must SEE it")
+        self.assertFalse(sites[0][4], "JUDGE half: a colon not adjacent to the keyword is not canonical")
+
+    def test_population_matches_kiss_trace_on_every_separator_the_tracer_accepts(self):
+        """⚠️ POPULATION PARITY WITH THE TRACER IS THE INVARIANT, not any single spelling.
+        Every separator `kiss_trace`'s `[:\s]*` accepts must also be SEEN here -- otherwise the
+        lint's clean run is a statement about its own regex rather than about the tree."""
+        forms = ["/// Backs: KISS-OPS-6.1-0001", "/// Backs : KISS-OPS-6.1-0002",
+                 "/// Backs  KISS-OPS-6.1-0003", "/// Backs:  KISS-OPS-6.1-0004",
+                 "/// Backs	:	KISS-OPS-6.1-0005"]
+        sites = self.scan(forms)
+        self.assertEqual(len(sites), len(forms),
+                         f"lint saw {len(sites)} of {len(forms)} tracer-accepted separators")
+        # control: exactly the two colon-adjacent ones are canonical
+        self.assertEqual(sum(1 for s in sites if s[4]), 2,
+                         "only `Backs:` and `Backs:  ` are colon-adjacent")
+
     # ---- the canonical forms must NOT be flagged ---------------------------------------
 
     def test_canonical_forms_are_accepted(self):
@@ -122,6 +151,6 @@ class CiteForm(unittest.TestCase):
 
 if __name__ == "__main__":
     r = unittest.main(exit=False, verbosity=0).result
-    print(f"ok - {r.testsRun} controls pass: born-red on all three keywords, canonical forms "
+    print(f"ok - {r.testsRun} controls pass: born-red on all three keywords AND on the space-before-colon form the tracer credits, population parity with kiss_trace, canonical forms "
           f"accepted, an empty population refuses rather than reporting clean, and no second parser")
     raise SystemExit(0 if r.wasSuccessful() else 1)

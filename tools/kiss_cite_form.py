@@ -45,11 +45,21 @@ import kiss_trace as kt  # noqa: E402
 # of #488 applied forward: the other three keywords got their reader late.
 CANONICAL = ("Backs", "Enforces", "Proven", "Supplements")
 
-# A keyword followed by anything other than a colon, then a clause id.
-RE_BAD = kt.re.compile(
-    r'\b(' + '|'.join(CANONICAL) + r')(\s+)(' + kt.CLAUSE_ID + r')')
+# ⚠️ THE SEPARATOR CLASS IS `[:\s]*` BECAUSE THAT IS WHAT `kiss_trace` USES -- character for
+# character, deliberately. An earlier version wrote `(:?\s*)`, which CANNOT MATCH `Backs : KISS-X`
+# (a space before the colon) at all -- while `kiss_trace`'s `RE_CITE` matches it and CREDITS it.
+# So the lint policing citation form was blind to a citation form the tracer accepts: a census
+# narrower than the claim built on it, inside the tool built to prevent exactly that.
+#
+# 0 such sites exist today (control: 64 canonical ones do), so it was a LATENT hole, not a live
+# miss -- the next author to write `Backs : X` would have been credited by the tracer and
+# unremarked by the lint, and the convention would have quietly gained a fourth spelling.
+#
+# The rule is two-part and the parts must not be merged: MATCH exactly what the tracer matches,
+# then JUDGE the form of what was matched. Narrowing the MATCH to things that look wrong is
+# what produced the hole.
 RE_ANY = kt.re.compile(
-    r'\b(' + '|'.join(CANONICAL) + r')(:?\s*)(' + kt.CLAUSE_ID + r')')
+    r'\b(' + '|'.join(CANONICAL) + r')([:\s]*)(' + kt.CLAUSE_ID + r')')
 
 
 def scan(root):
@@ -64,6 +74,8 @@ def scan(root):
             with open(p, encoding="utf-8") as fh:
                 for i, line in enumerate(fh, 1):
                     for m in RE_ANY.finditer(line):
+                        # Canonical == the colon comes IMMEDIATELY after the keyword.
+                        # `Backs: X` ok . `Backs : X` no . `Backs  X` no.
                         ok = m.group(2).startswith(":")
                         sites.append((os.path.relpath(p, root).replace("\\", "/"),
                                       i, m.group(1), m.group(3), ok))
