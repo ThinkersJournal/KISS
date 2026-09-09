@@ -79,6 +79,16 @@ fn test_contract_vectors_render_matches_appendix_c() {
 fn test_appendix_c_shows_every_block_the_codec_renders() {
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/contract.md"))
         .expect("spec/contract.md must be readable");
+    // NORMALIZE LINE ENDINGS BEFORE COMPARING. render_block emits LF; read_to_string returns
+    // the file bytes verbatim, so on a CRLF checkout every appendix line ends CRLF and every
+    // contains() below fails on a document that is textually identical.
+    //
+    // Asymmetric in a way that hides it: Rust NORMALIZES CRLF inside string literals, so the
+    // sibling APPENDIX_C_*_GOLDEN constants are LF whatever the .rs file holds -- a test
+    // comparing against THOSE passes on any checkout, while this one, which reads the spec
+    // from disk, does not. It surfaced on a rebase that re-checked-out spec/contract.md as
+    // CRLF, having passed moments earlier on identical content stored as LF.
+    let spec = spec.replace("\r\n", "\n");
     let start = spec.find("## Appendix C").expect("spec must carry Appendix C");
     let appendix = &spec[start..];
 
