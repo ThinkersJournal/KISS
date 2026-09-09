@@ -511,7 +511,7 @@ fn test_ops_opattrs_reduce_axes_classify_reconciliation() {
     assert_eq!(classify_reduce_field(Reduce::None), "-");
 }
 
-/// Enforces KISS-OPS-6.19-0037 — the window/permutation vector arm of the range rule:
+/// Enforces: KISS-OPS-6.19-0037 — the window/permutation vector arm of the range rule:
 /// "a conforming encoder MUST NOT emit ... a window/permutation vector whose element
 /// count exceeds `MAX_RANK`".
 ///
@@ -536,7 +536,7 @@ fn test_ops_opattrs_window_vector_bounded_by_max_rank() {
     let _ = window_param_vector(&too_many);
 }
 
-/// Enforces KISS-OPS-6.19-0037 — the paired positive: MAX_RANK elements exactly is ACCEPTED, so the test above pins a
+/// Enforces: KISS-OPS-6.19-0037 — the paired positive: MAX_RANK elements exactly is ACCEPTED, so the test above pins a
 /// boundary rather than a blanket refusal. Without this, narrowing the bound to any
 /// smaller number would still satisfy the should_panic.
 #[test]

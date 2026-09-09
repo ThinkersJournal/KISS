@@ -171,6 +171,15 @@ jobs:
         run: python tools/test_kiss_backs_matrix.py
       - name: Backs vs §9 matrix disagreement (reports; does not gate)
         run: python tools/kiss_backs_matrix.py
+      - name: Citation-form discrimination controls (#488)
+        run: python tools/test_kiss_cite_form.py
+      # ⚠️ BLOCKING, unlike the two citation steps above, and the difference is the VERDICT not
+      # the severity. Those produce CANDIDATES a human must adjudicate, so gating on them would
+      # gate on a judgement. This produces a mechanical, unambiguous verdict with a one-line
+      # fix. And a reporting-only form lint would reproduce the very defect #488 describes --
+      # a convention whose only reader is one nobody reads.
+      - name: Citation keyword form is canonical (blocking, #488)
+        run: python tools/kiss_cite_form.py --strict
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       # A metadata block wedged inside a requirement is not a style defect: a phrase

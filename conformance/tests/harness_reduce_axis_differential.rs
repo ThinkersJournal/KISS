@@ -34,7 +34,7 @@ fn advertised_class(token: &str) -> DeterminismClass {
     parse_guarantees_class(&body).expect("advertised class parses")
 }
 
-// Enforces KISS-OPS-6.11-0002 (`reduce` folds an axis with an associative monoid) and
+// Enforces: KISS-OPS-6.11-0002 (`reduce` folds an axis with an associative monoid) and
 // KISS-CONFORM-6.13-0006b (the differential comparator is selected from the op's
 // advertised determinism class, never hardcoded): the Sum path's comparator comes from
 // a contract advertising `order-invariant/nondeterministic`, the Max path's from one

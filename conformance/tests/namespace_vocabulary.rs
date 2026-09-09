@@ -62,7 +62,7 @@ fn gen_fields() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
-/// Enforces KISS-CLASSIFY-6.8-0013 — the `digest_input` CONTENT obligation: "the SAME
+/// Enforces: KISS-CLASSIFY-6.8-0013 — the `digest_input` CONTENT obligation: "the SAME
 /// byte string measured against the threshold, so a producer may disagree about WHETHER
 /// to digest but never about WHAT is digested".
 ///
@@ -106,7 +106,7 @@ fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
     );
 }
 
-/// Enforces KISS-CLASSIFY-6.8-0013 — a MALFORMED digest_input vector and a MISMATCHED one
+/// Enforces: KISS-CLASSIFY-6.8-0013 — a MALFORMED digest_input vector and a MISMATCHED one
 /// are different conditions and must not share a decline code.
 ///
 /// ⚠️ A review flagged the two `DigestInputNotIdentical` arms as redundant and prescribed

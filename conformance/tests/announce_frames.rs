@@ -39,7 +39,7 @@ fn saturated() -> Envelope {
 
 // ---- §6.1 producer layout discipline ----------------------------------------
 
-/// Enforces KISS-ANNOUNCE-6.1-0010 — a producer MUST write all-zero bytes to
+/// Enforces: KISS-ANNOUNCE-6.1-0010 — a producer MUST write all-zero bytes to
 /// `reserved1` (offset 42, length 6, the alignment padding).
 /// TEETH: asserted on a VARIED envelope set incl. a fully-set `capabilities`
 /// u64. A packed 50-byte layout with no 6-byte pad would write `capabilities`
@@ -70,7 +70,7 @@ fn test_announce_reserved1_pad_zero() {
     }
 }
 
-/// Enforces KISS-ANNOUNCE-6.1-0011 — the `capabilities` field MUST occupy offset
+/// Enforces: KISS-ANNOUNCE-6.1-0011 — the `capabilities` field MUST occupy offset
 /// 48 as an 8-byte little-endian unsigned integer.
 /// TEETH: distinct-byte value 0x0807_0605_0403_0201, so a big-endian write (the
 /// `htonl` reflex) or a wrong offset produces a byte transposition the golden's
@@ -91,7 +91,7 @@ fn test_announce_capabilities_field() {
     assert_eq!(decode(&b).unwrap().capabilities, caps);
 }
 
-/// Enforces KISS-ANNOUNCE-6.1-0013 — every field MUST occupy the exact SIZE in
+/// Enforces: KISS-ANNOUNCE-6.1-0013 — every field MUST occupy the exact SIZE in
 /// the §6.1 layout table.
 /// TEETH: the field byte-WIDTHS are pinned from the spec table; the test derives
 /// each field's offset by prefix-sum and checks the REAL codec output lands
@@ -144,7 +144,7 @@ fn test_announce_field_sizes_match_table() {
     );
 }
 
-/// Enforces KISS-ANNOUNCE-6.1-0006 — a producer MUST write all-zero bytes to
+/// Enforces: KISS-ANNOUNCE-6.1-0006 — a producer MUST write all-zero bytes to
 /// `reserved0` (offset 5, length 3).
 /// TEETH: asserts the producer ZEROES reserved0 across the reference and a
 /// non-default envelope (distinct from the reader-reject §6.2-0004). Fails on an
@@ -162,7 +162,7 @@ fn test_announce_reserved0_is_zero() {
     }
 }
 
-/// Enforces KISS-ANNOUNCE-6.1-0008 — a producer MUST write zero to every
+/// Enforces: KISS-ANNOUNCE-6.1-0008 — a producer MUST write zero to every
 /// `profiles` entry at index `>= profiles_len`.
 /// TEETH: the boundary is checked exactly at `profiles_len`: the LIVE entries
 /// are asserted present (nonzero, at the right slots) AND every trailing slot up
@@ -195,7 +195,7 @@ fn test_announce_trailing_profiles_zero() {
 
 // ---- §6.2 reader hard-reject discipline -------------------------------------
 
-/// Enforces KISS-ANNOUNCE-6.2-0007 — on any rejection, a reader MUST return a
+/// Enforces: KISS-ANNOUNCE-6.2-0007 — on any rejection, a reader MUST return a
 /// typed decline and MUST NOT panic, abort, crash, hang, or read outside the
 /// input buffer.
 /// TEETH: (a) a battery of malformations each yields `Err(AnnounceDecline::_)`;
@@ -264,7 +264,7 @@ fn test_announce_rejection_is_typed_decline() {
     }
 }
 
-/// Enforces KISS-ANNOUNCE-6.2-0008 — a reader MUST NOT tolerate, silently
+/// Enforces: KISS-ANNOUNCE-6.2-0008 — a reader MUST NOT tolerate, silently
 /// ignore, or attempt to repair a malformed envelope.
 /// TEETH: hard-reject vs soft-repair. For each repair-TEMPTING malformation the
 /// reader must return `Err`, NEVER `Ok`: a nonzero reserved region is not
@@ -309,7 +309,7 @@ fn test_announce_reader_never_repairs() {
 
 // ---- §6.3 kernel availability (identity only) -------------------------------
 
-/// Enforces KISS-ANNOUNCE-6.3-0001 — a provider MUST announce each available
+/// Enforces: KISS-ANNOUNCE-6.3-0001 — a provider MUST announce each available
 /// kernel as an availability record consisting SOLELY of the pair
 /// `(structure_key, revision_hash)`.
 /// TEETH: the per-record wire footprint is the closed form
@@ -352,7 +352,7 @@ fn test_announce_availability_is_identity_pair() {
     assert_eq!(decode_availability_list(&b2), Ok(two));
 }
 
-/// Enforces KISS-ANNOUNCE-6.3-0003 — `revision_hash` MUST be exactly 32 bytes.
+/// Enforces: KISS-ANNOUNCE-6.3-0003 — `revision_hash` MUST be exactly 32 bytes.
 /// TEETH: two-sided. Producer — the encoded record's hash region is exactly 32
 /// bytes (`record_len - 4 - key_len == 32`), so a 16- or 20-byte hash fails the
 /// closed form. Reader — a list whose final record's hash is cut to 31 bytes
@@ -380,7 +380,7 @@ fn test_announce_revision_hash_is_32_bytes() {
     );
 }
 
-/// Enforces KISS-ANNOUNCE-6.3-0004 — a provider MUST carry `structure_key` as
+/// Enforces: KISS-ANNOUNCE-6.3-0004 — a provider MUST carry `structure_key` as
 /// the opaque, length-delimited KISS-Classify token and MUST NOT reinterpret,
 /// truncate, or re-encode its bytes.
 /// TEETH: an adversarial key {0x00, 0x00, 0xFF, 0x80, 0x41} (embedded NUL, high
@@ -412,7 +412,7 @@ fn test_announce_structure_key_is_opaque() {
     );
 }
 
-/// Enforces KISS-ANNOUNCE-6.3-0008 — `revision_hash` MUST be treated as an
+/// Enforces: KISS-ANNOUNCE-6.3-0008 — `revision_hash` MUST be treated as an
 /// opaque provider-assigned identifier compared only for equality; an impl MUST
 /// NOT assume any hash algorithm or recomputable input domain.
 /// TEETH: an all-zero [0u8;32] hash is a VALID record (not rejected as
@@ -455,7 +455,7 @@ fn test_announce_revision_hash_opaque_identity() {
 
 // ---- §6.4 contract-query protocol -------------------------------------------
 
-/// Enforces KISS-ANNOUNCE-6.4-0011 — a contract or decline RESPONSE MUST echo
+/// Enforces: KISS-ANNOUNCE-6.4-0011 — a contract or decline RESPONSE MUST echo
 /// the `(structure_key, revision_hash)` identity it is answering for.
 /// TEETH: one `Identity` is encoded into a CYRQ request, a CRSP response, and a
 /// CDEC response; the identity block (every byte after the 4-byte tag, derived

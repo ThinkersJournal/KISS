@@ -678,8 +678,27 @@ instrument you spent less on.
 **15. A citation's FORM settles deliberateness; only a MUTATION settles aboutness — and the
 mutation must target the SUBJECT of the obligation, not the text that states it.** A clause ID
 in a test earns coverage credit only in a **backing form**: the ID as the first argument of a
-backing assertion (`assert_golden("KISS-X", …)`, `assert_token(…)`), or after a `Backs:` /
-`Enforces` keyword in a comment. Every other occurrence — a fixture literal, a `panic!`/`assert!`
+backing assertion (`assert_golden("KISS-X", …)`, `assert_token(…)`), or after a citation
+keyword in a comment. **Every citation keyword is written `Keyword:` — capitalised, colon
+immediately after, then the ID**: `Backs:`, `Enforces:`, `Proven:`, and `Supplements:`
+(⚠️ **RESERVED, NOT YET LIVE** — the spelling is settled here so #498's dual-level keyword
+arrives into a stated convention rather than inventing a fifth habit, but `kiss_trace` does
+**not** recognise it yet, so a `Supplements:` citation earns **no credit today**. Do not use
+it until #498 lands. `kiss_cite_form.py` already polices its *form*, so the day it becomes
+live it has a reader — which is the one thing the other three did not have). One rule,
+no per-keyword exceptions. *Why the rule is stated rather than left to habit:* this sentence
+used to read "a `Backs:` / `Enforces` keyword" — **spelling one with a colon and one without,
+in the same phrase** — and the tree followed it exactly: 54 `Backs:` against 4 `Backs`, and
+79 `Enforces` against 0 `Enforces:`. Three keywords, three near-unanimous but different
+habits, none of them wrong by any statement anyone had written. ⚠️ **And the forms were not
+equally safe**: `kiss_trace`'s `RE_CITE` accepts `Backs`/`Enforces` with or without the
+colon, but `RE_PROVEN` requires it — so a `Proven` written in the loose form that `Backs`
+taught is **not recognised at all and its credit vanishes with no error**. `tools/kiss_cite_form.py`
+now enforces the single form. ⚠️ **It reports; it never credits or de-credits.** Tightening
+the recognizer instead would have added a check and moved coverage as a *side effect* —
+sites in the loose form silently losing their backing, `untested` moving, and the ratchet
+reporting a number whose real cause was a regex edit, indistinguishable from a regression
+or an arrival. **Detection and crediting must stay separate instruments.** Every other occurrence — a fixture literal, a `panic!`/`assert!`
 message, a bare comment id, a lookup key — is a **mention** and earns nothing (`kiss_trace`'s
 scanner enforces this; `// Backs: KISS-X` is the one-line migration for a genuine backing written
 in a bare form). But form is only *deliberateness*; whether the test **asserts the clause's

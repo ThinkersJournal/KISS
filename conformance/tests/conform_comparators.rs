@@ -1,6 +1,6 @@
 //! KISS-Conform §6.8 comparator refinements.
 //!
-//! Backs KISS-CONFORM-6.8-0010 (computed-NaN result comparison, KISS #88 ruling
+//! Backs: KISS-CONFORM-6.8-0010 (computed-NaN result comparison, KISS #88 ruling
 //! 2026-07-23): a *computed* NaN result compares by NaN-**ness** under the value
 //! comparators (payload/sign not checked), while a *moved* NaN — a byte-preserving
 //! result or a wire constant — and signed zero stay exact-byte.

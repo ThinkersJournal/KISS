@@ -156,7 +156,7 @@ mod tests {
         ]
     }
 
-    // Enforces KISS-OPS-6.0-0007: per-output determinism class by full-sub-DAG
+    // Enforces: KISS-OPS-6.0-0007: per-output determinism class by full-sub-DAG
     // propagation, with the value/selection split.
     #[test]
     fn test_ops_per_output_determinism_class() {
@@ -191,7 +191,7 @@ mod tests {
         assert_eq!(output_class(&r, 7), ExactByte); // argmax over max
     }
 
-    // Enforces KISS-CONFORM-6.8-0011: the differential comparator is selected PER
+    // Enforces: KISS-CONFORM-6.8-0011: the differential comparator is selected PER
     // OUTPUT from that output's class. A reassociated result within the band is
     // accepted for the order-invariant root and rejected for the exact-byte root —
     // a single whole-op comparator cannot do both.
@@ -214,7 +214,7 @@ mod tests {
         assert!(compare_reduced_f32(max_class, actual, expected, tol, 0.0).is_err());
     }
 
-    // Enforces KISS-OPS-6.0-0008: the value-vs-selection classification of an output is
+    // Enforces: KISS-OPS-6.0-0008: the value-vs-selection classification of an output is
     // fixed by op SEMANTICS (the comparison op-family, via RecipeNode::from_op /
     // is_selection_producer), NOT by the lane an implementation computes it in. Nothing
     // here hand-tags a selection — from_op derives it from the op token. The witness is
