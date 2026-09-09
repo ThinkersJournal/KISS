@@ -12,3 +12,11 @@
 # The narrow scope was avoiding a cost that was never going to be paid, so the rule now
 # covers what it always should have — the whole generated corpus, not one file of it.
 conformance/corpus/*.json text eol=lf
+
+# spec/*.md are read FROM DISK by the Appendix C binding tests (#496), which compare
+# against codec output that emits LF. Without this, a CRLF checkout makes those tests fail
+# on a document that is textually identical -- measured: all ten were i/lf w/crlf attr/.
+# Same reasoning as the corpus rule above, and the same measured cost: the index is ALREADY
+# LF, so --renormalize stages nothing. Verify with `git ls-files --eol`, never with grep --
+# MINGW64 grep strips CR before matching, so no grep can see a line ending here (#506).
+spec/*.md text eol=lf
