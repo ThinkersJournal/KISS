@@ -63,21 +63,80 @@ fn test_contract_vectors_render_matches_appendix_c() {
     );
 }
 
-/// (3) 16(d) PARTIAL, STATED — the artifact renders the 3 blocks Appendix C SHOWS, not the 7 its
-/// preamble promises in the machine-readable file. blocks 4-7 have no builder. The artifact's own
-/// note states this, so a reader cannot mistake it for the complete document; the seven-block
-/// resolution is a NORMATIVE decision, filed separately.
+/// (3) THE APPENDIX AND THE ARTIFACT ARE ONE DOCUMENT, ASSERTED PER BLOCK (#496).
+///
+/// This replaces `test_contract_vectors_states_the_three_of_seven_gap`, which asserted the
+/// artifact DECLARED a 3-of-7 gap. The gap is closed, so a test whose subject is the gap's
+/// statement has no subject left; keeping it green would have required keeping the gap.
+///
+/// It reads Appendix C out of `spec/contract.md` and requires each of the seven codec-rendered
+/// blocks to appear there VERBATIM. The old `test_contract_vectors_render_matches_appendix_c`
+/// pinned Identity byte-for-byte, substring-checked Semantics, and never looked at the rest --
+/// so it passed with the codec rendering seven blocks against an appendix showing three. A test
+/// named "render matches appendix C" that cannot see a four-block divergence is the vacuity
+/// family: its name is a claim about coverage its assertions do not make.
 #[test]
-fn test_contract_vectors_states_the_three_of_seven_gap() {
-    let json = contract::emit_contract_vectors_json();
-    assert!(json.contains("\"blocks_shown\": 3"), "must state it renders 3 blocks");
+fn test_appendix_c_shows_every_block_the_codec_renders() {
+    let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/contract.md"))
+        .expect("spec/contract.md must be readable");
+    let start = spec.find("## Appendix C").expect("spec must carry Appendix C");
+    let appendix = &spec[start..];
+
+    let blocks: [(&str, Vec<u8>); 7] = [
+        ("identity", contract::appendix_c_identity_block()),
+        ("semantics", contract::appendix_c_semantics_block()),
+        ("interface", contract::appendix_c_interface_block()),
+        ("dispatch", contract::appendix_c_dispatch_block()),
+        ("capabilities", contract::appendix_c_capabilities_block()),
+        ("guarantees", contract::appendix_c_guarantees_block()),
+        ("provenance", contract::appendix_c_provenance_block()),
+    ];
+
+    for (name, bytes) in &blocks {
+        let text = std::str::from_utf8(bytes).expect("block must be UTF-8");
+        assert!(
+            appendix.contains(text),
+            "Appendix C does not show the codec's `{name}` block verbatim. The appendix and the \
+             machine-readable golden are one document (§8-0004/-0005 name Appendix C as the \
+             target a foreign reader reproduces), so a block the codec renders and the appendix \
+             omits is a divergence in the thing under obligation.\n\
+             --- codec renders ---\n{text}"
+        );
+    }
+
+    // CONTROL: the extraction is not vacuously true. A block the codec does NOT render must be
+    // absent -- otherwise `contains` would pass for anything and the seven assertions above
+    // would be measuring the appendix's length rather than its content.
     assert!(
-        json.contains("\"blocks_promised_by_appendix\": 7"),
-        "must state Appendix C promises 7 blocks in the machine-readable file"
+        !appendix.contains("[section:8:"),
+        "control: Appendix C must not show an eighth section block; §6.11-0004 pins seven"
     );
     assert!(
-        json.contains("PARTIALLY fulfils") && json.contains("NORMATIVE decision"),
-        "the 16(d) note must state the artifact is PARTIAL and the gap-closure is a normative decision"
+        !appendix.contains("dispatch_model = provider-internal"),
+        "control: the appendix must not carry a §6.6-0001-forbidden dispatch value"
+    );
+}
+
+/// (3b) The artifact DECLARES what remains partial, rather than leaving it to be discovered.
+///
+/// The 16(d) note is gone because its subject is gone. What replaces it is not silence: two real
+/// limits are stated in the artifact itself -- the Dispatch sentinel (so a foreign reader never
+/// exercises the five-field geometry path) and the AUDIT-checklist nature of §8-0004/-0005.
+#[test]
+fn test_contract_vectors_states_what_remains_partial() {
+    let json = contract::emit_contract_vectors_json();
+    assert!(json.contains("\"blocks_shown\": 7"), "must state it renders all 7 blocks");
+    assert!(
+        json.contains("\"blocks_promised_by_appendix\": 7"),
+        "must still state Appendix C promises 7 blocks"
+    );
+    assert!(
+        json.contains("geometry-agnostic sentinel") && json.contains("never exercises"),
+        "must state that the Dispatch sentinel leaves the five-field geometry path unexercised"
+    );
+    assert!(
+        json.contains("AUDIT-role checklist") || json.contains("UNBACKED.tsv records both as untested"),
+        "must state that the freeze gates naming Appendix C are audit-checklist, not automated"
     );
 }
 
