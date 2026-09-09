@@ -95,6 +95,16 @@ RE_HEAD = re.compile(r"^#{1,6}\s+.*$", re.M)
 # A `*Test:*` tag inside a clause block. `\s*` spans a line wrap between the tag
 # and its backtick-quoted test name.
 RE_TEST = re.compile(r"\*Test:\*\s*`([A-Za-z][A-Za-z0-9_]*)`")
+
+# A clause that DECLARES ITSELF a checklist gate: its `*Test:*` names a human AUDIT
+# procedure, not a function. The suite writes this as `(checklist gate; ...)` right
+# after the test name -- e.g. KISS-CONTRACT-8-0004's "(checklist gate; signed by the
+# AUDIT role, not DESIGN)". DERIVED from the spec text, never hand-curated: the whole
+# defect this closes is that the spec said "checklist gate" three lines above a ledger
+# row that recorded a bare `untested`, and a hand-maintained category would drift the
+# same way again. If the spec stops calling a clause a checklist gate, the category
+# disappears on the next --update-ledger with no one to remember to remove it.
+RE_CHECKLIST_GATE = re.compile(r"\(\s*checklist gate", re.I)
 RE_IDPART = re.compile(r"^KISS-([A-Z]+)-(\d+(?:\.\d+)?)-(\d{4}[a-z]?)$")
 
 # --- BACKING vs MENTION (#187) ---------------------------------------------------------
@@ -290,6 +300,16 @@ CATEGORIES = {
     "definitional",   # a test would be a tautology — the clause states a
                       # definition/ownership with no implementation behaviour
                       # (note = one-line reason). Use sparingly and auditably.
+    "attested",       # a CHECKLIST GATE the spec itself declares (#505): the clause's
+                      # `*Test:*` names a human AUDIT procedure, and its evidence is
+                      # EXTERNAL to this repo -- ">=2 dissimilar implementations
+                      # interoperate", "a foreign reader consumed the wire". TERMINAL
+                      # like `definitional`, but for the opposite reason: not "a test
+                      # would be a tautology" (these have very real behaviour) but
+                      # "an in-repo test would be VACUOUS", since the repo cannot
+                      # supply a second implementation or a foreign reader. Writing
+                      # one would mark the clause COVERED and stop anyone looking.
+                      # note = the declaring text. DERIVED from the spec, not curated.
     "decredited",     # an over-credit CORRECTED downward (#261): the clause was
                       # counted harness-backed by a citation that MENTIONS but does
                       # not ASSERT it (#187/#191), and the false credit is removed.
@@ -353,6 +373,13 @@ LEDGER_HEADER = """\
 #   blocked       spec has not pinned the bytes/behaviour yet (note = issue ref)
 #   untestable    contradictory/undefined until reworded (note = filed issue)
 #   definitional  a test would be a tautology (note = one-line reason)
+#   attested      a CHECKLIST GATE the spec itself declares (#505): the `*Test:*`
+#                 names a human AUDIT procedure and the evidence is EXTERNAL to
+#                 this repo (">=2 dissimilar impls interoperate", "a foreign reader
+#                 consumed the wire"). TERMINAL -- an in-repo test would be VACUOUS,
+#                 marking the clause COVERED and stopping anyone looking. DERIVED
+#                 from the spec text on every run, never curated, so the ledger
+#                 cannot drift from what the spec declares.
 # Every non-`untested` category MUST carry a note; a bare `untested` needs none.
 #
 # It is a RATCHET, enforced by tools/kiss_trace.py:
@@ -1227,17 +1254,31 @@ def classify_proven(floor_proven, live_proven_map, live_harness, base_proven_map
         f"{live_count} in this PR."])
 
 
-def write_ledger(path, unbacked, prior=None):
+def write_ledger(path, unbacked, prior=None, attested=None):
     """Write the ledger, PRESERVING the category/note of any clause still unbacked
     (so --update-ledger never silently drops a curated categorization). A clause
-    unbacked for the first time is written as bare `untested`."""
+    unbacked for the first time is written as bare `untested`.
+
+    `attested` (#505) is DERIVED FROM THE SPEC on every run and OVERRIDES any prior
+    category, which is the opposite of how every other category behaves. That is
+    deliberate: this defect existed because the spec declared a clause a checklist
+    gate three lines above a ledger row that recorded a bare `untested`, and a
+    curated category would drift back apart the same way. Derived means the ledger
+    cannot disagree with the spec -- and if a clause stops being a checklist gate,
+    the category leaves on the next run with nobody needing to remember."""
     prior = prior or {}
+    attested = attested or set()
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(LEDGER_HEADER)
         for cid in sorted(unbacked):
             test = unbacked[cid]
             p = prior.get(cid)
-            if p and p["category"] != "untested":
+            if cid in attested:
+                # DERIVED, and it wins over `prior` on purpose (see docstring).
+                note = ("spec declares this a checklist gate; AUDIT-signed, "
+                        "evidence external to this repo")
+                fh.write(f"{cid}\t{test}\tattested\t{note}\n")
+            elif p and p["category"] != "untested":
                 cat = f"{p['category']}:{p['lint']}" if p["category"] == "lint" and p["lint"] else p["category"]
                 fh.write(f"{cid}\t{test}\t{cat}\t{p['note']}\n")
             else:
@@ -1348,6 +1389,7 @@ class DocResult:
         self.prefix = "KISS-" + stem.upper()
         self.body = []       # (clause_id, line, [tests])
         self.terms = {}      # clause_id -> distinctive terms (#246)
+        self.attested = set()   # clause_ids the spec declares CHECKLIST GATES (#505)
         self.matrix = []     # (clause_id, test, line)
         self.violations = []
 
@@ -1495,6 +1537,8 @@ def parse(path, res):
         block = text[pos:end]
         res.body.append((cid, lineno(pos), RE_TEST.findall(block)))
         res.terms[cid] = clause_terms(block)
+        if RE_CHECKLIST_GATE.search(block):
+            res.attested.add(cid)
     for m in RE_MATRIX.finditer(text):
         res.matrix.append((m.group(1), m.group(2), lineno(m.start())))
 
@@ -1844,6 +1888,12 @@ def main():
     for res in results:
         all_terms.update(res.terms)
 
+    # #505: the clauses the SPEC declares checklist gates, unioned across the suite.
+    # Derived every run; see write_ledger's docstring for why this must not be curated.
+    attested_clauses = set()
+    for res in results:
+        attested_clauses |= res.attested
+
     # A clause is BACKED if executable code is tied to it, by either direction of
     # §6.1's bidirectional traceability:
     #   forward — the test the clause names exists in the harness; or
@@ -1955,6 +2005,14 @@ def main():
         return "untested", ""
 
     cat_of = {c: eff_category(c) for c in unbacked}
+    # DERIVED beats recorded (#505): an attested clause is categorized from the spec on
+    # THIS run, so `--report` and `--strict` are right the first time rather than after a
+    # subsequent --update-ledger. Otherwise the tool would state a number it was about to
+    # contradict, which is the drift this closes.
+    for _c in unbacked:
+        if _c in attested_clauses:
+            cat_of[_c] = ("attested", "spec declares this a checklist gate; AUDIT-signed, "
+                                      "evidence external to this repo")
     lint_backed = {c: lint_cov[c] for c in unbacked if c in lint_cov}
     by_category = defaultdict(list)
     for c, (base, _note) in cat_of.items():
@@ -1978,7 +2036,11 @@ def main():
     #
     # `decredited` was added by #261 and never added here -- a new claim category arrived
     # without the check that makes claim categories auditable.
-    CLAIM_CATEGORIES = ("blocked", "untestable", "definitional", "decredited")
+    # `attested` makes a claim ("the spec declares this a checklist gate") and carries a
+    # note, so it belongs here: the missing-note check then enforces that the derived note
+    # is actually written, and the two generated sentences below name it without anyone
+    # maintaining a second list.
+    CLAIM_CATEGORIES = ("blocked", "untestable", "definitional", "decredited", "attested")
     missing_note = sorted(
         c for c, p in ledger.items()
         if p["category"] in CLAIM_CATEGORIES
@@ -1992,7 +2054,7 @@ def main():
             if c in lint_cov:
                 eff_prior[c] = {"category": "lint", "lint": lint_cov[c][0],
                                 "note": lint_cov[c][1] or "enforced by the lint"}
-        write_ledger(ledger_path, unbacked, prior=eff_prior)
+        write_ledger(ledger_path, unbacked, prior=eff_prior, attested=attested_clauses)
         nb = untested_count(by_category)
         print(f"Wrote {ledger_path}: {len(unbacked)} unbacked "
               f"({len(lint_backed)} lint, {nb} untested).")
@@ -2200,6 +2262,8 @@ def main():
         ("blocked", "spec has not pinned the bytes/behaviour yet (see note)"),
         ("untestable", "contradictory/undefined until reworded (filed issue)"),
         ("definitional", "a test would be a tautology (definition/ownership)"),
+        ("attested", "a checklist gate the SPEC declares; AUDIT-signed, evidence external"),
+        ("decredited", "an over-credit corrected downward; a real test is still OWED"),
         ("untested", "neither tested, enforced, nor explained  <-- the real gap"),
     ]
     # The lint tools actually enforcing a clause (from live coverage, so a stale
