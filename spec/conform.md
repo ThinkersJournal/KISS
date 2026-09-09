@@ -1509,6 +1509,25 @@ version)`; the reference **crate** carries an ordinary semver that moves on any 
   may issue a conformance verdict, and a verdict from a suite whose vector set differs from the
   canonical artifact MUST NOT back a conformance claim. *Test:*
   `test_conform_canonical_suite_authoritative`.
+- **KISS-CONFORM-8-0011** — A sub-standard MUST NOT be promoted Draft→Frozen until, for **each
+  closed set its normative clauses declare**, the AUDIT role's recorded manifest states the
+  **covered/declared ratio** as an integer pair and **names every uncovered member individually**,
+  each with a recorded reason. Coverage is measured over the frozen golden-vector set: a member is
+  **covered** when at least one vector in that set carries it **in its own bytes**, and
+  **uncovered** otherwise. ⚠️ A vector LABELLED, named or annotated as covering a member does
+  not cover it: the numerator counts only members a reader can observe in the vector's content,
+  because a ratio whose numerator is raised by a claim rather than by an artifact **moves in the
+  flattering direction for the wrong reason and stays internally consistent while doing it** —
+  and an audit that reads such a ratio sees improvement, not a defect. A
+  manifest that omits a closed set, states a ratio without enumerating the uncovered members, or
+  names a member the sub-standard does not declare, MUST NOT be signed. ⚠️ A **qualitative**
+  coverage statement does not satisfy this clause however accurate it is: a sentence such as
+  *"this set never places some shapes"* cannot be made false by any corpus, **so it has no failure
+  state and never fires**; the ratio is required because it is the form that **moves**. This
+  condition governs the AUDIT role's own signature (umbrella §7.3) and imposes nothing on a
+  sub-standard's text — each editor of record keeps their pen, and gains a criterion they must
+  satisfy to obtain a signature they were never entitled to demand. *Test:*
+  `test_conform_freeze_corpus_coverage_declared`.
 
 ---
 
@@ -1663,6 +1682,7 @@ the traceability lint.
 | KISS-CONFORM-8-0008 | `test_conform_retire_by_floor` |
 | KISS-CONFORM-8-0009 | `test_conform_self_freeze_gate` |
 | KISS-CONFORM-8-0010 | `test_conform_canonical_suite_authoritative` |
+| KISS-CONFORM-8-0011 | `test_conform_freeze_corpus_coverage_declared` |
 
 Every normative clause above appears in this matrix exactly once; the KISS-Conform build fails if
 any clause ID lacks a mapped citing test, and a conformance run fails if any mapped test fails at

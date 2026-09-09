@@ -584,3 +584,4 @@ KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	untested
 KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	untested	
 KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	untested	
 KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	
+KISS-CONFORM-8-0011	test_conform_freeze_corpus_coverage_declared	untested

@@ -520,8 +520,19 @@
 # ⚠️ THE THREE ARE DELIBERATELY UNBACKED and that is the honest state: they are CHECKLIST gates,
 # human-signed in every one of the other eight sub-standards too. Backing them is not a test anyone
 # can write today; counting them is.
+#
+# #459 (this branch) -- untested +1, clauses +1. KISS-CONFORM-8-0011 ARRIVES UNBACKED and the
+# ledger getting WORSE is the CORRECT record, not a regression: the clause is new, its named test
+# does not exist yet, and UNBACKED.tsv says `untested` rather than crediting it to nothing. The
+# ratchet diagnosed this unaided -- "harness is UNCHANGED, so this is the ARRIVAL case, not a
+# loss" -- which is the whole argument for ratcheting harness SEPARATELY from untested.
+#
+# DELTA, NOT AN ABSOLUTE: +1 on untested. ⚠️ This branch's earlier bump was DISCARDED in a rebase
+# conflict on this very file and RE-DERIVED rather than kept-side -- two branches each correctly
+# bumping a shared counter converge on a value that is neither. Re-derive after every rebase.
+#
 # key	value
 harness	387
 lint	33
-untested	500
+untested	501
 proven	20
