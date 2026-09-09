@@ -36,7 +36,13 @@ pub struct DispatchFields {
 /// launch geometry declared; `Declared` carries all five fields (§6.6-0001).
 #[derive(Clone, Debug, PartialEq)]
 pub enum DispatchModel {
-    /// §6.6-0007: geometry-agnostic kernel — no Dispatch section.
+    /// §6.6-0007: geometry-agnostic kernel — no launch GEOMETRY declared.
+    ///
+    /// ⚠️ NOT "no Dispatch section", which is what this comment used to say. §6.6-0007 is
+    /// explicit, in the sentence written to prevent exactly that reading: "The Dispatch
+    /// section is still **present** — §6.11-0004 requires all seven section blocks — so it
+    /// is the section's *content* that is the sentinel, never the section that is absent."
+    /// A reader following the old comment renders SIX blocks and silently omits Dispatch.
     GeometryAgnostic,
     /// §6.6-0001: a declared launch geometry (all five fields).
     Declared(DispatchFields),

@@ -467,7 +467,7 @@ pub fn parse_guarantees_class(body: &[u8]) -> Result<crate::DeterminismClass, Co
 //
 // These sections' field-line schemas were verified only as PROSE (a spec-text test reads the
 // clause and checks its field list) and no test ever built one of these blocks and parsed it —
-// their byte form fell through because the golden renders 3 of 7 blocks (#365). These readers add
+// their byte form fell through because the golden rendered 3 of 7 blocks (#365; all 7 since #496). These readers add
 // the missing production parse path (the established per-section shape, cf. parse_guarantees_class),
 // and the byte tests exercise THESE, never a test-only parser.
 // ---------------------------------------------------------------------------
@@ -768,7 +768,7 @@ pub fn well_formed_document() -> Vec<u8> {
 //     to the codec, not conformance/tests (§6.5-0002 — the eval_minmax/#354 shape). contract_framing.rs
 //     now calls these, so the test and the emitted artifact provably share ONE builder. Appendix C
 //     SHOWS three of the document's seven blocks (header line + Identity + Semantics); these render
-//     those three. There is no builder for blocks 4-7 anywhere (see the emitter's 16(d) note).
+//     all seven. Builders for blocks 3-7 landed in #496; `appendix_c_body` renders them in order.
 
 /// Appendix C Identity block (heading id 1) as transcribed text, for asserting the codec's rendering
 /// against the appendix (§6.11-0004/-0005; fields in §6.3-0001 order; `revision_hash` as `<n>:<hex>`).
@@ -821,16 +821,190 @@ pub fn appendix_c_semantics_block() -> Vec<u8> {
     )
 }
 
-/// The Appendix C document BODY (Identity + Semantics) — the two shown blocks.
+/// The Appendix C Interface block (heading id 3), fields in KISS-CONTRACT-6.5-0001 order.
+///
+/// Values promoted from the #495 byte-form fixture in `contract_section_schemas.rs` rather than
+/// re-authored: that test BYTE-PINS this exact block, so a second set of canonical values here
+/// would make two goldens for one section, and the disagreement would surface as a test failure
+/// whose cause is "which one is canonical" rather than a defect.
+pub fn appendix_c_interface_block() -> Vec<u8> {
+    render_block(
+        3,
+        "interface",
+        &[
+            ("entry_point", Value::Str("k".into())),
+            ("rank", Value::Str("2".into())),
+            ("positional_signature", Value::Str("[]".into())),
+            ("launch_scalars", Value::Str("[]".into())),
+            ("count_unit", Value::Str("elements".into())),
+            ("in_place", Value::Str("false".into())),
+            ("alignment_bytes", Value::Str("1".into())),
+        ],
+    )
+}
+
+/// The Appendix C Dispatch block (heading id 4) - the §6.6-0007 carried sentinel.
+///
+/// THE SECTION IS PRESENT AND ITS CONTENT IS THE SENTINEL. §6.6-0007 states this in the sentence
+/// written to prevent the opposite reading: "The Dispatch section is still present - §6.11-0004
+/// requires all seven section blocks - so it is the section's content that is the sentinel, never
+/// the section that is absent."
+///
+/// THE SENTINEL IS FORCED HERE, NOT PREFERRED. §6.6-0005 requires the geometry derivations to
+/// reference exactly the launch scalars declared in the Interface `positional_signature`, and this
+/// document's Interface block declares `positional_signature = []` and `launch_scalars = []`. A
+/// five-field geometry block would have no launch scalars to reference, so rendering the
+/// `Declared` alternative would require re-authoring the Interface values that #495 byte-pins.
+///
+/// AND THE COST IS STATED RATHER THAN LEFT TO BE DISCOVERED: a foreign reader reproducing this
+/// golden never exercises the five-field geometry path, the more complex of the two §6.6-0001
+/// alternatives. The golden covers the alternative this contract actually has.
+pub fn appendix_c_dispatch_block() -> Vec<u8> {
+    render_block(4, "dispatch", &[("dispatch_model", Value::Str("geometry-agnostic".into()))])
+}
+
+/// The Appendix C Capabilities block (heading id 5), fields in KISS-CONTRACT-6.7-0001 order.
+/// Values promoted from the #495 byte-form fixture, for the reason on the Interface block.
+pub fn appendix_c_capabilities_block() -> Vec<u8> {
+    render_block(
+        5,
+        "capabilities",
+        &[
+            ("accept_predicate", Value::Str("sk4|bin|f32".into())),
+            ("supported_dtype_set", Value::Str("[f32]".into())),
+            ("awkward_layout_strategy", Value::Str("decline".into())),
+            ("in_place_eligible_variants", Value::Str("[]".into())),
+            ("index_width", Value::Str("ix32".into())),
+            ("determinism_class", Value::Str("exact-byte".into())),
+            ("precision_class", Value::Str("strict".into())),
+            ("cost", Value::Str("1".into())),
+        ],
+    )
+}
+
+/// The Guarantees inputs this document declares - the derivation's subject (§6.8-0008).
+///
+/// Split out so `audited_status` is DERIVED from these rather than sitting beside them as a ninth
+/// authored string. §6.8-0008: an implementation MUST NOT hardcode `audited_status` independently
+/// of the Guarantees fields it is derived from.
+fn appendix_c_guarantees_inputs() -> Guarantees {
+    Guarantees {
+        reference_function: Some("add".into()),
+        per_backend_ulp_tiers: vec![(
+            "cuda:sm89".into(),
+            // §6.7-0007: a `strict` precision class maps to tier 0, carried as `max_ulp = 0` -
+            // not a separate representation. Consistent with `determinism_class = exact-byte`.
+            DeclaredAccuracyTier { max_ulp: Some(0), ..DeclaredAccuracyTier::default() },
+        )],
+        determinism_class: crate::DeterminismClass::ExactByte,
+        bit_stability: true,
+    }
+}
+
+/// The Appendix C Guarantees block (heading id 6), fields in KISS-CONTRACT-6.8-0001 order.
+///
+/// `audited_status` IS COMPUTED, NOT WRITTEN. It calls `derive_audited_status` over
+/// [`appendix_c_guarantees_inputs`], so the golden cannot drift from the §6.8-0009/-0010
+/// derivation: change the reference function or the tier and this byte changes with it. An
+/// authored constant would satisfy the field list and violate §6.8-0008 silently, and no schema
+/// check could tell the two apart.
+///
+/// `math_precision` IS THE WIRE FIELD NAME AND IS DELIBERATELY NOT `math_fidelity`. #478 renamed
+/// the KISS-Ops ATTRIBUTE `MathPrecision` to `MathFidelity`; the KISS-Contract Guarantees wire
+/// field is `math_precision` (§6.8-0001) and its rename is a deferred §8-0002 wire change filed as
+/// #477. Measured: `math_precision` 23 occurrences in `spec/`, `math_fidelity` 0.
+///
+/// `cost_provenance` MUST EQUAL the Provenance block's (§6.8-0007 / §6.9-0006), which is why both
+/// are `measured` and why neither may be changed alone.
+pub fn appendix_c_guarantees_block() -> Vec<u8> {
+    // ⚠️ EVERY FIELD THE STRUCT OWNS IS RENDERED FROM THE STRUCT. The first version derived
+    // `audited_status` and then RE-TYPED `reference_function` and the tier as string literals
+    // beside it — so changing the inputs would have re-derived the status while the two fields
+    // it was derived FROM kept their old text, and the block would have claimed a reference
+    // function the derivation never saw.
+    //
+    // ⚠️ The doc comment above already promised this ("change the reference function or the
+    // tier and this byte changes with it") and only ONE of the three bytes actually moved. A
+    // partial derivation is the worst shape available here: the one derived field makes the
+    // hand-set ones LOOK derived, and the comment is what a reader checks instead of the code.
+    let g = appendix_c_guarantees_inputs();
+    let audited = match derive_audited_status(&g) {
+        AuditedStatus::Audited => "audited",
+        AuditedStatus::Unaudited => "unaudited",
+    };
+    let reference_function = g.reference_function.clone().unwrap_or_default();
+    let tiers = g
+        .per_backend_ulp_tiers
+        .iter()
+        .map(|(backend, tier)| match tier.max_ulp {
+            Some(u) => format!("{backend}{{max_ulp={u}}}"),
+            None => format!("{backend}{{}}"),
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let determinism = match g.determinism_class {
+        crate::DeterminismClass::ExactByte => "exact-byte",
+        crate::DeterminismClass::UlpTolerance => "ULP/tolerance",
+        crate::DeterminismClass::OrderInvariant => "order-invariant/nondeterministic",
+    };
+    let bit_stability = if g.bit_stability { "bit-stable" } else { "bit-unstable" };
+    render_block(
+        6,
+        "guarantees",
+        &[
+            ("reference_function", Value::Str(reference_function)),
+            ("per_backend_ulp_tiers", Value::Str(format!("[{tiers}]"))),
+            ("determinism_class", Value::Str(determinism.into())),
+            ("math_precision", Value::Str("f32".into())),
+            ("accumulation_type", Value::Str("f32".into())),
+            ("bit_stability", Value::Str(bit_stability.into())),
+            ("audited_status", Value::Str(audited.into())),
+            ("cost_provenance", Value::Str("measured".into())),
+        ],
+    )
+}
+
+/// The Appendix C Provenance block (heading id 7), fields in KISS-CONTRACT-6.9-0001 order.
+///
+/// Carries `cost_provenance` and NOT `audited_status`: §6.9-0001 forbids the latter here (a
+/// derived Guarantees field) while §6.9-0006 REQUIRES the former to equal the Guarantees value.
+/// The two fields look alike and their rules are opposites.
+pub fn appendix_c_provenance_block() -> Vec<u8> {
+    render_block(
+        7,
+        "provenance",
+        &[
+            ("kernel_source", Value::Str("authored".into())),
+            ("revision_base", Value::Str("r0".into())),
+            ("revision_hash", Value::Str("abc".into())),
+            ("cost_provenance", Value::Str("measured".into())),
+            ("negotiation_metadata", Value::Str("0:".into())),
+        ],
+    )
+}
+
+/// The Appendix C document BODY - all seven section blocks in §6.11-0005 order (#496).
+///
+/// Was three (header + Identity + Semantics). §6.11-0004 requires all seven blocks and Appendix
+/// C's own preamble promises "the complete document (all seven blocks)" in the machine-readable
+/// file, so the artifact was under-fulfilling a promise the appendix makes. KISS-CONTRACT-8-0004
+/// and -0005 name Appendix C as the target a foreign reader reproduces, so the artifact's SIZE is
+/// load-bearing for two freeze conditions even though the appendix prose is informative.
 pub fn appendix_c_body() -> Vec<u8> {
     let mut body = appendix_c_identity_block();
     body.extend_from_slice(&appendix_c_semantics_block());
+    body.extend_from_slice(&appendix_c_interface_block());
+    body.extend_from_slice(&appendix_c_dispatch_block());
+    body.extend_from_slice(&appendix_c_capabilities_block());
+    body.extend_from_slice(&appendix_c_guarantees_block());
+    body.extend_from_slice(&appendix_c_provenance_block());
     body
 }
 
 /// The Appendix C GOLDEN DOCUMENT: header line + the two shown blocks, `len`/`crc32` made
-/// self-consistent by `Document::encode`. These are the 3 of 7 blocks Appendix C shows; blocks 4-7
-/// have no builder (Appendix C promises them in the machine-readable file — see the emitter's note).
+/// self-consistent by `Document::encode`. All SEVEN section blocks (#496) — Appendix C's preamble
+/// promises "the complete document (all seven blocks)" in the machine-readable file, and this now
+/// delivers it. §8-0004 and §8-0005 name Appendix C as the target a foreign reader reproduces.
 pub fn appendix_c_golden_document() -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
@@ -845,16 +1019,18 @@ pub fn appendix_c_golden_document() -> Vec<u8> {
 /// `reference_vectors::emit_reference_vectors_json` (a LIBRARY generator, never a test helper). The
 /// committed artifact is byte-identical to this output (the #161 freshness pattern).
 ///
-/// Carries the Appendix C golden document (the 3 shown blocks, codec-rendered) + the single-fault
+/// Carries the Appendix C golden document (all seven blocks, codec-rendered) + the single-fault
 /// decline set. **DIFFABLE, not COVERED**: it lets a foreign reader byte-diff the document and each
 /// decline; it does NOT cover the untested KISS-Contract clauses.
 ///
-/// **Enforcement is PARTIAL and STATED, not discovered (the 16(d) principle), on TWO axes:**
-///   (i)  Appendix C shows 3 of 7 blocks; this renders those 3.
-///   (ii) Blocks 4-7 have NO builder and Appendix C does not show them — yet Appendix C's preamble
-///        promises "all seven blocks" in the machine-readable file, so this artifact only PARTIALLY
-///        fulfils that reference. Closing it (amend the promise vs author 4-7) is a NORMATIVE decision,
-///        filed as its own issue.
+/// **What remains PARTIAL is STATED here, not left to be discovered (the 16(d) principle).**
+/// All seven blocks are rendered (#496). Two limits survive and both are named in the emitted
+/// `coverage_note_496` so a foreign reader meets them in the artifact, not only in this comment:
+///   (i)  the Dispatch block carries the §6.6-0007 geometry-agnostic sentinel, so a reader
+///        reproducing this golden never exercises the five-field geometry alternative;
+///   (ii) §8-0004/§8-0005 name Appendix C but are AUDIT-role checklist gates whose §9-named
+///        tests do not exist — `UNBACKED.tsv` records both as `untested`, so the gap is
+///        DECLARED and no coverage figure is overstated by it.
 pub fn emit_contract_vectors_json() -> String {
     // ⚠️ `crate::hex`, not a private re-implementation of it. This function was byte-for-byte
     // the same as the public helper — same {b:02X}, same join(" ") — so it was a THIRD copy of a
@@ -875,10 +1051,14 @@ pub fn emit_contract_vectors_json() -> String {
     s.push_str("  \"generated_from\": \"conformance/src/contract.rs::emit_contract_vectors_json (the reference codec)\",\n");
     s.push_str("  \"spec_reference\": \"spec/contract.md Appendix C (informative) — the \u{00a7}2.5 strided add golden document under the \u{00a7}6.11 structured/text framing\",\n");
     s.push_str("  \"scope_note\": \"DIFFABLE, not COVERED: a foreign reader byte-diffs the golden document and each single-fault decline; this does NOT cover the untested KISS-Contract clauses.\",\n");
-    s.push_str("  \"partial_note_16d\": \"Enforcement is PARTIAL and STATED here, not left to be discovered, on two axes. (i) Appendix C shows 3 of 7 blocks (header line + Identity + Semantics); these are rendered here, codec-generated. (ii) Blocks 4-7 have NO builder anywhere and Appendix C does not show them, yet Appendix C's own preamble promises 'the complete document (all seven blocks)' in the machine-readable golden-vector file. This artifact therefore only PARTIALLY fulfils that reference. Which way to close the gap (amend the preamble to match what exists, or author blocks 4-7) is a NORMATIVE decision, filed as its own issue.\",\n");
+    // The 16(d) PARTIAL note is gone because the partiality is gone: this artifact now
+    // renders all seven blocks. It is replaced rather than annotated -- a correction that
+    // leaves the old text in place leaves it where readers read. What REMAINS partial is
+    // stated in its own key below, because an absence must be declared, never inferred.
+    s.push_str("  \"coverage_note_496\": \"This artifact renders all SEVEN section blocks (header line + Identity + Semantics + Interface + Dispatch + Capabilities + Guarantees + Provenance), codec-generated, fulfilling Appendix C's preamble promise of the complete document. Two limits are STATED rather than left to be discovered. (i) The Dispatch block carries the SS6.6-0007 geometry-agnostic sentinel, not the five-field geometry alternative: SS6.6-0005 requires the geometry derivations to reference exactly the Interface positional_signature, and this document declares that empty. A foreign reader reproducing this golden therefore never exercises the five-field path. (ii) KISS-CONTRACT-8-0004 and -0005 name Appendix C as their target but are AUDIT-role checklist gates: their SS9-named tests do not exist and UNBACKED.tsv records both as untested. Widening this artifact closes no red and inflates no coverage figure -- it makes the artifact an AUDIT sign-off attests actually contain what the sign-off claims.\",\n");
     s.push_str("  \"expect_encoding\": \"each decline_vectors[].expect is the decline's STABLE category tag (kebab-case), pinned per variant by ContractDecline::wire_tag — NOT a Rust Debug string. A foreign reader matches the category; the impl-derived payload (declared/computed/got) is intentionally omitted.\",\n");
     s.push_str("  \"golden_document\": {\n");
-    s.push_str("    \"blocks_shown\": 3,\n");
+    s.push_str("    \"blocks_shown\": 7,\n");
     s.push_str("    \"blocks_promised_by_appendix\": 7,\n");
     s.push_str(&format!("    \"byte_length\": {},\n", doc.len()));
     s.push_str(&format!("    \"bytes_hex\": {}\n", jstr(&hex(&doc))));

@@ -1814,9 +1814,10 @@ KISS-Ops op family or a KISS-Classify op-category adds rows without renumbering 
 This appendix renders the §2.5 `add` contract as a concrete golden **document** vector under the
 §6.11 structured/text document framing: a UTF-8 text document with LF line terminators, a pinned
 header line, and seven section blocks under pinned heading lines (**not** a length-prefixed binary
-envelope). The header line, the full Identity block, and the Semantics block are shown here to seed a
-foreign reader; the complete document (all seven blocks) is carried in the machine-readable
-golden-vector file. `<N>` is the decimal byte count of the document body (every byte after the header
+envelope). The header line and **all seven section blocks** are shown here, and the same complete
+document is carried in the machine-readable golden-vector file — the two are byte-identical by
+construction (#496): every block below is rendered by the codec and asserted against this text, so
+the appendix cannot drift from the artifact a foreign reader reproduces. `<N>` is the decimal byte count of the document body (every byte after the header
 line's LF), and `<HHHHHHHH>` is the CRC-32 of exactly those body bytes (§6.11-0003) — both computed
 over the fully assembled document.
 
@@ -1852,6 +1853,79 @@ op_dag = [Op{add; ; []}]
 
 The `op_dag` array is in the §6.11-0007 node order (children strictly earlier, root last); the
 one-node `add` DAG has the root as its only (last) element with empty `child_edges`.
+
+**Interface block (§6.5-0001; heading id 3)** — the seven Interface fields in schema order. The
+`positional_signature` and `launch_scalars` are empty for this contract, which is what forces the
+Dispatch block below to carry the geometry-agnostic sentinel rather than the five geometry fields
+(§6.6-0005 requires the geometry derivations to reference exactly these scalars):
+
+```
+[section:3:interface]
+entry_point = k
+rank = 2
+positional_signature = []
+launch_scalars = []
+count_unit = elements
+in_place = false
+alignment_bytes = 1
+```
+
+**Dispatch block (§6.6-0001/-0007; heading id 4)** — the **carried sentinel**. The section is
+present and its *content* is the sentinel; §6.6-0007 is explicit that it is "never the section that
+is absent". A consumer MUST NOT require the five geometry fields for it, and launch geometry is the
+executor's under the grid-stride semantic (§6.6-0004):
+
+```
+[section:4:dispatch]
+dispatch_model = geometry-agnostic
+```
+
+**Capabilities block (§6.7-0001; heading id 5)** — the eight Capabilities fields in schema order.
+`precision_class = strict` maps to accuracy tier 0 (§6.7-0007), consistent with the
+`determinism_class = exact-byte` carried here and in Guarantees:
+
+```
+[section:5:capabilities]
+accept_predicate = sk4|bin|f32
+supported_dtype_set = [f32]
+awkward_layout_strategy = decline
+in_place_eligible_variants = []
+index_width = ix32
+determinism_class = exact-byte
+precision_class = strict
+cost = 1
+```
+
+**Guarantees block (§6.8-0001; heading id 6)** — the eight Guarantees fields in schema order.
+⚠️ `audited_status` is a **derived** field (§6.8-0008): the codec computes it from the
+`reference_function` and `per_backend_ulp_tiers` under the §6.8-0009/-0010 rule and MUST NOT author
+it, so the `audited` shown here is the rule's output over a bounded tier against the named `add`
+reference, not a constant. The `cost_provenance` MUST equal the Provenance block's (§6.9-0006):
+
+```
+[section:6:guarantees]
+reference_function = add
+per_backend_ulp_tiers = [cuda:sm89{max_ulp=0}]
+determinism_class = exact-byte
+math_precision = f32
+accumulation_type = f32
+bit_stability = bit-stable
+audited_status = audited
+cost_provenance = measured
+```
+
+**Provenance block (§6.9-0001; heading id 7)** — the five Provenance fields in schema order. It
+carries `cost_provenance` (equal to the Guarantees value above) and MUST NOT carry
+`audited_status`, which is a derived Guarantees field (§6.9-0001 / §6.8-0008):
+
+```
+[section:7:provenance]
+kernel_source = authored
+revision_base = r0
+revision_hash = abc
+cost_provenance = measured
+negotiation_metadata = 0:
+```
 
 **`op_identity` renderings (§6.11-0009).** The §2.5 `add` root carries no identity-bearing
 attributes and no identity-bearing operand-role tuple, so its `op_identity` line renders as the
