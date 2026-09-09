@@ -917,21 +917,47 @@ fn appendix_c_guarantees_inputs() -> Guarantees {
 /// `cost_provenance` MUST EQUAL the Provenance block's (§6.8-0007 / §6.9-0006), which is why both
 /// are `measured` and why neither may be changed alone.
 pub fn appendix_c_guarantees_block() -> Vec<u8> {
+    // ⚠️ EVERY FIELD THE STRUCT OWNS IS RENDERED FROM THE STRUCT. The first version derived
+    // `audited_status` and then RE-TYPED `reference_function` and the tier as string literals
+    // beside it — so changing the inputs would have re-derived the status while the two fields
+    // it was derived FROM kept their old text, and the block would have claimed a reference
+    // function the derivation never saw.
+    //
+    // ⚠️ The doc comment above already promised this ("change the reference function or the
+    // tier and this byte changes with it") and only ONE of the three bytes actually moved. A
+    // partial derivation is the worst shape available here: the one derived field makes the
+    // hand-set ones LOOK derived, and the comment is what a reader checks instead of the code.
     let g = appendix_c_guarantees_inputs();
     let audited = match derive_audited_status(&g) {
         AuditedStatus::Audited => "audited",
         AuditedStatus::Unaudited => "unaudited",
     };
+    let reference_function = g.reference_function.clone().unwrap_or_default();
+    let tiers = g
+        .per_backend_ulp_tiers
+        .iter()
+        .map(|(backend, tier)| match tier.max_ulp {
+            Some(u) => format!("{backend}{{max_ulp={u}}}"),
+            None => format!("{backend}{{}}"),
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let determinism = match g.determinism_class {
+        crate::DeterminismClass::ExactByte => "exact-byte",
+        crate::DeterminismClass::UlpTolerance => "ULP/tolerance",
+        crate::DeterminismClass::OrderInvariant => "order-invariant/nondeterministic",
+    };
+    let bit_stability = if g.bit_stability { "bit-stable" } else { "bit-unstable" };
     render_block(
         6,
         "guarantees",
         &[
-            ("reference_function", Value::Str("add".into())),
-            ("per_backend_ulp_tiers", Value::Str("[cuda:sm89{max_ulp=0}]".into())),
-            ("determinism_class", Value::Str("exact-byte".into())),
+            ("reference_function", Value::Str(reference_function)),
+            ("per_backend_ulp_tiers", Value::Str(format!("[{tiers}]"))),
+            ("determinism_class", Value::Str(determinism.into())),
             ("math_precision", Value::Str("f32".into())),
             ("accumulation_type", Value::Str("f32".into())),
-            ("bit_stability", Value::Str("bit-stable".into())),
+            ("bit_stability", Value::Str(bit_stability.into())),
             ("audited_status", Value::Str(audited.into())),
             ("cost_provenance", Value::Str("measured".into())),
         ],
@@ -997,12 +1023,14 @@ pub fn appendix_c_golden_document() -> Vec<u8> {
 /// decline set. **DIFFABLE, not COVERED**: it lets a foreign reader byte-diff the document and each
 /// decline; it does NOT cover the untested KISS-Contract clauses.
 ///
-/// **Enforcement is PARTIAL and STATED, not discovered (the 16(d) principle), on TWO axes:**
-///   (i)  Appendix C's machine-readable golden carries all 7 blocks; this renders all 7.
-///   (ii) Blocks 4-7 have NO builder and Appendix C does not show them — yet Appendix C's preamble
-///        promises "all seven blocks" in the machine-readable file, so this artifact only PARTIALLY
-///        fulfils that reference. Closing it (amend the promise vs author 4-7) is a NORMATIVE decision,
-///        filed as its own issue.
+/// **What remains PARTIAL is STATED here, not left to be discovered (the 16(d) principle).**
+/// All seven blocks are rendered (#496). Two limits survive and both are named in the emitted
+/// `coverage_note_496` so a foreign reader meets them in the artifact, not only in this comment:
+///   (i)  the Dispatch block carries the §6.6-0007 geometry-agnostic sentinel, so a reader
+///        reproducing this golden never exercises the five-field geometry alternative;
+///   (ii) §8-0004/§8-0005 name Appendix C but are AUDIT-role checklist gates whose §9-named
+///        tests do not exist — `UNBACKED.tsv` records both as `untested`, so the gap is
+///        DECLARED and no coverage figure is overstated by it.
 pub fn emit_contract_vectors_json() -> String {
     // ⚠️ `crate::hex`, not a private re-implementation of it. This function was byte-for-byte
     // the same as the public helper — same {b:02X}, same join(" ") — so it was a THIRD copy of a
