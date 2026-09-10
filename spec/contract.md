@@ -753,15 +753,15 @@ without renumbering existing ones.
 **Scope of this table (§6.3-0006 — a declared, not forgotten, gap).** The compatible-family
 relation is defined **only for the op-categories rowed above.** A KISS-Classify cell op-category
 that does **not** appear as a row here has no compatible set in this schema version, so under
-§6.3-0006 a contract whose `accept_predicate` cell op-category is un-rowed is **rejected with a
+§6.3-0006 a contract whose `accept_predicate`'s cell op-category is un-rowed is **rejected with a
 typed decline** — and that rejection is **intended and known**, not an omission. Such categories
-are defined KISS-Classify vocabulary that has **no cross-party differential vector and no
+are members of the defined KISS-Classify vocabulary but have **no cross-party differential vector and no
 implementation the suite has seen**; a compatible-family row is authored — via a §8-0002
 contract-schema bump (the mechanism above) — **when a category gains a real implementer _and_ a
 cross-party differential vector, with that implementer, never ahead of one** (authoring an
 unexercised normative relation ahead of an implementer is the §6.6-0007 failure mode). **Owner:**
 the KISS-Classify / KISS-Contract editors of record. Derived from the closed KISS-Classify
-cell-op-category set minus the rows above, the un-rowed categories at this schema version are
+cell op-category set minus the rows above, the un-rowed categories at this schema version are
 `gated-activation`, `convolution`, `pooling`, `attention`, `sorting`, `quantization`, `random`,
 `loss`, `segment-ops`, `image`, `fft`, `linalg`, and `mixture-of-experts`; that list is a
 **derivation** of the difference, to be re-derived from those two authorities and never maintained
