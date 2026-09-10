@@ -21,7 +21,6 @@ Run: python tools/test_kiss_attested.py
 """
 import os
 import pathlib
-import re
 import sys
 import unittest
 
