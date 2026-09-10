@@ -13,6 +13,13 @@
 #   blocked       spec has not pinned the bytes/behaviour yet (note = issue ref)
 #   untestable    contradictory/undefined until reworded (note = filed issue)
 #   definitional  a test would be a tautology (note = one-line reason)
+#   attested      a CHECKLIST GATE the spec itself declares (#505): the `*Test:*`
+#                 names a human AUDIT procedure and the evidence is EXTERNAL to
+#                 this repo (">=2 dissimilar impls interoperate", "a foreign reader
+#                 consumed the wire"). TERMINAL -- an in-repo test would be VACUOUS,
+#                 marking the clause COVERED and stopping anyone looking. DERIVED
+#                 from the spec text on every run, never curated, so the ledger
+#                 cannot drift from what the spec declares.
 # Every non-`untested` category MUST carry a note; a bare `untested` needs none.
 #
 # It is a RATCHET, enforced by tools/kiss_trace.py:
@@ -64,9 +71,9 @@ KISS-ANNOUNCE-7.3-0002	test_announce_consumer_zeroes_provider_only_feat	untested
 KISS-ANNOUNCE-8-0001	test_announce_two_version_axes_independent	untested	
 KISS-ANNOUNCE-8-0002	test_announce_shape_change_bumps_version	untested	
 KISS-ANNOUNCE-8-0003	test_announce_additive_capability_no_version_bump	untested	
-KISS-ANNOUNCE-8-0004	test_announce_freeze_gate_two_impls	untested	
-KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	untested	
-KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	untested	
+KISS-ANNOUNCE-8-0004	test_announce_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CLASSIFY-6.0-0001	test_classify_determinism_class_exact_byte	untested	
 KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested	
 KISS-CLASSIFY-6.1-0002	test_classify_dtype_bit_widths	untested	
@@ -109,9 +116,9 @@ KISS-CLASSIFY-7.2-0002	test_classify_non_additive_bumps_version	untested
 KISS-CLASSIFY-8-0001	test_classify_two_version_axes_independent	untested	
 KISS-CLASSIFY-8-0002	test_classify_wire_change_bumps_version	untested	
 KISS-CLASSIFY-8-0003	test_classify_additive_no_version_bump	untested	
-KISS-CLASSIFY-8-0004	test_classify_freeze_gate_two_dissimilar_impls	untested	
-KISS-CLASSIFY-8-0005	test_classify_freeze_gate_foreign_reader	untested	
-KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	untested	
+KISS-CLASSIFY-8-0004	test_classify_freeze_gate_two_dissimilar_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-CLASSIFY-8-0005	test_classify_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CLASSIFY-8-0007	test_classify_dtype_layout_version_handle	lint:kiss_tables	the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008
 KISS-CONFORM-6.0-0003	test_conform_structural_artifacts_byte_exact	untested	
 KISS-CONFORM-6.1-0001	test_conform_traceability_matrix_exists	untested	
@@ -196,11 +203,12 @@ KISS-CONFORM-8-0002	test_conform_refactor_no_new_suite	untested
 KISS-CONFORM-8-0003	test_conform_suite_stamped_per_version	untested	
 KISS-CONFORM-8-0004	test_conform_frozen_suite_immutable	untested	
 KISS-CONFORM-8-0005	test_conform_unmodified_suite_only	untested	
-KISS-CONFORM-8-0006	test_conform_freeze_gate_checklist	untested	
+KISS-CONFORM-8-0006	test_conform_freeze_gate_checklist	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CONFORM-8-0007	test_conform_reference_impl_no_exemption	untested	
 KISS-CONFORM-8-0008	test_conform_retire_by_floor	untested	
-KISS-CONFORM-8-0009	test_conform_self_freeze_gate	untested	
+KISS-CONFORM-8-0009	test_conform_self_freeze_gate	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CONFORM-8-0010	test_conform_canonical_suite_authoritative	untested	
+KISS-CONFORM-8-0011	test_conform_freeze_corpus_coverage_declared	untested	
 KISS-CONSUME-6.1-0001	test_consume_recognition_structure_based	untested	
 KISS-CONSUME-6.1-0002	test_consume_recognition_renaming_invariant	untested	
 KISS-CONSUME-6.1-0003	test_consume_source_syntax_out_of_scope	untested	
@@ -301,9 +309,9 @@ KISS-CONTRACT-7.2-0002	test_contract_external_token_deferred	untested
 KISS-CONTRACT-8-0001	test_contract_two_version_axes_independent	untested	
 KISS-CONTRACT-8-0002	test_contract_schema_change_bumps_version	untested	
 KISS-CONTRACT-8-0003	test_contract_upstream_growth_no_bump	untested	
-KISS-CONTRACT-8-0004	test_contract_freeze_gate_two_impls	untested	
-KISS-CONTRACT-8-0005	test_contract_freeze_gate_foreign_reader	untested	
-KISS-CONTRACT-8-0006	test_contract_freeze_gate_conform_suite_passes	untested	
+KISS-CONTRACT-8-0004	test_contract_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-CONTRACT-8-0005	test_contract_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-CONTRACT-8-0006	test_contract_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CONTRACT-8-0007	test_contract_retire_by_floor	untested	
 KISS-EMIT-6.1-0001	test_emit_normative_input_is_opdef_plus_key	untested	
 KISS-EMIT-6.1-0002	test_emit_rejects_schedule_plan_as_abi	untested	
@@ -376,11 +384,11 @@ KISS-GRAMMAR-7.2-0001	test_grammar_extension_via_ops_or_frozen_shape	untested
 KISS-GRAMMAR-8-0001	test_grammar_two_version_axes_independent	untested	
 KISS-GRAMMAR-8-0002	test_grammar_shape_change_bumps_version	untested	
 KISS-GRAMMAR-8-0003	test_grammar_op_addition_no_shape_bump	untested	
-KISS-GRAMMAR-8-0004	test_grammar_freeze_gate_two_impls	untested	
-KISS-GRAMMAR-8-0005	test_grammar_freeze_gate_foreign_reader	untested	
-KISS-GRAMMAR-8-0006	test_grammar_freeze_gate_conform_suite_passes	untested	
+KISS-GRAMMAR-8-0004	test_grammar_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-GRAMMAR-8-0005	test_grammar_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-GRAMMAR-8-0006	test_grammar_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-GRAMMAR-8-0007	test_grammar_retire_by_floor	untested	
-KISS-GRAMMAR-8-0008	test_grammar_opattrs_freeze_precondition	untested	
+KISS-GRAMMAR-8-0008	test_grammar_opattrs_freeze_precondition	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-OPS-6.0-0001	test_ops_determinism_class_enum	lint:kiss_tables	a sub-standard re-forks the determinism/fidelity enum instead of importing it
 KISS-OPS-6.0-0005	test_ops_determinism_class_precedence	untested	
 KISS-OPS-6.1-0001	test_ops_op_set_closed	untested	
@@ -483,8 +491,8 @@ KISS-OPS-8-0001	test_ops_two_version_axes_independent	untested
 KISS-OPS-8-0002	test_ops_additive_high_level_no_floor_bump	untested	
 KISS-OPS-8-0003	test_ops_floor_or_semantics_change_bumps_version	untested	
 KISS-OPS-8-0004	test_ops_retired_tokens_burned	untested	
-KISS-OPS-8-0005	test_ops_freeze_gate_two_impls	untested	
-KISS-OPS-8-0006	test_ops_freeze_gate_conform_suite_passes	untested	
+KISS-OPS-8-0005	test_ops_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-OPS-8-0006	test_ops_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-6.0-0001	test_synth_determinism_class_exact_byte	untested	
 KISS-SYNTH-6.0-0001a	test_synth_determinism_class_no_tolerance	untested	
 KISS-SYNTH-6.0-0001b	test_synth_determinism_class_not_reforked	untested	
@@ -580,8 +588,7 @@ KISS-SYNTH-8-0002	test_synth_shape_change_bumps_version	untested
 KISS-SYNTH-8-0002a	test_synth_shape_change_rfc_coordinated	untested	
 KISS-SYNTH-8-0003	test_synth_additive_no_bump	untested	
 KISS-SYNTH-8-0003a	test_synth_additive_no_wire_version_bump	untested	
-KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	untested	
-KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	untested	
-KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	untested	
+KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
+KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	
-KISS-CONFORM-8-0011	test_conform_freeze_corpus_coverage_declared	untested
