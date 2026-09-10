@@ -118,6 +118,58 @@ class AttestedIsAccountedFor(unittest.TestCase):
         self.assertEqual(kt.untested_count({"attested": ["X"], "untested": []}), 0)
         self.assertEqual(kt.untested_count({"untested": ["X"], "attested": ["Y"]}), 1)
 
+class AttestedRevertsWhenTheSpecWithdrawsIt(unittest.TestCase):
+    """⚠️ BORN-RED for a defect that SHIPPED in the first version of this feature.
+
+    `write_ledger`'s docstring promised "if a clause stops being a checklist gate, the
+    category leaves on the next run with nobody needing to remember." The code did not do
+    that: the general preservation branch (`elif p and p["category"] != "untested"`) kept any
+    non-untested prior category, INCLUDING a stale `attested`. So a clause whose spec tag was
+    removed kept asserting a property the spec had withdrawn — a claim outliving its evidence,
+    in the writer whose whole job is recording what IS evidenced.
+
+    Found by a static analyser, not by me, and my own docstring asserted the opposite. These
+    three cases pin the behaviour in both directions plus the regression guard, because the
+    fix touches a branch that #272 exists to protect.
+    """
+
+    def _write(self, prior, attested):
+        import tempfile
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "L.tsv")
+        kt.write_ledger(path, {"KISS-OPS-8-0004": "test_x"}, prior=prior, attested=attested)
+        with open(path, encoding="utf-8") as fh:
+            rows = [l.rstrip("\n").split("\t") for l in fh if not l.startswith("#")]
+        return rows[0]
+
+    ATTESTED_PRIOR = {"KISS-OPS-8-0004": {
+        "category": "attested", "lint": None,
+        "note": "spec declares this a checklist gate; AUDIT-signed, evidence external to this repo"}}
+
+    def test_a_withdrawn_spec_tag_reverts_the_category(self):
+        row = self._write(self.ATTESTED_PRIOR, set())
+        self.assertEqual(row[2], "untested",
+                         "a clause the spec no longer declares a checklist gate must not keep "
+                         "`attested` — the label would outlive its evidence")
+
+    def test_the_stale_note_goes_with_the_stale_category(self):
+        """A curated reason for a category that no longer applies is worse than none: it reads
+        as deliberate. Reverting the category and keeping its note is the half-fix."""
+        row = self._write(self.ATTESTED_PRIOR, set())
+        self.assertEqual(row[3], "", "the note justified the withdrawn category and must go too")
+
+    def test_a_still_declared_clause_keeps_it(self):
+        """The converse. Without this, 'revert everything' would pass the test above."""
+        row = self._write(self.ATTESTED_PRIOR, {"KISS-OPS-8-0004"})
+        self.assertEqual(row[2], "attested")
+
+    def test_other_curated_categories_are_still_preserved(self):
+        """REGRESSION GUARD (#272): `attested` is the ONLY category that auto-reverts, and it
+        may do so only because it is DERIVED — nothing was curated, so nothing curated is lost.
+        Every hand-curated category must still survive a routine --update-ledger."""
+        prior = {"KISS-OPS-8-0004": {"category": "blocked", "lint": None, "note": "see #41"}}
+        row = self._write(prior, set())
+        self.assertEqual((row[2], row[3]), ("blocked", "see #41"))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

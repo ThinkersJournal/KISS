@@ -1278,6 +1278,17 @@ def write_ledger(path, unbacked, prior=None, attested=None):
                 note = ("spec declares this a checklist gate; AUDIT-signed, "
                         "evidence external to this repo")
                 fh.write(f"{cid}\t{test}\tattested\t{note}\n")
+            elif p and p["category"] == "attested":
+                # ⚠️ A STALE `attested` MUST NOT SURVIVE ITS EVIDENCE. This clause carried the
+                # category on a previous run and the spec no longer declares it a checklist
+                # gate, so the label has outlived the thing that justified it. Preserving it
+                # here would make the ledger assert a property the spec has withdrawn -- a
+                # claim outliving its evidence, in the writer whose whole job is recording
+                # what IS evidenced. The note goes with it: a curated reason for a category
+                # that no longer applies is worse than none, because it reads as deliberate.
+                # This is the ONLY category that auto-reverts, and it reverts BECAUSE it is
+                # derived: nothing was curated here, so nothing curated is lost.
+                fh.write(f"{cid}\t{test}\tuntested\t\n")
             elif p and p["category"] != "untested":
                 cat = f"{p['category']}:{p['lint']}" if p["category"] == "lint" and p["lint"] else p["category"]
                 fh.write(f"{cid}\t{test}\t{cat}\t{p['note']}\n")
