@@ -2,6 +2,8 @@
   "schema": "kiss-opattrs-spec-vectors/1",
   "generated_from": "spec/ops.md §6.19.3 (canonical field order = ABI)",
   "derivation": "PARSED from the spec table at compile time, never transcribed. No implementation output was consulted: this is an EXTERNAL reference for the OpAttrs channel, not another party's golden (#504).",
+  "layout_authority": "KISS-OPS-6.19-0004 — the blob is its §6.19.3 schema fields CONCATENATED in canonical order (no padding, no alignment, no tag stream). The offset column is a restatement of that sentence, not a computed value; if the sentence changes the offsets are unfounded and the generator refuses.",
+  "scope": "STATED LAYOUT ONLY. This artifact pins field order, widths, ordinals and offsets. It deliberately states NO expected VALUE for any op: a value would have to be COMPUTED, and two parties computing through a shared intermediate are comprehension-correlated even when code-disjoint (kiss-ref, DESIGN.md:17-20). Independence of DERIVATION is the property, not external-ness.",
   "carrier_ops": 17,
   "ops": [
     {

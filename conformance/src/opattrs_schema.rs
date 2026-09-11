@@ -232,6 +232,45 @@ pub fn parse_clause_coverage() -> BTreeMap<String, Vec<String>> {
     cov
 }
 
+/// The clause that makes the `offset` column STATED rather than COMPUTED, checked to still say so.
+///
+/// ⚠️ THE BOUNDARY THIS ENFORCES, kiss-ref's, and it is the sharpest correction this artifact
+/// received: *"An external reference that resolves non-primitives from §6.13 is STILL
+/// comprehension-correlated. External-ness is not the property you want — INDEPENDENCE OF
+/// DERIVATION is."* Two parties reading one decomposition table are module-disjoint and
+/// semantically correlated, and no set-intersection of module names can see it.
+///
+/// So this artifact pins STATED LAYOUT and must never compute an expected VALUE. Field order,
+/// widths and ordinals are read straight off §6.19.3. **`offset` is the one column that is
+/// arithmetic**, and it is legitimate only because §6.19-0004 states the composition rule:
+///
+/// > "Each carrier op's OpAttrs blob MUST be exactly its schema fields (§6.19.3) **concatenated**
+/// > in the canonical, frozen field order shown"
+///
+/// Concatenated — no padding, no alignment, no tag stream. Under that sentence `offset` is a
+/// restatement of the stated layout, not a walk through a shared intermediate.
+///
+/// ⚠️ AND IF THAT SENTENCE EVER CHANGES, THE OFFSETS BECOME UNFOUNDED WHILE STILL LOOKING
+/// CORRECT — a padding or alignment rule would make every offset after the first field silently
+/// wrong, and nothing else in this crate would notice. That is precisely the "compute past a gap
+/// in a stated layout" failure kiss-ref told me to refuse rather than fill, so it is a guard
+/// rather than a comment.
+fn assert_concatenation_is_stated() {
+    let c = OPS_SPEC
+        .find("KISS-OPS-6.19-0004")
+        .map(|i| &OPS_SPEC[i..i + 600])
+        .expect("spec/ops.md must carry KISS-OPS-6.19-0004 — the blob composition rule");
+    let flat: String = c.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+        flat.contains("concatenated in the canonical"),
+        "KISS-OPS-6.19-0004 no longer states that the blob is its schema fields CONCATENATED in \
+         canonical order. The `offset` column of this artifact is arithmetic over stated widths \
+         and is sound ONLY under that sentence: a padding or alignment rule would make every \
+         offset after field 0 silently wrong. Re-derive the offset model against the new text \
+         rather than letting this artifact keep asserting the old one."
+    );
+}
+
 /// Emit the SPEC-DERIVED OpAttrs vector artifact (#504).
 ///
 /// ⚠️ THIS IS THE NON-RELATIVE ORACLE. Every byte below is computed from `spec/ops.md` §6.19.3 —
@@ -249,6 +288,8 @@ pub fn parse_clause_coverage() -> BTreeMap<String, Vec<String>> {
 /// not buildable from inside this repo. This makes the KISS side externally CHECKABLE, which is
 /// the half that can be built alone.
 pub fn emit_opattrs_vectors_json() -> String {
+    // the offset column is sound only while §6.19-0004 says "concatenated" — check, do not assume
+    assert_concatenation_is_stated();
     let schemas = parse_table();
     let coverage = parse_clause_coverage();
 
@@ -262,6 +303,8 @@ not another party's golden (#504).\",\n");
     // ⚠️ THE POPULATION IS PART OF THE ARTIFACT. A narrowed parser emits a smaller, well-formed
     // file, and a reader diffing two such files sees a clean diff of a shorter document. Stating
     // the count makes a narrowing visible IN the artifact rather than only in a test run.
+    s.push_str("  \"layout_authority\": \"KISS-OPS-6.19-0004 — the blob is its §6.19.3 schema fields CONCATENATED in canonical order (no padding, no alignment, no tag stream). The offset column is a restatement of that sentence, not a computed value; if the sentence changes the offsets are unfounded and the generator refuses.\",\n");
+    s.push_str("  \"scope\": \"STATED LAYOUT ONLY. This artifact pins field order, widths, ordinals and offsets. It deliberately states NO expected VALUE for any op: a value would have to be COMPUTED, and two parties computing through a shared intermediate are comprehension-correlated even when code-disjoint (kiss-ref, DESIGN.md:17-20). Independence of DERIVATION is the property, not external-ness.\",\n");
     s.push_str(&format!("  \"carrier_ops\": {},\n", schemas.len()));
 
     s.push_str("  \"ops\": [\n");
