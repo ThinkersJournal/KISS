@@ -95,6 +95,7 @@ pub mod dispatch;
 pub mod dispatch_expr;
 pub mod expressibility;
 pub mod grammar;
+pub mod opattrs_schema;
 pub mod fp;
 pub mod hp;
 pub mod dtype;
