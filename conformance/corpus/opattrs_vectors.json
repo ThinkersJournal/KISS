@@ -1,0 +1,184 @@
+{
+  "schema": "kiss-opattrs-spec-vectors/1",
+  "generated_from": "spec/ops.md §6.19.3 (canonical field order = ABI)",
+  "derivation": "PARSED from the spec table at compile time, never transcribed. No implementation output was consulted: this is an EXTERNAL reference for the OpAttrs channel, not another party's golden (#504).",
+  "layout_authority": "KISS-OPS-6.19-0004 — the blob is its §6.19.3 schema fields CONCATENATED in canonical order (no padding, no alignment, no tag stream). The offset column is a restatement of that sentence, not a computed value; if the sentence changes the offsets are unfounded and the generator refuses.",
+  "scope": "STATED LAYOUT ONLY. This artifact pins field order, widths, ordinals and offsets. It deliberately states NO expected VALUE for any op: a value would have to be COMPUTED, and two parties computing through a shared intermediate are comprehension-correlated even when code-disjoint (kiss-ref, DESIGN.md:17-20). Independence of DERIVATION is the property, not external-ness.",
+  "carrier_ops": 17,
+  "ops": [
+    {
+      "op": "reduce",
+      "clauses": ["KISS-OPS-6.19-0025"],
+      "blob_bytes": 6,
+      "fields": [
+        {"ordinal": 0, "name": "monoid", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "reduce_axes", "width": "u16le", "offset": 1},
+        {"ordinal": 2, "name": "keepdim", "width": "u8", "offset": 3},
+        {"ordinal": 3, "name": "accumulator", "width": "u8", "offset": 4},
+        {"ordinal": 4, "name": "math_precision", "width": "u8", "offset": 5}
+      ]
+    },
+    {
+      "op": "prefix_scan",
+      "clauses": ["KISS-OPS-6.19-0026"],
+      "blob_bytes": 6,
+      "fields": [
+        {"ordinal": 0, "name": "monoid", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "reduce_axes", "width": "u16le", "offset": 1},
+        {"ordinal": 2, "name": "exclusivity", "width": "u8", "offset": 3},
+        {"ordinal": 3, "name": "accumulator", "width": "u8", "offset": 4},
+        {"ordinal": 4, "name": "math_precision", "width": "u8", "offset": 5}
+      ]
+    },
+    {
+      "op": "gather",
+      "clauses": ["KISS-OPS-6.19-0027"],
+      "blob_bytes": 4,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "oob_policy", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "index_operand", "width": "u8", "offset": 2},
+        {"ordinal": 3, "name": "index_dtype", "width": "u8", "offset": 3}
+      ]
+    },
+    {
+      "op": "scatter",
+      "clauses": ["KISS-OPS-6.19-0028"],
+      "blob_bytes": 5,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "combine", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "oob_policy", "width": "u8", "offset": 2},
+        {"ordinal": 3, "name": "index_operand", "width": "u8", "offset": 3},
+        {"ordinal": 4, "name": "index_dtype", "width": "u8", "offset": 4}
+      ]
+    },
+    {
+      "op": "sort_network",
+      "clauses": ["KISS-OPS-6.19-0029"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "direction", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "stability", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "reduce_var",
+      "clauses": ["KISS-OPS-6.19-0030"],
+      "blob_bytes": 4,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2},
+        {"ordinal": 2, "name": "bessel_correction", "width": "u8", "offset": 3}
+      ]
+    },
+    {
+      "op": "reduce_std",
+      "clauses": ["KISS-OPS-6.19-0030"],
+      "blob_bytes": 4,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2},
+        {"ordinal": 2, "name": "bessel_correction", "width": "u8", "offset": 3}
+      ]
+    },
+    {
+      "op": "softmax",
+      "clauses": ["KISS-OPS-6.19-0031"],
+      "blob_bytes": 1,
+      "fields": [
+        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+      ]
+    },
+    {
+      "op": "log_softmax",
+      "clauses": ["KISS-OPS-6.19-0031"],
+      "blob_bytes": 1,
+      "fields": [
+        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+      ]
+    },
+    {
+      "op": "rms_norm",
+      "clauses": ["KISS-OPS-6.19-0031"],
+      "blob_bytes": 1,
+      "fields": [
+        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+      ]
+    },
+    {
+      "op": "layer_norm",
+      "clauses": ["KISS-OPS-6.19-0031"],
+      "blob_bytes": 1,
+      "fields": [
+        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+      ]
+    },
+    {
+      "op": "avg_pool",
+      "clauses": ["KISS-OPS-6.19-0032"],
+      "blob_bytes": null,
+      "fields": [
+        {"ordinal": 0, "name": "window_size", "width": "variable", "offset": 0},
+        {"ordinal": 1, "name": "stride", "width": "variable", "offset": null},
+        {"ordinal": 2, "name": "dilation", "width": "variable", "offset": null},
+        {"ordinal": 3, "name": "padding", "width": "variable", "offset": null},
+        {"ordinal": 4, "name": "count_include_pad", "width": "u8", "offset": null}
+      ]
+    },
+    {
+      "op": "max_pool",
+      "clauses": ["KISS-OPS-6.19-0032"],
+      "blob_bytes": null,
+      "fields": [
+        {"ordinal": 0, "name": "window_size", "width": "variable", "offset": 0},
+        {"ordinal": 1, "name": "stride", "width": "variable", "offset": null},
+        {"ordinal": 2, "name": "dilation", "width": "variable", "offset": null},
+        {"ordinal": 3, "name": "padding", "width": "variable", "offset": null}
+      ]
+    },
+    {
+      "op": "im2col",
+      "clauses": ["KISS-OPS-6.19-0033"],
+      "blob_bytes": null,
+      "fields": [
+        {"ordinal": 0, "name": "window_size", "width": "variable", "offset": 0},
+        {"ordinal": 1, "name": "stride", "width": "variable", "offset": null},
+        {"ordinal": 2, "name": "dilation", "width": "variable", "offset": null},
+        {"ordinal": 3, "name": "padding", "width": "variable", "offset": null},
+        {"ordinal": 4, "name": "output_column_ordering", "width": "u8", "offset": null}
+      ]
+    },
+    {
+      "op": "index_select",
+      "clauses": ["KISS-OPS-6.19-0034"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "index_operand", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "index_dtype", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "embedding",
+      "clauses": ["KISS-OPS-6.19-0034"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "index_operand", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "index_dtype", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "scatter_add",
+      "clauses": ["KISS-OPS-6.19-0034"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "axis", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "index_operand", "width": "u8", "offset": 1},
+        {"ordinal": 2, "name": "index_dtype", "width": "u8", "offset": 2}
+      ]
+    }
+  ]
+}
