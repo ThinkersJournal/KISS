@@ -51,7 +51,7 @@ The remaining 558<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **479<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 693<!-- bound:test_fns --> test fns, **263<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 699<!-- bound:test_fns --> test fns, **269<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
