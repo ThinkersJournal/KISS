@@ -188,6 +188,31 @@ Normative text does not rely on unquantified qualitative adjectives such as "wel
 
 Values in normative text are pinned as **bits and IEEE-754 semantics with endianness fixed**, never as one source language's surface spelling. Constant and non-finite values (positive and negative infinity, quiet and signaling NaN, positive and negative zero, subnormals) are specified by their bit patterns per dtype and round-trip exactly. Where a normative artifact is a wire byte sequence, its bytes are pinned in wire order (left to right) so a foreign reader reproduces them without inferring an endianness convention.
 
+### 3.6 Roles are defined against a surface
+
+The suite-wide role words — **consumer**, **provider**, **producer** / **emitter**, and **implementation** — name what a party *does to a KISS surface*, not a fixed identity a party carries. One party is routinely a consumer of one surface and a producer of another. Treating a role as a blanket identity is the defect RFC #500 records: a clause whose quantifier ranges over a broader set (every party) than the obligation it states (every party *acting on the surface the clause is about*). These definitions are canonical for the suite; where a sub-standard's §3 Terms entry names one of these words, it states the same role scoped to that sub-standard's surface, and this section is the canonical statement where those wordings differ.
+
+**The surfaces.** A KISS party acts on one or more surfaces, each with its own directions:
+
+1. **op-semantics** (KISS-Ops) — **evaluate** an op's pinned floor semantics, and/or **lift** a foreign graph into the suite. A lift produces semantics only: `KISS-CONSUME-6.2-0004` — "a lift MUST NOT produce an artifact … it produces semantics (a Semantics field and recorded residue) only" — so a lifter is a *producer of op-semantics* and, by that same clause, explicitly *not* a producer of artifact+contract. The recorded residue is the lifter's honesty channel, the inverse of the emitter's contract.
+2. **wire** (the KISS-Announce / KISS-Classify / KISS-Contract byte artifacts) — **parse** and/or **produce**. This surface is **not atomic**: a party may produce one wire artifact and parse another, so a clause binding it names the artifact (see below).
+3. **artifact+contract** (KISS-Synth / KISS-Emit) — **produce/emit** and/or **request/provision**. An emitter produces the pair `{artifact, contract}`; producing the artifact alone does not make a component an emitter.
+4. **vocabulary** (the token spellings) — **bind/consume**, **mint**, and **reference-implement**, over two ownership kinds: the §6.1 **core** spellings (KISS-owned, frozen with the standard) and a namespace **`<capability-set>`** vocabulary (maintainer-owned, frozen independently). Because `KISS-CLASSIFY-6.8-0004` forbids a KISS clause from pinning any namespace's capability-set vocabulary, a clause that binds this surface **names which vocabulary** it binds — not only for clarity, but because a surface-generic obligation would have KISS binding a vocabulary its own standard forbids it to pin.
+5. **conformance-corpus** (the KISS-Conform golden vectors, §6.5) — **minter** (authors a vector into the corpus), **proxy** (is tested against the corpus), and **oracle** (the authority others are checked against), under the anti-circularity clauses `KISS-CONFORM-6.5-0002` (the oracle shares no lowering module with any reference implementation) and `KISS-CONFORM-6.5-0003` (a vector whose provenance is not `oracle` is rejected as circular).
+
+**The roles, per surface.** For a surface *S* — and, where *S* is non-atomic, for a named artifact *A* on it:
+
+- **consumer of *S* [for *A*]** — a party that reads, requests, or evaluates *S*. A party may be a consumer of one surface and not another and, on a non-atomic surface, of one artifact and not another.
+- **provider of *S*** — a party that serves or answers requests for *S*.
+- **producer / emitter of *S*** — a party that produces *S* (an emitter is a producer of {artifact, contract}; a lifter is a producer of the op-DAG on op-semantics).
+- **implementation** — any software that acts on some KISS surface; the broadest role. A clause that names *implementation* with no surface is governed by the transition rule below.
+
+The **[for artifact *A*]** parameter is written wherever a surface is non-atomic — so a clause binds only the artifact it means, not every artifact on the surface — or of mixed authority — so a clause reaches only the vocabulary KISS may pin. By construction, a party that only *parses* a wire artifact is a consumer of *wire*, not of *op-semantics*, and so falls outside an "evaluate the floor" obligation without needing an exception.
+
+**Transition rule.** Adding these definitions re-scopes no existing clause. A clause that uses a role word **without** naming a surface keeps the scope it has today until it is individually re-scoped by its own sub-standard's editor; each such use is a separate, listed normative question. RFC #500 records the current worklist, headed by re-scoping `KISS-OPS-6.3-0002` ("every conforming consumer of KISS-Ops MUST … evaluate … every op in the primitive floor") to the *op-semantics / evaluate* direction, so that a parse-only consumer is outside it by construction.
+
+> *Provenance: RFC #500. The per-surface definitions were agreed by the affected cosignatories; the surface taxonomy was completed from their measured findings — the non-atomic `wire` surface, the two vocabulary ownership kinds, and the corpus minter/proxy/oracle directions.*
+
 ---
 
 ## 4. The dual-document template
