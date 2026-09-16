@@ -212,7 +212,7 @@ pub fn parse_clause_coverage() -> BTreeMap<String, Vec<String>> {
                         .chars()
                         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
                 {
-                    let e = cov.entry(name.to_string()).or_insert_with(Vec::new);
+                    let e = cov.entry(name.to_string()).or_default();
                     if !e.contains(id) {
                         e.push(id.clone());
                     }
@@ -271,6 +271,65 @@ fn assert_concatenation_is_stated() {
     );
 }
 
+/// Render one field's line: ordinal, name, width, and its OFFSET.
+///
+/// ⚠️ EXTRACTED SO THE OFFSET CHAIN IS AUDITABLE ON ITS OWN. This is the only arithmetic in the
+/// whole artifact, and it is the one column kiss-ref's boundary reaches — legitimate only because
+/// §6.19-0004 states the blob is its fields CONCATENATED (checked by
+/// `assert_concatenation_is_stated`). Buried mid-emitter it was three lines inside a 72-line
+/// function: a reader auditing whether this artifact computes a VALUE had to read the JSON
+/// plumbing to establish that it does not.
+fn render_field(f: &SchemaField, ordinal: usize, offset: Option<usize>, last: bool) -> String {
+    let width = match f.width {
+        FieldWidth::U8 => "\"u8\"",
+        FieldWidth::U16Le => "\"u16le\"",
+        FieldWidth::Variable => "\"variable\"",
+    };
+    // ⚠️ `null`, never 0: past a Variable field no later offset is KNOWABLE, and a 0 would read
+    // as "this field starts at the beginning" rather than as "the layout does not pin this".
+    let off = match offset {
+        Some(o) => format!("{o}"),
+        None => "null".to_string(),
+    };
+    format!(
+        "        {{\"ordinal\": {}, \"name\": {}, \"width\": {}, \"offset\": {}}}{}\n",
+        ordinal,
+        crate::json::escape_string(&f.name),
+        width,
+        off,
+        if last { "" } else { "," }
+    )
+}
+
+/// Render one op's block: its name, the clauses naming it, its blob width, and its fields.
+fn render_op(sc: &OpSchema, clauses: &[String], last: bool) -> String {
+    let mut s = String::new();
+    s.push_str("    {\n");
+    s.push_str(&format!("      \"op\": {},\n", crate::json::escape_string(&sc.op)));
+    s.push_str(&format!(
+        "      \"clauses\": [{}],\n",
+        clauses.iter().map(|c| crate::json::escape_string(c)).collect::<Vec<_>>().join(", ")
+    ));
+    match sc.fixed_width() {
+        Some(w) => s.push_str(&format!("      \"blob_bytes\": {w},\n")),
+        // ⚠️ `null`, never 0 — a pooling op's `vec` fields are not pinned by the table, and a 0
+        // would read as an empty blob rather than as an unpinned width.
+        None => s.push_str("      \"blob_bytes\": null,\n"),
+    }
+    s.push_str("      \"fields\": [\n");
+    let mut offset: Option<usize> = Some(0);
+    for (j, f) in sc.fields.iter().enumerate() {
+        s.push_str(&render_field(f, j, offset, j + 1 == sc.fields.len()));
+        offset = match (offset, f.width.bytes()) {
+            (Some(o), Some(w)) => Some(o + w),
+            _ => None,
+        };
+    }
+    s.push_str("      ]\n");
+    s.push_str(if last { "    }\n" } else { "    },\n" });
+    s
+}
+
 /// Emit the SPEC-DERIVED OpAttrs vector artifact (#504).
 ///
 /// ⚠️ THIS IS THE NON-RELATIVE ORACLE. Every byte below is computed from `spec/ops.md` §6.19.3 —
@@ -309,51 +368,8 @@ not another party's golden (#504).\",\n");
 
     s.push_str("  \"ops\": [\n");
     for (i, sc) in schemas.iter().enumerate() {
-        s.push_str("    {\n");
-        s.push_str(&format!("      \"op\": {},\n", crate::json::escape_string(&sc.op)));
         let clauses = coverage.get(&sc.op).cloned().unwrap_or_default();
-        s.push_str(&format!(
-            "      \"clauses\": [{}],\n",
-            clauses
-                .iter()
-                .map(|c| crate::json::escape_string(c))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
-        match sc.fixed_width() {
-            Some(w) => s.push_str(&format!("      \"blob_bytes\": {w},\n")),
-            // ⚠️ `null`, never 0. A pooling op's `vec` fields are not pinned by the table, and a
-            // 0 would read as an empty blob rather than as an unpinned width.
-            None => s.push_str("      \"blob_bytes\": null,\n"),
-        }
-        s.push_str("      \"fields\": [\n");
-        let mut offset: Option<usize> = Some(0);
-        for (j, f) in sc.fields.iter().enumerate() {
-            let width = match f.width {
-                FieldWidth::U8 => "\"u8\"",
-                FieldWidth::U16Le => "\"u16le\"",
-                FieldWidth::Variable => "\"variable\"",
-            };
-            let off = match offset {
-                Some(o) => format!("{o}"),
-                None => "null".to_string(),
-            };
-            s.push_str(&format!(
-                "        {{\"ordinal\": {}, \"name\": {}, \"width\": {}, \"offset\": {}}}{}\n",
-                j,
-                crate::json::escape_string(&f.name),
-                width,
-                off,
-                if j + 1 == sc.fields.len() { "" } else { "," }
-            ));
-            // once a variable-width field is passed, no later offset is knowable
-            offset = match (offset, f.width.bytes()) {
-                (Some(o), Some(w)) => Some(o + w),
-                _ => None,
-            };
-        }
-        s.push_str("      ]\n");
-        s.push_str(if i + 1 == schemas.len() { "    }\n" } else { "    },\n" });
+        s.push_str(&render_op(sc, &clauses, i + 1 == schemas.len()));
     }
     s.push_str("  ]\n");
     s.push_str("}\n");
