@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Third and final KISS-Emit conformance module — the spec-self-consistency /
 //! meta-conformance clauses of §6.1 neutrality, §7 capability, §8 versioning, and
 //! §9 conformance, continuing the #91 coverage burndown. Companion to

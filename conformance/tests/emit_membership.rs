@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Second KISS-Emit conformance module — the lowering-partition MEMBERSHIP (§6.3
 //! driver-may-spell, §6.4 emitter-must-supply) and the neutrality-audit SCOPE (§6.5),
 //! continuing the #91 coverage burndown. Companion to `emit_partition.rs`, reusing the

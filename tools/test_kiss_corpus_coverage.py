@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination test for the corpus op-coverage ratchet (#459).
 
 The ratchet must red for a coverage LOSS and for a DOMAIN move, and — the load-bearing part —

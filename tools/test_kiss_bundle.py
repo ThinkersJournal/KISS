@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """
 Invariant tests for kiss_bundle.py — the properties the paste-into-an-LLM audit
 bundle depends on, plus the derive-from-spec hardening (the suite shape is read

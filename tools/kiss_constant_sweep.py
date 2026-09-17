@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Mutate every named constant and report the ones NO test reds on (#409 Phase 1).
 
 Found the #422 class in one run: three live shape-expression wire tags — `Add`, `Sub`, `Mul` —

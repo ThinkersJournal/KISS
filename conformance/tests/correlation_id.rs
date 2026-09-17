@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform suite for the OPTIONAL request-correlation id on the
 //! contract-query / provision request+response frames (KISS-ANNOUNCE-6.4-0013).
 //!

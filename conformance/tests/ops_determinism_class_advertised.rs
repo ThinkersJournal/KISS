@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-OPS-7.4-0001 via the contract codec: an implementation advertises, per op,
 //! its determinism/fidelity class drawn from the single canonical §6.0 enum. Here
 //! the advertisement rides a real Contract Guarantees block, round-tripped through

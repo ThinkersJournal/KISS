@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform tests for the Contract §6.6-0006 Dispatch expression grammar.
 //! Backs: KISS-CONTRACT-6.6-0006 (the pinned machine-evaluable expression grammar,
 //! incl. the element-subscript operator resolving issue #43).

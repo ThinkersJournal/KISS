@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference codec for the KISS-Classify `structure_key` token (Classify §6.7).
 //!
 //! The token is the sole normative wire form of a specialization-cell identity

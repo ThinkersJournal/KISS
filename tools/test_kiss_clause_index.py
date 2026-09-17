@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the clause-index emitter.
 
 The emitter's whole value is that a downstream project can vendor it and turn "does this

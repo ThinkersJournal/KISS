@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Per-output determinism class via full-sub-DAG propagation (KISS-OPS-6.0-0007).
 //!
 //! §6.0-0001 declares ONE class per op; 6.0-0007 refines it for multi-output ops:

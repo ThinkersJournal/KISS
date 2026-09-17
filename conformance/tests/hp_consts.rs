@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T3 — `hp::consts` constant tables + FULL-WIDTH verification.
 //!
 //! These are the failing-first tests for the wide mathematical constants the

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference evaluator + canonical serializer for the KISS-Ops **shape-expression
 //! vocabulary** and the shape-side oracle (Ops §6.20).
 //!

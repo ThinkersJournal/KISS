@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the `Backs:` ↔ §9 matrix cross-check (`kiss_backs_matrix.py`, #479).
 
 Every positive assertion is paired with the case it must NOT flag, because a checker that flags

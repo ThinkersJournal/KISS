@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Does a test's `Backs:` citation AGREE with the §9 matrix row that names it? (#479)
 
 `kiss_trace` credits a clause two ways — FORWARD (the spec's `*Test:*` name exists as a test) and

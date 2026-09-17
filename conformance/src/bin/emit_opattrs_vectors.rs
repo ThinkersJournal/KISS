@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Regenerate `conformance/corpus/opattrs_vectors.json` from `spec/ops.md` §6.19.3.
 //!
 //! ⚠️ A LIBRARY GENERATOR, never a test helper (#365): the builder lives in

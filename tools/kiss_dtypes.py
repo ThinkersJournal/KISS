@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """
 kiss_dtypes.py — the KISS-Classify §6.1 dtype-set SSOT manifest + within-doc lint.
 

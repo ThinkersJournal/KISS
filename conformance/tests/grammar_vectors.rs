@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Grammar golden REGION vector artifact (`conformance/corpus/grammar_vectors.json`) — the
 //! machine-readable golden region set that now EXISTS in the corpus, giving `KISS-GRAMMAR-8-0004`
 //! (≥2 dissimilar implementations interoperate on the golden region vectors) and `-8-0005` (a

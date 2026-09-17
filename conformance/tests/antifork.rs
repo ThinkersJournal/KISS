@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.4-0012 anti-fork op-tag test (#29 item 1): the op name is the sole identity anchor;
 //! never fabricate a tag — an operation with no KISS-Ops name typed-declines.
 //!

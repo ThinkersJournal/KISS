@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Loader for the KISS-Conform oracle-vector corpus (§6.3-0003, §6.4, §6.5).
 //! Parses a Wycheproof-shaped JSON bundle (see docs/superpowers/specs/
 //! 2026-07-19-kiss-oracle-vector-corpus-design.md §4) into typed cells, decoding

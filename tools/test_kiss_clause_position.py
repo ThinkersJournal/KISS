@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Born-red for kiss_clause_position — the position check MUST flag a clause moved out of its
 section, and MUST stay clean with the clause in place.
 

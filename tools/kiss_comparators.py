@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Comparator-blindness lint (KISS-CONFORM-6.8-0012).
 
 A check that normalizes away a difference cannot see the difference it normalizes.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the citation audit (`kiss_cites.py`).
 
 The audit reports on the integrity of every coverage number the project quotes,

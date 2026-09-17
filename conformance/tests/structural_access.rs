@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform oracle-differential vectors for the **structural access atoms**
 //! (KISS-Ops §6.11): `reduce`, `prefix_scan`, `gather`, `scatter`. These transcribe
 //! the pinned monoid identities, empty-reduction rule, OOB policies, combine algebra

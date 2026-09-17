@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! First KISS-Emit conformance module — the §6.0 imported-enum and §6.2 lowering-
 //! partition clauses, backed by DOC-LINT + ENUM-IMPORT tests (structural facts and
 //! cross-standard enum spellings extracted from the spec text), continuing the #91

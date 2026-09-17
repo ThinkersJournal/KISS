@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* WRONG — computes the per-row MIN instead of the MAX (correct axis, wrong op).
    Caught by the exact-byte comparator on any row with distinct values. §6.5 ABI:
    (in, out, ein, eout, n). */

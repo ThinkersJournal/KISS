@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* Correct elementwise add, independent implementation: pointer-walk + commuted
    operand order. `b + a == a + b` bit-for-bit in IEEE-754. */
 __declspec(dllexport) void kiss_add(const float* in0, const float* in1, float* out, long long n) {

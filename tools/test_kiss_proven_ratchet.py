@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Fixture controls for the 4th ratchet dimension — the PROVEN gate (#278, step 2b).
 
 PROVEN starts at 0 and the live tree reports 0 -> 0 forever, so the live ratchet can never

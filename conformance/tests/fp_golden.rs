@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform vectors for the reduced-float storage codecs (KISS-Ops §6.16).
 
 use kiss_conformance::fp::*;

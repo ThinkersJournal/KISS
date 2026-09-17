@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.6 Dispatch tests (D3 / #43): Dispatch is optional (geometry-agnostic class), and
 //! `thread_mapping`/`addressing_rule` are thread-index-free structural declarations with the
 //! richer form reserved post-v1.

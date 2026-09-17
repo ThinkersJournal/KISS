@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Gate for KISS-CONFORM §6.8-0013 — a declared blindness must be EXHIBITED.
 //!
 //! The sub-standard is spelled out on every reference here on purpose:

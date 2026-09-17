@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONSUME refusal-taxonomy & version-axis structural conformance module — the
 //! THIRD CONSUME doc-lint module of the #91 coverage burndown, continuing the discipline
 //! established in `tests/consume_taxonomy.rs` (and the EMIT `emit_partition` /

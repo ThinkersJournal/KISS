@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the pinned-tolerated-red assertion (#343).
 
 `strict` is `continue-on-error` BY DESIGN and should stay that way — a gate that can never

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! #456 / #480 spec-consistency guard: the geometry-agnostic Dispatch clause (§6.6-0007) and the
 //! seven-block body invariant (§6.11-0004) MUST stay mutually satisfiable.
 //!

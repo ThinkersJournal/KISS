@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* reduce_mean via pairwise (tree) summation, then ÷ n. A DIFFERENT reassociation
    than mean_a — bit-different partial sums, within the reassociation band. */
 static float pairwise(const float* a, long long n) {

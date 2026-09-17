@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Raw Win32 dynamic-loading (dependency-free — no `libloading`). All `unsafe`
 //! in the harness is confined to this file behind a safe `Artifact` wrapper.
 

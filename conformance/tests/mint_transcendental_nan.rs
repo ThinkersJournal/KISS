@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! T9 step 3 — the transcendental COMPUTED-NaN bundle round-trips through `load_cell`, and
 //! every emitted `expected` NaN is QUIET. A minter emitting a SIGNALING expected would be a
 //! SILENT conformance hole: `load_cell` accepts it (is-NaN ∧ provenance present satisfies the

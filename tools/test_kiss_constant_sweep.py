@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the constant sweep (#409 Phase 1).
 
 Every positive assertion is paired with the defect it must reject. The three that matter:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The KISS-Contract §6.5 positional ABI for a rank-1 packed elementwise-binary
 //! op: `(in0*, in1*, out*, n)`. The marshaller sizes the output from `n`, lays
 //! the operands out in canonical order, and calls the entry point.

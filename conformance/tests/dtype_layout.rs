@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform vectors for the sub-byte / FP8 storage layouts (KISS-Classify §6.1).
 
 use kiss_conformance::dtype::*;

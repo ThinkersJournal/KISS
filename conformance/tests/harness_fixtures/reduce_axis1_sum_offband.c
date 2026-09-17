@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* WRONG magnitude, RIGHT shape: a sequential per-row sum that DOUBLE-COUNTS each
    row's first element — the classic `float s = in[row];` init followed by a loop
    that still runs from c=0. The output is the same rows-shaped buffer as the

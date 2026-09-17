@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Negative controls for runtime-gate discovery in kiss_trace (KISS #140).
 
 The defect: a test that declines at run time (`eprintln!("SKIP"); return;`) reports

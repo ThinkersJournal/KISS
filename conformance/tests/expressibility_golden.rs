@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden + decline vectors for the Appendix-F expressible-
 //! signature-set byte format. Backs **KISS-CONFORM-6.10-0006**: the enumerated
 //! expressible-signature set's byte form is pinned by Appendix F, and a reader

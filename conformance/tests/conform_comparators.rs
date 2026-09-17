@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform §6.8 comparator refinements.
 //!
 //! Backs: KISS-CONFORM-6.8-0010 (computed-NaN result comparison, KISS #88 ruling

@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# KISS licensing by path, in the REUSE.toml ANNOTATION FORMAT. See the License section of README.md.
+#
+# ⚠️ THIS REPOSITORY DOES NOT CLAIM REUSE COMPLIANCE. REUSE 3.3 also requires a LICENSES/ directory
+# and a copyright notice in every code header, and nothing here runs `reuse lint`. This file only
+# uses the annotation format to declare which licence applies to which paths.
+#
+# CODE (.rs .c .cu .py .sh .bat .toml .yml) carries an in-file SPDX header — MIT OR Apache-2.0 —
+# enforced by `tools/kiss_spdx.py --check` in CI. TEXT and DATA are annotated here BY PATH, so no
+# byte of any specification or corpus file changes: spec line numbers are cited across issues and
+# other repositories, and the corpus JSON is sha256-pinned.
+version = 1
+
+# The standard's TEXT and all DATA — CC0-1.0.
+# CireSnave, verbatim: "KISS should be CC0 for the standard's TEXT (normal and correct for a
+# standard; it is how you get universal adoption) and MIT/Apache for the CODE (normal for Rust)."
+[[annotations]]
+path = ["**/*.md", "**/*.json", "**/*.tsv", "**/*.txt", "LICENSE", "**/.gitattributes", "**/.gitignore"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Thinker's Journal"
+SPDX-License-Identifier = "CC0-1.0"
+
+# A VERBATIM THIRD-PARTY FILE KEEPS ITS ORIGIN'S TERMS AND IS NOT EDITED.
+# Emitted by `baracuda-kernelgen` (see conformance/cuda/generated/PROVENANCE.md) and marked
+# "do not edit". Stamping it in-file would falsify PROVENANCE.md's "remains the generator's verbatim
+# output". Its licence and holder are Baracuda's own (ciresnave/baracuda LICENSE-MIT), kept as the
+# origin states them rather than restated as this repository's.
+[[annotations]]
+path = ["conformance/cuda/generated/baracuda_gen_relu_add_f32_co_v4.cu"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Eric Evans"
+SPDX-License-Identifier = "MIT OR Apache-2.0"

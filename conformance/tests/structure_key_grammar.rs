@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform teeth for the KISS-Classify `structure_key` **field-grammar /
 //! admissibility** surface (`conformance/src/structure_key.rs`). Sibling of
 //! `structure_key_codec.rs` and `structure_key_golden.rs`: the golden file pins

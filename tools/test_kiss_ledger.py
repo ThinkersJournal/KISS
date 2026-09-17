@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Round-trip controls for the UNBACKED.tsv ledger writer (#272).
 
 `write_ledger` promises in its own docstring that `--update-ledger` "never silently

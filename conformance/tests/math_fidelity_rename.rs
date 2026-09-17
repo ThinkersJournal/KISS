@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! #414 rename guard — the KISS-Ops compute-fidelity attribute was renamed `MathPrecision` →
 //! `MathFidelity` (spec + this crate) to remove the collision with unpopped-vocab's dtype-shaped
 //! `MathPrecision`: an implementer following KISS-CONTRACT-6.8-0004's "imported from KISS-Ops"

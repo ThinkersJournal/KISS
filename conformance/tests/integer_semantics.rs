@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden/edge vectors for the pinned **integer** primitive
 //! semantics (KISS-Ops §6.4 arithmetic atoms on the integer path, §6.10 bitwise
 //! atoms). These transcribe the prose the spec spends pinning integer behavior —

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* reduce_mean over n elements, forward-order sum ÷ n. Entry per the §6.5 reduction ABI. */
 __declspec(dllexport) void kiss_reduce_mean(const float* in, float* out, long long n) {
     float s = 0.0f;

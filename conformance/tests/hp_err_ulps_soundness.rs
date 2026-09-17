@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 T5 — err_ulps SOUNDNESS: verify each atom's reported `err_ulps`
 //! actually BOUNDS its true error. This is a SOUNDNESS test, not a tightness test:
 //! an err_ulps that UNDER-states the true error silently corrupts the Ziv decision

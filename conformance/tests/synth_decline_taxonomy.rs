@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform tests for KISS-Synth §6.6 (the never-panic obligation and the
 //! provision decline taxonomy) plus the two level-2 availability "identity-only"
 //! corollaries (§6.2-0007a, §6.7-0003a). Continues the #91 SYNTH coverage burndown.

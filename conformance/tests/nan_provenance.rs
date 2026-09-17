@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B / #352 — the per-row NaN-provenance comparator arms (Conform §6.8-0010(a)
 //! MOVED / §6.16-0010 COMPUTED), the gap that made both clauses unenforceable in the
 //! harness (`compare_f32` carried no provenance). Three born-red / pinning tests; the

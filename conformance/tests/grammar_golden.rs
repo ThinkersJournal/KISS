@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden + rule-mutation vectors for the KISS-Grammar region wire
 //! form (Grammar §6.4, §6.8), tested against Appendix A.1 vectors G1
 //! (`out=(a*b)+c`, n_inputs=3) and G4 (`out=a+a`, n_inputs=1).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The minted bundle must load back through the corpus reader and carry the
 //! signed-zero add cell (the point of the slice: -0 vs +0 is normative, exact-byte).
 use kiss_conformance::corpus;

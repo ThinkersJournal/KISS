@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform teeth for the KISS-Classify §6.8 **namespace registry** and the
 //! general encoding rules that bind every `target_capability` namespace.
 //!

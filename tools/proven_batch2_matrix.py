@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """#278 batch 2 -- thin wrapper over the generic proven_matrix.py core; record in conformance/PROVEN_BATCH2.md.
 
 Only the ten mutation seeds and their clause map live here; the runner (DERIVED targets + baseline gate

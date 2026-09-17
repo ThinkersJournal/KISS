@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.8 transcendental **accuracy tier** — the D2 ceiling-retirement (#39).
 //!
 //! Retires the fixed per-atom ULP ceiling of the old §6.8-0001. The **declared

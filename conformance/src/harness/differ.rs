@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Class-aware comparison of a candidate's outputs against the oracle-tagged
 //! corpus. For `add` (a bit-stable exact-byte op) the comparator is the
 //! NaN-relaxed exact-byte `agree` from `differential`. Each divergence is data.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Third KISS-Contract conformance module (sibling to `contract_golden.rs` and
 //! `contract_framing.rs`), continuing the #91 coverage burndown. It mirrors the
 //! already-accepted §6.8-0001 / §6.9-0001 doc-lint style — a frozen hardcoded

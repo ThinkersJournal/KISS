@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! A reproducible, randomized differential loop (Conform §6.5).
 //!
 //! Instead of only hand-picked golden vectors, a candidate implementation is

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 #![cfg(windows)]
 //! KISS-CONFORM-6.13-0006a (increment 2): the differential harness resolves the
 //! non-primitive `reduce_mean` to its floor decomposition and proves ≥2 dissimilar

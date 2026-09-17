@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* Correct axis-1 (per-row) sum reduction, SEQUENTIAL fold — the order-matching
    sibling of the oracle. §6.5 axis-reduce ABI: (in, out, ein, eout, n). */
 __declspec(dllexport) void kiss_reduce_axis1(const float* in, float* out, const long long* ein, const long long* eout, long long n) {

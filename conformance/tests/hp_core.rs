@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T1 — `hp-core` `BigFloat<N>` correctness vectors.
 //!
 //! These are the §11 test vectors of the recovered hp-core design spec

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference encoder/decoder for the KISS-Announce 56-byte handshake envelope
 //! (Announce §6.1), plus the hard-reject reader discipline (§6.2).
 //!

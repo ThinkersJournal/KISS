@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """
 kiss_ops.py — the KISS-Ops within-document op-set consistency lint.
 

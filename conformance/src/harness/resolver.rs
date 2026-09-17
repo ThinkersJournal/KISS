@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Decomposition-resolver: evaluates a non-primitive op's KISS-Ops reference
 //! decomposition down to the primitive floor (KISS-CONFORM-6.5-0004). Increment 2
 //! is focused on `reduce_mean = div(reduce(sum, x), reduced_count)` (ops.md §6.13).

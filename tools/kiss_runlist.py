@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Every clause-backing test must appear in a compiled test binary on some CI leg.
 
 THE PROPERTY. `kiss_trace` answers *"does the spec name a test that exists in the

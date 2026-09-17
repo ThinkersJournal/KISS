@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.4-0012 — the **anti-fork op-tag rule** (#29 item 1).
 //!
 //! The op name is the sole identity anchor of an advertisable op. A party that meets an

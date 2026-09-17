@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden + decline vectors for the KISS-Announce 56-byte handshake
 //! envelope (Announce §6.1–§6.2). The golden envelope is transcribed from the
 //! Announce §2.5 worked example.

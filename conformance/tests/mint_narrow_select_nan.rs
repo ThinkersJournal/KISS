@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Narrow-float MOVE bit-exactness vectors, increment 2: the SELECTION ops min/max. §6.16-0011
 //! traces the fold to the observable output, and for a selection the output is a MOVED operand —
 //! but which operand, and whether it is the NaN, depends on the arm (corrected after Baracuda's

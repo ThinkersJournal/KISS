@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.5-0008 (coverage completeness) and 6.5-0009 (inline wide-precision
 //! stored value), enforced against the frozen bundle + the ops.md-derived manifest.
 use kiss_conformance::{corpus, json};

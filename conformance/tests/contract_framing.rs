@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Second KISS-Contract conformance module (sibling to `contract_golden.rs`),
 //! continuing the #91 coverage burndown. Two sections:
 //!

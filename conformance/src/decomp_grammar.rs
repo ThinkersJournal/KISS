@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference-decomposition body grammar (KISS-Ops §6.13-0006) and the structured-op
 //! classification (§6.13-0009).
 //!

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch storage codec for the pinned **sub-byte / FP8 dtype layouts**
 //! (KISS-Classify §6.1-0008 `s4`/`u4` nibble packing, §6.1-0009 `b1` bit packing,
 //! §6.1-0010 `e4m3` FP8 encoding).

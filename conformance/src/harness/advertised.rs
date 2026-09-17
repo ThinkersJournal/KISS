@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Contract-sourced comparator selection (KISS-CONFORM-6.13-0006b): select the
 //! differential comparator from the op's advertised determinism class, never a
 //! hardcoded structural map. The advertised class is honesty-checked against the

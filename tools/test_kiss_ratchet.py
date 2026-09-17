@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the coverage ratchet (`kiss_trace.py --ratchet`).
 
 The ratchet exists because `--strict` has been red since it was written, and a

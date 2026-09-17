@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS reference conformance harness — core.
 //!
 //! Non-normative. This crate is *a* conformant implementation of the KISS

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T5/T6 — the `semantics.rs` special-value FRONT DOOR for the
 //! transcendental atoms (exp/log/sin at f32 & f64).
 //!

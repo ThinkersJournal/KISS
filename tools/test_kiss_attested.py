@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Genuineness controls for the `attested` ledger category (#505).
 
 The category exists because 20 clauses across seven sub-standards DECLARE THEMSELVES

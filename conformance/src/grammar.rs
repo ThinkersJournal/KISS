@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference encoder/decoder for the KISS-Grammar **region wire form**
 //! (Grammar §6.8), plus the canonicalization rules of §6.4 it depends on.
 //!

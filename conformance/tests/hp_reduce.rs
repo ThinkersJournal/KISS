@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T4 — `hp::reduction` argument-reduction vectors.
 //!
 //! Payne–Hanek trig reduction + Cody–Waite exp reduction + log octave reduction.

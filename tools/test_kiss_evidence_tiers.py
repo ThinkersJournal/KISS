@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the evidence-strength tiers (#278): NAMED / CITED / PROVEN.
 
 The single `backed` count spans three strengths of evidence (convention 15): a name

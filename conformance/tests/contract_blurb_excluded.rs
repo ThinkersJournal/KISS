@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.13-0020 — the free-text blurb is OUTSIDE the exact-byte scope.
 //!
 //! The clause is a **prohibition**: KISS-Conform MUST NOT byte-compare the optional

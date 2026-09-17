@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Byte-level field-schema tests for the Interface (§6.5-0001), Capabilities (§6.7-0001) and
 //! Provenance (§6.9-0001) sections — the three whose field-line schema was verified only as PROSE.
 //!

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! **KISS-EMIT-6.4-0006 — spellable is not computable.**
 //!
 //! # Why this is a document lint rather than an emitter-behaviour test

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // KISS-Conform §6.6 — ON-DEVICE real-kernel differential slice.
 //
 // Non-normative. This is a Conform §6.5 differential oracle carried onto real

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform tests for the first SYNTH slice: the provision request (§6.1) and
 //! the provision decline framing (§6.6), restarting the #91 SYNTH coverage
 //! burndown (SYNTH was 0/130 backed).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The `audited_status` DERIVATION — four clauses, four tests, four proofs.
 //!
 //! `audited_status` is a **derived** trust field: it says whether a kernel's

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 import json, subprocess, sys, pathlib, unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

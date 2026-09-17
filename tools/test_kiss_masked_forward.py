@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the MASKED FORWARD NAME detector and the DECLARED_SHARES allow-list (#286).
 
 A clause's §9 `*Test:*` names its forward test. The `no such test` report catches a

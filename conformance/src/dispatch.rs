@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.6 Dispatch — the geometry-agnostic (optional-Dispatch) model and the thread-index-free
 //! structural declaration of `thread_mapping`/`addressing_rule` (D3 / #43).
 //!

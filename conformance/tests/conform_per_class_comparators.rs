@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.13-0005 — the three §6.8 comparators are the selection targets
 //! of the canonical enum **imported from KISS-Ops**, and each class routes to the
 //! comparator its own KISS-Ops member clause names.
