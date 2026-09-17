@@ -31,7 +31,6 @@ import fnmatch
 import io
 import os
 import subprocess
-import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
