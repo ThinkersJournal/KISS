@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# KISS licensing, machine-readable (REUSE spec 3.x). See the LICENSING section of README.md.
+# KISS licensing by path, in the REUSE.toml ANNOTATION FORMAT. See the License section of README.md.
+#
+# ⚠️ THIS REPOSITORY DOES NOT CLAIM REUSE COMPLIANCE. REUSE 3.3 also requires a LICENSES/ directory
+# and a copyright notice in every code header, and nothing here runs `reuse lint`. This file only
+# uses the annotation format to declare which licence applies to which paths.
 #
 # CODE (.rs .c .cu .py .sh .bat .toml .yml) carries an in-file SPDX header — MIT OR Apache-2.0 —
 # enforced by `tools/kiss_spdx.py --check` in CI. TEXT and DATA are annotated here BY PATH, so no

@@ -17,10 +17,17 @@ the files it covers.
 lanes' worktrees, and a WRITER that walks the disk edits them (portfolio CLAUDE.md §5b). The index
 cannot see another worktree by construction — a property, not an exclusion list.
 
-⚠️ A FILE COVERED BY A `REUSE.toml` ANNOTATION IS NOT STAMPED. That is how a verbatim third-party
-file keeps its origin's terms without being edited: `conformance/cuda/generated/` is Baracuda's
-generator output, committed verbatim and marked "do not edit", and stamping it would falsify its
-PROVENANCE.md ("remains the generator's verbatim output").
+⚠️ ONLY A `precedence = "override"` ANNOTATION EXEMPTS A CODE FILE. That is how a verbatim
+third-party file keeps its origin's terms without being edited: `conformance/cuda/generated/` is
+Baracuda's generator output, marked "do not edit", and stamping it would falsify its PROVENANCE.md.
+An `aggregate` annotation does NOT exempt: it is the normal way to add copyright text over a glob such
+as `**/*.rs`, and if it exempted, one such entry would silently switch the in-file rule off for every
+Rust file.
+
+⚠️ ANY `SPDX-License-Identifier` COUNTS AS PRESENT. EXPECTATIONS §6.4a requires a vendored file to
+carry its ORIGIN's identifier, "never the project's default". Such a file is reported as FOREIGN
+(printed, not failed), and `--stamp` never touches a file that already has an identifier. Otherwise
+the gate would report it missing and the stamper would add a second, conflicting licence.
 
 Run:
     python tools/kiss_spdx.py --check     # CI gate: exit 1 if any code file lacks its header
@@ -54,29 +61,33 @@ def git_ls_files(root):
     return [p for p in out.stdout.decode("utf-8").split("\0") if p]
 
 
-def reuse_code_paths(root):
-    """Path globs that REUSE.toml annotates as CODE — those files are exempt from stamping.
+def reuse_override_paths(root):
+    """Path globs from REUSE.toml annotations with `precedence = "override"` — the only exempt ones.
 
-    Only annotations whose licence is NOT CC0 count: the CC0 annotations cover text, and a glob
-    like `**` there must not silently exempt every code file from the in-file rule.
+    ⚠️ NOT "any non-CC0 annotation". An `aggregate` annotation over `**/*.rs` is the normal way to add
+    copyright text, and treating it as an exemption would switch the in-file rule off for every
+    Rust file while the gate stayed green.
     """
     p = os.path.join(root, "REUSE.toml")
     if not os.path.exists(p):
         return []
-    globs, cur_paths, cur_lic = [], [], None
+    globs, cur_paths, cur_prec = [], [], None
+
+    def flush():
+        if cur_paths and cur_prec == "override":
+            globs.extend(cur_paths)
+
     for line in io.open(p, encoding="utf-8"):
-        s = line.strip()
-        if s == "[[annotations]]":
-            if cur_paths and cur_lic and "CC0" not in cur_lic:
-                globs.extend(cur_paths)
-            cur_paths, cur_lic = [], None
-        elif s.startswith("path"):
-            val = s.split("=", 1)[1].strip()
+        t = line.strip()
+        if t == "[[annotations]]":
+            flush()
+            cur_paths, cur_prec = [], None
+        elif t.startswith("path"):
+            val = t.split("=", 1)[1].strip()
             cur_paths = [x.strip().strip('"') for x in val.strip("[]").split(",") if x.strip()]
-        elif s.startswith("SPDX-License-Identifier"):
-            cur_lic = s.split("=", 1)[1].strip().strip('"')
-    if cur_paths and cur_lic and "CC0" not in cur_lic:
-        globs.extend(cur_paths)
+        elif t.startswith("precedence"):
+            cur_prec = t.split("=", 1)[1].strip().strip('"')
+    flush()
     return globs
 
 
@@ -84,9 +95,17 @@ def exempt(path, globs):
     return any(fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.replace("**/", "")) for g in globs)
 
 
-def has_header(text):
-    # the header must be in the first three lines: after a shebang, an encoding line, or @echo off
-    return any(SPDX in l for l in text.splitlines()[:3])
+def header_id(text):
+    """The SPDX identifier in the first three lines, or None.
+
+    ANY identifier counts: a vendored file carries its origin's (§6.4a), and treating that as
+    missing would make the stamper add a second, conflicting licence.
+    """
+    for line in text.splitlines()[:3]:
+        k = line.find("SPDX-License-Identifier:")
+        if k >= 0:
+            return line[k + len("SPDX-License-Identifier:"):].strip()
+    return None
 
 
 def stamp_text(text, prefix):
@@ -106,9 +125,9 @@ def stamp_text(text, prefix):
 
 def run(root, stamp):
     files = git_ls_files(root)
-    globs = reuse_code_paths(root)
+    globs = reuse_override_paths(root)
     code = [f for f in files if code_class(f)]
-    missing, exempted, stamped = [], [], []
+    missing, exempted, stamped, foreign = [], [], [], []
     for f in code:
         if exempt(f, globs):
             exempted.append(f)
@@ -117,7 +136,10 @@ def run(root, stamp):
         with open(full, "rb") as fh:
             raw = fh.read()
         text = raw.decode("utf-8")
-        if has_header(text):
+        ident = header_id(text)
+        if ident is not None:
+            if ident != SPDX.split(":", 1)[1].strip():
+                foreign.append((f, ident))   # reported, never failed, never stamped over
             continue
         if stamp:
             with open(full, "wb") as fh:
@@ -133,7 +155,8 @@ def run(root, stamp):
     print(f"  enumeration          git ls-files ({len(files)} tracked)")
     print(f"  code files           {len(code)}   by class: " + ", ".join(
         f"{e}={sum(1 for x in code if x.lower().endswith(e))}" for e in sorted(CODE)))
-    print(f"  exempt (REUSE.toml)  {len(exempted)}   {exempted if exempted else ''}")
+    print(f"  exempt (override)    {len(exempted)}   {exempted if exempted else ''}")
+    print(f"  foreign identifier   {len(foreign)}   {foreign if foreign else ''}")
     if stamp:
         print(f"  stamped now          {len(stamped)}")
     else:

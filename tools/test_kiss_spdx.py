@@ -76,7 +76,7 @@ class Gate(unittest.TestCase):
     # ---- the REUSE exemption must be exactly as wide as intended ---------------------------
 
     def test_a_reuse_annotated_code_file_is_exempt(self):
-        reuse = ('# SPDX-License-Identifier: MIT OR Apache-2.0\nversion = 1\n[[annotations]]\npath = ["vendor/gen.cu"]\n'
+        reuse = ('# SPDX-License-Identifier: MIT OR Apache-2.0\nversion = 1\n[[annotations]]\npath = ["vendor/gen.cu"]\nprecedence = "override"\n'
                  'SPDX-FileCopyrightText = "x"\nSPDX-License-Identifier = "MIT OR Apache-2.0"\n')
         r = self.mk({"vendor/gen.cu": "// verbatim, do not edit\n", "src/a.rs": HDR + "\n"}, reuse)
         self.assertEqual(self.check(r), 0, "a verbatim third-party file must not be forced to change")
@@ -88,6 +88,30 @@ class Gate(unittest.TestCase):
                  'SPDX-FileCopyrightText = "x"\nSPDX-License-Identifier = "CC0-1.0"\n')
         r = self.mk({"src/a.rs": "fn main() {}\n"}, reuse)
         self.assertEqual(self.check(r), 1, "a CC0 glob must never exempt a code file")
+
+    def test_an_aggregate_code_annotation_does_NOT_exempt(self):
+        """An `aggregate` annotation over `**/*.rs` is the normal way to add copyright text.
+        If it exempted, one entry would switch the in-file rule off for all Rust (architect, #513)."""
+        reuse = ('# SPDX-License-Identifier: MIT OR Apache-2.0\nversion = 1\n[[annotations]]\n'
+                 'path = ["**/*.rs"]\nprecedence = "aggregate"\n'
+                 'SPDX-FileCopyrightText = "x"\nSPDX-License-Identifier = "MIT OR Apache-2.0"\n')
+        r = self.mk({"src/a.rs": "fn main() {}\n"}, reuse)
+        self.assertEqual(self.check(r), 1, "an aggregate annotation must not exempt a code file")
+
+    # ---- a foreign identifier is PRESENT, never overwritten (EXPECTATIONS 6.4a) ----------
+
+    def test_a_foreign_spdx_identifier_counts_as_present(self):
+        r = self.mk({"vendor/x.rs": "// SPDX-License-Identifier: Apache-2.0\nfn f() {}\n"})
+        self.assertEqual(self.check(r), 0, "a vendored file's own identifier must not read as missing")
+
+    def test_stamp_never_adds_a_second_identifier(self):
+        body = "// SPDX-License-Identifier: BSD-3-Clause\nfn f() {}\n"
+        r = self.mk({"vendor/x.rs": body})
+        ks.run(r, stamp=True)
+        with open(os.path.join(r, "vendor", "x.rs"), encoding="utf-8", newline="") as fh:
+            after = fh.read()
+        self.assertEqual(after, body, "--stamp must leave a file with any identifier untouched")
+        self.assertEqual(after.count("SPDX-License-Identifier"), 1)
 
     # ---- placement -------------------------------------------------------------------------
 
