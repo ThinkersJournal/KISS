@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Determinism/fidelity class of the KISS-Ops **scalar atoms** (KISS-Ops §6.0).
 //!
 //! §6.0-0001 pins the canonical enum `{exact-byte, ULP/tolerance,

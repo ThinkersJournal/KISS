@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden + decline vectors for the KISS-Contract structured/text
 //! **document** framing (Contract §6.11) and its transport hard-reject reader
 //! (§6.1). The golden document bytes are transcribed verbatim from Contract

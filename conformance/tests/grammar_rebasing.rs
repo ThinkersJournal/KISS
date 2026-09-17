@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform vocabulary-rebasing & upstream-binding vectors for the
 //! KISS-Grammar region codec (Grammar §6.6 token spelling, §6.1 tag identity,
 //! §6.2 Ops-owned OOB set), plus the two cross-cutting invariants they rest on:

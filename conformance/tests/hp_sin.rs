@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T6 — `sin` atom vectors, correctly-rounded f64/f32.
 //!
 //! The `Sin` atom composes `reduce_trig` (T4: Payne–Hanek, octant = round(|x|·2/π)

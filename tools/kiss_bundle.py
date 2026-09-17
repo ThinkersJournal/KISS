@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """
 kiss_bundle.py — assemble the KISS spec suite into paste-into-an-LLM audit bundles.
 

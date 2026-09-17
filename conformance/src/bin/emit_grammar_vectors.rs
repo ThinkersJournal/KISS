@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Regenerate `conformance/corpus/grammar_vectors.json` from the reference region codec.
 //! Prints the artifact to stdout; the committed file is exactly this output:
 //!

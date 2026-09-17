@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Shared integration-test helper: compile a C fixture to a DLL and resolve its
 //! `kiss_add` entry as a `BinaryKernel`. (Rust integration-test files are
 //! separate crates; `tests/common/mod.rs` is the idiomatic single home.)

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the NAMED-tier aboutness signal (#246).
 
 `kiss_trace` binds a clause to a test BY NAME in both directions and reads no assertion, so

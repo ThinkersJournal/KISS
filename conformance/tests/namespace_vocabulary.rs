@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform tests for the namespace capability-vocabulary manifest ENVELOPE
 //! (KISS-CLASSIFY §6.8-0008 … -0013, RFC #171).
 //!

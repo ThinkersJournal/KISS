@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T1 — `hp-core`: a dependency-free, from-scratch,
 //! spec-pinned binary big-float `BigFloat<N>` (N in {4,8,16} => 256/512/1024
 //! bit working precision P = 64*N). This is the numeric substrate every later

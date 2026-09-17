@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 r"""Is every citation keyword written in its CANONICAL form? (#488)
 
 ⚠️ THE CONVENTION HAD NO READER, WHICH IS WHY THIS EXISTS. `kiss_trace` recognises citations with

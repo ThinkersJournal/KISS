@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the 16(e) bare-cite detector.
 
 Every case must FAIL on the defect and PASS without it. The controls that matter most here

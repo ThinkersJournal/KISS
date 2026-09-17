@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference encoder for the KISS-Conform **Appendix-F expressible-signature-set**
 //! byte format. Backs **KISS-CONFORM-6.10-0006**
 //! (`test_conform_expressible_signature_set_schema`,

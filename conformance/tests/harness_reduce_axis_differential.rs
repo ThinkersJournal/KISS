@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 #![cfg(windows)]
 //! KISS-OPS-6.11-0002 (axis reduction) + KISS-CONFORM-6.13-0006b (Contract-sourced
 //! comparator selection) via the differential harness: two dissimilar C

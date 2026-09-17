@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! A deterministic, provenance-tagged corpus of `add` invocations. Each vector
 //! carries a tag naming the source of its expected value (KISS-CONFORM-6.5-0003)
 //! — here, the from-scratch oracle. Reuses the `differential` edge set + PRNG.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the RFC clause-id allocation gate (#342).
 
 `dup_scan` catches an id defined twice in one document. Ids are ALSO allocated in `rfcs/`,

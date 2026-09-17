@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Gates for the uncited-test sweep's DECLARATION SCOPE.
 
 The sweep decides which uncited tests are citation CANDIDATES. Its scope rule is

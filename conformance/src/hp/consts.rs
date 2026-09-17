@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T3 — `hp::consts`: the wide, hard-coded mathematical
 //! constant tables consumed by the argument-reduction kernel (T4) and the
 //! transcendental atoms (T5/T6).

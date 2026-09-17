@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Extract a workflow step's `run:` block so it can be EXECUTED, not read (#338, #369).
 
 Shell inside YAML is the least-tested code in this repository: nothing imports it, no linter

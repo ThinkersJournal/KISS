@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Contract golden vector artifact (`conformance/corpus/contract_vectors.json`) — the
 //! machine-readable golden document + decline set that now EXISTS in the corpus, fulfilling the
 //! reference Appendix C makes to it ("the complete document … is carried in the machine-readable

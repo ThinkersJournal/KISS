@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Behavioural controls for the MSRV leg (#369).
 
 `rust-version = "1.77"` was DECLARED and never MEASURED. Nothing had ever built at it, so

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference witness for the KISS-Contract provider-bundle **envelope** and its
 //! shared provenance vocabulary (Contract §6.9-0009).
 //!

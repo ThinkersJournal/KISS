@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform §6.5-0001 differential: run an implementation-under-test against
 //! the frozen corpus and compare under each cell's declared class. Proves teeth —
 //! a correct add passes; a normalize-to-+0 add fails the (-0)+(-0) cell.

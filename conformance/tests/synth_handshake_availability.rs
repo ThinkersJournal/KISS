@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform tests for the KISS-Synth level-1/level-2 seam (§6.7 handshake +
 //! availability) plus the request/response "no new shape / opaque / identity-only"
 //! corollaries (§6.1-0002a, §6.2-0002b, §6.2-0003a). Continues the #91 SYNTH

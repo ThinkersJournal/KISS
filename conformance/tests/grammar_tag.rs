@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform batch-3 vectors for the KISS-Grammar advertisable-op **tag**
 //! canonical serialization (Grammar §6.8-0012 / §6.1-0007) — the third distinct
 //! wire artifact after the region wire form (`grammar_golden.rs`) and the canonical

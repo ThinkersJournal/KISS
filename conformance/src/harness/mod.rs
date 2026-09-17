@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! A live differential-conformance harness (KISS-Conform §6.5 / §6.13-0006).
 //!
 //! Differences a foreign C op kernel — invoked through the KISS-Contract §6.5

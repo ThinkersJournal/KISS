@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform differential/semantic vectors for the pinned floating-point
 //! primitives (KISS-Ops §2.3 / §6.15). These are the numeric distinctions the
 //! spec spends prose pinning — now executable: NaN-propagating vs NaN-suppressing

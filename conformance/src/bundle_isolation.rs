@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.11-0011 — bundle / catalog member isolation (#29 item 2).
 //!
 //! A provider **catalog** is a bundle of multiple contract documents carried together on the

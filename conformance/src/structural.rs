@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch CPU oracles for the **structural (multi-element) access atoms**
 //! (KISS-Ops §6.11) and their determinism-class-aware comparators (KISS-Conform
 //! §6.8).

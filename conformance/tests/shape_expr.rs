@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform suite for the KISS-Ops **shape-expression vocabulary** and the
 //! shape-side oracle (Ops §6.20), plus the KISS-Contract shape-consistency tie
 //! (Contract §6.4-0011). Exercises three KISS-Conform modalities over the

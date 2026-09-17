@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform teeth for the §6.1 traceability matrix and the §6.2 build-fail
 //! gate — the clauses describing the suite's OWN build gate.
 //!

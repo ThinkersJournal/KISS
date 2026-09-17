@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform behavioral vectors for the "rest of the KISS-Announce codec"
 //! beyond the transcribed golden in `announce_golden.rs`: producer MBZ/size
 //! layout discipline (§6.1), the reader hard-reject / never-repair discipline

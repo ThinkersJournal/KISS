@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Convention 16(e) — a bare `§N.M` cite is ambiguous outside the document defining it.
 
 16(e) says this is the one convention that is MECHANICALLY CHECKABLE and can have a

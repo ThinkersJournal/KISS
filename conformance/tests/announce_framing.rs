@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Announce golden vector artifact (`conformance/corpus/announce_vectors.json`) — the
 //! machine-readable golden handshake frames a foreign (non-Rust) reader byte-diffs to check
 //! endianness, field width and structure padding (umbrella §5.3 condition 2, which a Markdown

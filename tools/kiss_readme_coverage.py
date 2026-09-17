@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """The conformance README's coverage figures are BOUND to the artifacts that maintain them.
 
 `conformance/README.md` carried three claims that had aged apart from the tree in the same

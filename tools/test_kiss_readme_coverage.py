@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the README coverage binding (#266).
 
 The README's figures had aged apart from the tree in the same directory — `31 of 855`

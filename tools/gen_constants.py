@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Dev-time generator for the Plan B Slice-0 `hp::consts` wide constant tables.
 
 NOT SHIPPED with the crate (the conformance crate is stdlib-only). It mints the

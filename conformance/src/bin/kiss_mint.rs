@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! kiss_mint — mints the frozen oracle-vector corpus from the reference oracle. Three bundles:
 //!   corpus/ops-arith.json              — Plan A slice: exact-byte `add` cells (incl. the
 //!                                        signed-zero distinctions), provenance `oracle`.

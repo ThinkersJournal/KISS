@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform §6.5 randomized differential loop.
 //!
 //! The value of a differential harness is that it *catches* a wrong

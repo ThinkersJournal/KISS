@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Negative controls for the does-anything-run-it gate (`kiss_runlist.py`).
 
 The gate's claim is that a clause backed by code no CI leg compiles is a FAILURE.

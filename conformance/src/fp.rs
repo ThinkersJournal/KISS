@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch f32 <-> reduced-float converters for the three non-IEEE storage
 //! dtypes KISS-Ops pins directly in §6.16: `bf16` (§6.16-0003), `e4m3`
 //! (§6.16-0004, OCP OFP8), and `e5m2` (§6.16-0005, OCP OFP8).

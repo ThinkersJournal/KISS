@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden-vector suite for the KISS-Ops OpAttrs encoding (Ops §6.19).
 //!
 //! Every expected hex string is transcribed verbatim from Ops Appendix E ("bytes

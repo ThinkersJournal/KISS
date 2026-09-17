@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """The floor's DIMENSION SET is itself checked (#271).
 
 The ratchet validated its NUMBERS and had no check over its own dimension set. A wrong

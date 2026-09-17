@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the `// Proven:` marker parser and collector (#278, step 2).
 
 A `// Proven:` marker is TESTIMONY that a seeded mutation of a clause's obligation was

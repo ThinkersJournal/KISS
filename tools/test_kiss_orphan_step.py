@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Behavioural controls for the orphaned-citation CI STEP (#407).
 
 Shell inside YAML is the least-tested code in this repository: nothing imports it, no

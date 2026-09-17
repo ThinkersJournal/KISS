@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Per-row NaN-output provenance comparison (Conform §6.8-0010 Layer-2 + §6.16-0010).
 //!
 //! A NaN *output* is compared by HOW it arose, per row, not by the op class:

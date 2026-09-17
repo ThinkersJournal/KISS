@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Find prose citations ORPHANED by a diff that removed the wording they quote (#407).
 
 This repo's discipline is citation — `Backs:`, `*Test:*`, clause ids, `Enforces` — and all

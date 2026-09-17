@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T5 — `log` (natural log) atom vectors, correctly-rounded.
 //!
 //! The `Log` atom composes `reduce_log` (T4: x = 2^e·m, m ∈ [√2/2, √2), m EXACT)

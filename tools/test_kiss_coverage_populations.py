@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the TWO coverage populations `kiss_trace` publishes (#392 review).
 
 `--report`'s per-sub table counts HARNESS-BACKED clauses. The FREEZE READINESS block

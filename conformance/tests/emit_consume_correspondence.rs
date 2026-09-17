@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Cross-standard document lint for the emit↔consume two-tier round-trip
 //! correspondence, continuing the #91 burndown. This one Conform-owned test
 //! DOUBLE-BACKS two clauses of different sub-standards:

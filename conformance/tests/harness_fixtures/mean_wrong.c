@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* WRONG on purpose: divides by (n-1). The harness must CATCH this. */
 __declspec(dllexport) void kiss_reduce_mean(const float* in, float* out, long long n) {
     float s = 0.0f;

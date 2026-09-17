@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T2 — `round-ziv` kernel vectors.
 //!
 //! These exercise the rounding/decidability core added to `hp.rs`: the

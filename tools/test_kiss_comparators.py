@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Discrimination controls for the comparator-blindness lint (§6.8-0012).
 
 Every case must FAIL on the defect and PASS without it. A control that passes in

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.8 accuracy-tier tests (D2 / #39): the declared tier is the sole gate, the ceiling is
 //! retired to an *informative advisory floor*, and the v1 tier is flat with the
 //! argument-dependent form reserved (§6.8-0006).

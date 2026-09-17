@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.5-0017 — the oracle-vector envelope. Required fields, a typed decline on an
 //! unrecognized `schema`/`schema_version` (the reader gap: before this clause `schema` was read and
 //! never validated and `schema_version` was never read), and comparator selection under §6.8-0008's

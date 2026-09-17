@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch CPU oracle for the pinned floating-point primitive semantics
 //! (KISS-Ops §2.3 and the §6.15 reference decompositions).
 //!

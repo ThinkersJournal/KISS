@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.13-0023 — malformed contracts fail LOUDLY, as a typed decline
 //! over the §6.1 hard-reject transport: never a panic, never a silent empty.
 //!

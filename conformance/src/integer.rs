@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch CPU oracle for the pinned **integer** primitive semantics
 //! (KISS-Ops §6.4 arithmetic atoms on the integer path, and §6.10 bitwise atoms).
 //!

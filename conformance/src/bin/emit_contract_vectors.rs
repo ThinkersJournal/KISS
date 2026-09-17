@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Regenerate `conformance/corpus/contract_vectors.json` from the reference codec.
 //! Prints the artifact to stdout; the committed file is exactly this output:
 //!

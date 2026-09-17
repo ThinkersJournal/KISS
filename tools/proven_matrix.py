@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """#278 -- the generic re-runnable isolation-matrix driver CORE (proven_matrix.py).
 
 The batch wrappers (proven_batch1_matrix.py, proven_batch2_matrix.py) supply (BATCH, MUT); this core

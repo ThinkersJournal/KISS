@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! A minimal, dependency-free JSON reader — enough to load the oracle-vector
 //! corpus (KISS-Conform §6.3-0003) without pulling serde into a stdlib-only
 //! crate. Parse-only; the corpus is authored/minted, never serialized here.

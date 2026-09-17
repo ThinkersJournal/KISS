@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 T5/T6 — transcendental ATOMS (exp/log/sin) over the wide
 //! `BigFloat` core.
 //!

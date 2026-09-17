@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The §6.19.3 OpAttrs schema, PARSED FROM `spec/ops.md` — the first non-relative oracle for
 //! the OpAttrs wire channel (#504).
 //!

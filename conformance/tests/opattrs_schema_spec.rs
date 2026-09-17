@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The §6.19.3 schema, read from `spec/ops.md` by two independent paths (#504).
 //!
 //! ⚠️ PRE-REGISTERED COUNTS. Every population below was written down BEFORE the first run, from

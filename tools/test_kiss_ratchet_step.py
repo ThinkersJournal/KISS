@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Behavioural controls for the ratchet's CI step (#338).
 
 The step is SHELL INSIDE YAML, which is the least-tested code in the repository: nothing

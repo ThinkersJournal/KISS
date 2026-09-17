@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 #![cfg(windows)]
 //! Each C fixture compiles, loads, and computes on a trivial input.
 

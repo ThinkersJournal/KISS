@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Gate for the generated reference-vectors artifact
 //! (`conformance/corpus/structure_key_vectors.json`, Classify §6.7, sk4).
 //!

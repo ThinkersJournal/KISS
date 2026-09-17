@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """KISS-Conform uncited-test sweep — what is the harness already proving?
 
 `kiss_trace.py` reports N executable tests that cite no clause: "real work the

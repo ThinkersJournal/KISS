@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference recursive-descent evaluator for the KISS-Contract §6.6-0006 Dispatch
 //! **expression grammar**: arithmetic over launch-scalar symbols, `ceil_div`, and
 //! the element-subscript operator `sym[k]` (the R1.1 grammar fix, issue #43).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 name: traceability
 
 # KISS-Conform §6.1/§6.2 as a CI gate. Two independent checks, both blocking:
@@ -180,6 +181,13 @@ jobs:
       # a convention whose only reader is one nobody reads.
       - name: Citation keyword form is canonical (blocking, #488)
         run: python tools/kiss_cite_form.py --strict
+      - name: Licence-split gate controls (#508)
+        run: python tools/test_kiss_spdx.py
+      # BLOCKING. CireSnave: CC0 for the standard's TEXT, MIT OR Apache-2.0 for the CODE.
+      # Every git-tracked code file must carry its SPDX header, so the property cannot regrow
+      # after the #508 sweep; text is covered by REUSE.toml and is never stamped in-file.
+      - name: Every code file carries its SPDX header (blocking, #508)
+        run: python tools/kiss_spdx.py --check
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       # A metadata block wedged inside a requirement is not a style defect: a phrase

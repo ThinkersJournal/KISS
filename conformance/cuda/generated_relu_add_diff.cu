@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // KISS-Conform §6.5/§6.6 — ON-DEVICE differential of a GENERATED kernel.
 //
 // This closes the loop from "the spec is testable" to "the reference generator is

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* Correct axis-1 (per-row) max reduction, FORWARD scan. Max is exact-byte for
    any fold order (the only admitted reordering is the sign of a zero, canonicalized
    away by the comparator). §6.5 ABI: (in, out, ein, eout, n). */

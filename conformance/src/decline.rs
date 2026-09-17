@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.4-0009/-0010 — the typed-decline taxonomy (#17).
 //!
 //! Two additive fields on a decline / `lift_residue` frame, orthogonal to the four-category

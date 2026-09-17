@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform canonicalization / wire-embedding vectors for the KISS-Grammar
 //! region codec (Grammar §6.4, §6.6, §6.8), exercising the existing reference
 //! codec in `kiss_conformance::grammar` (encode/decode round-trip, commutative

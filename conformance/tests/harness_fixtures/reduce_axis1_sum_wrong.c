@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* WRONG — reduces axis 0 (per column) instead of axis 1 (per row). Writes `cols`
    output cells. The harness catches this either by output-length mismatch
    (non-square shapes) or by value divergence (the asymmetric square). This is the

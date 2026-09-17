@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* Correct axis-1 (per-row) sum reduction, PAIRWISE fold — a DIFFERENT (equally
    valid) reassociation than sum_a's sequential order. On the large-magnitude
    corpus row it lands a nonzero rounding distance from the sequential oracle,

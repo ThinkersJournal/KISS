@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! MSVC toolchain discovery + C→DLL compilation, mirroring the `cuda`/`nvcc`
 //! runtime-shell-out pattern. Dependency-free: globs the install dirs and calls
 //! `cl.exe` directly with explicit INCLUDE/LIB (no `vcvars`, which is slow/blocking).

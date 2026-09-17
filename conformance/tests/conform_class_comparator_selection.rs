@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONFORM-6.13-0006b: the comparator is selected from the op's ADVERTISED
 //! determinism class, never hardcoded. The crux: the SAME op and monoid, advertised
 //! two different ways, yield OPPOSITE verdicts on the same result — proving selection

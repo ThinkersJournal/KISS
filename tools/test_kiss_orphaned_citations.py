@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for the orphaned-citation scanner (#407).
 
 Every positive assertion is paired with the defect it must reject, because a scanner that

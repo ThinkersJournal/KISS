@@ -1,4 +1,5 @@
 @echo off
+REM SPDX-License-Identifier: MIT OR Apache-2.0
 REM KISS-Conform 6.6 on-device slice -- Windows build+run driver.
 REM (ASCII only: cmd mis-parses non-ASCII bytes in REM lines under the OEM codepage.)
 REM

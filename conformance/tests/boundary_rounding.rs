@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform §6.5-0006 / §6.5-0007 — two oracle-hygiene disciplines a
 //! differential oracle must hold, surfaced by a Baracuda↔KISS alignment review
 //! (the reference oracle's `round_to_compute`, oracle.rs:507, and its

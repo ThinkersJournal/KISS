@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 r"""Controls for the citation-form lint (#488).
 
 ⚠️ BORN-RED IS THE POINT OF THIS FILE. After the normalization pass the tree is CLEAN, so without

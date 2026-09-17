@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.11-0011 bundle / catalog member isolation (#29 item 2): a malformed member in a bundle
 //! of contract documents is typed-declined in isolation; its well-formed siblings still parse,
 //! and reading never panics (§6.1-0004). Isolation rides the §6.11-0003 self-delimiting frame.

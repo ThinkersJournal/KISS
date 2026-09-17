@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform golden + decline vectors for the KISS-Classify `structure_key`
 //! token codec (Classify §6.7). The golden tokens are transcribed verbatim from
 //! Classify Appendix A.1; each is checked in both directions: `to_token` on a

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Envelope reader for the machine-readable namespace capability-vocabulary manifest
 //! (KISS-CLASSIFY §6.8-0008 … -0013, RFC #171).
 //!

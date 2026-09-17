@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Plan B Slice-0 Task T5 — `exp` atom vectors (f64 & f32 correctly-rounded).
 //!
 //! The `Exp` atom composes `reduce_exp` (T4: x = k·ln2 + r, |r| ≤ ln2/2) with a

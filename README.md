@@ -88,7 +88,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/consume.md`](spec/consume.md) | **KISS-Consume** *(Recognition / Lift)*, the recognition direction — **not the consumer's sub-standard; the role is orthogonal to provider/consumer**: structure-based lifting into the KISS-Ops op DAG, the MECE refusal taxonomy, and the residue / lift-fraction. |
 | [`spec/emit.md`](spec/emit.md) | **KISS-Emit**, the generation direction: the complete driver-may-spell vs emitter-must-supply lowering partition, and the two-tier emit/consume round-trip. |
 | [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix (the build fails on any untested MUST), the four test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. |
-| `LICENSE` | CC0 1.0 Universal (see [License](#license)). |
+| `LICENSE`, `LICENSE-MIT`, `LICENSE-APACHE`, `REUSE.toml` | The licence texts and the machine-readable map of which applies where (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 | [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
 | [`PRIOR-ART.md`](PRIOR-ART.md) | Prior art (informative): KISS measured against StableHLO/PJRT, ONNX, Triton/MLIR, PyTorch, DLPack, SPIR-V/IREE, the vendor kernel libraries, and the Khronos ULP/CTS precedent — what they already solve, what they do not, and the one claim that survives. **Read this before implementing.** |
@@ -146,13 +146,30 @@ to a pull request.
 
 ## License
 
-- **Specification text** (this repository) — dedicated to the public domain under
-  **[CC0 1.0 Universal](LICENSE)**. Anyone may copy, modify, distribute, re-host, and
-  implement it, for any purpose, without permission or attribution. CC0 waives copyright
-  and related rights only; patent rights are addressed separately (umbrella §9.4).
-- **Reference implementation crates** (separate repositories) — MIT OR Apache-2.0.
-- **KISS-Conform suite** — permissive to run; a conformance claim is backed only by
-  results from the unmodified suite.
+KISS is split **by file kind**, because a standard and the code that tests it want different terms.
+
+| What | Licence | Where it is recorded |
+|---|---|---|
+| **Specification text and data** — every `.md`, `.json`, `.tsv` and other non-code file, including `spec/`, `docs/`, `rfcs/` and the conformance corpus | **[CC0 1.0 Universal](LICENSE)** | [`REUSE.toml`](REUSE.toml), by path |
+| **Code** — `.rs` `.c` `.cu` `.py` `.sh` `.bat` `.toml` `.yml`, in `conformance/`, `tools/` and `.github/` | **MIT OR Apache-2.0** ([`LICENSE-MIT`](LICENSE-MIT), [`LICENSE-APACHE`](LICENSE-APACHE)) | an `SPDX-License-Identifier` header in each file |
+
+- **The text is public domain.** Anyone may copy, modify, distribute, re-host and implement the
+  standard, for any purpose, without permission or attribution — which is how a standard gets
+  adopted. CC0 waives copyright and related rights only; patent rights are addressed separately
+  (umbrella §9.4).
+- **The code is dual-licensed** under the usual Rust terms, at your option.
+- **Text is not stamped in-file.** An added first line would shift every specification line number,
+  and those numbers are cited in issues and in other repositories; the corpus JSON is also
+  sha256-pinned. `REUSE.toml` records the licence by path instead, touching no byte of those files.
+- **Third-party files keep their origin's terms.** `conformance/cuda/generated/` holds a kernel
+  emitted verbatim by Baracuda's generator; it is annotated in `REUSE.toml` with its origin's
+  licence and holder and is not edited.
+- **The copyright holder is Thinker's Journal.**
+- `tools/kiss_spdx.py --check` runs in CI and fails if any tracked code file lacks its header.
+- `conformance/Cargo.toml` has `publish = false`, so no crate is published from this repository and
+  there is no crates.io licence field to keep in step.
+- **KISS-Conform suite** — permissive to run; a conformance claim is backed only by results from the
+  unmodified suite.
 
 ---
 

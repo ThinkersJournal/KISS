@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CONSUME structural / document-consistency conformance module, continuing the
 //! #91 coverage burndown. KISS-Consume is the recognition (lift) DISCIPLINE: it ships
 //! **no** reference lifter and **no** input-structure-graph codec in this crate — its

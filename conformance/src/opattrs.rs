@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference encoder for the KISS-Ops OpAttrs canonical wire encoding (Ops §6.19).
 //!
 //! Design rules, verbatim from §6.19 (each field of every per-op schema is

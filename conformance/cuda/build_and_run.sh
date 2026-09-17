@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT OR Apache-2.0
 # KISS-Conform §6.6 on-device slice — POSIX build+run driver (Linux/WSL).
 #
 # Compiles fmax_ieee.cu with nvcc (host compiler = gcc/clang, no vcvars dance)

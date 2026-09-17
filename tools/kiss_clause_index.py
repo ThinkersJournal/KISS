@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Emit KISS's clause set as a machine-readable index, for downstream projects to vendor.
 
 WHY THIS EXISTS

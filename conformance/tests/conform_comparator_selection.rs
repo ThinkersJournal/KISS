@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-Conform §6.0 / §6.5 / §6.8 — determinism-class comparator **selection**.
 //!
 //! A sibling of `conform_comparators.rs` (which backs §6.8-0010, the computed-NaN

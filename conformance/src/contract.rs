@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Reference codec for the KISS-Contract structured/text **document** framing
 //! (Contract §6.11) and the transport hard-reject reader discipline (Contract
 //! §6.1). A contract is a UTF-8 text document — a pinned header line followed by

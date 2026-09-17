@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! §6.4-0009/-0010 typed-decline taxonomy tests (#17): a CLOSED normative `decline_code` the
 //! consumer binds on + an OPEN, seeded, informative `blocker_reason` SET that never gates.
 //!

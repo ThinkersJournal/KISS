@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 /* Correct axis-1 (per-row) max reduction, REVERSE scan — same result as max_a,
    different traversal order (proves the exact-byte comparator accepts a legitimate
    reordering for max). §6.5 ABI: (in, out, ein, eout, n). */

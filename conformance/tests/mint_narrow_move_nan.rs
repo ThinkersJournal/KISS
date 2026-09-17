@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Narrow-float MOVE bit-exactness vectors (§6.16-0009 / KISS-OPS-6.16-0011), increment 1:
 //! the sign-edit ops neg/abs/copysign. A narrow-float sign edit MOVES the operand's bits — a
 //! moved NaN's payload and (post-edit) sign survive EXACTLY. There is NO decline member for this

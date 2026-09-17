@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """
 kiss_clause_position.py — every clause DEFINITION sits under its own section heading.
 

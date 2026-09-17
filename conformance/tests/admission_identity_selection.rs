@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Gates for KISS-CLASSIFY §6.6-0002 and §6.6-0020 — the key names a SHAPE, never a
 //! computation.
 //!
