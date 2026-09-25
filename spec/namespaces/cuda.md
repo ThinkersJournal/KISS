@@ -12,7 +12,7 @@
 > `classify.md`). Where it appears to contradict §6.8-0001 / -0002 / -0005 or the
 > general encoding rules, **the KISS clause wins.**
 
-**Reference implementation:** [`unpopped-vocab`](https://github.com/EvansLaboratories/Unpopped)
+**Reference implementation:** [`baracuda-cuda-vocab`](https://github.com/ciresnave/baracuda)
 — the dependency-free crate that derives the `structure_key` and emits `cuda:`
 tokens through the real codec. Per KISS-CLASSIFY-6.9-0003 it links no backend; the
 CUDA emitter that *consumes* these tokens lives separately (`unpopped-cuda`).
