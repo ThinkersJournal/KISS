@@ -197,15 +197,15 @@ The complete pinned scalar dtype set (normative table in §6.1):
 | `f8e5m2` | float | 8 | FP8 E5M2 (1s+5e+2m, bias 15); max finite ±57344, IEEE-style inf/NaN (sk3 `e5m2`) |
 | `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; reserved (recognized on parse; use typed-declines at this schema version) |
 | `f8e8m0` | float | 8 | MX shared-exponent scale (unsigned; 8 exp, 0 mantissa); OCP Microscaling; a sibling-operand scale type, not an element value dtype (new at sk4) |
-| `f8e6m2` | float | 8 | MX scale (unsigned; 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0`; a scale type, not an element value dtype (new at sk4) |
+| `f8e6m2` | float | 8 | 8-bit MX-family scale spelling; **reserved** (recognized on parse; use typed-declines at this schema version); no encoding is pinned (§6.1-0013) (new at sk4) |
 | `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair storage (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair storage identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit binary-GEMM operand; packed-byte storage (8 bits/byte, LSB = lowest logical index); xor+popcount accumulation, raw `i32` output (reference name `Bin`) |
 | `c64` | complex | 64 | complex: interleaved (re,im) pair of `f32`, 64 bits total (named by total width; sk3 `c32`); complex arithmetic semantics owned by KISS-Ops (Classify pins storage only) |
 | `c128` | complex | 128 | complex: interleaved (re,im) pair of `f64`, 128 bits total (named by total width; sk3 `c64`) |
 
-Twenty-four dtypes, five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
-no "etc.". (sk4: the two 8-bit MX scales `f8e8m0`/`f8e6m2` are additive; the FP8/complex
+Twenty-four recognized dtypes (twenty-one usable, three reserved; §6.1-0001), five numeric kinds (`float`, `int`, `uint`, `bool`, `complex`),
+no "etc.". (sk4: the two 8-bit scale spellings `f8e8m0` (usable) and `f8e6m2` (reserved) are additive; the FP8/complex
 respellings and the `s`→`i` integer renames are covered by umbrella §3.1.)
 
 ### 2.7 Readable catalog — the operand descriptor
@@ -453,7 +453,7 @@ where it fixes storage bytes.
 | `f8e5m2` | float | 8 | FP8 E5M2 IEEE-style (sign 1, exp 5, mantissa 2, bias 15); max finite ±57344; IEEE-style inf/NaN (OCP OFP8, §6.1-0011). sk3 `e5m2` + `f8` prefix; carries no variant suffix (only `fnuz` deviates from IEEE E5M2, umbrella §3.1.5) |
 | `f8e5m2fnuz` | float | 8 | FP8 E5M2 AMD `fnuz` variant (bias 16, no −0, no infinities); byte-incompatible with `f8e5m2`; **reserved** (recognized on parse; use typed-declines at this schema version). sk3 `e5m2fnuz` + `f8` prefix |
 | `f8e8m0` | float | 8 | MX shared-exponent **scale** (unsigned: 0 sign, 8 exp, 0 mantissa); all-exponent, no mantissa; OCP Microscaling (MX), §6.1-0013. A scale type — the per-block shared scale of an MX-encoded operand, carried as a **sibling operand**, not an element value dtype (umbrella §3.2). New at sk4 (additive) |
-| `f8e6m2` | float | 8 | MX **scale** (unsigned: 0 sign, 6 exp, 2 mantissa); finer-granularity sibling of `f8e8m0` (+2 mantissa, −2 exponent, less range); OCP Microscaling (MX), §6.1-0013. A scale type, not an element value dtype (umbrella §3.2). New at sk4 (additive) |
+| `f8e6m2` | float | 8 | 8-bit MX-family scale spelling; **reserved** (recognized on parse; use typed-declines at this schema version); no encoding is pinned and none is defined by the cited OCP-MX source (§6.1-0013). New at sk4 (additive) |
 | `i4` | int | 4 | signed 4-bit `[-8,+7]`; packed-pair byte (low nibble = even index, high nibble = odd index); sign-extended on read (sk3 `s4`) |
 | `u4` | uint | 4 | unsigned 4-bit `[0,15]`; packed-pair byte identical to `i4`; zero-extended on read |
 | `b1` | uint | 1 | 1-bit; packed-byte (8 bits/byte, LSB = lowest logical index) |
@@ -464,17 +464,18 @@ where it fixes storage bytes.
   twenty-four tokens in the table above (`f16`, `bf16`, `f32`, `f64`, `i8`, `i16`, `u8`,
   `u16`, `i32`, `i64`, `u32`, `u64`, `bool`, `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`, `f8e5m2fnuz`,
   `f8e8m0`, `f8e6m2`, `i4`, `u4`, `b1`, `c64`, `c128`); an implementation MUST NOT recognize a
-  twenty-fifth dtype token at this schema version and MUST NOT omit any of the twenty-four. The FP8
+  twenty-fifth dtype token at this schema version and MUST NOT omit any of the twenty-four. Of these twenty-four **recognized** tokens, twenty-one are **usable** and
+  three are **reserved** (`f8e4m3fnuz`, `f8e5m2fnuz`, `f8e6m2`; see below). The FP8
   spellings are **width-prefixed and variant-explicit** (sk4): the `f8` width prefix (umbrella §3.1.2) plus,
   where a layout admits multiple variants, a mandatory variant suffix (umbrella §3.1.5) — `f8e4m3fn` (OCP)
   with `f8e4m3fnuz` reserved, and `f8e5m2` (IEEE, no suffix) with `f8e5m2fnuz` reserved
-  — byte-incompatible hardware variants MUST NOT share a token. The `f8e8m0`/`f8e6m2` **scale**
-  types are new at sk4 (additive; MX shared-exponent scales, umbrella §3.2), carried as sibling operands,
-  not element value dtypes. The complex tokens are named by **total** width (umbrella §3.1.4): `c64` =
+  — byte-incompatible hardware variants MUST NOT share a token. The `f8e8m0` **scale**
+  type is new at sk4 (additive; MX shared-exponent scale, umbrella §3.2), carried as a sibling operand,
+  not an element value dtype; `f8e6m2` is new at sk4 and **reserved** (§6.1-0013). The complex tokens are named by **total** width (umbrella §3.1.4): `c64` =
   pair-of-`f32` (the sk3 `c32`), `c128` = pair-of-`f64` (the sk3 `c64`); the version prefix (umbrella §3.4)
   makes this reinterpretation loud, never silent. In particular, no
   strict-precision float variant is a dtype: the dtype set is **pure storage**
-  (§6.1-0005). A **reserved** spelling (`f8e4m3fnuz`, `f8e5m2fnuz`) is part of the
+  (§6.1-0005). A **reserved** spelling (`f8e4m3fnuz`, `f8e5m2fnuz`, `f8e6m2`) is part of the
   closed vocabulary — a reader MUST recognize it and distinguish it from an
   unknown token — but has **no computation semantics at this schema version**: a
   `structure_key` using a reserved dtype in **any** dtype position MUST be
@@ -491,9 +492,9 @@ where it fixes storage bytes.
 - **KISS-CLASSIFY-6.1-0003** — Each dtype MUST have the exact numeric kind in the
   table above (`float`: `f16`, `bf16`, `f32`, `f64`, `f8e4m3fn`, `f8e4m3fnuz`, `f8e5m2`,
   `f8e5m2fnuz`, `f8e8m0`, `f8e6m2`; `int`: `i8`, `i16`, `i32`, `i64`, `i4`; `uint`: `u8`, `u16`, `u32`, `u64`, `u4`, `b1`;
-  `bool`: `bool`; `complex`: `c64`, `c128`). The MX scales `f8e8m0`/`f8e6m2` are kind `float`
-  (unsigned exponent-scales; the unsigned property is a packing fact of §6.1-0013, not a
-  distinct kind). *Test:* `test_classify_dtype_numeric_kinds`.
+  `bool`: `bool`; `complex`: `c64`, `c128`). The MX scale `f8e8m0` is kind `float`
+  (an unsigned exponent-scale; the unsigned property is a packing fact of §6.1-0013, not a
+  distinct kind), and the reserved `f8e6m2` is kind `float` by its table row alone (§6.1-0013). *Test:* `test_classify_dtype_numeric_kinds`.
 - **KISS-CLASSIFY-6.1-0004** — Each dtype MUST be spelled by exactly its stable
   lowercase token in the table above wherever it appears in a `structure_key` token
   or an operand descriptor; an implementation MUST NOT substitute a synonym or an
@@ -503,7 +504,7 @@ where it fixes storage bytes.
   compute-precision or numeric-fidelity guarantee. In particular, `f32` MUST be a
   single IEEE-754 binary32 **storage** dtype, and a strict-precision (bit-stable,
   full-precision multiply-add) float variant MUST NOT exist as a distinct dtype
-  token; equivalently, the closed twenty-four-token set (§6.1-0001) contains no such
+  token; equivalently, the closed set of twenty-four recognized tokens (§6.1-0001) contains no such
   token and the dtype record carries no precision field. Compute precision — whether
   a computation must be bit-stable full-precision or may use a reduced-mantissa
   reduction — is a **KISS-Ops fidelity attribute** (a `MathFidelity`-style attribute
@@ -558,16 +559,28 @@ where it fixes storage bytes.
   width at sk4 (umbrella §3.1.4): the token `c64` denotes the 64-bit pair-of-`f32` (the sk3 `c32`),
   and `c128` the 128-bit pair-of-`f64` (the sk3 `c64`); the version prefix (umbrella §3.4) makes
   this reinterpretation loud. *Test:* `test_classify_complex_interleaved_layout`.
-- **KISS-CLASSIFY-6.1-0013** — The MX scale dtypes `f8e8m0` and `f8e6m2` (both new at
-  sk4, additive) MUST use the OCP Microscaling (MX) scale encodings: `f8e8m0` is an
-  **unsigned** 8-bit all-exponent scale (0 sign, 8 exp, 0 mantissa); `f8e6m2` is an
-  **unsigned** 8-bit scale (0 sign, 6 exp, 2 mantissa), a finer-granularity sibling of
-  `f8e8m0`. A scale carries **no sign bit**, so the width self-check is `exp + mantissa`
-  (8+0 and 6+2, both 8). Both are **scale types** — the per-block shared scale of an
-  MX-encoded value operand, carried as a **sibling operand** (umbrella §3.2), never an element
-  value dtype. These are pinned format constants citing OCP-MX; their special values
-  follow the OCP-MX definitions (not restated here), and the MX **block** structure
-  (block size, scale placement) is an encoding-axis concern **outside** §6.1.
+- **KISS-CLASSIFY-6.1-0013** — The MX scale dtype `f8e8m0` (new at sk4, additive) MUST
+  use the OCP Microscaling (MX) E8M0 scale encoding: an **unsigned** 8-bit all-exponent
+  scale (0 sign, 8 exp, 0 mantissa) with exponent bias 127, whose value for a stored byte
+  `e` in `0x00..=0xFE` is `2^(e − 127)`, whose single NaN encoding is `0xFF`, and which
+  defines **no infinity** and **no zero** encoding (the absence of a zero encoding is
+  inferred from E8M0 being a pure power-of-two exponent-only scale factor with no mantissa;
+  not directly stated in either cited source). A scale carries **no sign bit**, so the width
+  self-check is `exp + mantissa` (8+0 = 8). *Provenance of the special-value detail:* Rouhani
+  et al., "Microscaling Data Formats for Deep Learning", arXiv 2310.10537 §2.2, and the OCP
+  Microscaling Formats (MX) Specification v1.0; the special-value detail restated here is
+  **secondary-sourced**, pending verification against the primary OCP specification PDF,
+  which has not yet been read. `f8e8m0` is a **scale type** — the per-block shared scale of an
+  MX-encoded value operand, carried as a **sibling operand**, never an element value dtype;
+  the MX **block** structure (block size, scale placement) is an encoding-axis concern
+  **outside** §6.1.
+  `f8e6m2` (new at sk4, additive) is **reserved**, on the same footing as `f8e4m3fnuz`
+  (§6.1-0010): it is recognized on parse and distinct from an unknown token, and has **no
+  computation semantics at this schema version**, so a `structure_key` using it in any dtype
+  position MUST be answered with a typed decline (§6.1-0001, §6.7-0009). **No bit layout is
+  pinned for it:** it has no external definition to cite (OCP-MX v1.0 defines E8M0 as its
+  only scale encoding), and it is unsupported in Fuel and Unpopped as of this revision
+  (informative). Activating `f8e6m2` is a future additive schema event.
   *Sibling placement (informative):* this clause pins no **position** for the scale's
   sibling operand in the canonical operand order (§6.6-0014); placement is left
   unconstrained. §6.6-0019's prohibition on reading the weight role from operand
@@ -587,8 +600,8 @@ where it fixes storage bytes.
   and negative infinity for `f16`/`bf16`/`f32`/`f64`/`f8e5m2` (but **not** `f8e4m3fn`,
   `f8e4m3fnuz`, or `f8e5m2fnuz`, which define none); quiet and signaling NaN for every float
   dtype that defines both (all except the FP8 variants); and the single NaN encoding for
-  the FP8 variants (§6.1-0010/-0011). The MX scale floats `f8e8m0`/`f8e6m2` follow the
-  OCP-MX special-value definitions (§6.1-0013) and are not restated here. An implementation MUST distinguish `-0` from `+0`
+  the FP8 variants (§6.1-0010/-0011). The MX scale float `f8e8m0` follows the
+  special-value definitions restated in §6.1-0013; the reserved `f8e6m2` (§6.1-0013) defines no special values at this schema version. An implementation MUST distinguish `-0` from `+0`
   by bit pattern where the format defines `−0`, and MUST NOT conflate distinct NaN
   encodings when identifying a dtype's special values. *Test:*
   `test_classify_float_special_values_pinned`.
@@ -606,7 +619,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `rank` | u8 | `0 ..= MAX_RANK` (§6.4) |
 | `extents` | `i64[MAX_RANK]` | any i64; only `extents[0..rank]` meaningful; symbolic-axis entry is the capacity |
 | `strides` | `i64[MAX_RANK]` | any signed i64 (`0` = broadcast, `< 0` = reversed); element units; only `strides[0..rank]` meaningful |
-| `dtype` | dtype token | one of the twenty-four (§6.1) |
+| `dtype` | dtype token | one of the twenty-four recognized tokens (§6.1; a reserved one typed-declines, §6.1-0001) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
@@ -634,8 +647,8 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   **exact-modulo** alignment gate (a divisor test, not a power-of-two floor), with
   `alignment = 0` (unspecified base-pointer alignment) forcing `v1`. *Test:*
   `test_classify_alignment_is_bytes`.
-- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-four tokens
-  of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
+- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-four recognized tokens
+  of §6.1 (a reserved token is recognized and typed-declines, §6.1-0001). *Test:* `test_classify_operand_dtype_in_set`.
 - **KISS-CLASSIFY-6.3-0007** — `layout_tag` MUST be derived as a projection of
   `extents` and `strides` (§6.5-0002) and MUST NOT be an independently stored raw
   field that can disagree with them. *Test:* `test_classify_layout_tag_is_derived`.
@@ -1836,7 +1849,7 @@ separating a registered namespace from that namespace's capability-set token.
 
 - **KISS-CLASSIFY-7.1-0001** — The KISS-Classify **mandatory core** — which every
   conforming implementation MUST satisfy regardless of claimed options — MUST be:
-  the full twenty-four-dtype set (§6.1), the operand-descriptor field set (§6.3), the
+  the full twenty-four-recognized-dtype set (§6.1), the operand-descriptor field set (§6.3), the
   pinned constants (§6.4), the enumerations and derivations (§6.5), the
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
@@ -2308,7 +2321,7 @@ provenance and examples only; no normative clause names any project.
   by the namespace maintainer (e.g. `sm89`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
-- **dtype** — a scalar element type from the twenty-four-token set of §6.1; pure
+- **dtype** — a scalar element type from the twenty-four-token recognized set of §6.1; pure
   storage (byte layout only), never a compute-precision guarantee.
 - **extent** — an axis's logical length (capacity for a symbolic axis).
 - **inner-contiguous** — a layout tag: the innermost non-unit axis has `|stride| ==
