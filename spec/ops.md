@@ -298,23 +298,23 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `expm1` | transcendental | `reduce_std` | reduction |
 | `log2` | transcendental | `logsumexp` | reduction |
 | `log10` | transcendental | `argmax` | reduction |
-| `log1p` | transcendental | `any` | reduction |
-| `tan` | transcendental | `all` | reduction |
-| `tanh` | transcendental | `matmul` | contraction |
-| `sinh` | transcendental | `softmax` | normalization |
-| `cosh` | transcendental | `log_softmax` | normalization |
-| `asinh` | transcendental | `rms_norm` | normalization |
-| `acosh` | transcendental | `layer_norm` | normalization |
-| `atanh` | transcendental | `cumsum` | scan |
-| `asin` | transcendental | `cumprod` | scan |
-| `acos` | transcendental | `cummax` | scan |
-| `cbrt` | transcendental | `avg_pool` | window |
-| `erfc` | transcendental | `max_pool` | window |
-| `sigmoid` | activation | `index_select` | gather_scatter |
-| `relu` | activation | `embedding` | gather_scatter |
-| `silu` | activation | `scatter_add` | gather_scatter |
-| `softplus` | activation | `im2col` | shape |
-| `mish` | activation | | |
+| `log1p` | transcendental | `argmin` | reduction |
+| `tan` | transcendental | `any` | reduction |
+| `tanh` | transcendental | `all` | reduction |
+| `sinh` | transcendental | `matmul` | contraction |
+| `cosh` | transcendental | `softmax` | normalization |
+| `asinh` | transcendental | `log_softmax` | normalization |
+| `acosh` | transcendental | `rms_norm` | normalization |
+| `atanh` | transcendental | `layer_norm` | normalization |
+| `asin` | transcendental | `cumsum` | scan |
+| `acos` | transcendental | `cumprod` | scan |
+| `cbrt` | transcendental | `cummax` | scan |
+| `erfc` | transcendental | `avg_pool` | window |
+| `sigmoid` | activation | `max_pool` | window |
+| `relu` | activation | `index_select` | gather_scatter |
+| `silu` | activation | `embedding` | gather_scatter |
+| `softplus` | activation | `scatter_add` | gather_scatter |
+| `mish` | activation | `im2col` | shape |
 | `gelu` | activation | | |
 | `gelu_tanh` | activation | | |
 
@@ -1012,8 +1012,12 @@ section-intro paragraph is an informative pointer to it):
   lower original index (the stability rule). It MUST expose **two** outputs: (a) the values
   written back as a raw-bit permutation, and (b) the **original-index vector** — for each
   output rank, the source position it came from. It MUST be treated as a structural atom
-  with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`,
-  §6.13 table.) *Test:* `test_ops_sort_network_total_order`.
+  with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`
+  and `argmin` reads rank 0 under `direction=ascending`, §6.13 table. Because NaN orders as
+  the greatest value, `argmax` selects the lowest-index NaN when any element is NaN, whereas
+  `argmin` never selects a NaN while any element is non-NaN and selects index `0` when every
+  element is NaN; both resolve ties to the lower original index.) *Test:*
+  `test_ops_sort_network_total_order`.
 - **KISS-OPS-6.11-0008** — `reduce` MUST retain each reduced axis as an extent-`1` axis
   with stride `0` (a keepdim result) so the reduced value broadcasts back over the
   original axis via extent-1 / stride-0, so a shifted-shape decomposition such as
@@ -1244,6 +1248,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `reduce_std` | reduction | — | `sqrt(reduce_var(x))` |
 | `logsumexp` | reduction | — | `m=reduce(max,x); out=add(m, log(reduce(sum, exp(sub(x,m)))))` |
 | `argmax` | reduction | — | `original-index at rank 0 of sort_network(desc, keys=x)` (the §6.11-0007 index-vector output) |
+| `argmin` | reduction | — | `original-index at rank 0 of sort_network(asc, keys=x)` (the §6.11-0007 index-vector output) |
 | `any` | reduction | — | `reduce(max, cmp_ne(x, const(0)))` |
 | `all` | reduction | — | `reduce(min, cmp_ne(x, const(0)))` |
 | `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001 |
@@ -2246,8 +2251,8 @@ promoted to this normative OpAttrs encoding for that channel only.
 
 - **KISS-OPS-6.19-0036** — Several advertised, axis-parameterized non-primitive ops are
   **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field):
-  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `any`, `all`, `cumsum`, `cumprod`,
-  and `cummax`. A consumer that natively matches one of these ops — and therefore does not
+  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `argmin`, `any`, `all`, `cumsum`,
+  `cumprod`, and `cummax`. A consumer that natively matches one of these ops — and therefore does not
   expand its §6.13 reference decomposition (§6.14-0004) — MUST obtain the reduce/scan axis
   by resolving the axis of the **inner carrier node** of that op's reference decomposition
   (the `reduce`, `prefix_scan`, or `sort_network` the op is defined over), even though it
@@ -2877,7 +2882,10 @@ NaN` (propagate); `fmax_ieee(a,b) = 3.0` (suppress); `min_prop(a,b) = NaN`; `fmi
 **A.5 `argmax` via `sort_network`.** `argmax(x)` reads the rank-0 entry of the
 **original-index vector** output of `sort_network(desc, keys=x)` (§6.11-0007). Because the
 sort is stable and descending, ties resolve to the first original index (argmax ties-to-
-first), and the values output is not consumed — only the index vector is.
+first), and the values output is not consumed — only the index vector is. `argmin` is the
+same read under `sort_network(asc, keys=x)`: with NaN ordered greatest, an ascending sort
+places NaN last, so `argmin` skips NaN unless every element is NaN (then index `0`), whereas
+`argmax` returns the first NaN.
 
 ## Appendix B — Glossary (informative)
 
