@@ -1234,7 +1234,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `mish` | activation | ✓ | `mul(x, tanh(softplus(x)))` (refinement-permitted: inherits the overflow-safe `tanh`/`softplus`) |
 | `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), erf(div(x, const(sqrt2)))))` |
 | `gelu_tanh` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh(mul(const(sqrt(2/pi)), add(x, mul(const(0.044715), mul(x, sqr(x))))))))` |
-| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for `a>0`; full-domain behavior pinned by §6.13-0005 |
+| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for finite `a>0`, `a≠1`, finite nonzero `b` only; every other input (NaN, `±∞`, `±0`, `a=1`, `a<0`) is pinned by the IEEE 754-2019 §9.2.1 special-value table in §6.13-0005 |
 | `hypot` | binary_math | ✓ | `sqrt(add(sqr(a), sqr(b)))` |
 | `rem_floor` | binary_math | — | `sub(a, mul(floor(div(a,b)), b))` |
 | `rem_trunc` | binary_math | — | `sub(a, mul(trunc(div(a,b)), b))` |
@@ -1309,16 +1309,32 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `window_size` positions with the given `stride` and `padding`, OOB taps skipped.
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
   `test_ops_parameterized_attributes_explicit`.
-- **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain: for `a>0`,
-  `pow(a,b)` equals the reference `exp(mul(b, log(a)))` (refinement permitted,
-  §6.13-0003); `pow(0,0)` MUST yield `1`; `pow(+0.0, b)` for `b>0` MUST yield `+0.0` and
-  for `b<0` MUST yield `+∞`; for the negative-zero base, `pow(-0.0, b)` MUST yield `-0.0`
-  when `b` is a positive odd integer, `+0.0` when `b` is a positive even integer or a
-  positive non-integer, `-∞` when `b` is a negative odd integer, and `+∞` when `b` is a
-  negative even integer or a negative non-integer (the sign follows IEEE 754 `pow` on the
-  signed zero); for `a<0`, `pow(a,b)` MUST yield NaN unless `b` is an exact integer, in
-  which case `pow(a,b)` MUST yield `|a|^b` when `b` is even and `-(|a|^b)` when `b` is odd.
-  *Test:* `test_ops_pow_full_domain`.
+- **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain by the IEEE 754-2019
+  §9.2.1 special-value table for `pow` (the same table as ISO C99/C11 Annex F.9.4.4); the
+  `exp(mul(b, log(a)))` reference is **not** the definition of any special value below and
+  MUST NOT be used to derive one. The rules are applied **in order, first match wins**, with
+  `±∞` counting as a non-integer (and never an odd integer) exponent:
+  (1) `pow(a, ±0)` MUST yield `+1` for every `a`, **including a NaN `a`** (so `pow(0,0)` is
+  `1`); (2) `pow(+1, b)` MUST yield `+1` for every `b`, **including a NaN `b` and `b=±∞`**;
+  (3) otherwise, a NaN `a` or `b` MUST yield NaN; (4) `pow(-1, ±∞)` MUST yield `+1`;
+  (5) for `b=±∞` (`a` neither NaN nor `±1` by now): `|a|<1` MUST yield `+0` for `b=+∞` and
+  `+∞` for `b=-∞`, and `|a|>1` (including `a=±∞`) MUST yield `+∞` for `b=+∞` and `+0` for
+  `b=-∞`; (6) `pow(+0.0, b)` for finite `b>0` MUST yield `+0.0` and for finite `b<0` MUST
+  yield `+∞`; for the negative-zero base, `pow(-0.0, b)` MUST yield `-0.0` when `b` is a
+  positive odd integer, `+0.0` when `b` is a positive even integer or a positive
+  non-integer, `-∞` when `b` is a negative odd integer, and `+∞` when `b` is a negative
+  even integer or a negative non-integer (the sign follows IEEE 754 `pow` on the signed
+  zero); (7) `pow(+∞, b)` for finite `b` MUST yield `+∞` when `b>0` and `+0` when `b<0`;
+  `pow(-∞, b)` for finite `b` MUST yield `-∞` when `b` is a positive odd integer, `+∞` when
+  `b` is any other positive value, `-0.0` when `b` is a negative odd integer, and `+0.0`
+  when `b` is any other negative value; (8) for finite `a<0` and finite `b`, `pow(a,b)` MUST
+  yield NaN unless `b` is an exact integer, in which case `pow(a,b)` MUST yield `|a|^b` when
+  `b` is even and `-(|a|^b)` when `b` is odd; (9) only for finite `a>0`, `a≠1`, and finite
+  nonzero `b` does `pow(a,b)` equal the reference `exp(mul(b, log(a)))` (refinement
+  permitted, §6.13-0003). *Informative:* the reference is wrong at exactly the values the
+  rules above override — `exp(b·log 1)` is NaN for `b=±∞` or NaN where IEEE 754 requires `1`,
+  and `0·log a` is NaN for `a=+∞, b=0` where IEEE 754 requires `1`. *Test:*
+  `test_ops_pow_full_domain`.
 - **KISS-OPS-6.13-0006** — A reference-decomposition body **that is a scalar-expression
   body** MUST conform to this grammar: a body is either (a) a single expression tree over
   KISS-Ops ops and the §6.12 scalar-source leaves, or (b) a sequence of single-assignment
