@@ -1021,7 +1021,10 @@ section-intro paragraph is an informative pointer to it):
   and `argmin` reads rank 0 under `direction=ascending`, §6.13 table. Because NaN orders as
   the greatest value, `argmax` selects the lowest-index NaN when any element is NaN, whereas
   `argmin` never selects a NaN while any element is non-NaN and selects index `0` when every
-  element is NaN; both resolve ties to the lower original index.) *Test:*
+  element is NaN; both resolve ties to the lower original index. This **differs from
+  NumPy and PyTorch**, where `argmin` and `argmax` both return the NaN index: here the rule
+  is derived from this clause's total order (NaN greatest), not chosen as a NaN-propagation
+  policy.) *Test:*
   `test_ops_sort_network_total_order`.
 - **KISS-OPS-6.11-0008** — `reduce` MUST retain each reduced axis as an extent-`1` axis
   with stride `0` (a keepdim result) so the reduced value broadcasts back over the
@@ -2913,7 +2916,9 @@ sort is stable and descending, ties resolve to the first original index (argmax 
 first), and the values output is not consumed — only the index vector is. `argmin` is the
 same read under `sort_network(asc, keys=x)`: with NaN ordered greatest, an ascending sort
 places NaN last, so `argmin` skips NaN unless every element is NaN (then index `0`), whereas
-`argmax` returns the first NaN.
+`argmax` returns the first NaN. This **differs from NumPy and PyTorch** (both return the NaN
+index for `argmin` as well): it is derived from the §6.11-0007 total order (NaN greatest), not
+a NaN-propagation choice.
 
 ## Appendix B — Glossary (informative)
 
