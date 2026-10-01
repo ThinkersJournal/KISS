@@ -5,8 +5,9 @@ use kiss_conformance::contract::BitStability;
 use kiss_conformance::DeterminismClass;
 
 /// Enforces: KISS-CONTRACT-6.8-0013 — the value set is exactly `{portable, same-hardware,
-/// none}`; `portable` iff `exact-byte`; and an `order-invariant/nondeterministic` kernel MAY
-/// declare `same-hardware` (the former forced-`false` coupling is withdrawn).
+/// none}`; `exact-byte` and `ULP/tolerance` may declare any value; `order-invariant/
+/// nondeterministic` is capped at `same-hardware`/`none` (never `portable`) but MAY declare
+/// `same-hardware` (the former forced-`false` coupling is withdrawn).
 #[test]
 fn test_contract_bit_stability_scope() {
     use BitStability::*;
@@ -25,10 +26,8 @@ fn test_contract_bit_stability_scope() {
     // Consistency table, all nine (scope, class) cells -- a rule that ignored either axis
     // would differ from this table in at least one cell.
     let expect = |s: BitStability, c: DeterminismClass| match (s, c) {
-        (Portable, ExactByte) => true,
-        (Portable, _) => false,
-        (_, ExactByte) => false,
-        (SameHardware | None, UlpTolerance | OrderInvariant) => true,
+        (Portable, OrderInvariant) => false,
+        _ => true,
     };
     for s in all {
         for c in [ExactByte, UlpTolerance, OrderInvariant] {

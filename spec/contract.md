@@ -1254,12 +1254,16 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   inputs are bit-identical on **any** compatible hardware; `same-hardware` states that they
   are bit-identical on the **same** hardware but MAY differ across hardware; `none` states
   that run-to-run variation is possible (for example an atomic floating-point accumulation
-  or a scheduler-dependent reduction order). `portable` MUST be declared if and only if the
-  `determinism_class` is `exact-byte`. A kernel of class `ULP/tolerance` or
-  `order-invariant/nondeterministic` MUST declare `same-hardware` or `none`, and MAY declare
-  `same-hardware` — including a kernel of class `order-invariant/nondeterministic` whose
-  floating-point reduction order is fixed, so that it is not reassociated between runs on
-  the same hardware. An implementation MUST NOT define a parallel reproducibility
+  or a scheduler-dependent reduction order). A kernel of class `exact-byte` or `ULP/tolerance`
+  MAY declare any of the three values; a declaration is a **claim** that remains subject to
+  actual verification of the kernel, and this clause adds no verification mechanism. A kernel
+  of class `order-invariant/nondeterministic` MUST declare `same-hardware` or `none` and MUST
+  NOT declare `portable`: its reduction order is not pinned, so different hardware may choose
+  a different associativity and cross-hardware bit-identity cannot be soundly guaranteed
+  under that class; a kernel that pins its order enough to be portable MUST be reclassified
+  rather than claim `portable` under `order-invariant/nondeterministic`. Such a kernel MAY
+  declare `same-hardware` when its reduction order is fixed, so that it is not reassociated
+  between runs on the same hardware. An implementation MUST NOT define a parallel reproducibility
   vocabulary, and MUST NOT write the former two-value spelling (`bit-stable` /
   `bit-unstable`). *Test:* `test_contract_bit_stability_scope`.
 

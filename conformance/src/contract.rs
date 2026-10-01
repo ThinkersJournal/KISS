@@ -680,11 +680,11 @@ impl BitStability {
         }
     }
 
-    /// §6.8-0013 consistency with the determinism class: `portable` iff `exact-byte`; the
-    /// other two classes carry `same-hardware` or `none`.
+    /// §6.8-0013 consistency with the determinism class: `exact-byte` and `ULP/tolerance`
+    /// may carry any value (a claim, subject to verification); `order-invariant/
+    /// nondeterministic` is capped at `same-hardware` / `none` (never `portable`).
     pub fn consistent_with(self, class: crate::DeterminismClass) -> bool {
-        let exact = class == crate::DeterminismClass::ExactByte;
-        (self == BitStability::Portable) == exact
+        !(self == BitStability::Portable && class == crate::DeterminismClass::OrderInvariant)
     }
 }
 
