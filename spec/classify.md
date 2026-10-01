@@ -585,7 +585,8 @@ where it fixes storage bytes.
   sibling operand in the canonical operand order (§6.6-0014); placement is left
   unconstrained. §6.6-0019's prohibition on reading the weight role from operand
   position depends on that — if a later revision pins sibling placement, revisit
-  §6.6-0019. *Test:* `test_classify_mx_scale_format`.
+  §6.6-0019. A scale-type dtype at operand 0 is not a valid primary dtype for
+  `structure_key.dtype` (§6.6-0021). *Test:* `test_classify_mx_scale_format`.
 
 ### 6.2 Numeric-kind and special-value pinning
 
@@ -702,9 +703,19 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   `test_classify_symbolic_extent_flags_live_length`.
 - **KISS-CLASSIFY-6.3-0011** — Axes MUST be ordered **outermost first**: axis index
   `0` is the outermost axis and axis index `rank−1` is the innermost axis. Every
-  derivation that references an "innermost" axis (§6.5-0002 layout, §6.5-0009 vector
-  width, §6.5-0012 divisibility) MUST use the highest active axis index as the
-  innermost axis. *Test:* `test_classify_axis_ordering_convention`.
+  derivation that references the "innermost active axis" (§6.5-0009 vector width,
+  §6.5-0012 divisibility, §6.5-0013 forward-unit-stride test) MUST use the highest
+  active axis index, `rank−1`, as the innermost axis, **including when that axis has
+  extent `1`**: these derivations have **no non-unit exclusion**, so the innermost
+  axis of an operand of extents `[4, 1]` is axis `1` (extent `1`: bucket `da`, width
+  `v1`), not axis `0`, whereas for `[1, 8]` it is axis `1` (extent `8`: bucket `d8`).
+  The layout-tag derivation (§6.5-0002) is the **one** derivation that separately
+  visits only the active **non-unit** axes (its step **(3)** tests the *innermost
+  active non-unit axis*); the specification therefore deliberately has **two**
+  notions — the *innermost active axis* (this clause: axis `rank−1`, used by
+  §6.5-0009, §6.5-0012 and §6.5-0013) and the *innermost active non-unit axis*
+  (§6.5-0002 only) — and this clause does not change §6.5-0002's behaviour.
+  *Test:* `test_classify_axis_ordering_convention`.
 
 ### 6.4 Pinned structural constants
 
@@ -815,7 +826,23 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   twenty-four categories of the table above, each spelled by its 3-letter token
   code; an implementation MUST NOT invent a twenty-fifth code at this schema
   version, and MUST fail (not silently encode as an "unknown" code) when it cannot
-  map a cell to one of the twenty-four. *Test:* `reject_unknown_op_family`.
+  map a cell to one of the twenty-four. A **deriver** (an implementation that computes a
+  key from a cell, §6.6-0012) MAY decline, with a typed decline (§7.1-0002), a cell whose
+  op family it cannot map to a defined member below; supporting a subset of the
+  twenty-four codes on the derive side is conformant, while a **reader** still recognizes
+  all twenty-four (§6.7-0009). **Membership** of the five categories whose members are not
+  otherwise defined in this specification (the code names the *category*; which concrete
+  op falls in it is the caller's classification, §6.6-0012, and the lists are
+  illustrative, not exhaustive): `gat` — a **gated activation**: an activation that splits
+  one input into two halves `(a, b)` and yields `a · gate(b)` (e.g. GLU, ReGLU, SwiGLU,
+  GeGLU); `emb` — an **embedding lookup**: a row-lookup of a table operand by an index
+  operand, including the bagged-sum/mean forms (the index operand is a role hint,
+  §6.6-0012); `qnt` — a **quantization helper**: a quantize, dequantize, fake-quantize or
+  quantized-linear op (distinct from the optional `quant` facts of §6.3-0009, which describe
+  an operand and do not name a category); `img` — an **image-domain op**: interpolation /
+  resampling, grid sampling, region-of-interest ops, non-maximum suppression; `moe` — a
+  **mixture-of-experts** op: fused per-token expert dispatch, expert contraction and
+  accumulate. *Test:* `reject_unknown_op_family`.
 - **KISS-CLASSIFY-6.5-0007** — The work-class domain MUST be exactly `{one-warp,
   one-block, grid-stride}` with token codes `warp`, `block`, `grid`, and the
   boundaries MUST be total element count `≤ 32` (`one-warp`), `≤ 1024`
@@ -895,6 +922,24 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   active axis is forward-unit-stride derives `vL` with the flag set. This
   precondition gates §6.5-0009(c) before its byte-cap, extent-divisibility, and
   alignment tests are applied. *Test:* `test_classify_vec_width_unit_stride`.
+- **KISS-CLASSIFY-6.5-0014** — For an operand of rank `r` in a cell whose iteration
+  rank is `R > r` (§6.6-0006), the `layout_tag` (§6.5-0002) and the broadcast-axis mask
+  (§6.6-0008) MUST be derived over the operand's **frame-padded view**: the operand's own
+  axes right-aligned to the iteration frame (§6.6-0013), preceded by `R − r` leading
+  padded axes, each taking the **iteration-frame extent** at that axis and **stride `0`**.
+  A padded axis whose frame extent is `> 1` is therefore a broadcast axis (§6.5-0002 step
+  **(1)**, and its bit is set in the mask), so such an operand's `layout_tag` is
+  `broadcast` even when its own axes are contiguous; a padded axis whose frame extent is
+  `1` is a unit axis and affects neither. The operand's vector-access width (§6.5-0009)
+  and divisibility bucket (§6.5-0012) are still read from the operand's **own** innermost
+  axis (§6.3-0011), and §6.5-0009(a) takes the padded `layout_tag`.
+  *Worked example (informative):* an `f32` operand of extents `[256]` and strides `[1]`,
+  256-byte aligned, in the iteration frame `[128, 256]` (`R = 2`, `r = 1`): the padded
+  view is extents `[128, 256]`, strides `[0, 1]`; the layout is `br` (axis 0 has extent
+  `128 > 1` and stride `0`), the mask is `01` (bit 0 = frame axis 0), the vector width is
+  `v1` (§6.5-0009(a)), the divisibility bucket is `d16` (own innermost extent `256`), and
+  the flipped flag is `f`: sub-key `br/01/v1/d16/f`, beside `co/00/v4/d16/f` for each
+  `[128, 256]` operand of the same cell. *Test:* `test_classify_layout_tag_frame_padded_view`.
 
 ### 6.6 The `structure_key` admissibility predicate
 
@@ -967,7 +1012,8 @@ form (§6.7-0011).
   `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
-  ordering of §6.6-0014. *Test:* `test_classify_structure_key_primary_dtype`.
+  ordering of §6.6-0014 (and is undefined where operand-0 is a scale-type dtype,
+  §6.6-0021). *Test:* `test_classify_structure_key_primary_dtype`.
 - **KISS-CLASSIFY-6.6-0006** — `structure_key.rank` MUST be the widest operand rank
   (the iteration rank, §6.6-0013), and `n_operands` MUST be the count of populated
   per-operand sub-keys, `≤ MAX_OPERANDS`. The codec (§6.7-0004) MUST serialize
@@ -1166,6 +1212,15 @@ form (§6.7-0011).
   > derives a computation identity **upstream** of the cell satisfies this clause; one that
   > keys on the cell alone does not.
   *Test:* `test_classify_cell_mates_are_not_substitutable`.
+- **KISS-CLASSIFY-6.6-0021** — A **scale-type** dtype — `f8e8m0` or `f8e6m2`
+  (§6.1-0013) — is **not a valid operand-0 dtype**: `structure_key.dtype` (§6.6-0005) is
+  defined only where operand-0 (§6.6-0014) carries an element value dtype, so a derivation
+  whose operand 0 has dtype `f8e8m0` or `f8e6m2` MUST **decline** with a typed decline
+  (§7.1-0002) rather than emit a token, and MUST NOT substitute another operand's dtype, or
+  the scale's own spelling, for the primary dtype. A scale-type dtype remains valid as a
+  non-primary (sibling) operand's dtype (§6.1-0013, §6.6-0019); this clause constrains only
+  the primary-dtype slot that §6.6-0005 reads from operand 0. *Test:*
+  `test_classify_scale_dtype_at_operand0_declines`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -1854,7 +1909,8 @@ separating a registered namespace from that namespace's capability-set token.
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
   implementation that cannot satisfy the mandatory core does not conform to
-  KISS-Classify. *Test:* `test_classify_mandatory_core`.
+  KISS-Classify. This is the **full profile** (§7.3-0001); the one exemption from it
+  is the emit-only profile of §7.3-0002. *Test:* `test_classify_mandatory_core`.
 - **KISS-CLASSIFY-7.1-0002** — An implementation MUST answer an unrecognized or
   out-of-range input (an unknown dtype token, an over-`MAX_RANK` rank, an
   over-`MAX_OPERANDS` count, a malformed token, an over-length token, a collapsed
@@ -1873,6 +1929,55 @@ separating a registered namespace from that namespace's capability-set token.
   (removing, reordering, or altering the meaning of an existing `structure_key`
   field or enumeration) MUST bump the `structure_key` schema version (§8). *Test:*
   `test_classify_non_additive_bumps_version`.
+
+### 7.3 Conformance profiles
+
+KISS-Classify has two conformance profiles, which differ in exactly one respect: whether
+the implementation exposes a **token reader**. A **token reader** is any code path that
+accepts a presented `structure_key` token and parses it into a key or into a typed decline
+(the reference `from_token`, §6.7-0008). A party that only **produces** tokens — production
+codegen that derives a key from a cell and writes it — is a producer of the wire artifact,
+not a reader of it: producing and parsing are distinct directions on the wire surface, and
+a party may do one without the other (umbrella §3.6).
+
+- **KISS-CLASSIFY-7.3-0001** — The **full profile** — the mandatory core of §7.1-0001 in
+  its entirety, reader-side obligations included — MUST be the default meaning of a
+  KISS-Classify conformance claim: an unqualified claim that an implementation conforms to
+  KISS-Classify (§9; umbrella §8.1) MUST be read as a claim of the full profile, and a claim
+  of any other profile MUST name it. *Test:* `test_classify_full_profile_is_default`.
+- **KISS-CLASSIFY-7.3-0002** — An implementation that **produces** `structure_key` tokens
+  and exposes **no token reader** MAY claim **emit-only** conformance. An emit-only
+  implementation MUST satisfy the mandatory core of §7.1-0001 with the sole exception of the
+  reader-side obligations enumerated in §7.3-0003, MUST name its claim as KISS-Classify
+  (emit-only), and MUST NOT make an unqualified claim. Its conformance is evidenced by the
+  **emit direction** of the suite: the golden positive vectors compared by byte-match on the
+  tokens it produces. *Test:* `test_classify_emit_only_profile_emit_direction`.
+- **KISS-CLASSIFY-7.3-0003** — The **reader-side obligations** — exactly the obligations
+  from which an emit-only implementation is exempt, and no others — are: **(a)** the
+  sentences of §6.3-0001, §6.4-0002, §6.4-0004, §6.6-0010, §6.6-0017, §6.7-0001 and
+  §6.7-0006 that require a **reader** to reject a presented token; **(b)** the
+  reader-rejection sentences of §6.7-0002 (version-field rejection, canonical form before
+  numeric parse), §6.7-0005 (field-8 rejection and `x<hh>` canonicality), §6.7-0010
+  (uppercase or variable-width hex), and the `from_token` field-count dispatch and
+  all-default-form rejection of §6.7-0013; **(c)** §6.7-0009, §6.7-0014 and §6.7-0015 in
+  their entirety; **(d)** the round-trip property of §6.7-0008, which requires a reader; and
+  **(e)** the **token-input** cases of §7.1-0002 (a malformed token, an over-length token).
+  Every other obligation of the mandatory core applies to an emit-only implementation
+  unchanged — in particular every **producer** obligation (a producer MUST emit, or MUST NOT
+  emit, a given spelling: §6.3-0001, §6.4-0002, §6.4-0004, §6.7-0001, §6.7-0002,
+  §6.7-0005, §6.7-0010, §6.7-0013), the derivations of §6.5 and §6.6, the deterministic
+  serialization of §6.6-0011 (which carries the serialization direction §6.7-0008
+  presupposes), and the typed declines of §7.1-0002 for **derivation inputs** (an unknown
+  dtype, an over-`MAX_RANK` rank, an over-`MAX_OPERANDS` count, a collapsed reduction, a
+  malformed target). §6.8 is unaltered by this clause. *Test:*
+  `test_classify_emit_only_reader_side_set`.
+- **KISS-CLASSIFY-7.3-0004** — The emit-only profile is a claim, not a restriction on the
+  implementation: an implementation MAY add a token reader at any time. An implementation
+  that exposes a token reader MUST satisfy every reader-side obligation of §7.3-0003 on that
+  reader and MUST NOT claim emit-only conformance while it exposes one; it MAY claim the
+  full profile once it satisfies them. Nothing in §7.3 relaxes the full profile, or any
+  obligation on a reader, for an implementation that has one. *Test:*
+  `test_classify_emit_only_does_not_block_reader`.
 
 ---
 
@@ -1949,7 +2054,8 @@ reference-crate *semver*. They move independently. A third, Classify-local handl
 
 ## 9. Conformance
 
-An implementation conforms to KISS-Classify at a given `structure_key` schema
+An implementation conforms to KISS-Classify (the **full profile**, §7.3-0001; the
+emit-only profile of §7.3-0002 is a distinct, named claim) at a given `structure_key` schema
 version if it (a) recognizes exactly the dtype set, operand-descriptor fields,
 constants, enumerations and derivations, `structure_key` layout, token codec, and
 target-capability grammar of §6–§8 for that version, (b) passes the KISS-Conform
@@ -2014,6 +2120,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0011 | `test_classify_index_width_offset` |
 | KISS-CLASSIFY-6.5-0012 | `test_classify_div_bucket_derivation` |
 | KISS-CLASSIFY-6.5-0013 | `test_classify_vec_width_unit_stride` |
+| KISS-CLASSIFY-6.5-0014 | `test_classify_layout_tag_frame_padded_view` |
 | KISS-CLASSIFY-6.6-0001 | `test_classify_structure_key_is_admissibility_predicate` |
 | KISS-CLASSIFY-6.6-0002 | `test_classify_structure_key_is_not_op_identity` |
 | KISS-CLASSIFY-6.6-0003 | `test_classify_structure_key_extent_free` |
@@ -2034,6 +2141,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0018 | `sk4_mixed_precision_fp8_disambiguated` |
 | KISS-CLASSIFY-6.6-0019 | `test_classify_weight_role_hint` |
 | KISS-CLASSIFY-6.6-0020 | `test_classify_cell_mates_are_not_substitutable` |
+| KISS-CLASSIFY-6.6-0021 | `test_classify_scale_dtype_at_operand0_declines` |
 | KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |
@@ -2073,6 +2181,10 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-7.1-0002 | `test_classify_unclaimed_input_typed_decline` |
 | KISS-CLASSIFY-7.2-0001 | `test_classify_extension_is_additive` |
 | KISS-CLASSIFY-7.2-0002 | `test_classify_non_additive_bumps_version` |
+| KISS-CLASSIFY-7.3-0001 | `test_classify_full_profile_is_default` |
+| KISS-CLASSIFY-7.3-0002 | `test_classify_emit_only_profile_emit_direction` |
+| KISS-CLASSIFY-7.3-0003 | `test_classify_emit_only_reader_side_set` |
+| KISS-CLASSIFY-7.3-0004 | `test_classify_emit_only_does_not_block_reader` |
 | KISS-CLASSIFY-8-0001 | `test_classify_two_version_axes_independent` |
 | KISS-CLASSIFY-8-0002 | `test_classify_wire_change_bumps_version` |
 | KISS-CLASSIFY-8-0003 | `test_classify_additive_no_version_bump` |
