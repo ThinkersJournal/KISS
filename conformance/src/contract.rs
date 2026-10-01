@@ -278,7 +278,7 @@ pub enum ContractDecline {
     MalformedHeader,
     /// The `contract_kind` is not the recognized token `kiss-contract` (§6.1-0007).
     UnknownKind { got: String },
-    /// The `contract_version` is not `1` (§6.1-0008).
+    /// The `contract_version` is not `2` (§6.1-0008).
     UnknownVersion { got: String },
     /// The declared body length does not equal the actual body byte count
     /// (§6.11-0003). Carries the declared length as a `u64` — it is never used to
@@ -372,7 +372,7 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
     }
     // (4) Supported version (§6.1-0008).
     let version = parts[2];
-    if version != "1" {
+    if version != "2" {
         return Err(ContractDecline::UnknownVersion { got: version.to_string() });
     }
     // (5) `len=<N>` — decimal body byte count.
@@ -645,6 +645,49 @@ pub enum AuditedStatus {
     Unaudited,
 }
 
+/// The Guarantees `bit_stability` field (KISS-CONTRACT-6.8-0005 / 6.8-0013): the kernel's
+/// **reproducibility scope**, an axis orthogonal to the determinism class. The closed set is
+/// `{portable, same-hardware, none}`, spelled verbatim on the wire; the former two-value
+/// `bit-stable` / `bit-unstable` spelling is withdrawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BitStability {
+    /// Bit-identical on any compatible hardware.
+    Portable,
+    /// Bit-identical on the same hardware; MAY differ across hardware.
+    SameHardware,
+    /// Run-to-run variation is possible.
+    None,
+}
+
+impl BitStability {
+    /// The wire spelling (§6.8-0013).
+    pub fn token(self) -> &'static str {
+        match self {
+            BitStability::Portable => "portable",
+            BitStability::SameHardware => "same-hardware",
+            BitStability::None => "none",
+        }
+    }
+
+    /// Parse the wire spelling; anything outside the closed set (including the withdrawn
+    /// `bit-stable` / `bit-unstable`) is `None` (the Option), i.e. rejected.
+    pub fn from_token(t: &str) -> Option<BitStability> {
+        match t {
+            "portable" => Some(BitStability::Portable),
+            "same-hardware" => Some(BitStability::SameHardware),
+            "none" => Some(BitStability::None),
+            _ => None,
+        }
+    }
+
+    /// §6.8-0013 consistency with the determinism class: `exact-byte` and `ULP/tolerance`
+    /// may carry any value (a claim, subject to verification); `order-invariant/
+    /// nondeterministic` is capped at `same-hardware` / `none` (never `portable`).
+    pub fn consistent_with(self, class: crate::DeterminismClass) -> bool {
+        !(self == BitStability::Portable && class == crate::DeterminismClass::OrderInvariant)
+    }
+}
+
 /// The Guarantees fields the derivation reads, plus the one field it MUST NOT
 /// read. `bit_stability` is present deliberately: §6.8-0009 forbids the rule
 /// setting it (that field is owned by §6.8-0005), and a rule that cannot see the
@@ -660,7 +703,7 @@ pub struct Guarantees {
     pub determinism_class: crate::DeterminismClass,
     /// Owned by §6.8-0005. The derivation MAY read it — §6.8-0005 says it does —
     /// but MUST NOT set it, which the shared borrow below makes structural.
-    pub bit_stability: bool,
+    pub bit_stability: BitStability,
 }
 
 impl Guarantees {
@@ -746,7 +789,7 @@ fn well_formed_body() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
+            ("contract_version", Value::Str("2".into())),
         ],
     )
 }
@@ -758,7 +801,7 @@ pub fn well_formed_document() -> Vec<u8> {
     let body = well_formed_body();
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body,
     }
     .encode()
@@ -776,7 +819,7 @@ pub fn well_formed_document() -> Vec<u8> {
 pub const APPENDIX_C_IDENTITY_GOLDEN: &str = "\
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 1
+contract_version = 2
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
@@ -791,7 +834,7 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
+            ("contract_version", Value::Str("2".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
             ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
@@ -898,7 +941,7 @@ fn appendix_c_guarantees_inputs() -> Guarantees {
             DeclaredAccuracyTier { max_ulp: Some(0), ..DeclaredAccuracyTier::default() },
         )],
         determinism_class: crate::DeterminismClass::ExactByte,
-        bit_stability: true,
+        bit_stability: BitStability::Portable,
     }
 }
 
@@ -948,7 +991,7 @@ pub fn appendix_c_guarantees_block() -> Vec<u8> {
         crate::DeterminismClass::UlpTolerance => "ULP/tolerance",
         crate::DeterminismClass::OrderInvariant => "order-invariant/nondeterministic",
     };
-    let bit_stability = if g.bit_stability { "bit-stable" } else { "bit-unstable" };
+    let bit_stability = g.bit_stability.token();
     render_block(
         6,
         "guarantees",
@@ -1009,7 +1052,7 @@ pub fn appendix_c_body() -> Vec<u8> {
 pub fn appendix_c_golden_document() -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: appendix_c_body(),
     }
     .encode()
@@ -1094,7 +1137,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
     let owned_body = well_formed_body();
     let body = &owned_body[..];
     let kind = "kiss-contract";
-    let version = "1";
+    let version = "2";
     let len_owned = format!("len={}", body.len());
     let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
     let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
@@ -1151,8 +1194,8 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         },
         NegativeVector {
             name: "unsupported contract_version",
-            doc: with_header(&format!("KISC {kind} 2 {len_f} {crc_f}")),
-            expect: ContractDecline::UnknownVersion { got: "2".into() },
+            doc: with_header(&format!("KISC {kind} 1 {len_f} {crc_f}")),
+            expect: ContractDecline::UnknownVersion { got: "1".into() },
         },
         NegativeVector {
             name: "declared length overstates the body",
@@ -1201,7 +1244,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         name: "headingless body (framing valid, no first section heading)",
         doc: Document {
             contract_kind: "kiss-contract".into(),
-            contract_version: "1".into(),
+            contract_version: "2".into(),
             body: headless_body,
         }
         .encode(),

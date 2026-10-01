@@ -26,9 +26,15 @@
 # |all_ops ∪ atoms| = 106 — NOT 115. The "106 ops + 9 atoms = 115" framing double-counts the atoms.
 # The denominator is the DERIVED union, so it is correct regardless of that overlap.
 #
+# DOMAIN MOVE 106 -> 122 (spec/ops.md reconciliation): +1 `argmin` (§6.13 row it was always cited by,
+# §6.13-0009 / §6.19-0036, but never tabulated) and +15 §6.18 complex-arithmetic ops (§6.1-0001 puts
+# them in the op set; the registry now lists every in-scope op even with zero implementations).
+# `declared` is untouched at 1, so this is the denominator-moved verdict, not a coverage loss. The
+# "106" figures in the prose above describe the domain at the time of #459.
+#
 # This file is COMMITTED and edited by hand (like COVERAGE_FLOOR.tsv): a floor the tool rewrites is
 # a state derived from the run, not a decision, and would silently absorb a regression.
 #
 # key	value
 declared	1
-total	106
+total	122

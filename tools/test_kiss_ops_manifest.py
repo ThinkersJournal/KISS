@@ -18,6 +18,24 @@ class ManifestTest(unittest.TestCase):
         self.assertIn("add", m["all_ops"])
         self.assertIn("add", m["declared_coverage_set"])
 
+    def test_registry_lists_every_in_scope_op(self):
+        """§6.1-0001: the op set is primitive ∪ non-primitive ∪ complex. The manifest is the
+        registry, so it MUST list the §6.18 complex ops (zero implementations is no excuse) and
+        every op the §6.13 table defines, argmin included."""
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "kiss_ops.py"), "--emit-manifest", "--stdout"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        ops = set(json.loads(out)["all_ops"])
+        complex_ops = {"cadd", "csub", "cneg", "cconj", "cmul", "cdiv", "cabs", "carg",
+                       "cexp", "clog", "csqrt", "cpow", "cmake", "cre", "cim"}
+        self.assertEqual(len(complex_ops), 15)
+        self.assertEqual(complex_ops - ops, set(), "complex ops missing from the registry")
+        self.assertIn("argmin", ops)
+        self.assertIn("argmax", ops)
+        # discrimination: a token that is not an op must not be listed
+        self.assertNotIn("cmplx", ops)
+
 
     def test_committed_manifest_matches_spec_byte_for_byte(self):
         """The committed op_manifest.json MUST equal a fresh generation BYTE FOR BYTE.

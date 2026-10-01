@@ -277,35 +277,61 @@ fn f32_pow_pos(a: f32, b: f32) -> f32 {
     (a as f64).powf(b as f64) as f32
 }
 
-/// `pow` pinned over its full domain (§6.13-0005). Transcribes the domain table:
-/// `pow(_,0)=1` (incl. `pow(0,0)=1`); for `a>0` the reference `exp(b·log(a))`;
-/// for `±0` bases the IEEE signed-zero rule (sign flips only for an odd-integer
-/// exponent); for `a<0`, NaN unless `b` is an exact integer, then `|a|^b` (even) or
-/// `-(|a|^b)` (odd). A naive `exp(b·log(a))` (see [`pow_via_exp_log`]) gets the
-/// negative-base and `0^0` cases wrong (NaN).
+/// `pow` pinned over its full domain (§6.13-0005): the IEEE 754-2019 9.2.1 special-value
+/// table as nine ORDERED rules (first match wins; `±inf` is a non-integer, never an odd
+/// integer, exponent). Only finite `a>0`, `a!=1`, finite nonzero `b` reaches the
+/// `exp(b·log a)` reference (rule 9). A naive `exp(b·log(a))` (see [`pow_via_exp_log`]) gets
+/// the negative-base, `0^0`, `1^NaN` and `1^±inf` cases wrong (NaN).
 pub fn pow(a: f32, b: f32) -> f32 {
-    // pow(_, 0) = 1 for every base, including 0^0 = 1 and (-2)^0 = 1.
+    // (1) pow(a, ±0) = 1 for every a, NaN included.
     if b == 0.0 {
         return 1.0;
     }
-    if a > 0.0 {
-        return f32_pow_pos(a, b);
+    // (2) pow(+1, b) = 1 for every b, NaN and ±inf included.
+    if a == 1.0 {
+        return 1.0;
     }
+    // (3) otherwise a NaN operand gives NaN.
+    if a.is_nan() || b.is_nan() {
+        return f32::NAN;
+    }
+    // (4) pow(-1, ±inf) = 1.
+    if a == -1.0 && b.is_infinite() {
+        return 1.0;
+    }
+    // (5) b = ±inf: |a|<1 -> +0 / +inf ; |a|>1 (a = ±inf included) -> +inf / +0.
+    if b.is_infinite() {
+        let small = abs(a) < 1.0;
+        return if (b > 0.0) == small { 0.0 } else { f32::INFINITY };
+    }
+    // From here `b` is finite and nonzero, and `a` is not NaN, not +1.
+    // (6) ±0 base: magnitude +0 for b>0, +inf for b<0; sign flips only for a negative-zero
+    // base with an odd-integer exponent.
     if a == 0.0 {
-        // ±0 base: magnitude is +0 for b>0, +inf for b<0; sign flips only for a
-        // negative-zero base raised to a positive/negative ODD-INTEGER exponent.
         let mag = if b > 0.0 { 0.0f32 } else { f32::INFINITY };
         if a.is_sign_negative() && is_odd_integer(b) {
             return copysign(mag, -1.0); // -0.0 or -inf
         }
-        return mag; // +0.0 or +inf
+        return mag;
     }
-    // a < 0.
-    if is_integer(b) {
-        let m = f32_pow_pos(abs(a), b); // |a|^b
-        return if is_odd_integer(b) { neg(m) } else { m };
+    // (7) ±inf base, finite b.
+    if a.is_infinite() {
+        let mag = if b > 0.0 { f32::INFINITY } else { 0.0f32 };
+        if a < 0.0 && is_odd_integer(b) {
+            return copysign(mag, -1.0);
+        }
+        return mag;
     }
-    f32::NAN // a<0 with a non-integer exponent
+    // (8) finite a<0, finite b: NaN unless b is an exact integer.
+    if a < 0.0 {
+        if is_integer(b) {
+            let m = f32_pow_pos(abs(a), b); // |a|^b
+            return if is_odd_integer(b) { neg(m) } else { m };
+        }
+        return f32::NAN;
+    }
+    // (9) finite a>0, a!=1, finite nonzero b: the reference at a refinement-permitted accuracy.
+    f32_pow_pos(a, b)
 }
 
 /// The WRONG `pow` that computes only the `a>0` reference `exp(b·log(a))` for every

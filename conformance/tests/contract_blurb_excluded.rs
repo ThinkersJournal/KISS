@@ -58,7 +58,7 @@ fn identity_block() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
+            ("contract_version", Value::Str("2".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
             ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
@@ -78,7 +78,7 @@ fn body(op: &str, blurb: Option<&str>) -> Vec<u8> {
 fn document(body: Vec<u8>) -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body,
     }
     .encode()

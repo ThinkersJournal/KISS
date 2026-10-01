@@ -16,7 +16,7 @@ fn member(tail: &str) -> Vec<u8> {
     body.extend_from_slice(tail.as_bytes());
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body,
     }
     .encode()
@@ -71,7 +71,7 @@ fn test_contract_bundle_headingless_member_isolated() {
     // A well-framed member whose body does NOT start with the first pinned heading.
     let headingless = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: b"garbage-with-no-heading\n".to_vec(),
     }
     .encode();

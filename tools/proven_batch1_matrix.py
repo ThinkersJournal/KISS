@@ -35,7 +35,7 @@ MUT = [
     ("scan_is_length_preserving", ST, b"    }\n    out\n}", b"    }\n    out.pop();\n    out\n}"),
     ("scatter_oob_writes_are_skipped", ST, b"continue; // \xc2\xa76.11-0005: OOB writes are skipped.", b"(); // \xc2\xa76.11-0005 skip REMOVED (mutation)"),
     ("scatter_atomic_max_min_nan_propagating", ST, b"Combine::AtomicMax => max_prop(dest[i], s),", b"Combine::AtomicMax => dest[i].max(s),"),
-    ("test_contract_version_value_pinned", CT, b'if version != "1" {', b'if version != "2" {'),
+    ("test_contract_version_value_pinned", CT, b'if version != "2" {', b'if version != "3" {'),
 ]
 
 if __name__ == "__main__":

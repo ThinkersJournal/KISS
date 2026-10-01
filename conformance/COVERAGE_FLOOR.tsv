@@ -244,7 +244,7 @@
 #
 # proven 9 -> 10 by the KISS-CONTRACT-6.1-0008 NAMED->CITED->PROVEN migration (#278 follow-up).
 # The clause was demonstrated in batch 1 (ee1d186 / PROVEN_BATCH1.md row 36: mutating read_document's
-# `version != "1"` -> `!= "2"` reddens EXACTLY test_contract_version_value_pinned) but DEFERRED as
+# `version != "2"` -> `!= "3"` reddens EXACTLY test_contract_version_value_pinned) but DEFERRED as
 # NAMED-not-CITED: the test named the clause only in assert MESSAGES -- a MENTION, not a backing form
 # -- so it was harness-NAMED with no `// Backs:`. This PR adds the `// Backs:` (NAMED->CITED, harness
 # UNCHANGED: NAMED 241->240 / CITED 139->140, both inside the 380) and the `// Proven:` marker.
@@ -532,7 +532,7 @@
 # bumping a shared counter converge on a value that is neither. Re-derive after every rebase.
 #
 # key	value
-harness	387
+harness	388
 lint	33
 untested	481
 proven	20

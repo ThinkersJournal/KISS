@@ -243,12 +243,12 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `neg` | arithmetic | `-x`; flips sign bit, `-(-0.0)=+0.0`, NaN propagates |
 | `abs` | arithmetic | `|x|` by clearing the sign bit (raw-bit) |
 | `select` | select | `cond!=0 ? a : b`; raw-bit move, order `(cond,a,b)` |
-| `cmp_eq` | comparison | `a==b ? 1:0`; any-NaN → 0 |
-| `cmp_ne` | comparison | `a!=b ? 1:0`; any-NaN → 1 (isnan via `cmp_ne(x,x)`) |
-| `cmp_lt` | comparison | `a<b ? 1:0`; false on NaN |
-| `cmp_le` | comparison | `a<=b ? 1:0`; false on NaN; `-0.0<=+0.0` true |
-| `cmp_gt` | comparison | `a>b ? 1:0`; false on NaN |
-| `cmp_ge` | comparison | `a>=b ? 1:0`; false on NaN |
+| `cmp_eq` | comparison | `a==b ? 1:0` (`bool` mask); any-NaN → 0 |
+| `cmp_ne` | comparison | `a!=b ? 1:0` (`bool` mask); any-NaN → 1 (isnan via `cmp_ne(x,x)`) |
+| `cmp_lt` | comparison | `a<b ? 1:0` (`bool` mask); false on NaN |
+| `cmp_le` | comparison | `a<=b ? 1:0` (`bool` mask); false on NaN; `-0.0<=+0.0` true |
+| `cmp_gt` | comparison | `a>b ? 1:0` (`bool` mask); false on NaN |
+| `cmp_ge` | comparison | `a>=b ? 1:0` (`bool` mask); false on NaN |
 | `floor` | rounding | round toward −∞ |
 | `ceil` | rounding | round toward +∞ |
 | `trunc` | rounding | round toward zero |
@@ -298,23 +298,23 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `expm1` | transcendental | `reduce_std` | reduction |
 | `log2` | transcendental | `logsumexp` | reduction |
 | `log10` | transcendental | `argmax` | reduction |
-| `log1p` | transcendental | `any` | reduction |
-| `tan` | transcendental | `all` | reduction |
-| `tanh` | transcendental | `matmul` | contraction |
-| `sinh` | transcendental | `softmax` | normalization |
-| `cosh` | transcendental | `log_softmax` | normalization |
-| `asinh` | transcendental | `rms_norm` | normalization |
-| `acosh` | transcendental | `layer_norm` | normalization |
-| `atanh` | transcendental | `cumsum` | scan |
-| `asin` | transcendental | `cumprod` | scan |
-| `acos` | transcendental | `cummax` | scan |
-| `cbrt` | transcendental | `avg_pool` | window |
-| `erfc` | transcendental | `max_pool` | window |
-| `sigmoid` | activation | `index_select` | gather_scatter |
-| `relu` | activation | `embedding` | gather_scatter |
-| `silu` | activation | `scatter_add` | gather_scatter |
-| `softplus` | activation | `im2col` | shape |
-| `mish` | activation | | |
+| `log1p` | transcendental | `argmin` | reduction |
+| `tan` | transcendental | `any` | reduction |
+| `tanh` | transcendental | `all` | reduction |
+| `sinh` | transcendental | `matmul` | contraction |
+| `cosh` | transcendental | `softmax` | normalization |
+| `asinh` | transcendental | `log_softmax` | normalization |
+| `acosh` | transcendental | `rms_norm` | normalization |
+| `atanh` | transcendental | `layer_norm` | normalization |
+| `asin` | transcendental | `cumsum` | scan |
+| `acos` | transcendental | `cumprod` | scan |
+| `cbrt` | transcendental | `cummax` | scan |
+| `erfc` | transcendental | `avg_pool` | window |
+| `sigmoid` | activation | `max_pool` | window |
+| `relu` | activation | `index_select` | gather_scatter |
+| `silu` | activation | `embedding` | gather_scatter |
+| `softplus` | activation | `scatter_add` | gather_scatter |
+| `mish` | activation | `im2col` | shape |
 | `gelu` | activation | | |
 | `gelu_tanh` | activation | | |
 
@@ -635,7 +635,7 @@ verbatim, everywhere).
   (§6.0-0007) is fixed by the output's **semantics** — whether it reports *which*
   value(s) won a comparison — and MUST NOT depend on which internal lane or
   representation an implementation uses to compute it. In particular, a
-  **comparison/predicate mask** — a boolean (or `{0, 1}`, §6.2-0005) result of a
+  **comparison/predicate mask** — the `bool` byte `0`/`1` result (§6.2-0005) of a
   comparison op — is a **selection** output even when an implementation realizes it as
   an ordinary elementwise value; over a producing sub-DAG that is not entirely
   exact-byte it is **order-invariant/nondeterministic, never ULP/tolerance**. A
@@ -697,9 +697,14 @@ verbatim, everywhere).
   its dtype and MUST NOT normalize `-0.0` to `+0.0` except where a clause explicitly
   produces `+0.0` (e.g. `neg` of `-0.0`, `abs` of `-0.0`). *Test:*
   `test_ops_signed_zero_preserved`.
-- **KISS-OPS-6.2-0005** — A comparison op (§6.6) MUST produce its result as the value `1`
-  (true) or `0` (false) encoded in the op's compute dtype, and MUST NOT produce any other
-  value. *Test:* `test_ops_compare_result_zero_one`.
+- **KISS-OPS-6.2-0005** — A comparison op (§6.6) MUST produce a **`bool` mask** — dtype
+  `bool` (§6.2-0006), one byte per element, the same storage as `u8` — whose byte is `1`
+  (true) or `0` (false), and MUST NOT produce any other byte value; the result dtype is
+  `bool` whatever the operands' compute dtype (it is **not** encoded in that compute
+  dtype, so an `f32` comparison yields a one-byte mask, not a 4-byte `1.0`/`0.0`). A mask
+  that feeds an arithmetic or `reduce` atom (the `logical_and`, `logical_or`, `any`, and
+  `all` rows of §6.13) is read as the unsigned byte value `0`/`1`. *Test:*
+  `test_ops_compare_result_zero_one`.
 - **KISS-OPS-6.2-0006** — For the `bool` dtype, any op that consumes a `bool` operand MUST
   treat a byte value of `0` as false and any non-zero byte as true, and any op that
   produces a `bool` result MUST normalize it to strictly `0` or `1`. *Test:*
@@ -801,7 +806,7 @@ wrapping two's-complement per §6.2-0002):
 
 ### 6.6 Comparison atoms
 
-Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
+Each comparison yields a `bool` mask byte, `1` or `0` (§6.2-0005):
 
 | Op | True when | NaN operand |
 |---|---|---|
@@ -813,7 +818,7 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 | `cmp_ge` | `a >= b` | → 0 (false) |
 
 - **KISS-OPS-6.6-0001** — Each comparison op MUST compute the predicate in its row above
-  and yield `1` (true) or `0` (false) in the compute dtype. *Test:*
+  and yield the `bool` mask byte `1` (true) or `0` (false) (§6.2-0005). *Test:*
   `test_ops_compare_predicates`.
 - **KISS-OPS-6.6-0002** — `cmp_eq`, `cmp_lt`, `cmp_le`, `cmp_gt`, and `cmp_ge` MUST each
   yield `0` (false) whenever either operand is NaN. *Test:* `comparisons_are_ieee_ordered`.
@@ -1012,8 +1017,15 @@ section-intro paragraph is an informative pointer to it):
   lower original index (the stability rule). It MUST expose **two** outputs: (a) the values
   written back as a raw-bit permutation, and (b) the **original-index vector** — for each
   output rank, the source position it came from. It MUST be treated as a structural atom
-  with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`,
-  §6.13 table.) *Test:* `test_ops_sort_network_total_order`.
+  with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`
+  and `argmin` reads rank 0 under `direction=ascending`, §6.13 table. Because NaN orders as
+  the greatest value, `argmax` selects the lowest-index NaN when any element is NaN, whereas
+  `argmin` never selects a NaN while any element is non-NaN and selects index `0` when every
+  element is NaN; both resolve ties to the lower original index. This **differs from
+  NumPy and PyTorch**, where `argmin` and `argmax` both return the NaN index: here the rule
+  is derived from this clause's total order (NaN greatest), not chosen as a NaN-propagation
+  policy.) *Test:*
+  `test_ops_sort_network_total_order`.
 - **KISS-OPS-6.11-0008** — `reduce` MUST retain each reduced axis as an extent-`1` axis
   with stride `0` (a keepdim result) so the reduced value broadcasts back over the
   original axis via extent-1 / stride-0, so a shifted-shape decomposition such as
@@ -1230,7 +1242,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `mish` | activation | ✓ | `mul(x, tanh(softplus(x)))` (refinement-permitted: inherits the overflow-safe `tanh`/`softplus`) |
 | `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), erf(div(x, const(sqrt2)))))` |
 | `gelu_tanh` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh(mul(const(sqrt(2/pi)), add(x, mul(const(0.044715), mul(x, sqr(x))))))))` |
-| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for `a>0`; full-domain behavior pinned by §6.13-0005 |
+| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for finite `a>0`, `a≠1`, finite nonzero `b` only; every other input (NaN, `±∞`, `±0`, `a=1`, `a<0`) is pinned by the IEEE 754-2019 clause 9.2.1 special-value table, restated in §6.13-0005 |
 | `hypot` | binary_math | ✓ | `sqrt(add(sqr(a), sqr(b)))` |
 | `rem_floor` | binary_math | — | `sub(a, mul(floor(div(a,b)), b))` |
 | `rem_trunc` | binary_math | — | `sub(a, mul(trunc(div(a,b)), b))` |
@@ -1240,10 +1252,11 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `logical_not` | logical | — | `cmp_eq(x, const(0))` |
 | `reduce_mean` | reduction | — | `div(reduce(sum, x), reduced_count)` (divisor is the product of extents over **all** reduced axes, §6.12-0001) |
 | `reduce_norm2` | reduction | — | `sqrt(reduce(sum, sqr(x)))` |
-| `reduce_var` | reduction | — | `sub(reduce_mean(sqr(x)), sqr(reduce_mean(x)))` |
+| `reduce_var` | reduction | ✓ | `mu=reduce_mean(x); out=reduce_mean(sqr(sub(x, mu)))` (two-pass, population divisor: the mean is formed first, then the squared deviations from it are averaged; Bessel divisor per §6.13-0004. The algebraically equal one-pass form `sub(reduce_mean(sqr(x)), sqr(reduce_mean(x)))` is **non-normative, illustrative only** — it catastrophically cancels when `|mean|` greatly exceeds the spread and can yield a negative variance. Refinement-permitted: a single-pass Welford/Chan update over deviations from a running mean, §6.13-0004) |
 | `reduce_std` | reduction | — | `sqrt(reduce_var(x))` |
 | `logsumexp` | reduction | — | `m=reduce(max,x); out=add(m, log(reduce(sum, exp(sub(x,m)))))` |
 | `argmax` | reduction | — | `original-index at rank 0 of sort_network(desc, keys=x)` (the §6.11-0007 index-vector output) |
+| `argmin` | reduction | — | `original-index at rank 0 of sort_network(asc, keys=x)` (the §6.11-0007 index-vector output) |
 | `any` | reduction | — | `reduce(max, cmp_ne(x, const(0)))` |
 | `all` | reduction | — | `reduce(min, cmp_ne(x, const(0)))` |
 | `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001 |
@@ -1272,7 +1285,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `test_ops_decomposition_strictly_lower_level`.
 - **KISS-OPS-6.13-0003** — For every op marked **✓** in the *Refine* column of the §6.13
   table (`expm1`, `log1p`, `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`, `pow`,
-  `hypot`, `ldexp`), a conforming kernel MAY — and, where the literal reference
+  `hypot`, `ldexp`, `reduce_var`), a conforming kernel MAY — and, where the literal reference
   decomposition would overflow or catastrophically cancel while the true function is finite
   (the exp-of-large-argument forms `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`),
   MUST — compute a more accurate result than the literal reference decomposition (e.g. an
@@ -1282,8 +1295,15 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   under its determinism class. *Test:* `test_ops_decomposition_accuracy_refinement`.
 - **KISS-OPS-6.13-0004** — A parameterized non-primitive op MUST carry its semantics-
   affecting attributes explicitly: `reduce_var` and `reduce_std` default to the
-  population form and MUST declare a Bessel correction as an attribute rather than
-  changing the decomposition silently; `softmax` / `log_softmax` MUST declare the
+  population form (divisor `reduced_count`) and MUST declare a Bessel correction as an
+  attribute (`bessel_correction`, §6.19-0030) rather than changing the decomposition
+  silently — with `bessel_correction` set the divisor of the final mean in the `reduce_var`
+  row is `reduced_count − 1`, evaluated as ordinary IEEE 754 division with no special case;
+  `reduce_var` MUST be computed from **deviations about the mean** — the two-pass form of
+  its §6.13 row, or a single-pass Welford/Chan update that accumulates squared deviations
+  about a running mean — and MUST NOT be computed as `E[x²] − E[x]²` (the §6.13 row's
+  non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
+  `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
   normalization axis; `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
   `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
@@ -1297,16 +1317,32 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `window_size` positions with the given `stride` and `padding`, OOB taps skipped.
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
   `test_ops_parameterized_attributes_explicit`.
-- **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain: for `a>0`,
-  `pow(a,b)` equals the reference `exp(mul(b, log(a)))` (refinement permitted,
-  §6.13-0003); `pow(0,0)` MUST yield `1`; `pow(+0.0, b)` for `b>0` MUST yield `+0.0` and
-  for `b<0` MUST yield `+∞`; for the negative-zero base, `pow(-0.0, b)` MUST yield `-0.0`
-  when `b` is a positive odd integer, `+0.0` when `b` is a positive even integer or a
-  positive non-integer, `-∞` when `b` is a negative odd integer, and `+∞` when `b` is a
-  negative even integer or a negative non-integer (the sign follows IEEE 754 `pow` on the
-  signed zero); for `a<0`, `pow(a,b)` MUST yield NaN unless `b` is an exact integer, in
-  which case `pow(a,b)` MUST yield `|a|^b` when `b` is even and `-(|a|^b)` when `b` is odd.
-  *Test:* `test_ops_pow_full_domain`.
+- **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain by the IEEE 754-2019
+  clause 9.2.1 special-value table for `pow` (the same table as ISO C99/C11 Annex F.9.4.4); the
+  `exp(mul(b, log(a)))` reference is **not** the definition of any special value below and
+  MUST NOT be used to derive one. The rules are applied **in order, first match wins**, with
+  `±∞` counting as a non-integer (and never an odd integer) exponent:
+  (1) `pow(a, ±0)` MUST yield `+1` for every `a`, **including a NaN `a`** (so `pow(0,0)` is
+  `1`); (2) `pow(+1, b)` MUST yield `+1` for every `b`, **including a NaN `b` and `b=±∞`**;
+  (3) otherwise, a NaN `a` or `b` MUST yield NaN; (4) `pow(-1, ±∞)` MUST yield `+1`;
+  (5) for `b=±∞` (`a` neither NaN nor `±1` by now): `|a|<1` MUST yield `+0` for `b=+∞` and
+  `+∞` for `b=-∞`, and `|a|>1` (including `a=±∞`) MUST yield `+∞` for `b=+∞` and `+0` for
+  `b=-∞`; (6) `pow(+0.0, b)` for finite `b>0` MUST yield `+0.0` and for finite `b<0` MUST
+  yield `+∞`; for the negative-zero base, `pow(-0.0, b)` MUST yield `-0.0` when `b` is a
+  positive odd integer, `+0.0` when `b` is a positive even integer or a positive
+  non-integer, `-∞` when `b` is a negative odd integer, and `+∞` when `b` is a negative
+  even integer or a negative non-integer (the sign follows IEEE 754 `pow` on the signed
+  zero); (7) `pow(+∞, b)` for finite `b` MUST yield `+∞` when `b>0` and `+0` when `b<0`;
+  `pow(-∞, b)` for finite `b` MUST yield `-∞` when `b` is a positive odd integer, `+∞` when
+  `b` is any other positive value, `-0.0` when `b` is a negative odd integer, and `+0.0`
+  when `b` is any other negative value; (8) for finite `a<0` and finite `b`, `pow(a,b)` MUST
+  yield NaN unless `b` is an exact integer, in which case `pow(a,b)` MUST yield `|a|^b` when
+  `b` is even and `-(|a|^b)` when `b` is odd; (9) only for finite `a>0`, `a≠1`, and finite
+  nonzero `b` does `pow(a,b)` equal the reference `exp(mul(b, log(a)))` (refinement
+  permitted, §6.13-0003). *Informative:* the reference is wrong at exactly the values the
+  rules above override — `exp(b·log 1)` is NaN for `b=±∞` or NaN where IEEE 754 requires `1`,
+  and `0·log a` is NaN for `a=+∞, b=0` where IEEE 754 requires `1`. *Test:*
+  `test_ops_pow_full_domain`.
 - **KISS-OPS-6.13-0006** — A reference-decomposition body **that is a scalar-expression
   body** MUST conform to this grammar: a body is either (a) a single expression tree over
   KISS-Ops ops and the §6.12 scalar-source leaves, or (b) a sequence of single-assignment
@@ -2246,8 +2282,8 @@ promoted to this normative OpAttrs encoding for that channel only.
 
 - **KISS-OPS-6.19-0036** — Several advertised, axis-parameterized non-primitive ops are
   **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field):
-  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `any`, `all`, `cumsum`, `cumprod`,
-  and `cummax`. A consumer that natively matches one of these ops — and therefore does not
+  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `argmin`, `any`, `all`, `cumsum`,
+  `cumprod`, and `cummax`. A consumer that natively matches one of these ops — and therefore does not
   expand its §6.13 reference decomposition (§6.14-0004) — MUST obtain the reduce/scan axis
   by resolving the axis of the **inner carrier node** of that op's reference decomposition
   (the `reduce`, `prefix_scan`, or `sort_network` the op is defined over), even though it
@@ -2877,7 +2913,12 @@ NaN` (propagate); `fmax_ieee(a,b) = 3.0` (suppress); `min_prop(a,b) = NaN`; `fmi
 **A.5 `argmax` via `sort_network`.** `argmax(x)` reads the rank-0 entry of the
 **original-index vector** output of `sort_network(desc, keys=x)` (§6.11-0007). Because the
 sort is stable and descending, ties resolve to the first original index (argmax ties-to-
-first), and the values output is not consumed — only the index vector is.
+first), and the values output is not consumed — only the index vector is. `argmin` is the
+same read under `sort_network(asc, keys=x)`: with NaN ordered greatest, an ascending sort
+places NaN last, so `argmin` skips NaN unless every element is NaN (then index `0`), whereas
+`argmax` returns the first NaN. This **differs from NumPy and PyTorch** (both return the NaN
+index for `argmin` as well): it is derived from the §6.11-0007 total order (NaN greatest), not
+a NaN-propagation choice.
 
 ## Appendix B — Glossary (informative)
 

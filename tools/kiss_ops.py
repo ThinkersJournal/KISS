@@ -254,7 +254,13 @@ def build_manifest(spec_dir):
     ops = open(os.path.join(spec_dir, "ops.md"), encoding="utf-8").read()
     primitive = set(sec27_primitive(ops))
     nonprim = set(sec27_nonprimitive_family(ops))
-    all_ops = sorted(primitive | nonprim)
+    # The registry lists EVERY in-scope op (§6.1-0001: the §6.3 primitive floor, the §6.13
+    # non-primitive ops AND the §6.18 complex-arithmetic ops), whether or not any implementation
+    # or corpus slice covers it yet — an op with zero implementations is still in the op set.
+    # The complex ops come from the §6.18 tables (bridge + advertised), the same regions check()
+    # reconciles against the §6.18-0001 clause set.
+    complex_ops = set(sec618_table_ops(ops, "bridge")) | set(sec618_table_ops(ops, "advertised"))
+    all_ops = sorted(primitive | nonprim | complex_ops)
     atoms = transcendental_atoms(ops)  # sqrt, exp, log, sin, cos, atan, atan2, erf, lgamma
     # Plan A's declared coverage set: the exact-byte arithmetic floor that is minted now.
     declared = sorted(o for o in ("add",) if o in all_ops)

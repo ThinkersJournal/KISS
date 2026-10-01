@@ -75,7 +75,7 @@ fn test_contract_document_header_line() {
     body.extend_from_slice(&semantics_block());
     let doc = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: body.clone(),
     }
     .encode();
@@ -95,7 +95,7 @@ fn test_contract_document_header_line() {
 
     // Exact pinned form: single-space separators, `len=<N>`, `crc32=<8 hex>`.
     let expected_header = format!(
-        "KISC kiss-contract 1 len={} crc32={:08x}",
+        "KISC kiss-contract 2 len={} crc32={:08x}",
         body.len(),
         crc32_ieee(&body)
     );
@@ -199,7 +199,7 @@ fn test_contract_reject_malformed_header() {
     body.extend_from_slice(&semantics_block());
     let bad_kind = Document {
         contract_kind: "kiss-kontract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body,
     }
     .encode();
@@ -231,7 +231,7 @@ fn test_contract_rejection_is_typed_decline() {
     // allocates `declared_len` before checking would attempt a ~4 GB allocation
     // and OOM/abort; a length-checking reader declines with BadLength. The CRC
     // and body are never touched with the bogus length.
-    let attack = b"KISC kiss-contract 1 len=4000000000 crc32=00000000\n[section:1:identity]\n";
+    let attack = b"KISC kiss-contract 2 len=4000000000 crc32=00000000\n[section:1:identity]\n";
     assert_eq!(
         read_document(attack),
         Err(ContractDecline::BadLength { declared: 4_000_000_000, actual: 21 })

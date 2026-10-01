@@ -223,7 +223,7 @@ strided cell. Its contract carries:
 - **Capabilities:** `accept_predicate = structure_key`; determinism class `exact-byte`;
   precision class `correctly-rounded`; cost class `elementwise`, cost `1 * n`.
 - **Guarantees:** reference function `add` (IEEE-754); ULP tier 0 (correctly rounded);
-  determinism `exact-byte`; MathFidelity `bit-stable`; bit-stable on same hardware;
+  determinism `exact-byte`; MathFidelity `bit-stable`; reproducibility scope `portable`;
   `audited_status` **derived** here from those guarantees.
 - **Provenance:** kernel source (generator), revision base + `revision_hash`,
   `cost_provenance = declared`, negotiation metadata (empty).
@@ -572,7 +572,7 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `1`, and a contract conforming to this schema version MUST carry exactly that token
+  token `2`, and a contract conforming to this schema version MUST carry exactly that token
   (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
   a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
   reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
@@ -1207,10 +1207,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   the reassociation error stays bounded by the `|max partial sum|` term, so a
   result-relative metric would spuriously explode and reject a conformant kernel. *Test:*
   `test_contract_accumulator_tolerance_band`.
-- **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state whether the kernel is
-  bit-stable on the same hardware and is the **single authoritative home** of that fact; it
-  MUST be consistent with the `determinism_class`, and in particular a kernel of class
-  `order-invariant/nondeterministic` MUST carry `bit_stability = false`. The `audited_status`
+- **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state the kernel's
+  **reproducibility scope** — exactly one value of the closed set `{portable, same-hardware,
+  none}` defined in §6.8-0013 — and is the **single authoritative home** of that fact; it
+  MUST be consistent with the `determinism_class` as §6.8-0013 states (an earlier form of
+  this clause forced `order-invariant/nondeterministic` to carry `false`; that coupling is
+  withdrawn and replaced by §6.8-0013). The `audited_status`
   derivation (§6.8-0009 / §6.8-0010) reads this field and MUST NOT set it. *Test:*
   `test_contract_bit_stability_consistent`.
 - **KISS-CONTRACT-6.8-0006** — The `cost_provenance` MUST be `declared` or `measured`, stating
@@ -1244,6 +1246,26 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   `reference_function`; an implementation MUST NOT author `unaudited` where the Guarantees do
   declare such a bound, and MUST NOT produce an `audited_status` value that neither §6.8-0009
   nor this clause yields. *Test:* `test_contract_unaudited_derivation_rule`.
+
+- **KISS-CONTRACT-6.8-0013** — The `bit_stability` value set is the closed three-member
+  enum `{portable, same-hardware, none}`, spelled verbatim, an axis **orthogonal** to the
+  `determinism_class` (the class selects the KISS-Conform comparator, KISS-OPS §6.0; this
+  field states reproducibility). `portable` states that repeated invocations on identical
+  inputs are bit-identical on **any** compatible hardware; `same-hardware` states that they
+  are bit-identical on the **same** hardware but MAY differ across hardware; `none` states
+  that run-to-run variation is possible (for example an atomic floating-point accumulation
+  or a scheduler-dependent reduction order). A kernel of class `exact-byte` or `ULP/tolerance`
+  MAY declare any of the three values; a declaration is a **claim** that remains subject to
+  actual verification of the kernel, and this clause adds no verification mechanism. A kernel
+  of class `order-invariant/nondeterministic` MUST declare `same-hardware` or `none` and MUST
+  NOT declare `portable`: its reduction order is not pinned, so different hardware may choose
+  a different associativity and cross-hardware bit-identity cannot be soundly guaranteed
+  under that class; a kernel that pins its order enough to be portable MUST be reclassified
+  rather than claim `portable` under `order-invariant/nondeterministic`. Such a kernel MAY
+  declare `same-hardware` when its reduction order is fixed, so that it is not reassociated
+  between runs on the same hardware. An implementation MUST NOT define a parallel reproducibility
+  vocabulary, and MUST NOT write the former two-value spelling (`bit-stable` /
+  `bit-unstable`). *Test:* `test_contract_bit_stability_scope`.
 
 ### 6.9 Provenance section
 
@@ -1373,7 +1395,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   the 4-byte magic `0x4B 0x49 0x53 0x43` (ASCII `KISC`), one space, the `contract_kind` token
   (exactly `kiss-contract`, §6.1-0007), one space, the `contract_version` (decimal ASCII), one
   space, `len=<N>`, one space, `crc32=<HHHHHHHH>`, then a single LF (`0x0A`) — for example
-  `KISC kiss-contract 1 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
+  `KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
   any document not beginning with the magic `KISC` or whose header line does not match this
   pinned form. *Test:* `test_contract_document_header_line`.
 - **KISS-CONTRACT-6.11-0003** — The header line MUST declare the document's inner framing: `<N>`
@@ -1688,6 +1710,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0010 | `test_contract_unaudited_derivation_rule` |
 | KISS-CONTRACT-6.8-0011 | `test_contract_accumulation_type_matches_key_acc` |
 | KISS-CONTRACT-6.8-0012 | `test_contract_accumulator_tolerance_band` |
+| KISS-CONTRACT-6.8-0013 | `test_contract_bit_stability_scope` |
 | KISS-CONTRACT-6.9-0001 | `test_contract_provenance_field_schema` |
 | KISS-CONTRACT-6.9-0002 | `test_contract_provenance_source` |
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |
@@ -1841,7 +1864,7 @@ over the fully assembled document.
 **Header line (§6.11-0002/-0003)** — begins with the 4-byte magic `KISC` (`0x4B 0x49 0x53 0x43`):
 
 ```
-KISC kiss-contract 1 len=<N> crc32=<HHHHHHHH>
+KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>
 ```
 
 **Identity block (§6.11-0004/-0005; heading id 1)** — heading line then one `key = value` line per
@@ -1851,7 +1874,7 @@ field, in field-schema order (§6.3-0001); `revision_hash` is the opaque-blob te
 ```
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 1
+contract_version = 2
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
@@ -1926,7 +1949,7 @@ per_backend_ulp_tiers = [cuda:sm89{max_ulp=0}]
 determinism_class = exact-byte
 math_precision = f32
 accumulation_type = f32
-bit_stability = bit-stable
+bit_stability = portable
 audited_status = audited
 cost_provenance = measured
 ```

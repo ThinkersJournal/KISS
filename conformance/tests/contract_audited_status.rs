@@ -27,7 +27,8 @@
 //! use the `§<sec>-<nnnn>` short form, which does not match the citation grammar.
 
 use kiss_conformance::contract::{
-    derive_audited_status, verify_audited_status, AuditedStatus, DeclaredAccuracyTier, Guarantees,
+    derive_audited_status, verify_audited_status, AuditedStatus, BitStability, DeclaredAccuracyTier,
+    Guarantees,
 };
 use kiss_conformance::DeterminismClass;
 
@@ -48,7 +49,7 @@ fn audited_guarantees() -> Guarantees {
         reference_function: Some("exp".into()),
         per_backend_ulp_tiers: vec![("cuda:sm89".into(), bounded_tier())],
         determinism_class: DeterminismClass::UlpTolerance,
-        bit_stability: false,
+        bit_stability: BitStability::None,
     }
 }
 

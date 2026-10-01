@@ -197,7 +197,7 @@ fn test_contract_document_inner_length_and_crc() {
     let body = appendix_c_body();
     let good = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: body.clone(),
     }
     .encode();
@@ -245,7 +245,7 @@ fn test_contract_document_inner_length_and_crc() {
 fn test_contract_reject_unknown_version() {
     // Each rebuilt via Document::encode so len/crc stay self-consistent and ONLY
     // the version triggers the decline.
-    for v in ["2", "99", "0"] {
+    for v in ["1", "99", "0"] {
         let doc = document("kiss-contract", v);
         assert_eq!(
             read_document(&doc),
@@ -278,7 +278,7 @@ fn test_contract_kind_recognized_token() {
     );
 
     // The reader accepts EXACTLY the token the spec names.
-    let good = document(accepted, "1");
+    let good = document(accepted, "2");
     let hdr = read_document(&good).expect("KISS-CONTRACT-6.1-0007: the spec-declared kind must be accepted");
     assert_eq!(
         hdr.contract_kind, accepted,
@@ -288,7 +288,7 @@ fn test_contract_kind_recognized_token() {
     // Byte-mutated near-misses are each declined with the offending token echoed.
     for near in ["KISS-CONTRACT", "kiss_contract", "kiss-contracts", "kisscontract"] {
         assert_eq!(
-            read_document(&document(near, "1")),
+            read_document(&document(near, "2")),
             Err(ContractDecline::UnknownKind { got: near.to_string() }),
             "KISS-CONTRACT-6.1-0007: near-miss kind `{near}` must decline UnknownKind (no case-fold / prefix accept)"
         );
@@ -296,32 +296,32 @@ fn test_contract_kind_recognized_token() {
 }
 
 /// KISS-CONTRACT-6.1-0008 — the `contract_version` of THIS schema is the exact
-/// decimal token `1`; a reader MUST accept exactly `1` (UTF-8, byte-exact) and
+/// decimal token `2`; a reader MUST accept exactly `2` (UTF-8, byte-exact) and
 /// reject any other value. The version is compared BYTE-for-byte, never
 /// integer-parsed. Distinct from §6.1-0003 (general unsupported decline); this
 /// pins the exact accepted byte-token of this schema.
 ///
-/// TEETH: a reader that numeric-parses the version would accept `01` or `1.0`
-/// (both equal to 1 numerically); byte-exact comparison declines them.
+/// TEETH: a reader that numeric-parses the version would accept `02` or `2.0`
+/// (both equal to 2 numerically); byte-exact comparison declines them.
 // Backs: KISS-CONTRACT-6.1-0008 — pins the accepted `contract_version` to the exact
-// byte-token `1`: exactly `1` is read, `01`/`1.0`/`10`/`2`/`+1` decline byte-exact
-// (never integer-parsed), and a whitespace-padded ` 1` is a FRAMING decline.
+// byte-token `2`: exactly `2` is read, `02`/`2.0`/`20`/`1`/`+2` decline byte-exact
+// (never integer-parsed), and a whitespace-padded ` 2` is a FRAMING decline.
 // Proven: KISS-CONTRACT-6.1-0008 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_contract_version_value_pinned() {
     let contract = read_spec("contract.md");
     let block = norm(clause_block(&contract, "KISS-CONTRACT-6.1-0008"));
     let pinned = backtick_after(&block, "the exact decimal token ");
-    assert_eq!(pinned, "1", "KISS-CONTRACT-6.1-0008: the §6.1-0008 pinned version drifted from `1`");
+    assert_eq!(pinned, "2", "KISS-CONTRACT-6.1-0008: the §6.1-0008 pinned version drifted from `2`");
 
     // Exactly the pinned token is accepted.
     let hdr = read_document(&document("kiss-contract", pinned))
-        .expect("KISS-CONTRACT-6.1-0008: version `1` must be accepted");
-    assert_eq!(hdr.contract_version, "1", "KISS-CONTRACT-6.1-0008: reader accepted a non-`1` version");
+        .expect("KISS-CONTRACT-6.1-0008: version `2` must be accepted");
+    assert_eq!(hdr.contract_version, "2", "KISS-CONTRACT-6.1-0008: reader accepted a non-`2` version");
 
     // Numeric-equal-but-byte-different spellings are declined UnknownVersion — a
-    // numeric parser would wrongly accept `01` / `1.0` / `+1`.
-    for near in ["01", "1.0", "10", "2", "+1"] {
+    // numeric parser would wrongly accept `02` / `2.0` / `+2`.
+    for near in ["02", "2.0", "20", "1", "+2"] {
         assert_eq!(
             read_document(&document("kiss-contract", near)),
             Err(ContractDecline::UnknownVersion { got: near.to_string() }),
@@ -335,12 +335,12 @@ fn test_contract_version_value_pinned() {
     //
     // Pinning the exact code rather than `is_err()` is what gives this teeth: a
     // reader with a lenient field-count check (`parts.len() < 5`) splits
-    // `KISC kiss-contract  1 …` into six, reads the empty string between the two
+    // `KISC kiss-contract  2 …` into six, reads the empty string between the two
     // spaces as the version, and declines `UnknownVersion { got: "" }`. That reader
     // has silently accepted a non-single-space separator — a real framing defect —
     // and `is_err()` cannot see it, because a wrong-code decline is still a decline.
     assert_eq!(
-        read_document(&document("kiss-contract", " 1")),
+        read_document(&document("kiss-contract", " 2")),
         Err(ContractDecline::MalformedHeader),
         "KISS-CONTRACT-6.1-0008: a whitespace-padded version must decline as a FRAMING \
          fault — a decline naming the version instead means the reader tolerated a \
@@ -361,7 +361,7 @@ fn test_contract_self_delimiting_document() {
     let body = appendix_c_body();
     let doc = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: body.clone(),
     }
     .encode();
