@@ -449,6 +449,39 @@ fn test_ops_pow_full_domain() {
     assert_eq!(pow(-0.0, -0.5), inf);          // negative non-integer   -> +inf
     // a>0 reference (exact power) still holds.
     assert_eq!(pow(2.0, 10.0), 1024.0);
+
+    // IEEE 754-2019 9.2.1 special values (§6.13-0005 rules 1-9), the cases the
+    // `exp(b*log a)` reference and the old `a<0 => NaN unless integer` rule got wrong.
+    let nan = f32::NAN;
+    assert_eq!(pow(nan, 0.0).to_bits(), 1.0f32.to_bits());   // rule 1: pow(NaN, +-0) = 1
+    assert_eq!(pow(nan, -0.0).to_bits(), 1.0f32.to_bits());
+    assert_eq!(pow(1.0, nan).to_bits(), 1.0f32.to_bits());   // rule 2: pow(1, NaN) = 1
+    assert_eq!(pow(1.0, inf).to_bits(), 1.0f32.to_bits());   // rule 2: pow(1, +-inf) = 1
+    assert_eq!(pow(1.0, -inf).to_bits(), 1.0f32.to_bits());
+    assert!(pow(2.0, nan).is_nan() && pow(nan, 2.0).is_nan()); // rule 3
+    assert_eq!(pow(-1.0, inf).to_bits(), 1.0f32.to_bits());  // rule 4: pow(-1, +-inf) = 1
+    assert_eq!(pow(-1.0, -inf).to_bits(), 1.0f32.to_bits());
+    assert_eq!(pow(0.5, inf), 0.0);                          // rule 5: |a|<1
+    assert_eq!(pow(0.5, -inf), inf);
+    assert_eq!(pow(2.0, inf), inf);                          // rule 5: |a|>1
+    assert_eq!(pow(2.0, -inf), 0.0);
+    assert_eq!(pow(-2.0, inf), inf);                         // a<0, b=+inf (not NaN)
+    assert!(bits_eq(pow(-2.0, -inf), 0.0));
+    assert_eq!(pow(-inf, inf), inf);
+    assert!(bits_eq(pow(0.0, inf), 0.0));                    // rule 5 with a=+-0
+    assert_eq!(pow(-0.0, -inf), inf);
+    assert_eq!(pow(0.0, -1.0), inf);                         // rule 6
+    assert_eq!(pow(-0.0, -3.0), -inf);
+    assert_eq!(pow(inf, 2.0), inf);                          // rule 7: +inf base
+    assert!(bits_eq(pow(inf, -2.0), 0.0));
+    assert_eq!(pow(-inf, 0.5), inf);                         // rule 7: -inf, positive non-odd-integer
+    assert_eq!(pow(-inf, 3.0), -inf);                        // positive odd integer
+    assert!(bits_eq(pow(-inf, -3.0), -0.0));                 // negative odd integer -> -0
+    assert!(bits_eq(pow(-inf, -0.5), 0.0));                  // other negative -> +0
+    // rule 8: finite a<0, finite non-integer b -> NaN; and the reference is wrong at the specials.
+    assert!(pow(-2.0, 0.5).is_nan() && pow(-0.5, -1.5).is_nan());
+    assert!(pow_via_exp_log(1.0, nan).is_nan());             // reference NaN where IEEE says 1
+    assert!(pow_via_exp_log(1.0, inf).is_nan());
 }
 
 /// Enforces: KISS-OPS-6.13-0003 — a Refine-marked exp-of-large-argument op MUST
