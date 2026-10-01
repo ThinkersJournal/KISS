@@ -1239,7 +1239,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `mish` | activation | ✓ | `mul(x, tanh(softplus(x)))` (refinement-permitted: inherits the overflow-safe `tanh`/`softplus`) |
 | `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), erf(div(x, const(sqrt2)))))` |
 | `gelu_tanh` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh(mul(const(sqrt(2/pi)), add(x, mul(const(0.044715), mul(x, sqr(x))))))))` |
-| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for finite `a>0`, `a≠1`, finite nonzero `b` only; every other input (NaN, `±∞`, `±0`, `a=1`, `a<0`) is pinned by the IEEE 754-2019 §9.2.1 special-value table in §6.13-0005 |
+| `pow` | binary_math | ✓ | `exp(mul(b, log(a)))` for finite `a>0`, `a≠1`, finite nonzero `b` only; every other input (NaN, `±∞`, `±0`, `a=1`, `a<0`) is pinned by the IEEE 754-2019 clause 9.2.1 special-value table, restated in §6.13-0005 |
 | `hypot` | binary_math | ✓ | `sqrt(add(sqr(a), sqr(b)))` |
 | `rem_floor` | binary_math | — | `sub(a, mul(floor(div(a,b)), b))` |
 | `rem_trunc` | binary_math | — | `sub(a, mul(trunc(div(a,b)), b))` |
@@ -1315,7 +1315,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
   `test_ops_parameterized_attributes_explicit`.
 - **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain by the IEEE 754-2019
-  §9.2.1 special-value table for `pow` (the same table as ISO C99/C11 Annex F.9.4.4); the
+  clause 9.2.1 special-value table for `pow` (the same table as ISO C99/C11 Annex F.9.4.4); the
   `exp(mul(b, log(a)))` reference is **not** the definition of any special value below and
   MUST NOT be used to derive one. The rules are applied **in order, first match wins**, with
   `±∞` counting as a non-integer (and never an odd integer) exponent:
