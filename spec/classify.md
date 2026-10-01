@@ -503,7 +503,7 @@ where it fixes storage bytes.
   compute-precision or numeric-fidelity guarantee. In particular, `f32` MUST be a
   single IEEE-754 binary32 **storage** dtype, and a strict-precision (bit-stable,
   full-precision multiply-add) float variant MUST NOT exist as a distinct dtype
-  token; equivalently, the closed twenty-two-token set (§6.1-0001) contains no such
+  token; equivalently, the closed twenty-four-token set (§6.1-0001) contains no such
   token and the dtype record carries no precision field. Compute precision — whether
   a computation must be bit-stable full-precision or may use a reduced-mantissa
   reduction — is a **KISS-Ops fidelity attribute** (a `MathFidelity`-style attribute
@@ -606,7 +606,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `rank` | u8 | `0 ..= MAX_RANK` (§6.4) |
 | `extents` | `i64[MAX_RANK]` | any i64; only `extents[0..rank]` meaningful; symbolic-axis entry is the capacity |
 | `strides` | `i64[MAX_RANK]` | any signed i64 (`0` = broadcast, `< 0` = reversed); element units; only `strides[0..rank]` meaningful |
-| `dtype` | dtype token | one of the twenty-two (§6.1) |
+| `dtype` | dtype token | one of the twenty-four (§6.1) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
 | `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
@@ -634,7 +634,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   **exact-modulo** alignment gate (a divisor test, not a power-of-two floor), with
   `alignment = 0` (unspecified base-pointer alignment) forcing `v1`. *Test:*
   `test_classify_alignment_is_bytes`.
-- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-two tokens
+- **KISS-CLASSIFY-6.3-0006** — `dtype` MUST be exactly one of the twenty-four tokens
   of §6.1. *Test:* `test_classify_operand_dtype_in_set`.
 - **KISS-CLASSIFY-6.3-0007** — `layout_tag` MUST be derived as a projection of
   `extents` and `strides` (§6.5-0002) and MUST NOT be an independently stored raw
@@ -1836,7 +1836,7 @@ separating a registered namespace from that namespace's capability-set token.
 
 - **KISS-CLASSIFY-7.1-0001** — The KISS-Classify **mandatory core** — which every
   conforming implementation MUST satisfy regardless of claimed options — MUST be:
-  the full twenty-two-dtype set (§6.1), the operand-descriptor field set (§6.3), the
+  the full twenty-four-dtype set (§6.1), the operand-descriptor field set (§6.3), the
   pinned constants (§6.4), the enumerations and derivations (§6.5), the
   `structure_key` field layout and admissibility semantics (§6.6), the token codec
   (§6.7), and the target-capability grammar and byte-exact match (§6.8). An
@@ -1866,7 +1866,7 @@ separating a registered namespace from that namespace's capability-set token.
 ## 8. Versioning & Lifecycle
 
 KISS-Classify tracks the umbrella's **two version axes**: the wire/ABI *structure-key
-schema version* (`STRUCTURE_KEY_VERSION`, currently `3`) and the published
+schema version* (`STRUCTURE_KEY_VERSION`, currently `4`) and the published
 reference-crate *semver*. They move independently. A third, Classify-local handle —
 `DTYPE_LAYOUT_VERSION` (§8-0007) — separately tracks the pinned dtype bit **layouts** of
 §6.1, on its own axis independent of both.
@@ -2308,7 +2308,7 @@ provenance and examples only; no normative clause names any project.
   by the namespace maintainer (e.g. `sm89`, `gfx942`, `apple9`).
 - **cell (specialization cell)** — one layout/dtype/target class a kernel is built
   for; named by exactly one `structure_key`.
-- **dtype** — a scalar element type from the twenty-two-token set of §6.1; pure
+- **dtype** — a scalar element type from the twenty-four-token set of §6.1; pure
   storage (byte layout only), never a compute-precision guarantee.
 - **extent** — an axis's logical length (capacity for a symbolic axis).
 - **inner-contiguous** — a layout tag: the innermost non-unit axis has `|stride| ==
