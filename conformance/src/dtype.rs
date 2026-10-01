@@ -205,3 +205,39 @@ pub fn e4m3_decode(byte: u8) -> E4M3 {
     let v = s * (1.0 + mant as f32 / 8.0) * 2.0f32.powi(exp as i32 - 7);
     E4M3::Normal(v)
 }
+
+// ---------------------------------------------------------------------------
+// §6.1-0013 — E8M0 MX scale storage/decoding (`f8e8m0`)
+// ---------------------------------------------------------------------------
+//
+// Unsigned 8-bit, 0 sign / 8 exponent / 0 mantissa, bias 127. A stored byte `e`
+// in `0x00..=0xFE` denotes the power of two `2^(e - 127)`; `0xFF` is the single
+// NaN; there is no infinity and no zero encoding. SECONDARY-SOURCED (Rouhani et
+// al., arXiv 2310.10537 §2.2; OCP MX v1.0) pending verification against the
+// primary OCP PDF; "no zero" is an inference from the format having no mantissa
+// and a biased exponent field covering `0x00..=0xFE` (see the clause text).
+// `f8e6m2` is RESERVED (no layout pinned), so there is deliberately no decoder
+// for it here.
+
+/// The exponent bias of E8M0 (§6.1-0013).
+pub const E8M0_BIAS: i32 = 127;
+
+/// The decoded class of an `f8e8m0` byte (§6.1-0013). There is deliberately no
+/// `Infinite` and no `Zero` variant: the format defines neither.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum E8M0 {
+    /// The power of two `2^k`, carried as the unbiased exponent `k = e - 127`.
+    Pow2(i32),
+    /// The single NaN encoding `0xFF`.
+    Nan,
+}
+
+/// Decode one stored `f8e8m0` byte from scratch (§6.1-0013): `0xFF` is NaN, every
+/// other byte `e` is `2^(e - 127)`.
+pub fn e8m0_decode(byte: u8) -> E8M0 {
+    if byte == 0xFF {
+        E8M0::Nan
+    } else {
+        E8M0::Pow2(i32::from(byte) - E8M0_BIAS)
+    }
+}

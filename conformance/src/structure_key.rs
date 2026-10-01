@@ -34,7 +34,7 @@ pub const OP_FAMILIES: [&str; 24] = [
 /// Integers are uniform `i`-prefixed (`i8`/`i16`/`i4`); FP8 carries the `f8` width prefix
 /// + mandatory variant suffix (`f8e4m3fn` OCP finite/no-inf max 448; `f8e4m3fnuz` AMD
 /// reserved; `f8e5m2` IEEE inf/NaN max 57344; `f8e5m2fnuz` AMD reserved); the MX
-/// shared-exponent scales `f8e8m0`/`f8e6m2` are additive (§6.1-0013); complex is named by
+/// shared-exponent scale `f8e8m0` is additive and `f8e6m2` is additive but reserved (§6.1-0013); complex is named by
 /// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
 /// §6.1-0012, made loud by the version prefix).
 pub const DTYPES: [&str; 24] = [
@@ -42,12 +42,12 @@ pub const DTYPES: [&str; 24] = [
     "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
 ];
 
-/// The two **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
+/// The three **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
 /// closed vocabulary so the spellings are pinned now, but with **no computation
 /// semantics at this schema version** — a `structure_key` using one in any dtype
 /// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
 /// from the unknown-token decline. Activation is a future additive schema event.
-pub const RESERVED_DTYPES: [&str; 2] = ["f8e4m3fnuz", "f8e5m2fnuz"];
+pub const RESERVED_DTYPES: [&str; 3] = ["f8e4m3fnuz", "f8e5m2fnuz", "f8e6m2"];
 
 // ---- small enum codecs -------------------------------------------------------
 

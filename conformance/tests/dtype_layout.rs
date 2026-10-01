@@ -124,3 +124,54 @@ fn test_classify_e4m3_format() {
     assert_eq!(max_finite, 448.0);
     assert_eq!(nan_bytes, vec![0x7F, 0xFF]);
 }
+
+// KISS-CLASSIFY-6.1-0013 — `test_classify_mx_scale_format`:
+// `f8e8m0` is the OCP-MX E8M0 scale: unsigned, bias 127, byte `e` in 0x00..=0xFE
+// is 2^(e-127), 0xFF is the single NaN, no infinity, no zero encoding. The
+// special-value detail is SECONDARY-SOURCED (pending the primary OCP PDF) and
+// "no zero" is the clause's own flagged inference. `f8e6m2` is RESERVED: it has
+// no layout to pin, and a structure_key naming it typed-declines (§6.1-0001).
+#[test]
+fn test_classify_mx_scale_format() {
+    use kiss_conformance::structure_key::{from_token, KeyDecline};
+
+    // Bias 127: 0x7F = 2^0 = 1.0; the extremes of the non-NaN range.
+    assert_eq!(e8m0_decode(0x7F), E8M0::Pow2(0));
+    assert_eq!(e8m0_decode(0x00), E8M0::Pow2(-127));
+    assert_eq!(e8m0_decode(0xFE), E8M0::Pow2(127));
+    assert_eq!(e8m0_decode(0x80), E8M0::Pow2(1)); // each step is one doubling
+    assert_eq!(E8M0_BIAS, 127);
+
+    // Exhaustive over all 256 encodings: exactly ONE NaN (0xFF) and 255 powers of
+    // two; no variant for infinity or zero exists, so no byte can decode to either.
+    let nan_bytes: Vec<u8> = (0u16..=255)
+        .map(|b| b as u8)
+        .filter(|&b| e8m0_decode(b) == E8M0::Nan)
+        .collect();
+    assert_eq!(nan_bytes, vec![0xFF]);
+    // the 255 non-NaN bytes are 255 DISTINCT exponents, -127..=127 (injective).
+    let exps: Vec<i32> = (0u16..=254)
+        .map(|b| match e8m0_decode(b as u8) {
+            E8M0::Pow2(k) => k,
+            E8M0::Nan => panic!("byte {b:#04X} decoded to NaN"),
+        })
+        .collect();
+    assert_eq!(exps, (-127..=127).collect::<Vec<i32>>());
+
+    // f8e6m2 is RESERVED (typed decline, distinct from unknown); f8e8m0 is usable.
+    const TOK: &str = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+    assert_eq!(
+        from_token(&TOK.replacen("|f32|", "|f8e6m2|", 1)),
+        Err(KeyDecline::ReservedDtype),
+        "KISS-CLASSIFY-6.1-0013: f8e6m2 is reserved and must typed-decline"
+    );
+    assert_ne!(
+        from_token(&TOK.replacen("|f32|", "|f8e8m0|", 1)),
+        Err(KeyDecline::ReservedDtype),
+        "KISS-CLASSIFY-6.1-0013: f8e8m0 is usable, not reserved"
+    );
+    assert_ne!(
+        from_token(&TOK.replacen("|f32|", "|f8e8m0|", 1)),
+        Err(KeyDecline::UnknownDtype)
+    );
+}

@@ -83,7 +83,6 @@ KISS-CLASSIFY-6.1-0006	test_classify_u32_is_ordinary_storage	untested
 KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
 KISS-CLASSIFY-6.1-0011	test_classify_e5m2_format	untested	
 KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
-KISS-CLASSIFY-6.1-0013	test_classify_mx_scale_format	untested	MX scale bit-layout (f8e8m0/f8e6m2 = 8-bit unsigned, exp+mantissa=8) lives in the §6.1 table + dtype_manifest.json, enforced by the kiss_dtypes table lint; the stdlib-only Rust harness holds only token strings, so a harness test would bind vocabulary membership but not the OCP-MX encoding widths. Candidate upgrade to lint:kiss_tables once kiss_dtypes declares this clause (Lane B).
 KISS-CLASSIFY-6.2-0001	test_classify_numeric_kind_set_closed	untested	
 KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
