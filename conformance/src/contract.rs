@@ -645,6 +645,49 @@ pub enum AuditedStatus {
     Unaudited,
 }
 
+/// The Guarantees `bit_stability` field (KISS-CONTRACT-6.8-0005 / 6.8-0013): the kernel's
+/// **reproducibility scope**, an axis orthogonal to the determinism class. The closed set is
+/// `{portable, same-hardware, none}`, spelled verbatim on the wire; the former two-value
+/// `bit-stable` / `bit-unstable` spelling is withdrawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BitStability {
+    /// Bit-identical on any compatible hardware.
+    Portable,
+    /// Bit-identical on the same hardware; MAY differ across hardware.
+    SameHardware,
+    /// Run-to-run variation is possible.
+    None,
+}
+
+impl BitStability {
+    /// The wire spelling (§6.8-0013).
+    pub fn token(self) -> &'static str {
+        match self {
+            BitStability::Portable => "portable",
+            BitStability::SameHardware => "same-hardware",
+            BitStability::None => "none",
+        }
+    }
+
+    /// Parse the wire spelling; anything outside the closed set (including the withdrawn
+    /// `bit-stable` / `bit-unstable`) is `None` (the Option), i.e. rejected.
+    pub fn from_token(t: &str) -> Option<BitStability> {
+        match t {
+            "portable" => Some(BitStability::Portable),
+            "same-hardware" => Some(BitStability::SameHardware),
+            "none" => Some(BitStability::None),
+            _ => None,
+        }
+    }
+
+    /// §6.8-0013 consistency with the determinism class: `portable` iff `exact-byte`; the
+    /// other two classes carry `same-hardware` or `none`.
+    pub fn consistent_with(self, class: crate::DeterminismClass) -> bool {
+        let exact = class == crate::DeterminismClass::ExactByte;
+        (self == BitStability::Portable) == exact
+    }
+}
+
 /// The Guarantees fields the derivation reads, plus the one field it MUST NOT
 /// read. `bit_stability` is present deliberately: §6.8-0009 forbids the rule
 /// setting it (that field is owned by §6.8-0005), and a rule that cannot see the
@@ -660,7 +703,7 @@ pub struct Guarantees {
     pub determinism_class: crate::DeterminismClass,
     /// Owned by §6.8-0005. The derivation MAY read it — §6.8-0005 says it does —
     /// but MUST NOT set it, which the shared borrow below makes structural.
-    pub bit_stability: bool,
+    pub bit_stability: BitStability,
 }
 
 impl Guarantees {
@@ -898,7 +941,7 @@ fn appendix_c_guarantees_inputs() -> Guarantees {
             DeclaredAccuracyTier { max_ulp: Some(0), ..DeclaredAccuracyTier::default() },
         )],
         determinism_class: crate::DeterminismClass::ExactByte,
-        bit_stability: true,
+        bit_stability: BitStability::Portable,
     }
 }
 
@@ -948,7 +991,7 @@ pub fn appendix_c_guarantees_block() -> Vec<u8> {
         crate::DeterminismClass::UlpTolerance => "ULP/tolerance",
         crate::DeterminismClass::OrderInvariant => "order-invariant/nondeterministic",
     };
-    let bit_stability = if g.bit_stability { "bit-stable" } else { "bit-unstable" };
+    let bit_stability = g.bit_stability.token();
     render_block(
         6,
         "guarantees",
