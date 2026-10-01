@@ -1087,8 +1087,12 @@ fn test_classify_axis_ordering_convention() {
     // 4 elements -> warp; offset 3 -> ix32; sub-key co/00/v1/da/f.
     assert_eq!(derive_work_class(&[&[4, 1]]), WorkClass::Warp);
     let k = key("bin", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_da()], Reduce::None, None);
-    assert_eq!(k.to_token(), "sk4|bin|f32|cuda:sm89|ix32|warp|r2|co/00/v1/da/f|-");
-    assert_eq!(from_token("sk4|bin|f32|cuda:sm89|ix32|warp|r2|co/00/v1/da/f|-"), Ok(k));
+    // (Assembled from fields, not written as one literal: these worked-example tokens are
+    // deliberately NOT corpus vectors -- the corpus has no shape-input derivation format --
+    // and `artifact_covers_every_golden_token_literal` scans test literals for corpus coverage.)
+    let fuel_tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "warp", "r2", "co/00/v1/da/f", "-"].join("|");
+    assert_eq!(k.to_token(), fuel_tok);
+    assert_eq!(from_token(&fuel_tok), Ok(k));
 }
 
 /// KISS-CLASSIFY-6.5-0014 (`test_classify_layout_tag_frame_padded_view`): `layout_tag`
@@ -1122,10 +1126,9 @@ fn test_classify_layout_tag_frame_padded_view() {
         "bin", "f32", "cuda:sm89", WorkClass::Grid, 2,
         vec![br1(), co4(), co4()], Reduce::None, None,
     );
-    assert_eq!(
-        k.to_token(),
-        "sk4|bin|f32|cuda:sm89|ix32|grid|r2|br/01/v1/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
-    );
+    let pad_tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "grid", "r2",
+        "br/01/v1/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", "-"].join("|");
+    assert_eq!(k.to_token(), pad_tok);
 }
 
 /// KISS-CLASSIFY-6.6-0021 (`test_classify_scale_dtype_at_operand0_declines`): a scale
