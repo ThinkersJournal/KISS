@@ -243,12 +243,12 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `neg` | arithmetic | `-x`; flips sign bit, `-(-0.0)=+0.0`, NaN propagates |
 | `abs` | arithmetic | `|x|` by clearing the sign bit (raw-bit) |
 | `select` | select | `cond!=0 ? a : b`; raw-bit move, order `(cond,a,b)` |
-| `cmp_eq` | comparison | `a==b ? 1:0`; any-NaN → 0 |
-| `cmp_ne` | comparison | `a!=b ? 1:0`; any-NaN → 1 (isnan via `cmp_ne(x,x)`) |
-| `cmp_lt` | comparison | `a<b ? 1:0`; false on NaN |
-| `cmp_le` | comparison | `a<=b ? 1:0`; false on NaN; `-0.0<=+0.0` true |
-| `cmp_gt` | comparison | `a>b ? 1:0`; false on NaN |
-| `cmp_ge` | comparison | `a>=b ? 1:0`; false on NaN |
+| `cmp_eq` | comparison | `a==b ? 1:0` (`bool` mask); any-NaN → 0 |
+| `cmp_ne` | comparison | `a!=b ? 1:0` (`bool` mask); any-NaN → 1 (isnan via `cmp_ne(x,x)`) |
+| `cmp_lt` | comparison | `a<b ? 1:0` (`bool` mask); false on NaN |
+| `cmp_le` | comparison | `a<=b ? 1:0` (`bool` mask); false on NaN; `-0.0<=+0.0` true |
+| `cmp_gt` | comparison | `a>b ? 1:0` (`bool` mask); false on NaN |
+| `cmp_ge` | comparison | `a>=b ? 1:0` (`bool` mask); false on NaN |
 | `floor` | rounding | round toward −∞ |
 | `ceil` | rounding | round toward +∞ |
 | `trunc` | rounding | round toward zero |
@@ -635,7 +635,7 @@ verbatim, everywhere).
   (§6.0-0007) is fixed by the output's **semantics** — whether it reports *which*
   value(s) won a comparison — and MUST NOT depend on which internal lane or
   representation an implementation uses to compute it. In particular, a
-  **comparison/predicate mask** — a boolean (or `{0, 1}`, §6.2-0005) result of a
+  **comparison/predicate mask** — the `bool` byte `0`/`1` result (§6.2-0005) of a
   comparison op — is a **selection** output even when an implementation realizes it as
   an ordinary elementwise value; over a producing sub-DAG that is not entirely
   exact-byte it is **order-invariant/nondeterministic, never ULP/tolerance**. A
@@ -697,9 +697,14 @@ verbatim, everywhere).
   its dtype and MUST NOT normalize `-0.0` to `+0.0` except where a clause explicitly
   produces `+0.0` (e.g. `neg` of `-0.0`, `abs` of `-0.0`). *Test:*
   `test_ops_signed_zero_preserved`.
-- **KISS-OPS-6.2-0005** — A comparison op (§6.6) MUST produce its result as the value `1`
-  (true) or `0` (false) encoded in the op's compute dtype, and MUST NOT produce any other
-  value. *Test:* `test_ops_compare_result_zero_one`.
+- **KISS-OPS-6.2-0005** — A comparison op (§6.6) MUST produce a **`bool` mask** — dtype
+  `bool` (§6.2-0006), one byte per element, the same storage as `u8` — whose byte is `1`
+  (true) or `0` (false), and MUST NOT produce any other byte value; the result dtype is
+  `bool` whatever the operands' compute dtype (it is **not** encoded in that compute
+  dtype, so an `f32` comparison yields a one-byte mask, not a 4-byte `1.0`/`0.0`). A mask
+  that feeds an arithmetic or `reduce` atom (the `logical_and`, `logical_or`, `any`, and
+  `all` rows of §6.13) is read as the unsigned byte value `0`/`1`. *Test:*
+  `test_ops_compare_result_zero_one`.
 - **KISS-OPS-6.2-0006** — For the `bool` dtype, any op that consumes a `bool` operand MUST
   treat a byte value of `0` as false and any non-zero byte as true, and any op that
   produces a `bool` result MUST normalize it to strictly `0` or `1`. *Test:*
@@ -801,7 +806,7 @@ wrapping two's-complement per §6.2-0002):
 
 ### 6.6 Comparison atoms
 
-Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
+Each comparison yields a `bool` mask byte, `1` or `0` (§6.2-0005):
 
 | Op | True when | NaN operand |
 |---|---|---|
@@ -813,7 +818,7 @@ Each comparison yields `1` or `0` in the compute dtype (§6.2-0005):
 | `cmp_ge` | `a >= b` | → 0 (false) |
 
 - **KISS-OPS-6.6-0001** — Each comparison op MUST compute the predicate in its row above
-  and yield `1` (true) or `0` (false) in the compute dtype. *Test:*
+  and yield the `bool` mask byte `1` (true) or `0` (false) (§6.2-0005). *Test:*
   `test_ops_compare_predicates`.
 - **KISS-OPS-6.6-0002** — `cmp_eq`, `cmp_lt`, `cmp_le`, `cmp_gt`, and `cmp_ge` MUST each
   yield `0` (false) whenever either operand is NaN. *Test:* `comparisons_are_ieee_ordered`.
