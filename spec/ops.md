@@ -1244,7 +1244,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `logical_not` | logical | — | `cmp_eq(x, const(0))` |
 | `reduce_mean` | reduction | — | `div(reduce(sum, x), reduced_count)` (divisor is the product of extents over **all** reduced axes, §6.12-0001) |
 | `reduce_norm2` | reduction | — | `sqrt(reduce(sum, sqr(x)))` |
-| `reduce_var` | reduction | — | `sub(reduce_mean(sqr(x)), sqr(reduce_mean(x)))` |
+| `reduce_var` | reduction | ✓ | `mu=reduce_mean(x); out=reduce_mean(sqr(sub(x, mu)))` (two-pass, population divisor: the mean is formed first, then the squared deviations from it are averaged; Bessel divisor per §6.13-0004. The algebraically equal one-pass form `sub(reduce_mean(sqr(x)), sqr(reduce_mean(x)))` is **non-normative, illustrative only** — it catastrophically cancels when `|mean|` greatly exceeds the spread and can yield a negative variance. Refinement-permitted: a single-pass Welford/Chan update over deviations from a running mean, §6.13-0004) |
 | `reduce_std` | reduction | — | `sqrt(reduce_var(x))` |
 | `logsumexp` | reduction | — | `m=reduce(max,x); out=add(m, log(reduce(sum, exp(sub(x,m)))))` |
 | `argmax` | reduction | — | `original-index at rank 0 of sort_network(desc, keys=x)` (the §6.11-0007 index-vector output) |
@@ -1277,7 +1277,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `test_ops_decomposition_strictly_lower_level`.
 - **KISS-OPS-6.13-0003** — For every op marked **✓** in the *Refine* column of the §6.13
   table (`expm1`, `log1p`, `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`, `pow`,
-  `hypot`, `ldexp`), a conforming kernel MAY — and, where the literal reference
+  `hypot`, `ldexp`, `reduce_var`), a conforming kernel MAY — and, where the literal reference
   decomposition would overflow or catastrophically cancel while the true function is finite
   (the exp-of-large-argument forms `tanh`, `sinh`, `cosh`, `silu`, `softplus`, `mish`),
   MUST — compute a more accurate result than the literal reference decomposition (e.g. an
@@ -1287,8 +1287,15 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   under its determinism class. *Test:* `test_ops_decomposition_accuracy_refinement`.
 - **KISS-OPS-6.13-0004** — A parameterized non-primitive op MUST carry its semantics-
   affecting attributes explicitly: `reduce_var` and `reduce_std` default to the
-  population form and MUST declare a Bessel correction as an attribute rather than
-  changing the decomposition silently; `softmax` / `log_softmax` MUST declare the
+  population form (divisor `reduced_count`) and MUST declare a Bessel correction as an
+  attribute (`bessel_correction`, §6.19-0030) rather than changing the decomposition
+  silently — with `bessel_correction` set the divisor of the final mean in the `reduce_var`
+  row is `reduced_count − 1`, evaluated as ordinary IEEE 754 division with no special case;
+  `reduce_var` MUST be computed from **deviations about the mean** — the two-pass form of
+  its §6.13 row, or a single-pass Welford/Chan update that accumulates squared deviations
+  about a running mean — and MUST NOT be computed as `E[x²] − E[x]²` (the §6.13 row's
+  non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
+  `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
   normalization axis; `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
   `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
