@@ -532,7 +532,7 @@
 # bumping a shared counter converge on a value that is neither. Re-derive after every rebase.
 #
 # key	value
-harness	387
+harness	388
 lint	33
 untested	481
 proven	20
