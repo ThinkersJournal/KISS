@@ -223,7 +223,7 @@ strided cell. Its contract carries:
 - **Capabilities:** `accept_predicate = structure_key`; determinism class `exact-byte`;
   precision class `correctly-rounded`; cost class `elementwise`, cost `1 * n`.
 - **Guarantees:** reference function `add` (IEEE-754); ULP tier 0 (correctly rounded);
-  determinism `exact-byte`; MathFidelity `bit-stable`; bit-stable on same hardware;
+  determinism `exact-byte`; MathFidelity `bit-stable`; reproducibility scope `portable`;
   `audited_status` **derived** here from those guarantees.
 - **Provenance:** kernel source (generator), revision base + `revision_hash`,
   `cost_provenance = declared`, negotiation metadata (empty).
@@ -1207,10 +1207,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   the reassociation error stays bounded by the `|max partial sum|` term, so a
   result-relative metric would spuriously explode and reject a conformant kernel. *Test:*
   `test_contract_accumulator_tolerance_band`.
-- **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state whether the kernel is
-  bit-stable on the same hardware and is the **single authoritative home** of that fact; it
-  MUST be consistent with the `determinism_class`, and in particular a kernel of class
-  `order-invariant/nondeterministic` MUST carry `bit_stability = false`. The `audited_status`
+- **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state the kernel's
+  **reproducibility scope** — exactly one value of the closed set `{portable, same-hardware,
+  none}` defined in §6.8-0013 — and is the **single authoritative home** of that fact; it
+  MUST be consistent with the `determinism_class` as §6.8-0013 states (an earlier form of
+  this clause forced `order-invariant/nondeterministic` to carry `false`; that coupling is
+  withdrawn and replaced by §6.8-0013). The `audited_status`
   derivation (§6.8-0009 / §6.8-0010) reads this field and MUST NOT set it. *Test:*
   `test_contract_bit_stability_consistent`.
 - **KISS-CONTRACT-6.8-0006** — The `cost_provenance` MUST be `declared` or `measured`, stating
@@ -1244,6 +1246,22 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   `reference_function`; an implementation MUST NOT author `unaudited` where the Guarantees do
   declare such a bound, and MUST NOT produce an `audited_status` value that neither §6.8-0009
   nor this clause yields. *Test:* `test_contract_unaudited_derivation_rule`.
+
+- **KISS-CONTRACT-6.8-0013** — The `bit_stability` value set is the closed three-member
+  enum `{portable, same-hardware, none}`, spelled verbatim, an axis **orthogonal** to the
+  `determinism_class` (the class selects the KISS-Conform comparator, KISS-OPS §6.0; this
+  field states reproducibility). `portable` states that repeated invocations on identical
+  inputs are bit-identical on **any** compatible hardware; `same-hardware` states that they
+  are bit-identical on the **same** hardware but MAY differ across hardware; `none` states
+  that run-to-run variation is possible (for example an atomic floating-point accumulation
+  or a scheduler-dependent reduction order). `portable` MUST be declared if and only if the
+  `determinism_class` is `exact-byte`. A kernel of class `ULP/tolerance` or
+  `order-invariant/nondeterministic` MUST declare `same-hardware` or `none`, and MAY declare
+  `same-hardware` — including a kernel of class `order-invariant/nondeterministic` whose
+  floating-point reduction order is fixed, so that it is not reassociated between runs on
+  the same hardware. An implementation MUST NOT define a parallel reproducibility
+  vocabulary, and MUST NOT write the former two-value spelling (`bit-stable` /
+  `bit-unstable`). *Test:* `test_contract_bit_stability_scope`.
 
 ### 6.9 Provenance section
 
@@ -1688,6 +1706,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0010 | `test_contract_unaudited_derivation_rule` |
 | KISS-CONTRACT-6.8-0011 | `test_contract_accumulation_type_matches_key_acc` |
 | KISS-CONTRACT-6.8-0012 | `test_contract_accumulator_tolerance_band` |
+| KISS-CONTRACT-6.8-0013 | `test_contract_bit_stability_scope` |
 | KISS-CONTRACT-6.9-0001 | `test_contract_provenance_field_schema` |
 | KISS-CONTRACT-6.9-0002 | `test_contract_provenance_source` |
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |
@@ -1926,7 +1945,7 @@ per_backend_ulp_tiers = [cuda:sm89{max_ulp=0}]
 determinism_class = exact-byte
 math_precision = f32
 accumulation_type = f32
-bit_stability = bit-stable
+bit_stability = portable
 audited_status = audited
 cost_provenance = measured
 ```
