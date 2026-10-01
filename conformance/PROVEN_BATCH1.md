@@ -42,7 +42,7 @@ in the run set was being in the run here too.
 | KISS-OPS-6.11-0003 | `scan_is_length_preserving` | structural.rs (`prefix_scan_f32`) | drop the last output (`out` → `out.pop(); out`) |
 | KISS-OPS-6.11-0005 | `scatter_oob_writes_are_skipped` | structural.rs (`scatter_f32`) | remove the OOB-skip `continue` (OOB write no longer skipped) |
 | KISS-OPS-6.11-0010 | `scatter_atomic_max_min_nan_propagating` | structural.rs (`scatter_f32`) | `max_prop` → `f32::max` (NaN-suppressing, not -propagating) |
-| KISS-CONTRACT-6.1-0008 | `test_contract_version_value_pinned` | contract.rs (`read_document`) | `if version != "1"` → `!= "2"` (reject the pinned version) |
+| KISS-CONTRACT-6.1-0008 | `test_contract_version_value_pinned` | contract.rs (`read_document`) | `if version != "2"` → `!= "3"` (reject the pinned version) |
 
 ## Isolation matrix — every mutation reddens EXACTLY ONE batch test (its own)
 

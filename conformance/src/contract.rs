@@ -278,7 +278,7 @@ pub enum ContractDecline {
     MalformedHeader,
     /// The `contract_kind` is not the recognized token `kiss-contract` (§6.1-0007).
     UnknownKind { got: String },
-    /// The `contract_version` is not `1` (§6.1-0008).
+    /// The `contract_version` is not `2` (§6.1-0008).
     UnknownVersion { got: String },
     /// The declared body length does not equal the actual body byte count
     /// (§6.11-0003). Carries the declared length as a `u64` — it is never used to
@@ -372,7 +372,7 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
     }
     // (4) Supported version (§6.1-0008).
     let version = parts[2];
-    if version != "1" {
+    if version != "2" {
         return Err(ContractDecline::UnknownVersion { got: version.to_string() });
     }
     // (5) `len=<N>` — decimal body byte count.
@@ -789,7 +789,7 @@ fn well_formed_body() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
+            ("contract_version", Value::Str("2".into())),
         ],
     )
 }
@@ -801,7 +801,7 @@ pub fn well_formed_document() -> Vec<u8> {
     let body = well_formed_body();
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body,
     }
     .encode()
@@ -819,7 +819,7 @@ pub fn well_formed_document() -> Vec<u8> {
 pub const APPENDIX_C_IDENTITY_GOLDEN: &str = "\
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 1
+contract_version = 2
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
@@ -834,7 +834,7 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("1".into())),
+            ("contract_version", Value::Str("2".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
             ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
@@ -1052,7 +1052,7 @@ pub fn appendix_c_body() -> Vec<u8> {
 pub fn appendix_c_golden_document() -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "1".into(),
+        contract_version: "2".into(),
         body: appendix_c_body(),
     }
     .encode()
@@ -1137,7 +1137,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
     let owned_body = well_formed_body();
     let body = &owned_body[..];
     let kind = "kiss-contract";
-    let version = "1";
+    let version = "2";
     let len_owned = format!("len={}", body.len());
     let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
     let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
@@ -1194,8 +1194,8 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         },
         NegativeVector {
             name: "unsupported contract_version",
-            doc: with_header(&format!("KISC {kind} 2 {len_f} {crc_f}")),
-            expect: ContractDecline::UnknownVersion { got: "2".into() },
+            doc: with_header(&format!("KISC {kind} 1 {len_f} {crc_f}")),
+            expect: ContractDecline::UnknownVersion { got: "1".into() },
         },
         NegativeVector {
             name: "declared length overstates the body",
@@ -1244,7 +1244,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         name: "headingless body (framing valid, no first section heading)",
         doc: Document {
             contract_kind: "kiss-contract".into(),
-            contract_version: "1".into(),
+            contract_version: "2".into(),
             body: headless_body,
         }
         .encode(),

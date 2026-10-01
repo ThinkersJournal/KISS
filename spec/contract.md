@@ -572,7 +572,7 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `1`, and a contract conforming to this schema version MUST carry exactly that token
+  token `2`, and a contract conforming to this schema version MUST carry exactly that token
   (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
   a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
   reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
@@ -1395,7 +1395,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   the 4-byte magic `0x4B 0x49 0x53 0x43` (ASCII `KISC`), one space, the `contract_kind` token
   (exactly `kiss-contract`, §6.1-0007), one space, the `contract_version` (decimal ASCII), one
   space, `len=<N>`, one space, `crc32=<HHHHHHHH>`, then a single LF (`0x0A`) — for example
-  `KISC kiss-contract 1 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
+  `KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
   any document not beginning with the magic `KISC` or whose header line does not match this
   pinned form. *Test:* `test_contract_document_header_line`.
 - **KISS-CONTRACT-6.11-0003** — The header line MUST declare the document's inner framing: `<N>`
@@ -1864,7 +1864,7 @@ over the fully assembled document.
 **Header line (§6.11-0002/-0003)** — begins with the 4-byte magic `KISC` (`0x4B 0x49 0x53 0x43`):
 
 ```
-KISC kiss-contract 1 len=<N> crc32=<HHHHHHHH>
+KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>
 ```
 
 **Identity block (§6.11-0004/-0005; heading id 1)** — heading line then one `key = value` line per
@@ -1874,7 +1874,7 @@ field, in field-schema order (§6.3-0001); `revision_hash` is the opaque-blob te
 ```
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 1
+contract_version = 2
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
