@@ -954,7 +954,8 @@ pub fn derive_primary_dtype<'a>(operand_dtypes: &[&'a str]) -> Option<&'a str> {
     }
 }
 
-/// §6.5-0014 + §6.6-0013: the **frame-padded view** of an operand — its own axes
+/// §6.5-0014(a) + §6.6-0013: the **frame-padded view** of an operand, used for the
+/// broadcast-axis mask only (never the layout, §6.5-0014(b)) — its own axes
 /// right-aligned to the iteration `frame` (outermost-first extents), preceded by
 /// `frame.len() - extents.len()` leading padded axes, each taking the iteration-frame
 /// extent at that axis and stride `0`. An operand of rank `>=` the frame rank is
@@ -970,14 +971,12 @@ pub fn frame_padded_view(extents: &[i64], strides: &[i64], frame: &[i64]) -> (Ve
     (e, s)
 }
 
-/// §6.5-0014: [`derive_layout_tag`] over the operand's frame-padded view. A padded
-/// axis with frame extent `> 1` has stride `0`, so a lower-rank operand broadcasting
-/// along a real frame axis is `broadcast` even when its own axes are contiguous.
-#[must_use]
-pub fn derive_layout_tag_in_frame(extents: &[i64], strides: &[i64], frame: &[i64]) -> Contig {
-    let (e, s) = frame_padded_view(extents, strides, frame);
-    derive_layout_tag(&e, &s)
-}
+// §6.5-0014(b): the `layout_tag` of an operand in an iteration frame is derived from
+// the operand's **own** axes only — there is deliberately no frame-taking layout
+// function: a padded axis (§6.6-0013) never contributes, so call [`derive_layout_tag`]
+// on the operand's own `extents`/`strides`. A lower-rank operand is therefore `broadcast`
+// only for a broadcast axis it itself has; its frame broadcasting shows in the mask
+// ([`derive_bcast_mask_in_frame`]) alone.
 
 /// §6.5-0014 + §6.6-0008: the broadcast-axis mask of an operand in iteration `frame`
 /// — bit `i` (frame axis `i`, outermost-first) is set iff the **frame** extent at axis

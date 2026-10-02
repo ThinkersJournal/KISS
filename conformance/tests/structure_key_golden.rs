@@ -1095,40 +1095,102 @@ fn test_classify_axis_ordering_convention() {
     assert_eq!(from_token(&fuel_tok), Ok(k));
 }
 
-/// KISS-CLASSIFY-6.5-0014 (`test_classify_layout_tag_frame_padded_view`): `layout_tag`
-/// and the broadcast mask are computed over the FRAME-PADDED view of a lower-rank
-/// operand (leading padded axes = frame extent, stride 0). Teeth: a reader that derives
-/// the layout over the operand's OWN axes calls a `[256]`/`[1]` operand in a `[128,256]`
-/// frame `co`, not `br`.
+/// The full per-operand sub-key of an `f32` operand (`own_extents`/`own_strides`, 256-byte
+/// aligned, natural orientation) in iteration `frame`, assembled per KISS-CLASSIFY-6.5-0014:
+/// the MASK over the frame-padded view, everything else (layout, vector width, divisibility)
+/// over the operand's OWN axes.
+fn f32_sub_key_in_frame(own_extents: &[i64], own_strides: &[i64], frame: &[i64]) -> OperandSubKey {
+    let any_own_broadcast = own_extents.iter().zip(own_strides).any(|(&e, &s)| e > 1 && s == 0);
+    let layout = derive_layout_tag(own_extents, own_strides);
+    let inner = own_extents.len() - 1;
+    // §6.5-0009(a): v1 iff the (own-axes) layout is broadcast; else the (c) ladder.
+    let vec = if layout == Contig::Broadcast {
+        VecWidth::V1
+    } else {
+        derive_vec_width(own_strides[inner], own_extents[inner], Some(4), 256, any_own_broadcast)
+    };
+    op(
+        layout,
+        derive_bcast_mask_in_frame(own_extents, own_strides, frame),
+        vec,
+        derive_div_bucket_of(own_extents),
+        false,
+    )
+}
+
+/// KISS-CLASSIFY-6.5-0014 (`test_classify_layout_own_axes_mask_frame_padded`): the
+/// broadcast MASK is computed over the FRAME-PADDED view of a lower-rank operand (leading
+/// padded axes = frame extent, stride 0) but `layout_tag`, vector width and divisibility
+/// read the operand's OWN axes. Teeth: a reader that derives the layout over the padded
+/// view calls a `[256]`/`[1]` operand in a `[128,256]` frame `br` (and `v1`), not `co`
+/// (`v4`); and a dense and a strided rank-3 operand in a rank-4 frame would collide.
 #[test]
-fn test_classify_layout_tag_frame_padded_view() {
+fn test_classify_layout_own_axes_mask_frame_padded() {
     let frame: &[i64] = &[128, 256];
-    // the worked example: [256] stride [1] in frame [128,256] -> padded [128,256]/[0,1].
+    // the padded view (mask input) of the worked example: [256]/[1] -> [128,256]/[0,1].
     assert_eq!(frame_padded_view(&[256], &[1], frame), (vec![128, 256], vec![0, 1]));
-    assert_eq!(derive_layout_tag_in_frame(&[256], &[1], frame), Contig::Broadcast);
     assert_eq!(derive_bcast_mask_in_frame(&[256], &[1], frame), 0x01);
-    // own-axes reading (the bug): contiguous, no mask.
+    // the layout is the own-axes one: co (NOT br, which the padded view would give).
     assert_eq!(derive_layout_tag(&[256], &[1]), Contig::Contiguous);
-    // full-rank operand in the same frame is unchanged: co, mask 00.
-    assert_eq!(derive_layout_tag_in_frame(&[128, 256], &[256, 1], frame), Contig::Contiguous);
-    assert_eq!(derive_bcast_mask_in_frame(&[128, 256], &[256, 1], frame), 0x00);
-    // a padded axis of frame extent 1 is a unit axis: no broadcast, no bit.
-    assert_eq!(derive_layout_tag_in_frame(&[256], &[1], &[1, 256]), Contig::Contiguous);
-    assert_eq!(derive_bcast_mask_in_frame(&[256], &[1], &[1, 256]), 0x00);
-    // rank-0 scalar in a rank-2 frame broadcasts along both real axes: mask 0b11.
-    assert_eq!(derive_layout_tag_in_frame(&[], &[], frame), Contig::Broadcast);
-    assert_eq!(derive_bcast_mask_in_frame(&[], &[], frame), 0x03);
-    // padded axis outermost of three: [4] in [2,3,4] -> axes 0,1 padded (extents 2,3).
-    assert_eq!(derive_bcast_mask_in_frame(&[4], &[1], &[2, 3, 4]), 0b011);
-    // ...and the sub-key that results (f32, 256B aligned): own innermost axis 256 -> d16,
-    // layout br forces v1 (§6.5-0009(a)): br/01/v1/d16/f; the full-rank operands co/00/v4/d16/f.
+    assert_eq!(derive_layout_tag(&frame_padded_view(&[256], &[1], frame).0, &frame_padded_view(&[256], &[1], frame).1), Contig::Broadcast);
+    // worked example 1: sub-key co/01/v4/d16/f (own innermost fwd-unit, E=256, L=4).
+    assert_eq!(
+        f32_sub_key_in_frame(&[256], &[1], frame),
+        op(Contig::Contiguous, 0x01, VecWidth::V4, DivBucket::D16, false)
+    );
     let k = key(
         "bin", "f32", "cuda:sm89", WorkClass::Grid, 2,
-        vec![br1(), co4(), co4()], Reduce::None, None,
+        vec![f32_sub_key_in_frame(&[256], &[1], frame), co4(), co4()], Reduce::None, None,
     );
-    let pad_tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "grid", "r2",
-        "br/01/v1/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", "-"].join("|");
-    assert_eq!(k.to_token(), pad_tok);
+    let tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "grid", "r2",
+        "co/01/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", "-"].join("|");
+    assert_eq!(k.to_token(), tok);
+    // [1,256] stride [0,1] in the same frame (r == R, no padded axis): own axis 0 is a
+    // unit axis (co, no own broadcast -> v4) but the frame extent 128 > 1 sets mask bit 0.
+    assert_eq!(derive_bcast_mask_in_frame(&[1, 256], &[0, 1], frame), 0x01);
+    assert_eq!(
+        f32_sub_key_in_frame(&[1, 256], &[0, 1], frame),
+        op(Contig::Contiguous, 0x01, VecWidth::V4, DivBucket::D16, false)
+    );
+    // an operand that itself broadcasts a real axis stays br/v1 (own-axes step (1)):
+    // [128,256]/[0,1] in the frame, the existing "operand 1 broadcasting axis 0" vector.
+    assert_eq!(f32_sub_key_in_frame(&[128, 256], &[0, 1], frame), br1());
+    // full-rank operand in the same frame is unchanged: co, mask 00.
+    assert_eq!(derive_layout_tag(&[128, 256], &[256, 1]), Contig::Contiguous);
+    assert_eq!(derive_bcast_mask_in_frame(&[128, 256], &[256, 1], frame), 0x00);
+    // mask unchanged for the earlier frame-padded examples. A padded axis of frame extent 1
+    // is a unit axis: no bit.
+    assert_eq!(derive_bcast_mask_in_frame(&[256], &[1], &[1, 256]), 0x00);
+    assert_eq!(derive_layout_tag(&[256], &[1]), Contig::Contiguous);
+    // rank-0 scalar in a rank-2 frame: both real axes set a bit (0b11); its own axes are
+    // empty, so the own-axes layout is the empty-product `contiguous`.
+    assert_eq!(derive_bcast_mask_in_frame(&[], &[], frame), 0x03);
+    assert_eq!(derive_layout_tag(&[], &[]), Contig::Contiguous);
+    // padded axes outermost of three: [4] in [2,3,4] -> axes 0,1 padded (extents 2,3).
+    assert_eq!(derive_bcast_mask_in_frame(&[4], &[1], &[2, 3, 4]), 0b011);
+    // a rank-1 operand with its own broadcast axis ([4] stride [0]) is br AND masks its frame bit.
+    assert_eq!(derive_layout_tag(&[4], &[0]), Contig::Broadcast);
+    assert_eq!(derive_bcast_mask_in_frame(&[4], &[0], &[2, 3, 4]), 0b111);
+
+    // worked example 2: the dense-vs-strided collision is gone. Frame rank 4; two rank-3
+    // operands of extents [4,16,64], one dense, one strided; same mask, different layout.
+    let frame4: &[i64] = &[8, 4, 16, 64];
+    let dense = f32_sub_key_in_frame(&[4, 16, 64], &[1024, 64, 1], frame4);
+    let strided = f32_sub_key_in_frame(&[4, 16, 64], &[2048, 128, 2], frame4);
+    assert_eq!(dense, op(Contig::Contiguous, 0x01, VecWidth::V4, DivBucket::D16, false));
+    assert_eq!(strided, op(Contig::Strided, 0x01, VecWidth::V1, DivBucket::D16, false));
+    assert_eq!(dense.bcast_mask, strided.bcast_mask);
+    assert_ne!(dense, strided);
+    assert_ne!(dense.contig, strided.contig);
+    // the padded-view layout the old rule used would have derived the SAME layout for both.
+    let (de, ds) = frame_padded_view(&[4, 16, 64], &[1024, 64, 1], frame4);
+    let (se, ss) = frame_padded_view(&[4, 16, 64], &[2048, 128, 2], frame4);
+    assert_eq!(derive_layout_tag(&de, &ds), Contig::Broadcast);
+    assert_eq!(derive_layout_tag(&se, &ss), Contig::Broadcast);
+    let k4 = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 4, vec![dense, strided], Reduce::None, None);
+    let tok4 = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "grid", "r4",
+        "co/01/v4/d16/f;st/01/v1/d16/f", "-"].join("|");
+    assert_eq!(k4.to_token(), tok4);
 }
 
 /// KISS-CLASSIFY-6.6-0021 (`test_classify_scale_dtype_at_operand0_declines`): a scale

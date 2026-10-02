@@ -790,7 +790,9 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
 - **KISS-CLASSIFY-6.5-0002** — `layout_tag` MUST be derived from `extents` and
   `strides` using `|stride|` (absolute value — so a fully reversed view is
   `contiguous` with the reversal captured only by the flipped flag, §6.6-0007) by the
-  following pinned algorithm. Consider only the **active non-unit axes** (active axes
+  following pinned algorithm, applied to the operand's **own** axes only: the
+  iteration-frame padding of a lower-rank operand (§6.6-0013) is never an input here
+  (§6.5-0014). Consider only the **active non-unit axes** (active axes
   §6.3-0002 whose extent is neither `0` nor `1`), visited **innermost (§6.3-0011)
   first**. **(1)** The operand is `broadcast` if any axis of extent > 1 has stride
   `0`. **(2)** Else it is `contiguous` if, maintaining a running product `P`
@@ -864,7 +866,8 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   `≤ 8`, `9..=128`, `129..=2048`, `> 2048`; a `structure_key` MUST key size
   **classes**, never literal extents. *Test:* `test_classify_size_class_enum`.
 - **KISS-CLASSIFY-6.5-0009** — The vector-access width of an operand MUST be
-  derived as: **(a)** `v1` if the operand's `layout_tag` is `broadcast`; **(b)**
+  derived as: **(a)** `v1` if the operand's `layout_tag` — derived from its own axes, §6.5-0014 —
+  is `broadcast`; **(b)**
   `v1` if the operand's innermost active axis (§6.3-0011) is a reduced axis of a
   reduction cell — i.e. the cell's reduce field (§6.6-0009) is `rall`, or is
   `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set (a scan, `scn`,
@@ -911,7 +914,8 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
 - **KISS-CLASSIFY-6.5-0013** — A vector-access width `vL` with `L > 1`
   (§6.5-0009(c)) MUST additionally require that the operand's **innermost active
   axis** (§6.3-0011) is **forward-unit-stride** — its signed stride (§6.3-0003) is
-  exactly `+1` — and that **no** axis of the operand broadcasts. An innermost axis
+  exactly `+1` — and that **no** axis of the operand's **own** axes broadcasts (an own axis of extent `> 1`
+  and stride `0`; a frame-padded axis, §6.5-0014, is not one). An innermost axis
   whose stride is `-1` (a **reversed** run), or whose `|stride| > 1` (a transposed /
   non-inner-contiguous axis), MUST derive `v1`, because its elements are not a
   contiguous forward run in memory and no conformant packed / vector load (`ld.128`,
@@ -924,23 +928,53 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   precondition gates §6.5-0009(c) before its byte-cap, extent-divisibility, and
   alignment tests are applied. *Test:* `test_classify_vec_width_unit_stride`.
 - **KISS-CLASSIFY-6.5-0014** — For an operand of rank `r` in a cell whose iteration
-  rank is `R > r` (§6.6-0006), the `layout_tag` (§6.5-0002) and the broadcast-axis mask
-  (§6.6-0008) MUST be derived over the operand's **frame-padded view**: the operand's own
-  axes right-aligned to the iteration frame (§6.6-0013), preceded by `R − r` leading
-  padded axes, each taking the **iteration-frame extent** at that axis and **stride `0`**.
-  A padded axis whose frame extent is `> 1` is therefore a broadcast axis (§6.5-0002 step
-  **(1)**, and its bit is set in the mask), so such an operand's `layout_tag` is
-  `broadcast` even when its own axes are contiguous; a padded axis whose frame extent is
-  `1` is a unit axis and affects neither. The operand's vector-access width (§6.5-0009)
-  and divisibility bucket (§6.5-0012) are still read from the operand's **own** innermost
-  axis (§6.3-0011), and §6.5-0009(a) takes the padded `layout_tag`.
-  *Worked example (informative):* an `f32` operand of extents `[256]` and strides `[1]`,
-  256-byte aligned, in the iteration frame `[128, 256]` (`R = 2`, `r = 1`): the padded
-  view is extents `[128, 256]`, strides `[0, 1]`; the layout is `br` (axis 0 has extent
-  `128 > 1` and stride `0`), the mask is `01` (bit 0 = frame axis 0), the vector width is
-  `v1` (§6.5-0009(a)), the divisibility bucket is `d16` (own innermost extent `256`), and
-  the flipped flag is `f`: sub-key `br/01/v1/d16/f`, beside `co/00/v4/d16/f` for each
-  `[128, 256]` operand of the same cell. *Test:* `test_classify_layout_tag_frame_padded_view`.
+  rank is `R > r` (§6.6-0006), the frame is seen by the **broadcast-axis mask only**, never
+  by the `layout_tag`. **(a) Mask:** the broadcast-axis mask (§6.6-0008) MUST be derived
+  over the operand's **frame-padded view** — the operand's own axes right-aligned to the
+  iteration frame (§6.6-0013), preceded by `R − r` leading padded axes, each taking the
+  **iteration-frame extent** at that axis and **stride `0`**: a padded axis whose frame
+  extent is `> 1` sets its bit; one whose frame extent is `1` is a unit axis and sets none.
+  **(b) Layout:** the `layout_tag` (§6.5-0002) MUST be derived from the operand's **own
+  axes only** — its own `extents` and `strides`, rank `r` — and a padded axis MUST NOT
+  contribute to it. §6.5-0002 step **(1)** (`broadcast`) therefore fires only for a
+  broadcast axis the operand itself has (an own axis of extent `> 1` and stride `0`), and a
+  lower-rank operand whose own axes are contiguous is `contiguous` (`co`), whose own axes
+  are strided is `strided` (`st`), and so on, exactly as the same axes would classify at
+  rank `r` outside any frame. Two lower-rank operands that differ in their own strides
+  therefore derive different `layout_tag`s even though their masks are equal (the masks
+  depend on the frame, the layouts on the operand alone). **(c) Everything else is own-axes:**
+  the vector-access width (§6.5-0009, including (a) "`layout_tag` is `broadcast`", which now
+  reads the own-axes `layout_tag` of (b), and the §6.5-0013 "no axis of the operand
+  broadcasts" test, which ranges over the operand's own axes) and the divisibility bucket
+  (§6.5-0012) are read from the operand's **own** axes and innermost axis (§6.3-0011); a
+  padded axis never forces `v1`. A rank-`R` operand (`r = R`) has no padded axis, and for it
+  the own-axes view and the frame view coincide.
+  *Worked example 1 (informative):* an `f32` operand of extents `[256]` and strides `[1]`,
+  256-byte aligned, in the iteration frame `[128, 256]` (`R = 2`, `r = 1`): the mask is
+  computed over the padded view (extents `[128, 256]`, strides `[0, 1]`), so axis 0
+  (frame extent `128 > 1`, stride `0`) sets bit 0 and the mask is `01`; the layout is
+  computed over the own axes `[256]`/`[1]` and is `co` (§6.5-0002 step **(2)**); the vector
+  width reads the own innermost axis: forward-unit stride `+1` (§6.5-0013), no own axis
+  broadcasts, `L = 4` (`4·4 = 16 ≤ 16`, `4 | 256`, `256 mod 16 = 0`) so `v4`
+  (§6.5-0009(c)); the divisibility bucket is `d16` (own innermost extent `256`); the
+  flipped flag is `f`: sub-key `co/01/v4/d16/f`, beside `co/00/v4/d16/f` for each
+  `[128, 256]` operand of the same cell. (Before this clause's own-axes layout rule the
+  same operand derived `br/01/v1/d16/f`.) An operand of extents `[1, 256]` and strides
+  `[0, 1]` in that same frame (`r = R`, no padded axis) derives the identical sub-key
+  `co/01/v4/d16/f`: its own axis 0 has extent `1`, so it is a unit axis for the layout
+  (`co`) and for §6.5-0013, while the mask bit is set because the **frame** extent at axis
+  0 is `128 > 1` and the operand's stride along it is `0` (§6.6-0008).
+  *Worked example 2 (informative; the collision, resolved):* an iteration frame of rank 4,
+  `[8, 4, 16, 64]`, and two `f32` operands of rank 3, both of extents `[4, 16, 64]`, both
+  256-byte aligned. The *dense* one has strides `[1024, 64, 1]`; the *strided* one has
+  strides `[2048, 128, 2]` (a gather or rank-reduced view of a wider buffer). Both pad
+  one leading axis of frame extent `8`, so both masks are `01`. The dense layout is `co`
+  (step **(2)**), the strided layout is `st` (step **(4)**: innermost `|stride| = 2`).
+  The dense operand's innermost axis is forward-unit with `64` divisible by `4`, so `v4`;
+  the strided one's innermost stride is `2`, so `v1` (§6.5-0013). Both bucket `d16`.
+  Sub-keys: `co/01/v4/d16/f` and `st/01/v1/d16/f` — distinct, whereas a layout read over
+  the padded view would have derived the same `br/01/v1/d16/f` for both.
+  *Test:* `test_classify_layout_own_axes_mask_frame_padded`.
 
 ### 6.6 The `structure_key` admissibility predicate
 
@@ -1028,8 +1062,10 @@ form (§6.7-0011).
   iteration-frame axes (§6.6-0013), bit `i` denoting iteration-frame axis `i`,
   bounded by `MAX_RANK` so a single byte suffices, with bit `i` set iff
   iteration-frame axis `i` has extent > 1 and that operand's stride along it is `0`
-  (the operand broadcasts along that axis). *Test:*
-  `test_classify_broadcast_axis_mask`.
+  (the operand broadcasts along that axis). A frame axis the operand does not have
+  (a padded axis, §6.6-0013, §6.5-0014) has stride `0` for this test; an own axis of
+  extent `1` and stride `0` still sets its bit when the **frame** extent at that axis is
+  `> 1`. *Test:* `test_classify_broadcast_axis_mask`.
 - **KISS-CLASSIFY-6.6-0009** — The reduce spec MUST be exactly one of four
   **distinctly-encoded** values, and an implementation MUST NOT overload a single
   sentinel across two of them: **(1) none / not-a-reduction** (token field `-`,
@@ -1105,8 +1141,10 @@ form (§6.7-0011).
 - **KISS-CLASSIFY-6.6-0013** — When operands differ in rank, each operand's axes
   MUST be **right-aligned** to the iteration rank (§6.6-0006): an operand of rank
   `r` occupies iteration-frame axes `[iteration_rank − r, iteration_rank − 1]`, and
-  every iteration-frame axis below `iteration_rank − r` MUST be treated as broadcast
-  (stride `0`) for that operand. All per-operand masks (broadcast-axis mask
+  every iteration-frame axis below `iteration_rank − r` MUST be treated as stride `0`
+  (broadcast when its frame extent is `> 1`) **for that operand's per-operand masks
+  below**; it is not an input to the operand's `layout_tag`, vector width or
+  divisibility bucket, which read the operand's own axes (§6.5-0014). All per-operand masks (broadcast-axis mask
   §6.6-0008, `reduce_axes` §6.6-0009) MUST be computed in the iteration frame.
   *Test:* `test_classify_mixed_rank_axis_alignment`.
 - **KISS-CLASSIFY-6.6-0014** — Operands MUST be presented in canonical order: all
@@ -2121,7 +2159,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0011 | `test_classify_index_width_offset` |
 | KISS-CLASSIFY-6.5-0012 | `test_classify_div_bucket_derivation` |
 | KISS-CLASSIFY-6.5-0013 | `test_classify_vec_width_unit_stride` |
-| KISS-CLASSIFY-6.5-0014 | `test_classify_layout_tag_frame_padded_view` |
+| KISS-CLASSIFY-6.5-0014 | `test_classify_layout_own_axes_mask_frame_padded` |
 | KISS-CLASSIFY-6.6-0001 | `test_classify_structure_key_is_admissibility_predicate` |
 | KISS-CLASSIFY-6.6-0002 | `test_classify_structure_key_is_not_op_identity` |
 | KISS-CLASSIFY-6.6-0003 | `test_classify_structure_key_extent_free` |
