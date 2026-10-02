@@ -34,7 +34,7 @@ pub const OP_FAMILIES: [&str; 24] = [
 /// Integers are uniform `i`-prefixed (`i8`/`i16`/`i4`); FP8 carries the `f8` width prefix
 /// + mandatory variant suffix (`f8e4m3fn` OCP finite/no-inf max 448; `f8e4m3fnuz` AMD
 /// reserved; `f8e5m2` IEEE inf/NaN max 57344; `f8e5m2fnuz` AMD reserved); the MX
-/// shared-exponent scales `f8e8m0`/`f8e6m2` are additive (§6.1-0013); complex is named by
+/// shared-exponent scale `f8e8m0` is additive and `f8e6m2` is additive but reserved (§6.1-0013); complex is named by
 /// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
 /// §6.1-0012, made loud by the version prefix).
 pub const DTYPES: [&str; 24] = [
@@ -42,12 +42,12 @@ pub const DTYPES: [&str; 24] = [
     "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
 ];
 
-/// The two **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
+/// The three **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
 /// closed vocabulary so the spellings are pinned now, but with **no computation
 /// semantics at this schema version** — a `structure_key` using one in any dtype
 /// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
 /// from the unknown-token decline. Activation is a future additive schema event.
-pub const RESERVED_DTYPES: [&str; 2] = ["f8e4m3fnuz", "f8e5m2fnuz"];
+pub const RESERVED_DTYPES: [&str; 3] = ["f8e4m3fnuz", "f8e5m2fnuz", "f8e6m2"];
 
 // ---- small enum codecs -------------------------------------------------------
 
@@ -76,7 +76,7 @@ code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
 /// precondition. This is the reference derivation for the non-reduction,
 /// non-broadcast branch: parts (a)/(b) of §6.5-0009 (broadcast `layout_tag`,
-/// reduced/scan innermost axis) are decided by the caller and reach this function
+/// reduced innermost axis of a `red` cell; a scan cell takes this ladder) are decided by the caller and reach this function
 /// only as `any_axis_broadcast` or by not being called.
 ///
 /// Arguments are the innermost active axis's signed stride (§6.3-0003, elements)
@@ -927,6 +927,72 @@ pub fn derive_bcast_mask(extents: &[i64], strides: &[i64]) -> u8 {
         // broadcast iff a REAL (extent > 1) axis is walked with stride 0; a size-1
         // axis (e == 1) carries stride 0 legitimately and MUST NOT set the bit.
         if e > 1 && s == 0 {
+            mask |= 1u8 << i;
+        }
+    }
+    mask
+}
+
+/// The two MX **scale** dtypes (§6.1-0013). Neither is an element value dtype, so
+/// neither is a valid operand-0 / primary dtype (§6.6-0021).
+pub const SCALE_DTYPES: [&str; 2] = ["f8e8m0", "f8e6m2"];
+
+/// §6.6-0005 + §6.6-0021: `structure_key.dtype` is operand-0's dtype, where operand-0
+/// is fixed by the canonical operand order (§6.6-0014) — and a derivation whose
+/// operand 0 is a scale-type dtype (`f8e8m0` / `f8e6m2`, §6.1-0013) **declines**
+/// (`None`): it MUST NOT emit the scale's spelling and MUST NOT substitute another
+/// operand's dtype. A scale at any NON-zero position is untouched (a quantized-GEMM
+/// operand list `[weight, weight_scale, activation]` has primary dtype = the weight's).
+/// An empty operand list has no operand 0 and also declines.
+#[must_use]
+pub fn derive_primary_dtype<'a>(operand_dtypes: &[&'a str]) -> Option<&'a str> {
+    let first = *operand_dtypes.first()?;
+    if SCALE_DTYPES.contains(&first) {
+        None
+    } else {
+        Some(first)
+    }
+}
+
+/// §6.5-0014 + §6.6-0013: the **frame-padded view** of an operand — its own axes
+/// right-aligned to the iteration `frame` (outermost-first extents), preceded by
+/// `frame.len() - extents.len()` leading padded axes, each taking the iteration-frame
+/// extent at that axis and stride `0`. An operand of rank `>=` the frame rank is
+/// returned unchanged. (The frame is the per-axis maximum extent across operands,
+/// §6.5-0010; the caller supplies it.)
+#[must_use]
+pub fn frame_padded_view(extents: &[i64], strides: &[i64], frame: &[i64]) -> (Vec<i64>, Vec<i64>) {
+    let off = frame.len().saturating_sub(extents.len());
+    let mut e: Vec<i64> = frame[..off].to_vec();
+    let mut s: Vec<i64> = vec![0; off];
+    e.extend_from_slice(extents);
+    s.extend_from_slice(strides);
+    (e, s)
+}
+
+/// §6.5-0014: [`derive_layout_tag`] over the operand's frame-padded view. A padded
+/// axis with frame extent `> 1` has stride `0`, so a lower-rank operand broadcasting
+/// along a real frame axis is `broadcast` even when its own axes are contiguous.
+#[must_use]
+pub fn derive_layout_tag_in_frame(extents: &[i64], strides: &[i64], frame: &[i64]) -> Contig {
+    let (e, s) = frame_padded_view(extents, strides, frame);
+    derive_layout_tag(&e, &s)
+}
+
+/// §6.5-0014 + §6.6-0008: the broadcast-axis mask of an operand in iteration `frame`
+/// — bit `i` (frame axis `i`, outermost-first) is set iff the **frame** extent at axis
+/// `i` is `> 1` and the operand's stride along it (`0` on a padded axis) is `0`.
+/// §6.6-0008 keys the extent test on the iteration-frame axis, not on the operand's
+/// own extent. Bounded by `MAX_RANK` so a byte suffices.
+#[must_use]
+pub fn derive_bcast_mask_in_frame(extents: &[i64], strides: &[i64], frame: &[i64]) -> u8 {
+    let (_, s) = frame_padded_view(extents, strides, frame);
+    let mut mask: u8 = 0;
+    for (i, (&fe, &st)) in frame.iter().zip(s.iter()).enumerate() {
+        if i >= MAX_RANK as usize {
+            break;
+        }
+        if fe > 1 && st == 0 {
             mask |= 1u8 << i;
         }
     }

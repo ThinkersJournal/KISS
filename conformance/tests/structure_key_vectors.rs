@@ -94,8 +94,8 @@ fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
 #[test]
 fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(DTYPES.len(), 24, "recognition set must be 24 tokens");
-    assert_eq!(RESERVED_DTYPES.len(), 2, "two reserved tokens");
-    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 22, "usable const = 22");
+    assert_eq!(RESERVED_DTYPES.len(), 3, "three reserved tokens");
+    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 21, "usable const = 21");
 
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
         .expect("the emitted artifact must be valid JSON");
@@ -105,12 +105,12 @@ fn test_dual_axis_is_present_and_discriminates() {
     let reserved = str_array(&doc, "reserved_dtypes");
 
     // counts equal the ACTUAL array lengths — a declared count that lies about its
-    // array is caught here, not assumed equal to 24/22.
+    // array is caught here, not assumed equal to 24/21.
     assert_eq!(doc.get("recognition_count").and_then(|j| j.as_u64()), Some(recognition.len() as u64), "recognition_count must equal its array length");
     assert_eq!(doc.get("usable_count").and_then(|j| j.as_u64()), Some(usable.len() as u64), "usable_count must equal its array length");
     assert_eq!(recognition.len(), 24);
-    assert_eq!(usable.len(), 22);
-    assert_eq!(reserved.len(), 2);
+    assert_eq!(usable.len(), 21);
+    assert_eq!(reserved.len(), 3);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(4));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk4"));
     // NOT asserted here: `source_commit`. `doc` is the emitter's own output and the
@@ -317,7 +317,7 @@ fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
     // before prescribing, so an equality miss on a DECREASE isn't reported as an improvement.
     check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 4, format!("{in_dtype_pos:?}"));
     check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 7, format!("{anywhere:?}"));
-    // the boundary the note states: strictly fewer than the 22 usable tokens are exercised.
+    // the boundary the note states: strictly fewer than the 21 usable tokens are exercised.
     assert!(
         in_dtype_pos.len() < usable.len(),
         "dtype-position coverage must be a strict subset of the {} usable tokens",

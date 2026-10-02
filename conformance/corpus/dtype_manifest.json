@@ -117,7 +117,7 @@
       "token": "f8e6m2",
       "kind": "float",
       "storage_bits": 8,
-      "reserved": false
+      "reserved": true
     },
     {
       "token": "i4",

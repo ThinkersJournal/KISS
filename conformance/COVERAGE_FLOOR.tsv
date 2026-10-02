@@ -531,8 +531,14 @@
 # conflict on this very file and RE-DERIVED rather than kept-side -- two branches each correctly
 # bumping a shared counter converge on a value that is neither. Re-derive after every rebase.
 #
+# spec/fuel-reconcile-classify-ops (base 5e817a6): harness 388 -> 392, untested 481 -> 480. Four clauses arrive
+# or become harness-backed (6.1-0013 test_classify_mx_scale_format, new 6.5-0014, 6.6-0021, 7.3-0002); three new
+# 7.3 clauses are `definitional`. RE-DERIVED from the tool after a clean rebuild of the branch off the moved main,
+# not kept from either side: `--ratchet --base-ref origin/main` said "Set the floor to harness 392, lint 33,
+# untested 480".
+#
 # key	value
-harness	388
+harness	392
 lint	33
-untested	481
+untested	480
 proven	20

@@ -1058,6 +1058,94 @@ fn test_classify_axis_ordering_convention() {
     // Appendix A `[4,1] -> [4,1]` output: inner axis 1 extent 1 -> `da`
     // (not axis 0 extent 4 -> `d4`).
     assert_eq!(derive_div_bucket_of(&[4, 1]), DivBucket::Da);
+
+    // §6.3-0011 (wording-only clarification, PM ruling B): the innermost active axis
+    // INCLUDES a unit-extent axis -- there is NO non-unit exclusion for the vector-width
+    // (§6.5-0009/-0013) and divisibility (§6.5-0012) derivations. (Only the layout tag,
+    // §6.5-0002, separately visits the active NON-UNIT axes; its behaviour is unchanged.)
+    let f32b = Some(4u32);
+    // [4,1] f32, strides [1,1], 256-byte aligned: inner axis is axis 1 (E=1, stride 1)
+    //   -> E=1 divides nothing >1 -> v1; bucket `da`.
+    assert_eq!(innermost_active_axis(2), Some(1));
+    assert_eq!(derive_vec_width(1, 1, f32b, 256, false), VecWidth::V1);
+    assert_eq!(derive_div_bucket_of(&[4, 1]), DivBucket::Da);
+    // [8,1]: same -- the trailing unit axis, not the extent-8 outer axis, is read.
+    assert_eq!(derive_vec_width(1, 1, f32b, 256, false), VecWidth::V1);
+    assert_eq!(derive_div_bucket_of(&[8, 1]), DivBucket::Da);
+    // contrast [1,8]: inner axis is axis 1 with E=8 -> d8, and v4 (f32: 4*4=16 byte cap,
+    // 256 % 16 == 0, 8 % 4 == 0; v8 would be 32 bytes > cap).
+    assert_eq!(derive_div_bucket_of(&[1, 8]), DivBucket::D8);
+    assert_eq!(derive_vec_width(1, 8, f32b, 256, false), VecWidth::V4);
+    // A "skip unit axes" reader would read E=4 for [4,1] (-> d4 / v4) and E=8 for [8,1]
+    // (-> d8 / v4): the two disagree with the rank-1 reading on BOTH derivations.
+    assert_ne!(derive_div_bucket_of(&[4, 1]), derive_div_bucket(4));
+    assert_ne!(derive_vec_width(1, 1, f32b, 256, false), derive_vec_width(1, 4, f32b, 256, false));
+    // layout (§6.5-0002) keeps its own notion: [4,1]/[1,1] is `co` by the non-unit axes.
+    assert_eq!(derive_layout_tag(&[4, 1], &[1, 1]), Contig::Contiguous);
+    // The whole-cell token Fuel pins for an f32 [4,1] one-operand `bin` cell on
+    // cuda:sm89, 256B-aligned (fuel eee8e119, trailing_unit_axis_reads_rank_minus_1_inner):
+    // 4 elements -> warp; offset 3 -> ix32; sub-key co/00/v1/da/f.
+    assert_eq!(derive_work_class(&[&[4, 1]]), WorkClass::Warp);
+    let k = key("bin", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_da()], Reduce::None, None);
+    // (Assembled from fields, not written as one literal: these worked-example tokens are
+    // deliberately NOT corpus vectors -- the corpus has no shape-input derivation format --
+    // and `artifact_covers_every_golden_token_literal` scans test literals for corpus coverage.)
+    let fuel_tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "warp", "r2", "co/00/v1/da/f", "-"].join("|");
+    assert_eq!(k.to_token(), fuel_tok);
+    assert_eq!(from_token(&fuel_tok), Ok(k));
+}
+
+/// KISS-CLASSIFY-6.5-0014 (`test_classify_layout_tag_frame_padded_view`): `layout_tag`
+/// and the broadcast mask are computed over the FRAME-PADDED view of a lower-rank
+/// operand (leading padded axes = frame extent, stride 0). Teeth: a reader that derives
+/// the layout over the operand's OWN axes calls a `[256]`/`[1]` operand in a `[128,256]`
+/// frame `co`, not `br`.
+#[test]
+fn test_classify_layout_tag_frame_padded_view() {
+    let frame: &[i64] = &[128, 256];
+    // the worked example: [256] stride [1] in frame [128,256] -> padded [128,256]/[0,1].
+    assert_eq!(frame_padded_view(&[256], &[1], frame), (vec![128, 256], vec![0, 1]));
+    assert_eq!(derive_layout_tag_in_frame(&[256], &[1], frame), Contig::Broadcast);
+    assert_eq!(derive_bcast_mask_in_frame(&[256], &[1], frame), 0x01);
+    // own-axes reading (the bug): contiguous, no mask.
+    assert_eq!(derive_layout_tag(&[256], &[1]), Contig::Contiguous);
+    // full-rank operand in the same frame is unchanged: co, mask 00.
+    assert_eq!(derive_layout_tag_in_frame(&[128, 256], &[256, 1], frame), Contig::Contiguous);
+    assert_eq!(derive_bcast_mask_in_frame(&[128, 256], &[256, 1], frame), 0x00);
+    // a padded axis of frame extent 1 is a unit axis: no broadcast, no bit.
+    assert_eq!(derive_layout_tag_in_frame(&[256], &[1], &[1, 256]), Contig::Contiguous);
+    assert_eq!(derive_bcast_mask_in_frame(&[256], &[1], &[1, 256]), 0x00);
+    // rank-0 scalar in a rank-2 frame broadcasts along both real axes: mask 0b11.
+    assert_eq!(derive_layout_tag_in_frame(&[], &[], frame), Contig::Broadcast);
+    assert_eq!(derive_bcast_mask_in_frame(&[], &[], frame), 0x03);
+    // padded axis outermost of three: [4] in [2,3,4] -> axes 0,1 padded (extents 2,3).
+    assert_eq!(derive_bcast_mask_in_frame(&[4], &[1], &[2, 3, 4]), 0b011);
+    // ...and the sub-key that results (f32, 256B aligned): own innermost axis 256 -> d16,
+    // layout br forces v1 (§6.5-0009(a)): br/01/v1/d16/f; the full-rank operands co/00/v4/d16/f.
+    let k = key(
+        "bin", "f32", "cuda:sm89", WorkClass::Grid, 2,
+        vec![br1(), co4(), co4()], Reduce::None, None,
+    );
+    let pad_tok = ["sk4", "bin", "f32", "cuda:sm89", "ix32", "grid", "r2",
+        "br/01/v1/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", "-"].join("|");
+    assert_eq!(k.to_token(), pad_tok);
+}
+
+/// KISS-CLASSIFY-6.6-0021 (`test_classify_scale_dtype_at_operand0_declines`): a scale
+/// type (`f8e8m0`/`f8e6m2`) at operand 0 has no defined `structure_key.dtype`; the
+/// derivation declines. Teeth: it must NOT emit the scale spelling or fall through to
+/// another operand's dtype, and a scale at a NON-zero position must not trigger it.
+#[test]
+fn test_classify_scale_dtype_at_operand0_declines() {
+    assert_eq!(derive_primary_dtype(&["f32", "f32"]), Some("f32"));
+    assert_eq!(derive_primary_dtype(&["f8e8m0", "i4", "bf16"]), None);
+    assert_eq!(derive_primary_dtype(&["f8e6m2", "f32"]), None);
+    // a scale at a non-zero position leaves the primary dtype = operand 0's dtype.
+    assert_eq!(derive_primary_dtype(&["i4", "f8e8m0", "bf16"]), Some("i4"));
+    // no operand 0 -> nothing to read -> decline.
+    assert_eq!(derive_primary_dtype(&[]), None);
+    // the scale set is exactly the two §6.1-0013 scale dtypes.
+    assert_eq!(SCALE_DTYPES, ["f8e8m0", "f8e6m2"]);
 }
 
 /// KISS-CLASSIFY-6.5-0002 (`test_classify_layout_tag_derivation`): the 4-step
@@ -1192,4 +1280,59 @@ fn test_classify_weight_role_hint() {
         derive_weight_dtype(&ops, 1),
         "weight-role hint must not coincide with a fixed operand-1 read",
     );
+}
+
+/// KISS-CLASSIFY-7.3-0002 (`test_classify_emit_only_profile_emit_direction`): an
+/// emit-only implementation is evidenced by the EMIT direction alone -- the golden
+/// positive vectors compared by byte-match on the tokens it PRODUCES, plus the
+/// producer obligations checked on the emitted bytes. This test never calls
+/// `from_token`: the shape checks below are a reader-independent parse of the OUTPUT
+/// (so a producer with no token reader can run the same checks). Teeth: a producer that
+/// emits an uppercase/variable-width mask, `x<hh>` for an all-axes reduce, a wrong field
+/// count, or a contraction field on a non-`gem` cell fails here without any reader.
+#[test]
+fn test_classify_emit_only_profile_emit_direction() {
+    use kiss_conformance::reference_vectors::positive_vectors;
+    let is_lower_hex2 = |h: &str| h.len() == 2 && h.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+    let pv = positive_vectors();
+    assert!(!pv.is_empty(), "positive-vector set must not be empty (vacuous-pass guard)");
+    for v in &pv {
+        let tok = v.key.to_token();
+        // (1) byte-match on the emitted token (the emit-direction golden check).
+        assert_eq!(tok, v.token, "[{}] emitted token differs from the golden token", v.name);
+        // (2) producer obligations, read off the emitted bytes with no reader.
+        let f: Vec<&str> = tok.split('|').collect();
+        assert!(f.len() == 9 || f.len() == 10, "[{}] 6.7-0001: field count {}", v.name, f.len());
+        assert_eq!(f[0], "sk4", "[{}] 6.7-0002: field 0", v.name);
+        assert!(OP_FAMILIES.contains(&f[1]), "[{}] 6.5-0006 op-family", v.name);
+        assert!(DTYPES.contains(&f[2]) && !RESERVED_DTYPES.contains(&f[2]), "[{}] 6.1 dtype usable", v.name);
+        assert!(f[3].contains(':'), "[{}] 6.8-0001 namespaced target", v.name);
+        let ops: Vec<&str> = f[7].split(';').collect();
+        assert!(!ops.is_empty() && ops.len() <= MAX_OPERANDS as usize, "[{}] 6.4-0002 operand count", v.name);
+        for o in &ops {
+            let p: Vec<&str> = o.split('/').collect();
+            assert_eq!(p.len(), 5, "[{}] 6.7-0004 sub-key shape {o}", v.name);
+            assert!(["co", "ic", "st", "br"].contains(&p[0]), "[{}] layout code", v.name);
+            assert!(is_lower_hex2(p[1]), "[{}] 6.7-0010 lowercase two-digit mask {o}", v.name);
+            assert!(["v1", "v2", "v4", "v8"].contains(&p[2]), "[{}] vec code", v.name);
+            assert!(["d16", "d8", "d4", "d2", "da"].contains(&p[3]), "[{}] div code", v.name);
+            assert!(["f", "r"].contains(&p[4]), "[{}] flip code", v.name);
+        }
+        let r = f[8];
+        assert!(
+            r == "-" || r == "rall" || r == "rlast" || (r.len() == 3 && r.starts_with('x') && is_lower_hex2(&r[1..])),
+            "[{}] 6.7-0005 reduce spelling {r}", v.name
+        );
+        // 6.6-0010: the contraction field (`c<m><n><k>/...`, M/N/K in {t,s,m,l}) is present
+        // iff the cell is a `gem` cell; a non-`gem` tenth field is the (acc+mp) field.
+        let has_contraction = f.len() == 10
+            && f[9].len() >= 4
+            && f[9].starts_with('c')
+            && f[9][1..4].chars().all(|c| "tsml".contains(c));
+        assert_eq!(f[1] == "gem", has_contraction, "[{}] 6.6-0010 contraction presence", v.name);
+    }
+    // The producer emits rall/rlast, never the equivalent x<hh> (6.7-0005), checked here
+    // on emitted bytes: a Trailing/All key serializes without an `x` mask.
+    let t = key("red", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::All, None).to_token();
+    assert!(t.ends_with("|rall") && !t.contains("|x"), "emitted {t}");
 }

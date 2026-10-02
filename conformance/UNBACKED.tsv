@@ -83,7 +83,6 @@ KISS-CLASSIFY-6.1-0006	test_classify_u32_is_ordinary_storage	untested
 KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
 KISS-CLASSIFY-6.1-0011	test_classify_e5m2_format	untested	
 KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
-KISS-CLASSIFY-6.1-0013	test_classify_mx_scale_format	untested	MX scale bit-layout (f8e8m0/f8e6m2 = 8-bit unsigned, exp+mantissa=8) lives in the §6.1 table + dtype_manifest.json, enforced by the kiss_dtypes table lint; the stdlib-only Rust harness holds only token strings, so a harness test would bind vocabulary membership but not the OCP-MX encoding widths. Candidate upgrade to lint:kiss_tables once kiss_dtypes declares this clause (Lane B).
 KISS-CLASSIFY-6.2-0001	test_classify_numeric_kind_set_closed	untested	
 KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
@@ -112,7 +111,10 @@ KISS-CLASSIFY-6.9-0002	test_classify_structure_key_opaque_carry	untested
 KISS-CLASSIFY-6.9-0003	test_classify_zero_dependency	untested	
 KISS-CLASSIFY-7.1-0001	test_classify_mandatory_core	untested	
 KISS-CLASSIFY-7.2-0001	test_classify_extension_is_additive	untested	
-KISS-CLASSIFY-7.2-0002	test_classify_non_additive_bumps_version	untested	
+KISS-CLASSIFY-7.2-0002	test_classify_non_additive_bumps_version	untested
+KISS-CLASSIFY-7.3-0001	test_classify_full_profile_is_default	definitional	states which conformance claim an unqualified 'conforms' means; a test could only assert the definition against itself
+KISS-CLASSIFY-7.3-0003	test_classify_emit_only_reader_side_set	definitional	enumerates which existing clause sentences are reader-side; each is already backed (or ledgered) under its own clause, and a test over the enumeration would restate it
+KISS-CLASSIFY-7.3-0004	test_classify_emit_only_does_not_block_reader	definitional	a claim-scoping rule (an implementation adding a reader claims the full profile); no behaviour of the code under test distinguishes it
 KISS-CLASSIFY-8-0001	test_classify_two_version_axes_independent	untested	
 KISS-CLASSIFY-8-0002	test_classify_wire_change_bumps_version	untested	
 KISS-CLASSIFY-8-0003	test_classify_additive_no_version_bump	untested	
