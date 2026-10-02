@@ -94,3 +94,105 @@ pub fn advisory_floor_ulp(atom: &str) -> Option<f64> {
         _ => None,
     }
 }
+
+// ---------------------------------------------------------------------------
+// §6.8-0007/-0008/-0009 — the closed precision-class token set and its derivation.
+// ---------------------------------------------------------------------------
+
+/// The kind of a declared accuracy tier (§6.8-0008), ordered tightest to loosest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TierKind {
+    /// Carries `max_ulp = 0`.
+    T0,
+    /// Carries `max_ulp > 0`.
+    Tulp,
+    /// Carries only `max_relative` and/or `max_absolute`.
+    Tother,
+    /// Declares no bound.
+    NoBound,
+}
+
+impl TierKind {
+    /// Classify a tier from its `max_ulp` and whether it carries a relative/absolute bound.
+    pub fn of(max_ulp: Option<f64>, has_other_bound: bool) -> TierKind {
+        match max_ulp {
+            Some(u) if u == 0.0 => TierKind::T0,
+            Some(_) => TierKind::Tulp,
+            None if has_other_bound => TierKind::Tother,
+            None => TierKind::NoBound,
+        }
+    }
+}
+
+impl AccuracyTier {
+    /// §6.8-0008 tier kind of this tier.
+    pub fn kind(&self) -> TierKind {
+        TierKind::of(self.max_ulp, self.max_relative.is_some() || self.max_absolute.is_some())
+    }
+}
+
+/// The closed precision-class token set (§6.8-0007), declared tightest first so the derived
+/// `Ord` is the §6.8-0007 ordering (`Strict` is the smallest, i.e. tightest).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PrecisionClass {
+    Strict,
+    CorrectlyRounded,
+    BoundedUlp,
+    BoundedTolerance,
+    Unbounded,
+}
+
+impl PrecisionClass {
+    /// The whole closed set, tightest to loosest.
+    pub const ALL: [PrecisionClass; 5] = [
+        PrecisionClass::Strict,
+        PrecisionClass::CorrectlyRounded,
+        PrecisionClass::BoundedUlp,
+        PrecisionClass::BoundedTolerance,
+        PrecisionClass::Unbounded,
+    ];
+
+    /// The wire spelling (§6.8-0007).
+    pub fn token(self) -> &'static str {
+        match self {
+            PrecisionClass::Strict => "strict",
+            PrecisionClass::CorrectlyRounded => "correctly-rounded",
+            PrecisionClass::BoundedUlp => "bounded-ulp",
+            PrecisionClass::BoundedTolerance => "bounded-tolerance",
+            PrecisionClass::Unbounded => "unbounded",
+        }
+    }
+
+    /// Parse the wire spelling; anything outside the closed set (including the withdrawn
+    /// `bit-reproducible`) is `None`.
+    pub fn from_token(t: &str) -> Option<PrecisionClass> {
+        PrecisionClass::ALL.into_iter().find(|c| c.token() == t)
+    }
+
+    /// §6.8-0009: the tier kind this class corresponds to.
+    pub fn tier_kind(self) -> TierKind {
+        match self {
+            PrecisionClass::Strict | PrecisionClass::CorrectlyRounded => TierKind::T0,
+            PrecisionClass::BoundedUlp => TierKind::Tulp,
+            PrecisionClass::BoundedTolerance => TierKind::Tother,
+            PrecisionClass::Unbounded => TierKind::NoBound,
+        }
+    }
+}
+
+/// §6.8-0008: derive the `precision_class` from the per-target tier kinds and the
+/// `bit_stability` scope. The governing tier kind is the LOOSEST declared; no tier at all is
+/// [`TierKind::NoBound`].
+pub fn derive_precision_class(
+    kinds: impl IntoIterator<Item = TierKind>,
+    bit_stability: crate::contract::BitStability,
+) -> PrecisionClass {
+    use crate::contract::BitStability::Portable;
+    match kinds.into_iter().max().unwrap_or(TierKind::NoBound) {
+        TierKind::T0 if bit_stability == Portable => PrecisionClass::Strict,
+        TierKind::T0 => PrecisionClass::CorrectlyRounded,
+        TierKind::Tulp => PrecisionClass::BoundedUlp,
+        TierKind::Tother => PrecisionClass::BoundedTolerance,
+        TierKind::NoBound => PrecisionClass::Unbounded,
+    }
+}
