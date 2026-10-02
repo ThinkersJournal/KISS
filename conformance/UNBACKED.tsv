@@ -293,7 +293,6 @@ KISS-CONTRACT-6.6-0003	test_contract_count_to_grid	untested
 KISS-CONTRACT-6.6-0005	test_contract_dispatch_interface_consistent	untested	
 KISS-CONTRACT-6.7-0002	test_contract_capabilities_accept_matches_identity	untested	
 KISS-CONTRACT-6.7-0003	test_contract_capabilities_is_envelope	untested	
-KISS-CONTRACT-6.7-0005	test_contract_precision_class_consistent	untested	
 KISS-CONTRACT-6.7-0006	test_contract_cost_expressions	untestable	#44 — cost has no byte layout / cost_class vocab
 KISS-CONTRACT-6.8-0002	test_contract_precision_names_reference	untestable	#44 — per_backend_ulp_tiers: no layout, no float encoding
 KISS-CONTRACT-6.8-0005	test_contract_bit_stability_consistent	untested	

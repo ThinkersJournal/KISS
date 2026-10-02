@@ -912,6 +912,49 @@ section-intro paragraph is an informative pointer to it):
   use. A v1 kernel whose true accuracy is argument-dependent MUST declare a flat tier that
   bounds it over the declared input domain; KISS-Conform MUST NOT require the reserved form
   in v1. *Test:* `test_ops_accuracy_tier_flat_v1`.
+- **KISS-OPS-6.8-0007** — KISS-Ops **owns** the closed **precision-class** token set that
+  the KISS-Contract Capabilities `precision_class` field carries (KISS-CONTRACT-6.7-0005). The
+  set is exactly the five members `{strict, correctly-rounded, bounded-ulp, bounded-tolerance,
+  unbounded}`, spelled verbatim, and is **ordered** from tightest to loosest in that order
+  (`strict` > `correctly-rounded` > `bounded-ulp` > `bounded-tolerance` > `unbounded`). An
+  implementation MUST NOT use a precision-class spelling outside this set, MUST NOT re-fork or
+  re-spell a member, and MUST NOT define a parallel precision-class vocabulary. `bit-reproducible`
+  is **not** a member: bit-reproducibility is the reproducibility-scope axis `bit_stability`
+  (KISS-CONTRACT-6.8-0013), and a tier-0 kernel that is reproducible on any compatible hardware
+  is the class `strict` (§6.8-0008). *Test:* `test_ops_precision_class_token_set`.
+- **KISS-OPS-6.8-0008** — The `precision_class` is a **derived label**, not an authored fact: it
+  MUST equal the output of the following function of the kernel's declared per-target accuracy
+  tier (§6.8-0001) and its `bit_stability` (KISS-CONTRACT-6.8-0013), so it cannot contradict
+  its tier. The **tier kind** of a tier is `T0` if it carries `max_ulp = 0`; else `Tulp` if it
+  carries `max_ulp > 0`; else `Tother` if it carries only `max_relative` and/or `max_absolute`;
+  else `none` (no bound declared). When a kernel declares tiers for several targets, the
+  governing tier kind is the **loosest** of them (`none` loosest, then `Tother`, `Tulp`, `T0`);
+  a kernel declaring no tier is `none`.
+
+  | tier kind | `bit_stability = portable` | `same-hardware` | `none` |
+  |---|---|---|---|
+  | `T0` | `strict` | `correctly-rounded` | `correctly-rounded` |
+  | `Tulp` | `bounded-ulp` | `bounded-ulp` | `bounded-ulp` |
+  | `Tother` | `bounded-tolerance` | `bounded-tolerance` | `bounded-tolerance` |
+  | `none` | `unbounded` | `unbounded` | `unbounded` |
+
+  An implementation MUST NOT author a `precision_class` independently of this derivation and
+  MUST NOT declare one the derivation does not yield. *Informative:* the `bit_stability` axis
+  distinguishes the classes only at tier 0, because only an exact result can be bit-reproducible
+  against the reference by construction; the looser tiers carry the same class at every scope.
+  *Test:* `test_ops_precision_class_derivation`.
+- **KISS-OPS-6.8-0009** — The precision-class↔tier correspondence is: `strict` and
+  `correctly-rounded` map to **tier 0** (`max_ulp = 0`, a definitional floor, not a retired
+  ceiling); `bounded-ulp` maps to a tier carrying `max_ulp > 0`; `bounded-tolerance` maps to a
+  tier carrying only `max_relative` and/or `max_absolute`; `unbounded` maps to no declared tier.
+  The tier-0 classes are **0 ULP versus the NAMED `reference_function`** (KISS-CONTRACT-6.8-0002):
+  `correctly-rounded` here does **not** claim that the result is the provably correct rounding
+  of the true mathematical value, which is a stronger claim that KISS-Ops does not make and that
+  would need a further input beyond tier and `bit_stability`. Consequently a looser class MUST
+  NOT correspond to a tighter tier than a stricter class. *Informative:* Fuel's five-rung
+  `AccuracyClass` ranking is **not** adopted and is not part of this set; it is a consumer-side
+  ranking over the same inputs, noted in `rfcs/accuracy-class-clause-question.md`. *Test:*
+  `test_ops_precision_class_tier_correspondence`.
 
 ### 6.9 Binary-math atoms
 
@@ -2674,6 +2717,9 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.8-0004 | `test_ops_special_function_atoms` |
 | KISS-OPS-6.8-0005 | `test_ops_atan2_class_is_ulp` |
 | KISS-OPS-6.8-0006 | `test_ops_accuracy_tier_flat_v1` |
+| KISS-OPS-6.8-0007 | `test_ops_precision_class_token_set` |
+| KISS-OPS-6.8-0008 | `test_ops_precision_class_derivation` |
+| KISS-OPS-6.8-0009 | `test_ops_precision_class_tier_correspondence` |
 | KISS-OPS-6.9-0001 | `test_ops_atan2_quadrants` |
 | KISS-OPS-6.9-0002 | `test_ops_copysign_raw_bit` |
 | KISS-OPS-6.9-0003 | `test_ops_nextafter_own_lattice` |

@@ -617,7 +617,7 @@ fn parse_crc_hex(s: &str) -> Option<u32> {
 /// reference. A tier carrying none of the three declares no bound.
 ///
 /// The `correctly-rounded` and `bit-reproducible` precision classes are carried
-/// here as `max_ulp = 0`, which is the §6.7-0007 precision-class↔tier
+/// here as `max_ulp = 0`, which is the §6.7-0005 (KISS-OPS-6.8-0009) precision-class↔tier
 /// correspondence ("MUST map to tier 0"), not a separate representation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DeclaredAccuracyTier {
@@ -629,6 +629,14 @@ pub struct DeclaredAccuracyTier {
 }
 
 impl DeclaredAccuracyTier {
+    /// The §6.8-0008 tier kind (the input of the precision-class derivation).
+    pub fn kind(&self) -> crate::accuracy::TierKind {
+        crate::accuracy::TierKind::of(
+            self.max_ulp.map(f64::from),
+            self.max_relative.is_some() || self.max_absolute.is_some(),
+        )
+    }
+
     /// A tier declares a bound iff it carries at least one of the three tagged
     /// quantities (§6.8-0002).
     pub fn is_bounded(&self) -> bool {
@@ -707,6 +715,17 @@ pub struct Guarantees {
 }
 
 impl Guarantees {
+    /// The `precision_class` these Guarantees DERIVE (KISS-OPS-6.8-0008): the loosest declared
+    /// tier kind crossed with `bit_stability`. The Capabilities field is a label over this,
+    /// never an authored fact (KISS-CONTRACT-6.7-0005).
+    pub fn derived_precision_class(&self) -> crate::accuracy::PrecisionClass {
+        crate::accuracy::derive_precision_class(
+            self.per_backend_ulp_tiers.iter().map(|(_, t)| t.kind()),
+            self.bit_stability,
+        )
+    }
+
+
     /// Whether the Guarantees declare a **bounded precision against a named
     /// reference function** — the single predicate §6.8-0009 and §6.8-0010
     /// partition on.
@@ -716,6 +735,28 @@ impl Guarantees {
             .as_deref()
             .is_some_and(|r| !r.trim().is_empty());
         named && self.per_backend_ulp_tiers.iter().any(|(_, t)| t.is_bounded())
+    }
+}
+
+/// Why a declared Capabilities `precision_class` is refused (KISS-CONTRACT-6.7-0005).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PrecisionClassDecline {
+    /// The spelling is outside the closed KISS-OPS-6.8-0007 set (e.g. the withdrawn `bit-reproducible`).
+    NotInClosedSet(String),
+    /// A member of the set, but not the label the Guarantees derive (KISS-OPS-6.8-0008).
+    ContradictsGuarantees { declared: crate::accuracy::PrecisionClass, derived: crate::accuracy::PrecisionClass },
+}
+
+/// KISS-CONTRACT-6.7-0005: accept a declared `precision_class` only if it is a member of the
+/// closed set and equals the label the Guarantees derive.
+pub fn verify_precision_class(g: &Guarantees, declared: &str) -> Result<(), PrecisionClassDecline> {
+    let class = crate::accuracy::PrecisionClass::from_token(declared)
+        .ok_or_else(|| PrecisionClassDecline::NotInClosedSet(declared.to_string()))?;
+    let derived = g.derived_precision_class();
+    if class == derived {
+        Ok(())
+    } else {
+        Err(PrecisionClassDecline::ContradictsGuarantees { declared: class, derived })
     }
 }
 
@@ -920,7 +961,7 @@ pub fn appendix_c_capabilities_block() -> Vec<u8> {
             ("in_place_eligible_variants", Value::Str("[]".into())),
             ("index_width", Value::Str("ix32".into())),
             ("determinism_class", Value::Str("exact-byte".into())),
-            ("precision_class", Value::Str("strict".into())),
+            ("precision_class", Value::Str(appendix_c_guarantees_inputs().derived_precision_class().token().into())),
             ("cost", Value::Str("1".into())),
         ],
     )
@@ -931,12 +972,12 @@ pub fn appendix_c_capabilities_block() -> Vec<u8> {
 /// Split out so `audited_status` is DERIVED from these rather than sitting beside them as a ninth
 /// authored string. §6.8-0008: an implementation MUST NOT hardcode `audited_status` independently
 /// of the Guarantees fields it is derived from.
-fn appendix_c_guarantees_inputs() -> Guarantees {
+pub fn appendix_c_guarantees_inputs() -> Guarantees {
     Guarantees {
         reference_function: Some("add".into()),
         per_backend_ulp_tiers: vec![(
             "cuda:sm89".into(),
-            // §6.7-0007: a `strict` precision class maps to tier 0, carried as `max_ulp = 0` -
+            // §6.7-0005 (KISS-OPS-6.8-0009): a `strict` precision class maps to tier 0, carried as `max_ulp = 0` -
             // not a separate representation. Consistent with `determinism_class = exact-byte`.
             DeclaredAccuracyTier { max_ulp: Some(0), ..DeclaredAccuracyTier::default() },
         )],
