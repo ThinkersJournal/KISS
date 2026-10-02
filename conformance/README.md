@@ -34,9 +34,9 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**388<!-- bound:harness --> of 946<!-- bound:clauses --> normative clauses are
+**392<!-- bound:harness --> of 952<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 237<!-- bound:named --> are
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 241<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
@@ -47,11 +47,11 @@ heading asks how much of the spec is executable, which is the BACKED one.** A nu
 sentence describing two different measurements, agreeing with each other only because
 neither was checked.
 
-The remaining 558<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
-population: **479<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
+The remaining 560<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
+population: **478<!-- bound:untested_rows --> genuinely untested**, 33 enforced by a
 document lint, 20 `blocked`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 700<!-- bound:test_fns --> test fns, **269<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 704<!-- bound:test_fns --> test fns, **269<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
@@ -177,11 +177,11 @@ default build and CI stay GPU-free.
   or name it in the comment above the test. `kiss_trace.py` reads both and will
   strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
   it is the cheapest coverage in the repo.
-- **Phase 6 — burn down `UNBACKED.tsv`.** 558<!-- bound:unbacked_total --> clauses, no executable test. Order
+- **Phase 6 — burn down `UNBACKED.tsv`.** 560<!-- bound:unbacked_total --> clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 31<!-- bound:synth_backed -->/130<!-- bound:synth_clauses --> and the highest Classify at 66<!-- bound:classify_backed -->/112<!-- bound:classify_clauses -->; Announce is 36<!-- bound:announce_backed -->/76<!-- bound:announce_clauses -->. Every one has a
+  Synth at 31<!-- bound:synth_backed -->/130<!-- bound:synth_clauses --> and the highest Classify at 70<!-- bound:classify_backed -->/118<!-- bound:classify_clauses -->; Announce is 36<!-- bound:announce_backed -->/76<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
