@@ -116,7 +116,7 @@ impl TierKind {
     /// Classify a tier from its `max_ulp` and whether it carries a relative/absolute bound.
     pub fn of(max_ulp: Option<f64>, has_other_bound: bool) -> TierKind {
         match max_ulp {
-            Some(u) if u == 0.0 => TierKind::T0,
+            Some(0.0) => TierKind::T0,
             Some(_) => TierKind::Tulp,
             None if has_other_bound => TierKind::Tother,
             None => TierKind::NoBound,
