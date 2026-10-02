@@ -537,8 +537,13 @@
 # not kept from either side: `--ratchet --base-ref origin/main` said "Set the floor to harness 392, lint 33,
 # untested 480".
 #
+# spec/precision-class-token-set (base 3687455): harness 392 -> 396, untested 480 -> 479. Four new clauses arrive harness-backed
+# (KISS-OPS-6.8-0007/-0008/-0009 and the previously untested KISS-CONTRACT-6.7-0005). RE-DERIVED from the tool after
+# rebuilding the branch on the moved main, not kept from either side: `--ratchet --base-ref origin/main` said
+# "Set the floor to harness 396, lint 33, untested 479".
+#
 # key	value
-harness	392
+harness	396
 lint	33
-untested	480
+untested	479
 proven	20
