@@ -76,7 +76,7 @@ code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
 /// precondition. This is the reference derivation for the non-reduction,
 /// non-broadcast branch: parts (a)/(b) of §6.5-0009 (broadcast `layout_tag`,
-/// reduced/scan innermost axis) are decided by the caller and reach this function
+/// reduced innermost axis of a `red` cell; a scan cell takes this ladder) are decided by the caller and reach this function
 /// only as `any_axis_broadcast` or by not being called.
 ///
 /// Arguments are the innermost active axis's signed stride (§6.3-0003, elements)

@@ -867,8 +867,9 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   derived as: **(a)** `v1` if the operand's `layout_tag` is `broadcast`; **(b)**
   `v1` if the operand's innermost active axis (§6.3-0011) is a reduced axis of a
   reduction cell — i.e. the cell's reduce field (§6.6-0009) is `rall`, or is
-  `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set — or the cell's
-  op category is scan (`scn`); **(c)** otherwise — provided the innermost active
+  `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set (a scan, `scn`,
+  cell carries no reduce field and no scanned-axis hint is a derivation input, so it
+  takes rule **(c)** like any other non-reduction cell); **(c)** otherwise — provided the innermost active
   axis is **forward-unit-stride** per §6.5-0013, else `v1` — the token `vL` for the
   largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the
   vector-access byte cap), `L` divides the innermost active axis extent, and
@@ -1141,7 +1142,7 @@ form (§6.7-0011).
   `red` (§6.5-0006); for every cell whose `op_family` is not `red` the reduce field
   MUST be `-`. This pins the "reduction cell" referent used in §6.5-0009(b): the
   vector-width `v1` rule of §6.5-0009(b) applies to a reduced innermost axis of a
-  `red` cell (scan cells derive `v1` via their own `scn` clause in §6.5-0009(b)). At
+  `red` cell (a scan cell has no reduce field and follows the ordinary §6.5-0009(c) ladder). At
   this schema version an op family that reduces along an axis without being `red` —
   softmax (`sft`), normalization (`nrm`), attention (`att`), or loss (`los`) — MUST
   carry the reduce field `-` and does not key its reduction axis (a disclosed
