@@ -221,7 +221,7 @@ strided cell. Its contract carries:
 - **Dispatch:** grid-stride mapping; `n` elements → grid; per-thread addressing via the
   signed strides.
 - **Capabilities:** `accept_predicate = structure_key`; determinism class `exact-byte`;
-  precision class `correctly-rounded`; cost class `elementwise`, cost `1 * n`.
+  precision class `strict` (derived: ULP tier 0 with `bit_stability` `portable`, KISS-OPS-6.8-0008); cost class `elementwise`, cost `1 * n`.
 - **Guarantees:** reference function `add` (IEEE-754); ULP tier 0 (correctly rounded);
   determinism `exact-byte`; MathFidelity `bit-stable`; reproducibility scope `portable`;
   `audited_status` **derived** here from those guarantees.
@@ -381,9 +381,10 @@ mean them.
   ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), imported
   verbatim, never re-forked.
 - **precision_class** — the compute-precision class drawn from the closed precision-class
-  token set imported verbatim from KISS-Ops, mapped to a per-backend ULP tier by the
-  KISS-Ops precision-class↔ULP-tier correspondence (KISS-OPS §6.8); `correctly-rounded`
-  and `bit-reproducible` map to ULP tier 0 (§6.7-0005).
+  token set imported verbatim from KISS-Ops (KISS-OPS-6.8-0007), a label **derived** from the
+  declared accuracy tier and `bit_stability` (KISS-OPS-6.8-0008) and mapped to the tier by the
+  KISS-Ops precision-class↔tier correspondence (KISS-OPS-6.8-0009); `strict` and
+  `correctly-rounded` map to ULP tier 0 (§6.7-0005).
 - **MathFidelity attribute** — the KISS-Ops compute-fidelity attribute `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17), imported from KISS-Ops, orthogonal to the
   determinism class, and **not** a dtype.
@@ -444,8 +445,8 @@ mean them.
   decomposition (the resolution oracle) and the **primitive floor** (the termination
   guarantee) are owned by KISS-Ops; the Guarantees **determinism class** (the single
   canonical enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`,
-  KISS-OPS §6.0-0001), the closed **precision-class** token set and its ULP-tier
-  correspondence (KISS-OPS §6.8), and the **MathFidelity** attribute `{bit-stable,
+  KISS-OPS §6.0-0001), the closed **precision-class** token set, its derivation and its
+  ULP-tier correspondence (KISS-OPS-6.8-0007 through KISS-OPS-6.8-0009), and the **MathFidelity** attribute `{bit-stable,
   reduced-mantissa-permitted}` (KISS-OPS §6.17) are imported verbatim. KISS-Contract
   re-defines none of them and defines no op meaning.
 - **KISS-Grammar** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
@@ -1128,15 +1129,16 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   the Guarantees `determinism_class` (§6.8-0003); an implementation MUST NOT define a parallel
   determinism vocabulary. *Test:* `test_contract_capabilities_determinism_from_ops`.
 - **KISS-CONTRACT-6.7-0005** — The Capabilities `precision_class` MUST be drawn from the
-  **closed precision-class token set imported verbatim from KISS-Ops** and MUST be consistent
-  with the Guarantees per-backend accuracy tiers (§6.8-0002) per the KISS-Ops
-  precision-class↔tier correspondence (KISS-OPS §6.8): the `correctly-rounded` and
-  `bit-reproducible` classes MUST map to tier 0 (a definitional floor, not a retired
-  ceiling), and every looser class MUST carry a declared tier consistent with the
-  precision-class ordering (a looser class MUST NOT declare a tighter tier than a stricter
-  class for the same reference). An implementation MUST NOT define a
-  KISS-Contract-local precision-class vocabulary and MUST NOT declare a precision class the
-  Guarantees ULP tiers contradict. *Test:* `test_contract_precision_class_consistent`.
+  **closed precision-class token set imported verbatim from KISS-Ops** (KISS-OPS-6.8-0007) and
+  MUST equal the label that KISS-Ops **derives** (KISS-OPS-6.8-0008) from the Guarantees
+  per-backend accuracy tiers (§6.8-0002) and the Guarantees `bit_stability` (§6.8-0013), per the
+  KISS-Ops precision-class↔tier correspondence (KISS-OPS-6.8-0009): the `strict` and
+  `correctly-rounded` classes map to tier 0 (a definitional floor, not a retired ceiling), and
+  every looser class carries a declared tier consistent with the precision-class ordering (a
+  looser class MUST NOT declare a tighter tier than a stricter class for the same reference). An
+  implementation MUST NOT define a KISS-Contract-local precision-class vocabulary and MUST NOT
+  declare a precision class the Guarantees ULP tiers contradict. *Test:*
+  `test_contract_precision_class_consistent`.
 - **KISS-CONTRACT-6.7-0006** — The Capabilities `cost` MUST carry a cost **class** plus cost
   **expressions** over the launch-scalar symbol vocabulary (for example a coefficient times
   `n`), spelled as expressions over the Interface launch-scalar symbols (§6.5) in the grammar
@@ -1235,8 +1237,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   *Test:* `test_contract_audited_status_derived`.
 - **KISS-CONTRACT-6.8-0009** — The `audited_status` derivation MUST yield `audited` for a
   kernel whose Guarantees declare a bounded precision against a named `reference_function`
-  under its `determinism_class` — a per-backend ULP tier (or bit-reproducible /
-  correctly-rounded precision), **including** an `order-invariant/nondeterministic` kernel
+  under its `determinism_class` — a per-backend ULP tier (tier 0, the `strict` and
+  `correctly-rounded` precision classes, included), **including** an `order-invariant/nondeterministic` kernel
   whose nondeterminism is declared against a named reference under a stated tolerance. An
   implementation MUST derive this value by applying the rule to the Guarantees section, MUST
   NOT author `audited` where the rule does not yield it, and MUST NOT set `bit_stability` from
@@ -1921,8 +1923,9 @@ dispatch_model = geometry-agnostic
 ```
 
 **Capabilities block (§6.7-0001; heading id 5)** — the eight Capabilities fields in schema order.
-`precision_class = strict` maps to accuracy tier 0 (§6.7-0007), consistent with the
-`determinism_class = exact-byte` carried here and in Guarantees:
+`precision_class = strict` is the label KISS-OPS-6.8-0008 derives from accuracy tier 0 with
+`bit_stability = portable` (§6.7-0005), consistent with the `determinism_class = exact-byte`
+carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
