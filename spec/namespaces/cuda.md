@@ -103,29 +103,69 @@ not bump the vocabulary version — an existing token's bytes are unchanged. Cha
 the grammar itself (the token shape, the charset) is **byte-altering** and bumps
 the vocabulary version.
 
+### Boundary conditions for consumers of a `cuda:` token
+
+A producer or consumer that takes a `cuda:` capability-set from a source other than a compiled-in
+`ArchSku` variant (for example a `--gpu-architecture=` flag built for NVRTC, or an arch string carried
+by a seam request) MUST NOT splice an unchecked string into the token or the flag. At that boundary it
+MUST validate the token against KISS-Classify §6.8-0001 (exactly one `:`, a non-empty namespace and a
+non-empty capability-set) and §6.8-0005 (case-sensitive ASCII; none of `|`, `;`, `/`, whitespace or a
+control byte), against §2's `sm<N>[<letter>]` grammar, and keep the whole `structure_key` token within
+its length bound (KISS-Classify §6.4-0004, 4096 bytes). A token that fails is declined with a typed
+error, never repaired.
+
 ## Appendix: machine-readable capability set (SSOT seed)
 
 The rows below are the single source the `cuda:` maintainer's generators consume
 directly, so the SKU set is not hand-transcribed into downstream code. KISS's
 conformance suite does **not** read this table — it treats `cuda:` tokens as opaque
 bytes and matches them byte-exact (§6.8-0002); only the maintainer's generators
-consume it. Format: tab-separated `sku` (the Rust `ArchSku` variant), `token`,
-`arch`, `notes`.
+consume it.
+Two tab-separated blocks. The **token set** is the vocabulary: every `cuda:` token the
+maintainer supports, whichever component serves it. The **dispatch set** is the subset for
+which `baracuda-cutlass` dispatches per-arch kernels, and the only place the Rust `ArchSku`
+variant appears.
 
 ```tsv
-sku	token	arch	notes
-Sm80	cuda:sm80	ampere	forward-compatible fallback on Ada/Hopper
-Sm89	cuda:sm89	ada	FP8 tensor cores; requires the sm89 feature
-Sm90	cuda:sm90	hopper	base Hopper; no arch-specific feature required (`cuda:sm90a` is a different cell, §2)
-Sm90a	cuda:sm90a	hopper	accelerated features; requires the sm90a feature
+token	arch	notes
+cuda:sm61	pascal	token set only; no baracuda-cutlass dispatch
+cuda:sm70	volta	token set only; no baracuda-cutlass dispatch
+cuda:sm75	turing	token set only; no baracuda-cutlass dispatch
+cuda:sm80	ampere	forward-compatible fallback on Ada/Hopper
+cuda:sm86	ampere	token set only; no baracuda-cutlass dispatch
+cuda:sm89	ada	FP8 tensor cores; requires the sm89 feature
+cuda:sm90	hopper	base Hopper; no arch-specific feature required (`cuda:sm90a` is a different cell, §2)
+cuda:sm90a	hopper	accelerated features; requires the sm90a feature; explicit opt-in, never derived from a capability number
+cuda:sm100	blackwell	token set only; no baracuda-cutlass dispatch
+cuda:sm100a	blackwell	arch-specific target; explicit opt-in, never derived from a capability number
+cuda:sm120	blackwell	token set only; no baracuda-cutlass dispatch
+cuda:sm120a	blackwell	arch-specific target; explicit opt-in, never derived from a capability number
+cuda:sm121	blackwell	compute capability 12.1; token set only; no baracuda-cutlass dispatch
 ```
 
-> The rows above are the SKUs the reference emitter wires today (the `ArchSku`
-> enum's variants). `cuda:sm100a` is valid under §2's grammar and appears in
-> illustrative examples, but is not yet an `ArchSku` variant; a row is
-> added here (with its variant) when the emitter wires that arch — deliberately a
-> breaking-change event for the exhaustive-match kernel dispatchers, per the
-> `ArchSku` design (it is intentionally not `#[non_exhaustive]`).
+```tsv
+sku	token
+Sm80	cuda:sm80
+Sm89	cuda:sm89
+Sm90	cuda:sm90
+Sm90a	cuda:sm90a
+```
+
+> Every `token` in the dispatch set MUST appear in the token set; the maintainer's
+> generators SHOULD fail when it does not (the check the #334 history below shows was
+> missing). A token-set row is added when any component supports the arch and is
+> **additive** (§5). A dispatch-set row is added, with its `ArchSku` variant, only when
+> `baracuda-cutlass` dispatches kernels for that arch — deliberately a breaking-change
+> event for the exhaustive-match dispatchers, per the `ArchSku` design (it is
+> intentionally not `#[non_exhaustive]`).
+>
+> The telemetry path mints the plain `cuda:sm<M><m>` token for every compute capability
+> it sees (`unpopped-vocab`, Unpopped#36). A token-set row records a capability the
+> maintainer lists as supported; a capability with no row (for example `cuda:sm107`)
+> has no listed support, though its token is still grammar-valid (§2) and matches
+> byte-exact like any other. The `a` tokens (`cuda:sm90a`, `cuda:sm100a`,
+> `cuda:sm120a`) are explicit opt-in dispatch targets only: they are never derived
+> from a capability number, and a capability number never selects one.
 >
 > `cuda:sm90`'s row was added 2026-08-26 under that rule, after the emitter had
 > already wired `ArchSku::Sm90` (`unpopped-vocab` `layout.rs:59`, `target.rs:309`).
