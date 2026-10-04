@@ -128,10 +128,19 @@ variant appears.
 
 ```tsv
 token	arch	notes
+cuda:sm61	pascal	NVRTC path only; no baracuda-cutlass dispatch
+cuda:sm70	volta	NVRTC path only; no baracuda-cutlass dispatch
+cuda:sm75	turing	NVRTC path only; no baracuda-cutlass dispatch
 cuda:sm80	ampere	forward-compatible fallback on Ada/Hopper
+cuda:sm86	ampere	NVRTC path only; no baracuda-cutlass dispatch
 cuda:sm89	ada	FP8 tensor cores; requires the sm89 feature
 cuda:sm90	hopper	base Hopper; no arch-specific feature required (`cuda:sm90a` is a different cell, §2)
 cuda:sm90a	hopper	accelerated features; requires the sm90a feature; explicit opt-in, never derived from a capability number
+cuda:sm100	blackwell	NVRTC path only; no baracuda-cutlass dispatch
+cuda:sm100a	blackwell	NVRTC path only; arch-specific target; explicit opt-in, never derived from a capability number
+cuda:sm120	blackwell	NVRTC path only; no baracuda-cutlass dispatch
+cuda:sm120a	blackwell	NVRTC path only; arch-specific target; explicit opt-in, never derived from a capability number
+cuda:sm121	blackwell	NVRTC path only; compute capability 12.1
 ```
 
 ```tsv
@@ -158,12 +167,13 @@ Sm90a	cuda:sm90a
 > targets only: they are never derived from a capability number, and a capability
 > number never selects one.
 >
-> Tokens served only by the NVRTC/seam path (no `baracuda-cutlass` dispatch) are added to
-> the token set once a construct that produces them exists and can be named as their
-> derivability witness (KISS-CLASSIFY-6.8-0014): a manifest entry carries a witness naming
-> the construct that produces it (the maintainer discharges whether it does), and naming
-> one that does not yet produce the entry would be a false witness. Until then those
-> spellings are grammar-valid but unlisted.
+> Tokens served only by the NVRTC/seam path (no `baracuda-cutlass` dispatch) are token-set
+> rows without a dispatch-set row. Their derivability witness (KISS-CLASSIFY-6.8-0014) is
+> the maintainer's: `NvrtcCompiler::new(TargetId)` in `baracuda-cuda-emit` accepts each of
+> them without an `ArchSku` variant, pinned by the test
+> `nvrtc_only_targets_with_no_archsku_variant_are_accepted` (baracuda#151). A capability
+> with no row (for example `cuda:sm107`) has no listed support, though its token is still
+> grammar-valid (§2) and matches byte-exact like any other.
 >
 > `cuda:sm90`'s row was added 2026-08-26 under that rule, after the emitter had
 > already wired `ArchSku::Sm90` (`unpopped-vocab` `layout.rs:59`, `target.rs:309`).
