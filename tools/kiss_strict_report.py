@@ -24,9 +24,13 @@ something pins what it is tolerating (#343); a number that cannot be read is not
 `--_broken_invocation` hands `kiss_trace.py` a flag it does not have, so the report MUST fail:
 the workflow runs it as a negative control on every run.
 
+`--emit-coverage` returns immediately with nothing (KISS-Trace's lint discovery runs it on every
+sibling tool; this one enforces no clause) and the tool refuses to re-enter itself.
+
 Usage:
   python tools/kiss_strict_report.py
   python tools/kiss_strict_report.py --_broken_invocation   # must exit 1
+  python tools/kiss_strict_report.py --emit-coverage        # prints nothing, exits 0 at once
 """
 import os
 import re
@@ -39,6 +43,7 @@ if not __debug__:
         "controls would report success having verified nothing")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 TRACE = os.path.join(HERE, "kiss_trace.py")
 
 ENFORCED_RE = re.compile(
@@ -48,12 +53,37 @@ SATISFY_RE = re.compile(r"(\d+) of (\d+) sub-standard\(s\) satisfy")
 ROW_RE = re.compile(r"\[\s*(FAIL|ok)\s*\]\s+([A-Z]+)\s+(\d+)/(\d+)\s+traced")
 
 
-def run(args):
-    """Run kiss_trace.py with `args`; return (returncode, merged output as text)."""
-    env = dict(os.environ, PYTHONIOENCODING="utf-8")
-    p = subprocess.run([sys.executable, TRACE] + list(args), capture_output=True,
-                       env=env, cwd=os.path.dirname(HERE))
+def _decode(p):
     return p.returncode, (p.stdout + p.stderr).decode("utf-8", errors="replace")
+
+
+def _env():
+    # The marker is the recursion guard: main() refuses to run the instruments when it is
+    # already set, so a child that somehow re-enters this tool cannot spawn kiss_trace again.
+    return dict(os.environ, PYTHONIOENCODING="utf-8", KISS_STRICT_REPORT_ACTIVE="1")
+
+
+# One literal argv per instrument (no argv assembled from variables): the commands are the
+# whole attack surface of this module and they are all visible here.
+def run_strict():
+    return _decode(subprocess.run([sys.executable, TRACE, "--strict"], capture_output=True,
+                                  env=_env(), cwd=ROOT))
+
+
+def run_freeze_ready():
+    return _decode(subprocess.run([sys.executable, TRACE, "--freeze-ready"],
+                                  capture_output=True, env=_env(), cwd=ROOT))
+
+
+def run_assert_known_red():
+    return _decode(subprocess.run([sys.executable, TRACE, "--assert-known-red"],
+                                  capture_output=True, env=_env(), cwd=ROOT))
+
+
+def run_refused():
+    """A kiss_trace.py invocation it refuses (argparse exit 2): the negative control."""
+    return _decode(subprocess.run([sys.executable, TRACE, "--strict", "--no-such-flag"],
+                                  capture_output=True, env=_env(), cwd=ROOT))
 
 
 def parse_strict(out):
@@ -115,11 +145,20 @@ def decide(rc_strict, out_strict, rc_freeze, out_freeze, rc_known, out_known):
 
 
 def main(argv):
+    # FIRST, before any subprocess: kiss_trace.py runs every sibling `kiss_*.py --emit-coverage`
+    # (discover_lint_coverage), and a tool that ignores the flag runs its whole main() there. This
+    # one would spawn kiss_trace.py, which would spawn it again (#266). It enforces no clause, so
+    # the answer is the empty coverage record: print nothing, exit 0, immediately.
+    if "--emit-coverage" in argv:
+        return 0
+    if os.environ.get("KISS_STRICT_REPORT_ACTIVE"):
+        print("refusing to run: kiss_strict_report.py was invoked from inside its own "
+              "instruments (recursion)", file=sys.stderr)
+        return 1
     broken = "--_broken_invocation" in argv
-    extra = ["--no-such-flag"] if broken else []
-    rc_s, out_s = run(["--strict"] + extra)
-    rc_f, out_f = run(["--freeze-ready"] + extra)
-    rc_k, out_k = run(["--assert-known-red"] + extra)
+    rc_s, out_s = run_refused() if broken else run_strict()
+    rc_f, out_f = run_refused() if broken else run_freeze_ready()
+    rc_k, out_k = run_refused() if broken else run_assert_known_red()
     code, text = decide(rc_s, out_s, rc_f, out_f, rc_k, out_k)
     print(text)
     if broken:
@@ -129,7 +168,8 @@ def main(argv):
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as fh:
-            fh.write(("" if code == 0 else "## `strict` report FAILED\n\n") + text + "\n")
+            banner = "" if code == 0 else "## `strict` report FAILED" + chr(10) * 2
+            fh.write(banner + text + chr(10))
     if code != 0:
         print("::error::strict report failed: see above", file=sys.stderr)
     return code

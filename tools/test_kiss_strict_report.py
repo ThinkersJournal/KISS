@@ -8,9 +8,14 @@ parse, a red that is no longer the documented one, and an argparse refusal. The 
 
 Run as a script or under pytest.
 """
+import io
 import os
+import subprocess
 import sys
+import time
 import unittest
+from contextlib import redirect_stdout
+from unittest import mock
 
 if not __debug__:
     raise SystemExit(
@@ -67,6 +72,41 @@ class StrictReport(unittest.TestCase):
         self.assertEqual(r.decide(1, STRICT_OK, 1, TRACEBACK, 0, "")[0], 1)
         # exit 0 with unparseable output is still a refusal, not a clean result
         self.assertEqual(r.decide(0, "all good", 0, "all good", 0, "")[0], 1)
+
+    def test_emit_coverage_answers_at_once_and_spawns_nothing(self):
+        """kiss_trace.discover_lint_coverage runs every sibling `kiss_*.py --emit-coverage` (#266).
+
+        This tool spawns kiss_trace.py, which would spawn it again; so the flag is answered FIRST,
+        before any subprocess. In-process: main() must return 0, print nothing and never call
+        subprocess. (Mutation: delete the early return and this fails by name.)
+        """
+        out = io.StringIO()
+        boom = AssertionError("spawned a subprocess")
+        with mock.patch.object(r.subprocess, "run", side_effect=boom) as sp:
+            with redirect_stdout(out):
+                self.assertEqual(r.main(["--emit-coverage"]), 0)
+        self.assertEqual(out.getvalue(), "")
+        sp.assert_not_called()
+
+    def test_emit_coverage_is_cheap_as_a_real_process(self):
+        """The exact call test_every_kiss_lint_answers_emit_coverage_CHEAPLY makes, with a hard
+        5s ceiling instead of its 120s: the real process, the real flag."""
+        start = time.monotonic()
+        p = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                         "kiss_strict_report.py"), "--emit-coverage"],
+                           capture_output=True, timeout=20)
+        self.assertEqual(p.returncode, 0)
+        self.assertEqual(p.stdout, b"")
+        self.assertLess(time.monotonic() - start, 5)
+
+    def test_refuses_to_reenter_itself(self):
+        boom = AssertionError("spawned a subprocess")
+        with mock.patch.dict(os.environ, {"KISS_STRICT_REPORT_ACTIVE": "1"}):
+            with mock.patch.object(r.subprocess, "run", side_effect=boom):
+                self.assertEqual(r.main([]), 1)
+
+    def test_instruments_run_with_the_recursion_marker_set(self):
+        self.assertEqual(r._env()["KISS_STRICT_REPORT_ACTIVE"], "1")
 
     def test_broken_invocation_fails_end_to_end(self):
         # A kiss_trace.py invocation it refuses (argparse exit 2) must not report green.
