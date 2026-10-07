@@ -24,12 +24,12 @@ jobs:
   kiss-trace:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
           # the PR path fetches its base ref explicitly.
           fetch-depth: 2
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
       - name: Clause↔test traceability + binding (ratcheted)
@@ -286,12 +286,12 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
           # the PR path fetches its base ref explicitly.
           fetch-depth: 2
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
       # Runs `--strict` (§6.2) and `--freeze-ready` (§5.3 condition 3), writes the

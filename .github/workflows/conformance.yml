@@ -20,7 +20,7 @@ jobs:
   cargo-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Reference conformance harness
         working-directory: conformance
         run: cargo test
@@ -31,7 +31,7 @@ jobs:
         working-directory: conformance
         shell: bash
         run: cargo test --quiet -- --list > ../runlist-ubuntu.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: runlist-ubuntu
           path: runlist-ubuntu.txt
@@ -68,7 +68,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Clippy correctness lints (deny-by-default group) -- BLOCKING
         working-directory: conformance
         run: cargo clippy --all-targets --all-features
@@ -105,7 +105,7 @@ jobs:
   windows-test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Reference conformance harness (Windows — runs the §6.13-0006 differential slice)
         working-directory: conformance
         run: cargo test
@@ -116,7 +116,7 @@ jobs:
         working-directory: conformance
         shell: bash
         run: cargo test --quiet -- --list > ../runlist-windows.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: runlist-windows
           path: runlist-windows.txt
@@ -136,7 +136,7 @@ jobs:
   msrv:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: The declared rust-version is SUFFICIENT and NECESSARY (#369)
         working-directory: conformance
         shell: bash
@@ -212,14 +212,14 @@ jobs:
     needs: [cargo-test, windows-test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: runlist-ubuntu
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: runlist-windows
       # The gate's own negative controls run FIRST. A gate that cannot fail
