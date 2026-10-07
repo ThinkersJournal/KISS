@@ -268,15 +268,21 @@ jobs:
         run: python -m pytest tools/ -q
 
   strict:
-    # KISS-Conform §6.2 verbatim: the build fails on ANY untested normative MUST,
-    # plus umbrella §5.3 condition 3 per sub-standard.
+    # KISS-Conform §6.2 verbatim (the build fails on ANY untested normative MUST) plus
+    # umbrella §5.3 condition 3 per sub-standard, REPORTED rather than enforced here.
     #
     # Non-blocking BY DESIGN, and the reason matters: a gate that can never go
     # green — including for the commits that would fix it — gets bypassed by
-    # habit, and decays back into a green check that means nothing. So an
-    # untested MUST is reported here on every PR, and hard-fails the two
-    # transitions it actually invalidates (a freeze, and a conformance claim)
-    # rather than every commit. The number is the point; see UNBACKED.tsv.
+    # habit, and decays back into a green check that means nothing. A permanent red
+    # that is acknowledged by name on every PR is the same decay. So this job REPORTS
+    # the number (job summary + log) and goes red only when the red is no longer the
+    # documented one, or an instrument cannot be read: tools/kiss_strict_report.py.
+    # The blocking pin on the same fact is `--assert-known-red` in the kiss-trace job.
+    #
+    # ⚠️ NOT IMPLEMENTED: a hard-fail on a FREEZE or on a CONFORMANCE CLAIM. Nothing in
+    # CI blocks a Draft -> Frozen promotion or a conformance claim today; `--freeze-ready`
+    # runs only here, non-blocking. Tracked in ThinkersJournal/KISS#524. Until that
+    # lands, do not read this job as a freeze gate.
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -288,11 +294,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      - name: Untested-MUST count (§6.2 target state)
-        run: python tools/kiss_trace.py --strict
-      - name: Freeze readiness (umbrella §5.3 condition 3)
+      # Runs `--strict` (§6.2) and `--freeze-ready` (§5.3 condition 3), writes the
+      # untested-MUST count and the per-sub-standard X/Y rows to the job summary, and
+      # exits 0 only if `--assert-known-red` also holds and both outputs parsed. A crash,
+      # an unreadable output, or a changed red exits 1.
+      - name: Report untested MUSTs and freeze readiness (§6.2, §5.3 condition 3)
+        run: python tools/kiss_strict_report.py
+      # NEGATIVE CONTROL, in every run log: a kiss_trace.py invocation that the tool
+      # refuses must NOT report green. If this step ever succeeds, the report above has
+      # started swallowing failures.
+      - name: Negative control, a refused kiss_trace invocation fails the report
         if: always()
-        run: python tools/kiss_trace.py --freeze-ready
+        shell: bash
+        run: |
+          if python tools/kiss_strict_report.py --_broken_invocation; then
+            echo "::error::the report exited 0 on a refused invocation: it swallows failures"
+            exit 1
+          fi
+          echo "OK: the report failed on a refused invocation, as required."
       # ⚠️ ADVISORY BY DESIGN (#407). This reports CANDIDATES to adjudicate, not defects:
       # a surviving phrase may be an unrelated legitimate use of the same words. It lives
       # in the continue-on-error job for that reason.
