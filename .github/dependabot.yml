@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Keeps the GitHub Actions this repository uses on their latest major versions (CireSnave: all
+# dependencies on their latest versions at all times). Scope is `github-actions` ONLY: the
+# crate (`conformance/`) and the Python tools are deliberately not covered by this file.
+#
+# - One grouped pull request per week for all actions, never one per action.
+# - No auto-merge: every update is merged by a person after its own CI run, because the job
+#   names in these workflows are required contexts and a major bump can change behaviour
+#   (see the release-note review in #526 for what that review covers).
+# - Dependabot cannot bump the `kiss-conformance` crate version, which this repository's
+#   rule requires every CI/docs change to carry or to name the change set that carries it;
+#   whoever merges a Dependabot PR adds that bump (or names the change set) before merging.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
