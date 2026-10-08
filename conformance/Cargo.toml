@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 [package]
 name = "kiss-conformance"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 rust-version = "1.77"  # f32::round_ties_even (round_even oracle)
 license = "MIT OR Apache-2.0"
