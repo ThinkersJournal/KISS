@@ -31,7 +31,7 @@
 - Rebind to KISS `904a4b4` is MERGED (#48-#51): workspace is **0.4.0, unpublished**. Evidence sent to the PM 2026-10-09 (fe23926): tests, `cargo package`,
   dry-runs OK for classify-vocab and ops-vocab; kiss-ref-core's dry-run can only pass after the two vocab crates are on crates.io, so publish
   order is classify-vocab, ops-vocab, (wait for index), ref-core. **Publish needs CireSnave's yes per crate**; the PM brings it. Do not publish.
-- After publishing, whoever publishes renames CHANGELOG `[Unreleased]` to `[0.4.0]` with the date. CHANGELOG lists what 0.4.0 does not model.
+- **HELD TASK:** when the PM says "publish go" (not before; no TBD date in a CHANGELOG), open ONE kiss-ref PR in a fresh worktree: rename CHANGELOG `[Unreleased]` -> `[0.4.0]` with that day's date and fix `DESIGN.md:3` ("published on crates.io (0.3.x)"). The PM gates it and publishes from a clean export. CHANGELOG lists what 0.4.0 does not model. READMEs have no install lines (checked).
 - Not closed (say if wanted): OpAttrs bytes, the `MathFidelity` type, a native Bool tensor lane.
 - kiss-ref worktree `C:\Projects\kiss-ref-rebind` is mine and clean at fe23926: remove it (`git worktree remove`, then prune in `C:\Projects\kiss-ref`).
 
