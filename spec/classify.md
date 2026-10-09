@@ -386,7 +386,11 @@ Classify defines no op meaning.
   the external source of truth for the quant-family and scale-placement codes
   mirrored by the optional `quant` facts (§6.3). KISS pins only the projection, not
   the external vocabulary's semantics; `family` and `scale_placement` are opaque to
-  Classify (§6.3-0009).
+  Classify (§6.3-0009). The registry publishes its facts in the **neutral quantization
+  sidecar** whose ten fields and projection onto `quant` are pinned by §6.3-0012.
+  *Informative, and the first thing a reader of that sidecar needs:* the `structure_key`
+  does **not** distinguish what the sidecar carries (apart from `dequant_form`,
+  §6.3-0009a), so key equality MUST NOT be read as equality of quantization facts.
 
 ---
 
@@ -716,6 +720,41 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   §6.5-0009, §6.5-0012 and §6.5-0013) and the *innermost active non-unit axis*
   (§6.5-0002 only) — and this clause does not change §6.5-0002's behaviour.
   *Test:* `test_classify_axis_ordering_convention`.
+- **KISS-CLASSIFY-6.3-0012** — A producer that carries quantization facts in the **neutral
+  quantization sidecar** (the record shape the external quantization-token registry of §4
+  publishes) MUST project them onto the `quant` record (§6.3-0009) exactly as the table below
+  states, MUST supply `dequant_form` (§6.3-0009a — it MUST NOT be inferred from `encoding`,
+  which Classify does not interpret), and MUST NOT fold any sidecar field into the
+  `structure_key` other than `dequant_form`, from the schema version that keys it (§6.3-0009a).
+  The sidecar has exactly ten fields. Each is listed with the `quant` field it projects to, or
+  `—` where `quant` has no counterpart: such a fact is carried registry-side, uninterpreted by
+  Classify, and is outside this standard's key at every version.
+
+  | Sidecar field | `quant` field |
+  |---|---|
+  | `encoding` | `family` |
+  | `scale.placement` | `scale_placement` |
+  | `quant_block.block_size` | `block_elems` |
+  | `logical_dtype` | `sub_byte_bits` |
+  | `dequant_form` | `dequant_form` |
+  | `quant_block.scale_dtype` | — |
+  | `scale.dtype` | — |
+  | `scale.granularity` | — |
+  | `byte_layout` | — |
+  | `alignment` | — |
+
+  `logical_dtype` projects to `sub_byte_bits` as that format's bit width. `encoding` and
+  `scale.placement` are drawn from open registries whose vocabulary the external registry
+  owns; they are opaque to Classify. Facts an implementation carries beyond these ten fields
+  (for example a named block-quantization variant, a block-shape or block-axes descriptor, a
+  packing or bit order, a zero-point descriptor, or an activation/weight scale pairing) are
+  **not covered** by this clause: they stay registry-private, uninterpreted, and out of the
+  key. *Informative:* **key equality is not quantization equality.** Apart from
+  `dequant_form`, the `structure_key` does not distinguish anything this sidecar carries, so
+  two operands whose keys are byte-equal (§6.8-0002) MAY differ in scale dtype, granularity,
+  placement, block structure and packing; a consumer that needs those facts MUST compare the
+  sidecar or the `quant` record itself, never infer them from the key. *Test:*
+  `test_classify_quant_sidecar_projection`.
 
 ### 6.4 Pinned structural constants
 
@@ -2142,6 +2181,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0009a | `test_classify_dequant_form_keyed` |
 | KISS-CLASSIFY-6.3-0010 | `test_classify_symbolic_extent_flags_live_length` |
 | KISS-CLASSIFY-6.3-0011 | `test_classify_axis_ordering_convention` |
+| KISS-CLASSIFY-6.3-0012 | `test_classify_quant_sidecar_projection` |
 | KISS-CLASSIFY-6.4-0001 | `test_classify_max_rank_is_8` |
 | KISS-CLASSIFY-6.4-0002 | `test_classify_max_operands_is_8` |
 | KISS-CLASSIFY-6.4-0003 | `test_classify_structure_key_version_matches_codec` |

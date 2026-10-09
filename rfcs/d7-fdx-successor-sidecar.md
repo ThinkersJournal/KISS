@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | **Cosigned; ready for editor adoption (2026-07-21).** The neutral field union below is signed off by both cosignatories — Fuel (as the FDX-schema originator) and Baracuda (provider), which drops its private `QuantFacts` mirror in favor of this shared shape. No maintainer objection outstanding; RFC pending editor adoption + merge to main. The concrete clause touch-points (§4) are approved in principle for a later application step; the exact token spellings and clause numbers are the editors' to pin. |
+| **Status** | **Adopted, as Option C (an informative annex plus one mapping clause), 2026-10-09:** KISS-CLASSIFY-6.3-0012 pins the ten-field sidecar and its projection onto the `quant` record; KISS-Classify §4 names the sidecar as the registry's record shape. **No `structure_key` bytes, no descriptor bytes and no schema version change**; the wire form (this RFC's §7) is deliberately left to the registry. Supersedes the 2026-07-21 "Cosigned; ready for editor adoption" status. Corrections made on adoption are recorded in §10. |
 | **Date** | 2026-07-21 |
 | **Affects** | KISS-Classify (§6.3 `quant` facts, §4 external-registry dependency), KISS-Announce (§7.2 EXT axis, the DLPack/FDX interchange bits) — **informative/registry only; no `structure_key` bytes change** |
 | **Filing** | umbrella §7.2, to the KISS-Classify / KISS-Announce editors-of-record, cc Fuel + Baracuda |
-| **Source** | [`RECONCILIATION.md`](../RECONCILIATION.md) decision **D7**; the `sk3` scope-boundary carve-out (§3, "D7 FDX blessing" — separable, no version bump); the `#17` open-seeded-registry pattern; the D2 informative-table treatment |
+| **Source** | [`docs/kiss-convergence-reconciliation.md`](../docs/kiss-convergence-reconciliation.md) (the RFC's original link, `RECONCILIATION.md`, does not exist in this repository) decision **D7**; the `sk3` scope-boundary carve-out (§3, "D7 FDX blessing" — separable, no version bump); the `#17` open-seeded-registry pattern; the D2 informative-table treatment |
 | **Related** | `sk3` (GEMM precision coordinates — establishes that MX/DLPack element facts stay **out** of the identity key); KISS-CLASSIFY-6.3-0009 (`quant` carried-not-keyed); KISS-ANNOUNCE §7.2 EXT registry (DLPack/FDX bits); PRIOR-ART.md §4/§6 (DLPack owns the dtype/interchange boundary) |
 
 > **This RFC is informative until adopted.** It proposes a shared *field union* (a sidecar
@@ -220,3 +220,35 @@ neutral quant/layout sidecar — the successor to two private descriptors — an
 - **Maintainer** — no objection outstanding; the boundary (DLPack owns interchange; sidecar
   carries the remainder; nothing enters the key) matches the PRIOR-ART recommendation and the
   `sk3`/D4 line. RFC ready for editor adoption.
+
+## 10. Adoption record and corrections (2026-10-09)
+
+**What was adopted.** Option C of the adoption design note (`docs/design-d7-sidecar-adoption.md`): the
+vocabulary, not the bytes. The sidecar record shape is pinned by KISS-CLASSIFY-6.3-0012, which also fixes the
+projection onto the `quant` record (§6.3-0009) and is checked by `tools/kiss_tables.py`. A byte-level wire form
+(descriptor bytes, a version allocation) is **not** adopted; it remains available as a later, versioned event.
+
+**Three corrections to this RFC's text, found on adoption:**
+
+1. **`dequant_form` was missing.** §4.1's union lacked it, and §4.2 said the sidecar MUST NOT be folded into
+   `structure_key`. KISS-CLASSIFY-6.3-0009/-0009a (already in force) put `dequant_form` in the `quant` record and
+   key it from the next schema version, because linear and codebook dequantization are not inter-substitutable. The
+   sidecar therefore has **ten** fields (the union plus `dequant_form`), and the no-fold rule is "no field except
+   `dequant_form`, from the schema version that keys it".
+2. **The mapping in §4.2 was incomplete.** `logical_dtype`, `quant_block.scale_dtype`, `scale.dtype`,
+   `scale.granularity` and `alignment` have no counterpart in the `quant` record, so the sidecar is a strict
+   superset, not a rename. The clause's table states every field's projection or its absence.
+3. **The source link was dead** (`RECONCILIATION.md`); replaced above.
+
+**Objections and conditions from the implementing lanes (relayed through the portfolio PM, 2026-10-09):**
+no lane objects to Option C or to keying `dequant_form` at the next schema version.
+- *Unpopped's condition:* the annex must say that the key does **not** distinguish what the sidecar carries, so key
+  equality is not quantization equality. Done: first paragraph of the §4 bullet and the informative tail of 6.3-0012.
+  Unpopped carries no quant facts on its operand descriptor today (a quantized weight is two operands, data and scale).
+- *Fuel's condition:* the clause must be able to NAME what its FDX descriptor carries without losing it. Fuel's real
+  ABI struct also carries packing and bit order, block axes, a full zero-point descriptor, a richer scale descriptor
+  and an activation/weight scale pairing, plus a named GGML block variant and a block shape on its contract surface.
+  The clause names these as examples of facts **not covered**: registry-private, uninterpreted, outside the key. The
+  pairing in particular has no home in this union and is deliberately left Fuel-private.
+- *Baracuda:* its private `QuantFacts` mirror is a design position in a document, never implemented in code; nothing
+  to retire there.
