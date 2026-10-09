@@ -211,6 +211,9 @@ def check(spec_dir):
     # (10) dtype bit-layout agreement — Ops §6.16 <-> Classify §6.1 (KISS-OPS-6.16-0008).
     violations += check_dtype_layouts(spec_dir)
 
+    # (11) the quantization sidecar projection — Classify §6.3-0012 <-> the `quant` record §6.3-0009.
+    violations += check_quant_projection(spec_dir)
+
     return violations, auth
 
 
@@ -598,6 +601,86 @@ def check_seven_sections(spec_dir):
     return out
 
 
+# ---- (11) the quantization sidecar projection — KISS-CLASSIFY-6.3-0012 <-> 6.3-0009 ----
+# §6.3-0009 pins the `quant` record's fields; §6.3-0012 pins the ten-field neutral sidecar and a
+# table projecting each sidecar field onto a `quant` field or `—`. The two are restated in two
+# clauses, so an added/renamed `quant` field that the table does not mention (or a table row that
+# projects to a field the record does not have, or two rows onto one field) is exactly the drift this
+# lint exists to catch.
+_COUNT_WORDS = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
+
+
+def _quant_record_fields(classify_text):
+    """The field names of the `quant` record, from the `{...}` after 'MUST carry' in §6.3-0009."""
+    body = _clause_body(classify_text, "CLASSIFY", "6.3-0009")
+    if body is None:
+        return None
+    m = re.search(r"MUST carry\s*`\{([^}]*)\}`", body)
+    if not m:
+        return None
+    return [re.sub(r"\s*\(.*?\)", "", f).strip() for f in m.group(1).split(",") if f.strip()]
+
+
+def _projection_rows(clause_body):
+    """(sidecar_field, quant_field-or-None) rows of the `| Sidecar field | ...` table in §6.3-0012."""
+    rows, in_table = [], False
+    for line in clause_body.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if line.strip().startswith("|") and cells and cells[0].lower().startswith("sidecar field"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not line.strip().startswith("|"):
+            break
+        if set(line.replace("|", "").strip()) <= set("-: "):
+            continue  # the separator row
+        if len(cells) >= 2:
+            left = cells[0].strip("`")
+            right = cells[1].strip("`")
+            rows.append((left, None if right in ("—", "-", "") else right))
+    return rows
+
+
+def quant_projection_violations(classify_text):
+    """All disagreements between the `quant` record (§6.3-0009) and the §6.3-0012 projection table."""
+    fields = _quant_record_fields(classify_text)
+    body = _clause_body(classify_text, "CLASSIFY", "6.3-0012")
+    if fields is None:
+        return ["could not find the `quant` record field list in KISS-CLASSIFY-6.3-0009"]
+    if body is None:
+        return ["could not find KISS-CLASSIFY-6.3-0012"]
+    rows = _projection_rows(body)
+    if not rows:
+        return ["KISS-CLASSIFY-6.3-0012 has no `| Sidecar field |` projection table"]
+    out = []
+    names = [r[0] for r in rows]
+    if len(names) != len(set(names)):
+        dup = sorted(n for n in set(names) if names.count(n) > 1)
+        out.append(f"§6.3-0012 table lists a sidecar field twice: {dup}")
+    word = re.search(r"exactly (\w+) fields", body)
+    if word and _COUNT_WORDS.get(word.group(1)) != len(rows):
+        out.append(f"§6.3-0012 says '{word.group(1)}' fields but its table has {len(rows)}")
+    targets = [r[1] for r in rows if r[1] is not None]
+    for f in fields:
+        n = targets.count(f)
+        if n != 1:
+            out.append(f"`quant` field `{f}` (§6.3-0009) is the target of {n} sidecar row(s) "
+                       f"in §6.3-0012, not exactly one")
+    for tgt in sorted(set(targets) - set(fields)):
+        out.append(f"§6.3-0012 projects onto `{tgt}`, which is not a field of the `quant` record (§6.3-0009)")
+    if ("dequant_form", "dequant_form") not in rows:
+        out.append("§6.3-0012 must project the sidecar `dequant_form` onto `quant.dequant_form` (§6.3-0009a)")
+    return out
+
+
+def check_quant_projection(spec_dir):
+    p = os.path.join(spec_dir, "classify.md")
+    if not os.path.exists(p):
+        return ["classify.md not found for the quant-sidecar projection check"]
+    return quant_projection_violations(open(p, encoding="utf-8").read())
+
+
 # The normative clauses this lint ENFORCES: a violation of each fails the lint,
 # so the traceability gate may count them lint-backed (they bind the spec document
 # — the closed dtype set restated in two owners — which is a linter's job, not a
@@ -625,6 +708,8 @@ COVERS = [
      "the Ops §6.16 dtype bit layouts drift from the Classify §6.1 pinned layouts"),
     ("KISS-CLASSIFY-8-0007",
      "the DTYPE_LAYOUT_VERSION co-version handle is dropped from Classify §8 or Ops §6.16-0008"),
+    ("KISS-CLASSIFY-6.3-0012",
+     "the quantization-sidecar projection table drifts from the `quant` record fields of §6.3-0009"),
 ]
 
 

@@ -91,6 +91,7 @@ KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested
 KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
 KISS-CLASSIFY-6.3-0009a	test_classify_dequant_form_keyed	blocked	#189 keyed field: needs a structure_key schema-version event (token grammar change), coordinated 3-way like sk4
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
+KISS-CLASSIFY-6.3-0012	test_classify_quant_sidecar_projection	lint:kiss_tables	the quantization-sidecar projection table drifts from the `quant` record fields of §6.3-0009
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
 KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
