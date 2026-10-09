@@ -15,7 +15,7 @@ statement about *its pinned copy*, not about the spec as it stands.
 | Fuel | `fuel-dispatch/fixtures/kiss-corpus/` vendored from KISS `f4952b4c` (2026-09-02) | `ops-arith`, `ops-minmax-ordinary`, `ops-minmax-signed-zero`: **same**. `structure_key_vectors`, `dtype_manifest`, `op_manifest`: **stale** |
 | Unpopped | `crates/unpopped-vocab/kiss/` re-vendored 2026-10-02 from KISS `bc16715` | `dtype_manifest`, `structure_key_vectors`: **same** as main |
 | Unpopped / Baracuda reference evaluator | `kiss-ref-core`, `kiss-ops-vocab`, `kiss-classify-vocab` **0.3.4** from crates.io (published 2026-09-05; the kiss-ref repo has no commit after 2026-09-16) | not blob-comparable. It predates KISS #516–#519 (2026-10-01/02) by date; **not diffed** |
-| Baracuda `baracuda-cuda-vocab` | `kiss-cuda-seed.tsv` pinned at KISS `becf90fc` (2026-08-26): **4 rows** (`Sm80 Sm89 Sm90 Sm90a`) | `spec/namespaces/cuda.md` now carries a **13-row token set** and a 4-row dispatch set (#521, #522): **stale** |
+| Baracuda `baracuda-cuda-vocab` | `kiss-cuda-seed.tsv` pinned at KISS `becf90fc` (2026-08-26): **4 rows** (`Sm80 Sm89 Sm90 Sm90a`) | `spec/namespaces/cuda.md` now carries a **13-row token set** and a 4-row dispatch set (#521, #522): the pinned seed is **stale**, the 4-member manifest is **not** a gap (see §3) |
 
 ## 1. Results as run (each against its own pinned copy)
 
@@ -55,9 +55,13 @@ main result for those two tests).
   (§6.8, §6.11-0005), not to clause ids. KISS's own matrix counts 479 untested MUSTs; none of this changes it.
 - **Nothing here exercises #516 (contract_version 2), #518 (precision-class tokens) or the Contract/Ops changes**: the
   evaluator is 0.3.4, and no implementation instrument reads Contract documents.
-- Baracuda's `cuda:` manifest lists 4 members; KISS's token set lists 13 (nine are NVRTC-only rows, witness
-  baracuda#151). Whether the manifest is *required* to equal the token set was **not verified**; the pinned-seed gate
-  cannot see the difference either way.
+- **Retracted 2026-10-09 (the original bullet here called the 4-member vs 13-row difference an unverified possible
+  gap).** Baracuda answered: its `cuda:` manifest is the closed `ArchSku` set of CUTLASS-dispatch SKUs
+  (`sm80 sm89 sm90 sm90a`) by design; the nine NVRTC-only tokens live in KISS's own `spec/namespaces/cuda.md`
+  (#522) and were deliberately moved onto the open `TargetId` (baracuda#151). The subset is correct and **is not a gap**.
+  What remains true is only that its vendored seed (`becf90fc`, 4 rows) predates the two-block annex, so its
+  agreement gate cannot see later annex edits. Basis: the Baracuda lane's reply, relayed by the PM; I did not read
+  their code for it.
 - The device legs cover 3 elementwise kernels and 2 folds on one GPU architecture (`sm_89`).
 - Fuel's vendored `ops-*` corpus is current for the three files it uses, but main has seven further corpus files
   (`announce`, `contract`, `grammar`, `opattrs`, `ops-narrow-*`, `ops-transcendental-nan`) that none of these
