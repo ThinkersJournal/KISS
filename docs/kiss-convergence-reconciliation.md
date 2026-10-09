@@ -1,5 +1,32 @@
 # KISS ⇄ Baracuda ⇄ Fuel — Convergence Reconciliation (single shared list)
 
+> ## CURRENT 2026-10-09 — read this block; the tables below are the 2026-07-20/21 record
+>
+> Measured at KISS `origin/main` `904a4b4`. **Every row below that says "open", "queued to author" or
+> "in the sk3 bundle" is superseded by this block.** Schema is now **`sk4`** (RFC `sk4-schema-event`,
+> Accepted 2026-08-08), not `sk3`.
+>
+> | Item | Now | Basis |
+> |---|---|---|
+> | D1 operand/accumulator/output dtypes in the `gem` key, `batch` | **DONE** | classify.md §6.7 (weight/acc/output dtype, conditional `b<class>`), superseded by sk4 |
+> | D2 transcendental ULP ceiling retired | **DONE** | #63 (+#42) |
+> | D3 §6.6 Dispatch optional, geometry-agnostic class | **DONE** | #43 closed; #483 (sentinel), #489 (Dispatch document layer) |
+> | D4 dtype vocabulary, `f32s` retired, `<mp>` | **DONE** | `f32s` absent from classify.md; `<mp>`/acc field realised by KISS-CLASSIFY-6.7-0013. The `u16`/`u64` prune: **not re-verified** |
+> | D5 `accumulation_type` | **DONE** | contract.md |
+> | D6 reproducibility-scope axis | **DONE** | contract.md §6.8 (closed set; `bit_stability`, 6.8-0013) |
+> | D7 neutral FDX-successor sidecar | **OPEN — spec adoption pending** | `rfcs/d7-fdx-successor-sidecar.md` is cosigned (2026-07-21) and ready for editor adoption; **no clause in `spec/` adopts it**. Blocked on the KISS editors, not on Fuel or Baracuda |
+> | D8 sk2 codec | **DONE** | superseded by sk4 |
+> | sk3 bundle / §6.17 input-rounding pin | **DONE** | KISS-OPS-6.17-0001..0005; the attribute is now `MathFidelity` (#478). The wire-field rename `math_precision` → `math_fidelity` is **open (#477)** |
+> | E6 freeze gate | **OPEN by design** | Eric's ruling stands: external implementors required. Open: #462, #387, #524, #263 |
+>
+> **Not done and not claimed here:** this block says what the *spec* now says. It does not say that Fuel or
+> Baracuda meet it; see `docs/conformance-results-2026-10-09.md` for what the implementations' own
+> differentials do and do not show.
+>
+> The 2026-07-20/21 text below is preserved as the record; the "Net" section's claim that both
+> implementors "reach full KISS conformance" was a forecast, not a measurement.
+
+
 **Maintained by:** KISS (ThinkersJournal editors-of-record) · **Reconciles:** the KISS `RECONCILIATION.md` D-list, Baracuda's `kiss-convergence-agenda-2026-07-20.md`, and the open KISS RFC/defect issues into **one view all three sides work from**.
 **As of:** 2026-07-20/21 · **Outcome:** convergent — **zero divergent rows** between KISS's tracking and Baracuda's agenda (Baracuda-confirmed).
 
