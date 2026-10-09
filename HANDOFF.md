@@ -1,50 +1,49 @@
-<!-- Written 2026-10-08 against origin/main e4b866d. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-09 against origin/main cf74c8d (PRs #530-#533 open). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
 ## Standing procedure (a restarted session must do these)
 
-1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS` (its HEAD is not `origin/main`).
-   `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`; remove it after the merge
-   (`git status --porcelain` first). Read `origin/main` (after `git fetch`), never a working tree.
-2. **Every docs/CI/test PR carries its own `kiss-conformance` patch bump** (`conformance/Cargo.toml`, currently
-   0.1.3) **or names in its body the change set whose bump lands with it.** The PM allocates the number.
-   Pre-1.0 a breaking change moves the second number. The crate number is bookkeeping: conformance keys on the
-   per-sub-standard schema versions (KISS-CONFORM-8-0001), which a PR bumps only if its own bytes/semantics change.
-3. **Dependabot PRs (`.github/dependabot.yml`, github-actions, weekly Monday, one grouped PR, no auto-merge):
-   whoever merges one adds the `kiss-conformance` patch bump as a commit on that PR's branch before merging,
-   and says so in a PR comment** (PM ruling 2026-10-08, option 1; no standing quarterly change set). Review each
-   like #526: read `using:` in the new tag's `action.yml` (node20 -> node24 is the control), read the release
-   notes against KISS's inputs, and check the Node annotation and the 5 required contexts on the PR's own run.
-4. **Derived figure files are re-derived by the tool, never kept from a side.** `conformance/COVERAGE_FLOOR.tsv` and
-   the README bound markers come from `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
-   `python tools/kiss_readme_coverage.py`. If a rebase conflicts only in them: `git rebase --abort`, rename the old
-   branch `...-v1-backup`, `git checkout -b <name> origin/main`, cherry-pick the non-figure commits, then re-run
-   the tools and commit the numbers separately.
-5. **Before pushing run every python step of the `kiss-trace` job** (list in `.github/workflows/traceability.yml`),
-   not just the tests you touched; a new `tools/kiss_*.py` must answer `--emit-coverage` at once (#266). Three
-   suites launch `bash` by name and fail on this box (WSL launcher): `test_kiss_ratchet_step.py`,
-   `test_kiss_msrv_step.py`, `test_kiss_orphan_step.py`; say so in the PR body, CI is their first run.
-6. **Auto-mode classifier denials are final for the session**: a peer (including the PM) cannot clear one, and
-   re-issuing the same outcome through another tool is the same outcome. Report it and take a different route.
-7. `strict` (non-required) now reports 479 untested MUSTs / "0 of 9 freeze-ready" in its job summary and is green
-   while that is the known red; it goes red only if the red changes or an instrument fails. Do not "ack" it by name.
+1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
+   remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
+2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
+   (0.1.5 is allocated to #529-#533, carried by #533). Pre-1.0 a breaking change moves the second number.
+3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
+   comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
+4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
+   `python tools/kiss_readme_coverage.py`. A new lint-backed clause needs: the `lint:<tool>` row in `conformance/UNBACKED.tsv`, the tool's
+   `--emit-coverage` entry, and the floor's `lint` number raised by the PR itself (the ratchet then reports a green "born with detector" arrival).
+5. **Before pushing run every python step of the `kiss-trace` job** (`.github/workflows/traceability.yml`). Three suites launch `bash` by name and
+   fail on this box (WSL): `test_kiss_ratchet_step.py`, `test_kiss_msrv_step.py`, `test_kiss_orphan_step.py`; say so in the PR body.
+6. **Auto-mode classifier denials are final for the session**; a peer cannot clear one. Report it and take a different route.
+7. **Codacy flags methods over 50 lines** on the lines a PR touches: split before pushing. Never configure the path out.
+8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; objections from Fuel/Baracuda/Unpopped go
+   through the PM too (`list_peers`, re-resolve IDs by cwd; they rotate).
 
-## State (as of origin/main e4b866d, 2026-10-08)
+## Open KISS PRs (PM gates in this order: #530, #531, #532, then #533)
 
-- Merged this reconciliation: #516 (Ops/Contract, `contract_version` 2), #517 (Classify), #518 (precision-class
-  token set, Ops 6.8-0007..0009), #519 (layout_tag from own axes, mask over the frame-padded view), #521/#522
-  (`cuda:` annex: token set / dispatch set, nine NVRTC-only rows), #523 (0.1.0), #525 (`strict` report),
-  #526 (Actions to Node 24 majors), #527 (Dependabot). No open KISS PRs.
-- Open issues owned here: **#520** (mask keys on the stride of an extent-1 axis: two tokens for one broadcast
-  meaning; PM prefers normalizing, not urgent), **#524** (the hard-fail on a freeze or a conformance claim that
-  the old `strict` comment promised is NOT implemented).
-- Other lanes' pending work that touches KISS output: Fuel `structure_key_derive.rs` own-axes layout (fuel#285,
-  held for bundling), Unpopped 0.14.0 (mask over the frame). Nothing is owed by KISS to them.
+- **#530** D7 design note. **#531** #263 decision memo + #520/#477 one-event wire proposal. **#532** retraction of the Baracuda `cuda:` manifest
+  "possible gap" (answered: closed ArchSku set by design). **#533** spec: D7 adopted as Option C, `KISS-CLASSIFY-6.3-0012` + `tools/kiss_tables.py`
+  check + RFC §10 + kiss-conformance 0.1.5 + this file.
+
+## kiss-ref (separate repo `C:\Projects\kiss-ref`, ThinkersJournal/kiss-ref; no lane exists, the KISS lane does its work)
+
+- Rebind to KISS `904a4b4` is MERGED (#48-#51): workspace is **0.4.0, unpublished**. Evidence sent to the PM 2026-10-09 (fe23926): tests, `cargo package`,
+  dry-runs OK for classify-vocab and ops-vocab; kiss-ref-core's dry-run can only pass after the two vocab crates are on crates.io, so publish
+  order is classify-vocab, ops-vocab, (wait for index), ref-core. **Publish needs CireSnave's yes per crate**; the PM brings it. Do not publish.
+- After publishing, whoever publishes renames CHANGELOG `[Unreleased]` to `[0.4.0]` with the date. CHANGELOG lists what 0.4.0 does not model.
+- Not closed (say if wanted): OpAttrs bytes, the `MathFidelity` type, a native Bool tensor lane.
+- kiss-ref worktree `C:\Projects\kiss-ref-rebind` is mine and clean at fe23926: remove it (`git worktree remove`, then prune in `C:\Projects\kiss-ref`).
+
+## Waiting on others (do not start)
+
+- **#263 op->family mapping:** CireSnave decides A/B/C (board 166); I recommend B. **#520 + #477 wire event** (sk bump + contract_version bump, with the
+  already-obligated `dequant_form` key slot): version numbers unallocated until #263 is decided. Memo and proposal are in #531.
+- **Fuel:** re-vendor KISS corpus and stop emitting `f8e6m2` (reserved by #517); answer its questions on KISS-CLASSIFY-6.1-0013 if it asks.
+- Dependabot first Monday report **2026-10-12**: read the Dependabot tab and tell the PM. Ubuntu 26 runner **2026-10-19**: if CI breaks, tell the PM first.
 
 ## Next actions
 
-- **Monday 2026-10-12, after Dependabot's first scheduled run:** read the Dependabot tab (Insights -> Dependency
-  graph -> Dependabot) and tell the PM what it shows. This is an observation, not a prediction; expected: nothing.
-- **2026-10-19:** `ubuntu-latest` becomes Ubuntu 26. No pin added; if CI breaks that day tell the PM first.
-- Otherwise idle until the PM assigns work.
+- First unblocked: after #530-#533 merge, remove worktrees `C:/Projects/kiss-d7`, `kiss-dec`, `kiss-retract`, `kiss-d7spec` (check `git status --porcelain`),
+  delete merged branches per portfolio CLAUDE.md §3.
+- Then idle until the PM assigns work (likely: the wire event after the #263 decision).
