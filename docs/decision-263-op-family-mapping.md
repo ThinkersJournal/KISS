@@ -1,5 +1,9 @@
 # Decision memo — #263: who decides which `op_family_tag` an op gets
 
+> **SUPERSEDED 2026-10-11 — #263 was ruled by CireSnave: "D and drop the 24 names entirely."** The op-family mapping this
+> document proposes (or asks to decide) does not exist any more: the 24-code family is replaced by a derived 7-class
+> `cell_class`. See `docs/design-263-cell-class.md`. Kept as the record of the question and of its measurements.
+
 **For CireSnave, via the PM. One decision needed; options and a recommendation below.** Measured at KISS
 `origin/main` `904a4b4`, 2026-10-09. Evidence: `docs/rfc-op-family-mapping.md` (the 121-row proposal) and issue #263.
 

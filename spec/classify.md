@@ -56,14 +56,14 @@ nothing else:
    and (for sub-byte and complex types) an exact packing convention.
 2. **The operand descriptor** — the minimal, canonical description of one tensor
    operand: rank, per-axis extents, per-axis **signed** strides, dtype, base-pointer
-   alignment, plus the derived layout tag and the cell-level op-family tag, and the
-   optional quantization and symbolic-extent facts carried for binding.
+   alignment, plus the derived layout tag and the optional quantization and
+   symbolic-extent facts carried for binding.
 3. **The specialization-cell identity `structure_key`** — an **admissibility
    predicate** over a layout/dtype/target specialization *cell*: a coarse,
    extent-free structural class computed canonically from the operand descriptors
-   (including the cell-level op category), the target, and the op category's role
-   hints, so a provider's build matrix and a consumer's runtime lookup join on the
-   same token. It is **not** the op's semantic identity.
+   (from which the cell-level structural class is derived, §6.5-0015), the target,
+   and the caller-declared role hints, so a provider's build matrix and a consumer's
+   runtime lookup join on the same token. It is **not** the op's semantic identity.
 4. **The all-hardware target-capability descriptor** — the namespaced
    `<namespace>:<capability-set>` token that names the compilation target a
    specialized kernel is built for, matched byte-exact on the full string.
@@ -96,9 +96,11 @@ the two together are kernel identity, and neither alone is sufficient (umbrella
 §2.1; charter §4a).
 
 Because the data vocabulary is foundational, it depends on nothing. It must not
-reach up into the op vocabulary: `structure_key` carries a coarse **op-family tag**
-(an elementwise/reduction/contraction *category*), never a KISS-Ops op *name*. This
-keeps Classify a true root and lets it freeze on its own cadence.
+reach up into the op vocabulary: `structure_key` carries a coarse **cell class**
+(elementwise-by-arity / reduction / contraction / indexed access / other),
+*derived* from the cell's own structure, never a KISS-Ops op *name* and never an
+op-family label. This keeps Classify a true root and lets it freeze on its own
+cadence.
 
 ### 2.2 Why dtypes are pinned by bits, not by spelling
 
@@ -143,9 +145,9 @@ index (§6.3-0011).
 
 A `structure_key` is the canonical identity of a specialization **cell**. A kernel
 accepts an invocation **if and only if** the `structure_key` derived from that
-invocation's derivation inputs — the canonically-ordered operand descriptors
-(including the cell-level op category), the target, and the op category's role hints
-(§6.6-0012) — **byte-matches** the kernel's key. It is deliberately **extent-free**:
+invocation's derivation inputs — the canonically-ordered operand descriptors, the
+target, and the caller-declared role hints (§6.6-0012), from which the cell class
+is derived (§6.5-0015) — **byte-matches** the kernel's key. It is deliberately **extent-free**:
 it keys size *classes* (one-warp / one-block / grid-stride; tiny / small / mid /
 large), never literal extents, so that the same kernel serves a whole family of
 shapes and the build matrix stays finite. Because the derivation is canonical and
@@ -156,8 +158,10 @@ this one function.
 The key is **carried opaquely** across the discovery/announce seam: KISS-Announce
 frames it as a length-delimited token (maximum 4096 bytes) and never parses it. The
 token codec is **spelling-keyed, not discriminant-keyed** — adding a new dtype code
-or op-family code shifts no existing token's bytes — so the vocabulary can grow
-without a schema-version bump. The string token is the **only** normative wire form
+shifts no existing token's bytes — so the dtype vocabulary can grow without a
+schema-version bump. (The cell-class set is **closed**: adding a class would
+reassign cells that derive `oth` or an `ew*` class today, so it is a schema event,
+§6.5-0006.) The string token is the **only** normative wire form
 (§6.7-0011); the binary field types quoted in the schema tables describe an
 in-memory representation only.
 
@@ -218,8 +222,7 @@ respellings and the `s`→`i` integer renames are covered by umbrella §3.1.)
 | `dtype` | dtype token (§6.1) | the operand's element dtype; the cell's primary dtype is operand-0's dtype |
 | `alignment` | u32 | base-pointer alignment in bytes; drives achievable vector width |
 | `layout_tag` | derived enum | per-operand memory-layout class (contiguous / inner-contiguous / strided / broadcast); a projection of extents+strides, part of the per-operand sub-key, not a stored raw field |
-| `op_family_tag` | enum (cell-level) | the coarse op category the cell participates in; drives canonicalization legality; carried at the cell level, not per raw operand |
-| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement, dequant form); carried for binding, **not** folded into the admissibility key at this schema version. `dequant_form` **becomes keyed at the next schema version** (§6.3-0009a) — linear and codebook are not inter-substitutable; every other field stays out at every version |
+| `quant` | optional | quantization facts (family, sub-byte bit width, block extent, scale placement, dequant form); carried for binding, **not** folded into the admissibility key at this schema version. `dequant_form` is **keyed from `sk5`** (§6.3-0009a) as the optional last component of the operand's sub-key — linear and codebook are not inter-substitutable; every other field stays out at every version |
 | `symbolic_extent` | optional | live-vs-capacity dynamic-extent fact (axis + kind: scalar bound / range / affine); flags a dynamic live length even though capacity keys the strides |
 
 ### 2.8 Worked examples (informative)
@@ -233,7 +236,7 @@ offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; iteration-frame element c
 `128·256 = 32768 > 1024` ⇒ `grid`; iteration rank 2. The token:
 
 ```
-sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
+sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-
 ```
 
 **(b) A broadcast operand.** If operand 1 is `strides=[0,1]` (axis 0 broadcasts
@@ -263,8 +266,8 @@ yields a typed decline. The reduced operand's innermost axis is a reduced axis
 derives scalar vector width (`v1`, §6.5-0009).
 
 **(d) A dense GEMM cell.** `lhs [8,4096] · rhs [4096,4096] → out [8,4096]`,
-row-major, op category `contraction`; the caller supplies M/N/K axis roles (lhs
-`[M,K]`, rhs `[K,N]`, out `[M,N]`, §6.6-0016). M is tiny (≤8), N and K are large
+row-major, cell class `ctr` (derived because the caller declares the M/N/K axis
+roles: lhs `[M,K]`, rhs `[K,N]`, out `[M,N]`, §6.6-0016). M is tiny (≤8), N and K are large
 (>2048), K is divisible by 16 ⇒ optional trailing contraction field `|ctll/d16`.
 Non-contraction tokens omit that field entirely and stay byte-identical to the base
 codec.
@@ -290,8 +293,8 @@ Classify defines no op meaning.
 - **numeric kind** — the coarse classification of a dtype: one of `float`, `int`,
   `uint`, `bool`, `complex`.
 - **operand descriptor** — the minimal per-operand description of §6.3: rank,
-  extents, strides, dtype, alignment, plus derived layout tag, cell-level op-family
-  tag, and optional quant / symbolic-extent facts.
+  extents, strides, dtype, alignment, plus derived layout tag and optional quant /
+  symbolic-extent facts.
 - **extent** — the logical length of one axis; for a symbolic axis it is the
   *capacity*, not the live length.
 - **stride** — a per-axis signed element offset step; `0` = broadcast, `< 0` =
@@ -299,27 +302,28 @@ Classify defines no op meaning.
 - **alignment** — base-pointer alignment in bytes (unsigned 32-bit).
 - **layout_tag** — the derived per-operand memory-layout class: `contiguous`,
   `inner-contiguous`, `strided`, or `broadcast`.
-- **op_family_tag (op category)** — the coarse category a cell participates in
-  (elementwise-unary/binary/ternary, reduction, scan, contraction, normalization,
-  gather/scatter, …). A component of `structure_key`; **distinct from the KISS-Ops
-  op name**. Supplied by the caller as part of the derivation input (§6.6-0012).
+- **cell class** — the coarse *structural* class of a cell, one of seven
+  (`ctr`, `ndx`, `rdc`, `ew1`, `ew2`, `ew3`, `oth`), **derived** by §6.5-0015 from the
+  operand descriptors and the declared role hints. A component of `structure_key`;
+  **distinct from the KISS-Ops op name and from any op family**. It is never
+  supplied as a label by the caller.
 - **structure_key** — the admissibility predicate identifying one specialization
   cell (§6.6). Carried opaquely across the announce seam as a length-delimited
   token. **Not** the op's semantic identity.
 - **specialization cell** — one layout/dtype/target class a kernel is built for; a
   `structure_key` names exactly one.
 - **admissibility predicate** — a total function from an invocation's derivation
-  inputs (§6.6-0012) — the canonically-ordered operand descriptors including the
-  cell-level op category, the target, and the op category's role hints — to a
-  `structure_key`; a kernel admits the invocation iff the derived key byte-matches
-  the kernel's key.
+  inputs (§6.6-0012) — the canonically-ordered operand descriptors, the target, and
+  the declared role hints — to a `structure_key`; a kernel admits the invocation
+  iff the derived key byte-matches the kernel's key.
 - **iteration frame** — the common axis frame of an invocation: `rank` = the widest
   operand rank, with lower-rank operands right-aligned into it (§6.6-0013).
-- **role hint** — a caller-supplied fact an op category needs that is not derivable
-  from bare operand extents: the M/N/K axis roles of a contraction cell (§6.6-0016)
-  and the index-operand slot of a gather/scatter/embedding cell (mirroring the
-  KISS-Ops index/address operand role, §6.1-0006; the index is not identified by
-  dtype).
+- **role hint** — a caller-declared fact of the invocation that is not derivable
+  from bare operand extents: the M/N/K axis roles of a contraction cell (§6.6-0016),
+  the index-operand slot of an indexed-access cell (mirroring the KISS-Ops
+  index/address operand role, §6.1-0006; the index is not identified by dtype), and
+  the reduced-axis set (§6.6-0009). A role hint is a fact about the invocation,
+  not a category label; the cell class (§6.5-0015) is derived from them.
 - **target_capability** — the namespaced, all-hardware compilation-target
   descriptor `<namespace>:<capability-set>` (§6.8), matched byte-exact.
 - **namespace** — the registered left component of a `target_capability` token
@@ -365,8 +369,9 @@ Classify defines no op meaning.
   `structure_key` schema version and token bound) are a **shared naming convention
   spelled identically in both sibling vocabularies** and used **by name only**;
   neither foundational vocabulary consumes or re-derives the other's definitions.
-  (Classify's op-category enum and the KISS-Ops per-op family taxonomy are separate,
-  Classify-owned and Ops-owned respectively; neither imports the other.) The
+  (Classify's cell-class set and the KISS-Ops per-op family taxonomy are separate,
+  Classify-owned and Ops-owned respectively; neither imports the other, and no
+  mapping between them exists.) The
   value-conversion and result-normalization obligations that Classify factors out
   (e.g. bool 0/1 normalization, e4m3fn/e5m2 saturating conversion) are owned by
   KISS-Ops / KISS-Emit.
@@ -486,7 +491,7 @@ where it fixes storage bytes.
   answered with a typed decline (§6.7-0009) distinct from the unknown-token
   decline (decline vectors: `reserved_fnuz_dtypes_typed_decline`). Activating a
   reserved spelling is a future additive schema event.
-  *Test:* `accepts_every_closed_op_family_and_dtype`.
+  *Test:* `accepts_every_closed_cell_class_and_dtype`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
   the table above (`f16`/`bf16` = 16; `f32` = 32; `f64` = 64; `i8` = 8;
   `i16` = 16; `u8` = 8; `u16` = 16; `i32` = 32; `i64` = 64; `u32` = 32;
@@ -614,8 +619,9 @@ where it fixes storage bytes.
 ### 6.3 Operand descriptor fields
 
 The operand descriptor is the following fixed field set. `rank`, `extents`,
-`strides`, `dtype`, and `alignment` are stored raw; `layout_tag` and `op_family_tag`
-are derived/cell-level; `quant` and `symbolic_extent` are optional. The binary types
+`strides`, `dtype`, and `alignment` are stored raw; `layout_tag` is derived;
+`quant` and `symbolic_extent` are optional. (The cell class is a cell-level derived
+fact, §6.5-0015, not an operand-descriptor field.) The binary types
 below (`u8`, `i64`, `u16`) describe a permitted in-memory representation only; the
 token (§6.7) is the sole normative wire form (§6.7-0011).
 
@@ -627,7 +633,6 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `dtype` | dtype token | one of the twenty-four recognized tokens (§6.1; a reserved one typed-declines, §6.1-0001) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
-| `op_family_tag` | enum | one op category (§6.5-0006); cell-level |
 | `quant` | optional record | `{family, sub_byte_bits: u8, block_elems: u16, scale_placement, dequant_form}` |
 | `symbolic_extent` | optional record | `{axis: u8 (< rank), kind ∈ {scalar, range, affine}}`; `kind` is an uninterpreted tag at this schema version (no bounds payload) |
 
@@ -657,18 +662,19 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 - **KISS-CLASSIFY-6.3-0007** — `layout_tag` MUST be derived as a projection of
   `extents` and `strides` (§6.5-0002) and MUST NOT be an independently stored raw
   field that can disagree with them. *Test:* `test_classify_layout_tag_is_derived`.
-- **KISS-CLASSIFY-6.3-0008** — `op_family_tag` MUST be carried at the **cell**
-  level (one per `structure_key`), not per raw operand, and MUST be supplied by the
-  caller (it is part of the derivation input, §6.6-0012). *Test:*
-  `test_classify_op_family_is_cell_level`.
+- **KISS-CLASSIFY-6.3-0008** — The `cell_class` MUST be carried at the **cell**
+  level (one per `structure_key`), not per raw operand, and MUST be **derived**
+  (§6.5-0015) from the derivation inputs of §6.6-0012; it MUST NOT be supplied by
+  the caller as a label. *Test:* `test_classify_cell_class_is_cell_level`.
 - **KISS-CLASSIFY-6.3-0009** — When present, the `quant` record MUST carry
   `{family, sub_byte_bits (u8), block_elems (u16), scale_placement, dequant_form}`;
   `sub_byte_bits` and `block_elems` are pinned integer fields, `dequant_form` is the
   closed Classify-owned enumerant of §6.3-0009a, while `family` and `scale_placement`
   are opaque tokens **uninterpreted by Classify** at this schema version (their
   vocabularies are owned by the external quantization-token registry, §4). Every field
-  of the `quant` record MUST be carried for binding and MUST NOT
-  be folded into the `structure_key` admissibility key at this schema version. *Test:*
+  of the `quant` record MUST be carried for binding; every field **except
+  `dequant_form`** MUST NOT be folded into the `structure_key` admissibility key
+  (`dequant_form` is keyed from `sk5`, §6.3-0009a). *Test:*
   `test_classify_quant_carried_not_keyed`.
 - **KISS-CLASSIFY-6.3-0009a** — `dequant_form` MUST be one of the closed set
   `{linear, codebook}`, owned and interpreted by KISS-Classify. `linear` means the stored
@@ -677,13 +683,13 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   the stored bits select**. An implementation MUST NOT infer `dequant_form` from
   `family`, which Classify does not interpret, and MUST NOT omit it from a `quant`
   record.
-  **Effective at the next `structure_key` schema version**, `dequant_form` — and, of the
-  `quant` record, only `dequant_form` — MUST be folded into the `structure_key`
-  admissibility key. **At the current schema version the §6.7 token grammar defines no
-  slot for it**, so an implementation MUST NOT invent one, and MUST NOT emit a key
-  claiming to distinguish dequant form at this version. The exclusion of §6.3-0009 is
-  thereby **narrowed, not reversed**: every other `quant` field stays out of the key at
-  every version.
+  **From `sk5`**, `dequant_form` — and, of the `quant` record, only `dequant_form` — is
+  folded into the `structure_key` admissibility key, as the **optional last
+  component of the sub-key** (§6.6-0007, §6.7-0004) of each operand that carries a
+  `quant` record: `dl` for `linear`, `dc` for `codebook`. An operand that carries no
+  `quant` record has no such component, so its sub-key is byte-identical to the
+  five-component form. The exclusion of §6.3-0009 is thereby **narrowed, not
+  reversed**: every other `quant` field stays out of the key at every version.
   *Rationale — this is the one quant distinction that is not a performance choice.*
   Two symmetric 4-bit schemes over the same storage dtype (e.g. a GPTQ-derived linear
   int4 and a 16-entry non-uniform codebook) agree on shapes, dtypes, layout and
@@ -766,9 +772,14 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   emit and a reader MUST reject a key declaring more than `MAX_OPERANDS`. *Test:*
   `test_classify_max_operands_is_8`.
 - **KISS-CLASSIFY-6.4-0003** — The `structure_key` schema version
-  (`STRUCTURE_KEY_VERSION`) MUST be the integer `4` at this maturity, encoded as the
-  token prefix `sk4` (§6.7-0002); a bump of this integer is required only when a
-  predicate axis is added or altered in a non-additive way. (Version `4` supersedes
+  (`STRUCTURE_KEY_VERSION`) MUST be the integer `5` at this maturity, encoded as the
+  token prefix `sk5` (§6.7-0002); a bump of this integer is required only when a
+  predicate axis is added or altered in a non-additive way. (Version `5` supersedes
+  version `4` and is one batched event: the caller-chosen twenty-four-code op-family
+  field is replaced by the **derived** seven-class `cell_class` (§6.5-0006,
+  §6.5-0015, #263); `dequant_form` is keyed (§6.3-0009a); and the extent-1 broadcast
+  mask spelling is fixed (§6.6-0008, #520) — each a non-additive change to existing
+  tokens, batched so the parties regenerate once. Version `4` had superseded
   version `3`: the sk4 dtype respellings — integer `i`-prefix, FP8 `f8`-prefix + mandatory
   variant suffix, and the complex total-width meaning-flip (§6.1, umbrella §3.1) — together with the
   new non-contraction precision coordinate `(acc + mp)` (§6.7-0012, §3.3), forced this
@@ -805,23 +816,19 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
 **Contraction size class.** `{tiny, small, mid, large}`, token codes `t` / `s` /
 `m` / `l`; `tiny` iff extent `≤ 8`, `small` iff `9..=128`, `mid` iff `129..=2048`,
 `large` iff `> 2048`.
-**Op-family tag (op category).** The closed set of coarse categories, each with a
-3-letter token code:
+**Cell class.** The closed set of seven **structural** classes, each with a 3-letter
+token code. A cell class is **derived** (§6.5-0015) from the cell's own structure and
+its declared role hints; it is never a caller-chosen label and never an op family.
 
-| Category | Code | Category | Code |
-|---|---|---|---|
-| contraction (dense GEMM) | `gem` | indexing (gather/scatter) | `idx` |
-| elementwise-unary | `une` | embedding | `emb` |
-| elementwise-binary | `bin` | shape/layout | `shp` |
-| elementwise-ternary | `ter` | sorting | `srt` |
-| gated-activation | `gat` | quantization | `qnt` |
-| reduction | `red` | random | `rnd` |
-| scan | `scn` | loss | `los` |
-| normalization | `nrm` | segment-ops | `seg` |
-| softmax | `sft` | image | `img` |
-| convolution | `cnv` | fft | `fft` |
-| pooling | `pol` | linalg | `lin` |
-| attention | `att` | mixture-of-experts | `moe` |
+| Class | Code | Derived when (first match wins, §6.5-0015) |
+|---|---|---|
+| dense contraction | `ctr` | the caller declares the M/N/K axis roles (§6.6-0016) |
+| indexed access | `ndx` | the caller declares an index-operand role (§6.6-0012) |
+| reduction | `rdc` | a non-empty reduced-axis set is declared (§6.6-0009) |
+| elementwise, one input | `ew1` | pointwise by shape, exactly one input operand |
+| elementwise, two inputs | `ew2` | pointwise by shape, exactly two input operands |
+| elementwise, three inputs | `ew3` | pointwise by shape, exactly three input operands |
+| other | `oth` | none of the above |
 
 - **KISS-CLASSIFY-6.5-0001** — The `layout_tag` domain MUST be exactly
   `{contiguous, inner-contiguous, strided, broadcast}` with token codes `co`, `ic`,
@@ -863,27 +870,15 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   are orthogonal axes, and the §6.1-0004 dtype-spelling rule applies **only** to the
   dtype field and the per-operand dtype positions, never to the index-width field.
   *Test:* `test_classify_index_width_boundary`.
-- **KISS-CLASSIFY-6.5-0006** — The op-family-tag domain MUST be exactly the
-  twenty-four categories of the table above, each spelled by its 3-letter token
-  code; an implementation MUST NOT invent a twenty-fifth code at this schema
-  version, and MUST fail (not silently encode as an "unknown" code) when it cannot
-  map a cell to one of the twenty-four. A **deriver** (an implementation that computes a
-  key from a cell, §6.6-0012) MAY decline, with a typed decline (§7.1-0002), a cell whose
-  op family it cannot map to a defined member below; supporting a subset of the
-  twenty-four codes on the derive side is conformant, while a **reader** still recognizes
-  all twenty-four (§6.7-0009). **Membership** of the five categories whose members are not
-  otherwise defined in this specification (the code names the *category*; which concrete
-  op falls in it is the caller's classification, §6.6-0012, and the lists are
-  illustrative, not exhaustive): `gat` — a **gated activation**: an activation that splits
-  one input into two halves `(a, b)` and yields `a · gate(b)` (e.g. GLU, ReGLU, SwiGLU,
-  GeGLU); `emb` — an **embedding lookup**: a row-lookup of a table operand by an index
-  operand, including the bagged-sum/mean forms (the index operand is a role hint,
-  §6.6-0012); `qnt` — a **quantization helper**: a quantize, dequantize, fake-quantize or
-  quantized-linear op (distinct from the optional `quant` facts of §6.3-0009, which describe
-  an operand and do not name a category); `img` — an **image-domain op**: interpolation /
-  resampling, grid sampling, region-of-interest ops, non-maximum suppression; `moe` — a
-  **mixture-of-experts** op: fused per-token expert dispatch, expert contraction and
-  accumulate. *Test:* `reject_unknown_op_family`.
+- **KISS-CLASSIFY-6.5-0006** — The cell-class domain MUST be exactly the seven classes
+  of the table above, each spelled by its token code (`ctr`, `ndx`, `rdc`, `ew1`, `ew2`,
+  `ew3`, `oth`); an implementation MUST NOT invent an eighth code at this schema
+  version, and a reader MUST reject a token whose class field is outside the seven
+  with a typed decline (§6.7-0009). The class is **total**: §6.5-0015 maps every cell
+  to exactly one of the seven, so there is no "cannot map" case, no "unknown" class,
+  and a deriver MUST NOT decline a cell for want of a class. Adding a class is **not**
+  additive — it would reassign cells that derive `oth` or an `ew*` class today — so it
+  is a schema-version event (§8-0002). *Test:* `reject_unknown_cell_class`.
 - **KISS-CLASSIFY-6.5-0007** — The work-class domain MUST be exactly `{one-warp,
   one-block, grid-stride}` with token codes `warp`, `block`, `grid`, and the
   boundaries MUST be total element count `≤ 32` (`one-warp`), `≤ 1024`
@@ -909,7 +904,7 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   is `broadcast`; **(b)**
   `v1` if the operand's innermost active axis (§6.3-0011) is a reduced axis of a
   reduction cell — i.e. the cell's reduce field (§6.6-0009) is `rall`, or is
-  `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set (a scan, `scn`,
+  `rlast`, or is an `x<hh>` bitmask whose innermost-axis bit is set (a scan
   cell carries no reduce field and no scanned-axis hint is a derivation input, so it
   takes rule **(c)** like any other non-reduction cell); **(c)** otherwise — provided the innermost active
   axis is **forward-unit-stride** per §6.5-0013, else `v1` — the token `vL` for the
@@ -1015,6 +1010,43 @@ elements — a maximum touched element offset `< 2³¹` is `idx32`, otherwise `i
   the padded view would have derived the same `br/01/v1/d16/f` for both.
   *Test:* `test_classify_layout_own_axes_mask_frame_padded`.
 
+- **KISS-CLASSIFY-6.5-0015** — The **cell class** MUST be derived, never supplied as a
+  label, from the derivation inputs of §6.6-0012 by the following ordered rules; the
+  **first** rule that holds decides. The inputs are the canonically-ordered operands
+  (§6.6-0014, each marked input, output or in-place), the iteration frame (§6.6-0013),
+  and three caller-declared facts: the **contraction roles** (the M/N/K axis roles,
+  §6.6-0016), the **index role** (the index-operand slot, §6.6-0012) and the
+  **reduced-axis set** (§6.6-0009).
+  **(1)** If the contraction roles are declared: `ctr`.
+  **(2)** Else if the index role is declared: `ndx`.
+  **(3)** Else if the reduced-axis set is non-empty: `rdc`.
+  **(4)** Else, if the cell is **pointwise** and has `n` input operands with
+  `1 ≤ n ≤ 3`: `ew<n>`. The **input operands** are those §6.6-0014 classifies as inputs
+  (an in-place operand counts once, as an input). The cell is **pointwise** iff, at
+  every iteration-frame axis, every operand's extent there — its own extent, or `1` at
+  an axis it does not have — is either `1` or equal to the frame extent (§6.5-0010),
+  and every **written** operand (an output, or an in-place operand) has, at every
+  iteration-frame axis, exactly the frame extent and has the iteration rank.
+  **(5)** Otherwise: `oth`, which includes a pointwise cell with no input operand and
+  one with more than three.
+  The derivation MUST read only descriptor facts and the three declared facts above;
+  it MUST NOT read an op name, an op family, or any property of the computation, and
+  no op-to-class table exists in this suite or is needed. The three declared facts
+  are facts **of the invocation**, which the caller takes from the op's own declared
+  role and iteration-space facts (KISS-OPS §6.11-0012 index operand role, §6.13-0009
+  M/N/K iteration space, §6.19 `reduce_axes`); they are not categories. *Test:*
+  `test_classify_cell_class_derivation`.
+
+  > *Informative — what the class does not say.* The class is a fact about the cell's
+  > structure, not about the computation. A prefix scan, a softmax, a normalization, a
+  > sort and a unary pointwise activation, each over a same-shape input and output,
+  > derive the **same** class (`ew1`); an attention over three same-shape inputs and
+  > one output derives `ew3`. Telling them apart is the op identity's job (§6.6-0002,
+  > §6.6-0020), which is why a lookup MUST carry it. What the derivation buys in
+  > exchange is that two conforming implementations cannot derive different classes
+  > for the same cell: the class is a function of facts both hold, not of a judgement
+  > about which of many categories an op belongs to (#263).
+
 ### 6.6 The `structure_key` admissibility predicate
 
 `structure_key` is an admissibility predicate over a specialization cell. Its field
@@ -1024,15 +1056,15 @@ form (§6.7-0011).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `version` | u16 (`= 4`) | schema version; extra fields append so old tokens stay byte-identical |
-| `op_family` | op category (§6.5-0006) | the coarse op category — **NOT** the semantic op name |
+| `version` | u16 (`= 5`) | schema version; extra fields append so old tokens stay byte-identical |
+| `cell_class` | cell class (§6.5-0006) | the derived structural class (§6.5-0015) — **NOT** an op family and **NOT** the semantic op name |
 | `dtype` | dtype token | operand-0 / primary element dtype |
 | `target` | target_capability (§6.8) | the namespaced compilation-target descriptor |
 | `index_width` | `{idx32, idx64}` | offset-arithmetic width (boundary `2³¹`) |
 | `work_class` | `{one-warp, one-block, grid-stride}` | total-work size class |
 | `rank` | u8 | iteration rank = the widest operand rank |
 | `n_operands` | u8 (`≤ MAX_OPERANDS`) | count of populated per-operand sub-keys |
-| `operands[]` | sub-key array | per-operand: `{layout_tag, broadcast-axis mask, vector-access width, inner-extent divisibility bucket, flipped flag}` |
+| `operands[]` | sub-key array | per-operand: `{layout_tag, broadcast-axis mask, vector-access width, inner-extent divisibility bucket, flipped flag}` and, iff the operand carries a `quant` record, its `dequant_form` (§6.3-0009a) |
 | `reduce_axes` | tagged reduce spec | one of three distinct values — none/not-a-reduction, all-axes, trailing-axis — or an explicit keepdim axis bitmask (u8) for any other set (§6.6-0009) |
 | `contraction` | optional | `{M, N, K size classes, K divisibility bucket, conditionally-present batch size class, weight dtype, accumulator dtype, output dtype, math-precision}` (sk3, §6.7-0006); absent for non-contraction cells |
 
@@ -1066,15 +1098,18 @@ form (§6.7-0011).
   > observable** is a consumer-side obligation and belongs to KISS-Consume, not here.
   *Test:* `test_classify_structure_key_is_admissibility_predicate`.
 - **KISS-CLASSIFY-6.6-0002** — A `structure_key` MUST NOT encode the op's semantic
-  identity; its `op_family` field MUST be a coarse op **category**, never a KISS-Ops
-  op name. Op-semantic identity is owned by KISS-Ops / KISS-Contract, and a
+  identity; its `cell_class` field MUST be the derived structural class of §6.5-0015,
+  never a KISS-Ops op name and never an op family. Op-semantic identity is owned by KISS-Ops / KISS-Contract, and a
   consumer MUST match **both** the cell (this key) and the op identity (KISS-Ops) to
   establish kernel identity. **That pair is necessary and NOT sufficient for a multi-node
   lift:** KISS-Consume pins `op_identity` to the **bare op name of the lifted DAG root**
   and forbids carrying the full DAG in it (KISS-CONSUME §6.2-0006), so two different
   computations sharing a root op name are **not** distinguished by (cell + op identity).
   A consumer MUST NOT treat that pair as establishing computation identity for a fused or
-  multi-node kernel (§6.6-0020). *Test:*
+  multi-node kernel (§6.6-0020). **A lookup MUST carry the op identity beside the key:**
+  the key alone names a *cell*, many unrelated computations of the same structure share
+  it (§6.5-0015), and what a key-only lookup returns is a set of candidates, none of
+  which it has established to compute the caller's op. *Test:*
   `test_classify_structure_key_is_not_op_identity`.
 - **KISS-CLASSIFY-6.6-0003** — A `structure_key` MUST be **extent-free**: it MUST
   key size *classes* (`work_class`, contraction size classes) and structural facts,
@@ -1082,7 +1117,7 @@ form (§6.7-0011).
   `test_classify_structure_key_extent_free`.
 - **KISS-CLASSIFY-6.6-0004** — The `structure_key` fields MUST appear in exactly
   the order and with exactly the types of the table above; `version` MUST be the
-  first field and MUST equal `4` (§6.4-0003, §6.7-0002). *Test:*
+  first field and MUST equal `5` (§6.4-0003, §6.7-0002). *Test:*
   `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
@@ -1095,16 +1130,21 @@ form (§6.7-0011).
   `test_classify_structure_key_rank_and_operand_count`.
 - **KISS-CLASSIFY-6.6-0007** — Each per-operand sub-key MUST carry exactly
   `{layout_tag, broadcast-axis mask, vector-access width, inner-extent divisibility
-  bucket, flipped flag}`, where the flipped flag MUST be set iff any axis of that
-  operand has a negative stride. *Test:* `test_classify_operand_sub_key_fields`.
+  bucket, flipped flag}` and, **iff** the operand carries a `quant` record
+  (§6.3-0009), a sixth component, its `dequant_form` (§6.3-0009a); the flipped flag
+  MUST be set iff any axis of that operand has a negative stride. *Test:* `test_classify_operand_sub_key_fields`.
 - **KISS-CLASSIFY-6.6-0008** — The broadcast-axis mask MUST be a bitmask over
   iteration-frame axes (§6.6-0013), bit `i` denoting iteration-frame axis `i`,
   bounded by `MAX_RANK` so a single byte suffices, with bit `i` set iff
   iteration-frame axis `i` has extent > 1 and that operand's stride along it is `0`
   (the operand broadcasts along that axis). A frame axis the operand does not have
-  (a padded axis, §6.6-0013, §6.5-0014) has stride `0` for this test; an own axis of
-  extent `1` and stride `0` still sets its bit when the **frame** extent at that axis is
-  `> 1`. *Test:* `test_classify_broadcast_axis_mask`.
+  (a padded axis, §6.6-0013, §6.5-0014) has stride `0` for this test; **so does an own
+  axis of extent `1`, whatever stride the descriptor records for it** — the stride of
+  a unit axis is never stepped and is arbitrary, so the bit MUST NOT depend on it: such
+  an axis sets its bit whenever the **frame** extent at that axis is `> 1`. (At
+  `sk4` an extent-1 axis with a non-zero recorded stride left its bit clear and the
+  same tensor spelled two tokens, #520; the clause is non-additive and is part of the
+  `sk5` event, §6.4-0003.) *Test:* `test_classify_broadcast_axis_mask`.
 - **KISS-CLASSIFY-6.6-0009** — The reduce spec MUST be exactly one of four
   **distinctly-encoded** values, and an implementation MUST NOT overload a single
   sentinel across two of them: **(1) none / not-a-reduction** (token field `-`,
@@ -1148,16 +1188,16 @@ form (§6.7-0011).
   keyed, so that reductions over different axis sets never collide. *Test:*
   `a1_reduction_rank1_all_axes`.
 - **KISS-CLASSIFY-6.6-0010** — A **dense-contraction cell** is defined as a cell
-  whose `op_family` is `gem` (§6.5-0006). The `contraction` field MUST be present
-  **if and only if** the cell is a dense-contraction cell (`op_family == gem`), and
+  whose `cell_class` is `ctr` (§6.5-0006). The `contraction` field MUST be present
+  **if and only if** the cell is a dense-contraction cell (`cell_class == ctr`), and
   MUST then carry `{M, N, K size classes, K divisibility bucket, the
   conditionally-present batch size class, and the precision group: weight dtype,
   accumulator dtype, output dtype, math-precision}` (sk3 grammar
   `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`, §6.7-0006); for every cell
-  whose `op_family` is not `gem` the `contraction` field MUST be absent, so the token
+  whose `cell_class` is not `ctr` the `contraction` field MUST be absent, so the token
   is byte-identical to the base (non-contraction) codec. A reader MUST reject, with a
-  typed decline (§7.1-0002), a token that carries the contraction field on a non-`gem`
-  cell or omits it on a `gem` cell. *Test:*
+  typed decline (§7.1-0002), a token that carries the contraction field on a non-`ctr`
+  cell or omits it on a `ctr` cell. *Test:*
   `test_classify_contraction_field_optional`.
 - **KISS-CLASSIFY-6.6-0011** — The derivation MUST be **canonical and
   deterministic**: two invocations whose derivation inputs (§6.6-0012) are equal
@@ -1165,17 +1205,16 @@ form (§6.7-0011).
   runtime lookup join on the same token without shared code beyond the derivation
   function. *Test:* `test_classify_structure_key_derivation_canonical`.
 - **KISS-CLASSIFY-6.6-0012** — The `structure_key` derivation function's input MUST
-  be: the canonically-ordered operand descriptors (§6.6-0014), including the
-  cell-level `op_family_tag` (op category, §6.3-0008); the `target`; and the
-  caller-supplied **role hints** required by that op category — for a
-  dense-contraction cell the M/N/K axis-role assignment (§6.6-0016) and which operand
-  slot carries the **weight role** (§6.6-0019; the weight is not identified by operand
-  position or dtype), and for a gather/scatter/embedding cell which operand slot
-  carries the index/address role
-  (the KISS-Ops operand-role fact of §6.1-0006, supplied to the derivation as a
-  caller role hint; the index is **not** identified by dtype). An implementation
-  MUST NOT infer the op category or these role hints from bare
-  operand extents; they MUST be supplied by the caller. *Test:*
+  be: the canonically-ordered operand descriptors (§6.6-0014); the `target`; and the
+  caller-declared **role hints** — for a dense-contraction cell the M/N/K axis-role
+  assignment (§6.6-0016) and which operand slot carries the **weight role**
+  (§6.6-0019; the weight is not identified by operand position or dtype), for an
+  indexed-access cell which operand slot carries the index/address role (the KISS-Ops
+  operand-role fact of §6.1-0006, supplied to the derivation as a caller role hint;
+  the index is **not** identified by dtype), and for a reduction the reduced-axis set
+  (§6.6-0009). The **cell class is not an input**: it is derived from these
+  (§6.5-0015). An implementation MUST NOT infer a role hint from bare operand
+  extents; the hints MUST be supplied by the caller. *Test:*
   `test_classify_derivation_input_tuple`.
 - **KISS-CLASSIFY-6.6-0013** — When operands differ in rank, each operand's axes
   MUST be **right-aligned** to the iteration rank (§6.6-0006): an operand of rank
@@ -1196,16 +1235,16 @@ form (§6.7-0011).
   listed among the outputs; it therefore contributes exactly one per-operand sub-key
   and is counted exactly once in `n_operands`. *Test:*
   `test_classify_operand_canonical_order`.
-- **KISS-CLASSIFY-6.6-0015** — Outside a dense-contraction (`gem`) cell, a
+- **KISS-CLASSIFY-6.6-0015** — Outside a dense-contraction (`ctr`) cell, a
   `structure_key` keys only the primary (operand-0) dtype (§6.6-0005); per-operand
-  sub-keys (§6.6-0007) carry **no** dtype, so two non-`gem` cells that differ only in a
+  sub-keys (§6.6-0007) carry **no** dtype, so two non-`ctr` cells that differ only in a
   non-primary operand's dtype derive byte-identical keys. This collision is
-  **deliberate** for non-`gem` cells at this schema version: an implementation MUST NOT
-  vary a non-`gem` derived key with any non-primary operand's dtype and MUST NOT add a
-  per-operand dtype to a sub-key. **For `gem` cells this is superseded** — the sk3
+  **deliberate** for non-`ctr` cells at this schema version: an implementation MUST NOT
+  vary a non-`ctr` derived key with any non-primary operand's dtype and MUST NOT add a
+  per-operand dtype to a sub-key. **For `ctr` cells this is superseded** — the sk3
   contraction field (§6.7-0006) carries the weight, accumulator, and output dtype
-  coordinates explicitly, so mixed-precision `gem` cells are distinguished in-key and no
-  longer collide. (Agreeing secondary-operand dtypes for non-`gem` cells remains the
+  coordinates explicitly, so mixed-precision `ctr` cells are distinguished in-key and no
+  longer collide. (Agreeing secondary-operand dtypes for non-`ctr` cells remains the
   caller's responsibility outside the admissibility key; see umbrella §8.2 and the registration
   obligation §6.6-0018.) *Test:* `test_classify_secondary_dtype_unkeyed`.
 - **KISS-CLASSIFY-6.6-0016** — The M, N, and K axis roles of a dense-contraction
@@ -1215,29 +1254,31 @@ form (§6.7-0011).
   extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). *Test:*
   `test_classify_contraction_axis_roles`.
 - **KISS-CLASSIFY-6.6-0017** — The reduce field (§6.6-0009) MUST carry a non-`-`
-  value **only** for a **reduction cell**, defined as a cell whose `op_family` is
-  `red` (§6.5-0006); for every cell whose `op_family` is not `red` the reduce field
-  MUST be `-`. This pins the "reduction cell" referent used in §6.5-0009(b): the
-  vector-width `v1` rule of §6.5-0009(b) applies to a reduced innermost axis of a
-  `red` cell (a scan cell has no reduce field and follows the ordinary §6.5-0009(c) ladder). At
-  this schema version an op family that reduces along an axis without being `red` —
-  softmax (`sft`), normalization (`nrm`), attention (`att`), or loss (`los`) — MUST
-  carry the reduce field `-` and does not key its reduction axis (a disclosed
-  limitation, analogous to §6.6-0015). A reader MUST reject, with a typed decline
-  (§7.1-0002), a token whose `op_family` is not `red` yet whose reduce field is not
-  `-`. *Test:* `test_classify_reduce_field_op_family_gated`.
+  value **if and only if** the cell is a **reduction cell**, defined as a cell whose
+  `cell_class` is `rdc` (§6.5-0006, §6.5-0015); for every cell whose class is not
+  `rdc` the reduce field MUST be `-`. This pins the "reduction cell" referent used in
+  §6.5-0009(b): the vector-width `v1` rule of §6.5-0009(b) applies to a reduced
+  innermost axis of an `rdc` cell (a scan cell has no reduce field and follows the
+  ordinary §6.5-0009(c) ladder). At this schema version an op that reduces along an
+  axis without presenting a keepdim-folded output — a softmax, a normalization, a loss —
+  declares no reduced-axis set, so it is not an `rdc` cell and MUST carry the reduce
+  field `-` and does not key its reduction axis (a disclosed limitation, analogous to
+  §6.6-0015). A reader MUST reject, with a typed decline (§7.1-0002), a token whose
+  `cell_class` is not `rdc` yet whose reduce field is not `-`, and one whose class is
+  `rdc` yet whose reduce field is `-` (the empty reduced set is the not-a-reduction
+  case, §6.6-0009). *Test:* `test_classify_reduce_field_cell_class_gated`.
 - **KISS-CLASSIFY-6.6-0018** — Because a `structure_key` omits several binding-only
-  facts (and, for non-`gem` cells, keys only the primary dtype, §6.6-0015), a provider
+  facts (and, for non-`ctr` cells, keys only the primary dtype, §6.6-0015), a provider
   MUST NOT register two distinct specialization cells whose derived `structure_key`
   tokens are byte-identical; such cells MUST be disambiguated out-of-band (outside the
   admissibility key) so that a consumer's byte-exact lookup (§6.6-0001) resolves to
   exactly one cell and neither implementation silently overwrites the other. (This is
   the provider-side enforcement of the umbrella §8.2 caller-responsibility rule.) The
-  mixed-precision `gem` collision that formerly forced this out-of-band step — two GEMMs
+  mixed-precision `ctr` collision that formerly forced this out-of-band step — two GEMMs
   differing only in weight / accumulator / output dtype — is resolved in-key by the sk3
-  contraction coordinates (§6.7-0006), so such `gem` cells are now distinct by their
+  contraction coordinates (§6.7-0006), so such `ctr` cells are now distinct by their
   tokens. *Test:* `sk4_mixed_precision_fp8_disambiguated`.
-- **KISS-CLASSIFY-6.6-0019** — The **weight role** of a dense-contraction (`gem`)
+- **KISS-CLASSIFY-6.6-0019** — The **weight role** of a dense-contraction (`ctr`)
   cell — the operand whose dtype the `contraction` field's `<wdt>` coordinate
   (§6.7-0006) carries — MUST be supplied by the caller as a role hint (§6.6-0012). An
   implementation MUST NOT infer the weight operand from operand **position**, and MUST
@@ -1306,19 +1347,21 @@ The token is the stable string serialization of a `structure_key` — the wire f
 KISS-Announce carries opaquely. Its grammar is `|`-separated fields:
 
 ```
-sk<version> | <op_family> | <dtype> | <target> | <index_width> | <work_class>
+sk<version> | <cell_class> | <dtype> | <target> | <index_width> | <work_class>
             | r<rank> | <operand0>;<operand1>;… | <reduce>
             [ | c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp> ]
 ```
 
-where each `<operandI>` is `<contig>/<bcasthex>/<vec>/<div>/<flip>` and:
+where each `<operandI>` is `<contig>/<bcasthex>/<vec>/<div>/<flip>[/<dq>]` and:
 `<contig>` ∈ `{co, ic, st, br}`; `<bcasthex>` is the 2-lowercase-hex-digit broadcast
 mask (§6.7-0010); `<vec>` ∈ `{v1, v2, v4, v8}`; `<div>` ∈ `{d16, d8, d4, d2, da}`;
-`<flip>` ∈ `{f, r}` (`r` = flipped). `<reduce>` is exactly one of `-`
+`<flip>` ∈ `{f, r}` (`r` = flipped); `<dq>` ∈ `{dl, dc}` (`linear`, `codebook`,
+§6.3-0009a) and is present **iff** the operand carries a `quant` record. `<reduce>`
+is exactly one of `-`
 (none / not-a-reduction), `rall` (all-axes reduction), `rlast` (trailing-axis
 reduction), or `x<hex>` (an explicit keepdim bitmask, 2 lowercase hex digits, for
 any other reduced-axis set) — the four distinctly-encoded values of §6.6-0009. The
-optional final field (present only for a dense-contraction `gem` cell) is
+optional final field (present only for a dense-contraction `ctr` cell) is
 `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`: a geometry group (the M/N/K size
 codes `{t, s, m, l}`, the K-divisibility code, and a conditionally-present batch
 size-class `b<class>`) followed by a precision group (the weight / accumulator / output
@@ -1330,21 +1373,26 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   token with any other field count with a typed decline. *Test:*
   `a1_binary_two_operands`.
 - **KISS-CLASSIFY-6.7-0002** — Field 0 MUST be `sk` immediately followed by the
-  canonical decimal schema version (`sk4` at this maturity); a reader MUST reject a
+  canonical decimal schema version (`sk5` at this maturity); a reader MUST reject a
   token whose field 0 is not `sk` followed by a supported version, including a
   non-canonical leading-zero spelling (e.g. `sk04`) — the malformed-field wall. The
   canonical-form check MUST precede any numeric parse (a bare `parse::<u32>()` accepts
   `sk04` as `4`); the recognized-but-unaccepted-version case is the distinct
   §6.7-0015 signpost. *Test:* `test_classify_token_version_prefix`.
-- **KISS-CLASSIFY-6.7-0003** — Fields 1–6 MUST be, in order, the op-family code
+- **KISS-CLASSIFY-6.7-0003** — Fields 1–6 MUST be, in order, the cell-class code
   (§6.5-0006), the dtype token (§6.1), the target_capability string (§6.8), the
   index-width code (`ix32`/`ix64`, §6.5-0005 — distinct from the `i32`/`i64` dtype
   tokens), the work-class code (`warp`/`block`/`grid`), and `r` immediately followed
   by the decimal iteration rank. *Test:* `a1_unary_f16_v8`.
 - **KISS-CLASSIFY-6.7-0004** — Field 7 MUST be the per-operand sub-keys joined by
   `;`, each formatted `<contig>/<bcasthex>/<vec>/<div>/<flip>` with the codes of
-  §6.5 and §6.6-0007, in the canonical operand order of §6.6-0014; the number of
-  `;`-separated entries MUST equal `n_operands` and MUST NOT exceed `MAX_OPERANDS`.
+  §6.5 and §6.6-0007, followed by `/<dq>` **iff** the operand carries a `quant`
+  record (`dl` for `linear`, `dc` for `codebook`, §6.3-0009a), in the canonical
+  operand order of §6.6-0014; the number of `;`-separated entries MUST equal
+  `n_operands` and MUST NOT exceed `MAX_OPERANDS`. A reader MUST reject a sub-key with
+  any part count other than five or six, a sixth part outside `{dl, dc}`, and (since
+  `quant` is a binding fact) MUST NOT infer from a missing sixth part anything about
+  the operand's quantization.
   *Test:* `a1_elementwise_with_broadcast_operand`.
 - **KISS-CLASSIFY-6.7-0005** — Field 8 MUST be exactly one of the four
   distinctly-encoded reduce values of §6.6-0009: `-` (none / not-a-reduction),
@@ -1366,7 +1414,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   cannot exist for the rank are separable producer bugs, and a reader MUST keep the two
   declines discriminable (the `noncanonical_reduce_*` and `out_of_range_reduce_mask_r2`
   decline vectors). *Test:* `a1_reduction_all_axes`.
-- **KISS-CLASSIFY-6.7-0006** — When present (dense-contraction `gem` cells only,
+- **KISS-CLASSIFY-6.7-0006** — When present (dense-contraction `ctr` cells only,
   §6.7-0001), field 9 MUST be `c` followed by the three M/N/K size-class codes (each ∈
   `{t, s, m, l}`), then `/`-separated: the K-divisibility code (∈ `{d16, d8, d4, d2,
   da}`); a **conditionally-present** batch coordinate `b<class>` (`<class>` ∈ `{t, s, m,
@@ -1385,8 +1433,10 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   same accumulator dtype the contract declares as `accumulation_type` (KISS-CONTRACT
   §6.8-0011). *Test:* `a1_dense_contraction_cuda`.
 - **KISS-CLASSIFY-6.7-0007** — The token codec MUST be **spelling-keyed, not
-  discriminant-keyed**: adding a new dtype code or op-family code MUST NOT change
-  the bytes of any pre-existing token and MUST NOT bump the schema version. *Test:*
+  discriminant-keyed**: adding a new dtype code MUST NOT change the bytes of any
+  pre-existing token and MUST NOT bump the schema version. (A new *cell class* is
+  not such an addition: the class is derived, so a new class would change the class
+  of cells that derive `oth` or `ew*` today — §6.5-0006.) *Test:*
   `test_classify_token_codec_additive`.
 - **KISS-CLASSIFY-6.7-0008** — `to_token` and `from_token` MUST round-trip: for
   every `structure_key` whose fields each satisfy the domains and derivations of
@@ -1395,7 +1445,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   `test_classify_token_roundtrip`.
 - **KISS-CLASSIFY-6.7-0009** — A reader MUST reject, with a typed decline and
   without a panic, abort, crash, hang, or out-of-bounds read, any token with a
-  malformed field, an unknown op-family or dtype code, an out-of-range mask, or a
+  malformed field, an unknown cell-class or dtype code, an out-of-range mask, or a
   length outside `[1, MAX_STRUCTURE_KEY_LEN]`. *Test:*
   `reject_wrong_field_count`.
 - **KISS-CLASSIFY-6.7-0010** — Every hexadecimal mask in a token — the per-operand
@@ -1415,8 +1465,8 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   `test_classify_token_is_only_wire_form`.
 - **KISS-CLASSIFY-6.7-0012** — A float **reduction or scan** tolerance-cell (a `reduce` or
   `prefix_scan` over a float `sum`/`prod`, KISS-OPS §6.17-0008) is keyed on its
-  accumulator dtype, but the current key grammar carries an accumulator coordinate ONLY for
-  dense-contraction `gem` cells (the field-9 `<acc>` of §6.7-0006); the non-contraction key
+  accumulator dtype, but the grammar before sk4 carried an accumulator coordinate ONLY for
+  dense-contraction `ctr` cells (the field-9 `<acc>` of §6.7-0006); the non-contraction key
   (§6.7-0001) has **no** accumulator coordinate. This clause states the **forward
   requirement**: a non-contraction reduction/scan cell whose accumulator dtype differs from
   its compute dtype MUST carry an accumulator-dtype coordinate drawn from the closed §6.1
@@ -1430,13 +1480,13 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   `test_classify_reduction_accumulator_coordinate`.
 - **KISS-CLASSIFY-6.7-0013** — The non-contraction precision field `(acc + mp)` (sk4,
   realizing §6.7-0012) is the **optional-trailing** precision field of a non-contraction cell,
-  spelled **gem-symmetrically** as `<acc>/<mp>` — a §6.1 accumulator dtype and the
-  math-precision code `<mp>` (the same codes as the `gem` contraction group's `<mp>`,
+  spelled **contraction-symmetrically** as `<acc>/<mp>` — a §6.1 accumulator dtype and the
+  math-precision code `<mp>` (the same codes as the `ctr` contraction group's `<mp>`,
   §6.7-0006), `/`-delimited. It occupies the **same optional-trailing token slot** the
-  contraction group occupies for `gem`; a cell carries **at most one** precision field — a
-  `gem` cell the contraction group, a non-contraction cell the `(acc + mp)` field — and the two
+  contraction group occupies for `ctr`; a cell carries **at most one** precision field — a
+  `ctr` cell the contraction group, a non-contraction cell the `(acc + mp)` field — and the two
   **never coexist**, so `from_token`'s nine-or-ten-field dispatch is resolved unambiguously by
-  the op-family code. The field:
+  the cell-class code. The field:
   (a) is **emitted iff at least one** of {accumulator dtype ≠ compute dtype, `<mp>` ≠ the
   cell's default math-precision} holds — that default being the KISS-Ops-owned default of
   KISS-OPS-6.17-0001 (a computation is bit-stable unless a reduced-mantissa variant is
@@ -1474,8 +1524,14 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   `c64` decodes as pair-`f64` under sk3 and pair-`f32` under sk4 (§6.1-0012), so a
   reader that loosened the version match would silently decode a cross-vocabulary
   token under the wrong dtype semantics. The KISS **reference** codec ships **no**
-  `sk3` arm; it therefore declines every non-`sk4` version, naming the cause per
-  §6.7-0015. *Test:* `test_classify_no_sk3_decoder_arm`.
+  `sk3` arm; it therefore declines every non-`sk5` version, naming the cause per
+  §6.7-0015. **At `sk5` the same policy applies one step on:** `sk3` is no longer
+  decodable at all (the arm's scheduled retirement), a bounded `sk4` arm MAY be
+  retained through the `sk5` series, and it MUST NOT be accepted at `sk6` or later.
+  A persisted `sk4` token MUST be re-derived, not assumed decodable: the `cell_class`
+  field's vocabulary changed (the twenty-four op-family codes are gone), so no
+  `sk4` token is meaningful under `sk5` bytes. *Test:*
+  `test_classify_no_sk3_decoder_arm`.
 - **KISS-CLASSIFY-6.7-0015** — **A well-formed token at an unaccepted schema version
   is a distinct, recognized decline — not a malformed-token decline.** On the
   §6.1-0001 recognized-vs-unknown model (a reserved dtype is *recognized but not
@@ -1998,10 +2054,10 @@ separating a registered namespace from that namespace's capability-set token.
 
 ### 7.2 Extension model
 
-- **KISS-CLASSIFY-7.2-0001** — Adding a new dtype code, op-family code, or
-  `target_capability` namespace MUST be an **additive** extension that leaves every
+- **KISS-CLASSIFY-7.2-0001** — Adding a new dtype code or `target_capability`
+  namespace MUST be an **additive** extension that leaves every
   pre-existing `structure_key` token byte-identical and does not bump the schema
-  version (§6.7-0007); such an addition MUST originate from a merged change to the
+  version (§6.7-0007); adding a **cell class** is not additive (§6.5-0006); such an addition MUST originate from a merged change to the
   PR-gated ThinkersJournal registry. *Test:* `test_classify_extension_is_additive`.
 - **KISS-CLASSIFY-7.2-0002** — A predicate-axis change that is **not** additive
   (removing, reordering, or altering the meaning of an existing `structure_key`
@@ -2062,7 +2118,7 @@ a party may do one without the other (umbrella §3.6).
 ## 8. Versioning & Lifecycle
 
 KISS-Classify tracks the umbrella's **two version axes**: the wire/ABI *structure-key
-schema version* (`STRUCTURE_KEY_VERSION`, currently `4`) and the published
+schema version* (`STRUCTURE_KEY_VERSION`, currently `5`) and the published
 reference-crate *semver*. They move independently. A third, Classify-local handle —
 `DTYPE_LAYOUT_VERSION` (§8-0007) — separately tracks the pinned dtype bit **layouts** of
 §6.1, on its own axis independent of both.
@@ -2076,8 +2132,8 @@ reference-crate *semver*. They move independently. A third, Classify-local handl
   or a constant change to `MAX_RANK` / `MAX_OPERANDS` / `MAX_STRUCTURE_KEY_LEN`)
   MUST bump the `structure_key` schema version. *Test:*
   `test_classify_wire_change_bumps_version`.
-- **KISS-CLASSIFY-8-0003** — Assigning a previously-unused dtype code, op-family
-  code, or target namespace MUST NOT bump the schema version (additive,
+- **KISS-CLASSIFY-8-0003** — Assigning a previously-unused dtype code or target
+  namespace MUST NOT bump the schema version (additive,
   spelling-keyed; §6.7-0007). *Test:* `test_classify_additive_no_version_bump`.
 - **KISS-CLASSIFY-8-0004** — KISS-Classify MUST NOT be promoted from Draft to
   Frozen until at least two structurally dissimilar implementations — **including at
@@ -2154,7 +2210,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 |---|---|
 | KISS-CLASSIFY-6.0-0001 | `test_classify_determinism_class_exact_byte` |
 | KISS-CLASSIFY-6.0-0002 | `test_classify_special_value_bit_patterns` |
-| KISS-CLASSIFY-6.1-0001 | `accepts_every_closed_op_family_and_dtype` |
+| KISS-CLASSIFY-6.1-0001 | `accepts_every_closed_cell_class_and_dtype` |
 | KISS-CLASSIFY-6.1-0002 | `test_classify_dtype_bit_widths` |
 | KISS-CLASSIFY-6.1-0003 | `test_classify_dtype_numeric_kinds` |
 | KISS-CLASSIFY-6.1-0004 | `test_classify_dtype_token_spelling` |
@@ -2176,7 +2232,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0005 | `test_classify_alignment_is_bytes` |
 | KISS-CLASSIFY-6.3-0006 | `test_classify_operand_dtype_in_set` |
 | KISS-CLASSIFY-6.3-0007 | `test_classify_layout_tag_is_derived` |
-| KISS-CLASSIFY-6.3-0008 | `test_classify_op_family_is_cell_level` |
+| KISS-CLASSIFY-6.3-0008 | `test_classify_cell_class_is_cell_level` |
 | KISS-CLASSIFY-6.3-0009 | `test_classify_quant_carried_not_keyed` |
 | KISS-CLASSIFY-6.3-0009a | `test_classify_dequant_form_keyed` |
 | KISS-CLASSIFY-6.3-0010 | `test_classify_symbolic_extent_flags_live_length` |
@@ -2191,7 +2247,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0003 | `test_classify_vec_width_enum` |
 | KISS-CLASSIFY-6.5-0004 | `test_classify_div_bucket_enum` |
 | KISS-CLASSIFY-6.5-0005 | `test_classify_index_width_boundary` |
-| KISS-CLASSIFY-6.5-0006 | `reject_unknown_op_family` |
+| KISS-CLASSIFY-6.5-0006 | `reject_unknown_cell_class` |
 | KISS-CLASSIFY-6.5-0007 | `test_classify_work_class_element_count` |
 | KISS-CLASSIFY-6.5-0008 | `test_classify_size_class_enum` |
 | KISS-CLASSIFY-6.5-0009 | `test_classify_vec_width_derivation` |
@@ -2200,6 +2256,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.5-0012 | `test_classify_div_bucket_derivation` |
 | KISS-CLASSIFY-6.5-0013 | `test_classify_vec_width_unit_stride` |
 | KISS-CLASSIFY-6.5-0014 | `test_classify_layout_own_axes_mask_frame_padded` |
+| KISS-CLASSIFY-6.5-0015 | `test_classify_cell_class_derivation` |
 | KISS-CLASSIFY-6.6-0001 | `test_classify_structure_key_is_admissibility_predicate` |
 | KISS-CLASSIFY-6.6-0002 | `test_classify_structure_key_is_not_op_identity` |
 | KISS-CLASSIFY-6.6-0003 | `test_classify_structure_key_extent_free` |
@@ -2216,7 +2273,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0014 | `test_classify_operand_canonical_order` |
 | KISS-CLASSIFY-6.6-0015 | `test_classify_secondary_dtype_unkeyed` |
 | KISS-CLASSIFY-6.6-0016 | `test_classify_contraction_axis_roles` |
-| KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_op_family_gated` |
+| KISS-CLASSIFY-6.6-0017 | `test_classify_reduce_field_cell_class_gated` |
 | KISS-CLASSIFY-6.6-0018 | `sk4_mixed_precision_fp8_disambiguated` |
 | KISS-CLASSIFY-6.6-0019 | `test_classify_weight_role_hint` |
 | KISS-CLASSIFY-6.6-0020 | `test_classify_cell_mates_are_not_substitutable` |
@@ -2291,7 +2348,7 @@ cannot drift.
   cosignatories — any project building a consumer, provider, emitter, or lifter that
   reads the dtype set, operand descriptors, or `structure_key` — before deciding a
   cross-party-visible change.
-- **Steward:** ThinkersJournal hosts the spec, the dtype/op-family/namespace
+- **Steward:** ThinkersJournal hosts the spec, the dtype/namespace
   registries (PR-gated, published as versioned machine-readable files bundled with
   the KISS-Conform suite), and the conformance registry; it free-certifies
   self-certified implementations on request as resources permit.
@@ -2322,16 +2379,16 @@ byte-exact-match / additivity tests. Each is shown as the exact bytes on the wir
 left to right. Each vector **pins its complete derivation input** so a foreign
 implementer can reproduce the token deterministically per §6.6-0011: every operand is
 given as `(extents; strides; dtype; alignment)` in canonical order (§6.6-0014), plus
-the cell's `op_family` and any role hints. (Recall: index-width token codes are
+the cell's declared role hints (from which its `cell_class` is derived, §6.5-0015). (Recall: index-width token codes are
 `ix32` / `ix64`, distinct from the `i32` / `i64` dtype tokens, §6.5-0005.)
 
-- **Binary elementwise add** — `op_family = bin`; three operands (`in`, `in`, `out`),
+- **Binary elementwise add** — `cell_class = ew2`; three operands (`in`, `in`, `out`),
   each `([128,256]; [256,1]; f32; 256)`; no role hints. Each operand is contiguous
   (`co`), no broadcast (`00`), vectorizes to `v4` (inner 256, `4·4 = 16 ≤ 16` byte
   cap, `16 ≤ A = 256`), inner extent 256 divisible by 16 (`d16`), unflipped (`f`).
   Max touched offset `256·127 + 1·255 = 32767 < 2³¹` ⇒ `ix32`; frame element count
   `128·256 = 32768 > 1024` ⇒ `grid`; rank 2; reduce field `-` (not a reduction):
-  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
+  `sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
   This vector is the **canonical derivation golden vector** for
   `test_classify_structure_key_derivation_canonical` — the full input tuple above maps
   to exactly these bytes.
@@ -2339,41 +2396,41 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   `([128,256]; [0,1]; f32; 256)` (stride 0 on axis 0), all else unchanged. Operand 1
   becomes layout `broadcast` (`br`), broadcast mask bit 0 set (`01`), scalar width
   (`v1`, §6.5-0009(a)); its inner extent 256 still buckets `d16`:
-  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
-- **Unary elementwise** — `op_family = une`; two operands (`in`, `out`), each
+  `sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-`
+- **Unary elementwise** — `cell_class = ew1`; two operands (`in`, `out`), each
   `([64,128]; [128,1]; f16; 256)`; no role hints. `v8` (`8·2 = 16 ≤ 16` byte cap,
   `16 ≤ A = 256`, 8 divides inner 128); inner 128 buckets `d16`. Max offset
   `128·63 + 1·127 = 8191 < 2³¹` ⇒ `ix32`; `64·128 = 8192 > 1024` ⇒ `grid`; rank 2:
-  `sk4|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
+  `sk5|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-`
 - **Reduction, keepdim, `[4,8] → [4,1]`** (trailing-axis reduce ⇒ reserved `rlast`,
-  not a bitmask) — `op_family = red`, caller op category `reduction`; two operands,
+  not a bitmask) — `cell_class = rdc` (the caller declares the reduced-axis set); two operands,
   `in = ([4,8]; [8,1]; f32; 256)` and `out = ([4,1]; [1,1]; f32; 256)`. The input's
   innermost axis (extent 8) is reduced ⇒ `v1` (§6.5-0009(b)) while its own inner
   extent 8 still buckets `d8`; the output's size-1 inner axis buckets `da`. Max offset
   `31 < 2³¹` ⇒ `ix32`; frame `4·8 = 32 ≤ 32` ⇒ `warp`; rank 2:
-  `sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
 - **Reduction, keepdim, `[4,8] → [1,1]`** (all-axes reduce ⇒ reserved `rall`) — same
   inputs as above but `out = ([1,1]; [1,1]; f32; 256)` and **every** axis reduced.
   Operand-0 (the input) keeps its own inner extent 8 ⇒ bucket `d8` (reduction changes
   only vector width, §6.5-0009, never the divisibility bucket); the `[1,1]` output
   buckets `da`:
-  `sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
 - **Rank-1 reduction, keepdim, `[8] → [1]`** (the single axis is simultaneously
   all-axes and the trailing axis; by the §6.6-0009 tiebreak `rall` takes precedence) —
-  `op_family = red`; `in = ([8]; [1]; f32; 256)`, `out = ([1]; [1]; f32; 256)`. Inner
+  `cell_class = rdc`; `in = ([8]; [1]; f32; 256)`, `out = ([1]; [1]; f32; 256)`. Inner
   extent 8 ⇒ `d8`; reduced innermost ⇒ `v1`; frame `8 ≤ 32` ⇒ `warp`; rank 1;
   reduce field `rall` (never `rlast`):
-  `sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
 - **Reduction, keepdim, rank-4 reducing axes 1 and 3** (neither all-axes nor
   trailing ⇒ explicit keepdim bitmask `0x0a`, exercising a two-digit lowercase hex ≥
-  `0x0a`) — `op_family = red`; `in = ([2,4,3,5]; [60,15,5,1]; f32; 256)`,
+  `0x0a`) — `cell_class = rdc`; `in = ([2,4,3,5]; [60,15,5,1]; f32; 256)`,
   `out = ([2,1,3,1]; [3,3,1,1]; f32; 256)`. Innermost axis (extent 5, odd) buckets
   `da` and is reduced ⇒ `v1`. Max offset `60·1 + 15·3 + 5·2 + 1·4 = 119 < 2³¹` ⇒
   `ix32`; frame `2·4·3·5 = 120` (`32 < 120 ≤ 1024`) ⇒ `block`; rank 4; reduce mask
   `x0a` (bits 1 and 3):
-  `sk4|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
+  `sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
 - **Reduction with a deviating accumulator (sk4, §6.7-0013)** — a trailing-axis `f16`
-  reduction `[4,8] → [4,1]` that accumulates in `f32`. `op_family = red`, dtype `f16`;
+  reduction `[4,8] → [4,1]` that accumulates in `f32`. `cell_class = rdc`, dtype `f16`;
   `in = ([4,8]; [8,1]; f16; 256)`, `out = ([4,1]; [1,1]; f16; 256)`. Innermost axis
   reduced ⇒ `v1`; input inner extent 8 ⇒ `d8`, output inner extent 1 ⇒ `da`; frame
   `4·8 = 32` ⇒ `warp`; rank 2; reduce `rlast`. The accumulator dtype (`f32`) **differs**
@@ -2382,29 +2439,59 @@ the cell's `op_family` and any role hints. (Recall: index-width token codes are
   spells both slots). The same cell accumulating in `f16` (accumulator == compute) omits
   the field entirely (rule c), yielding the nine-field token without the trailing
   `|f32/st`; a redundant `|f16/st` on that cell is rejected (rule d):
-  `sk4|red|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st`
-- **In-place binary accumulate** (`op_family = bin`) — an operand that is both read
+  `sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st`
+- **In-place binary accumulate** (`cell_class = ew2`) — an operand that is both read
   and written appears **exactly once**, classified as an input (§6.6-0014). The
   accumulator `acc = ([128,256]; [256,1]; f32; 256)` (in-place) and addend
   `b = ([128,256]; [256,1]; f32; 256)` yield two operands (`acc` is **not** repeated
   as an output), `n_operands = 2`, operand-0 = `acc`:
-  `sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
-- **Dense GEMM skinny-decode cell** `[8,4096]·[4096,4096]→[8,4096]` — `op_family =
-  gem`; three operands `lhs = ([8,4096]; [4096,1]; f32; 256)`,
+  `sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
+- **Extent-1 operand, one tensor, one token (sk5, §6.6-0008)** — the §A.1 add cell with
+  operand 1 given as `([1,256]; [256,1]; f32; 256)` (the unit axis records stride `256`, as
+  a slice of a wider buffer does) — or as `([1,256]; [0,1]; f32; 256)` (a broadcast view): the
+  unit axis is never stepped, so both are the same tensor and both set mask bit 0, because
+  the **frame** extent at axis 0 is `128 > 1`. Operand 1's layout is `co` (a unit axis is not
+  an active non-unit axis, §6.5-0002), its own innermost axis is forward-unit with extent
+  256, so `v4`/`d16`: sub-key `co/01/v4/d16/f`. At `sk4` the first spelling gave mask `00`
+  and the second `01`:
+  `sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/01/v4/d16/f;co/00/v4/d16/f|-`
+- **Three inputs, derived `ew3`** — `cell_class = ew3`; three inputs and one output, each
+  `([128,256]; [256,1]; f32; 256)`, no role hints: every operand has the frame extents, the
+  cell is pointwise by shape, and §6.5-0015 rule (4) takes the arity from the three inputs.
+  `sk5|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
+- **Indexed access, derived `ndx`** — `cell_class = ndx`; a table, an index operand and an
+  output, each shown as the contiguous 256-wide `f32` sub-key; the caller declares the
+  index-operand slot (§6.6-0012). Rule (2) of §6.5-0015 decides ahead of the shape rule, so
+  the class does not depend on the three extents:
+  `sk5|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-`
+- **A cell no rule claims, derived `oth`** — `cell_class = oth`; `in = ([128,256]; [256,1];
+  f32; 256)`, `out = ([128,128]; [128,1]; f32; 256)`, no role hints and no declared reduced
+  set. The output does not have the frame extents (`128` against `256`), so the cell is not
+  pointwise (§6.5-0015 rule (4)) and no declared fact applies — rule (5):
+  `sk5|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-`
+- **Quantized weight, `dequant_form` keyed (sk5, §6.3-0009a)** — the int4 GEMM cell whose
+  operand 0 is the weight and carries a `quant` record: with `dequant_form = linear` its
+  sub-key gains the sixth component `dl`, with `codebook` it gains `dc`; the two are
+  different cells (no scale reproduces a codebook with a linear dequant), and an operand with
+  no `quant` record keeps the five-component form:
+  `sk5|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st`
+  `sk5|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st`
+- **Dense GEMM skinny-decode cell** `[8,4096]·[4096,4096]→[8,4096]` — `cell_class =
+  ctr`; three operands `lhs = ([8,4096]; [4096,1]; f32; 256)`,
   `rhs = ([4096,4096]; [4096,1]; f32; 256)`, `out = ([8,4096]; [4096,1]; f32; 256)`;
   role hints `lhs = [M,K]`, `rhs = [K,N]`, `out = [M,N]` (§6.6-0016). M = 8 (tiny
   `t`), N = K = 4096 (large `l`), K divisible by 16 (`d16`). This f32 GEMM is
-  non-batched with f32 weight/accumulator/output and bit-stable compute, so the sk4
+  non-batched with f32 weight/accumulator/output and bit-stable compute, so the sk5
   precision group is `/f32/f32/f32/st` and the contraction field is
   `ctll/d16/f32/f32/f32/st`. Max offset (rhs) `4096·4095 + 1·4095 = 16777215 < 2³¹` ⇒
   `ix32`; work-class **frame-max** (§6.5-0010, the §6.6-0013 per-axis maximum across
   operands — **not** the output frame) `max(8,4096,8)·max(4096,4096,4096) = 4096·4096
   = 16777216 > 1024` ⇒ `grid`; rank 2:
-  `sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `sk5|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 - **The same GEMM cell built for a Vulkan target** — a **different** cell that does
   not match the CUDA one (byte-exact target rule, §6.8-0002); inputs identical except
   `target = vulkan:sg64.ops-abr.arith-f16.cm-none`:
-  `sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+  `sk5|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 
   > This is the re-mint anticipated when the vector was moved off
   > `vulkan:spirv1.6`: it now carries a **registered** namespace with a published
@@ -2426,12 +2513,12 @@ because only one class is a shared obligation:
 > **(a) `vulkan` GEMM cell, wave64-capable device — capability-specific.** The
 > same GEMM inputs as A.1, targeted at a device whose default subgroup width is
 > 64:
-> `sk4|gem|f32|vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk5|ctr|f32|vulkan:sg64.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > **(b) The same cell on a wave32-only device — capability-specific.** Differs
 > from (a) in exactly one field of the capability-set, and is therefore a
 > different cell:
-> `sk4|gem|f32|vulkan:sg32.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk5|ctr|f32|vulkan:sg32.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > (a) and (b) together are the point: they are two devices *and* two cells, and
 > no single encoding-envelope token could separate them. A measured consumer
@@ -2449,7 +2536,7 @@ because only one class is a shared obligation:
 >
 > **(d) Width-agnostic cell — capability-specific.** A kernel that reads the
 > subgroup width at runtime is a distinct artifact from either pinned variant:
-> `sk4|gem|f32|vulkan:sgdyn.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
+> `sk5|ctr|f32|vulkan:sgdyn.ops-abclqrstvw.arith-dot8-f16-i8-st16-st8.cm-16-16-16-f16-f16-f32-f32|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st`
 >
 > **(e) Minimal `vulkan` cell — codec-neutral.** Every field at its empty
 > spelling, exercising the "no omissible fields" rule:
@@ -2461,17 +2548,18 @@ reject tests and the foreign-reader freeze gate includes: a token with 8 fields
 unaccepted schema version — `sk9`, or a real persisted `sk3` — which is the
 **recognized-other-schema signpost** (`UnsupportedSchemaVersion`, naming the version,
 §6.7-0015), *distinct* from the non-canonical leading-zero `sk04`, which is the
-**malformed-field wall** (`BadVersionPrefix`); `sk4` is the current supported
+**malformed-field wall** (`BadVersionPrefix`); `sk5` is the current supported
 version; an unknown dtype code
-(`sk4|bin|f99|cuda:sm89|…`); an unknown op-family code (`sk4|zzz|f32|…`); an
+(`sk5|ew2|f99|cuda:sm89|…`); an unknown cell-class code (`sk5|zzz|f32|…`) — and a
+well-formed `sk5` token still carrying a retired op-family code (`sk5|gem|f32|…`); an
 over-`MAX_OPERANDS` operand field (9 sub-keys); a token exceeding
 `MAX_STRUCTURE_KEY_LEN` (4096 bytes); an uppercase-hex mask (`…|x0A`, forbidden by
 §6.7-0010); an unrecognized reduce-field spelling (`…|rmid`, `…|x` with no digits,
 or an all-axes set spelled as a bitmask instead of the required `rall`, forbidden by
 §6.6-0009 / §6.7-0005); a rank-1 reduction spelled `rlast` instead of the required
-`rall` (the tiebreak of §6.6-0009); a non-`red` cell carrying a non-`-` reduce field
-(forbidden by §6.6-0017); a `gem` cell omitting its mandatory contraction field
-(forbidden by §6.6-0010) — under sk4 a **non**-`gem` cell's optional-trailing field is
+`rall` (the tiebreak of §6.6-0009); a non-`rdc` cell carrying a non-`-` reduce field, and an `rdc` cell whose reduce
+field is `-` (both forbidden by §6.6-0017); a `ctr` cell omitting its mandatory contraction field
+(forbidden by §6.6-0010) — under sk5 a **non**-`ctr` cell's optional-trailing field is
 the `(acc+mp)` field (§6.7-0013), so a contraction-shaped payload there is simply a
 malformed `(acc+mp)` field, not a mis-placed contraction; a non-contraction `(acc+mp)`
 field spelled in the forbidden **all-default** form (accumulator == compute dtype AND
@@ -2505,7 +2593,7 @@ provenance and examples only; no normative clause names any project.
 ## Appendix B — Glossary (informative)
 
 - **admissibility predicate** — a total function from the derivation inputs
-  (operand descriptors + op category + target + role hints, §6.6-0012) to a
+  (operand descriptors + target + role hints, §6.6-0012) to a
   `structure_key`; a kernel admits an invocation iff the derived key byte-matches
   (§6.6-0001).
 - **capability-set** — the right component of `<namespace>:<capability-set>`; owned
@@ -2526,8 +2614,9 @@ provenance and examples only; no normative clause names any project.
 - **namespace** — the registered left component of a `target_capability`; registered
   by the steward.
 - **numeric kind** — one of `float`, `int`, `uint`, `bool`, `complex`.
-- **op_family_tag (op category)** — the coarse op category component of a
-  `structure_key`; distinct from a KISS-Ops op name.
+- **cell class** — the derived structural class component of a `structure_key`
+  (`ctr`, `ndx`, `rdc`, `ew1`, `ew2`, `ew3`, `oth`; §6.5-0015); distinct from a
+  KISS-Ops op name and from any op family.
 - **op name (KISS-Ops)** — the *semantic* identity of a computation; owned by
   KISS-Ops, **not** by KISS-Classify.
 - **primary dtype** — operand-0's dtype; the `structure_key.dtype` field.

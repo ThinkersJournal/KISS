@@ -1,5 +1,10 @@
 # Proposal — one coordinated wire change: #520 (`sk5`) + #477 (`contract_version` 3)
 
+> **PARTLY SUPERSEDED 2026-10-11.** The #263 ("op→family rows that need to move") part of this event is replaced by the
+> derived `cell_class` — see `docs/design-263-cell-class.md`, which also records that the event is now `sk5` **and**
+> `contract_version` 3 and that the Announce op-identity change is a named follow-on. #520, #477 and `dequant_form` are
+> in that PR as described here.
+
 **Proposal for the PM and editors; no clause is changed by this document.** Measured at KISS `origin/main` `904a4b4`,
 2026-10-09. **Version numbers are the PM's to allocate; the ones below are what each change requires, not a request
 for specific numbers.**

@@ -24,14 +24,14 @@ use kiss_conformance::structure_key::*;
 // ---- shared builders (this file's own; a sibling test file is a separate crate) ----
 
 fn op(contig: Contig, mask: u8, vec: VecWidth, div: DivBucket, flipped: bool) -> OperandSubKey {
-    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped }
+    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dequant: None }
 }
 
 /// A plain contiguous v4/d16 operand — the reusable filler sub-key.
 fn co() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false) }
 
 fn key(
-    op_family: &str,
+    cell_class: &str,
     dtype: &str,
     target: &str,
     work_class: WorkClass,
@@ -41,7 +41,7 @@ fn key(
     contraction: Option<Contraction>,
 ) -> StructureKey {
     StructureKey {
-        op_family: op_family.to_string(),
+        cell_class: cell_class.to_string(),
         dtype: dtype.to_string(),
         target: target.to_string(),
         index_width: "ix32".to_string(),
@@ -58,7 +58,7 @@ fn key(
 /// the `from_token` teeth. Guarded valid by an `is_ok` assert in each test that
 /// mutates it.
 const BASE: &str =
-    "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+    "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
 
 // ============================================================================
 // KISS-CLASSIFY-6.3-0001 — operand rank bounds
@@ -190,7 +190,7 @@ fn test_classify_dtype_token_spelling() {
 /// field-2 primary dtype — each of which the reader validates against the closed set.
 #[test]
 fn test_classify_operand_dtype_in_set() {
-    const GEM: &str = "sk4|gem|f32|cuda:sm89|ix32|grid|r2|\
+    const GEM: &str = "sk5|ctr|f32|cuda:sm89|ix32|grid|r2|\
 co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st";
     assert!(from_token(GEM).is_ok(), "KISS-CLASSIFY-6.3-0006: all-active group must parse");
 
@@ -233,15 +233,15 @@ co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st";
 fn test_classify_structure_key_field_layout() {
     assert!(from_token(BASE).is_ok(), "KISS-CLASSIFY-6.6-0004: base token invalid");
     // version is field 0 and is `sk4`, on both the wire and a freshly serialized key.
-    assert_eq!(BASE.split('|').next(), Some("sk4"), "KISS-CLASSIFY-6.6-0004");
-    let built = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None, None);
+    assert_eq!(BASE.split('|').next(), Some("sk5"), "KISS-CLASSIFY-6.6-0004");
+    let built = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None, None);
     assert!(
-        built.to_token().starts_with("sk4|"),
+        built.to_token().starts_with("sk5|"),
         "KISS-CLASSIFY-6.6-0004: version is not the first field"
     );
     // version moved out of field 0 is rejected (must be first).
     assert_eq!(
-        from_token("bin|sk4|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
+        from_token("bin|sk5|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
         Err(KeyDecline::BadVersionPrefix),
         "KISS-CLASSIFY-6.6-0004: version not required in field 0"
     );
@@ -249,14 +249,14 @@ fn test_classify_structure_key_field_layout() {
     // unknown op-family. An order-insensitive parser would instead recognize it as a
     // dtype and ACCEPT the swap — so this decline is the teeth.
     assert_eq!(
-        from_token("sk4|f32|bin|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
-        Err(KeyDecline::UnknownOpFamily),
+        from_token("sk5|f32|bin|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
+        Err(KeyDecline::UnknownCellClass),
         "KISS-CLASSIFY-6.6-0004: op-family/dtype positions not enforced"
     );
     // swap index-width (field 4) and work-class (field 5): `ix32` in the work-class
     // slot fails WorkClass parsing.
     assert_eq!(
-        from_token("sk4|bin|f32|cuda:sm89|grid|ix32|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
+        from_token("sk5|ew2|f32|cuda:sm89|grid|ix32|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"),
         Err(KeyDecline::BadWorkClass),
         "KISS-CLASSIFY-6.6-0004: index-width/work-class positions not enforced"
     );
@@ -275,7 +275,7 @@ fn test_classify_structure_key_rank_and_operand_count() {
     // n operands -> exactly (n-1) `;` separators in the operand field (field 7). A
     // fixed-width padding codec would emit MAX_OPERANDS slots regardless of n.
     for n in 1..=MAX_OPERANDS {
-        let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(); n], Reduce::None, None);
+        let k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(); n], Reduce::None, None);
         let tok = k.to_token();
         let field7 = tok.split('|').nth(7).expect("operand field present");
         assert_eq!(
@@ -339,13 +339,13 @@ fn test_classify_mixed_rank_axis_alignment() {
 // ============================================================================
 
 /// KISS-CLASSIFY-6.7-0007: the codec is spelling-keyed, not discriminant-keyed —
-/// adding a dtype or op-family code MUST NOT shift the bytes of any pre-existing
-/// field and MUST NOT bump the schema version.
+/// adding a dtype code MUST NOT shift the bytes of any pre-existing field and MUST
+/// NOT bump the schema version. (A cell class is not such an addition, §6.5-0006.)
 #[test]
 fn test_classify_token_codec_additive() {
-    assert_eq!(SCHEMA_VERSION, 4, "KISS-CLASSIFY-6.7-0007: schema version is not 4");
+    assert_eq!(SCHEMA_VERSION, 5, "KISS-CLASSIFY-6.7-0007: schema version is not 5");
     // the reference token whose field-2 dtype we vary; every OTHER field is invariant.
-    let base = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None, None);
+    let base = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None, None);
     let base_tok = base.to_token();
     let base_fields: Vec<&str> = base_tok.split('|').collect();
 
@@ -355,9 +355,9 @@ fn test_classify_token_codec_additive() {
         let tok = k.to_token();
         let fields: Vec<&str> = tok.split('|').collect();
         assert_eq!(fields.len(), base_fields.len(), "KISS-CLASSIFY-6.7-0007: dtype `{dt}` changed field count");
-        // field 0 stays the un-bumped version `sk4` (a set-size-keyed version bump
-        // would emit sk5/… here).
-        assert_eq!(fields[0], "sk4", "KISS-CLASSIFY-6.7-0007: dtype `{dt}` bumped the version");
+        // field 0 stays the un-bumped version `sk5` (a set-size-keyed version bump
+        // would emit sk6/… here).
+        assert_eq!(fields[0], "sk5", "KISS-CLASSIFY-6.7-0007: dtype `{dt}` bumped the version");
         // field 2 carries the dtype SPELLING verbatim (a discriminant codec would emit
         // a numeric index instead).
         assert_eq!(fields[2], dt, "KISS-CLASSIFY-6.7-0007: dtype `{dt}` not stored by spelling");
@@ -369,23 +369,23 @@ fn test_classify_token_codec_additive() {
             assert_eq!(fields[i], base_fields[i], "KISS-CLASSIFY-6.7-0007: dtype `{dt}` shifted field {i}");
         }
     }
-    // the same position-stability holds for op-family codes (non-gem, so the presence
+    // the same position-stability holds for cell-class codes (non-`ctr`, so the presence
     // of the contraction field is not in play here).
-    for fam in OP_FAMILIES {
-        if fam == "gem" {
+    for fam in CELL_CLASSES {
+        if fam == "ctr" {
             continue;
         }
         let mut k = base.clone();
-        k.op_family = fam.to_string();
+        k.cell_class = fam.to_string();
         let tok = k.to_token();
         let fields: Vec<&str> = tok.split('|').collect();
-        assert_eq!(fields[0], "sk4", "KISS-CLASSIFY-6.7-0007: op-family `{fam}` bumped the version");
-        assert_eq!(fields[1], fam, "KISS-CLASSIFY-6.7-0007: op-family `{fam}` not stored by spelling");
+        assert_eq!(fields[0], "sk5", "KISS-CLASSIFY-6.7-0007: cell class `{fam}` bumped the version");
+        assert_eq!(fields[1], fam, "KISS-CLASSIFY-6.7-0007: cell class `{fam}` not stored by spelling");
         for i in 0..base_fields.len() {
             if i == 1 {
                 continue;
             }
-            assert_eq!(fields[i], base_fields[i], "KISS-CLASSIFY-6.7-0007: op-family `{fam}` shifted field {i}");
+            assert_eq!(fields[i], base_fields[i], "KISS-CLASSIFY-6.7-0007: cell class `{fam}` shifted field {i}");
         }
     }
 }
@@ -402,23 +402,24 @@ fn test_classify_token_codec_additive() {
 fn test_classify_token_roundtrip() {
     let mut battery: Vec<StructureKey> = Vec::new();
     // non-gem base, no reduce.
-    battery.push(key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co()], Reduce::None, None));
+    battery.push(key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co()], Reduce::None, None));
     // unary f16 v8 on a different target.
     battery.push(key(
-        "une", "f16", "rocm:gfx942", WorkClass::Block, 2,
+        "ew1", "f16", "rocm:gfx942", WorkClass::Block, 2,
         vec![
             op(Contig::Contiguous, 0x00, VecWidth::V8, DivBucket::D16, false),
             op(Contig::Contiguous, 0x00, VecWidth::V8, DivBucket::D16, false),
         ],
         Reduce::None, None,
     ));
-    // every reduce variant on a `red` cell (the None/All/Trailing/Subset spellings).
+    // every reduce variant on an `rdc` cell (the All/Trailing/Subset spellings; `-` is
+    // not one: an `rdc` cell with the empty reduced set is `RdcWithoutReduce`, §6.6-0017).
     // Rank 4, not 3: the `Subset(0x0a)` mask sets bit 3 (axis 3), which exists only at
     // rank >= 4 — at rank 3 it is an out-of-range mask (§6.7-0009) a validating reader
     // rightly declines, so a round-trip corpus of VALID keys must give it a rank 4 cell.
-    for red in [Reduce::All, Reduce::Trailing, Reduce::Subset(0x0a), Reduce::None] {
+    for red in [Reduce::All, Reduce::Trailing, Reduce::Subset(0x0a)] {
         battery.push(key(
-            "red", "f32", "cuda:sm89", WorkClass::Warp, 4,
+            "rdc", "f32", "cuda:sm89", WorkClass::Warp, 4,
             vec![
                 op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::D8, false),
                 op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false),
@@ -430,7 +431,7 @@ fn test_classify_token_roundtrip() {
     // non-zero broadcast mask. The target is an arbitrary well-formed token —
     // capability semantics are irrelevant to a codec round-trip.
     battery.push(key(
-        "bin", "i8", "vulkan:spirv1.6", WorkClass::Grid, 4,
+        "ew2", "i8", "vulkan:spirv1.6", WorkClass::Grid, 4,
         vec![
             op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false),
             op(Contig::InnerContiguous, 0x00, VecWidth::V2, DivBucket::D8, true),
@@ -439,9 +440,16 @@ fn test_classify_token_roundtrip() {
         ],
         Reduce::None, None,
     ));
-    // gem WITHOUT the conditional batch coordinate.
+    // sk5: an operand carrying a `quant` record's `dequant_form` (the optional sixth
+    // sub-key component), both spellings, on a non-`ctr` cell and on a `ctr` cell.
+    for dq in [DequantForm::Linear, DequantForm::Codebook] {
+        let mut weight = op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false);
+        weight.dequant = Some(dq);
+        battery.push(key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![weight, co(), co()], Reduce::None, None));
+    }
+    // ctr WITHOUT the conditional batch coordinate.
     battery.push(key(
-        "gem", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None,
+        "ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None,
         Some(Contraction {
             m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
             batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
@@ -450,7 +458,7 @@ fn test_classify_token_roundtrip() {
     ));
     // gem WITH the batch coordinate + a mixed precision group + reduced-mantissa mp.
     battery.push(key(
-        "gem", "f8e4m3fn", "cuda:sm90a", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None,
+        "ctr", "f8e4m3fn", "cuda:sm90a", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None,
         Some(Contraction {
             m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D8,
             batch: Some(SizeClass::Medium), wdt: "f8e5m2".to_string(), acc: "f32".to_string(),
@@ -483,7 +491,7 @@ fn test_classify_mask_hex_lowercase() {
     // --- producer side: to_token emits `hh` (lowercase, 2 digits) in both positions ---
     // broadcast mask 0x0a -> `0a` (a `{:X}` producer -> `0A`; a width-less `{:x}` -> `a`).
     for (m, hex) in [(0x0au8, "0a"), (0x05u8, "05"), (0xffu8, "ff"), (0x00u8, "00")] {
-        let k = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2,
+        let k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2,
             vec![op(Contig::Broadcast, m, VecWidth::V1, DivBucket::D16, false)], Reduce::None, None);
         let tok = k.to_token();
         let want = format!("br/{hex}/v1/d16/f");
@@ -494,7 +502,7 @@ fn test_classify_mask_hex_lowercase() {
         );
     }
     // reduce keepdim mask 0x0a -> `x0a` on a red cell.
-    let r = key("red", "f32", "cuda:sm89", WorkClass::Warp, 4,
+    let r = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 4,
         vec![op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false)], Reduce::Subset(0x0a), None);
     assert_eq!(
         r.to_token().split('|').nth(8),
@@ -503,7 +511,7 @@ fn test_classify_mask_hex_lowercase() {
     );
 
     // --- consumer side: reject uppercase / variable-width in the BROADCAST position ---
-    let bcast_base = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/0a/v4/d16/f|-";
+    let bcast_base = "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/0a/v4/d16/f|-";
     assert!(from_token(bcast_base).is_ok(), "KISS-CLASSIFY-6.7-0010: valid lowercase mask rejected");
     for bad in ["co/FF/v4/d16/f", "co/Aa/v4/d16/f", "co/0/v4/d16/f", "co/100/v4/d16/f", "co/a/v4/d16/f"] {
         let t = bcast_base.replacen("co/0a/v4/d16/f", bad, 1);
@@ -514,7 +522,7 @@ fn test_classify_mask_hex_lowercase() {
         );
     }
     // --- consumer side: reject uppercase / variable-width in the REDUCE position ---
-    let red_base = "sk4|red|f32|cuda:sm89|ix32|warp|r4|co/00/v1/da/f|x0a";
+    let red_base = "sk5|rdc|f32|cuda:sm89|ix32|warp|r4|co/00/v1/da/f|x0a";
     assert!(from_token(red_base).is_ok(), "KISS-CLASSIFY-6.7-0010: valid reduce mask rejected");
     for bad in ["xFF", "xAa", "x0", "x100", "xa"] {
         let t = red_base.replacen("x0a", bad, 1);
@@ -537,7 +545,7 @@ fn test_classify_mask_hex_lowercase() {
 #[test]
 fn test_classify_target_byte_exact_match() {
     let mk = |tgt: &str| {
-        key("bin", "f32", tgt, WorkClass::Grid, 2, vec![co(), co()], Reduce::None, None).to_token()
+        key("ew2", "f32", tgt, WorkClass::Grid, 2, vec![co(), co()], Reduce::None, None).to_token()
     };
     // the target is embedded byte-for-byte (no lowercasing / truncation / normalization),
     // and survives parse unchanged.

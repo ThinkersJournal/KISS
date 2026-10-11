@@ -209,7 +209,7 @@ jobs:
         run: python tools/test_kiss_clause_position.py
       - name: Clause position (a clause must sit under its own section heading)
         run: python tools/kiss_clause_position.py
-      - name: Spec<->binding enumeration consistency (op-family set)
+      - name: Spec<->binding enumeration consistency (cell-class set)
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency
         run: python tools/kiss_ops.py

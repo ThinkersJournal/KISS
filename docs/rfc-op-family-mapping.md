@@ -1,5 +1,9 @@
 # Proposal — the op→family mapping (#263)
 
+> **SUPERSEDED 2026-10-11 — #263 was ruled by CireSnave: "D and drop the 24 names entirely."** The op-family mapping this
+> document proposes (or asks to decide) does not exist any more: the 24-code family is replaced by a derived 7-class
+> `cell_class`. See `docs/design-263-cell-class.md`. Kept as the record of the question and of its measurements.
+
 **Status: PROPOSAL. This introduces no clause, no §9 row, and no coverage-floor movement**
 (the ratchet is unchanged at `380/33/496`), and it is deliberately not drafted as normative
 text. The reason is the finding itself: `op_family_tag` is a `structure_key` cell field, and

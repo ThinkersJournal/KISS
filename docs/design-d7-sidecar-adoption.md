@@ -73,4 +73,5 @@ one lint with controls).
 ## 7. Not verified
 
 Whether any Fuel or Baracuda code currently emits quant facts in a shape that differs from the RFC's union; the next
-free clause id; whether `dequant_form` is in fact slotted at `sk5` (the `sk5` collection, #222, is unscheduled).
+free clause id; whether `dequant_form` is in fact slotted at `sk5` (*update 2026-10-11: it is — `docs/design-263-cell-class.md`; the
+sixth sub-key component `dl`/`dc`*).

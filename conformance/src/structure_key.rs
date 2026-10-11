@@ -4,30 +4,29 @@
 //! The token is the sole normative wire form of a specialization-cell identity
 //! (§6.7-0011), a `|`-separated string:
 //! ```text
-//!   sk<ver> | <op_family> | <dtype> | <target> | <index_width> | <work_class>
+//!   sk<ver> | <cell_class> | <dtype> | <target> | <index_width> | <work_class>
 //!           | r<rank> | <op0>;<op1>;… | <reduce>
 //!           [ | <precision-field> ]                       (optional-trailing, sk4)
 //! ```
 //! where `<precision-field>` is **either** the dense-contraction group
-//! `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>` (gem cells only, §6.7-0006)
-//! **or** the non-contraction precision field `<acc>/<mp>` (non-gem cells,
+//! `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>` (`ctr` cells only, §6.7-0006)
+//! **or** the non-contraction precision field `<acc>/<mp>` (non-`ctr` cells,
 //! §6.7-0013): the two occupy the same optional-trailing slot and never coexist, so
-//! the nine-or-ten-field parse is dispatched by the op-family code. Each `<opI>` is
-//! `<contig>/<bcasthex>/<vec>/<div>/<flip>`. `to_token`
+//! the nine-or-ten-field parse is dispatched by the cell-class code. Each `<opI>` is
+//! `<contig>/<bcasthex>/<vec>/<div>/<flip>[/<dq>]` (`<dq>` — `dl`/`dc` — iff the operand
+//! carries a `quant` record, §6.3-0009a). `to_token`
 //! and `from_token` round-trip byte-identically (§6.7-0008); every hex mask is
 //! lowercase, zero-padded to two digits (§6.7-0010); a producer emits `rall` /
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
-/// The closed op-family-tag set at this schema version — exactly the 24 codes of
-/// Classify §6.5-0006. A token whose op-family field is outside this set is
-/// rejected (a reader must not silently encode an "unknown" code).
-pub const OP_FAMILIES: [&str; 24] = [
-    "gem", "idx", "une", "emb", "bin", "shp", "ter", "srt", "gat", "qnt", "red", "rnd",
-    "scn", "los", "nrm", "seg", "sft", "img", "cnv", "fft", "pol", "lin", "att", "moe",
-];
+/// The closed cell-class set at this schema version — exactly the seven codes of
+/// Classify §6.5-0006. A token whose class field is outside this set is rejected (a
+/// reader must not silently encode an "unknown" class). The class is **derived**
+/// (§6.5-0015, [`derive_cell_class`]), never a caller-chosen label.
+pub const CELL_CLASSES: [&str; 7] = ["ctr", "ndx", "rdc", "ew1", "ew2", "ew3", "oth"];
 
 /// The closed dtype-token set — the 24 tokens of Classify §6.1 at sk4, in §6.1-table
 /// order (the index is the 1-based ordinal §6.19-0025's accumulator field references).
@@ -71,12 +70,14 @@ code_enum!(SizeClass { Tiny = "t", Small = "s", Medium = "m", Large = "l" });
 // `b` — that prefix is reserved for the conditionally-present batch coordinate — so
 // the geometry and precision groups never collide in spelling.
 code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
+// sk5: the operand's `dequant_form` (§6.3-0009a), the optional last sub-key component.
+code_enum!(DequantForm { Linear = "dl", Codebook = "dc" });
 
 /// Derive an operand's vector-access width from its innermost-active-axis facts
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
 /// precondition. This is the reference derivation for the non-reduction,
 /// non-broadcast branch: parts (a)/(b) of §6.5-0009 (broadcast `layout_tag`,
-/// reduced innermost axis of a `red` cell; a scan cell takes this ladder) are decided by the caller and reach this function
+/// reduced innermost axis of an `rdc` cell; a scan cell takes this ladder) are decided by the caller and reach this function
 /// only as `any_axis_broadcast` or by not being called.
 ///
 /// Arguments are the innermost active axis's signed stride (§6.3-0003, elements)
@@ -139,6 +140,9 @@ pub struct OperandSubKey {
     pub vec: VecWidth,
     pub div: DivBucket,
     pub flipped: bool,
+    /// sk5 (§6.3-0009a, §6.6-0007): the operand's `dequant_form`, present iff the
+    /// operand carries a `quant` record; spelled as the optional sixth component.
+    pub dequant: Option<DequantForm>,
 }
 
 /// Field 8, the four distinctly-encoded reduce values (§6.7-0005).
@@ -150,7 +154,7 @@ pub enum Reduce {
     Subset(u8),
 }
 
-/// The optional dense-contraction field (§6.7-0006), present IFF `op_family == gem`.
+/// The optional dense-contraction field (§6.7-0006), present IFF `cell_class == ctr`.
 /// sk3 grows it from `c<m><n><k>/<kdiv>` to
 /// `c<m><n><k>/<kdiv>[/b<class>]/<wdt>/<acc>/<out>/<mp>`: a geometry group
 /// (`m`/`n`/`k`, `k_div`, and the conditionally-present `batch` size-class) followed
@@ -183,10 +187,10 @@ pub struct Contraction {
 pub const ACC_MP_DEFAULT_MP: MathFidelity = MathFidelity::Stable;
 
 /// The optional **non-contraction** precision field (§6.7-0013, sk4), realizing the
-/// §6.7-0012 forward requirement. Present at most for a **non-`gem`** cell whose
+/// §6.7-0012 forward requirement. Present at most for a **non-`ctr`** cell whose
 /// accumulator dtype or math-precision deviates from the cell default; spelled
-/// gem-symmetrically as `<acc>/<mp>`. It occupies the same optional-trailing token
-/// slot the [`Contraction`] group occupies for `gem`, and the two **never coexist**
+/// contraction-symmetrically as `<acc>/<mp>`. It occupies the same optional-trailing token
+/// slot the [`Contraction`] group occupies for `ctr`, and the two **never coexist**
 /// (a cell carries at most one precision field). Rules a–e:
 /// (a) emitted IFF at least one of {accumulator ≠ compute dtype, `<mp>` ≠ default}
 ///     holds; (b) when emitted, **both** slots are spelled explicitly, including a
@@ -208,7 +212,7 @@ pub struct AccMp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructureKey {
-    pub op_family: String,
+    pub cell_class: String,
     pub dtype: String,
     pub target: String,
     pub index_width: String,
@@ -218,7 +222,7 @@ pub struct StructureKey {
     pub reduce: Reduce,
     pub contraction: Option<Contraction>,
     /// The non-contraction `(acc+mp)` precision field (§6.7-0013): present at most
-    /// for a non-`gem` cell that deviates from default, mutually exclusive with
+    /// for a non-`ctr` cell that deviates from default, mutually exclusive with
     /// `contraction` (they share the one optional-trailing slot).
     pub acc_mp: Option<AccMp>,
 }
@@ -236,8 +240,8 @@ pub enum KeyDecline {
     /// "re-derive" signpost: distinct from `BadVersionPrefix` on the §6.1-0001
     /// reserved-vs-unknown model, so a consumer can tell "real token, wrong schema —
     /// re-derive it" from "this isn't a token". A build MAY ship a bounded decoder
-    /// arm for an older version through the `sk4` series (§6.7-0014); this reference
-    /// build ships none and so declines every non-`sk4` version here.
+    /// arm for the previous version through the `sk5` series (§6.7-0014); this reference
+    /// build ships none and so declines every non-`sk5` version here.
     UnsupportedSchemaVersion { got: u32 },
     BadRank,
     BadWorkClass,
@@ -245,8 +249,9 @@ pub enum KeyDecline {
     BadReduceField,
     BadContractionField,
     UppercaseOrWidthHex,
-    /// Op-family code outside the closed §6.5-0006 set.
-    UnknownOpFamily,
+    /// Cell-class code outside the closed §6.5-0006 set (this includes every retired
+    /// sk4 op-family code, e.g. `gem`).
+    UnknownCellClass,
     /// Dtype token outside the closed §6.1 set.
     UnknownDtype,
     /// Dtype token inside the closed §6.1 vocabulary but **reserved** at this
@@ -265,11 +270,16 @@ pub enum KeyDecline {
     /// (`0x00`–`0x20`, `0x7f`), or a non-ASCII byte (`>= 0x80`) — so it could not
     /// embed in the token as one unambiguous field.
     BadTargetCharset,
-    /// The contraction field's presence does not match `op_family` (§6.6-0010):
-    /// present IFF `op_family == gem`.
+    /// The contraction field's presence does not match `cell_class` (§6.6-0010):
+    /// present IFF `cell_class == ctr`.
     ContractionPresenceMismatch,
-    /// The reduce field is non-`-` for an `op_family` other than `red` (§6.6-0017).
-    ReduceNotGatedToRed,
+    /// The reduce field is non-`-` for a `cell_class` other than `rdc` (§6.6-0017).
+    ReduceNotGatedToRdc,
+    /// The cell class is `rdc` but the reduce field is `-`: the empty reduced set is the
+    /// not-a-reduction case (§6.6-0009), so no `rdc` cell can carry it (§6.6-0017).
+    RdcWithoutReduce,
+    /// An operand sub-key's sixth component is not `dl` / `dc` (§6.7-0004).
+    BadDequantForm,
     /// The non-contraction `(acc+mp)` field (§6.7-0013) is malformed — not exactly
     /// two `/`-parts, or an unrecognized math-precision code.
     BadAccMpField,
@@ -304,14 +314,18 @@ fn hex2(v: u8) -> String {
 
 impl OperandSubKey {
     fn to_field(self) -> String {
-        format!(
+        let base = format!(
             "{}/{}/{}/{}/{}",
             self.contig.code(),
             hex2(self.bcast_mask),
             self.vec.code(),
             self.div.code(),
             if self.flipped { "r" } else { "f" }
-        )
+        );
+        match self.dequant {
+            Some(dq) => format!("{base}/{}", dq.code()),
+            None => base,
+        }
     }
 }
 
@@ -338,7 +352,7 @@ impl StructureKey {
         let mut token = format!(
             "sk{}|{}|{}|{}|{}|{}|r{}|{}|{}",
             SCHEMA_VERSION,
-            self.op_family,
+            self.cell_class,
             self.dtype,
             self.target,
             self.index_width,
@@ -390,7 +404,7 @@ fn parse_hex2(s: &str) -> Result<u8, KeyDecline> {
 
 fn parse_operand(s: &str) -> Result<OperandSubKey, KeyDecline> {
     let p: Vec<&str> = s.split('/').collect();
-    if p.len() != 5 {
+    if p.len() != 5 && p.len() != 6 {
         return Err(KeyDecline::BadOperandSubKey);
     }
     let contig = Contig::parse(p[0]).ok_or(KeyDecline::BadOperandSubKey)?;
@@ -402,7 +416,12 @@ fn parse_operand(s: &str) -> Result<OperandSubKey, KeyDecline> {
         "r" => true,
         _ => return Err(KeyDecline::BadOperandSubKey),
     };
-    Ok(OperandSubKey { contig, bcast_mask, vec, div, flipped })
+    // sk5: the optional sixth component, the operand's dequant_form (§6.3-0009a).
+    let dequant = match p.get(5) {
+        None => None,
+        Some(&c) => Some(DequantForm::parse(c).ok_or(KeyDecline::BadDequantForm)?),
+    };
+    Ok(OperandSubKey { contig, bcast_mask, vec, div, flipped, dequant })
 }
 
 fn parse_reduce(s: &str) -> Result<Reduce, KeyDecline> {
@@ -587,9 +606,9 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         Some(v) => return Err(KeyDecline::UnsupportedSchemaVersion { got: v }),
         None => return Err(KeyDecline::BadVersionPrefix),
     }
-    // field 1/2: op-family and dtype must be in their closed sets (§6.5-0006, §6.1)
-    if !OP_FAMILIES.contains(&f[1]) {
-        return Err(KeyDecline::UnknownOpFamily);
+    // field 1/2: cell class and dtype must be in their closed sets (§6.5-0006, §6.1)
+    if !CELL_CLASSES.contains(&f[1]) {
+        return Err(KeyDecline::UnknownCellClass);
     }
     if RESERVED_DTYPES.contains(&f[2]) {
         return Err(KeyDecline::ReservedDtype);
@@ -638,18 +657,22 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         return Err(KeyDecline::TooManyOperands { got: operands.len() });
     }
     let reduce = parse_reduce(f[8])?;
-    // §6.6-0017: a non-`-` reduce field is valid ONLY for a reduction cell
-    // (`op_family == red`); reject any other family carrying one. This op-family GATE
-    // precedes mask validation below: a non-red cell that carries ANY non-`-` value is
-    // a gating violation regardless of whether that value would be a well-formed mask,
-    // so it reports ReduceNotGatedToRed, not a mask-shape decline.
-    if f[1] != "red" && reduce != Reduce::None {
-        return Err(KeyDecline::ReduceNotGatedToRed);
+    // §6.6-0017: a non-`-` reduce field is valid IFF the cell is a reduction cell
+    // (`cell_class == rdc`); reject any other class carrying one, and an `rdc` cell
+    // carrying none (the empty reduced set is the not-a-reduction case, §6.6-0009).
+    // This class GATE precedes mask validation below: a non-`rdc` cell that carries ANY
+    // non-`-` value is a gating violation regardless of whether that value would be a
+    // well-formed mask, so it reports ReduceNotGatedToRdc, not a mask-shape decline.
+    if f[1] != "rdc" && reduce != Reduce::None {
+        return Err(KeyDecline::ReduceNotGatedToRdc);
+    }
+    if f[1] == "rdc" && reduce == Reduce::None {
+        return Err(KeyDecline::RdcWithoutReduce);
     }
     // §6.6-0009 / §6.7-0005: for a cell that legitimately reduces, an `x<hh>` bitmask
     // whose reduced set has a canonical `-`/`rall`/`rlast` encoding for this `rank`
     // overloads a sentinel and MUST decline (NonCanonicalReduceField); a bit ≥ rank is
-    // out-of-range (BadReduceField, §6.7-0009). Runs AFTER the gate so a non-red cell
+    // out-of-range (BadReduceField, §6.7-0009). Runs AFTER the gate so a non-`rdc` cell
     // reports the gating decline rather than a mask-shape decline.
     validate_reduce_mask(&reduce, rank)?;
     // §6.6-0009: a rank-0 (scalar) cell has no iteration-frame axis to reduce, so it admits
@@ -660,7 +683,7 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     //     wrong that `-` owns → NonCanonicalReduceField (exactly `x00`'s shape);
     //   * `rlast` = a lone innermost axis that does not exist at rank 0 — a set that cannot
     //     exist for the rank → BadReduceField (exactly `x04@r2`'s out-of-range shape).
-    // (Placed after the §6.6-0017 op-family gate, so a non-`red` cell still reports the gating
+    // (Placed after the §6.6-0017 class gate, so a non-`rdc` cell still reports the gating
     // decline, and after `validate_reduce_mask`, so an `x<hh>` keeps its mask-specific code.)
     if rank == 0 {
         match reduce {
@@ -672,26 +695,26 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
         }
     }
     // The optional-trailing field 9 (present iff 10 fields) is dispatched by the
-    // op-family (§6.7-0013): a `gem` cell spells the dense-contraction group, any
+    // cell class (§6.7-0013): a `ctr` cell spells the dense-contraction group, any
     // other cell the non-contraction `(acc+mp)` precision field. The two never
     // coexist, so the nine-or-ten-field count is resolved unambiguously by f[1].
     let mut contraction = None;
     let mut acc_mp = None;
     if f.len() == 10 {
-        if f[1] == "gem" {
+        if f[1] == "ctr" {
             contraction = Some(parse_contraction(f[9])?);
         } else {
             acc_mp = Some(parse_acc_mp(f[9], f[2])?);
         }
     }
     // §6.6-0010: the contraction field is present IFF the cell is a dense-contraction
-    // cell (`op_family == gem`). A `gem` cell missing field 9 is caught here (the
-    // dispatch above left `contraction == None`); a non-`gem` cell never sets it.
-    if (f[1] == "gem") != contraction.is_some() {
+    // cell (`cell_class == ctr`). A `ctr` cell missing field 9 is caught here (the
+    // dispatch above left `contraction == None`); a non-`ctr` cell never sets it.
+    if (f[1] == "ctr") != contraction.is_some() {
         return Err(KeyDecline::ContractionPresenceMismatch);
     }
     Ok(StructureKey {
-        op_family: f[1].to_string(),
+        cell_class: f[1].to_string(),
         dtype: f[2].to_string(),
         target: f[3].to_string(),
         index_width: f[4].to_string(),
@@ -785,7 +808,7 @@ pub fn derive_index_width(operands: &[(&[i64], &[i64])]) -> &'static str {
     }
 }
 
-/// §6.6-0019: the weight dtype of a dense-contraction (`gem`) cell — the `<wdt>`
+/// §6.6-0019: the weight dtype of a dense-contraction (`ctr`) cell — the `<wdt>`
 /// contraction coordinate (§6.7-0006). The weight operand is identified by the
 /// caller's role hint (§6.6-0012), NEVER by operand position (§6.6-0014's canonical
 /// order is call order, not a semantic role assignment) and never by an operand's
@@ -814,8 +837,8 @@ pub fn derive_weight_dtype<'a>(operand_dtypes: &[&'a str], weight_slot: usize) -
 ///
 /// This is the ruled reading (KISS #82 finding 2, 2026-07-23): the output-frame
 /// reading — product of the output operand's extents only — is NOT used, because it
-/// drops the contracted `K` axis of a `gem` cell and so cannot distinguish `K = 64`
-/// from `K = 65536`. For a `gem` cell whose output is much smaller than the frame
+/// drops the contracted `K` axis of a `ctr` cell and so cannot distinguish `K = 64`
+/// from `K = 65536`. For a `ctr` cell whose output is much smaller than the frame
 /// (e.g. `lhs[8,4096] · rhs[4096,8] → out[8,8]`) the two readings land in different
 /// work-class buckets; this function implements frame-max.
 #[must_use]
@@ -980,20 +1003,104 @@ pub fn frame_padded_view(extents: &[i64], strides: &[i64], frame: &[i64]) -> (Ve
 
 /// §6.5-0014 + §6.6-0008: the broadcast-axis mask of an operand in iteration `frame`
 /// — bit `i` (frame axis `i`, outermost-first) is set iff the **frame** extent at axis
-/// `i` is `> 1` and the operand's stride along it (`0` on a padded axis) is `0`.
-/// §6.6-0008 keys the extent test on the iteration-frame axis, not on the operand's
-/// own extent. Bounded by `MAX_RANK` so a byte suffices.
+/// `i` is `> 1` and the operand's stride along it is `0`, where a padded axis (§6.5-0014)
+/// has stride `0` and **so does an own axis of extent `1`, whatever stride the descriptor
+/// records for it** (sk5, #520: the stride of a unit axis is never stepped, so the bit
+/// must not depend on it). §6.6-0008 keys the extent test on the iteration-frame axis,
+/// not on the operand's own extent. Bounded by `MAX_RANK` so a byte suffices.
 #[must_use]
 pub fn derive_bcast_mask_in_frame(extents: &[i64], strides: &[i64], frame: &[i64]) -> u8 {
-    let (_, s) = frame_padded_view(extents, strides, frame);
+    let (e, s) = frame_padded_view(extents, strides, frame);
     let mut mask: u8 = 0;
-    for (i, (&fe, &st)) in frame.iter().zip(s.iter()).enumerate() {
+    for (i, ((&fe, &st), &oe)) in frame.iter().zip(s.iter()).zip(e.iter()).enumerate() {
         if i >= MAX_RANK as usize {
             break;
         }
-        if fe > 1 && st == 0 {
+        // `oe` is the operand's own extent on an own axis (the frame extent on a padded
+        // one, whose stride is already `0`): an own extent of `1` is stride `0` here.
+        if fe > 1 && (st == 0 || oe == 1) {
             mask |= 1u8 << i;
         }
     }
     mask
+}
+
+// ---- §6.5-0015: the cell-class derivation -------------------------------------
+
+/// How an operand is used by the cell (§6.6-0014): an input, an output, or an
+/// **in-place** operand that is both read and written (listed once, as an input).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperandUse {
+    Input,
+    Output,
+    InPlace,
+}
+
+/// The three **caller-declared facts** the cell class is derived from (§6.5-0015):
+/// facts of the invocation, never a family label.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DeclaredFacts {
+    /// The M/N/K axis roles are declared (§6.6-0016).
+    pub contraction_roles: bool,
+    /// The index-operand slot is declared (§6.6-0012; KISS-OPS §6.11-0012).
+    pub index_role: bool,
+    /// The declared reduced-axis set is non-empty (§6.6-0009).
+    pub reduced_axes_nonempty: bool,
+}
+
+/// §6.5-0015: derive the cell class from the operands (use + own extents, outermost
+/// first) and the declared facts. The first rule that holds decides: `ctr`, `ndx`,
+/// `rdc`, then `ew<n>` for a **pointwise** cell with `1 <= n <= 3` input operands, else
+/// `oth`. The derivation reads descriptor facts and the three declared facts only —
+/// never an op name or an op family.
+///
+/// *Pointwise*: at every iteration-frame axis every operand's extent (its own, or `1` at
+/// an axis it does not have) is `1` or the frame extent (§6.5-0010, the per-axis maximum
+/// across operands), and every **written** operand (output or in-place) has the frame
+/// extent at every frame axis and the iteration rank.
+#[must_use]
+pub fn derive_cell_class(operands: &[(OperandUse, &[i64])], facts: DeclaredFacts) -> &'static str {
+    if facts.contraction_roles {
+        return "ctr";
+    }
+    if facts.index_role {
+        return "ndx";
+    }
+    if facts.reduced_axes_nonempty {
+        return "rdc";
+    }
+    let n_in = operands
+        .iter()
+        .filter(|(u, _)| matches!(u, OperandUse::Input | OperandUse::InPlace))
+        .count();
+    if !(1..=3).contains(&n_in) {
+        return "oth";
+    }
+    let rank = operands.iter().map(|(_, e)| e.len()).max().unwrap_or(0);
+    // frame extent per axis = per-axis maximum across operands (right-aligned, pad = 1).
+    let at = |e: &[i64], axis: usize| -> i64 {
+        let off = rank - e.len();
+        if axis < off { 1 } else { e[axis - off] }
+    };
+    let frame: Vec<i64> = (0..rank)
+        .map(|a| operands.iter().map(|(_, e)| at(e, a)).max().unwrap_or(1))
+        .collect();
+    for (u, e) in operands {
+        let written = matches!(u, OperandUse::Output | OperandUse::InPlace);
+        if written && e.len() != rank {
+            return "oth";
+        }
+        for (a, &fe) in frame.iter().enumerate() {
+            let oe = at(e, a);
+            let ok = if written { oe == fe } else { oe == 1 || oe == fe };
+            if !ok {
+                return "oth";
+            }
+        }
+    }
+    match n_in {
+        1 => "ew1",
+        2 => "ew2",
+        _ => "ew3",
+    }
 }

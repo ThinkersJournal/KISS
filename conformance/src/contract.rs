@@ -278,7 +278,7 @@ pub enum ContractDecline {
     MalformedHeader,
     /// The `contract_kind` is not the recognized token `kiss-contract` (§6.1-0007).
     UnknownKind { got: String },
-    /// The `contract_version` is not `2` (§6.1-0008).
+    /// The `contract_version` is not `3` (§6.1-0008).
     UnknownVersion { got: String },
     /// The declared body length does not equal the actual body byte count
     /// (§6.11-0003). Carries the declared length as a `u64` — it is never used to
@@ -372,7 +372,7 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
     }
     // (4) Supported version (§6.1-0008).
     let version = parts[2];
-    if version != "2" {
+    if version != "3" {
         return Err(ContractDecline::UnknownVersion { got: version.to_string() });
     }
     // (5) `len=<N>` — decimal body byte count.
@@ -830,7 +830,7 @@ fn well_formed_body() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("2".into())),
+            ("contract_version", Value::Str("3".into())),
         ],
     )
 }
@@ -842,7 +842,7 @@ pub fn well_formed_document() -> Vec<u8> {
     let body = well_formed_body();
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "2".into(),
+        contract_version: "3".into(),
         body,
     }
     .encode()
@@ -860,10 +860,10 @@ pub fn well_formed_document() -> Vec<u8> {
 pub const APPENDIX_C_IDENTITY_GOLDEN: &str = "\
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 2
+contract_version = 3
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
+accept_predicate = ew2/f32,f32,f32/strided/cuda:sm89
 op_identity = add
 target_capability = cuda:sm89
 ";
@@ -875,10 +875,10 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("2".into())),
+            ("contract_version", Value::Str("3".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
-            ("accept_predicate", Value::Str("bin/f32,f32,f32/strided/cuda:sm89".into())),
+            ("accept_predicate", Value::Str("ew2/f32,f32,f32/strided/cuda:sm89".into())),
             ("op_identity", Value::Str("add".into())),
             ("target_capability", Value::Str("cuda:sm89".into())),
         ],
@@ -955,7 +955,7 @@ pub fn appendix_c_capabilities_block() -> Vec<u8> {
         5,
         "capabilities",
         &[
-            ("accept_predicate", Value::Str("sk4|bin|f32".into())),
+            ("accept_predicate", Value::Str("sk5|ew2|f32".into())),
             ("supported_dtype_set", Value::Str("[f32]".into())),
             ("awkward_layout_strategy", Value::Str("decline".into())),
             ("in_place_eligible_variants", Value::Str("[]".into())),
@@ -994,10 +994,11 @@ pub fn appendix_c_guarantees_inputs() -> Guarantees {
 /// authored constant would satisfy the field list and violate §6.8-0008 silently, and no schema
 /// check could tell the two apart.
 ///
-/// `math_precision` IS THE WIRE FIELD NAME AND IS DELIBERATELY NOT `math_fidelity`. #478 renamed
-/// the KISS-Ops ATTRIBUTE `MathPrecision` to `MathFidelity`; the KISS-Contract Guarantees wire
-/// field is `math_precision` (§6.8-0001) and its rename is a deferred §8-0002 wire change filed as
-/// #477. Measured: `math_precision` 23 occurrences in `spec/`, `math_fidelity` 0.
+/// `math_fidelity` IS THE WIRE FIELD NAME FROM `contract_version` 3 (§6.8-0001). #478 renamed the
+/// KISS-Ops ATTRIBUTE `MathPrecision` to `MathFidelity`; the KISS-Contract Guarantees wire field
+/// kept `math_precision` until the §8-0002 wire change filed as #477 landed with `contract_version`
+/// 3. Its value is the MathFidelity attribute (§6.8-0004), so the golden carries `bit-stable` — at
+/// `contract_version` 2 the golden carried the dtype token `f32` there, which §6.8-0004 forbids.
 ///
 /// `cost_provenance` MUST EQUAL the Provenance block's (§6.8-0007 / §6.9-0006), which is why both
 /// are `measured` and why neither may be changed alone.
@@ -1040,7 +1041,7 @@ pub fn appendix_c_guarantees_block() -> Vec<u8> {
             ("reference_function", Value::Str(reference_function)),
             ("per_backend_ulp_tiers", Value::Str(format!("[{tiers}]"))),
             ("determinism_class", Value::Str(determinism.into())),
-            ("math_precision", Value::Str("f32".into())),
+            ("math_fidelity", Value::Str("bit-stable".into())),
             ("accumulation_type", Value::Str("f32".into())),
             ("bit_stability", Value::Str(bit_stability.into())),
             ("audited_status", Value::Str(audited.into())),
@@ -1093,7 +1094,7 @@ pub fn appendix_c_body() -> Vec<u8> {
 pub fn appendix_c_golden_document() -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "2".into(),
+        contract_version: "3".into(),
         body: appendix_c_body(),
     }
     .encode()
@@ -1178,7 +1179,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
     let owned_body = well_formed_body();
     let body = &owned_body[..];
     let kind = "kiss-contract";
-    let version = "2";
+    let version = "3";
     let len_owned = format!("len={}", body.len());
     let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
     let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
@@ -1235,8 +1236,8 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         },
         NegativeVector {
             name: "unsupported contract_version",
-            doc: with_header(&format!("KISC {kind} 1 {len_f} {crc_f}")),
-            expect: ContractDecline::UnknownVersion { got: "1".into() },
+            doc: with_header(&format!("KISC {kind} 2 {len_f} {crc_f}")),
+            expect: ContractDecline::UnknownVersion { got: "2".into() },
         },
         NegativeVector {
             name: "declared length overstates the body",
@@ -1285,7 +1286,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         name: "headingless body (framing valid, no first section heading)",
         doc: Document {
             contract_kind: "kiss-contract".into(),
-            contract_version: "2".into(),
+            contract_version: "3".into(),
             body: headless_body,
         }
         .encode(),

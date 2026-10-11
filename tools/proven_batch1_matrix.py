@@ -17,7 +17,7 @@ SK = "conformance/src/structure_key.rs"; IT = "conformance/src/integer.rs"
 ST = "conformance/src/structural.rs"; CT = "conformance/src/contract.rs"
 
 BATCH = {  # proving test -> clause (the ten demonstrated; 6.1-0008 migrated in, see PROVEN_BATCH1.md)
-    "reject_unknown_dtype": "CLASSIFY-6.1-0001", "reject_unknown_op_family": "CLASSIFY-6.5-0006",
+    "reject_unknown_dtype": "CLASSIFY-6.1-0001", "reject_unknown_cell_class": "CLASSIFY-6.5-0006",
     "reject_wrong_field_count": "CLASSIFY-6.7-0009", "test_classify_work_class_element_count": "CLASSIFY-6.5-0007",
     "test_ops_add_sub_mul_wrapping": "OPS-6.4-0001", "test_ops_neg_integer": "OPS-6.4-0003",
     "scan_is_length_preserving": "OPS-6.11-0003", "scatter_oob_writes_are_skipped": "OPS-6.11-0005",
@@ -27,7 +27,7 @@ BATCH = {  # proving test -> clause (the ten demonstrated; 6.1-0008 migrated in,
 # obligation. Byte strings so the seed/restore is line-ending exact.
 MUT = [
     ("reject_unknown_dtype", SK, b"if !DTYPES.contains(&f[2]) {", b"if false && !DTYPES.contains(&f[2]) {"),
-    ("reject_unknown_op_family", SK, b"if !OP_FAMILIES.contains(&f[1]) {", b"if false && !OP_FAMILIES.contains(&f[1]) {"),
+    ("reject_unknown_cell_class", SK, b"if !CELL_CLASSES.contains(&f[1]) {", b"if false && !CELL_CLASSES.contains(&f[1]) {"),
     ("reject_wrong_field_count", SK, b"if f.len() != 9 && f.len() != 10 {", b"if false && f.len() != 9 && f.len() != 10 {"),
     ("test_classify_work_class_element_count", SK, b"c if c <= 1024 => WorkClass::Block,", b"c if c <= 1024 => WorkClass::Grid,"),
     ("test_ops_add_sub_mul_wrapping", IT, b"fn add(self, rhs: Self) -> Self { self.wrapping_add(rhs) }", b"fn add(self, rhs: Self) -> Self { self.saturating_add(rhs) }"),
@@ -35,7 +35,7 @@ MUT = [
     ("scan_is_length_preserving", ST, b"    }\n    out\n}", b"    }\n    out.pop();\n    out\n}"),
     ("scatter_oob_writes_are_skipped", ST, b"continue; // \xc2\xa76.11-0005: OOB writes are skipped.", b"(); // \xc2\xa76.11-0005 skip REMOVED (mutation)"),
     ("scatter_atomic_max_min_nan_propagating", ST, b"Combine::AtomicMax => max_prop(dest[i], s),", b"Combine::AtomicMax => dest[i].max(s),"),
-    ("test_contract_version_value_pinned", CT, b'if version != "2" {', b'if version != "3" {'),
+    ("test_contract_version_value_pinned", CT, b'if version != "3" {', b'if version != "2" {'),
 ]
 
 if __name__ == "__main__":

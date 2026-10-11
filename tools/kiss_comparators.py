@@ -86,6 +86,7 @@ RE_CODE_TOK = re.compile(r'=\s*"([^"]+)"')
 # declaration would claim a blindness the key does not have.
 NON_BUCKET = {
     "MathFidelity": "declared attribute (st/rm), not a bucketing of any continuum",
+    "DequantForm": "declared alternative (dl/dc): the identity of the dequant map the stored bits select, not a bucketing of any continuum",
 }
 
 # Index width is derived as a &'static str pair rather than a `code_enum!`, so the scan above
