@@ -3,6 +3,20 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.1 — 2026-10-11 — corrective
+
+The spec rule is **unchanged** from 0.2.0 (Classify §6.6-0008 as amended by #520); the published goldens
+now match it. 0.2.0 was never published (`publish = false`).
+
+- **Seven `sk5` positive vectors changed** in `conformance/corpus/structure_key_vectors.json`: the
+  keepdim reduction OUTPUT sub-key's broadcast mask is derived, not `00` — `02` (`[4,8]→[4,1]`), `03`
+  (`[4,8]→[1,1]`), `01` (`[8]→[1]`), `0a` (`[2,4,3,5]→[2,1,3,1]`): `reduction_trailing_axis`,
+  `reduction_all_axes`, `reduction_rank1_all_axes`, `reduction_subset_mask`,
+  `noncontraction_acc_mp_field`, `noncontraction_acc_deviating_f64`,
+  `noncontraction_reduction_mp_only`. The Classify Appendix A.1 goldens change the same way.
+- **Downstream: re-vendor the corpus from the merged #536 commit, not from `a33282c`.** A deriver that
+  follows §6.6-0008 already produces these masks.
+
 ## 0.2.0 — 2026-10-11 — **Breaking**
 
 One coordinated schema event: KISS-Classify `structure_key` `sk4` → `sk5`, KISS-Contract
