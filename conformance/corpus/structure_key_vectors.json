@@ -196,7 +196,7 @@
       "note": "reduction over the trailing axis serializes rlast",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -204,7 +204,7 @@
       "note": "reduction over all axes serializes rall",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
@@ -212,7 +212,7 @@
       "note": "rank-1 all-axes reduction",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -220,7 +220,7 @@
       "note": "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -308,7 +308,7 @@
       "note": "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st"
+      "token": "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -324,7 +324,7 @@
       "note": "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -332,7 +332,7 @@
       "note": "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
@@ -452,14 +452,14 @@
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "redundant_acc_mp_all_default",
       "note": "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st",
       "decline": "RedundantAccMpField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "acc_mp_bad_precision_code",
       "note": "the (acc+mp) field with an unrecognized math-precision code (zz)",
-      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/zz",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz",
       "decline": "BadAccMpField"
     },
     {

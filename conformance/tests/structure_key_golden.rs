@@ -75,6 +75,10 @@ fn co8() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V8, DivBucket
 fn br1() -> OperandSubKey { op(Contig::Broadcast, 0x01, VecWidth::V1, DivBucket::D16, false) }
 fn co1_d8() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::D8, false) }
 fn co1_da() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false) }
+/// A keepdim reduction OUTPUT: the folded axes are own extent-1 axes under a frame extent > 1,
+/// so their mask bits are set (§6.6-0008, #520) — `mask` is `derive_bcast_mask_in_frame` of the
+/// output over the frame.
+fn red_out(mask: u8) -> OperandSubKey { op(Contig::Contiguous, mask, VecWidth::V1, DivBucket::Da, false) }
 
 // ---- Appendix A.1 golden token vectors --------------------------------------
 
@@ -99,27 +103,27 @@ fn a1_unary_f16_v8() {
 
 #[test]
 fn a1_reduction_trailing_axis() {
-    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast");
+    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, None);
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast");
 }
 
 #[test]
 fn a1_reduction_all_axes() {
-    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None);
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall");
 }
 
 #[test]
 fn a1_reduction_rank1_all_axes() {
-    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), co1_da()], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), red_out(0x01)], Reduce::All, None);
+    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall");
 }
 
 #[test]
 fn a1_reduction_subset_mask() {
     // rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask 0x0a
-    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), co1_da()], Reduce::Subset(0x0a), None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a");
+    let k = key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), red_out(0x0a)], Reduce::Subset(0x0a), None);
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a");
 }
 
 #[test]
@@ -304,13 +308,13 @@ fn sk4_contraction_precision_group_declines() {
 #[test]
 fn test_classify_noncontraction_acc_mp_field() {
     let k = key_acc_mp(
-        "rdc", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing,
+        "rdc", "f16", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing,
         Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable }),
     );
     assert_token(
         "KISS-CLASSIFY-6.7-0013",
         &k,
-        "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st",
+        "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
     );
 }
 
@@ -340,9 +344,9 @@ fn sk4_noncontraction_acc_mp_deviating_precision_only() {
 /// A non-deviating cell is byte-identical to the pre-sk4 codec modulo dtype renames.
 #[test]
 fn sk4_noncontraction_acc_mp_omitted_when_default() {
-    let k = key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, None);
+    let k = key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None);
     let token = k.to_token();
-    assert_eq!(token, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall");
+    assert_eq!(token, "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall");
     // the omitted field means a nine-field token: no trailing precision field at all.
     assert_eq!(token.split('|').count(), 9, "rule (c)/(e): no trailing precision field");
 }
@@ -354,13 +358,13 @@ fn sk4_noncontraction_acc_mp_omitted_when_default() {
 #[test]
 fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
     // f32 compute, f32 accumulator, default `st` — all-default → RedundantAccMpField.
-    let redundant = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st";
+    let redundant = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st";
     assert_eq!(from_token(redundant), Err(KeyDecline::RedundantAccMpField));
     // but a deviating spelling on the same stem parses (accumulator f64 ≠ compute f32).
-    let deviating = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st";
+    let deviating = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st";
     assert!(from_token(deviating).is_ok(), "a genuinely-deviating acc+mp field must parse");
     // and a default accumulator with a deviating mp parses (mp ≠ default).
-    let mp_only = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm";
+    let mp_only = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm";
     assert!(from_token(mp_only).is_ok(), "a deviating-mp-only acc+mp field must parse");
 }
 
@@ -370,7 +374,7 @@ fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
 /// parts, incl. a contraction-shaped payload wrongly placed on a non-gem cell).
 #[test]
 fn sk4_noncontraction_acc_mp_declines() {
-    let stem = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall";
+    let stem = "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall";
     // unknown accumulator dtype.
     assert_eq!(from_token(&format!("{stem}|f99/rm")), Err(KeyDecline::UnknownDtype));
     // reserved accumulator dtype (recognized-but-reserved, distinct from unknown).
@@ -771,6 +775,18 @@ fn test_classify_broadcast_axis_mask() {
     assert_eq!(derive_bcast_mask_in_frame(&[1, 256], &[256, 1], &[1, 256]), 0b00);
     // A real own axis walked with a non-zero stride is still not a broadcast.
     assert_eq!(derive_bcast_mask_in_frame(&[128, 256], &[256, 1], &frame), 0b00);
+
+    // The A.1 KEEPDIM reduction OUTPUTS are exactly this case (§6.6-0009 folds each reduced axis
+    // to an own extent-1 axis under a frame extent > 1), so their masks are NOT 00: the golden
+    // reduction vectors were first minted with `00` and had to be re-derived (Fuel, #535 review).
+    assert_eq!(derive_bcast_mask_in_frame(&[4, 1], &[1, 1], &[4, 8]), 0b10, "[4,8] -> [4,1]: axis 1 folded");
+    assert_eq!(derive_bcast_mask_in_frame(&[1, 1], &[1, 1], &[4, 8]), 0b11, "[4,8] -> [1,1]: both axes folded");
+    assert_eq!(derive_bcast_mask_in_frame(&[1], &[1], &[8]), 0b01, "[8] -> [1]");
+    assert_eq!(
+        derive_bcast_mask_in_frame(&[2, 1, 3, 1], &[3, 3, 1, 1], &[2, 4, 3, 5]),
+        0b1010,
+        "[2,4,3,5] -> [2,1,3,1]: axes 1 and 3 folded"
+    );
 }
 
 #[test]
