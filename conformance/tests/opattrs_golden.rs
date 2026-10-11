@@ -473,7 +473,7 @@ fn test_ops_opattrs_permutation_reserved() {
 /// No Classify clause id is cited, so this stays a single-clause OpAttrs binding.
 fn classify_reduce_field(r: Reduce) -> String {
     let key = StructureKey {
-        op_family: "red".to_string(),
+        cell_class: "rdc".to_string(),
         dtype: "f32".to_string(),
         target: "cpu:baseline".to_string(),
         index_width: "u32".to_string(),

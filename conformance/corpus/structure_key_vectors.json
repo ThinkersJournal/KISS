@@ -8,8 +8,8 @@
     "cuda": 1,
     "vulkan": 5
   },
-  "structure_key_schema_version": 4,
-  "token_prefix": "sk4",
+  "structure_key_schema_version": 5,
+  "token_prefix": "sk5",
   "dtype_axis_note": "recognition_set is all 24 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 21 a byte-match runs over. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
   "recognition_count": 24,
   "usable_count": 21,
@@ -82,8 +82,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm89",
       "expect_match": true,
-      "left_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -93,8 +93,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm8",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|cuda:sm8|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|cuda:sm8|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -104,8 +104,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm890",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|cuda:sm890|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|cuda:sm890|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -115,8 +115,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm90",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -126,8 +126,8 @@
       "left": "cuda:sm89",
       "right": "cuda:SM89",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|cuda:SM89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|cuda:SM89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -137,8 +137,8 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "expect_match": true,
-      "left_token": "sk4|bin|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -148,8 +148,8 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -159,12 +159,12 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none",
       "expect_match": false,
-      "left_token": "sk4|bin|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk4|bin|f32|vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk5|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk5|ew2|f32|vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     }
   ],
   "mapping_guard_note": "The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.",
-  "coverage_note": "The positive vectors exercise the structure_key token GRAMMAR — field order, optional-field presence, sentinel spellings, work-class/dispatch, and decline verdicts — NOT the dtype vocabulary: they place only a few of the 21 usable dtypes in the dtype position, so a dtype-spelling divergence on a token that never appears is invisible to a byte-match against this set. Vocabulary agreement is a DIFFERENT instrument's job and IS closed there: the dtype-manifest gate — tools/test_kiss_dtypes_manifest.py, over conformance/corpus/dtype_manifest.json — asserts each dtype token's metadata, so a c128->c127 respell raises there, naming the token. Nor do the POSITIVE vectors test decline-side rules: rule (d) — rejecting the all-default redundant (acc+mp) form — is exercised only by the decline vector 'redundant_acc_mp_all_default' -> RedundantAccMpField (a deriver covers it by running the DECLINE vectors on the parse side, or by proving the redundant form unconstructible on the emit side; never by the positive byte-match). So 'the byte-match passed' means the token grammar agrees; the vocabulary is confirmed by the manifest and the decline-side rules by the decline vectors, not by this positive set. Three further blind spots, each with a DIFFERENT remedy so a reader knows what to do next: (c) the positives are a SAMPLE, not a census — a divergence that surfaces as a DIFFERENT cell (a shape this set never places) rather than a different spelling of the SAME cell is invisible, and is closed by sampling more cells, never by this set agreeing. (d) op-family ASSIGNMENT is upstream of the token — the op_family code is IN each token, but which concrete op maps to which §6.5-0006 family is the consumer's CLASSIFICATION, made before any token exists, so a party that files an op under the wrong family emits a token for a different cell (absent here), not a mismatched spelling of this one; a category error no token-level check can see, closed only by a classification instrument. [(c) and (d) share a shape — the byte-match tests spelling agreement on the cells sampled, not which cells EXIST or how ops MAP — but NOT a remedy, so they are named separately: (c) is a coverage gap, (d) is a category gap.] (e) Agreement on a PASS-THROUGH field is not evidence of independent DERIVATION of it. (Whether umbrella §5.3's implementation count should instead be per-FIELD is #208's OPEN question, owned there; this note claims only what THIS positive set cannot see.) A field a consumer carries VERBATIM (copied from a shared source, not derived from its own graph) byte-matches across every party sharing that source whether or not any DERIVED it and whether or not it is CORRECT. The lone pass-through field here is the `target` capability token's namespace-owned capability-SET SUFFIX — the part AFTER the colon (the namespace PREFIX `cuda`/`vulkan` is ThinkersJournal-registry-owned under §6.8 and IS checked; only the suffix is the maintainer's vocabulary). It is carried OPAQUELY by every consumer that compares it, and NONE derives it; one such `vulkan:` suffix once byte-matched green while it was MALFORMED against vulkan v4 — that incident is the proof this positive set cannot see the field. TWO DIFFERENT #200 instruments cover it, and they are not one: (i) the `namespace_vocabulary_versions` STAMP records which vocabulary version each embedded suffix was generated against — it proves BINDING, not CURRENCY: a stamp cannot report whether that vocabulary has SINCE moved, only which one was used, so detecting a STALE suffix needs a party comparing the stamp against the live namespace document (the §6.8-0008 manifest is that comparator, the sibling of the dtype-manifest gate above). The stamp alone is genuinely WEAKER than the arity gate; and (ii) the generation-time ARITY GATE refuses to emit a suffix whose FIELD COUNT violates the recorded arity, making a WRONG-ARITY suffix UNPUBLISHABLE — the instrument that closed the vulkan incident, which was an arity break. It counts `.`-separated fields only; it does NOT validate field CONTENT against the vocabulary, so a suffix with the right field count but a wrong field value (an unknown `ops-…` code, say) passes the gate and is caught by the namespace-vocabulary manifest (§6.8-0008), not here. The arity gate is also a TWO-LINK guarantee, not one: the generator cannot emit a token that violates the IN-CODE arity, and the in-code arity cannot drift from `spec/namespaces/<ns>.md` WHILE ITS BINDING TEST RUNS (arity is pinned in code and bound to the document by test — deliberately, to keep the emitter pure and the artifact path-independent). None of this is confirmed by this positive byte-match.",
+  "coverage_note": "The positive vectors exercise the structure_key token GRAMMAR — field order, optional-field presence, sentinel spellings, work-class/dispatch, and decline verdicts — NOT the dtype vocabulary: they place only a few of the 21 usable dtypes in the dtype position, so a dtype-spelling divergence on a token that never appears is invisible to a byte-match against this set. Vocabulary agreement is a DIFFERENT instrument's job and IS closed there: the dtype-manifest gate — tools/test_kiss_dtypes_manifest.py, over conformance/corpus/dtype_manifest.json — asserts each dtype token's metadata, so a c128->c127 respell raises there, naming the token. Nor do the POSITIVE vectors test decline-side rules: rule (d) — rejecting the all-default redundant (acc+mp) form — is exercised only by the decline vector 'redundant_acc_mp_all_default' -> RedundantAccMpField (a deriver covers it by running the DECLINE vectors on the parse side, or by proving the redundant form unconstructible on the emit side; never by the positive byte-match). So 'the byte-match passed' means the token grammar agrees; the vocabulary is confirmed by the manifest and the decline-side rules by the decline vectors, not by this positive set. Three further blind spots, each with a DIFFERENT remedy so a reader knows what to do next: (c) the positives are a SAMPLE, not a census — a divergence that surfaces as a DIFFERENT cell (a shape this set never places) rather than a different spelling of the SAME cell is invisible, and is closed by sampling more cells, never by this set agreeing. (d) cell-class DERIVATION is upstream of the token — the cell_class code is IN each token, but whether a deriver reaches it (§6.5-0015) from a cell's operands and declared facts is not exercised by a token-level byte-match, so a party whose derivation reads a different declared fact, or a different pointwise test, emits a well-formed token for a different cell (absent here), not a mismatched spelling of this one; closed by a derivation instrument, never by this set (the reference derivation is pinned by test_classify_cell_class_derivation). [(c) and (d) share a shape — the byte-match tests spelling agreement on the cells sampled, not which cells EXIST or how ops MAP — but NOT a remedy, so they are named separately: (c) is a coverage gap, (d) is a category gap.] (e) Agreement on a PASS-THROUGH field is not evidence of independent DERIVATION of it. (Whether umbrella §5.3's implementation count should instead be per-FIELD is #208's OPEN question, owned there; this note claims only what THIS positive set cannot see.) A field a consumer carries VERBATIM (copied from a shared source, not derived from its own graph) byte-matches across every party sharing that source whether or not any DERIVED it and whether or not it is CORRECT. The lone pass-through field here is the `target` capability token's namespace-owned capability-SET SUFFIX — the part AFTER the colon (the namespace PREFIX `cuda`/`vulkan` is ThinkersJournal-registry-owned under §6.8 and IS checked; only the suffix is the maintainer's vocabulary). It is carried OPAQUELY by every consumer that compares it, and NONE derives it; one such `vulkan:` suffix once byte-matched green while it was MALFORMED against vulkan v4 — that incident is the proof this positive set cannot see the field. TWO DIFFERENT #200 instruments cover it, and they are not one: (i) the `namespace_vocabulary_versions` STAMP records which vocabulary version each embedded suffix was generated against — it proves BINDING, not CURRENCY: a stamp cannot report whether that vocabulary has SINCE moved, only which one was used, so detecting a STALE suffix needs a party comparing the stamp against the live namespace document (the §6.8-0008 manifest is that comparator, the sibling of the dtype-manifest gate above). The stamp alone is genuinely WEAKER than the arity gate; and (ii) the generation-time ARITY GATE refuses to emit a suffix whose FIELD COUNT violates the recorded arity, making a WRONG-ARITY suffix UNPUBLISHABLE — the instrument that closed the vulkan incident, which was an arity break. It counts `.`-separated fields only; it does NOT validate field CONTENT against the vocabulary, so a suffix with the right field count but a wrong field value (an unknown `ops-…` code, say) passes the gate and is caught by the namespace-vocabulary manifest (§6.8-0008), not here. The arity gate is also a TWO-LINK guarantee, not one: the generator cannot emit a token that violates the IN-CODE arity, and the in-code arity cannot drift from `spec/namespaces/<ns>.md` WHILE ITS BINDING TEST RUNS (arity is pinned in code and bound to the document by test — deliberately, to keep the emitter pure and the artifact path-independent). None of this is confirmed by this positive byte-match.",
   "positive_vectors": [
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -172,7 +172,7 @@
       "note": "elementwise binary, three contiguous v4 operands, no reduce",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0004",
@@ -180,7 +180,7 @@
       "note": "middle operand broadcasts on axis 0 (br/01/v1)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-"
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0003",
@@ -188,7 +188,7 @@
       "note": "unary f16, two v8 operands",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|une|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-"
+      "token": "sk5|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -196,7 +196,7 @@
       "note": "reduction over the trailing axis serializes rlast",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -204,7 +204,7 @@
       "note": "reduction over all axes serializes rall",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
@@ -212,7 +212,7 @@
       "note": "rank-1 all-axes reduction",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -220,7 +220,7 @@
       "note": "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -228,7 +228,7 @@
       "note": "binary with two operands (no third)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -236,7 +236,7 @@
       "note": "the freeze-gate relu_add cell (#60): rank-1 flat grid-stride, three v4 operands",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|bin|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -244,7 +244,7 @@
       "note": "dense gem, f32 weight/acc/out, bit-stable (ctll/.../st)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk5|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.8",
@@ -252,7 +252,7 @@
       "note": "same gem cell on a vulkan capability-set target",
       "target": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "target_namespace": "vulkan",
-      "token": "sk4|gem|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk5|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -260,7 +260,7 @@
       "note": "batched gem carries the b<class> coordinate (cmll/.../bm/...)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st"
+      "token": "sk5|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0019",
@@ -268,7 +268,7 @@
       "note": "DISCRIMINATING (§6.6-0019): quantized-GEMM operands [weight=i4, weight_scale=f8e8m0, activation=bf16]; <wdt> derives to i4 from the caller's weight-role hint (slot 0), NOT the fixed operand-1 read that names the scale f8e8m0. wdt/acc/out are distinct (i4/f32/bf16) so a positional resolution yields DIFFERENT BYTES -- do not flatten to uniform dtypes; that silently destroys the discriminator.",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
+      "token": "sk5|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -276,7 +276,7 @@
       "note": "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk5|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -284,7 +284,7 @@
       "note": "TF32, reduced-mantissa mp=rm (same shape as simt_f32, distinct token)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm"
+      "token": "sk5|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0018",
@@ -292,7 +292,7 @@
       "note": "mixed-precision FP8: e4m3 x e5m2 -> f32, f32 acc",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st"
+      "token": "sk5|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0018",
@@ -300,7 +300,7 @@
       "note": "mixed-precision FP8: e4m3 x e4m3 -> f16, f32 acc (distinct token from the e5m2 cell)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk4|gem|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st"
+      "token": "sk5|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -308,7 +308,7 @@
       "note": "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st"
+      "token": "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -316,7 +316,7 @@
       "note": "scan cell, accumulator == compute (f32) but mp deviates (rm): |-|f32/rm",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|scn|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm"
+      "token": "sk5|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -324,7 +324,7 @@
       "note": "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -332,7 +332,47 @@
       "note": "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm"
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.5-0015",
+      "name": "cell_class_ew3_three_inputs",
+      "note": "three input operands + one output, pointwise by shape: ew3 (class is derived from structure, not from the op)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk5|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.5-0015",
+      "name": "cell_class_ndx_index_role_declared",
+      "note": "table + index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule)",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk5|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.5-0015",
+      "name": "cell_class_oth_not_pointwise",
+      "note": "no declared fact and not pointwise by shape (the output does not have the frame extents): oth",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk5|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.3-0009a",
+      "name": "dequant_form_linear_weight",
+      "note": "int4 weight operand carrying a linear dequant: the sixth sub-key component `dl`; distinct from the codebook cell below",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk5|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.3-0009a",
+      "name": "dequant_form_codebook_weight",
+      "note": "the same int4 cell with a codebook dequant: `dc` — no scale reproduces a codebook with a linear dequant, so the two MUST NOT share a key",
+      "target": "cuda:sm90",
+      "target_namespace": "cuda",
+      "token": "sk5|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
     }
   ],
   "decline_vectors": [
@@ -340,28 +380,56 @@
       "clause": "KISS-CLASSIFY-6.1-0001",
       "name": "unknown_dtype",
       "note": "dtype outside the closed 24-token set",
-      "token": "sk4|bin|f99|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk5|ew2|f99|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnknownDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0001",
       "name": "reserved_dtype",
       "note": "reserved fnuz dtype: recognized on parse, distinct from unknown",
-      "token": "sk4|bin|f8e4m3fnuz|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk5|ew2|f8e4m3fnuz|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "ReservedDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0006",
-      "name": "unknown_op_family",
-      "note": "op-family outside the closed 24-code set",
-      "token": "sk4|zzz|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "decline": "UnknownOpFamily"
+      "name": "unknown_cell_class",
+      "note": "class code outside the closed seven-class set",
+      "token": "sk5|zzz|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnknownCellClass"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.5-0006",
+      "name": "retired_sk4_op_family_code",
+      "note": "a well-formed sk5 token still carrying a retired sk4 op-family code (`gem`): the 24-code field is gone, so it is an unknown class",
+      "token": "sk5|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnknownCellClass"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.6-0017",
+      "name": "rdc_cell_with_empty_reduce_set",
+      "note": "an `rdc` cell whose reduce field is `-`: the empty reduced set is the not-a-reduction case (§6.6-0009), so no rdc cell can carry it",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "RdcWithoutReduce"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0004",
+      "name": "dequant_form_unknown_spelling",
+      "note": "the optional sixth sub-key component is not `dl` / `dc`",
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/xx;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "BadDequantForm"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0004",
+      "name": "operand_sub_key_seven_parts",
+      "note": "an operand sub-key with more than the six permitted parts",
+      "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/dl/dl;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "BadOperandSubKey"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0015",
       "name": "version_signpost_sk9",
       "note": "well-formed canonical OTHER version -> re-derive signpost, not a wall",
-      "token": "sk9|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk9|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnsupportedSchemaVersion",
       "got": 9
     },
@@ -369,7 +437,7 @@
       "clause": "KISS-CLASSIFY-6.7-0014",
       "name": "version_signpost_sk3",
       "note": "this reference build ships no sk3 decoder arm: a persisted sk3 token is the signpost, never a silent cross-vocab decode",
-      "token": "sk3|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk3|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnsupportedSchemaVersion",
       "got": 3
     },
@@ -377,84 +445,84 @@
       "clause": "KISS-CLASSIFY-6.7-0015",
       "name": "version_wall_leading_zero",
       "note": "non-canonical leading-zero sk04 is the malformed wall, not the signpost",
-      "token": "sk04|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk04|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "BadVersionPrefix"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "redundant_acc_mp_all_default",
       "note": "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st",
       "decline": "RedundantAccMpField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "acc_mp_bad_precision_code",
       "note": "the (acc+mp) field with an unrecognized math-precision code (zz)",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/zz",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/zz",
       "decline": "BadAccMpField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "contraction_reserved_weight_dtype",
       "note": "a reserved fnuz dtype inside the gem precision group declines as reserved",
-      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st",
+      "token": "sk5|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st",
       "decline": "ReservedDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "contraction_bad_precision_code",
       "note": "the gem precision group with an unrecognized math-precision code (zz)",
-      "token": "sk4|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz",
+      "token": "sk5|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz",
       "decline": "BadContractionField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_all_axes_r2",
       "note": "x03 at rank 2 is the all-axes set — MUST be rall, never a bitmask",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_trailing_r2",
       "note": "x02 at rank 2 is the lone innermost axis — MUST be rlast, never a bitmask",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_rank1",
       "note": "x01 at rank 1 is both all-axes and lone-trailing (they coincide) — MUST be rall (§6.6-0009 tie-break)",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_empty",
       "note": "x00 is the empty reduced set — that is not a reduction, spelled `-`, never a bitmask",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "out_of_range_reduce_mask_r2",
       "note": "x04 at rank 2 sets bit 2, an axis that does not exist — out-of-range mask, not a sentinel overload",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04",
       "decline": "BadReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
       "name": "noncanonical_reduce_rall_rank0",
       "note": "rall at rank 0 is the full set of zero axes = the empty set — a real set spelled wrong that `-` owns, exactly x00's shape",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
       "name": "out_of_range_reduce_rlast_rank0",
       "note": "rlast at rank 0 names a lone innermost axis that does not exist — a set that cannot exist for the rank, exactly x04@r2's out-of-range shape",
-      "token": "sk4|red|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast",
+      "token": "sk5|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast",
       "decline": "BadReduceField"
     }
   ]

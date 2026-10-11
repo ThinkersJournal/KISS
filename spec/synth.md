@@ -236,7 +236,7 @@ strided cell.
    envelope; the consumer sees the provider advertises `PROVISION_ON_REQUEST` (FEAT
    bit 32) and `CONTRACT_QUERY` (FEAT bit 33). Profile `1` is mutual.
 2. **Availability (level 2).** The provider's availability list does not contain the
-   consumer's `structure_key` (op-category `bin`, three `f32` operands, strided,
+   consumer's `structure_key` (cell class `ew2`, three `f32` operands, strided,
    `cuda:sm89`) — a **miss**.
 3. **Provision (level 3).** The consumer sends the contract-query request (tag
    `CYRQ`): the `u32` `structure_key` length, the `structure_key` bytes, and a
@@ -358,7 +358,7 @@ the identities and the built artifact, the upstream sub-standards mean them.
   that travels with every provided kernel. Owned by KISS-Contract; Synth **returns** it,
   never re-defines it. Every provided kernel carries one (KISS-SYNTH-6.2-0002).
 - **structure_key / specialization cell** — the KISS-Classify admissibility predicate
-  over one layout/dtype/target specialization cell: a coarse op-category tag +
+  over one layout/dtype/target specialization cell: a derived cell class +
   canonically-ordered operand descriptors + `target_capability` + role hints,
   **extent-free** (keyed by size classes, not literal extents), matched byte-for-byte.
   Owned by KISS-Classify; used here as the provision request key, carried opaquely

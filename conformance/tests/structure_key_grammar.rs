@@ -27,7 +27,7 @@ use kiss_conformance::structure_key::*;
 // ---- shared builders (this file's own; a sibling test file is a separate crate) ----
 
 fn op(contig: Contig, mask: u8, vec: VecWidth, div: DivBucket, flipped: bool) -> OperandSubKey {
-    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped }
+    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dequant: None }
 }
 
 /// A plain contiguous v4/d16 operand — the reusable filler sub-key.
@@ -36,7 +36,7 @@ fn co() -> OperandSubKey {
 }
 
 fn key(
-    op_family: &str,
+    cell_class: &str,
     dtype: &str,
     target: &str,
     work_class: WorkClass,
@@ -46,7 +46,7 @@ fn key(
     contraction: Option<Contraction>,
 ) -> StructureKey {
     StructureKey {
-        op_family: op_family.to_string(),
+        cell_class: cell_class.to_string(),
         dtype: dtype.to_string(),
         target: target.to_string(),
         index_width: "ix32".to_string(),
@@ -147,7 +147,7 @@ fn test_classify_structure_key_extent_free() {
     // token carries no extent, so the two are byte-identical.
     let key_from = |ext: &[i64]| {
         key(
-            "bin",
+            "ew2",
             "f32",
             "cuda:sm89",
             derive_work_class(&[ext]),
@@ -184,7 +184,7 @@ fn test_classify_structure_key_extent_free() {
 #[test]
 fn test_classify_structure_key_is_admissibility_predicate() {
     let base = key(
-        "bin",
+        "ew2",
         "f32",
         "cuda:sm89",
         WorkClass::Grid,
@@ -202,7 +202,7 @@ fn test_classify_structure_key_is_admissibility_predicate() {
 
     // each closure returns a one-field-different variant of the base.
     let variants: Vec<(&str, StructureKey)> = vec![
-        ("op_family", { let mut k = base.clone(); k.op_family = "une".into(); k }),
+        ("cell_class", { let mut k = base.clone(); k.cell_class = "ew1".into(); k }),
         ("dtype", { let mut k = base.clone(); k.dtype = "f16".into(); k }),
         ("target", { let mut k = base.clone(); k.target = "cuda:sm90a".into(); k }),
         ("index_width", { let mut k = base.clone(); k.index_width = "ix64".into(); k }),
@@ -224,7 +224,7 @@ fn test_classify_structure_key_is_admissibility_predicate() {
 
     // the reduce field is gated to `red` cells, so its near-miss uses a `red` base.
     let red_base = key(
-        "red",
+        "rdc",
         "f32",
         "cuda:sm89",
         WorkClass::Warp,
@@ -257,7 +257,7 @@ fn test_classify_operand_sub_key_fields() {
     // a rich sub-key with a distinct value in every position.
     let sk = op(Contig::Strided, 0x0a, VecWidth::V2, DivBucket::D8, true);
     let field7 = |o: OperandSubKey| -> String {
-        key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![o], Reduce::None, None)
+        key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![o], Reduce::None, None)
             .to_token()
             .split('|')
             .nth(7)
@@ -308,15 +308,17 @@ fn test_classify_operand_sub_key_fields() {
 
     // the sub-key round-trips: parsing reproduces the exact struct.
     let tok =
-        key("bin", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![sk], Reduce::None, None).to_token();
+        key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![sk], Reduce::None, None).to_token();
     assert_eq!(
         from_token(&tok).unwrap().operands[0],
         sk,
         "KISS-CLASSIFY-6.6-0007: sub-key did not round-trip"
     );
 
-    // arity is exactly five: a 4-field and a 6-field sub-key are typed declines.
-    let base = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
+    // arity is five, or six with the optional `dequant_form` component (sk5): a 4-field
+    // sub-key, a 6-field one whose sixth part is not `dl`/`dc`, and a 7-field one are
+    // typed declines.
+    let base = "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.6-0007: base token invalid");
     assert_eq!(
         from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16", 1)),
@@ -325,31 +327,39 @@ fn test_classify_operand_sub_key_fields() {
     );
     assert_eq!(
         from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/x", 1)),
-        Err(KeyDecline::BadOperandSubKey),
-        "KISS-CLASSIFY-6.6-0007: a 6-field sub-key was accepted"
+        Err(KeyDecline::BadDequantForm),
+        "KISS-CLASSIFY-6.6-0007: a 6-field sub-key with an unknown dequant_form was accepted"
     );
+    assert_eq!(
+        from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/dl/dl", 1)),
+        Err(KeyDecline::BadOperandSubKey),
+        "KISS-CLASSIFY-6.6-0007: a 7-field sub-key was accepted"
+    );
+    // ... and the six-field form with a valid `dequant_form` is accepted and round-trips.
+    let with_dq = base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/dc", 1);
+    assert_eq!(from_token(&with_dq).map(|k| k.to_token()), Ok(with_dq.clone()));
 }
 
 // ============================================================================
-// KISS-CLASSIFY-6.3-0008 — op_family is carried once at cell level, not per operand
+// KISS-CLASSIFY-6.3-0008 — cell_class is carried once at cell level, not per operand
 // ============================================================================
 
-/// KISS-CLASSIFY-6.3-0008: `op_family` is carried at the **cell** level (token
+/// KISS-CLASSIFY-6.3-0008: `cell_class` is carried at the **cell** level (token
 /// field 1), exactly once, never per raw operand — so it appears in exactly one
 /// `|`-field and never inside any per-operand sub-key.
 #[test]
-fn test_classify_op_family_is_cell_level() {
+fn test_classify_cell_class_is_cell_level() {
     let operands = vec![
         co(),
         op(Contig::Broadcast, 0x0a, VecWidth::V1, DivBucket::Da, true),
         op(Contig::Strided, 0x00, VecWidth::V2, DivBucket::D8, false),
     ];
     let mut base_field7: Option<String> = None;
-    for fam in OP_FAMILIES {
+    for fam in CELL_CLASSES {
         // gem adds the trailing contraction field (field 9); the op-family-presence
         // rule for gem is a separate clause, so this cell-level test uses non-gem
         // families where field 7 is the last operand block.
-        if fam == "gem" {
+        if fam == "ctr" {
             continue;
         }
         let tok = key(fam, "f32", "cuda:sm89", WorkClass::Grid, 2, operands.clone(), Reduce::None, None)
@@ -357,7 +367,7 @@ fn test_classify_op_family_is_cell_level() {
         let fields: Vec<&str> = tok.split('|').collect();
         // exactly one whole `|`-field is an op-family code, and it is field 1.
         let fam_positions: Vec<usize> =
-            (0..fields.len()).filter(|&i| OP_FAMILIES.contains(&fields[i])).collect();
+            (0..fields.len()).filter(|&i| CELL_CLASSES.contains(&fields[i])).collect();
         assert_eq!(
             fam_positions,
             vec![1],
@@ -368,7 +378,7 @@ fn test_classify_op_family_is_cell_level() {
         for sub in fields[7].split(';') {
             for comp in sub.split('/') {
                 assert!(
-                    !OP_FAMILIES.contains(&comp),
+                    !CELL_CLASSES.contains(&comp),
                     "KISS-CLASSIFY-6.3-0008: op-family code `{comp}` leaked into a sub-key (`{fam}`)"
                 );
             }
@@ -403,7 +413,7 @@ fn test_classify_secondary_dtype_unkeyed() {
         op(Contig::Broadcast, 0xb1, VecWidth::V1, DivBucket::Da, false),
         op(Contig::Strided, 0x00, VecWidth::V2, DivBucket::D8, true),
     ];
-    let tok = key("bin", "f32", "cuda:sm89", WorkClass::Grid, 3, ops, Reduce::None, None).to_token();
+    let tok = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 3, ops, Reduce::None, None).to_token();
     let fields: Vec<&str> = tok.split('|').collect();
 
     // count dtype tokens across the whole token, EXCLUDING the sub-key mask positions.
@@ -436,7 +446,7 @@ fn test_classify_secondary_dtype_unkeyed() {
     // contrast: a gem cell DOES carry the secondary dtypes — but only in the
     // contraction field (field 9), never in a sub-key.
     let gem = key(
-        "gem",
+        "ctr",
         "f32",
         "cuda:sm90",
         WorkClass::Grid,
@@ -490,7 +500,7 @@ fn test_classify_secondary_dtype_unkeyed() {
 /// decline.
 #[test]
 fn test_classify_target_token_charset() {
-    let base = "sk4|bin|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
+    let base = "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.8-0005: baseline token invalid");
 
     // legal targets still parse: `.` (e.g. spirv1.6) and uppercase letters (ASCII,

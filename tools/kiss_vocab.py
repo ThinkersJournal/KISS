@@ -6,17 +6,17 @@ kiss_vocab.py — the spec <-> reference-binding enumeration lint.
 A document lint, complementary to tools/kiss_tables.py. Where kiss_tables checks
 that a shared enumeration agrees with ITSELF across the spec (the dtype set, the
 determinism enum), this checks that a CLOSED enumeration the spec pins agrees with
-the way the reference conformance harness BINDS it — the op-family code set, and
+the way the reference conformance harness BINDS it — the cell-class code set, and
 (extensibly) the OpAttrs sub-vocabularies.
 
 Why this matters, and why it is not the same lint as kiss_tables: some closed sets
 are restated in several spec files (dtypes, the determinism enum) — kiss_tables
 catches a re-fork there. Others are owned by ONE clause and only *referenced* by
-tag elsewhere (the 24 op-family codes live only in KISS-Classify §6.5-0006; the
+tag elsewhere (the 7 cell-class codes live only in KISS-Classify §6.5-0006; the
 OpAttrs value enums live only in KISS-Ops §6.19 — Grammar/Contract embed OpAttrs
 opaquely). For those, a cross-document consistency lint has nothing to disagree
 with — it is teethless. The drift that CAN happen is between the pinned set and
-the reference implementation that binds it: change the spec's op-family list
+the reference implementation that binds it: change the spec's cell-class list
 without the codec (or vice versa) and the reference reader silently accepts or
 rejects the wrong token. This lint is the tooth for exactly that.
 
@@ -37,11 +37,11 @@ import os
 import re
 import sys
 
-# A 3-letter lowercase op-family code (KISS-Classify §6.5-0006).
+# A 3-letter lowercase cell-class code (KISS-Classify §6.5-0006).
 FAMILY_CODE = re.compile(r"`([a-z]{3})`")
 
 NUMBER_WORDS = {
-    "twenty-two": 22, "twenty-three": 23, "twenty-four": 24, "twenty-five": 25,
+    "seven": 7, "twenty-two": 22, "twenty-three": 23, "twenty-four": 24, "twenty-five": 25,
 }
 
 # The OpAttrs sub-vocabularies: each is owned by one KISS-Ops §6.19 clause as a
@@ -72,8 +72,8 @@ CLASSIFY_CODE_ENUMS = [
 # Each entry: a closed set the spec pins and the harness binds, plus the clause a
 # drift fails.
 COVERS = [("KISS-CLASSIFY-6.5-0006",
-           "the 24 op-family codes drift between Classify §6.5-0006 and the "
-           "reference structure_key codec (OP_FAMILIES)")]
+           "the 7 cell-class codes drift between Classify §6.5-0006 and the "
+           "reference structure_key codec (CELL_CLASSES)")]
 COVERS += [(cid, f"the {enum} OpAttrs enum drifts between its §6.19 clause, the "
             f"§6.19.2 table, and the reference opattrs codec")
            for cid, enum, _field in OPATTRS_ENUMS]
@@ -84,7 +84,7 @@ COVERS += [
     ("KISS-CLASSIFY-6.5-0005",
      "the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width"),
     ("KISS-CLASSIFY-6.4-0003",
-     "the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION"),
+     "the structure_key schema version drifts between §6.4-0003 (sk5) and SCHEMA_VERSION"),
 ]
 
 
@@ -110,29 +110,33 @@ def _markdown_tables(text):
 
 
 def spec_op_families(classify_text):
-    """The op-family code set pinned by KISS-Classify §6.5-0006, plus the count word.
+    """The cell-class code set pinned by KISS-Classify §6.5-0006, plus the count word.
 
-    §6.5-0006 says the domain is "exactly the twenty-four categories of the table
-    above, each spelled by its 3-letter token code". The table is a two-pair
-    layout (`| desc | code | desc | code |`); the op-family table is the one that
-    carries the most 3-letter backtick codes.
+    §6.5-0006 says the domain is "exactly the seven classes of the table above,
+    each spelled by its token code". The class table is the one that carries the
+    most 3-letter backtick codes.
     """
     best = []
     for block in _markdown_tables(classify_text):
-        codes = FAMILY_CODE.findall(block)
-        if len(codes) > len(best):
-            best = codes
+        header = block.splitlines()[0]
+        # the class table is the one headed `| Class | Code | ... |`; its code column is
+        # the second cell of each row (the dtype tables also carry short backticked tokens)
+        if not re.match(r"\|\s*Class\s*\|\s*Code\s*\|", header):
+            continue
+        best = [code for row in block.splitlines()[2:]
+                for code in re.findall(r"`([a-z][a-z0-9]{2})`", row.split("|")[2])]
+        break
     m = re.search(
-        r"op-family-tag domain MUST be exactly the\s+([a-z-]+)\s+categories",
+        r"cell-class domain MUST be exactly the\s+([a-z-]+)\s+classes",
         classify_text)
     count_word = m.group(1) if m else None
     return best, count_word
 
 
 def harness_op_families(rs_text):
-    """The op-family codes bound by the reference codec: the string literals in
-    `pub const OP_FAMILIES: [&str; N] = [ "gem", ... ];`."""
-    m = re.search(r"OP_FAMILIES\s*:\s*\[&str;\s*\d+\]\s*=\s*\[(.*?)\]", rs_text, re.S)
+    """The cell-class codes bound by the reference codec: the string literals in
+    `pub const CELL_CLASSES: [&str; N] = [ "ctr", ... ];`."""
+    m = re.search(r"CELL_CLASSES\s*:\s*\[&str;\s*\d+\]\s*=\s*\[(.*?)\]", rs_text, re.S)
     if not m:
         return None
     return re.findall(r'"([a-z0-9]+)"', m.group(1))
@@ -237,12 +241,12 @@ def check(spec_dir, conf_dir):
     if not os.path.exists(classify):
         return [f"missing {classify}"]
     if not os.path.exists(rs):
-        return [f"missing {rs} (the reference codec that binds the op-family set)"]
+        return [f"missing {rs} (the reference codec that binds the cell-class set)"]
 
     spec_codes, count_word = spec_op_families(open(classify, encoding="utf-8").read())
     harness_codes = harness_op_families(open(rs, encoding="utf-8").read())
     if harness_codes is None:
-        return ["could not find OP_FAMILIES in structure_key.rs"]
+        return ["could not find CELL_CLASSES in structure_key.rs"]
 
     spec_set, harness_set = set(spec_codes), set(harness_codes)
 
@@ -253,10 +257,10 @@ def check(spec_dir, conf_dir):
             f"lists {len(spec_set)} distinct codes")
     if len(spec_codes) != len(spec_set):
         dup = sorted({c for c in spec_codes if spec_codes.count(c) > 1})
-        violations.append(f"the §6.5 op-family table has duplicate code(s): {dup}")
+        violations.append(f"the §6.5 cell-class table has duplicate code(s): {dup}")
     if len(harness_codes) != len(harness_set):
         dup = sorted({c for c in harness_codes if harness_codes.count(c) > 1})
-        violations.append(f"OP_FAMILIES has duplicate code(s): {dup}")
+        violations.append(f"CELL_CLASSES has duplicate code(s): {dup}")
 
     if spec_set != harness_set:
         only_spec = sorted(spec_set - harness_set)
@@ -266,7 +270,7 @@ def check(spec_dir, conf_dir):
             parts.append(f"in §6.5-0006 but not the codec: {only_spec}")
         if only_harness:
             parts.append(f"in the codec but not §6.5-0006: {only_harness}")
-        violations.append("op-family set drift — " + "; ".join(parts))
+        violations.append("cell-class set drift — " + "; ".join(parts))
 
     # ---- OpAttrs sub-vocabularies: KISS-Ops §6.19 {ordinal=name} <-> opattrs.rs ----
     ops_md = os.path.join(spec_dir, "ops.md")
@@ -380,7 +384,7 @@ def main():
 
     print("KISS spec<->binding enumeration lint")
     print("=" * 68)
-    print(f"  op-family codes (KISS-CLASSIFY-6.5-0006): {len(codes)}")
+    print(f"  cell-class codes (KISS-CLASSIFY-6.5-0006): {len(codes)}")
     print(f"    {' '.join(codes)}")
     print(f"  OpAttrs enums checked (KISS-Ops §6.19): {n_enums}  "
           f"(§6.19 clause <-> §6.19.2 table <-> codec)")
@@ -393,7 +397,7 @@ def main():
             print(f"      - {v}")
         print("  RESULT: DRIFT FOUND")
         return 1
-    print("  op-family, the 7 OpAttrs enums, and the §6.5 structure_key sub-vocabularies")
+    print("  cell-class, the 7 OpAttrs enums, and the §6.5 structure_key sub-vocabularies")
     print("  all agree with the reference codec.")
     print("  RESULT: CLEAN")
     return 0

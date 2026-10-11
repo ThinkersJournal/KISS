@@ -11,7 +11,7 @@
 //!      pinned token AND round-trips through `from_token` byte-identically (§6.7-0008).
 //!   3. DECLINE INTEGRITY — every decline vector's malformed input yields the pinned
 //!      typed `KeyDecline`.
-//!   4. COVERAGE — the artifact is a superset of every `sk4|` token literal in the
+//!   4. COVERAGE — the artifact is a superset of every `sk5|` token literal in the
 //!      frozen `structure_key_golden.rs`, bound by scanning that source. This is what
 //!      lets the artifact be additive: a golden cell can never be silently dropped,
 //!      and no second transcription is introduced to drift against the first.
@@ -111,8 +111,8 @@ fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(recognition.len(), 24);
     assert_eq!(usable.len(), 21);
     assert_eq!(reserved.len(), 3);
-    assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(4));
-    assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk4"));
+    assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(5));
+    assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk5"));
     // NOT asserted here: `source_commit`. `doc` is the emitter's own output and the
     // emitter writes SOURCE_COMMIT into that field, so comparing the two compares a
     // value to itself and cannot fail — verified by mutating the constant to a bogus
@@ -182,10 +182,10 @@ fn test_target_axis_is_machine_readable_and_cross_checked() {
 }
 
 /// Extract every double-quoted string literal in `src` that looks like a full
-/// `structure_key` token: begins `sk4|` and carries at least the 9 mandatory fields.
-/// Fragments used as `replacen` needles (`"sk4|"`, `"sk4|bin|f32"`) have fewer fields
+/// `structure_key` token: begins `sk5|` and carries at least the 9 mandatory fields.
+/// Fragments used as `replacen` needles (`"sk5|"`, `"sk5|ew2|f32"`) have fewer fields
 /// and are excluded, as are the other-version literals (`"sk9"`, `"sk04"`) which do
-/// not begin `sk4|`. No regex crate — the harness is stdlib-only (§6.5).
+/// not begin `sk5|`. No regex crate — the harness is stdlib-only (§6.5).
 fn scan_sk4_token_literals(src: &str) -> Vec<String> {
     let bytes = src.as_bytes();
     let mut out = Vec::new();
@@ -205,7 +205,7 @@ fn scan_sk4_token_literals(src: &str) -> Vec<String> {
                     j += 1;
                 }
             }
-            if lit.starts_with("sk4|") && lit.split('|').count() >= 9 {
+            if lit.starts_with("sk5|") && lit.split('|').count() >= 9 {
                 out.push(lit);
             }
             i = j + 1;
@@ -216,7 +216,7 @@ fn scan_sk4_token_literals(src: &str) -> Vec<String> {
     out
 }
 
-/// (4-coverage) The artifact is a superset of every full `sk4|` token literal the
+/// (4-coverage) The artifact is a superset of every full `sk5|` token literal the
 /// frozen golden test pins — bound by scanning the golden source, additively, without
 /// refactoring it. A golden cell dropped from the artifact fails here, naming the token.
 #[test]
@@ -256,7 +256,7 @@ fn artifact_covers_every_golden_token_literal() {
 fn decline_wire_kinds_are_injective() {
     let kinds = all_decline_wire_kinds();
     // pinned — bump deliberately when a KeyDecline variant is added.
-    assert_eq!(kinds.len(), 21, "pinned decline-variant count; bump when KeyDecline grows");
+    assert_eq!(kinds.len(), 23, "pinned decline-variant count; bump when KeyDecline grows");
     let distinct: HashSet<&&str> = kinds.iter().collect();
     assert_eq!(
         distinct.len(),

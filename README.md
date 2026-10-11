@@ -40,7 +40,7 @@ just-in-time generator, and neither is forced to adopt the parts it does not use
 
 | Sub-standard | Tier | Owns | Status |
 |---|---|---|---|
-| **KISS-Classify** | foundational | The vocabulary that describes *data*: dtypes, operand descriptors, layout/op-family tags, the specialization-cell identity (`structure_key`), and the all-hardware target-capability descriptor. | **draft — [`spec/classify.md`](spec/classify.md)** |
+| **KISS-Classify** | foundational | The vocabulary that describes *data*: dtypes, operand descriptors, layout tags, the derived cell class, the specialization-cell identity (`structure_key`), and the all-hardware target-capability descriptor. | **draft — [`spec/classify.md`](spec/classify.md)** |
 | **KISS-Ops** | foundational | The vocabulary that describes *computation*: the op set, each op's pinned numeric semantics, each non-primitive op's reference decomposition, and the mandatory **primitive floor**. | **draft — [`spec/ops.md`](spec/ops.md)** |
 | **KISS-Grammar** | middle | The advertisable-op surface: how an op tag maps to a KISS-Ops op name plus pattern/synthesis attributes and an operand-role tuple, the region wire form, and how a frozen grammar admits a still-growing op set. | **draft — [`spec/grammar.md`](spec/grammar.md)** |
 | **KISS-Contract** | middle | The universal, vendor-neutral **kernel-contract** format — the seven-section document (identity, semantics, interface/ABI, dispatch, capabilities, guarantees, provenance) that tells a consumer what a kernel computes and exactly how to call it. Every provided kernel carries one. | **draft — [`spec/contract.md`](spec/contract.md)** |

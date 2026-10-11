@@ -142,12 +142,12 @@ The Identity section joins two identities that are easy to conflate:
 
 - **Which CELL fits** — the `accept_predicate = structure_key` (KISS-Classify): an
   **admissibility predicate** over a layout/dtype/target specialization cell — a
-  coarse op-**category** tag + canonically-ordered operand descriptors + the target +
-  op-category role hints, **extent-free** (keyed by size classes, not literal
+  derived structural **cell class** + canonically-ordered operand descriptors + the
+  target + the declared role hints, **extent-free** (keyed by size classes, not literal
   extents). It answers "does this invocation fall into this kernel's cell?" by
   byte-matching the derived key. It is explicitly **not** the op's semantic identity:
-  its cell-level op-category is a coarse Classify category, a different closed set from
-  a KISS-Ops op name.
+  its cell class is a coarse *structural* Classify class, a different closed set from
+  a KISS-Ops op name, and many unrelated ops share one.
 
 - **Which OP is this** — the `op_identity`: the op the Semantics DAG root computes,
   carried either as a full KISS-Grammar advertisable-op tag re-based onto a KISS-Ops op
@@ -160,9 +160,9 @@ The Identity section joins two identities that are easy to conflate:
 A consumer must match **both**. Two kernels can share a cell (same `structure_key`)
 yet compute different ops, and one op can span many cells. So Identity carries the
 `structure_key` and the `op_identity` as two distinct fields, requires them jointly
-for a match, and asserts their **consistency**: the `structure_key`'s coarse
-op-category must be compatible with the `op_identity`'s KISS-Ops family, per the
-normative compatibility table of §6.3, so the two identities cannot silently disagree.
+for a match, and asserts their **consistency**: a `structure_key` whose cell class
+claims a contraction, an indexed access or a reduction must name an op that has that
+structural fact, per §6.3-0006, so the two identities cannot silently disagree.
 
 ### 2.3 Semantics is a hierarchical, resolvable op DAG — the mandatory spine
 
@@ -210,7 +210,7 @@ strided cell. Its contract carries:
 
 - **Identity:** `contract_kind = kiss-contract`; `op_identity = add` (a bare
   advertisable-op tag over the KISS-Ops name `add`); `accept_predicate` = the cell's
-  `structure_key` token (op-category `bin`, three `f32` operands, strided);
+  `structure_key` token (cell class `ew2`, three `f32` operands, strided);
   `target_capability = cuda:sm89`; a `revision_hash`.
 - **Semantics:** a one-node DAG `{ op: add }` — a primitive, so a 1-node DAG; edge-case
   policy resolved from KISS-Ops (`add` is IEEE-754, NaN-propagating).
@@ -301,8 +301,8 @@ mean them.
   (which cell fits) and the `op_identity` (which op this is) into one joint match
   (§6.3).
 - **accept_predicate / structure_key** — the KISS-Classify admissibility predicate over
-  a specialization cell (a coarse op-category + canonically-ordered operand descriptors
-  + target + op-category role hints, extent-free); a kernel admits an invocation iff the
+  a specialization cell (a derived cell class + canonically-ordered operand descriptors
+  + target + declared role hints, extent-free); a kernel admits an invocation iff the
   derived `structure_key` byte-matches the kernel's key. **Not** the op's semantic
   identity.
 - **op_identity** — the identity of the op the kernel computes, naming the Semantics DAG root's
@@ -432,9 +432,9 @@ mean them.
   Classify vocabulary; the Interface operand pointers follow the KISS-Classify **canonical
   operand order**, carry KISS-Classify dtype tokens, and the launch scalars (extents,
   signed strides, index width `idx32`/`idx64`) are described with the Classify operand
-  descriptor; the closed op-category set and the contiguous-layout ("fully packed")
-  predicate are Classify vocabulary. The cell-level op-category of a `structure_key` is a
-  Classify category, distinct from a KISS-Ops op name. Used here by name/structure;
+  descriptor; the closed cell-class set and the contiguous-layout ("fully packed")
+  predicate are Classify vocabulary. The cell class of a `structure_key` is a
+  Classify structural class, distinct from a KISS-Ops op name. Used here by name/structure;
   re-defined nowhere.
 - **KISS-Ops** (by version) — DAG edge labeled **STRUCTURAL**, **upstream** dependency:
   the Semantics op DAG's nodes are KISS-Ops op names carrying the KISS-Ops **OpAttrs**
@@ -573,7 +573,7 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `2`, and a contract conforming to this schema version MUST carry exactly that token
+  token `3`, and a contract conforming to this schema version MUST carry exactly that token
   (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
   a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
   reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
@@ -582,7 +582,7 @@ outer length-prefix (§6.1-0005).
   any value outside that set, and MUST NOT reject a value inside it **solely** because that value
   is not the reader's own newest. A reader MUST NOT accept a version merely because it is
   **lower** than one it supports: §8-0002 admits schema changes that are not additive — a field
-  schema, the identity compatibility table, the `audited_status` derivation rule — so a newer
+  schema, the identity consistency relation, the `audited_status` derivation rule — so a newer
   reader has no general license to read an older document, and a maximum-version gate would let
   it **misread** rather than decline. Support is declared and enumerated, never inferred from an
   ordering. *Test:* `test_contract_version_value_pinned`.
@@ -639,8 +639,8 @@ outer length-prefix (§6.1-0005).
   MUST NOT omit any of these fields. *Test:* `test_contract_identity_field_schema`.
 - **KISS-CONTRACT-6.3-0002** — The `accept_predicate` MUST be a KISS-Classify
   `structure_key` token — the admissibility predicate over a layout/dtype/target
-  specialization cell (a coarse op-category + canonically-ordered operand descriptors +
-  target + op-category role hints, extent-free) — carried verbatim as the KISS-Classify
+  specialization cell (a derived cell class + canonically-ordered operand descriptors +
+  target + declared role hints, extent-free) — carried verbatim as the KISS-Classify
   token; an implementation MUST NOT re-encode, truncate, or reinterpret its bytes, and MUST
   NOT present it as the op's semantic identity. The `structure_key` MUST be a **printable,
   LF-free UTF-8 token** so that it carries verbatim as a single string value (§6.11-0001)
@@ -674,17 +674,28 @@ outer length-prefix (§6.1-0005).
   this"; an implementation MUST NOT treat either alone as full kernel identity, and MUST NOT
   collapse the two into a single field. *Test:* `test_contract_identity_requires_both`.
 - **KISS-CONTRACT-6.3-0006** — The Identity section MUST assert the **consistency** of its
-  two identities: the coarse cell-level op-category of the `accept_predicate`
-  `structure_key` (a KISS-Classify category) MUST be compatible with the KISS-Ops op family
-  of the **op the `op_identity` names** — for form (a) the advertisable-op tag's op name, for
-  form (b) the bare root op name (§6.3-0003), which in both forms is the Semantics DAG root's
-  op (§6.4-0002); for a **fusion**, this is the family of the fusion **root** op (which carries
-  the region's advertised identity), not of an interior node — per the **normative
-  compatibility table of §6.3** (below). The op-name→op-family classification is **owned by
-  KISS-Ops** (the KISS-Ops op-family classification) and referenced from there, never restated
-  in this document; this clause and its table pin only the category↔family compatibility
-  **relation**. A reader that detects a pair absent from that table's compatible set MUST
-  reject the contract with a typed decline (never silently accept two disagreeing identities).
+  two identities, decided from **structural facts the named op declares** and from no
+  per-op table: the cell class of the `accept_predicate` `structure_key` (a KISS-Classify
+  class, §6.5-0006) MUST be **supported by** the op the `op_identity` names — for form
+  (a) the advertisable-op tag's op name, for form (b) the bare root op name (§6.3-0003),
+  which in both forms is the Semantics DAG root's op (§6.4-0002) — in exactly this sense
+  and no other: class `ctr` requires that the op **is a contraction**, that is, declares
+  an M/N/K iteration space (KISS-OPS §6.13-0009); class `ndx` requires that the op
+  **declares the index-operand role** (KISS-OPS §6.11-0012); class `rdc` requires that
+  the op **declares a reduce axis** — by carrying a `reduce_axes` OpAttrs field, or, as
+  a non-carrier, by resolving its axis from the inner carrier node of its reference
+  decomposition (KISS-OPS §6.19-0036). Classes `ew1`, `ew2`, `ew3` and `oth` are decided
+  by operand shape alone (KISS-CLASSIFY §6.5-0015), so they impose no requirement on the
+  op. For a **fusion** the requirement is met if **any** op of the region's Semantics DAG
+  (§6.4-0002) has the fact, since a fused region's contraction, gather or reduction need
+  not be its root; a contract whose Semantics carries no node for a fused region
+  (`declared-op-tag`) is not rejected on this assertion. The facts are owned by
+  KISS-Ops and referenced from there, never restated here. A reader that detects a class
+  the named op cannot support MUST reject the contract with a typed decline (never
+  silently accept two disagreeing identities). The relation is **one-directional**: it
+  does not require an op that has such a fact to be keyed with the matching class — a
+  matmul keyed `oth` is a producer defect this assertion does not see, and it fails
+  instead at the (cell, op identity) lookup (§6.3-0005).
   *Test:* `test_contract_identity_consistency`.
 - **KISS-CONTRACT-6.3-0007** — The `target_capability` MUST be a KISS-Classify namespaced
   `<namespace>:<capability-set>` descriptor, matched **byte-exact** on the full string; an
@@ -713,60 +724,15 @@ outer length-prefix (§6.1-0005).
   `target_capability` (§6.3-0007, §6.5-0003), never from a second target value that could
   disagree. *Test:* `test_contract_structure_key_target_matches_capability`.
 
-#### Normative compatibility table (§6.3-0006)
+#### The consistency relation (§6.3-0006)
 
-The Identity consistency assertion (§6.3-0006) is decided **entirely from this table**, which
-is the sole point in the suite where the two closed sets meet. The two domains of this relation
-are **owned upstream and referenced, not defined here**: the cell op-category tokens are the
-**closed KISS-Classify cell op-category set** and the op-family tokens are the **closed KISS-Ops
-op-family set**, each spelled verbatim exactly as its owning vocabulary pins it and versioned
-there (KISS-Classify / KISS-Ops respectively); on any divergence the upstream set governs, and
-a member added upstream reaches this table only through a contract-schema bump that adds a row
-(§8-0002). The
-family checked is the KISS-Ops op family of the op the `op_identity` names (the Semantics DAG
-root's op, §6.3-0003 / §6.4-0002); for a **fusion**, that is the family of the fusion **root**
-op, not of an interior node — which is why the `contraction`, `normalization`, and `softmax`
-cells below admit elementwise **epilogue** families (a matmul+gelu epilogue, §2.3/§2.6, is a
-`contraction` cell with an `activation` root). A contract is consistent iff that root family
-appears in the compatible set of its `accept_predicate`'s cell op-category below; any other
-pair is inconsistent and MUST be rejected with a typed decline.
-
-| KISS-Classify cell op-category | Compatible KISS-Ops op family(ies) |
-|---|---|
-| `elementwise-unary` | `arithmetic`, `rounding`, `transcendental`, `binary_math`, `bitwise`, `logical`, `activation`, `minmax`, `comparison` |
-| `elementwise-binary` | `arithmetic`, `rounding`, `transcendental`, `binary_math`, `bitwise`, `logical`, `activation`, `minmax`, `comparison`, `select` |
-| `elementwise-ternary` | `arithmetic`, `binary_math`, `logical`, `activation`, `select`, `comparison` |
-| `reduction` | `reduction` |
-| `scan` | `scan` |
-| `contraction` | `contraction`, `activation`, `arithmetic`, `binary_math`, `minmax`, `rounding` |
-| `normalization` | `normalization`, `activation`, `arithmetic`, `binary_math`, `minmax`, `rounding` |
-| `softmax` | `normalization`, `activation`, `arithmetic` |
-| `indexing` | `gather_scatter` |
-| `embedding` | `gather_scatter` |
-| `shape/layout` | `shape` |
-
-The elementwise families in the `contraction`, `normalization`, and `softmax` rows admit
-fusion **epilogue roots** (the fusion root op that carries the region's advertised identity,
-per §6.3-0006); adding a KISS-Ops op family, a KISS-Classify op-category, or a compatible
-epilogue family to a row is a contract-schema change (§8) that adds rows and/or set members
-without renumbering existing ones.
-
-**Scope of this table (§6.3-0006 — a declared, not forgotten, gap).** The compatible-family
-relation is defined **only for the op-categories rowed above.** A KISS-Classify cell op-category
-that does **not** appear as a row here has no compatible set in this schema version, so under
-§6.3-0006 a contract whose `accept_predicate`'s cell op-category is un-rowed is **rejected with a
-typed decline** — and that rejection is **intended and known**, not an omission. Such categories
-are members of the defined KISS-Classify vocabulary but have **no cross-party differential vector and no
-implementation the suite has seen**; a compatible-family row is authored — via a §8-0002
-contract-schema bump (the mechanism above) — **when a category gains a real implementer _and_ a
-cross-party differential vector, with that implementer, never ahead of one** (authoring an
-unexercised normative relation ahead of an implementer is the §6.6-0007 failure mode). **Owner:**
-the KISS-Classify / KISS-Contract editors of record. Derived from the closed KISS-Classify
-cell op-category set minus the rows above, the un-rowed categories at this schema version are
-`gated-activation`, `convolution`, `pooling`, `attention`, `sorting`, `quantization`, `random`,
-`loss`, `segment-ops`, `image`, `fft`, `linalg`, and `mixture-of-experts`; that list is a
-**derivation** of the difference, to be re-derived from those two authorities and never maintained
-as an independent set (the standing restatement that once did so was the defect this note replaces).
+Earlier schema versions (`contract_version` 2) carried a normative table from the twenty-four
+KISS-Classify op-category codes to compatible KISS-Ops op families. It is **withdrawn**: the
+op-category set it keyed on no longer exists (KISS-Classify `sk5` derives a seven-class
+structural `cell_class`, §6.5-0015), and no per-op or per-family mapping replaces it — the
+relation of §6.3-0006 is decided from facts the op itself declares. Adding a KISS-Classify
+cell class, or changing which structural fact a class requires, is a contract-schema change
+(§8-0002).
 
 ### 6.4 Semantics section
 
@@ -1150,7 +1116,7 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 ### 6.8 Guarantees section
 
 - **KISS-CONTRACT-6.8-0001** — The Guarantees section MUST carry exactly the fields
-  `{reference_function, per_backend_ulp_tiers, determinism_class, math_precision,
+  `{reference_function, per_backend_ulp_tiers, determinism_class, math_fidelity,
   accumulation_type, bit_stability, audited_status, cost_provenance}`, serialized in that
   order (§6.11-0005); an
   implementation MUST NOT omit any of these fields, and MUST NOT scatter these facts across
@@ -1171,11 +1137,13 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}` (KISS-OPS §6.0-0001),
   spelled verbatim and imported from KISS-Ops; an implementation MUST NOT re-fork or re-spell
   the enum. *Test:* `test_contract_determinism_class_imported`.
-- **KISS-CONTRACT-6.8-0004** — The `math_precision` MUST be the KISS-Ops MathFidelity
+- **KISS-CONTRACT-6.8-0004** — The `math_fidelity` MUST be the KISS-Ops MathFidelity
   attribute `{bit-stable, reduced-mantissa-permitted}` (KISS-OPS §6.17), imported from
   KISS-Ops and orthogonal to the determinism class; an implementation MUST NOT re-fork it,
-  MUST NOT model it as a dtype, and MUST NOT infer it from a KISS-Classify dtype token. *Test:*
-  `test_contract_math_precision_imported`.
+  MUST NOT model it as a dtype, and MUST NOT infer it from a KISS-Classify dtype token.
+  (The field was spelled `math_precision` at `contract_version` 2; the rename follows the
+  KISS-Ops attribute's rename and is a wire change, §8-0002, #477.) *Test:*
+  `test_contract_math_fidelity_imported`.
 - **KISS-CONTRACT-6.8-0011** — The `accumulation_type` MUST declare the dtype in which a
   contraction/reduction-bearing kernel accumulates (matmul, reduce-sum/prod, any op with a
   float fold), drawn from the **same closed dtype-token set** as the KISS-Classify `<acc>`
@@ -1397,7 +1365,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   the 4-byte magic `0x4B 0x49 0x53 0x43` (ASCII `KISC`), one space, the `contract_kind` token
   (exactly `kiss-contract`, §6.1-0007), one space, the `contract_version` (decimal ASCII), one
   space, `len=<N>`, one space, `crc32=<HHHHHHHH>`, then a single LF (`0x0A`) — for example
-  `KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
+  `KISC kiss-contract 3 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
   any document not beginning with the magic `KISC` or whose header line does not match this
   pinned form. *Test:* `test_contract_document_header_line`.
 - **KISS-CONTRACT-6.11-0003** — The header line MUST declare the document's inner framing: `<N>`
@@ -1584,7 +1552,7 @@ KISS-Grammar frozen-shape schema.
   change. *Test:* `test_contract_two_version_axes_independent`.
 - **KISS-CONTRACT-8-0002** — Any change to the contract **schema** — a section, a section's
   field schema, the launch-scalar pinned order (§6.5-0004a), the transport framing or
-  structured/text document format (§6.1, §6.11), the identity compatibility table (§6.3), or the
+  structured/text document format (§6.1, §6.11), the identity consistency relation (§6.3), or the
   `audited_status` derivation rule (§6.8-0009 / §6.8-0010) — MUST bump the `contract_version`.
   *Test:* `test_contract_schema_change_bumps_version`.
 - **KISS-CONTRACT-8-0003** — A KISS-Ops op-name-set addition or a KISS-Grammar frozen-shape
@@ -1703,7 +1671,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0001 | `test_contract_guarantees_field_schema` |
 | KISS-CONTRACT-6.8-0002 | `test_contract_precision_names_reference` |
 | KISS-CONTRACT-6.8-0003 | `test_contract_determinism_class_imported` |
-| KISS-CONTRACT-6.8-0004 | `test_contract_math_precision_imported` |
+| KISS-CONTRACT-6.8-0004 | `test_contract_math_fidelity_imported` |
 | KISS-CONTRACT-6.8-0005 | `test_contract_bit_stability_consistent` |
 | KISS-CONTRACT-6.8-0006 | `test_contract_guarantees_cost_provenance` |
 | KISS-CONTRACT-6.8-0007 | `test_contract_cost_single_home` |
@@ -1801,8 +1769,8 @@ bare-KISS-Ops `op_identity` vector in Appendix C for `test_contract_text_op_iden
 Additional negative vectors — a headingless block (silently-droppable under the old markdown
 transport, now a hard `test_contract_reject_malformed_header` decline), an unknown
 `contract_version`, a contract missing a required section, a contract carrying an unknown/extra
-field (`test_contract_strict_schema`), an Identity whose `structure_key` op-category disagrees with
-its `op_identity` family (`test_contract_identity_consistency`), a strided cell whose Interface
+field (`test_contract_strict_schema`), an Identity whose `structure_key` cell class claims a structural fact its
+`op_identity` does not have (`test_contract_identity_consistency`), a strided cell whose Interface
 omits its strides (`test_contract_strided_cell_carries_strides`), an offset kernel omitting its base
 offsets, a `declared-op-tag` Semantics falsely marked `machine-checkable-IR`, and an
 authored-constant `audited_status` contradicting the derivation rule (`test_contract_audited_status_derived`,
@@ -1832,22 +1800,20 @@ advertisable tags by name/tag under the growth rule, a KISS-Ops op-set addition 
 frozen-shape change reaches a contract's Identity and Semantics with **no** KISS-Contract schema bump
 (§8-0003); the contract schema version bumps only on a change to a section, a section's field schema,
 the launch-scalar pinned order, the transport framing or structured/text document format, the identity
-compatibility table, or the `audited_status` derivation rule (§8-0002). This is the mechanism by which a frozen contract
+consistency relation, or the `audited_status` derivation rule (§8-0002). This is the mechanism by which a frozen contract
 schema admits a still-growing op set.
 
 ---
 
-## Appendix B — Identity consistency compatibility mapping (informative rendering of the §6.3 normative table)
+## Appendix B — Identity consistency relation (informative restatement of §6.3-0006)
 
-The **normative** compatibility mapping is the table under §6.3 (below clause §6.3-0006); it is the
-authoritative artifact the Identity consistency assertion (§6.3-0006) is decided from, and it
-enumerates the closed KISS-Classify cell op-category set and the closed KISS-Ops op-family set in full.
-This appendix is an informative restatement only; on any discrepancy the §6.3 table governs.
-
-A contract whose Identity pairs a `structure_key` op-category with an `op_identity` whose KISS-Ops op
-family is absent from that category's compatible set is inconsistent and is rejected with a typed
-decline (§6.3-0006). The full mapping is versioned with the contract schema (§8-0002); adding a
-KISS-Ops op family or a KISS-Classify op-category adds rows without renumbering existing ones.
+The **normative** relation is clause §6.3-0006; this appendix restates it and decides nothing. At
+`contract_version` 2 the relation was a table from twenty-four KISS-Classify op-category codes to
+KISS-Ops op families; it is withdrawn at `contract_version` 3 together with the op-category set
+it keyed on (KISS-Classify `sk5`, §6.5-0006), and replaced by three structural requirements
+(`ctr` needs a contraction, `ndx` needs the index-operand role, `rdc` needs a reduce axis) that
+are decided from facts the named op declares in KISS-Ops. No mapping from ops to classes, and
+none from op families to classes, exists in this suite.
 
 ---
 
@@ -1866,7 +1832,7 @@ over the fully assembled document.
 **Header line (§6.11-0002/-0003)** — begins with the 4-byte magic `KISC` (`0x4B 0x49 0x53 0x43`):
 
 ```
-KISC kiss-contract 2 len=<N> crc32=<HHHHHHHH>
+KISC kiss-contract 3 len=<N> crc32=<HHHHHHHH>
 ```
 
 **Identity block (§6.11-0004/-0005; heading id 1)** — heading line then one `key = value` line per
@@ -1876,10 +1842,10 @@ field, in field-schema order (§6.3-0001); `revision_hash` is the opaque-blob te
 ```
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 2
+contract_version = 3
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = bin/f32,f32,f32/strided/cuda:sm89
+accept_predicate = ew2/f32,f32,f32/strided/cuda:sm89
 op_identity = add
 target_capability = cuda:sm89
 ```
@@ -1929,7 +1895,7 @@ carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
-accept_predicate = sk4|bin|f32
+accept_predicate = sk5|ew2|f32
 supported_dtype_set = [f32]
 awkward_layout_strategy = decline
 in_place_eligible_variants = []
@@ -1950,7 +1916,7 @@ reference, not a constant. The `cost_provenance` MUST equal the Provenance block
 reference_function = add
 per_backend_ulp_tiers = [cuda:sm89{max_ulp=0}]
 determinism_class = exact-byte
-math_precision = f32
+math_fidelity = bit-stable
 accumulation_type = f32
 bit_stability = portable
 audited_status = audited

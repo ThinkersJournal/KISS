@@ -2,7 +2,7 @@
 //! Gates for KISS-CLASSIFY §6.6-0002 and §6.6-0020 — the key names a SHAPE, never a
 //! computation.
 //!
-//! §6.6-0002 says `op_family` MUST be a coarse category and never a KISS-Ops op name.
+//! §6.6-0002 says `cell_class` MUST be a coarse category and never a KISS-Ops op name.
 //! §6.6-0020 says cell-mates are therefore NOT mutually substitutable. Both rest on one
 //! measurable fact: **nothing in the token names what is computed.** These gates assert
 //! that against the real vocabularies instead of restating the prose.
@@ -35,13 +35,13 @@ fn all_ops() -> Vec<String> {
 fn co() -> OperandSubKey {
     OperandSubKey {
         contig: Contig::Contiguous, bcast_mask: 0x00,
-        vec: VecWidth::V4, div: DivBucket::D16, flipped: false,
+        vec: VecWidth::V4, div: DivBucket::D16, flipped: false, dequant: None,
     }
 }
 
-fn shape_key(op_family: &str) -> StructureKey {
+fn shape_key(cell_class: &str) -> StructureKey {
     StructureKey {
-        op_family: op_family.to_string(),
+        cell_class: cell_class.to_string(),
         dtype: "f32".to_string(),
         target: "cuda:sm89".to_string(),
         index_width: "ix32".to_string(),
@@ -54,7 +54,7 @@ fn shape_key(op_family: &str) -> StructureKey {
     }
 }
 
-/// Backs: KISS-CLASSIFY-6.6-0002 — `op_family` is a coarse category, never an op name.
+/// Backs: KISS-CLASSIFY-6.6-0002 — `cell_class` is a coarse category, never an op name.
 #[test]
 fn test_classify_structure_key_is_not_op_identity() {
     let ops = all_ops();
@@ -62,13 +62,13 @@ fn test_classify_structure_key_is_not_op_identity() {
     // Vacuity guards: both vocabularies must be non-empty, or the disjointness below
     // holds trivially and asserts nothing.
     assert!(!ops.is_empty(), "KISS-CLASSIFY-6.6-0002: op manifest is empty — the check would be vacuous");
-    assert!(!OP_FAMILIES.is_empty(), "KISS-CLASSIFY-6.6-0002: OP_FAMILIES is empty — the check would be vacuous");
+    assert!(!CELL_CLASSES.is_empty(), "KISS-CLASSIFY-6.6-0002: CELL_CLASSES is empty — the check would be vacuous");
 
-    let collisions: Vec<&&str> = OP_FAMILIES.iter()
+    let collisions: Vec<&&str> = CELL_CLASSES.iter()
         .filter(|f| ops.iter().any(|o| o == **f)).collect();
     assert!(
         collisions.is_empty(),
-        "KISS-CLASSIFY-6.6-0002: op_family code(s) {collisions:?} are also KISS-Ops op names. \
+        "KISS-CLASSIFY-6.6-0002: cell_class code(s) {collisions:?} are also KISS-Ops op names. \
          A family code that IS an op name makes the key carry op identity in the one field \
          that is supposed to be a coarse category."
     );
@@ -77,7 +77,7 @@ fn test_classify_structure_key_is_not_op_identity() {
     // check that cannot detect a collision passes for a vocabulary that is riddled with
     // them. Probe with a real op name and require the same predicate to flag it.
     let probe = ops[0].as_str();
-    let probe_families: Vec<&str> = vec!["gem", probe];
+    let probe_families: Vec<&str> = vec!["ctr", probe];
     let probe_hits: Vec<&&str> = probe_families.iter()
         .filter(|f| ops.iter().any(|o| o == **f)).collect();
     assert_eq!(
@@ -91,7 +91,7 @@ fn test_classify_structure_key_is_not_op_identity() {
 #[test]
 fn test_classify_cell_mates_are_not_substitutable() {
     let ops = all_ops();
-    let tok = shape_key("bin").to_token();
+    let tok = shape_key("ew2").to_token();
 
     // Vacuity guards, matching this test's sibling: an empty op vocabulary or a token with
     // no fields would make the "no field names an op" check below pass by having nothing to
@@ -112,7 +112,7 @@ fn test_classify_cell_mates_are_not_substitutable() {
 
     // REMOVED, and the removal is the point. This line used to read:
     //
-    //     assert_eq!(shape_key("bin").to_token(), shape_key("bin").to_token(), ...)
+    //     assert_eq!(shape_key("ew2").to_token(), shape_key("ew2").to_token(), ...)
     //
     // BOTH SIDES ARE THE SAME EXPRESSION, so it could only ever fail on nondeterminism —
     // it did not exhibit "two computations, one cell", which is what its message claimed.
@@ -126,8 +126,8 @@ fn test_classify_cell_mates_are_not_substitutable() {
     // derivation returning a constant would satisfy every collision above and destroy the
     // key, so an axis the key DOES capture must still separate.
     assert_ne!(
-        shape_key("bin").to_token(), shape_key("une").to_token(),
-        "DISCRIMINATION: two different op_family codes must not collide — if they do, the \
+        shape_key("ew2").to_token(), shape_key("ew1").to_token(),
+        "DISCRIMINATION: two different cell_class codes must not collide — if they do, the \
          key is not semantics-blind, it is inert"
     );
 }

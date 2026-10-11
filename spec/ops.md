@@ -343,16 +343,16 @@ golden vectors are in Appendix E.
 
 KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 i8 i16 u8 u16 i32 i64
 u32 u64 bool f8e4m3fn f8e4m3fnuz f8e5m2 f8e5m2fnuz f8e8m0 f8e6m2 i4 u4 b1 c64 c128`), the **operand descriptor** field names (`rank`,
-`extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `op_family_tag`, `quant`,
+`extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
 by name only — spelled identically to the shared anchor. These are the shared data-
 vocabulary nouns; KISS-Ops does not re-define the descriptor/`structure_key` machinery
 and does not depend on the data-vocabulary sub-standard. (The data vocabulary's
-`op_family_tag` operand-descriptor field — the cell-level op-category component of
-`structure_key` — is the shared noun listed above; the per-op **op-family tag**
+`cell_class` — the derived structural-class component of `structure_key` — is not an
+operand-descriptor field and is referenced by name only; the per-op **op-family tag**
 taxonomy of §2.7/§3 is a **separate, KISS-Ops-owned** concept, a different closed set,
-and is *not* a shared data-vocabulary noun.) It does, however, inline the
+and is *not* a shared data-vocabulary noun. No mapping between the two exists.) It does, however, inline the
 **bit layout** of every dtype to which it assigns numeric meaning (§6.16), because the
 per-op float semantics are layout-dependent (a `const` bit pattern, the `f16`/`bf16`
 lattice, and IEEE encodings cannot be computed from a name alone); inlining the layouts
@@ -368,12 +368,12 @@ reader holding only KISS-Ops plus the umbrella.
 - **Op-family tag** — the coarse per-op category an op belongs to (e.g. `arithmetic`,
   `comparison`, `reduction`, `normalization`, `access-primitive`), spanning the per-op
   families listed in §2.7. This per-op family taxonomy is **owned by KISS-Ops** and is a
-  **distinct** closed set from the data vocabulary's cell-level `op_family_tag` /
-  op-category enum (a separate, coarser closed set that is a component of `structure_key`);
-  the two are different closed sets, not the same tag. An op's specialization cell MAY
-  participate in a `structure_key` op-category, but that op-category is a separate,
-  data-vocabulary-owned classification and is not the KISS-Ops op-family named by this
-  term. Distinct from the op name.
+  **distinct** closed set from the data vocabulary's cell-level `cell_class`
+  (a separate, derived structural class that is a component of `structure_key`);
+  the two are different closed sets, not the same tag. An op's specialization cell
+  derives a `structure_key` cell class from its own structure, but that class is a
+  separate, data-vocabulary-owned classification and is not the KISS-Ops op-family named
+  by this term. Distinct from the op name.
 - **Primitive op / primitive floor** — an op that has no in-standard decomposition; the
   primitive floor is the mandatory-core set of such ops at which every decomposition
   chain terminates.

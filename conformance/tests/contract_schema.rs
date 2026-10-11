@@ -370,7 +370,7 @@ fn test_contract_capabilities_determinism_from_ops() {
     );
 }
 
-/// KISS-CONTRACT-6.8-0004 — the `math_precision` is the KISS-Ops MathFidelity
+/// KISS-CONTRACT-6.8-0004 — the `math_fidelity` is the KISS-Ops MathFidelity
 /// attribute `{bit-stable, reduced-mantissa-permitted}` spelled verbatim. The
 /// §6.8-0004 enum is compared against a reference CONSTANT (same no-reverse-bind
 /// discipline as the accepted §6.8-0003 determinism lint — the constant is NOT a
@@ -381,15 +381,15 @@ fn test_contract_capabilities_determinism_from_ops() {
 /// clause must say `MathFidelity` and MUST NOT say the colliding `MathPrecision` —
 /// a two-way discrimination that reds against the dtype-shaped decoy AND the decoy's name.
 #[test]
-fn test_contract_math_precision_imported() {
+fn test_contract_math_fidelity_imported() {
     let contract = read_spec("contract.md");
     let block = clause_block(&contract, "KISS-CONTRACT-6.8-0004");
     let parsed = enum_set(block);
     let canonical = ops_math_precision_enum();
-    assert_eq!(canonical.len(), 2, "KISS-CONTRACT-6.8-0004: the canonical math_precision enum must have 2 members");
+    assert_eq!(canonical.len(), 2, "KISS-CONTRACT-6.8-0004: the canonical math_fidelity enum must have 2 members");
     assert_eq!(
         parsed, canonical,
-        "KISS-CONTRACT-6.8-0004: §6.8-0004's math_precision enum {parsed:?} is not the verbatim canonical set {canonical:?} (a member was re-forked/re-spelled)"
+        "KISS-CONTRACT-6.8-0004: §6.8-0004's math_fidelity enum {parsed:?} is not the verbatim canonical set {canonical:?} (a member was re-forked/re-spelled)"
     );
     // (iii) #414 — pin the CARRIER NAME, not only the values. The decoy is unpopped-vocab's
     // dtype-shaped `MathPrecision`; a clause naming it walks the implementer into

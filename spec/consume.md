@@ -215,12 +215,13 @@ region (steps 3–4):
   steps 3–4, not not-a-kernel). (Testable: zero operation nodes in the input structure
   graph.)
 
-- **wrong-op-class** — the input **is** an op-bearing kernel and yields an op, but its
-  coarse op category is incompatible with the **requested** specialization **cell** — the
-  recognized root op's KISS-Ops op-family does not match the request cell's Classify
-  op-category, per the KISS-Contract Identity consistency relation. It is declined as
-  *not-fitting*, not *not-understood*. (Testable: recognition yields a root op whose
-  family is absent from the compatible set for the request cell.)
+- **wrong-op-class** — the input **is** an op-bearing kernel and yields an op, but that op
+  cannot be what the **requested** specialization **cell** structurally claims — the request
+  cell's Classify cell class is one that demands a structural fact (a contraction, an
+  index-operand role, a reduce axis) which the recognized op does not declare, per the
+  KISS-Contract Identity consistency relation. It is declined as *not-fitting*, not
+  *not-understood*. (Testable: recognition yields an op, and no op of the lifted region
+  declares the fact the request cell's class requires.)
 
 - **unrecognized-but-expressible** — a region that genuinely **is** expressible as a
   KISS-Ops op DAG, but *this* lifter does not yet recognize the idiom. A lifter-coverage
@@ -273,8 +274,8 @@ lifter recognizes a single elementwise binary structure: two operand reads feedi
 `add`, one store. It emits a **one-node DAG** `{ op: add }` (a primitive, so a 1-node
 DAG). Residue = ∅ (lift fraction, informally, ≈ 1.0). It produces a KISS-Contract whose:
 
-- **Identity** records `accept_predicate` = the cell's `structure_key` (cell op-category
-  code `bin`, three `f32` operands, strided), `op_identity` = the **bare** KISS-Ops op
+- **Identity** records `accept_predicate` = the cell's `structure_key` (cell class
+  `ew2`, three `f32` operands, strided), `op_identity` = the **bare** KISS-Ops op
   name `add` (form (b) — the canonical form a lift produces), and
   `target_capability = cuda:sm89`;
 - **Semantics** = `{ op: add }`, `semantics_kind = machine-checkable-IR`, edge-case
@@ -306,13 +307,10 @@ lifted node.
 - **not-a-kernel:** the input structure graph is a header, a comment block, a data table,
   or an empty region — zero operation nodes. Typed decline `not-a-kernel`.
 - **wrong-op-class:** the consumer asks, by request `structure_key`, for a kernel in the
-  reduction cell (cell op-category code `red`), but the lifted root op is `matmul`, whose
-  KISS-Ops op-family is `contraction` — a family the KISS-Contract Identity consistency
-  relation lists as incompatible with the `red` cell op-category. (Note the cell code and
-  the op-family are distinct closed sets: `gem` is the *cell* op-category code, whereas
-  `contraction` is the *KISS-Ops op-family*; they are never conflated.) Recognition
-  succeeded, the op is understood, but its family is incompatible with the requested cell;
-  typed decline `wrong-op-class`.
+  reduction cell (cell class `rdc`), but the lifted root op is `matmul`, which declares no
+  reduce axis — the KISS-Contract Identity consistency relation requires an `rdc` cell to
+  name an op that does. Recognition succeeded, the op is understood, but it cannot be what
+  the requested cell claims; typed decline `wrong-op-class`.
 - **unrecognized-but-expressible:** a region computes a `softmax`, expressible over
   `reduce` + `exp` + `div`, but this early lifter has no softmax idiom; residue tagged
   `unrecognized-but-expressible`.
@@ -390,7 +388,7 @@ foundational vocabularies mean the ops and the contract format frames the docume
   gather OOB policy, pool geometry, permutation, …) with a canonical default-resolved
   little-endian byte encoding; **owned by KISS-Ops (§6.19)**, carried per lifted node.
 - **structure_key / specialization cell** — the KISS-Classify admissibility predicate over
-  one layout/dtype/target specialization cell (a coarse op-category tag + canonically-ordered
+  one layout/dtype/target specialization cell (a derived cell class + canonically-ordered
   operand descriptors + `target_capability` + role hints, **extent-free**, matched
   byte-for-byte); **owned by KISS-Classify**. The lift records it on the produced contract's
   Identity `accept_predicate`; it is the accept-predicate, **not** the op's semantic identity.
@@ -479,8 +477,9 @@ foundational vocabularies mean the ops and the contract format frames the docume
   `Op{op_name, op_attrs, child_edges} | Bind(positional_index)`); every lifted node's
   `op_name` is a KISS-Ops op name (KISS-OPS §6.1) carrying the KISS-Ops **OpAttrs** channel
   (KISS-OPS §6.19); every lift bottoms out, recursively, at the KISS-Ops **primitive floor**
-  (KISS-OPS §6.3, the termination guarantee); the per-op semantics, the op-name→**op-family**
-  classification used by the wrong-op-class category (KISS-OPS §6.1-0003 / §2.7), the single
+  (KISS-OPS §6.3, the termination guarantee); the per-op semantics, the per-op structural
+  facts (contraction iteration space, index-operand role, reduce axis) that the wrong-op-class
+  category consults (KISS-OPS §6.13-0009 / §6.11-0012 / §6.19), the single
   canonical **determinism/fidelity enum** `{exact-byte, ULP/tolerance,
   order-invariant/nondeterministic}` (KISS-OPS §6.0-0001), and the **MathFidelity** attribute
   `{bit-stable, reduced-mantissa-permitted}` (KISS-OPS §6.17) are **imported verbatim, never
@@ -489,18 +488,17 @@ foundational vocabularies mean the ops and the contract format frames the docume
   the produced contract's Identity `accept_predicate` is a KISS-Classify **`structure_key`**
   (the admissibility predicate over a specialization cell); the operand descriptors and the
   namespaced **`target_capability`** recorded on the lifted contract are Classify vocabulary;
-  the coarse cell-level **op-category** enum used by the wrong-op-class category (the
-  `op_family_tag` component of a `structure_key`, KISS-CLASSIFY §6.5) is Classify vocabulary,
-  a **distinct** closed set from the KISS-Ops op-family, spelled with the Classify code (e.g.
-  the 3-letter code) verbatim and never conflated with a KISS-Ops op-family name. Used here by
-  name/structure; re-defined nowhere.
+  the derived **cell class** used by the wrong-op-class category (the `cell_class` component
+  of a `structure_key`, KISS-CLASSIFY §6.5) is Classify vocabulary, a **distinct** closed set
+  from the KISS-Ops op-family, spelled with the Classify code verbatim and never conflated with
+  a KISS-Ops op-family name. Used here by name/structure; re-defined nowhere.
 - **KISS-Contract** (by version) — DAG edge labeled **STRUCTURAL**, **upstream** dependency
   (the contract this direction produces): a successful lift produces a KISS-Contract's
   **Semantics** field (`semantics_kind ∈ {machine-checkable-IR, declared-op-tag}`) and its
   recorded **`lift_residue`**; the seven-section universal required core, the Identity
   `accept_predicate` / `op_identity` fields, the `semantics_kind` enum, and the
-  **Identity consistency relation** (the cell-op-category ↔ KISS-Ops-op-family compatibility
-  table of KISS-CONTRACT §6.3-0006) that the **wrong-op-class** category leans on are all
+  **Identity consistency relation** (the cell-class → declared-structural-fact requirement of
+  KISS-CONTRACT §6.3-0006) that the **wrong-op-class** category leans on are all
   **owned by KISS-Contract** and referenced from there, **never re-forked** here. The
   residue-bearing category set carried by KISS-Contract's `lift_residue` field is the two-token
   subset defined once in KISS-Consume §6.3-0004 (`unrecognized-but-expressible`,
@@ -730,14 +728,16 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
 - **KISS-CONSUME-6.4-0004** — **Step 2 — wrong-op-class (whole-input).** When the input is
   op-bearing (step 1 did not fire) **and** a **request specialization cell is supplied**
   (§6.2-0008), a failure MUST be classified **`wrong-op-class`** when the lifted **root** op's
-  KISS-Ops op-family is **incompatible** with the request cell's Classify cell op-category **per
-  the KISS-Contract Identity consistency relation** (the cell-op-category ↔ KISS-Ops-op-family
-  compatibility table of KISS-CONTRACT §6.3-0006, over the op-name→op-family classification owned
-  by KISS-Ops). Wrong-op-class MUST fire **only** when that relation has a row for the request
-  cell's op-category **and** the root op's family is absent from that row's compatible set; if no
-  request cell is supplied, or the relation has no row for the request cell's op-category, an
-  implementation MUST NOT decline `wrong-op-class` on that basis. An implementation MUST reference
-  that upstream compatibility relation and MUST NOT re-fork, restate, or redefine the table here.
+  structural facts do not support the request cell's Classify cell class **per
+  the KISS-Contract Identity consistency relation** (the cell-class requirement of
+  KISS-CONTRACT §6.3-0006, decided from facts the op declares in KISS-Ops). Wrong-op-class
+  MUST fire **only** when the request cell's class is one that relation gives a requirement
+  — a contraction, an indexed access or a reduction — **and** neither the root op nor, for a
+  fusion, any op of the lifted region declares the required fact; if no request cell is
+  supplied, or the class is an elementwise or other class, which the relation does not
+  constrain, an implementation MUST NOT decline `wrong-op-class` on that basis. An
+  implementation MUST reference that upstream relation and MUST NOT re-fork, restate, or
+  redefine it here.
   *Test:* `test_consume_refusal_wrong_op_class`.
 - **KISS-CONSUME-6.4-0005** — **Step 3 — unrecognized-but-expressible (per-region).** An un-lifted
   residue region (steps 1–2 did not fire) MUST be classified **`unrecognized-but-expressible`**
@@ -1100,7 +1100,7 @@ consumer, implementation, kernel, contract, and target.
 - **A.1 Full lift (strided binary `add`).** Structure: two `f32` operand reads → one `add` → one
   store, strided cell, `target = cuda:sm89`. Lift → one-node DAG `{ op: add }`;
   `semantics_kind = machine-checkable-IR`; Identity `op_identity = add` (bare KISS-Ops name, form
-  (b)), `accept_predicate = <structure_key sk4|bin|f32|…>` (cell op-category code `bin`); residue =
+  (b)), `accept_predicate = <structure_key sk5|ew2|f32|…>` (cell class `ew2`); residue =
   ∅ (lift fraction, informally, ≈ 1.0).
 - **A.2 Partial lift with inexpressible residue.** Structure: `matmul` → proprietary activation with
   no KISS-Ops decomposable-signature entry. Lift → `{ op: matmul }` node; `semantics_kind =
@@ -1114,10 +1114,9 @@ consumer, implementation, kernel, contract, and target.
   lifted node.
 - **A.4 not-a-kernel.** Input structure graph is a comment block / data table / empty region → zero
   operation nodes → typed decline `not-a-kernel` (decided from the input alone).
-- **A.5 wrong-op-class.** Request cell op-category code `red`; lifted root op `matmul` (KISS-Ops
-  op-family `contraction`, absent from the compatible set for the `red` cell op-category per the
-  KISS-Contract Identity consistency relation) → typed decline `wrong-op-class`. (The cell code
-  `gem` and the op-family `contraction` are distinct closed sets and are never conflated.)
+- **A.5 wrong-op-class.** Request cell class `rdc`; lifted root op `matmul`, which declares an
+  M/N/K iteration space and no reduce axis, so the `rdc` requirement of the KISS-Contract
+  Identity consistency relation is unmet → typed decline `wrong-op-class`.
 - **A.6 Round-trip.** Emit `(OpDef add + structure_key)` → artifact-described-by-a-contract; lift
   that kernel → the same one-node `{ op: add }` DAG (**tier 1**, structural equality over the
   declared subset); same-language on-device, `add` being `exact-byte` and the only op in the DAG,
@@ -1174,17 +1173,12 @@ recorded here as non-normative provenance only.
    residue entry with its determining op-set version, but the re-evaluation/migration workflow when
    an op set adds a high-level op is not yet fully specified.
 4. **wrong-op-class vs. the Contract Identity consistency relation (cross-standard coordination).**
-   The wrong-op-class category leans on the `structure_key` op-category ↔ KISS-Ops op-family
-   compatibility table owned upstream by KISS-Contract/KISS-Ops (§6.4-0004); the exact table
-   membership is defined there and must not be re-forked here — the cross-reference must remain the
-   single source. Two coordination items are tracked against the upstream table before freeze: (a) it
-   must be made **total** over the full KISS-Classify cell op-category domain, since a cell
-   op-category with no row would otherwise force every kernel in it to wrong-op-class — §6.4-0004
-   already forbids declining wrong-op-class when the relation has no row for the request cell's
-   op-category, so Consume does not inherit that defect, but the upstream table should be completed;
-   and (b) the cell op-category MUST be spelled with its Classify code (e.g. the 3-letter code)
-   verbatim in the Contract table and in every Consume reference, never conflated with a KISS-Ops
-   op-family name (e.g. cell code `gem` vs. op-family `contraction`).
+   The wrong-op-class category leans on the cell-class requirement owned upstream by
+   KISS-Contract §6.3-0006 (§6.4-0004); its membership is defined there and must not be
+   re-forked here — the cross-reference must remain the single source. The relation is
+   one-directional and constrains only three of the seven cell classes, so a request cell of
+   any other class can never produce wrong-op-class. (The twenty-four-code compatibility
+   table that preceded it is withdrawn with KISS-Classify `sk5`.)
 5. **Residue-bearing tag set — cross-standard reconciliation.** §6.3-0004 defines the residue-bearing
    category set once as the two-token subset {`unrecognized-but-expressible`, `inexpressible-residue`}.
    KISS-Contract's `lift_residue` clause must reference that subset and must not enumerate the wider

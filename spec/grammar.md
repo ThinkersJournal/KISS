@@ -40,7 +40,7 @@
 > definition (its name, its OpAttrs channel, its reference decomposition, its
 > per-op commutativity/positionality property, its operand-role vocabulary, and its
 > primitive-floor membership and level) and of the KISS-Classify data vocabulary
-> (dtype tokens, the cell-level op-category tag). This is the opposite of an
+> (dtype tokens, the cell-level cell-class token). This is the opposite of an
 > OPAQUE edge (where a token is carried uninterpreted). The labels reconcile with
 > the umbrella §2.2 edge table, which lists **KISS-Ops → KISS-Grammar** and
 > **KISS-Classify → KISS-Grammar** each as STRUCTURAL. On the downstream side, the
@@ -370,7 +370,7 @@ both by name/tag over STRUCTURAL edges.
 KISS-Grammar references the KISS-Ops op **names**, the OpAttrs channel, reference
 decompositions, the per-op commutativity/positionality property, the operand-role
 vocabulary, and the primitive floor/level by name; and the KISS-Classify dtype tokens
-and cell-level op-category tag by name. It re-defines none of them, and it disclaims op
+and cell-level cell-class token by name. It re-defines none of them, and it disclaims op
 *meaning* entirely — Grammar maps the advertisable surface, KISS-Ops means it.
 
 ### 2.8 The wire form — why bytes, not just term syntax
@@ -517,7 +517,7 @@ non-identity-bearing.
 - **Frozen shape** — the advertisable-op field schema, the region-composition rules, the
   attribute-channel structure, and the region wire form; frozen at the freeze gate,
   versioned independently of the KISS-Ops op-name set.
-- **op-category (cell-level op-family tag)** — a coarse KISS-Classify category (a component
+- **cell class (cell-level)** — a coarse, derived KISS-Classify structural class (a component
   of `structure_key`); distinct from a KISS-Ops op name and used by name only here.
 - **Typed decline** — a structured refusal returned in lieu of a result (a distinguished
   error value/enumerant, or an equivalent out-of-band error return); never a panic,
@@ -550,7 +550,7 @@ non-identity-bearing.
   op meaning.
 - **KISS-Classify** (by version) — DAG edge labeled **STRUCTURAL**, **upstream**
   dependency: the dtype **tokens** naming an operand-role tuple's expected dtype roles
-  (`u8`, `u32`, …) and the cell-level **op-category** tag are KISS-Classify vocabulary,
+  (`u8`, `u32`, …) and the cell-level **cell-class** token are KISS-Classify vocabulary,
   used here by name only and against a pinned KISS-Classify version.
 - **KISS-Contract** (by version) — DAG edge labeled **STRUCTURAL**, **downstream**
   consumer: the contract Identity `op_identity` field carries a KISS-Grammar
@@ -944,10 +944,10 @@ the full statement.
   or alternate casing for a dtype token, and MUST NOT spell a polymorphic dtype role as
   anything other than the pinned wildcard. *Test:* `test_grammar_operand_dtype_token_spelling`.
 - **KISS-GRAMMAR-6.6-0003** — Where an advertisable op references a cell-level
-  **op-category**, that category MUST be a KISS-Classify op-family tag (a coarse Classify
-  category, a distinct closed set from the KISS-Ops op name), spelled as KISS-Classify
-  spells it; an implementation MUST NOT conflate the cell-level op-category with the
-  `op_name`. *Test:* `test_grammar_op_category_is_classify_tag`.
+  **cell class**, that class MUST be a KISS-Classify cell-class token (§6.5-0006: a coarse,
+  derived structural class, a distinct closed set from the KISS-Ops op name), spelled as
+  KISS-Classify spells it; an implementation MUST NOT conflate the cell class with the
+  `op_name`. *Test:* `test_grammar_cell_class_is_classify_token`.
 - **KISS-GRAMMAR-6.6-0004** — A referenced `op_name` MUST correspond to an op present in
   the KISS-Ops op set of the **KISS-Ops version pinned on the region** (`ops_version`,
   §6.6-0007); op-name validity **and** primitiveness MUST be evaluated against that pinned
@@ -1276,7 +1276,7 @@ restated as a free-standing KISS-Grammar clause.
 | KISS-GRAMMAR-6.5-0005 | `test_grammar_frozen_shape_membership` |
 | KISS-GRAMMAR-6.6-0001 | `test_grammar_op_name_spelling` |
 | KISS-GRAMMAR-6.6-0002 | `test_grammar_operand_dtype_token_spelling` |
-| KISS-GRAMMAR-6.6-0003 | `test_grammar_op_category_is_classify_tag` |
+| KISS-GRAMMAR-6.6-0003 | `test_grammar_cell_class_is_classify_token` |
 | KISS-GRAMMAR-6.6-0004 | `test_grammar_op_name_exists_in_ops` |
 | KISS-GRAMMAR-6.6-0005 | `test_grammar_operand_role_token_vocabulary` |
 | KISS-GRAMMAR-6.6-0006 | `test_grammar_dtype_role_wildcard_token` |

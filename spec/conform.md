@@ -1045,7 +1045,7 @@ enum (§6.0). See umbrella §3 for the full statement.
   comparator: the `structure_key` **admissibility byte-match** (KISS-Classify §6.7). Its
   declaration is **`Normalizes:` the computation — ABSENT FROM THE COMPARED VALUE ENTIRELY, since
   the derivation never takes it as an input — and every bucketed component of shape** —
-  the key is derived from **shape** (op category, arity, dtypes, layout, target) and is
+  the key is derived from **shape** (cell class, arity, dtypes, layout, target) and is
   **silent on semantics**, so two *different* computations of the same shape compare
   **byte-equal**; and each bucketed component collapses a range onto one token: extent
   divisibility above its ceiling (`d16`), vector width above its widest (`v8`), element count
