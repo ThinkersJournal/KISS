@@ -121,6 +121,10 @@ fn co8() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V8, DivBucket
 fn br1() -> OperandSubKey { op(Contig::Broadcast, 0x01, VecWidth::V1, DivBucket::D16, false) }
 fn co1_d8() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::D8, false) }
 fn co1_da() -> OperandSubKey { op(Contig::Contiguous, 0x00, VecWidth::V1, DivBucket::Da, false) }
+/// A keepdim reduction OUTPUT: the folded axes are own extent-1 axes under a frame extent > 1,
+/// so their mask bits are set (§6.6-0008, #520) — `mask` is `derive_bcast_mask_in_frame` of the
+/// output over the frame.
+fn red_out(mask: u8) -> OperandSubKey { op(Contig::Contiguous, mask, VecWidth::V1, DivBucket::Da, false) }
 /// An operand sub-key carrying a `quant` record's `dequant_form` (sk5, §6.3-0009a).
 fn with_dq(mut o: OperandSubKey, dq: DequantForm) -> OperandSubKey {
     o.dequant = Some(dq);
@@ -235,29 +239,29 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             name: "reduction_trailing_axis",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "reduction over the trailing axis serializes rlast",
-            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, None),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast",
+            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, None),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
         },
         PositiveVector {
             name: "reduction_all_axes",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "reduction over all axes serializes rall",
-            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, None),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall",
+            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
         },
         PositiveVector {
             name: "reduction_rank1_all_axes",
             clause: "KISS-CLASSIFY-6.6-0009",
             note: "rank-1 all-axes reduction",
-            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), co1_da()], Reduce::All, None),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall",
+            key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), red_out(0x01)], Reduce::All, None),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
         },
         PositiveVector {
             name: "reduction_subset_mask",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
-            key: key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), co1_da()], Reduce::Subset(0x0a), None),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a",
+            key: key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), red_out(0x0a)], Reduce::Subset(0x0a), None),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
         },
         PositiveVector {
             name: "binary_two_operands",
@@ -338,8 +342,8 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             name: "noncontraction_acc_mp_field",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
-            key: key_acc_mp("rdc", "f16", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::Trailing, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable })),
-            token: "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st",
+            key: key_acc_mp("rdc", "f16", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable })),
+            token: "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
         },
         PositiveVector {
             name: "noncontraction_scan_mp_only",
@@ -352,15 +356,15 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             name: "noncontraction_acc_deviating_f64",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
-            key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f64".to_string(), mp: MathFidelity::Stable })),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/st",
+            key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, Some(AccMp { acc: "f64".to_string(), mp: MathFidelity::Stable })),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st",
         },
         PositiveVector {
             name: "noncontraction_reduction_mp_only",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
-            key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), co1_da()], Reduce::All, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/rm",
+            key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm",
         },
         PositiveVector {
             name: "cell_class_ew3_three_inputs",
@@ -612,14 +616,14 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             name: "redundant_acc_mp_all_default",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f32/st".to_string(),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st".to_string(),
             expected: KeyDecline::RedundantAccMpField,
         },
         DeclineVector {
             name: "acc_mp_bad_precision_code",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "the (acc+mp) field with an unrecognized math-precision code (zz)",
-            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall|f64/zz".to_string(),
+            token: "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz".to_string(),
             expected: KeyDecline::BadAccMpField,
         },
         DeclineVector {

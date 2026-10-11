@@ -2406,21 +2406,24 @@ the cell's declared role hints (from which its `cell_class` is derived, §6.5-00
   not a bitmask) — `cell_class = rdc` (the caller declares the reduced-axis set); two operands,
   `in = ([4,8]; [8,1]; f32; 256)` and `out = ([4,1]; [1,1]; f32; 256)`. The input's
   innermost axis (extent 8) is reduced ⇒ `v1` (§6.5-0009(b)) while its own inner
-  extent 8 still buckets `d8`; the output's size-1 inner axis buckets `da`. Max offset
+  extent 8 still buckets `d8`; the output's size-1 inner axis buckets `da`, and — being an own
+  extent-1 axis under frame extent `8 > 1` — sets mask bit 1 (`02`, §6.6-0008: a keepdim-folded
+  axis is a stride-0 axis whatever stride is recorded; the same holds for every reduction
+  vector below, whose output mask is `03`, `01` and `0a` respectively). Max offset
   `31 < 2³¹` ⇒ `ix32`; frame `4·8 = 32 ≤ 32` ⇒ `warp`; rank 2:
-  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast`
 - **Reduction, keepdim, `[4,8] → [1,1]`** (all-axes reduce ⇒ reserved `rall`) — same
   inputs as above but `out = ([1,1]; [1,1]; f32; 256)` and **every** axis reduced.
   Operand-0 (the input) keeps its own inner extent 8 ⇒ bucket `d8` (reduction changes
   only vector width, §6.5-0009, never the divisibility bucket); the `[1,1]` output
   buckets `da`:
-  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall`
 - **Rank-1 reduction, keepdim, `[8] → [1]`** (the single axis is simultaneously
   all-axes and the trailing axis; by the §6.6-0009 tiebreak `rall` takes precedence) —
   `cell_class = rdc`; `in = ([8]; [1]; f32; 256)`, `out = ([1]; [1]; f32; 256)`. Inner
   extent 8 ⇒ `d8`; reduced innermost ⇒ `v1`; frame `8 ≤ 32` ⇒ `warp`; rank 1;
   reduce field `rall` (never `rlast`):
-  `sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|rall`
+  `sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall`
 - **Reduction, keepdim, rank-4 reducing axes 1 and 3** (neither all-axes nor
   trailing ⇒ explicit keepdim bitmask `0x0a`, exercising a two-digit lowercase hex ≥
   `0x0a`) — `cell_class = rdc`; `in = ([2,4,3,5]; [60,15,5,1]; f32; 256)`,
@@ -2428,7 +2431,7 @@ the cell's declared role hints (from which its `cell_class` is derived, §6.5-00
   `da` and is reduced ⇒ `v1`. Max offset `60·1 + 15·3 + 5·2 + 1·4 = 119 < 2³¹` ⇒
   `ix32`; frame `2·4·3·5 = 120` (`32 < 120 ≤ 1024`) ⇒ `block`; rank 4; reduce mask
   `x0a` (bits 1 and 3):
-  `sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/00/v1/da/f|x0a`
+  `sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a`
 - **Reduction with a deviating accumulator (sk4, §6.7-0013)** — a trailing-axis `f16`
   reduction `[4,8] → [4,1]` that accumulates in `f32`. `cell_class = rdc`, dtype `f16`;
   `in = ([4,8]; [8,1]; f16; 256)`, `out = ([4,1]; [1,1]; f16; 256)`. Innermost axis
@@ -2439,7 +2442,7 @@ the cell's declared role hints (from which its `cell_class` is derived, §6.5-00
   spells both slots). The same cell accumulating in `f16` (accumulator == compute) omits
   the field entirely (rule c), yielding the nine-field token without the trailing
   `|f32/st`; a redundant `|f16/st` on that cell is rejected (rule d):
-  `sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|rlast|f32/st`
+  `sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st`
 - **In-place binary accumulate** (`cell_class = ew2`) — an operand that is both read
   and written appears **exactly once**, classified as an input (§6.6-0014). The
   accumulator `acc = ([128,256]; [256,1]; f32; 256)` (in-place) and addend

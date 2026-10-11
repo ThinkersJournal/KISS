@@ -7,7 +7,7 @@
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
 2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (0.2.0 is carried by #535, Breaking; 0.1.6 was #534; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
+   (0.2.1 is carried by #536; 0.2.0 was #535, Breaking; 0.1.6 was #534; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
    comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
