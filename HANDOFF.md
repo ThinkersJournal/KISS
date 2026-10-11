@@ -1,4 +1,4 @@
-<!-- Written 2026-10-09 against origin/main cf74c8d (PRs #530-#533 open). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-11 against origin/main 755ab69 (no open PRs). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -7,7 +7,7 @@
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
 2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (0.1.5 is allocated to #529-#533, carried by #533). Pre-1.0 a breaking change moves the second number.
+   (0.1.6 is carried by #534; 0.1.5 was #533; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
    comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
@@ -20,11 +20,9 @@
 8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; objections from Fuel/Baracuda/Unpopped go
    through the PM too (`list_peers`, re-resolve IDs by cwd; they rotate).
 
-## Open KISS PRs (PM gates in this order: #530, #531, #532, then #533)
+## Open KISS PRs
 
-- **#530** D7 design note. **#531** #263 decision memo + #520/#477 one-event wire proposal. **#532** retraction of the Baracuda `cuda:` manifest
-  "possible gap" (answered: closed ArchSku set by design). **#533** spec: D7 adopted as Option C, `KISS-CLASSIFY-6.3-0012` + `tools/kiss_tables.py`
-  check + RFC §10 + kiss-conformance 0.1.5 + this file.
+None as of origin/main 755ab69 (2026-10-11). #530-#533 merged 2026-10-09; their worktrees and branches are removed.
 
 ## kiss-ref (separate repo `C:\Projects\kiss-ref`, ThinkersJournal/kiss-ref; no lane exists, the KISS lane does its work)
 
@@ -33,7 +31,7 @@
   order is classify-vocab, ops-vocab, (wait for index), ref-core. **Publish needs CireSnave's yes per crate**; the PM brings it. Do not publish.
 - **HELD TASK:** when the PM says "publish go" (not before; no TBD date in a CHANGELOG), open ONE kiss-ref PR in a fresh worktree: rename CHANGELOG `[Unreleased]` -> `[0.4.0]` with that day's date and fix `DESIGN.md:3` ("published on crates.io (0.3.x)"). The PM gates it and publishes from a clean export. CHANGELOG lists what 0.4.0 does not model. READMEs have no install lines (checked).
 - Not closed (say if wanted): OpAttrs bytes, the `MathFidelity` type, a native Bool tensor lane.
-- kiss-ref worktree `C:\Projects\kiss-ref-rebind` is mine and clean at fe23926: remove it (`git worktree remove`, then prune in `C:\Projects\kiss-ref`).
+- kiss-ref `origin/main` is fe23926 (checked 2026-10-11); no kiss-ref worktree of mine remains.
 
 ## Waiting on others (do not start)
 
@@ -44,6 +42,5 @@
 
 ## Next actions
 
-- First unblocked: after #530-#533 merge, remove worktrees `C:/Projects/kiss-d7`, `kiss-dec`, `kiss-retract`, `kiss-d7spec` (check `git status --porcelain`),
-  delete merged branches per portfolio CLAUDE.md §3.
-- Then idle until the PM assigns work (likely: the wire event after the #263 decision).
+- Nothing unblocked. Idle until the PM assigns work (likely: the wire event after the #263 decision, or "publish go" for kiss-ref).
+- This HANDOFF PR (docs/handoff-2026-10-11) is open for the PM's gate; remove worktree `C:/Projects/kiss-handoff` and the branch once merged.
