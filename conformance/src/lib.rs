@@ -87,6 +87,8 @@ pub mod contract;
 pub mod corpus;
 pub mod decline;
 pub mod decomp_grammar;
+pub mod derivation_vectors;
+pub mod derive;
 pub mod nan_provenance;
 pub mod determinism;
 pub mod per_output;

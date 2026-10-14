@@ -70,6 +70,7 @@ Each consumer's binding today:
 | R1.5 | **Give `VariantFidelity` a home** (KISS-Emit category-(c) gap) or rule it stays out. | Unpopped `docs/deferred.md` ~448–462 | **[rule]** |
 | R1.6 | ~~A vector for KISS-CLASSIFY-6.8-0002~~ — **already exists**: `target_match_vectors` (8 pairs, `expect_match` verdicts, vocabulary-blind) in `structure_key_vectors.json` since #392 (2026-09-05). Unpopped's note that none is vendorable is stale; tell them. | Unpopped `docs/deferred.md` ~1041 | **done** (answer sent) |
 | R1.7 | **Namespace vocabulary decisions that are not ours**: widen the `cuda:` manifest from the 4-row dispatch set to the 13-token set is Baracuda's `vocabulary_version` call; KISS's part is only keeping `spec/namespaces/cuda.md` current. | Baracuda `CHANGELOG.md` alpha.91 | **[wait: PM/Baracuda]** |
+| R1.8 | **Define the batch coordinate** (`b<class>`): which axes are batch axes, what extent the class is computed from, what "batched" means for extent 1 and rank > 3 (KISS#543). Fuel takes it as a caller-supplied extent; Unpopped = leading dim of a rank-3 cell. Blocks the `ctr` half of the derivation corpus (R3.3). | Fuel, Unpopped, any third deriver | **[rule]** — boarded in PM item 193; not started |
 
 ### R2 — consumer asks that need new spec
 
@@ -92,7 +93,7 @@ Ordered by what unblocks a freeze claim, not by count.
 |---|---|---|
 | R3.1 | **The freeze-gate instruments tell the truth**: `--freeze-ready` measures existence, not accuracy (#387); the hard-fail promised by the strict job is not implemented (#524); three umbrella passages disagree on who signs (#462); no clause sidecar (#144). | **[go]**; #462 touches governance → **[rule]** for the signer |
 | R3.2 | **Classify first** (closest: 81/120). 39 untraced clauses; start with the ones consumers cite. Then Ops (88), Announce (34), Consume (28), Emit (38), Grammar (37), Contract (74), Conform (88), Synth (99). | **[go]**, the long tail; each is a test, a lint row, or an honest ledger category |
-| R3.3 | **Condition 1 per-field provenance report** (derived vs copied, per party) for the `structure_key` vectors — the four-way byte-match is already shared-source for Baracuda/Unpopped (re-export) and Fuel's deriver is test-only (#263 comment 2026-08-20). | **[go]**; the report is the deliverable |
+| R3.3 | **Condition 1 per-field provenance — derivation corpus.** ~~the report~~ **non-`ctr` cells done (0.2.8)**: `structure_key_derivation_vectors.json` (30 cells: raw operands + hints -> token or typed decline) and the reference emit-derivation stage `derive.rs`; nine vectors reproduce A.1 goldens derived from raw cells. Still open: `ctr` cells (blocked on R1.8 / #543 — the batch role), and a **second deriver** run over it (Fuel/Unpopped/Baracuda), which is what makes a field count as independently derived. | **[wait: #543 for ctr; consumers for the cross-run]** |
 | R3.4 | **Single-toolchain differential** (#139): toolchain independence is asserted, never demonstrated. | **[go]** |
 
 ### R4 — freeze (not ours to complete)
@@ -135,3 +136,4 @@ Each verified at `origin/main` `5b28bf5`.
 | #364 | Appendix C shows all seven blocks: `test_appendix_c_shows_every_block_the_codec_renders` passes (#496) |
 
 **Not on the list:** #298 (ops.md still states no per-op operand structure) and #222 (the collection; candidate 1 is a ruling).
+

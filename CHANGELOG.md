@@ -3,6 +3,21 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.8 — 2026-10-14
+
+- **New corpus artifact `conformance/corpus/structure_key_derivation_vectors.json`** (30 cells; R3.3) and the
+  reference **emit-derivation stage** it is generated from (`conformance/src/derive.rs`,
+  `derive_structure_key`): a RAW cell — operands `(use, dtype, extents, strides, alignment, dequant_form)`,
+  target, declared hints (index slot, reduced axes, accumulator, `<mp>`) — to the `structure_key`, or a typed
+  decline. Until now the codec round-tripped tokens and derived single facts; nothing derived a whole token
+  from a cell (§6.6-0019 names this stage as missing). Nine vectors reproduce Appendix A.1 goldens **derived
+  from raw operands** (their expected bytes are the spec's hand-derived tokens, asserted equal); the rest
+  are reference output for a second deriver to cross-check. **Scope: every cell class except `ctr`** —
+  the batch role is undefined (KISS#543), so a cell that declares contraction roles is a decline, not a
+  guess. Fuel/Unpopped/Baracuda can byte-match their DERIVATION, not only their tokens.
+  `KISS-CLASSIFY-6.6-0011` and `-6.6-0014` gain real tests; floor harness 400 → 402, untested 477 → 475.
+  No spec text and no existing artifact changes.
+
 ## 0.2.7 — 2026-10-14
 
 - **Two Classify clauses gain real tests** (`conformance/tests/classify_tail.rs`, R3.2): KISS-CLASSIFY-6.6-0005
