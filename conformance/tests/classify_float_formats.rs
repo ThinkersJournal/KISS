@@ -192,3 +192,15 @@ fn control_the_decode_distinguishes_formats_and_catches_a_wrong_bias() {
     let wrong = |b: u8| if b == 0x7C { f32::NAN } else { e5m2_to_f32(b) };
     assert_ne!(classify_f32(wrong(0x7C)), e5m2(0x7C));
 }
+
+// Backs: KISS-CLASSIFY-6.0-0002 — the special-value bit patterns are pinned format constants reproduced
+// byte-for-byte (exact-byte class). This is the §6.0 statement of the obligations carried by the two tests
+// above; it runs both, so a drift in either reddens this clause too.
+#[test]
+fn test_classify_special_value_bit_patterns() {
+    test_classify_float_special_values_pinned();
+    test_classify_e5m2_format();
+    // byte-for-byte: the compared quantity is the raw bit pattern, never a value comparison (0.0 == -0.0)
+    assert_ne!(0.0f32.to_bits(), (-0.0f32).to_bits());
+    assert_ne!(f32::from_bits(0x7FC0_0000).to_bits(), f32::from_bits(0x7F80_0001).to_bits());
+}

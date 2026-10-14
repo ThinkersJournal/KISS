@@ -74,15 +74,13 @@ KISS-ANNOUNCE-8-0003	test_announce_additive_capability_no_version_bump	untested
 KISS-ANNOUNCE-8-0004	test_announce_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
-KISS-CLASSIFY-6.0-0001	test_classify_determinism_class_exact_byte	untested	
-KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested	
-KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
-KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
-KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
-KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	
-KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested	
-KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	
-KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	
+KISS-CLASSIFY-6.0-0001	test_classify_determinism_class_exact_byte	untested	looked for a Classify-tier determinism-class assignment (a function or table classing dtype/descriptor/token clauses as exact-byte) in conformance/src/determinism.rs and lib.rs: none; control: atom_determinism_class exists and returns ExactByte for "nextafter" (tests/determinism.rs), so the search finds the Ops form. The clause is a meta-rule about the comparator KISS-Conform applies; the Classify goldens are compared byte-exact by their own tests
+KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	looked for a byte-level complex subject (an interleaved re/im buffer reader or writer) in conformance/src: none; control: s4/u4/b1 pack/unpack and e4m3/e8m0 decoders exist in dtype.rs. The width relation c64 = 2 x 32 and c128 = 2 x 64 follows from the manifest widths (6.1-0002, backed); the lower-addressed-half-is-real statement has no reader to run
+KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	definitional	unrepresentable in the reference crate: CellOperand.extents/strides are Vec<i64> of exactly the declared rank, so there is no padded tail to read. Control: a length mismatch declines BadShape (derive_declines_an_extents_strides_length_mismatch, tests/classify_bool_storage.rs). A test of "does not read past rank" could only assert the type
+KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	looked for a symbolic-extent model (symbolic_extent / capacity vs live length) in conformance/src/structure_key.rs and derive.rs: none; control: the same files model dequant_form, so the search finds optional operand records. The 64-bit element-unit half is the i64 field type; the capacity half has no subject
+KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	definitional	unrepresentable in the reference crate: CellOperand has no layout_tag field, the layout is computed from extents and strides by the deriver. Control: the derivation itself is backed under 6.5-0002 (test_classify_layout_tag_derivation). A test of "no stored raw field" could only assert the struct definition
+KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	looked for the full quant record {family, sub_byte_bits, block_elems, scale_placement, dequant_form} in conformance/src: only dequant_form is modelled (CellOperand.dequant); control: dequant_form is keyed and tested (structure_key_derivation_vectors.rs). "Every other field is not keyed" has no subject until the record is modelled
+KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	looked for a symbolic_extent record {axis, kind} in conformance/src: none (see 6.3-0004); control: optional operand records exist (dequant). Nothing to key or not key
 KISS-CLASSIFY-6.3-0012	test_classify_quant_sidecar_projection	lint:kiss_tables	the quantization-sidecar projection table drifts from the `quant` record fields of §6.3-0009
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
 KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION
@@ -91,22 +89,19 @@ KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	lint:kiss_vocab	the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
-KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	untested	
-KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
-KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
-KISS-CLASSIFY-6.8-0017	test_namespace_vocabulary_manifest_sufficiency_named	untested	
-KISS-CLASSIFY-6.9-0001	test_classify_no_upstream_dependency	untested	
-KISS-CLASSIFY-6.9-0002	test_classify_structure_key_opaque_carry	untested	
-KISS-CLASSIFY-6.9-0003	test_classify_zero_dependency	untested	
-KISS-CLASSIFY-7.1-0001	test_classify_mandatory_core	untested	
-KISS-CLASSIFY-7.2-0001	test_classify_extension_is_additive	untested	
-KISS-CLASSIFY-7.2-0002	test_classify_non_additive_bumps_version	untested
+KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	blocked	KISS#543: the contraction role hints (M/N/K, weight slot) are out of the derivation corpus until the batch role is ruled. The index-slot and reduced-axis hints ARE exercised (classify_storage_dtypes.rs: no declared slot, no ndx; the A.1 reduction vectors), so the clause is not counted backed on that half alone
+KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	blocked	KISS#543: contraction cells are declined out of scope (decline_contraction_out_of_scope) until the batch role is ruled, so the M/N/K size classes have no derivation to test; control: the decline vector exists
+KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	definitional	a statement of absence: no binary or fixed-width wire encoding of a structure_key is defined. Looked for to_bytes/from_bytes/encode/serialize on StructureKey in conformance/src/structure_key.rs: none; control: to_token and from_token exist. A test could only assert that no function exists
+KISS-CLASSIFY-6.8-0017	test_namespace_vocabulary_manifest_sufficiency_named	untested	looked for a test in which a party other than the maintainer produces byte-identical tokens from the manifest alone: none; control: the declarative half (envelope validation, 6.8-0008/-0010/-0011) is backed in namespace_vocabulary.rs. The remainder is a second-deriver / foreign-party obligation (R3.3, R4.1)
+KISS-CLASSIFY-7.1-0001	test_classify_mandatory_core	definitional	enumerates the mandatory core by naming other clauses; each member is backed or ledgered under its own clause, and a test over the enumeration would assert the list against itself (the 7.3-0001 reasoning)
+KISS-CLASSIFY-7.2-0001	test_classify_extension_is_additive	definitional	a change-control rule on how the schema evolves (additive extension leaves existing tokens byte-identical). The byte-identity it protects is carried by the frozen token goldens (structure_key_vectors.json and its round-trip test) under their own clauses; no behaviour of the code under test distinguishes the rule
+KISS-CLASSIFY-7.2-0002	test_classify_non_additive_bumps_version	definitional	a change-control rule (a non-additive predicate-axis change bumps the schema version); enforced by review and by the golden tokens carrying the version prefix, not by behaviour of the code under test
 KISS-CLASSIFY-7.3-0001	test_classify_full_profile_is_default	definitional	states which conformance claim an unqualified 'conforms' means; a test could only assert the definition against itself
 KISS-CLASSIFY-7.3-0003	test_classify_emit_only_reader_side_set	definitional	enumerates which existing clause sentences are reader-side; each is already backed (or ledgered) under its own clause, and a test over the enumeration would restate it
 KISS-CLASSIFY-7.3-0004	test_classify_emit_only_does_not_block_reader	definitional	a claim-scoping rule (an implementation adding a reader claims the full profile); no behaviour of the code under test distinguishes it
-KISS-CLASSIFY-8-0001	test_classify_two_version_axes_independent	untested	
-KISS-CLASSIFY-8-0002	test_classify_wire_change_bumps_version	untested	
-KISS-CLASSIFY-8-0003	test_classify_additive_no_version_bump	untested	
+KISS-CLASSIFY-8-0001	test_classify_two_version_axes_independent	definitional	a policy that two version axes are tracked independently (crate semver vs structure_key schema version); control: conformance/Cargo.toml is 0.2.x while the token prefix is sk5, so they differ today, but a test of "a semver change does not imply a wire change" could only assert the policy
+KISS-CLASSIFY-8-0002	test_classify_wire_change_bumps_version	definitional	a change-control rule (a change to the bytes of an existing token bumps the schema version); the frozen goldens are what would redden on such a change, under their own clauses
+KISS-CLASSIFY-8-0003	test_classify_additive_no_version_bump	definitional	a change-control rule (assigning a new dtype code or namespace does not bump the version; 6.7-0007 is the spelling-keyed behaviour and is backed)
 KISS-CLASSIFY-8-0004	test_classify_freeze_gate_two_dissimilar_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CLASSIFY-8-0005	test_classify_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CLASSIFY-8-0006	test_classify_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
