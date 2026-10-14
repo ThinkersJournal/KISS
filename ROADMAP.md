@@ -1,6 +1,6 @@
 # KISS roadmap
 
-**Measured at `origin/main` `5b28bf5` (conformance 0.2.1), 2026-10-13.** Not a plan of record until the
+**Statuses refreshed at `origin/main` `9ea8c05` (conformance 0.2.14), 2026-10-14; the measured tables below were taken at `5b28bf5` (0.2.1) unless a row says otherwise.** Not a plan of record until the
 PM gates it. Order is dependency order, not calendar: nothing here has a date, because the gates below are
 not ours to date.
 
@@ -79,7 +79,7 @@ Each consumer's binding today:
 | R2.1 | **Attention observability** — a second output slot (per-key column-sum of post-softmax weights) via `output_views`. Open "four-way (Lightbulb / Fuel / Baracuda / KISS)". | lightbulb `docs/superpowers/notes/capability-regression-audit.md` L36 | **[rule]** — an Ops/Contract shape; needs a proposal first |
 | R2.2 | ~~**Vectors for the four rounding atoms.**~~ **done (#539, 0.2.4).** Fuel GAP-300 reads "`trunc` has no spec decomposition"; it is a **primitive-floor atom** (§6.7: no decomposition by design), so what was missing is a *vector* — the oracle corpus carried none for `floor`/`ceil`/`trunc`/`round_even`. | Fuel GAP-300 | **done**: `ops-rounding.json`, 72 f32 cells, no NaN cell — #396 |
 | R2.3 | ~~**NaN vectors for `max_prop` vs `fmax_ieee`**~~ **done (#540, 0.2.5)**: `ops-minmax-nan.json`, 44 f32/f64 cells; a prop↔ieee swap differs on 44/44; kiss-ref 0.4.0 reproduces 44/44. Fuel runs it as the cosign (its lazy-Tensor test). Still open: inf/subnormal operands (value arm) — not asked for. | Fuel `PROVENANCE.md`, #329 | **done** (closing #329 is CireSnave's) |
-| R2.7 | ~~say in the vector header that a `class: ULP` cell with a NaN expected is compared per 6.8-0010~~ **done (0.2.6)**: `ops-transcendental-nan.json` carries a `harness_rule` key (the only file with such cells; 12 of 12). | Fuel finding 2026-10-14 | **done** |
+| R2.7 | ~~say in the vector header that a `class: ULP` cell with a NaN expected is compared per 6.8-0010~~ **done (0.2.6)**: `ops-transcendental-nan.json` carries a `harness_rule` key (the only file with such cells; 13 of 13 since 0.2.14, #550: +f64 `log` of an sNaN, from Fuel's macOS leg). kiss-ref re-pin: kiss-ref#54 (also vendors `ops-minmax-nan` 44 and `ops-rounding` 72). | Fuel finding 2026-10-14 | **done** |
 | R2.4 | **Reference wire codec + per-op OpAttrs bytes** with a cross-implementation byte comparison (#504, #502, #23). OpAttrs has **no** cross-implementation oracle today. | kiss-ref (models none), every OpAttrs consumer | **[go]**, large |
 | R2.5 | **`randombits` basis slot, shape-rule expression vocabulary** — filed by Fuel as outreach RFCs; `dims`/`with_dim` are registered *experimental* (umbrella §6.4.1) pending ≥2 dissimilar implementations. | Fuel `docs/outreach/kiss-rfc-*.md` | **[rule]** per RFC; promotion needs Baracuda as the second consumer |
 | R2.6 | **SVD / linalg ops** — absent from the op vocabulary; needed only if low-rank KV compression is wanted. | lightbulb audit L243–245 | **not started; no consumer committed** |
