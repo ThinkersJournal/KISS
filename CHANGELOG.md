@@ -3,14 +3,26 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.9 — 2026-10-14
+
+- **The freeze hard-fail the `strict` job promised now exists** (#524): `tools/kiss_freeze_gate.py` reads each
+  spec's front-matter `Maturity stage`; any sub-standard that is **Frozen** in the tree MUST pass
+  `kiss_trace.py --freeze-ready <SUB>` or the blocking `kiss-trace` job fails (a promotion in the PR and a
+  regression of an already-Frozen sub-standard are both caught). Three outcomes kept apart — CLEAN 0, BLOCKED 1,
+  DECLINED 2 (an unreadable stage row or base ref is inconclusive, not a pass). Because the whole tree is
+  Draft, the controls (`tools/test_kiss_freeze_gate.py`, 10 tests, run in CI) seed the red and run the real
+  `--freeze-ready` once to show the BLOCKED arm is not an artifact of an injected callable. **Not covered:**
+  who signed (#462), traceability accuracy (#387), conditions 1 and 2. CI/tooling only; no spec, harness or
+  corpus change. Also corrects the 0.2.8 entry's vector counts (32, ten A.1-anchored; first stated 30 and nine).
+
 ## 0.2.8 — 2026-10-14
 
-- **New corpus artifact `conformance/corpus/structure_key_derivation_vectors.json`** (30 cells; R3.3) and the
+- **New corpus artifact `conformance/corpus/structure_key_derivation_vectors.json`** (32 vectors; R3.3 — corrected in 0.2.9: first written as 30) and the
   reference **emit-derivation stage** it is generated from (`conformance/src/derive.rs`,
   `derive_structure_key`): a RAW cell — operands `(use, dtype, extents, strides, alignment, dequant_form)`,
   target, declared hints (index slot, reduced axes, accumulator, `<mp>`) — to the `structure_key`, or a typed
   decline. Until now the codec round-tripped tokens and derived single facts; nothing derived a whole token
-  from a cell (§6.6-0019 names this stage as missing). Nine vectors reproduce Appendix A.1 goldens **derived
+  from a cell (§6.6-0019 names this stage as missing). Ten vectors (9 first stated) reproduce Appendix A.1 goldens **derived
   from raw operands** (their expected bytes are the spec's hand-derived tokens, asserted equal); the rest
   are reference output for a second deriver to cross-check. **Scope: every cell class except `ctr`** —
   the batch role is undefined (KISS#543), so a cell that declares contraction roles is a decline, not a

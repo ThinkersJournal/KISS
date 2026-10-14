@@ -113,6 +113,24 @@ jobs:
             *) echo "::error title=Ratchet: unexpected exit::exit $rc -- not one of the three documented states.";;
           esac
           exit $rc
+      # #524: the hard-fail the `strict` job's comment promised. A sub-standard whose front-matter
+      # `Maturity stage` is Frozen MUST pass `--freeze-ready` (umbrella §5.3 condition 3) — a promotion
+      # in this change and a regression of an already-Frozen one are both blocked. The tree is all
+      # Draft today, so the controls SEED the red (a gate that lands green against a tree that cannot
+      # violate it has never been shown to fire). Exit 1 = BLOCKED, 2 = DECLINED (inconclusive). The tool spawns no subprocess.
+      - name: Freeze-gate discrimination controls (#524)
+        run: python tools/test_kiss_freeze_gate.py
+      - name: A Frozen sub-standard passes --freeze-ready (blocking, #524)
+        run: |
+          rc=0
+          python tools/kiss_freeze_gate.py || rc=$?
+          case $rc in
+            0) echo "freeze gate: CLEAN";;
+            1) echo "::error title=Freeze gate: BLOCKED::a Frozen sub-standard fails --freeze-ready (umbrella §5.3 condition 3). Run: python tools/kiss_trace.py --freeze-ready <SUB>";;
+            2) echo "::error title=Freeze gate: DECLINED (not a violation)::a Maturity stage row or the base ref could not be read — INCONCLUSIVE.";;
+            *) echo "::error title=Freeze gate: unexpected exit::exit $rc";;
+          esac
+          exit $rc
       - name: Comparator-blindness discrimination controls
         run: python tools/test_kiss_comparators.py
       # A comparator that normalizes a dimension cannot fail on it. This gates the
