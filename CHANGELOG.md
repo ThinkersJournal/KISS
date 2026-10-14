@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.20 — 2026-10-14
+
+- **`ops-compare-bool.json` — the first comparison and `bool` vectors** (KISS-OPS-6.2-0005 / -0006, ROADMAP R3.2): 181
+  exact-byte cells with expected dtype `bool`, one byte. (a) `cmp_eq/ne/lt/le/gt/ge` over f32 (ordinary, equal,
+  signed zeros, NaN on either side, inf), i32 and u32 (the u32 rows include the `0xFFFFFFFF` vs `1` pair on which a
+  signed reading flips the answer); (b) `logical_and/or/not` on `bool` operands holding `0x02/0x7F/0x80/0xFF/0x40`,
+  results strictly 0/1. An implementation returning a 4-byte `1.0f32` mask, or forwarding `0x02`, passed every
+  earlier vector. Independent models in `mint_compare_bool.rs` (f64 widening, signed/unsigned readings, non-zero
+  byte). Backs 6.2-0005 and 6.2-0006: floor harness 403 -> 405, untested 474 -> 472. **6.2-0007 stays unbacked** (its
+  bitwise/reduction/scan arms have no cells; the ledger note says what is covered). Opt-in file; no existing file
+  changed; not yet run through kiss-ref. No spec change.
+
 ## 0.2.19 — 2026-10-14
 
 - **`ops-int-wrap.json` — the first integer vectors** (KISS-OPS-6.2-0002, ROADMAP R3.2): 440 exact-byte cells,

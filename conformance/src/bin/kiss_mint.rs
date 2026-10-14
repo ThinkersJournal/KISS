@@ -7,6 +7,7 @@
 //!   corpus/ops-rounding.json          — KISS-OPS-6.7-0001/-0002: f32 floor/ceil/trunc/round_even exact-byte
 //!                                        cells (ties, zero signs, integral, inf, subnormal); no NaN (#396).
 //!   corpus/ops-int-wrap.json          — KISS-OPS-6.2-0002: i8..u64 add/sub/mul wrap at the boundaries
+//!   corpus/ops-compare-bool.json      — KISS-OPS-6.2-0005/-0006: comparison -> one-byte bool mask; bool consumers read non-zero as true
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -452,6 +453,118 @@ fn int_wrap_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.2-0002", &cells)
 }
 
+// ---- comparison-mask + bool-normalization bundle (KISS-OPS-6.2-0005 / -0006) -----------------
+//
+// WHY: §6.2-0005 pins a comparison's result as a one-byte `bool` mask, byte 0 or 1 — "an `f32`
+// comparison yields a one-byte mask, not a 4-byte `1.0`/`0.0`" — and §6.2-0006 pins that a `bool`
+// consumer reads ANY non-zero byte as true while a `bool` producer normalizes to strictly 0/1. The
+// corpus carried no comparison cell and no `bool` cell, so an implementation returning `1.0f32` or
+// forwarding `0x02` passed every vector.
+//
+// EMITTED: (a) cmp_eq/ne/lt/le/gt/ge over f32 (ordinary, equal, signed zeros, NaN either side, inf),
+// i32 and u32 — the u32 cells use the sign-bit pattern 0xFFFFFFFF vs 1 so a signed reading is
+// observable (§6.2-0007's comparison path; the clause is NOT backed here: its bitwise/reduction/scan
+// arms are not covered); (b) logical_and/logical_or/logical_not on `bool` operands holding non-0/1
+// non-zero bytes (0x02, 0x7F, 0x80, 0xFF), results strictly 0/1.
+// EXPECTED dtype is `bool`, one byte, whatever the compute dtype. NOT EMITTED: arrays/masks wider than one
+// element, `select`/`reduce` consumers of a mask, and the "MUST NOT produce any other byte value" half as a
+// REJECTION test (a vector can only show the defined result; the discrimination is the one-byte 0/1 expected).
+fn typed_cell(tc: u32, op: &str, dtype: &str, inputs: &[&[u8]], expected_dtype: &str, expected: &[u8], tags: &str) -> String {
+    let inputs_json = match inputs {
+        [x] => format!("[{{\"role\":\"x\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]", hex(x)),
+        [a, b] => format!(
+            "[{{\"role\":\"a\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}},              {{\"role\":\"b\",\"dtype\":\"{dtype}\",\"bits\":\"{}\"}}]",
+            hex(a),
+            hex(b)
+        ),
+        _ => panic!("a cell has 1 or 2 inputs"),
+    };
+    format!(
+        "    {{\"tcId\": {tc}, \"op\": \"{op}\", \"dtype\": \"{dtype}\", \"rounding\": \"roundTiesToEven\",          \"inputs\": {inputs_json},          \"expected\": {{\"dtype\":\"{expected_dtype}\",\"bits\":\"{}\"}},          \"class\": \"exact-byte\", \"ulp_bound\": 0, \"provenance\": \"oracle\",          \"tags\": [{tags}],          \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": 8}}}}",
+        hex(expected)
+    )
+}
+
+/// The comparison-mask cells (§6.2-0005), numbered from `tc`; returns the next free tcId.
+fn compare_mask_cells(cells: &mut Vec<String>, mut tc: u32) -> u32 {
+    let f32s: [(u32, u32); 12] = [
+        (0x3F80_0000, 0x4000_0000), // 1 , 2
+        (0x4000_0000, 0x3F80_0000), // 2 , 1
+        (0x3F80_0000, 0x3F80_0000), // 1 , 1
+        (0x0000_0000, 0x8000_0000), // +0, -0
+        (0x8000_0000, 0x0000_0000), // -0, +0
+        (0x7FC0_0000, 0x3F80_0000), // NaN, 1
+        (0x3F80_0000, 0x7FC0_0000), // 1, NaN
+        (0x7FC0_0000, 0x7FC0_0000), // NaN, NaN
+        (0x7F80_0000, 0x7F80_0000), // +inf, +inf
+        (0xFF80_0000, 0x7F80_0000), // -inf, +inf
+        (0xBF80_0000, 0x3F80_0000), // -1 , 1
+        (0x7F7F_FFFF, 0x7F80_0000), // max finite, +inf
+    ];
+    let ints: [(u32, u32); 5] = [
+        (0xFFFF_FFFF, 0x0000_0001), // -1 / 4294967295 vs 1: signed and unsigned readings DISAGREE on lt/gt
+        (0x0000_0001, 0xFFFF_FFFF),
+        (0x8000_0000, 0x7FFF_FFFF), // signed min vs signed max
+        (0x0000_0005, 0x0000_0005),
+        (0x0000_0000, 0x0000_0001),
+    ];
+    let pred = |op: &str, o: Option<std::cmp::Ordering>| -> u8 {
+        use std::cmp::Ordering::*;
+        u8::from(match (op, o) {
+            ("cmp_eq", o) => o == Some(Equal),
+            ("cmp_ne", o) => o != Some(Equal),
+            ("cmp_lt", o) => o == Some(Less),
+            ("cmp_le", o) => matches!(o, Some(Less | Equal)),
+            ("cmp_gt", o) => o == Some(Greater),
+            _ => matches!(o, Some(Greater | Equal)),
+        })
+    };
+    for op in ["cmp_eq", "cmp_ne", "cmp_lt", "cmp_le", "cmp_gt", "cmp_ge"] {
+        for (a, b) in f32s {
+            let o = f32::from_bits(a).partial_cmp(&f32::from_bits(b));
+            cells.push(typed_cell(tc, op, "f32", &[&a.to_be_bytes(), &b.to_be_bytes()], "bool", &[pred(op, o)], "\"mask\",\"6.2-0005\""));
+            tc += 1;
+        }
+        for (dtype, signed) in [("i32", true), ("u32", false)] {
+            for (a, b) in ints {
+                let o = if signed { (a as i32).partial_cmp(&(b as i32)) } else { a.partial_cmp(&b) };
+                let tag = if signed { "\"mask\",\"6.2-0005\"" } else { "\"mask\",\"6.2-0005\",\"u32-unsigned\"" };
+                cells.push(typed_cell(tc, op, dtype, &[&a.to_be_bytes(), &b.to_be_bytes()], "bool", &[pred(op, o)], tag));
+                tc += 1;
+            }
+        }
+    }
+    tc
+}
+
+/// The `bool`-consumer normalization cells (§6.2-0006), numbered from `tc`; returns the next free tcId.
+fn bool_normalization_cells(cells: &mut Vec<String>, mut tc: u32) -> u32 {
+    let bytes: [u8; 7] = [0x00, 0x01, 0x02, 0x7F, 0x80, 0xFF, 0x40];
+    let tag = "\"bool-normalize\",\"6.2-0006\"";
+    for op in ["logical_and", "logical_or"] {
+        for a in bytes {
+            for b in [0x00u8, 0x02, 0xFF] {
+                let (ta, tb) = (a != 0, b != 0);
+                let r = u8::from(if op == "logical_and" { ta && tb } else { ta || tb });
+                cells.push(typed_cell(tc, op, "bool", &[&[a], &[b]], "bool", &[r], tag));
+                tc += 1;
+            }
+        }
+    }
+    for a in bytes {
+        cells.push(typed_cell(tc, "logical_not", "bool", &[&[a]], "bool", &[u8::from(a == 0)], tag));
+        tc += 1;
+    }
+    tc
+}
+
+fn compare_bool_doc() -> String {
+    let mut cells = Vec::new();
+    let tc = compare_mask_cells(&mut cells, 1);
+    bool_normalization_cells(&mut cells, tc);
+    bundle_doc("OPS", "KISS-OPS-6.2-0005", &cells)
+}
+
 // ---- f32/f64 min/max NaN bundle (#329) -----------------------------------------------------
 //
 // WHY: `max_prop`/`min_prop` (NaN-propagating) and `fmax_ieee`/`fmin_ieee` (NaN-suppressing) differ
@@ -569,5 +682,6 @@ fn main() {
     write_bundle("/corpus/ops-narrow-select-nan.json", &narrow_select_nan_doc());
     write_bundle("/corpus/ops-rounding.json", &rounding_doc());
     write_bundle("/corpus/ops-int-wrap.json", &int_wrap_doc());
+    write_bundle("/corpus/ops-compare-bool.json", &compare_bool_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }
