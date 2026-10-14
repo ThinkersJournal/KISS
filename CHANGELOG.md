@@ -3,6 +3,17 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.19 — 2026-10-14
+
+- **`ops-int-wrap.json` — the first integer vectors** (KISS-OPS-6.2-0002, ROADMAP R3.2): 440 exact-byte cells,
+  `add`/`sub`/`mul` over i8/u8/i16/u16/i32/u32/i64/u64 at the five wrap-boundary patterns (0, 1, signed max, signed
+  min, all-ones; every ordered pair for `sub`, unordered for `add`/`mul`). A saturating implementation passes every
+  earlier vector and differs on at least one cell per (dtype, op) here. Minted by `kiss_mint`
+  (regenerating the other five bundles is byte-identical); `mint_int_wrap.rs` recomputes every cell from an
+  independent i128 model and asserts the saturating discrimination. Backs 6.2-0002: floor harness 402 -> 403, untested
+  475 -> 474; OPS untraced 88 -> 87. **Consumers opt in by vendoring the file; no existing file changed.** Not run
+  through kiss-ref yet (a re-vendor task). No spec change.
+
 ## 0.2.18 — 2026-10-14
 
 - **Clause sidecars for the remaining six sub-standards** (#144 option A, completes the seed): `spec/sidecar/{announce,classify,conform,contract,ops,synth}.json`
