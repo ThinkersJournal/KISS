@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.39 — 2026-10-14 (allocated by the PM)
+
+- **Conform 6.13-0012 backed** (floor harness 419 -> 420, untested 447 -> 446): `test_conform_contract_schema_byte_compare` compares the codec's Appendix C golden document with the committed `corpus/contract_vectors.json` bytes under the exact-byte comparator and checks the seven `[section:N:...]` headings are ids 1..7 in order (flipping a committed byte reds it).
+- The other 63 bare `untested` KISS-CONFORM rows each record what was searched for and a control. Findings: no consumer-verify check, structure-directed fuzzer, structural op-DAG equality, canonical suite artifact or profile switch exists in the crate, so none of those has a subject; 6.13-0008 and 6.13-0009 are recorded PARTIAL (floor unmoved). No category change, no spec change.
+
 ## 0.2.38 — 2026-10-14 (allocated by the PM)
 
 - Ledger notes only: the 30 bare `untested` KISS-GRAMMAR rows in `conformance/UNBACKED.tsv` each record what was searched for and a control (no synthesis channel, recognizer, KISS-Ops lookup or `op_identity` mapping in the reference crate). No category change, no test added; floor unmoved (harness 419, untested 447). No spec change.
