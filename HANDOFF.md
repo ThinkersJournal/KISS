@@ -7,7 +7,7 @@
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
 2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (latest merged is 0.2.16, #552; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
+   (latest merged is 0.2.17, #553; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
    comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
@@ -35,7 +35,7 @@ KISS#553-slot: the sidecar PR (0.2.17) if open; otherwise none (origin/main `055
 - **First second-party derivation runs** (Fuel#358, Baracuda): rulings in KISS#547. **Owed by implementations:** collapsed
   reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped: reduced innermost axis -> `v1`
   (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
-- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: consume, emit, grammar. TODO: announce, classify, conform, contract, ops, synth (+umbrella?). `determinism_class` / `wire_abi_schema_version` stay `null` until ruled (second ASK sent).
+- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null` until ruled (second ASK sent).
 - **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)

@@ -3,6 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.18 — 2026-10-14
+
+- **Clause sidecars for the remaining six sub-standards** (#144 option A, completes the seed): `spec/sidecar/{announce,classify,conform,contract,ops,synth}.json`
+  (768 clauses; all nine sub-standards now have one — per-sub counts in `kiss_sidecar.py --check`). Same
+  rules as 0.2.17: seeded once, `--write` refused over an existing sidecar, drift is a `kiss_trace` violation and a CI
+  step. `determinism_class` and `wire_abi_schema_version` remain `null`/UNSET pending the ruling (PM item 193). No clause
+  text, freeze state or coverage figure changes.
+
 ## 0.2.17 — 2026-10-14
 
 - **Clause sidecar, first three sub-standards** (#144 option A, PM-ruled; ROADMAP R3.1): `spec/sidecar/{consume,emit,grammar}.json`
