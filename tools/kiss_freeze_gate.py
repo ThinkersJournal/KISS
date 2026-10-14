@@ -29,18 +29,19 @@ the AUDIT-role part of §5.3), traceability ACCURACY (#387), conditions 1 and 2 
 a foreign reader). It is the cheapest of the five instruments and it is a floor, not the freeze gate.
 
 Usage:
-  python tools/kiss_freeze_gate.py --base-ref origin/main
-  python tools/kiss_freeze_gate.py            # no base: reads only the working tree (regression arm)
+  python tools/kiss_freeze_gate.py
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import os
 import re
-import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 ROOT = os.path.dirname(HERE)
 SPEC_DIR = os.path.join(ROOT, "spec")
 
@@ -103,41 +104,31 @@ def _read_worktree(sub: str):
         return f.read()
 
 
-def _read_base(ref: str, sub: str):
-    r = subprocess.run(
-        ["git", "-C", ROOT, "show", f"{ref}:spec/{sub}.md"], capture_output=True, text=True, encoding="utf-8"
-    )
-    return r.stdout if r.returncode == 0 else None
-
-
 def _freeze_ready(sub: str) -> int:
-    return subprocess.run(
-        [sys.executable, os.path.join(HERE, "kiss_trace.py"), "--freeze-ready", sub.upper()],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    ).returncode
+    """`kiss_trace.py --freeze-ready <SUB>` exit status, run in-process (no subprocess: the gate has
+    no business spawning a shell, and a Frozen claim is decided by the same code CI already runs)."""
+    import kiss_trace
+
+    argv = sys.argv
+    sys.argv = ["kiss_trace.py", "--freeze-ready", sub.upper()]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = kiss_trace.main()
+    except SystemExit as e:  # kiss_trace may sys.exit
+        rc = e.code
+    finally:
+        sys.argv = argv
+    return int(rc or 0)
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Blocking hard-fail for a Frozen sub-standard (#524)")
-    ap.add_argument("--base-ref", default=None, help="git ref of the pre-change state, to REPORT promotions")
-    args = ap.parse_args(argv)
+    argparse.ArgumentParser(description="Blocking hard-fail for a Frozen sub-standard (#524)").parse_args(argv)
 
     stages = {s: (maturity_stage(t) if (t := _read_worktree(s)) is not None else None) for s in SUBS}
     print("KISS freeze gate (#524) — umbrella §5.3 condition 3 on a Frozen sub-standard")
     print("=" * 68)
     for s in SUBS:
-        base = ""
-        if args.base_ref:
-            bt = _read_base(args.base_ref, s)
-            if bt is None:
-                print(f"DECLINED: cannot read spec/{s}.md at {args.base_ref}")
-                return 2
-            bs = maturity_stage(bt)
-            if bs != stages[s]:
-                base = f"   <- was {bs}"
-        print(f"  {s:9} {stages[s]}{base}")
+        print(f"  {s:9} {stages[s]}")
     code, lines = evaluate(stages, _freeze_ready)
     print("-" * 68)
     print("\n".join(lines))

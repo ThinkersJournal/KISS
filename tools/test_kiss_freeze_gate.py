@@ -9,7 +9,6 @@ BLOCKED arm is not an artifact of the injected callable.
 Run: python tools/test_kiss_freeze_gate.py
 """
 import pathlib
-import subprocess
 import sys
 import unittest
 
@@ -84,8 +83,7 @@ class RealDataTest(unittest.TestCase):
         self.assertEqual(code, 1)
 
     def test_the_cli_is_clean_on_the_draft_tree(self):
-        r = subprocess.run([sys.executable, str(HERE / "kiss_freeze_gate.py")], capture_output=True, text=True)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(g.main([]), 0)
 
 
 if __name__ == "__main__":
