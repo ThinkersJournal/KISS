@@ -4,6 +4,13 @@
 ROADMAP R2.4 (#504, #502, #23). No code accompanies it; the PM gates whether and in what slices to build it.
 Every figure below names its command; anything not measured says so.
 
+> **Correction, 2026-10-14 (after slice 1 landed and Fuel was re-read at `e6cbf782c`).** §4 below called Fuel "the
+> live pair". That was wrong. Fuel's own `fuel-kernel-seam-types/tests/kiss_ops_619_divergence.rs` (GAP-305, OPEN,
+> owner unallocated) states that `OpAttrs::to_canonical_bytes` is a u32-LE node envelope that diverges from §6.19.3
+> on every carrier op and "is NOT an interop test". The live OpAttrs pair count is therefore still **0**, and the value
+> file is an external reference for GAP-305's remedy, not a pass/fail run against a conformant second encoder. Slice 2
+> was sent to Fuel as an optional body-diff against its clause-derived vectors (a second *reading*), not as a run.
+
 ## 1. The gap, restated at `e317315`
 
 §6.19 owns the OpAttrs wire encoding (17 carrier ops, positional fields, default-resolved, LE). #504 measured on
@@ -69,14 +76,15 @@ field order and a dropped default each turn the cross-check red; `rank` omitted 
 
 | party | produces OpAttrs bytes | role |
 |---|---|---|
-| **Fuel** | yes (`to_canonical_bytes`) | the live pair: runs the file, reports PASS/FAIL per vector (as it did for `ops-int-wrap`: 275/0/55/110) |
-| **kiss-ref** | **no, by design** (kiss-ref CHANGELOG 0.4.0, "What 0.4.0 does NOT model": OpAttrs bytes) | **needs a ruling.** Adding a codec makes kiss-ref a second implementation but makes the repo's "models no wire" scope false; leaving it keeps the pair count at one external party. The PM/CireSnave call, not this note's |
+| **Fuel** | an envelope, **not** §6.19 (GAP-305, its own measurement) | **not a conformant second encoder.** Its divergence test derives expected bytes from the clause text, which is a second *reading*: diffing that against this file (body only) is the useful comparison. Optional, queued on Fuel's side |
+| **kiss-ref** | **no, by design** (kiss-ref CHANGELOG 0.4.0, "What 0.4.0 does NOT model": OpAttrs bytes) | **ruled 2026-10-14 (PM): stays a non-party.** Adding a codec would have made kiss-ref a second implementation but made the repo's "models no wire" scope false |
 | **Baracuda** | no (non-party, #504) | none |
 | a third implementer | — | [ext]; this is the only route to *dissimilar* parties (E6) |
 
-Consequence stated plainly: even a perfect run gives **KISS x Fuel**, two parties that trace to one interpretation
-(CireSnave's E6). It makes the claim *exercised* rather than *unexercised*, which is what #504 asks; it does not discharge
-condition 1.
+Consequence stated plainly (corrected 2026-10-14): **no party today can run the file as an interop test.** The pair
+count stays 0 until a party emits a §6.19-conformant blob. Even then the pair would be KISS x that party, two readings
+that trace to one interpretation (CireSnave's E6): that makes the claim *exercised* rather than *unexercised*, which is
+what #504 asks; it does not discharge condition 1.
 
 ## 5. Clause and ledger effects (predictions, to be re-measured)
 
@@ -90,8 +98,8 @@ condition 1.
 
 1. **KISS only:** generic encoder (A), `opattrs_value_vectors.json` generator in `kiss_mint`-style bin, the A-vs-B
    cross-check test, controls, README/CHANGELOG. No spec change, opt-in file.
-2. **Fuel run:** a [TASK]/[NOTICE] to Fuel with the file and blob hash; their report is relayed as a [FINDING]
-   (their branch/PR is theirs).
+2. **Fuel notice (sent 2026-10-14, optional on their side):** the file and blob hash, offered as GAP-305's external
+   reference; a body-diff against their clause-derived vectors, any disagreement relayed as a [FINDING].
 3. **kiss-ref decision:** only after the ruling in §4; otherwise record "no second in-repo party" in the file header.
 4. **Decline kind** and the #502 clause, separately.
 
