@@ -562,8 +562,13 @@
 # PARTIAL (no emitter/lifter): floor unmoved for it. RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said "Set the floor
 # to harness 429, lint 35, untested 422".
 #
+# board 203 item (3) IN-half (stacked on item 2): harness 429 -> 430, untested 422 -> 421, lint 35 unmoved. KISS-CONFORM-6.6-0005 is
+# harness-backed by tests/fuzz_gen.rs against the new fuzz module (malformed/near-boundary generator + typed validity check). 6.6-0001
+# stays untested, recorded PARTIAL (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated): floor unmoved for it. RE-DERIVED from the
+# tool: `--ratchet --base-ref origin/main` said "Set the floor to harness 430, lint 35, untested 421".
+#
 # key	value
-harness	429
+harness	430
 lint	35
-untested	422
+untested	421
 proven	20
