@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.3.0 — 2026-10-14 (allocated by the PM)
+
+- **BREAKING (wire, pre-1.0 so the second number moves): the `reduce`/`prefix_scan` `math_fidelity` ordinals are pinned** (board 201, CireSnave verbatim: "Accept Fuel's table."). §6.19.2 gains `math_fidelity`: `0` reserved, `1`=bit-stable, `2`=reduced-mantissa-permitted (the §6.17-0001 member order); `accumulator` stays `0x00` (compute dtype) or the 1-based §6.1-table dtype ordinal. §6.19-0025/-0026 and the §6.19.3 rows spell the field `math_fidelity` (it was `math_precision`; the name is not on the wire, and the PM read the rename as following #478). Appendix E.2's `reduce`/`prefix_scan` blobs are now the 6-byte form (`01 FF FF 01 00 01`, `01 FE FF 01 00 01`, `03 FF FF 01 00 01`) plus a non-default worked blob (`01 FF FF 01 03 02`).
+- Code: `opattrs::encode_reduce`/`encode_prefix_scan` take `accumulator` and `MathFidelityOrd` (a breaking Rust API change for any in-tree caller); the generic value encoder mints `reduce` and `prefix_scan` (`not_emitted` is empty; population 133 -> 167, 39 new vectors incl. non-default accumulator and fidelity); `opattrs_vectors.json` field `math_precision` -> `math_fidelity`; a prefix_scan folds exactly one axis (rank-1 scan is `01 00`, never `FF FF`). Floor unmoved: no clause changed status.
+
 ## 0.2.44 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Structural op-DAG equality comparator shipped** (board 203 item 2; floor harness 427 -> 429, untested 424 -> 422): new `structural_dag` module and `tests/structural_dag.rs` back KISS-CONFORM-6.9-0001 and -0002. It resolves non-primitive nodes through the KISS-Ops §6.13 decomposition rows read from `spec/ops.md`, normalizes node/edge order and commutative operand order, and compares node sets, edge sets and OpAttrs bytes; an unreadable (let-bound) decomposition is a typed decline, never a silent primitive. 6.9-0003 stays `untested`, recorded PARTIAL: no emitter or lifter exists, so no round-trip runs. Nothing is re-bracketed (KISS-Ops declares no associativity property). No spec change.

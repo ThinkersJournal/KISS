@@ -42,6 +42,13 @@ ordinal_enum!(/// §6.19-0019
     ScanExclusivity { Inclusive = 1, Exclusive = 2 });
 ordinal_enum!(/// §6.19-0021 (schema field `output_column_ordering`)
     ColumnOrdering { ChannelMajor = 1, TapMajor = 2 });
+ordinal_enum!(/// §6.19.2 `math_fidelity` (schema field of `reduce`/`prefix_scan`, §6.19-0025/-0026): the
+    /// §6.17-0001 MathFidelity members in their declared order; `0` reserved. NOT the `st`/`rm`
+    /// structure_key spelling, which is a different channel.
+    MathFidelityOrd { BitStable = 1, ReducedMantissa = 2 });
+
+/// `accumulator` byte meaning "the compute dtype" (the §6.17-0005 diagonal, §6.19-0025).
+pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
 
 // ---- §6.19-0020 reduce_axes multiplex ---------------------------------------
 
@@ -96,19 +103,48 @@ pub fn window_param_vector(elems: &[u32]) -> Vec<u8> {
 // values; a "defaulted" and an "explicit-equal" field therefore produce the same
 // bytes (§6.19-0005, Appendix E.3).
 
-/// `reduce`: monoid, reduce_axes, keepdim (§6.19-0025).
-pub fn encode_reduce(monoid: Monoid, reduced: &[usize], rank: usize, keepdim: bool) -> Vec<u8> {
+/// `reduce`: monoid, reduce_axes, keepdim, accumulator, math_fidelity (§6.19-0025, sk4).
+///
+/// `accumulator` is [`ACCUMULATOR_COMPUTE_DTYPE`] (`0x00`) or the 1-based §6.1-table dtype ordinal of
+/// a float accumulator; it MUST be `0x00` for `max`/`min` (§6.19-0025).
+pub fn encode_reduce(
+    monoid: Monoid,
+    reduced: &[usize],
+    rank: usize,
+    keepdim: bool,
+    accumulator: u8,
+    fidelity: MathFidelityOrd,
+) -> Vec<u8> {
+    assert!(
+        accumulator == ACCUMULATOR_COMPUTE_DTYPE || matches!(monoid, Monoid::Sum | Monoid::Prod),
+        "§6.19-0025: accumulator MUST be 0x00 for max/min"
+    );
     let mut out = vec![monoid.ordinal()];
     push_u16_le(&mut out, reduce_axes_reduction(reduced, rank));
     out.push(keepdim as u8);
+    out.push(accumulator);
+    out.push(fidelity.ordinal());
     out
 }
 
-/// `prefix_scan`: monoid, reduce_axes, exclusivity (§6.19-0026).
-pub fn encode_prefix_scan(monoid: Monoid, axis: usize, rank: usize, excl: ScanExclusivity) -> Vec<u8> {
+/// `prefix_scan`: monoid, reduce_axes, exclusivity, accumulator, math_fidelity (§6.19-0026, sk4).
+pub fn encode_prefix_scan(
+    monoid: Monoid,
+    axis: usize,
+    rank: usize,
+    excl: ScanExclusivity,
+    accumulator: u8,
+    fidelity: MathFidelityOrd,
+) -> Vec<u8> {
+    assert!(
+        accumulator == ACCUMULATOR_COMPUTE_DTYPE || matches!(monoid, Monoid::Sum | Monoid::Prod),
+        "§6.19-0026: accumulator MUST be 0x00 for max/min"
+    );
     let mut out = vec![monoid.ordinal()];
     push_u16_le(&mut out, reduce_axes_scan(axis, rank));
     out.push(excl.ordinal());
+    out.push(accumulator);
+    out.push(fidelity.ordinal());
     out
 }
 
