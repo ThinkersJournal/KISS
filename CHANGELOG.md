@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.3.1 — 2026-10-14 (allocated by the PM)
+
+- **IR-DAG generator and validity self-check (the IN half of board 203 item 3)** (floor harness 429 -> 430, untested 437 -> 436): new `fuzz` module and `tests/fuzz_gen.rs`. A seeded generator of valid scalar-expression DAGs over the ops whose arity the KISS-Ops §6.13 table fixes (ops that resolve through an unreadable decomposition are excluded, and the self-check caught that during development), a typed validity check, and a malformed/near-boundary generator (forward edge, self loop, unknown op, arity +/-1, input index at the bound, root past the end) plus the Grammar codec's `BindSetMismatch`/`BindIndexOutOfRange` declines back KISS-CONFORM-6.6-0005. 6.6-0001 stays `untested`, recorded PARTIAL: roles, ranks, dtypes and OpAttrs sub-vocabularies are not generated. The cross-backend rows stay `blocked`. No spec change.
+
 ## 0.3.0 — 2026-10-14 (allocated by the PM)
 
 - **BREAKING (wire, pre-1.0 so the second number moves): the `reduce`/`prefix_scan` `math_fidelity` ordinals are pinned** (board 201, CireSnave verbatim: "Accept Fuel's table."). §6.19.2 gains `math_fidelity`: `0` reserved, `1`=bit-stable, `2`=reduced-mantissa-permitted (the §6.17-0001 member order); `accumulator` stays `0x00` (compute dtype) or the 1-based §6.1-table dtype ordinal. §6.19-0025/-0026 and the §6.19.3 rows spell the field `math_fidelity` (it was `math_precision`; the name is not on the wire, and the PM read the rename as following #478). Appendix E.2's `reduce`/`prefix_scan` blobs are now the 6-byte form (`01 FF FF 01 00 01`, `01 FE FF 01 00 01`, `03 FF FF 01 00 01`) plus a non-default worked blob (`01 FF FF 01 03 02`).
