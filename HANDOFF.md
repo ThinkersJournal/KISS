@@ -1,4 +1,4 @@
-<!-- Written 2026-10-14 against origin/main 6aeb9b6 (0.2.23). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-14 against origin/main 507f691 (conformance 0.2.35). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,60 +6,59 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (latest merged is 0.2.17, #553; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
-3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
-   comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
-4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
-   `python tools/kiss_readme_coverage.py`. A new lint-backed clause needs: the `lint:<tool>` row in `conformance/UNBACKED.tsv`, the tool's
-   `--emit-coverage` entry, and the floor's `lint` number raised by the PR itself (the ratchet then reports a green "born with detector" arrival).
-5. **Before pushing run every python step of the `kiss-trace` job** (`.github/workflows/traceability.yml`). Three suites launch `bash` by name and
-   fail on this box (WSL): `test_kiss_ratchet_step.py`, `test_kiss_msrv_step.py`, `test_kiss_orphan_step.py`; say so in the PR body.
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.2.35). `conformance/Cargo.toml` and the top `CHANGELOG.md`
+   heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
+3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
+   like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
+4. **Derived figure files come from the tools**: `python tools/kiss_trace.py --ratchet --base-ref origin/main` (floor numbers) and
+   `python tools/kiss_readme_coverage.py` (README bound figures, update number AND marker together). Report ENFORCED separately from
+   `untested`: recategorising a row is a ledger statement, not coverage.
+5. **Before pushing run every python step of the `kiss-trace` job** (`.github/workflows/traceability.yml`), `cargo test` and `cargo clippy
+   --all-targets --all-features` in `conformance/` (`approx_constant` is blocking). The three bash-launching suites DO run here:
+   `python tools/run_with_git_bash.py tools/test_kiss_ratchet_step.py` (same for `_msrv_step`, `_orphan_step`); the WSL launcher in System32
+   wins over PATH, so never call them bare. Do not report them "unrun".
 6. **Auto-mode classifier denials are final for the session**; a peer cannot clear one. Report it and take a different route.
-7. **Codacy flags methods over 50 lines** on the lines a PR touches: split before pushing. Never configure the path out.
-8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; objections from Fuel/Baracuda/Unpopped go
-   through the PM too (`list_peers`, re-resolve IDs by cwd; they rotate).
+7. **Codacy:** methods over 50 lines on touched lines, `assert` in Python tests (use `unittest`), and a new `import subprocess`
+   (accepted once, #568, with a disposition comment). Split or answer on the PR; never configure the path out.
+8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; `list_peers` and re-resolve IDs by cwd
+   (they rotate; the PM's changed twice today). **Write scripts with the Write tool**: multi-line python heredocs with quotes broke Bash, and
+   `/tmp` in Git Bash is not `/tmp` to Windows python.
+9. **Claims:** a clause is "backed" only when the test discriminates; when half a clause has no vector form, count it PARTIAL (floor unmoved,
+   `UNBACKED.tsv` note, test does not cite the clause), as 6.8-0003 and 6.9-0003 were. Say what a source scan cannot prove.
 
 ## Open PRs
 
-- KISS: none (origin/main at conformance 0.2.23, `6aeb9b6`; this HANDOFF PR is docs only, number allocated by the PM).
-- **kiss-ref#57** (`ops-sqrt-rounding` re-vendor, 0.4.4): [READY] sent, 7/7 green; the PM gates. No local worktree; the branch is `revendor-sqrt`.
-  If merged, nothing is owed. kiss-ref main is 0.4.3 (#55 int/bool 0.4.2, #56 atan2 0.4.3).
+None on KISS (main = 507f691, conformance 0.2.35). kiss-ref main = 0.4.5 (all re-vendors merged: int/bool, atan2, sqrt, nextafter);
+kiss-ref is a **non-party** for OpAttrs (PM ruling). This HANDOFF PR carries 0.2.36 if open.
 
-## Current state at origin/main (conformance 0.2.23)
+## State at 0.2.35
 
-- **#263 landed** (`sk5`, derived 7-class `cell_class`, `contract_version` 3); design in `docs/design-263-cell-class.md`.
-  Touch kiss-ref only on a PM task (the PM has been issuing them per re-vendor).
-- **Instruments:** `ops-rounding.json` (72), `ops-minmax-nan.json` (44), `ops-transcendental-nan.json` (13), the cell-carrying
-  `structure_key_derivation_vectors.json` (33) with `conformance/src/derive.rs`, the blocking freeze hard-fail
-  (`tools/kiss_freeze_gate.py`), a second C toolchain (`KISS_C_COMPILER`, CI job `windows-clang-cl`).
-- **R3.2 Ops vectors this session (all opt-in, no spec change):** `ops-int-wrap.json` (440, 6.2-0002) and `ops-compare-bool.json`
-  (181, 6.2-0005/-0006): kiss-ref 621/621 (#55); Fuel measured int-wrap: 275 PASS, 0 FAIL, 55 typed ERROR (all i8, Fuel GAP-356),
-  110 NOT-EXPRESSIBLE (u16/u64). `ops-atan2-quadrants.json` (28, 6.9-0001, class ULP bound 4, libm-backed oracle, BACKED; kiss-ref
-  28/28 #56). `ops-sqrt-rounding.json` (24, 6.8-0003 first arm, class ULP bound 0; **counted PARTIAL**: the floor did not move, the
-  UNBACKED row stays `untested` with a note, and the test deliberately does not cite the clause; kiss-ref 24/24 in #57).
-- **Ratchet floor:** harness 406, lint 34, untested 471, proven 20. 6.2-0007 stays unbacked (bitwise/reduction/scan arms uncovered).
-- **ULP comparator caveat:** totalOrder distance does not discriminate `+0`/`-0`; atan2 and sqrt zero-sign cells are carried, not enforced.
-- **Owed by implementations:** collapsed reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped:
-  reduced innermost axis -> `v1` (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `697aa543` (36 vectors, 0.2.30; was `299811b1`/33).
-- **Sidecar (#144, option A):** done for all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null`/UNSET until
-  CireSnave rules (PM item 193; option C amends Appendix E). **#387:** instrument/wording choice boarded (PM 193).
-- **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
+- **Floor** harness 418, lint 34, untested 448, proven 20. Classify 88/120. 539 clauses without a harness test: 446 untested, 34 lint,
+  21 blocked, 12 definitional, 20 attested, 4 untestable, 2 decredited.
+- **R3.2 Ops vectors all landed** (opt-in, no spec change): `ops-int-wrap` (440), `ops-compare-bool` (181), `ops-atan2-quadrants` (28),
+  `ops-sqrt-rounding` (24, 6.8-0003 first arm: PARTIAL), `ops-nextafter` (40, value half: PARTIAL). kiss-ref reproduces all.
+  Fuel measured int-wrap: 275 PASS / 0 FAIL / 55 ERROR (i8, GAP-356) / 110 NOT-EXPRESSIBLE.
+- **R2.4 slice 1 landed:** `opattrs_value_vectors.json` (133 encode, 7 equivalences, 112 distinct; 15 of 17 ops) by a generic encoder,
+  cross-checked vs the hand encoders and Appendix E.2. **Live OpAttrs pair count is 0**: Fuel's `to_canonical_bytes` is an envelope that
+  diverges from 6.19.3 (its GAP-305, OPEN); Baracuda emits none. Not independent evidence (E6).
+- **Spec finding, a [rule] (R1.9, board 193, not ours):** `reduce`/`prefix_scan` carry sk4 `accumulator`+`math_precision` (6 bytes) but
+  6.19.2 pins no ordinal table for `math_precision`; Appendix E.2 and `encode_reduce`/`encode_prefix_scan` still show 4 bytes. Not minted.
+- **R1.4 done:** `structure_key_derivation_vectors.json` is 36 vectors (blob 697aa543); `[8,0]` -> `da` per 6.3-0011+6.3-0002+6.5-0012,
+  reference-deriver output not an independent golden.
+- **Classify tail:** the 6 `untested` rows (6.0-0001, 6.1-0012, 6.3-0004, 6.3-0009, 6.3-0010, 6.8-0017) each say what was searched for.
+  They need a SUBJECT (a quant-record model, a symbolic-extent model, a complex byte reader): ask the architect on the board if that is
+  a spec change; do not write tests with no subject.
 
-## Held / waiting (do not start)
+## Waiting (do not start)
 
-- **R1.1 Announce op identity in every lookup** (`docs/design-263-cell-class.md` §6): own PR, own `list_version`; **timing is CireSnave's**.
-- **#222 candidate 1** (quantized `ctr` scale dtype keying) and **VariantFidelity's home**: need a ruling. R1.2/R1.5/R1.8/#462: boarded, PM 193.
-- `ctr` derivation vectors wait on #543; Unpopped sk5 keyer; the four-way sk5 table; Fuel's replies.
-- Dependabot Monday reports; Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first.
+- **R1.1** (Announce op identity), **R1.2** (#222 scale-dtype keying), **R1.5** (VariantFidelity), **R1.8/#543** (batch role; `ctr` vectors,
+  6.6-0012/-0016), **R1.9**, #462 (signer), #387 instrument, sidecar fields: all [rule], boarded under PM 193. Timing is CireSnave's.
+- Fuel (idle, queued): body-diff of its clause-derived OpAttrs vectors vs our file (will send a [FINDING]); re-vendor of the 36-vector
+  derivation file; Unpopped: whether it reads `[8,0]` as `da` (no reply yet). Baracuda sk5 keyer, Unpopped sk5 keyer, four-way sk5 table.
+- Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 
 ## Next actions
 
-1. DONE in this change (0.2.26, `ops-nextafter.json`, PARTIAL like 6.8-0003): R3.2 Ops `nextafter` value arm (6.9-0003; its typed-decline half has no vector form,
-   so do **not** back the clause: count it PARTIAL as 6.8-0003 was, floor unmoved, UNBACKED note, test not citing the clause). The rest of
-   Ops (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
-2. kiss-ref re-vendor of `ops-nextafter.json` (own kiss-ref PR, PM-allocated number, tests/fixtures only; the runner already handles f32/f64 exact-byte binary ops). Then R3.2 has no vector candidate left: ask the PM what is next.
-3. R2.4 slice 1 landed (0.2.28, `opattrs_value_vectors.json`, generic encoder, KISS-only). Owed: slice 2 = a [NOTICE] to Fuel with the file + blob hash, relay their PASS/FAIL as a [FINDING] (re-measure Fuel first). kiss-ref stays a non-party (PM ruled). Open spec finding: `math_precision`/`accumulator` wire ordinals unpinned, E.2 stale (reduce/prefix_scan not minted); a ruling, not ours. #502 injectivity clause is a separate spec PR.
-4. Method that worked: mint in `conformance/src/bin/kiss_mint.rs` (keep each fn under 50 lines, Codacy), an independent-model test, run every
-   python `kiss-trace` step plus `cargo clippy --all-targets --all-features` locally (`approx_constant` is blocking), README bound figures
-   by `tools/kiss_readme_coverage.py`. Write scripts to files with the Write tool: multi-line python heredocs with quotes broke the Bash tool.
+1. Read `list_peers`, `check_messages`; answer any [FINDING] from Fuel/Unpopped by re-measuring at their `origin/main` first.
+2. Take the next **[go]** in `ROADMAP.md`; R2.4 and R3.2 have none left until a second encoder or R1.9 lands. If none, ask the PM.
+3. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext]: nothing to build from inside this repo.

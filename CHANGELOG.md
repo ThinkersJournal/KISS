@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.36 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- `HANDOFF.md` rewritten to the state at 0.2.35 (R3.2 Ops vectors, R2.4 slice 1, R1.4, the Classify tail and its dispositions, the bash-suite wrapper, what waits on rulings). Docs only; floor unmoved (418/34/448).
+
 ## 0.2.35 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Classify untested tail: 5 clauses backed, 11 dispositioned** (ROADMAP R3.2; PM: each disposition names what was
