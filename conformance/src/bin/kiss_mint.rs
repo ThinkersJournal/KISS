@@ -485,9 +485,8 @@ fn typed_cell(tc: u32, op: &str, dtype: &str, inputs: &[&[u8]], expected_dtype: 
     )
 }
 
-fn compare_bool_doc() -> String {
-    let mut cells = Vec::new();
-    let mut tc = 1u32;
+/// The comparison-mask cells (§6.2-0005), numbered from `tc`; returns the next free tcId.
+fn compare_mask_cells(cells: &mut Vec<String>, mut tc: u32) -> u32 {
     let f32s: [(u32, u32); 12] = [
         (0x3F80_0000, 0x4000_0000), // 1 , 2
         (0x4000_0000, 0x3F80_0000), // 2 , 1
@@ -535,6 +534,11 @@ fn compare_bool_doc() -> String {
             }
         }
     }
+    tc
+}
+
+/// The `bool`-consumer normalization cells (§6.2-0006), numbered from `tc`; returns the next free tcId.
+fn bool_normalization_cells(cells: &mut Vec<String>, mut tc: u32) -> u32 {
     let bytes: [u8; 7] = [0x00, 0x01, 0x02, 0x7F, 0x80, 0xFF, 0x40];
     let tag = "\"bool-normalize\",\"6.2-0006\"";
     for op in ["logical_and", "logical_or"] {
@@ -551,6 +555,13 @@ fn compare_bool_doc() -> String {
         cells.push(typed_cell(tc, "logical_not", "bool", &[&[a]], "bool", &[u8::from(a == 0)], tag));
         tc += 1;
     }
+    tc
+}
+
+fn compare_bool_doc() -> String {
+    let mut cells = Vec::new();
+    let tc = compare_mask_cells(&mut cells, 1);
+    bool_normalization_cells(&mut cells, tc);
     bundle_doc("OPS", "KISS-OPS-6.2-0005", &cells)
 }
 
