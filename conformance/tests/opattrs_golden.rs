@@ -14,9 +14,30 @@ use kiss_conformance::structure_key::{Reduce, StructureKey, WorkClass};
 
 #[test]
 fn e2_reduce_sum_all_axes_keepdim() {
-    // reduce(sum, all-axes, keepdim) over a rank-2 operand -> 01 FF FF 01
-    let b = encode_reduce(Monoid::Sum, &[0, 1], 2, true);
-    assert_golden("KISS-OPS-6.19-0025", "reduce_sum_all_keepdim", &b, "01 FF FF 01");
+    // reduce(sum, all-axes, keepdim) over a rank-2 operand, compute-dtype accumulator, bit-stable
+    // (the sk4 defaults, emitted explicitly) -> 01 FF FF 01 00 01
+    let b = encode_reduce(Monoid::Sum, &[0, 1], 2, true, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    assert_golden("KISS-OPS-6.19-0025", "reduce_sum_all_keepdim", &b, "01 FF FF 01 00 01");
+}
+
+#[test]
+fn e2_reduce_sum_f32_accumulator_reduced_mantissa() {
+    // the two sk4 fields at NON-default values: accumulator=f32 (§6.1 ordinal 03), math_fidelity=
+    // reduced-mantissa-permitted (02) -> 01 FF FF 01 03 02. A default-only vector cannot tell an
+    // encoder that hard-codes `00 01` from one that reads the fields.
+    let b = encode_reduce(Monoid::Sum, &[0, 1], 2, true, 0x03, MathFidelityOrd::ReducedMantissa);
+    assert_golden("KISS-OPS-6.19-0025", "reduce_sum_f32_acc_rm", &b, "01 FF FF 01 03 02");
+}
+
+#[test]
+fn math_fidelity_ordinals_are_pinned_and_reserved_zero_is_never_emitted() {
+    // §6.19.2: {1=bit-stable, 2=reduced-mantissa-permitted}, 0 reserved.
+    assert_eq!(MathFidelityOrd::BitStable.ordinal(), 1);
+    assert_eq!(MathFidelityOrd::ReducedMantissa.ordinal(), 2);
+    for f in [MathFidelityOrd::BitStable, MathFidelityOrd::ReducedMantissa] {
+        let b = encode_reduce(Monoid::Sum, &[0], 1, true, 0, f);
+        assert_ne!(*b.last().unwrap(), 0, "KISS-OPS-6.19-0025: the fidelity byte is never the reserved 0");
+    }
 }
 
 #[test]
@@ -28,9 +49,11 @@ fn e2_gather_clamp_nondefault() {
 
 #[test]
 fn e2_prefix_scan_trailing_inclusive() {
-    // prefix_scan(sum, trailing-axis, inclusive) over rank>1 -> 01 FE FF 01
-    let b = encode_prefix_scan(Monoid::Sum, 1, 2, ScanExclusivity::Inclusive);
-    assert_golden("KISS-OPS-6.19-0026", "prefix_scan_trailing_incl", &b, "01 FE FF 01");
+    // prefix_scan(sum, trailing-axis, inclusive) over rank>1, sk4 defaults -> 01 FE FF 01 00 01
+    let b = encode_prefix_scan(
+        Monoid::Sum, 1, 2, ScanExclusivity::Inclusive, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable,
+    );
+    assert_golden("KISS-OPS-6.19-0026", "prefix_scan_trailing_incl", &b, "01 FE FF 01 00 01");
 }
 
 #[test]
@@ -50,16 +73,16 @@ fn e2_reduce_var_population() {
 #[test]
 fn e2_reduce_rank1_sole_axis_is_all_axes() {
     // reduce(sum) over a rank-1 sole axis MUST encode FF FF (all-axes precedence),
-    // never the single-bit subset mask 01 00 -> 01 FF FF 01
-    let b = encode_reduce(Monoid::Sum, &[0], 1, true);
-    assert_golden("KISS-OPS-6.19-0020", "reduce_rank1_all", &b, "01 FF FF 01");
+    // never the single-bit subset mask 01 00 -> 01 FF FF 01 00 01
+    let b = encode_reduce(Monoid::Sum, &[0], 1, true, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    assert_golden("KISS-OPS-6.19-0020", "reduce_rank1_all", &b, "01 FF FF 01 00 01");
 }
 
 #[test]
 fn e2_reduce_rank3_full_is_all_axes() {
     // reduce(max) over a rank-3 operand's {0,1,2} MUST encode FF FF, never 07 00
-    let b = encode_reduce(Monoid::Max, &[0, 1, 2], 3, true);
-    assert_golden("KISS-OPS-6.19-0020", "reduce_rank3_all", &b, "03 FF FF 01");
+    let b = encode_reduce(Monoid::Max, &[0, 1, 2], 3, true, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    assert_golden("KISS-OPS-6.19-0020", "reduce_rank3_all", &b, "03 FF FF 01 00 01");
 }
 
 #[test]
@@ -335,8 +358,8 @@ fn test_ops_opattrs_enum_ordinal_reserve_zero() {
 fn test_ops_opattrs_int_fixed_width_le() {
     // reduce(sum, subset{0,2} of rank 3, keepdim): reduce_axes is a fixed u16 that
     // occupies exactly bytes[1..3], even though its value 0x0005 fits in one byte.
-    let b = encode_reduce(Monoid::Sum, &[0, 2], 3, true);
-    assert_eq!(b.len(), 4, "monoid(1) + reduce_axes(2) + keepdim(1) = 4 fixed bytes");
+    let b = encode_reduce(Monoid::Sum, &[0, 2], 3, true, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    assert_eq!(b.len(), 6, "monoid(1) + reduce_axes(2) + keepdim(1) + accumulator(1) + math_fidelity(1) = 6");
     assert_eq!(&b[1..3], &[0x05, 0x00], "reduce_axes is a fixed-width u16, not a 1-byte varint");
     // a window element is a fixed u32 (4 bytes), even for the value 2.
     let w = window_param_vector(&[2]);
@@ -354,7 +377,9 @@ fn test_ops_opattrs_little_endian() {
     let w = window_param_vector(&[0x0403_0201]);
     assert_eq!(w, vec![0x01, 0x01, 0x02, 0x03, 0x04], "u32 element is little-endian");
     // the trailing-axis reduce_axes sentinel 0xFFFE serializes low-byte-first.
-    let ps = encode_prefix_scan(Monoid::Sum, 1, 2, ScanExclusivity::Inclusive);
+    let ps = encode_prefix_scan(
+        Monoid::Sum, 1, 2, ScanExclusivity::Inclusive, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable,
+    );
     assert_eq!(&ps[1..3], &[0xFE, 0xFF], "reduce_axes 0xFFFE is little-endian (not FF FE)");
 }
 
@@ -424,12 +449,12 @@ fn test_ops_opattrs_opaque_embedding_byte_compare() {
 #[test]
 fn test_ops_opattrs_boolean_flags() {
     // keepdim (reduce): a 0/1 byte; toggling it flips exactly byte 3.
-    let kt = encode_reduce(Monoid::Sum, &[0, 1], 2, true);
-    let kf = encode_reduce(Monoid::Sum, &[0, 1], 2, false);
-    assert_eq!((kt.len(), kf.len()), (4, 4));
+    let kt = encode_reduce(Monoid::Sum, &[0, 1], 2, true, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    let kf = encode_reduce(Monoid::Sum, &[0, 1], 2, false, ACCUMULATOR_COMPUTE_DTYPE, MathFidelityOrd::BitStable);
+    assert_eq!((kt.len(), kf.len()), (6, 6));
     assert_eq!((kt[3], kf[3]), (0x01, 0x00), "keepdim is a u8 0/1, not a mask");
     assert_eq!(
-        (0..4).filter(|&i| kt[i] != kf[i]).collect::<Vec<_>>(),
+        (0..6).filter(|&i| kt[i] != kf[i]).collect::<Vec<_>>(),
         vec![3],
         "toggling keepdim changes exactly the keepdim byte"
     );

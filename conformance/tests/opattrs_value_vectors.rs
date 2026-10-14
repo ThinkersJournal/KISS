@@ -8,12 +8,16 @@
 //! the cross-check can go red. The `reduce`/`prefix_scan` divergence is recorded, not hidden.
 
 use kiss_conformance::opattrs::{
-    self, ColumnOrdering, IndexDtype, OobPolicy, ScatterCombine, SortDirection,
+    self, ColumnOrdering, IndexDtype, MathFidelityOrd, Monoid, OobPolicy, ScanExclusivity, ScatterCombine,
+    SortDirection,
 };
 use kiss_conformance::opattrs_schema::parse_table;
 use kiss_conformance::opattrs_value::{
     self as ov, encode, encode_vectors, equivalences, not_emitted, Attrs, EncodeVector, Value,
 };
+
+/// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
+const POPULATION: usize = 167;
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -65,9 +69,65 @@ fn idt(t: &str) -> IndexDtype {
     }
 }
 
+fn monoid(t: &str) -> Monoid {
+    match t {
+        "sum" => Monoid::Sum,
+        "prod" => Monoid::Prod,
+        "max" => Monoid::Max,
+        "min" => Monoid::Min,
+        _ => panic!("monoid {t}"),
+    }
+}
+fn fidelity(t: &str) -> MathFidelityOrd {
+    match t {
+        "bit-stable" => MathFidelityOrd::BitStable,
+        "reduced-mantissa-permitted" => MathFidelityOrd::ReducedMantissa,
+        _ => panic!("math_fidelity {t}"),
+    }
+}
+/// The §6.1 ordinal of an accumulator token, from the classify.md table itself (an independent read of
+/// the order `DTYPES` is expected to share).
+fn acc_ordinal(t: &str) -> u8 {
+    if t == "compute-dtype" {
+        return 0;
+    }
+    let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/classify.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
+    let mut rows = spec.lines().filter_map(|l| {
+        let c: Vec<&str> = l.split('|').map(str::trim).collect();
+        (c.len() > 4 && c[1].starts_with('`') && c[2] != "---" && ["float", "int", "uint", "bool", "complex"].contains(&c[2]))
+            .then(|| c[1].trim_matches('`').to_string())
+    });
+    let mut seen = Vec::new();
+    for r in rows.by_ref() {
+        if seen.contains(&r) {
+            break; // the §6.1 table is the first run of rows; a repeated token starts another table
+        }
+        seen.push(r);
+    }
+    seen.iter().position(|d| d == t).unwrap_or_else(|| panic!("`{t}` not in the classify.md §6.1 table")) as u8 + 1
+}
+
 /// The hand encoder's bytes for a vector, `None` where `opattrs.rs` has no encoder for the op.
 fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
     Some(match v.op.as_str() {
+        "reduce" => {
+            let (a, r) = axes(v);
+            opattrs::encode_reduce(
+                monoid(tok(v, "monoid")), &a, r, flag(v, "keepdim"),
+                acc_ordinal(tok(v, "accumulator")), fidelity(tok(v, "math_fidelity")),
+            )
+        }
+        "prefix_scan" => {
+            let (a, r) = axes(v);
+            assert_eq!(a.len(), 1, "a scan folds exactly one axis");
+            let ex = if tok(v, "exclusivity") == "inclusive" { ScanExclusivity::Inclusive } else { ScanExclusivity::Exclusive };
+            opattrs::encode_prefix_scan(
+                monoid(tok(v, "monoid")), a[0], r, ex,
+                acc_ordinal(tok(v, "accumulator")), fidelity(tok(v, "math_fidelity")),
+            )
+        }
         "gather" => opattrs::encode_gather(byte(v, "axis"), oob(tok(v, "oob_policy")), byte(v, "index_operand"), idt(tok(v, "index_dtype"))),
         "scatter" => {
             let c = match tok(v, "combine") {
@@ -131,7 +191,7 @@ fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
     }
     // generic-only (no hand encoder in opattrs.rs): max_pool (17), rms_norm (3), layer_norm (3)
     assert_eq!(skipped, 23, "max_pool, rms_norm and layer_norm are generic-only");
-    assert_eq!(compared + skipped, 133, "population is pinned");
+    assert_eq!(compared + skipped, POPULATION, "population is pinned");
 }
 
 #[test]
@@ -177,7 +237,11 @@ fn rank_sensitivity_of_reduce_axes_matches_the_spec_examples() {
 #[test]
 fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     let eqs = equivalences();
-    assert_eq!(eqs.len(), 7, "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col");
+    assert_eq!(
+        eqs.len(),
+        9,
+        "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan"
+    );
     for e in &eqs {
         assert!(!e.omitted.is_empty(), "{}: an equivalence that omits nothing proves nothing", e.op);
     }
@@ -197,21 +261,45 @@ fn every_variation_that_differs_is_recorded_distinct_and_none_is_vacuous() {
 }
 
 #[test]
-fn reduce_and_prefix_scan_are_recorded_not_minted_and_the_divergence_is_real() {
-    let ne: Vec<&str> = not_emitted().iter().map(|(o, _)| *o).collect();
-    assert_eq!(ne, ["reduce", "prefix_scan"]);
+fn reduce_and_prefix_scan_are_minted_at_six_bytes_with_the_pinned_ordinals() {
+    // board 201 ("Accept Fuel's table.") pinned `math_fidelity`; nothing is withheld any more.
+    assert!(not_emitted().is_empty(), "no carrier op may be withheld once its fields are pinned");
     let schemas = parse_table();
-    for op in ne {
+    for op in ["reduce", "prefix_scan"] {
         let s = schemas.iter().find(|s| s.op == op).expect("carrier op");
         let names: Vec<&str> = s.fields.iter().map(|f| f.name.as_str()).collect();
-        assert!(names.contains(&"accumulator") && names.contains(&"math_precision"), "{op}: {names:?}");
-        assert_eq!(s.fixed_width(), Some(6), "{op}: the table now says 6 bytes");
+        assert!(names.contains(&"accumulator") && names.contains(&"math_fidelity"), "{op}: {names:?}");
+        assert!(!names.contains(&"math_precision"), "{op}: the field is spelled math_fidelity: {names:?}");
+        assert_eq!(s.fixed_width(), Some(6), "{op}: the table says 6 bytes");
+        let vs: Vec<_> = encode_vectors().into_iter().filter(|v| v.op == op).collect();
+        assert!(vs.len() >= 8, "{op}: minted {} vectors", vs.len());
+        assert!(vs.iter().all(|v| v.blob.len() == 6), "{op}: every blob is 6 bytes");
+        // the last byte is the math_fidelity ordinal: only 1 or 2, never the reserved 0.
+        assert!(vs.iter().all(|v| matches!(*v.blob.last().unwrap(), 1 | 2)), "{op}: fidelity byte");
+        // a non-default accumulator and a non-default fidelity each appear (not just the defaults).
+        assert!(vs.iter().any(|v| v.blob[4] != 0), "{op}: no non-default accumulator vector");
+        assert!(vs.iter().any(|v| *v.blob.last().unwrap() == 2), "{op}: no reduced-mantissa vector");
     }
-    // the hand encoders and Appendix E.2 still say 4: when either side is fixed this goes red and the
-    // `not_emitted` list must be revisited rather than left to rot
-    assert_eq!(opattrs::encode_reduce(opattrs::Monoid::Sum, &[0, 1], 2, true).len(), 4);
-    assert!(encode_vectors().iter().all(|v| v.op != "reduce" && v.op != "prefix_scan"));
-    assert!(encode("reduce", &Vec::new()).is_err(), "and the generic encoder refuses the unpinned fields");
+    // the hand encoder now agrees with Appendix E.2's 6-byte form
+    let b = opattrs::encode_reduce(Monoid::Sum, &[0, 1], 2, true, 0, MathFidelityOrd::BitStable);
+    assert_eq!(b, vec![0x01, 0xFF, 0xFF, 0x01, 0x00, 0x01]);
+    // an accumulator that is not a float, or a non-dtype, is a typed refusal, never a byte
+    let bad = |acc: &str| {
+        encode(
+            "reduce",
+            &vec![
+                ("monoid".into(), Value::Token("sum".into())),
+                ("reduce_axes".into(), Value::Axes { axes: vec![0], rank: 1 }),
+                ("keepdim".into(), Value::Flag(true)),
+                ("accumulator".into(), Value::Token(acc.into())),
+                ("math_fidelity".into(), Value::Token("bit-stable".into())),
+            ],
+        )
+    };
+    assert!(bad("f32").is_ok());
+    for no in ["i32", "bool", "f8e6m2", "not-a-dtype"] {
+        assert!(bad(no).is_err(), "accumulator `{no}` must be refused");
+    }
 }
 
 #[test]

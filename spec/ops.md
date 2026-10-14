@@ -2110,6 +2110,7 @@ inlined normatively in §6.19-0037.
 | `sort_direction` | enum, `u8` | `0`=RESERVED, `1`=ascending, `2`=descending |
 | `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
 | `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
+| `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
 | `boolean-flag` | bool, `u8` | `0`=false, `1`=true (both meaningful; `0` NOT reserved) |
 | `reduce_axes` | multiplexed category+bitmask, `u16` LE | `0x0000`=none/not-a-reduction; `0x0001..0x00FF`=per-axis subset keepdim mask (bit `k`⇔axis `k`, ≥1 bit set); `0x0100..0xFFFD`=RESERVED (never emitted); `0xFFFE`=trailing-axis (innermost) only; `0xFFFF`=all-axes. Category selected by the rank-aware total precedence of §6.19-0020 (all-axes beats trailing beats subset; `0xFFFF` covers the rank-1 sole-axis case and every all-axes case) |
 | `window-param-vector` | ordered length-prefixed vector | `u8` element-count prefix (`0..MAX_RANK`), then count × `u32` LE elements, in ascending operand spatial-axis order (element `i` ⇔ spatial axis `i`, outermost spatial axis first; never sorted) |
@@ -2212,8 +2213,8 @@ by the embedding layer) selects the schema and the reader replays it positionall
 
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
-| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_precision`:`mp` enum `u8`:resolved default (§6.7-0006; sk4) |
-| `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_precision`:`mp` enum `u8`:resolved default (§6.7-0006; sk4) |
+| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
+| `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
 | `sort_network` | `axis`:`u8`:trailing axis `r-1` (§6.11-0014) — `direction`:enum `u8`:`1` (ascending) — `stability`:bool `u8`:`1` (fixed, §6.11-0007) |
@@ -2233,15 +2234,21 @@ by the embedding layer) selects the schema and the reader replays it positionall
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
   `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, fixed `1`) then
-  — **(sk4)** — `accumulator` (`u8`) then `math_precision` (`u8`), in that order. **`accumulator`**
+  — **(sk4)** — `accumulator` (`u8`) then `math_fidelity` (`u8`), in that order. **`accumulator`**
   is `0x00` when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal, its
   resolved default), otherwise the **1-based §6.1-table dtype ordinal** of the accumulator, which
   MUST be a float (§6.7-0012); it is meaningful only for a float `sum`/`prod` reduction and MUST be
-  `0x00` for `max`/`min` or a non-float element type. **`math_precision`** is the `<mp>` enum ordinal
-  of §6.7-0006 extended to the non-contraction key, at the op's resolved compute-precision default.
-  Both are emitted explicitly (§6.19-0005); the Classify structure_key **omits** the `(acc + mp)`
-  field when both are at their default — a separate concern of §6.7-0013, not this blob. This is the
-  ops-side that makes the accumulator/precision **requestable**, realizing KISS-CLASSIFY-6.7-0012.
+  `0x00` for `max`/`min` or a non-float element type. **`math_fidelity`** is the §6.17-0001
+  MathFidelity attribute at the op's resolved value, encoded as the frozen `u8` ordinal of §6.19.2
+  `1`=bit-stable and `2`=reduced-mantissa-permitted, `0` reserved (never emitted): the default
+  `bit-stable` is therefore emitted explicitly as `01`, never as an absent or zero byte. The
+  ordinals follow the §6.17-0001 member order; the structure_key `<mp>` spellings `st`/`rm`
+  (§6.7-0006) are a different channel and never appear in this blob. Both fields are emitted
+  explicitly (§6.19-0005); the Classify structure_key **omits** the `(acc + mp)` field when both
+  are at their default — a separate concern of §6.7-0013, not this blob. This is the ops-side that
+  makes the accumulator/fidelity **requestable**, realizing KISS-CLASSIFY-6.7-0012. (The field was
+  spelled `math_precision` through sk4 as drafted; it is renamed to match the §6.17 type rename,
+  and the name never appears on the wire.)
   *Test:* `e2_reduce_sum_all_axes_keepdim`.
 - **KISS-OPS-6.19-0026** — The `prefix_scan` OpAttrs blob MUST be exactly `monoid`
   (`u8`, mandatory) then `reduce_axes` (`u16` LE, selecting exactly one axis per the
@@ -2252,8 +2259,9 @@ by the embedding layer) selects the schema and the reader replays it positionall
   ordinal — `1`=inclusive, `2`=exclusive — not a boolean truth value) then — **(sk4)** —
   `accumulator` (`u8`, encoded exactly as for `reduce` in §6.19-0025: `0x00` = compute-dtype
   diagonal, else the 1-based §6.1-table dtype ordinal of a float accumulator, meaningful only for a
-  float `sum`/`prod` scan) then `math_precision` (`u8`, the `<mp>` ordinal of §6.7-0006), in that
-  order. *Test:* `e2_prefix_scan_trailing_inclusive`.
+  float `sum`/`prod` scan) then `math_fidelity` (`u8`, the §6.19.2 MathFidelity ordinal
+  `1`=bit-stable and `2`=reduced-mantissa-permitted exactly as for `reduce` in §6.19-0025; the default
+  `bit-stable` is emitted as `01`), in that order. *Test:* `e2_prefix_scan_trailing_inclusive`.
 - **KISS-OPS-6.19-0027** — The `gather` OpAttrs blob MUST be exactly `axis` (`u8`, the
   indexed axis of §6.11-0013, range `0..MAX_RANK-1`) then `oob_policy` (enum `u8`, default
   `1` skip) then `index_operand` (`u8`, range `0..MAX_OPERANDS-1`) then `index_dtype`
@@ -3173,8 +3181,14 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
 **E.2 Full per-op OpAttrs blobs.**
 
 - **`reduce(sum, all-axes, keepdim)`** (§6.19-0025): `monoid`=sum `01`, `reduce_axes`=rall
-  `FF FF`, `keepdim`=true `01` → **`01 FF FF 01`** (4 bytes). Framed by KISS-Grammar
-  §6.8-0007 as `u16` LE length + blob → **`04 00 01 FF FF 01`**.
+  `FF FF`, `keepdim`=true `01`, `accumulator`=compute-dtype `00`, `math_fidelity`=bit-stable `01`
+  → **`01 FF FF 01 00 01`** (6 bytes). Framed by KISS-Grammar §6.8-0007 as `u16` LE length +
+  blob → **`06 00 01 FF FF 01 00 01`**.
+- **`reduce(sum, all-axes, keepdim)` with an `f32` accumulator over an `f16` operand, reduced-mantissa**
+  (§6.19-0025; the two sk4 fields at non-default values): `monoid`=sum `01`, `reduce_axes`=rall
+  `FF FF`, `keepdim`=true `01`, `accumulator`=f32 `03` (the 1-based §6.1-table ordinal; f16=`01`,
+  bf16=`02`, f32=`03`, f64=`04`), `math_fidelity`=reduced-mantissa-permitted `02` →
+  **`01 FF FF 01 03 02`** (6 bytes).
 - **`gather(axis=0, oob=clamp, index_operand=1, index_dtype=i32)`** (§6.19-0027; the
   KISS-Grammar §2.4 clamp worked example, clamp a non-default value): `axis` `00`,
   `oob_policy`=clamp `02`, `index_operand` `01`, `index_dtype`=i32 `02` →
@@ -3182,7 +3196,8 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
 - **`prefix_scan(sum, trailing-axis, inclusive)` over a rank>1 operand** (§6.19-0026):
   `monoid`=sum `01`, `reduce_axes`=rlast `FE FF` (trailing axis of a rank>1 operand;
   §6.19-0020 scan precedence), `exclusivity`=inclusive `01` (the `scan_exclusivity` enum
-  ordinal, NOT a boolean) → **`01 FE FF 01`** (4 bytes).
+  ordinal, NOT a boolean), `accumulator`=compute-dtype `00`, `math_fidelity`=bit-stable `01` →
+  **`01 FE FF 01 00 01`** (6 bytes).
 - **`scatter(axis=0, combine=atomic-add, oob=skip, index_operand=1, index_dtype=i64)`**
   (§6.19-0028): `axis` `00`, `combine`=atomic-add `02`, `oob_policy`=skip `01`,
   `index_operand` `01`, `index_dtype`=i64 `03` → **`00 02 01 01 03`** (5 bytes).
@@ -3191,10 +3206,12 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
   (4 bytes).
 - **`reduce(sum)` over a rank-1 operand's sole axis** (§6.19-0020/-0025): the sole axis is
   all-axes, so `reduce_axes`=`FF FF` (NOT the single-bit subset mask `01 00`), `monoid`=sum
-  `01`, `keepdim`=true `01` → **`01 FF FF 01`** (4 bytes).
+  `01`, `keepdim`=true `01`, `accumulator` `00`, `math_fidelity`=bit-stable `01` →
+  **`01 FF FF 01 00 01`** (6 bytes).
 - **`reduce(max)` over a rank-3 operand's axes {0,1,2}** (§6.19-0020/-0025): the selected
   set covers all three axes, so `reduce_axes`=`FF FF` (NOT the subset mask `07 00`),
-  `monoid`=max `03`, `keepdim`=true `01` → **`03 FF FF 01`** (4 bytes).
+  `monoid`=max `03`, `keepdim`=true `01`, `accumulator` `00` (`max` takes none),
+  `math_fidelity`=bit-stable `01` → **`03 FF FF 01 00 01`** (6 bytes).
 - **`sort_network(ascending, stable)` over a rank-2 operand** (§6.19-0029): `axis`=trailing
   `01`, `direction`=ascending `01`, `stability`=stable `01` → **`01 01 01`** (3 bytes).
 - **`softmax(norm_axis=1)`** (§6.19-0031): `norm_axis` `01` → **`01`** (1 byte).

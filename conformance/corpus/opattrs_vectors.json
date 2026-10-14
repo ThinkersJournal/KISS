@@ -15,7 +15,7 @@
         {"ordinal": 1, "name": "reduce_axes", "width": "u16le", "offset": 1},
         {"ordinal": 2, "name": "keepdim", "width": "u8", "offset": 3},
         {"ordinal": 3, "name": "accumulator", "width": "u8", "offset": 4},
-        {"ordinal": 4, "name": "math_precision", "width": "u8", "offset": 5}
+        {"ordinal": 4, "name": "math_fidelity", "width": "u8", "offset": 5}
       ]
     },
     {
@@ -27,7 +27,7 @@
         {"ordinal": 1, "name": "reduce_axes", "width": "u16le", "offset": 1},
         {"ordinal": 2, "name": "exclusivity", "width": "u8", "offset": 3},
         {"ordinal": 3, "name": "accumulator", "width": "u8", "offset": 4},
-        {"ordinal": 4, "name": "math_precision", "width": "u8", "offset": 5}
+        {"ordinal": 4, "name": "math_fidelity", "width": "u8", "offset": 5}
       ]
     },
     {

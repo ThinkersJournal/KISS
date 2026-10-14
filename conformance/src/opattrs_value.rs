@@ -11,12 +11,11 @@
 //! the code is consistent with the table, not that the table is read correctly (the E6 caveat). The file's
 //! value is as a TARGET for a second party.
 //!
-//! ⚠️ TWO OPS ARE NOT EMITTED, AND THAT IS A FINDING, NOT AN OMISSION. `reduce` and `prefix_scan` carry
-//! `accumulator` and `math_precision` since sk4 (§6.19-0025/-0026), but §6.19.2 pins NO ordinal table for
-//! `math_precision` (the clause says "the `<mp>` enum ordinal of §6.7-0006", and §6.7-0006 spells the
-//! values `st`/`rm` as TEXT), and Appendix E.2 and the hand encoders still show the pre-sk4 4-byte form.
-//! Minting a byte for a field whose encoding the spec does not pin would be fabrication; the generator
-//! refuses and records the reason in the artifact (`not_emitted`).
+//! `reduce` and `prefix_scan` carry `accumulator` and `math_fidelity` since sk4 (§6.19-0025/-0026). They
+//! were NOT emitted while §6.19.2 pinned no ordinal table for `math_fidelity` (minting a byte for an
+//! unpinned field would have been fabrication). CireSnave ruled board 201 ("Accept Fuel's table.") and
+//! §6.19.2 now pins `{1=bit-stable, 2=reduced-mantissa-permitted}`, `0` reserved; `accumulator` is `0x00`
+//! (compute dtype) or the 1-based §6.1-table dtype ordinal. Both ops are minted; [`not_emitted`] is empty.
 
 use crate::opattrs_schema::{parse_clause_coverage, parse_table, FieldWidth, OpSchema, SchemaField};
 use std::collections::BTreeMap;
@@ -46,12 +45,29 @@ pub enum Value {
 /// Named attribute values in any order; the encoder replays the schema order.
 pub type Attrs = Vec<(String, Value)>;
 
-/// Ops this module declines to emit, with the reason recorded in the artifact.
-pub fn not_emitted() -> [(&'static str, &'static str); 2] {
-    const WHY: &str = "the sk4 fields `accumulator` and `math_precision` have no pinned wire ordinal table in \
-        §6.19.2 (`<mp>` is spelled st/rm as text in §6.7-0006); Appendix E.2 and the hand encoders still show \
-        the pre-sk4 4-byte form, which §6.19-0025/-0026 no longer says";
-    [("reduce", WHY), ("prefix_scan", WHY)]
+/// Ops this module declines to emit, with the reason recorded in the artifact. Empty since board 201
+/// pinned the `math_fidelity` ordinals (§6.19.2); kept so a future unpinned field is recorded, not minted.
+pub fn not_emitted() -> [(&'static str, &'static str); 0] {
+    []
+}
+
+/// The `accumulator` token for "the compute dtype" (`0x00`, §6.19-0025); any other value is a §6.1
+/// dtype token whose 1-based position in [`crate::structure_key::DTYPES`] is the wire ordinal.
+pub const COMPUTE_DTYPE_TOKEN: &str = "compute-dtype";
+
+fn accumulator_ordinal(token: &str) -> Result<u8, String> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if token == COMPUTE_DTYPE_TOKEN {
+        return Ok(0);
+    }
+    let i = DTYPES.iter().position(|d| *d == token).ok_or_else(|| format!("`{token}` is not a §6.1 dtype"))?;
+    // §6.7-0012: the accumulator MUST be a float; the float members lead the §6.1 table (f16..f64) and
+    // the fp8 members follow the integers. Reserved members have no computation semantics.
+    let float = token.starts_with('f') || token == "bf16";
+    if !float || RESERVED_DTYPES.contains(&token) {
+        return Err(format!("accumulator `{token}` must be a non-reserved float dtype (§6.7-0012)"));
+    }
+    Ok(i as u8 + 1)
 }
 
 fn section_6_19_2() -> &'static str {
@@ -98,6 +114,7 @@ fn vocab_of(field: &str) -> Option<&'static str> {
         "direction" => "sort_direction",
         "exclusivity" => "scan_exclusivity",
         "output_column_ordering" => "column_ordering",
+        "math_fidelity" => "math_fidelity",
         _ => return None,
     })
 }
@@ -123,7 +140,10 @@ pub fn is_mandatory(f: &SchemaField) -> bool {
 pub fn default_byte(f: &SchemaField) -> Option<u8> {
     let after = f.encoding.split("`u8`:").nth(1)?;
     let digits = after.strip_prefix('`')?.split('`').next()?;
-    digits.parse().ok()
+    match digits.strip_prefix("0x") {
+        Some(h) => u8::from_str_radix(h, 16).ok(),
+        None => digits.parse().ok(),
+    }
 }
 
 fn token_of(vocab_name: &str, ordinal: u8) -> Option<String> {
@@ -153,9 +173,25 @@ pub fn reduce_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
     })
 }
 
+/// `reduce_axes` word for a `prefix_scan` (§6.19-0020 scan precedence): exactly ONE axis; the trailing
+/// axis of a rank>1 operand is `0xFFFE`, every other axis its single-bit subset mask. Never `0xFFFF`
+/// (a rank-1 scan is `0x0001`, not all-axes) and never `0x0000`.
+pub fn scan_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
+    if !(1..=MAX_RANK as usize).contains(&rank) {
+        return Err(format!("rank {rank} outside 1..=MAX_RANK"));
+    }
+    match axes {
+        [a] if *a < rank => Ok(if rank > 1 && *a == rank - 1 { 0xFFFE } else { 1u16 << a }),
+        _ => Err(format!("a prefix_scan folds exactly one in-range axis, got {axes:?} of rank {rank}")),
+    }
+}
+
 fn encode_field(f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, String)>>) -> Result<Vec<u8>, String> {
-    if matches!(f.name.as_str(), "accumulator" | "math_precision") {
-        return Err(format!("field `{}` has no pinned wire ordinal table (§6.19.2)", f.name));
+    if f.name == "accumulator" {
+        return match v {
+            Value::Token(t) => Ok(vec![accumulator_ordinal(t)?]),
+            other => Err(format!("accumulator takes a dtype token, got {other:?}")),
+        };
     }
     match (f.width, v) {
         (FieldWidth::U16Le, Value::Axes { axes, rank }) => {
@@ -205,6 +241,13 @@ pub fn encode_with_schema(schema: &OpSchema, attrs: &Attrs) -> Result<Vec<u8>, S
             .find(|(n, _)| n == &f.name)
             .map(|(_, v)| v)
             .ok_or_else(|| format!("`{}` has no value for `{}`", schema.op, f.name))?;
+        if schema.op == "prefix_scan" && f.name == "reduce_axes" {
+            let Value::Axes { axes, rank } = v else {
+                return Err(format!("`reduce_axes` takes an axis set, got {v:?}"));
+            };
+            out.extend(scan_axes_word(axes, *rank)?.to_le_bytes());
+            continue;
+        }
         out.extend(encode_field(f, v, &vocab)?);
     }
     Ok(out)
@@ -230,6 +273,8 @@ pub fn resolve_defaults(op: &str, partial: &Attrs) -> Result<Attrs, String> {
         })?;
         let v = if is_flag(f) {
             Value::Flag(byte != 0)
+        } else if f.name == "accumulator" {
+            Value::Token(COMPUTE_DTYPE_TOKEN.into())
         } else {
             let name = vocab_of(&f.name).ok_or_else(|| format!("default of `{}` is not an enum", f.name))?;
             Value::Token(token_of(name, byte).ok_or_else(|| format!("no token for `{name}`={byte}"))?)
@@ -250,7 +295,8 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
     let mut out = Attrs::new();
     for f in &schema.fields {
         let v = if f.width == FieldWidth::U16Le {
-            Value::Axes { axes: vec![0, 1], rank: 2 }
+            // a scan folds exactly one axis (§6.19-0020): the trailing axis of a rank-2 operand
+            Value::Axes { axes: if op == "prefix_scan" { vec![1] } else { vec![0, 1] }, rank: 2 }
         } else if f.width == FieldWidth::Variable {
             Value::Vector(match f.name.as_str() {
                 "padding" => vec![0, 0],
@@ -259,6 +305,8 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
             })
         } else if is_flag(f) {
             Value::Flag(default_byte(f).unwrap_or(1) != 0)
+        } else if f.name == "accumulator" {
+            Value::Token(COMPUTE_DTYPE_TOKEN.into())
         } else if let Some(name) = vocab_of(&f.name) {
             let first = vocab.get(name)?.first()?.0;
             let ord = default_byte(f).filter(|_| !is_mandatory(f)).unwrap_or(first);
@@ -289,6 +337,10 @@ pub fn alternatives(f: &SchemaField, base: &Value) -> Vec<Value> {
             .map(Value::Vector)
             .collect(),
         (_, Value::Flag(b)) => vec![Value::Flag(!b)],
+        (_, Value::Token(_)) if f.name == "accumulator" => ["f16", "bf16", "f32", "f64"]
+            .into_iter()
+            .map(|d| Value::Token(d.into()))
+            .collect(),
         (_, Value::Token(_)) => vocab_of(&f.name)
             .and_then(|n| vocab.get(n))
             .map(|es| es.iter().map(|(_, t)| Value::Token(t.clone())).collect())
@@ -349,6 +401,10 @@ pub fn encode_vectors() -> Vec<EncodeVector> {
         push(base.clone(), "base".into());
         for (i, f) in schema.fields.iter().enumerate() {
             for alt in alternatives(f, &base[i].1) {
+                // a scan folds exactly one axis: multi-axis sets are not values of its field
+                if schema.op == "prefix_scan" && matches!(&alt, Value::Axes { axes, .. } if axes.len() != 1) {
+                    continue;
+                }
                 let mut attrs = base.clone();
                 attrs[i].1 = alt;
                 push(attrs, format!("vary:{}", f.name));
