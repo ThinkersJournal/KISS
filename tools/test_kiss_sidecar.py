@@ -7,7 +7,6 @@ drift case below is SEEDED against a copy of the real sidecar and the real one i
 Run: python tools/test_kiss_sidecar.py
 """
 import json
-import os
 import pathlib
 import sys
 import tempfile
