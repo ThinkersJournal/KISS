@@ -414,58 +414,59 @@ fn rounding_doc() -> String {
 // NOT EMITTED: inf and subnormal operands (no NaN -> covered by the value arm of
 // ops-minmax-ordinary/-signed-zero); bf16/f16/f8 (ops-narrow-select-nan.json); a sNaN QUIETING
 // claim — a MOVED NaN keeps its bits, §6.16-0010 quieting applies to COMPUTED NaNs only.
-fn minmax_nan_doc() -> String {
-    struct D {
-        name: &'static str,
-        bytes: usize,
-        qa: u64,    // quiet NaN, payload A
-        qb: u64,    // quiet NaN, payload B (distinct)
-        sa: u64,    // signaling NaN
-        sb: u64,    // signaling NaN, distinct
-        negq: u64,  // quiet NaN with the SIGN bit set
-        one: u64,   // 1.0
+/// One float lane's NaN fixtures for the min/max bundle (bit patterns as integers, widest first).
+struct MmLane {
+    name: &'static str,
+    bytes: usize,
+    qa: u64,   // quiet NaN, payload A
+    qb: u64,   // quiet NaN, payload B (distinct)
+    sa: u64,   // signaling NaN
+    sb: u64,   // signaling NaN, distinct
+    negq: u64, // quiet NaN with the SIGN bit set
+    one: u64,  // 1.0
+}
+
+const MM_LANES: [MmLane; 2] = [
+    MmLane { name: "f32", bytes: 4, qa: 0x7FC1_2345, qb: 0x7FD5_5555, sa: 0x7F81_2345, sb: 0x7F80_0001, negq: 0xFFC0_1234, one: 0x3F80_0000 },
+    MmLane {
+        name: "f64",
+        bytes: 8,
+        qa: 0x7FF8_0000_0000_1234,
+        qb: 0x7FFA_AAAA_AAAA_AAAA,
+        sa: 0x7FF0_0000_0000_1234,
+        sb: 0x7FF0_0000_0000_0001,
+        negq: 0xFFF8_0000_0000_1234,
+        one: 0x3FF0_0000_0000_0000,
+    },
+];
+
+/// The cells of one lane: the propagating arm (6 per op) then the IEEE arm (5 per op).
+fn minmax_nan_lane_cells(d: &MmLane, tc: &mut u32, cells: &mut Vec<String>) {
+    let by = |v: u64| -> Vec<u8> { v.to_be_bytes()[8 - d.bytes..].to_vec() };
+    let (qa, qb, sa, sb, nq, one) = (by(d.qa), by(d.qb), by(d.sa), by(d.sb), by(d.negq), by(d.one));
+    for op in ["max_prop", "min_prop"] {
+        let t = "\"moved-nan\",\"select-propagate\",\"6.16-0009\"";
+        for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb), (&nq, &one), (&qa, &qb)] {
+            cells.push(select_cell(*tc, op, d.name, a, b, t));
+            *tc += 1;
+        }
     }
-    let dtypes = [
-        D { name: "f32", bytes: 4, qa: 0x7FC1_2345, qb: 0x7FD5_5555, sa: 0x7F81_2345, sb: 0x7F80_0001, negq: 0xFFC0_1234, one: 0x3F80_0000 },
-        D {
-            name: "f64",
-            bytes: 8,
-            qa: 0x7FF8_0000_0000_1234,
-            qb: 0x7FFA_AAAA_AAAA_AAAA,
-            sa: 0x7FF0_0000_0000_1234,
-            sb: 0x7FF0_0000_0000_0001,
-            negq: 0xFFF8_0000_0000_1234,
-            one: 0x3FF0_0000_0000_0000,
-        },
-    ];
-    let bytes_of = |v: u64, n: usize| -> Vec<u8> { v.to_be_bytes()[8 - n..].to_vec() };
+    for op in ["fmax_ieee", "fmin_ieee"] {
+        let t = "\"moved-survivor\",\"select-ieee-suppress\",\"6.15\"";
+        for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb)] {
+            cells.push(select_cell(*tc, op, d.name, a, b, t));
+            *tc += 1;
+        }
+        cells.push(select_cell(*tc, op, d.name, &qa, &qb, "\"moved-nan\",\"select-ieee-both-nan\",\"6.15\""));
+        *tc += 1;
+    }
+}
+
+fn minmax_nan_doc() -> String {
     let mut cells = Vec::new();
     let mut tc = 1u32;
-    for d in &dtypes {
-        let (qa, qb, sa, sb, nq, one) = (
-            bytes_of(d.qa, d.bytes),
-            bytes_of(d.qb, d.bytes),
-            bytes_of(d.sa, d.bytes),
-            bytes_of(d.sb, d.bytes),
-            bytes_of(d.negq, d.bytes),
-            bytes_of(d.one, d.bytes),
-        );
-        for op in ["max_prop", "min_prop"] {
-            let t = "\"moved-nan\",\"select-propagate\",\"6.16-0009\"";
-            for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb), (&nq, &one), (&qa, &qb)] {
-                cells.push(select_cell(tc, op, d.name, a, b, t));
-                tc += 1;
-            }
-        }
-        for op in ["fmax_ieee", "fmin_ieee"] {
-            let t = "\"moved-survivor\",\"select-ieee-suppress\",\"6.15\"";
-            for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb)] {
-                cells.push(select_cell(tc, op, d.name, a, b, t));
-                tc += 1;
-            }
-            cells.push(select_cell(tc, op, d.name, &qa, &qb, "\"moved-nan\",\"select-ieee-both-nan\",\"6.15\""));
-            tc += 1;
-        }
+    for d in &MM_LANES {
+        minmax_nan_lane_cells(d, &mut tc, &mut cells);
     }
     bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
 }
