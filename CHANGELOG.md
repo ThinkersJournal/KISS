@@ -3,6 +3,20 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.33 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Classify float formats backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0011 the FP8 E5M2 format constants, 6.2-0002 the
+  special values of every float dtype by pinned bit pattern): `tests/classify_float_formats.rs` decodes EVERY byte of
+  `f8e5m2`, `f8e5m2fnuz`, `f8e4m3fn` and `f8e4m3fnuz` from the format definition (sign / exponent width / mantissa
+  width / bias / NaN-and-infinity convention), never from `fp.rs`, and holds the crate's own decoders
+  (`e5m2_to_f32`, `e4m3_to_f32`, `bf16_to_f32`, `e8m0_decode`) and the platform's `f32`/`f64` against it. Pinned: E5M2
+  max finite 57344, IEEE-style infinities and exactly six NaN bytes, `-0` present; the fnuz variants have bias 16/8, no
+  `-0`, no infinity, the single NaN `0x80`, and are byte-incompatible (the same byte `0x3C` is 1.0 vs 0.5); f16/bf16/f32/
+  f64 infinities, `-0`, quiet vs signaling NaN (distinct encodings, quiet bit), subnormals; `f8e8m0` per 6.1-0013. A control
+  proves the decode distinguishes bias and convention. **They agree today**: coverage, not a defect. Not tested, and said so
+  in the file: the `f8e6m2` "defines no special values" statement of absence; no implementation's storage (R4.1). Floor
+  harness 409 -> 411, untested 468 -> 466 (Classify 81/120); 2 `UNBACKED.tsv` rows removed.
+
 ## 0.2.32 — 2026-10-14
 
 - **`tools/run_with_git_bash.py` — run the three bash-launching suites on a Windows box with WSL** (docs/tooling only):

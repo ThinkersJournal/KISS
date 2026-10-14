@@ -79,9 +79,7 @@ KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested
 KISS-CLASSIFY-6.1-0005	test_classify_dtypes_are_pure_storage	untested	
 KISS-CLASSIFY-6.1-0006	test_classify_u32_is_ordinary_storage	untested	
 KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
-KISS-CLASSIFY-6.1-0011	test_classify_e5m2_format	untested	
 KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
-KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
 KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	
 KISS-CLASSIFY-6.3-0007	test_classify_layout_tag_is_derived	untested	
