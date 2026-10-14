@@ -52,10 +52,8 @@ class StrictReport(unittest.TestCase):
 
     def test_parse_freeze_ignores_the_proven_block(self):
         # #387 option B adds a per-sub PROVEN report after the summary: it must not read as a row.
-        extra = FREEZE_OK + ("      PROVEN per sub-standard - ...
-"
-                             "          GRAMMAR     0 proven /  74 backed /  74 clauses
-")
+        extra = FREEZE_OK + ("      PROVEN per sub-standard - ...\n"
+                             "          GRAMMAR     0 proven /  74 backed /  74 clauses\n")
         self.assertEqual(r.parse_freeze(extra), r.parse_freeze(FREEZE_OK))
 
     def test_parse_freeze_refuses_missing_rows_or_summary(self):
