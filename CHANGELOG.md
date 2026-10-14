@@ -3,6 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.29 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Correction to the R2.4 design note and ROADMAP** (docs only): the note called Fuel "the live pair"; Fuel's own
+  GAP-305 divergence test says its `to_canonical_bytes` is an envelope that diverges from §6.19.3 on every carrier op,
+  so the live OpAttrs pair count is still 0. The note's §4/slice 2 and ROADMAP R2.4 now say so, record the PM's ruling
+  that kiss-ref stays a non-party, and R1.9 is added as a **[rule]** row (the `math_precision`/`accumulator` wire
+  encodings for `reduce`/`prefix_scan`, and the Appendix E.2 refresh; boarded in PM item 193, not started).
+
 ## 0.2.28 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **`opattrs_value_vectors.json` — the first value-bearing OpAttrs vectors** (R2.4 slice 1, #504;
