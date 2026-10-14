@@ -65,11 +65,11 @@ fn test_ops_atan2_quadrants() {
             None => {
                 let r = f32::from_bits(got);
                 assert_eq!(r.is_sign_negative(), y < 0.0, "{w}: result sign follows y");
-                let (lo, hi) = if x > 0.0 { (0.0, 1.5707964) } else { (1.5707963, 3.1415927) };
+                let (lo, hi) = if x > 0.0 { (0.0, std::f32::consts::FRAC_PI_2) } else { (std::f32::consts::FRAC_PI_2, std::f32::consts::PI) };
                 assert!(r.abs() >= lo - 1e-6 && r.abs() <= hi + 1e-6, "{w}: {r} outside its quadrant");
                 // the atan(y/x) mutation lands in (-pi/2, pi/2): distinct for every x < 0 cell
                 if x < 0.0 {
-                    assert!(r.abs() > 1.5707964, "{w}: x<0 must leave the right half-plane");
+                    assert!(r.abs() > std::f32::consts::FRAC_PI_2, "{w}: x<0 must leave the right half-plane");
                     x_neg_ordinary += 1;
                 }
                 ordinary += 1;
