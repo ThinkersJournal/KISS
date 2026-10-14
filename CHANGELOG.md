@@ -3,6 +3,15 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.4 — 2026-10-13
+
+- **New corpus artifact `conformance/corpus/ops-rounding.json`** (72 f32 exact-byte vectors, minted by `kiss_mint`,
+  `KISS-OPS-6.7-0001`): `floor`, `ceil`, `trunc`, `round_even` over ±0, ±0.5, the ties ±0.5/1.5/2.5,
+  one-ulp-either-side-of-an-integer, 2^23, largest finite, ±inf and the smallest subnormals. The four are
+  primitive-floor atoms with no decomposition, so a vector is their only cross-implementation pin; the corpus
+  had none. **No NaN cell** (§6.7-0002 does not pin which NaN, #396). `test_fns` figure in the conformance
+  README moves 710 → 711. Consumers (Fuel GAP-300 was this) vendor the file; nothing existing changes.
+
 ## 0.2.3 — 2026-10-13 — docs
 
 - `HANDOFF.md` rewritten as current state. No spec, harness or corpus change.
