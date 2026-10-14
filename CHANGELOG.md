@@ -3,6 +3,24 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.35 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Classify untested tail: 5 clauses backed, 11 dispositioned** (ROADMAP R3.2; PM: each disposition names what was
+  looked for and a positive control, and `untestable`/`definitional`/`blocked` are NOT counted backed).
+  **Backed (floor harness 413 -> 418):** 6.9-0001 (no upstream dependency) and 6.9-0003 (standard library only), as a
+  source-level lint over the Classify-tier modules with a control that proves the scan sees imports and driver loaders
+  (`tests/classify_dependency_and_carriage.rs`); 6.9-0002 (opaque length-delimited carry: every derivation-vector token
+  and arbitrary bytes round-trip an Announce availability list unchanged and the token still parses);
+  6.1-0007 (`bool` is one byte, width equals `u8`; every logical cell of `ops-compare-bool.json` has the expected byte
+  "non-zero is true" dictates, recomputed from the vector content; `tests/classify_bool_storage.rs`); 6.0-0002 (the §6.0
+  statement of the special-value patterns, running the 6.1-0011/6.2-0002 tests). **Dispositioned (each with its basis in
+  `UNBACKED.tsv`):** `blocked` on KISS#543 (6.6-0012, 6.6-0016); `definitional` (6.3-0002 and 6.3-0007, unrepresentable in
+  the reference crate with a control; 6.7-0011, a statement of absence; 7.1-0001, 7.2-0001, 7.2-0002, 8-0001, 8-0002,
+  8-0003, change-control and profile-scoping rules). **Left `untested`, notes now say why:** 6.0-0001, 6.1-0012, 6.3-0004,
+  6.3-0009, 6.3-0010, 6.8-0017 (each names the symbol searched for and not found, and a control). The `untested`
+  figure moves 464 -> 448: 5 by backing, 11 by recategorisation, which is a ledger statement and not coverage; the
+  ENFORCED figure rises by 5 only. No spec or corpus change.
+
 ## 0.2.34 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Classify storage-dtype clauses backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0005 dtypes are pure storage, 6.1-0006
