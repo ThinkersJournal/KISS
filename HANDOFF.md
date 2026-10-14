@@ -7,7 +7,7 @@
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
 2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (latest merged is 0.2.14, #550; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
+   (latest merged is 0.2.16, #552; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
    comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
@@ -22,9 +22,9 @@
 
 ## Open KISS PRs
 
-None in KISS as of origin/main `9ea8c05d` (2026-10-14, conformance 0.2.14). kiss-ref#54 (corpus re-pin at `9ea8c05`) is `[READY]` with the PM; remove worktree `C:/Projects/kiss-ref-v` + branch `rebind/corpus-9ea8c05` after its `[MERGED]`.
+KISS#553-slot: the sidecar PR (0.2.17) if open; otherwise none (origin/main `055ed018`, 2026-10-14, conformance 0.2.16). kiss-ref 0.4.1 merged (#54).
 
-## Current state at origin/main 9ea8c05d (conformance 0.2.14)
+## Current state at origin/main 055ed018 (conformance 0.2.16)
 
 - **#263 landed** (`sk5`, derived 7-class `cell_class`, `contract_version` 3); design in `docs/design-263-cell-class.md`.
   kiss-ref 0.4.0 is published (bound to `a33282c`); corpus re-pin is kiss-ref#54. Touch kiss-ref only on a PM task.
@@ -35,6 +35,7 @@ None in KISS as of origin/main `9ea8c05d` (2026-10-14, conformance 0.2.14). kiss
 - **First second-party derivation runs** (Fuel#358, Baracuda): rulings in KISS#547. **Owed by implementations:** collapsed
   reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped: reduced innermost axis -> `v1`
   (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
+- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: consume, emit, grammar. TODO: announce, classify, conform, contract, ops, synth (+umbrella?). `determinism_class` / `wire_abi_schema_version` stay `null` until ruled (second ASK sent).
 - **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)
