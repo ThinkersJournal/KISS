@@ -213,6 +213,8 @@ jobs:
         run: python tools/test_kiss_version_sync.py
       - name: Manifest version equals the newest CHANGELOG heading (blocking)
         run: python tools/kiss_version_sync.py
+      - name: Git-Bash wrapper controls (a bare `bash` is the only thing rewritten)
+        run: python tools/test_run_with_git_bash.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       # A metadata block wedged inside a requirement is not a style defect: a phrase

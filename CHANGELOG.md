@@ -3,6 +3,15 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.32 — 2026-10-14
+
+- **`tools/run_with_git_bash.py` — run the three bash-launching suites on a Windows box with WSL** (docs/tooling only):
+  `CreateProcess` resolves a bare `bash` to the System32 WSL launcher before `PATH`, so `test_kiss_ratchet_step.py`,
+  `test_kiss_msrv_step.py` and `test_kiss_orphan_step.py` failed with `execvpe(/bin/bash) failed` and were carried as
+  "unrun (WSL)" through 0.2.22-0.2.31. The wrapper rewrites only a bare leading `bash` in `subprocess.run`/`Popen` to
+  Git Bash (no-op off Windows) and runs the suite unmodified; `tools/test_run_with_git_bash.py` (7 controls) is a CI
+  step. Measured green at `60c375c`: 8/8, 13/13, 7 controls. No spec, corpus or floor change.
+
 ## 0.2.31 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Classify dtype-table clauses backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0002 bit widths, 6.1-0003 numeric kinds,

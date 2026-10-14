@@ -52,3 +52,20 @@ Conform §6.4–§6.7) is the next phase, and lives in a separate reference crat
 853 normative clauses across the nine sub-standards, every one mapped 1:1 to a
 named conformance test.  RESULT: CLEAN.
 ```
+
+## `run_with_git_bash.py` — running the bash-launching suites on a Windows box with WSL
+
+`test_kiss_ratchet_step.py`, `test_kiss_msrv_step.py` and `test_kiss_orphan_step.py` execute a workflow step's
+`run:` block through a bare `bash`. On Windows with WSL installed, `CreateProcess` resolves that to
+`C:\Windows\System32\bash.exe` (the WSL launcher) before `PATH`, so they fail with `execvpe(/bin/bash) failed`
+and read as a defect. Run them through the wrapper instead (a no-op on Linux/macOS):
+
+```text
+python tools/run_with_git_bash.py tools/test_kiss_ratchet_step.py
+python tools/run_with_git_bash.py tools/test_kiss_msrv_step.py
+python tools/run_with_git_bash.py tools/test_kiss_orphan_step.py
+```
+
+It rewrites only a bare leading `bash` in `subprocess.run`/`Popen` to Git Bash and runs the suite unmodified;
+`KISS_GIT_BASH` overrides the path. Measured green at KISS `60c375c` (8/8, 13/13, 7 controls). Do not report
+these suites "unrun (WSL)": run them.
