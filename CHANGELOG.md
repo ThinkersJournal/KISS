@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.15 — 2026-10-14
+
+- `ROADMAP.md` (R2.7 count 13 of 13; header says which figures are 0.2.14-fresh) and `HANDOFF.md` refreshed to `9ea8c05d`; names kiss-ref#54. Docs only.
+
 ## 0.2.14 — 2026-10-14
 
 - **`ops-transcendental-nan.json` gains one vector (12 → 13): f64 `log` of a signaling NaN** (tcId 13,
