@@ -4,6 +4,8 @@
 //!                                        signed-zero distinctions), provenance `oracle`.
 //!   corpus/ops-transcendental-nan.json — T9/#352: transcendental COMPUTED-NaN cells — a
 //!                                        computed NaN must be QUIET (§6.16-0010 / §6.8-0010).
+//!   corpus/ops-rounding.json          — KISS-OPS-6.7-0001/-0002: f32 floor/ceil/trunc/round_even exact-byte
+//!                                        cells (ties, zero signs, integral, inf, subnormal); no NaN (#396).
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -335,6 +337,67 @@ fn narrow_select_nan_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
 }
 
+// ---- rounding-atom bundle (KISS-OPS-6.7-0001 / -0002) ---------------------------------------
+//
+// POPULATION — stated so the gaps are visible. The four rounding atoms are PRIMITIVE-FLOOR (§6.7:
+// no decomposition by design), so the only thing that can pin them across implementations is a
+// vector; before this bundle the oracle corpus carried none for `floor`/`ceil`/`trunc`/`round_even`.
+//
+// EMITTED (f32, exact-byte, unary): for each of the four ops, the inputs that separate the
+// directions and the zero-sign edges — +-0, +-0.5 (`trunc(-0.5)` and `ceil(-0.5)` are `-0.0`: an
+// impl that returns `+0.0` is wrong), the ties +-0.5/1.5/2.5 (`round_even` is banker's, not
+// half-away), values one ulp either side of an integer, the 2^23 boundary where every f32 is
+// already integral, the largest finite, +-inf (fixed points), and the smallest subnormals.
+//
+// NOT EMITTED, on purpose: a NaN operand. §6.7-0002 pins "propagates a NaN" but not WHICH NaN
+// (payload / quietness) — issue #396. A byte-exact cell would over-constrain a conforming impl.
+// narrow dtypes, f64 and the §6.17 fidelity axis are not covered either.
+fn rounding_doc() -> String {
+    let inputs: [(u32, &str); 18] = [
+        (0x0000_0000, "signed-zero"),   // +0
+        (0x8000_0000, "signed-zero"),   // -0
+        (0x3F00_0000, "half"),          // +0.5
+        (0xBF00_0000, "half"),          // -0.5
+        (0x3FC0_0000, "tie"),           // +1.5
+        (0xBFC0_0000, "tie"),           // -1.5
+        (0x4020_0000, "tie"),           // +2.5
+        (0xC020_0000, "tie"),           // -2.5
+        (0x3EFF_FFFF, "near-integer"),  // 0.49999997 (just below 0.5)
+        (0x3F80_0001, "near-integer"),  // 1.0000001 (just above 1)
+        (0xBF7F_FFFF, "near-integer"),  // -0.99999994 (just above -1)
+        (0x4B00_0000, "integral"),      // 2^23: every f32 here is already an integer
+        (0x4AFF_FFFF, "near-integer"),  // 2^23 - 0.5
+        (0x7F7F_FFFF, "integral"),      // largest finite
+        (0x7F80_0000, "inf"),           // +inf
+        (0xFF80_0000, "inf"),           // -inf
+        (0x0000_0001, "subnormal"),     // smallest positive subnormal
+        (0x8000_0001, "subnormal"),     // smallest negative subnormal
+    ];
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for op in ["floor", "ceil", "trunc", "round_even"] {
+        for (bits, tag) in inputs {
+            let x = f32::from_bits(bits);
+            let r = match op {
+                "floor" => semantics::floor(x),
+                "ceil" => semantics::ceil(x),
+                "trunc" => semantics::trunc(x),
+                _ => semantics::round_even(x),
+            };
+            cells.push(emit_cell(
+                tc,
+                op,
+                "f32",
+                &[&bits.to_be_bytes()],
+                &r.to_bits().to_be_bytes(),
+                &format!("\"{tag}\",\"6.7-0001\""),
+            ));
+            tc += 1;
+        }
+    }
+    bundle_doc("OPS", "KISS-OPS-6.7-0001", &cells)
+}
+
 /// Assemble a bundle document from its cells. Header strings are shared across bundles so the
 /// arith bundle regenerates byte-for-byte.
 fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String {
@@ -367,4 +430,5 @@ fn main() {
     write_bundle("/corpus/ops-transcendental-nan.json", &transcendental_nan_doc());
     write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());
     write_bundle("/corpus/ops-narrow-select-nan.json", &narrow_select_nan_doc());
+    write_bundle("/corpus/ops-rounding.json", &rounding_doc());
 }
