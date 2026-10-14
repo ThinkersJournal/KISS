@@ -3,6 +3,17 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.30 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **`structure_key_derivation_vectors.json` 33 -> 36 vectors: the innermost axis is axis `rank-1` whatever its extent**
+  (KISS-CLASSIFY-6.3-0011 with 6.3-0002 and 6.5-0012; ROADMAP R1.4). Three non-`ctr` cells: `[4,1]` (bucket `da`, `v1`)
+  and `[1,8]` (`d8`) are the clause's own worked examples; `[8,0]` is the case Unpopped's CHANGELOG held open as
+  "deliberately not changed" and **no earlier vector had an innermost extent of `0`**: bucket `da` from axis 1 (`E = 0`,
+  6.5-0012 "covering ... `E = 0`"), not `d8` from the outer axis. The `[8,0]` expected token is reference-deriver output,
+  not an independent golden. `derivation_vectors_innermost_axis_is_rank_minus_1_including_extents_one_and_zero` pins the
+  three buckets as different. **Artifact change, no spec change; no existing vector's token moved.** New blob
+  `697aa54370b51df0e26fe5fbd23ceca8419290c5`; consumers that vendored this file re-vendor (Fuel, Unpopped). Floor unmoved (406/34/471).
+
 ## 0.2.29 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Correction to the R2.4 design note and ROADMAP** (docs only): the note called Fuel "the live pair"; Fuel's own

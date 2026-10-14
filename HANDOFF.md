@@ -41,7 +41,7 @@
 - **Ratchet floor:** harness 406, lint 34, untested 471, proven 20. 6.2-0007 stays unbacked (bitwise/reduction/scan arms uncovered).
 - **ULP comparator caveat:** totalOrder distance does not discriminate `+0`/`-0`; atan2 and sqrt zero-sign cells are carried, not enforced.
 - **Owed by implementations:** collapsed reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped:
-  reduced innermost axis -> `v1` (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
+  reduced innermost axis -> `v1` (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `697aa543` (36 vectors, 0.2.30; was `299811b1`/33).
 - **Sidecar (#144, option A):** done for all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null`/UNSET until
   CireSnave rules (PM item 193; option C amends Appendix E). **#387:** instrument/wording choice boarded (PM 193).
 - **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
