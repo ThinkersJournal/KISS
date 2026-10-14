@@ -3,7 +3,7 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.2.22 — 2026-10-14 (number proposed; the PM allocates at gate time)
+## 0.2.22 — 2026-10-14
 
 - **`ops-atan2-quadrants.json` — the first `atan2` vectors** (KISS-OPS-6.9-0001, ROADMAP R3.2): 28 f32 cells,
   class **ULP** (`ulp_bound` 4, never exact-byte, §6.8-0005): one ordinary cell per quadrant (two magnitudes
