@@ -106,6 +106,7 @@ pub mod integer;
 pub mod json;
 pub mod namespace_vocabulary;
 pub mod opattrs;
+pub mod opattrs_value;
 pub mod reference_vectors;
 pub mod semantics;
 pub mod shape_expr;
