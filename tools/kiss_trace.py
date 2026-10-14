@@ -2399,6 +2399,13 @@ def main():
         print("      NOTE: `satisfy` is an EXISTENCE reading (a backing is named for every clause). Condition 3 asks for")
         print("      complete traceability; a sampled audit found ~half of even well-evidenced pointers under-describe")
         print("      their clause (#387), so an [ OK ] row is necessary for a freeze, not evidence of accuracy.")
+        print("      PROVEN per sub-standard — a seeded mutation of the obligation's subject reddened the test")
+        print("      (ABOUTNESS; testimony at a ref, not a live re-run). REPORTS, never gates (#387 option B):")
+        for sub in targets:
+            n_sub = sum(1 for c in clause_test if sub_of(c) == sub)
+            n_bk = sum(1 for c in backed if sub_of(c) == sub)
+            n_pv = sum(1 for c in tier_proven if sub_of(c) == sub)
+            print(f"          {sub:<9} {n_pv:>3} proven / {n_bk:>3} backed / {n_sub:>3} clauses")
         if any_fail:
             print("      A Draft->Frozen transition is BLOCKED for each [FAIL] above, and a")
             print("      §8.1 conformance claim to it is unbacked for its untested clauses.")
