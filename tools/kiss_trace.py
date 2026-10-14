@@ -2393,9 +2393,12 @@ def main():
                     print(f"                 ... and {len(miss) - 3} more")
             else:
                 ready += 1
-                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced (harness+lint) — may freeze on §5.3 cond. 3")
+                print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced (harness+lint) — every clause has a backing; whether each backing demonstrates its clause is NOT measured (#387)")
         print()
         print(f"      {ready} of {len(targets)} sub-standard(s) satisfy §5.3 condition 3.")
+        print("      NOTE: `satisfy` is an EXISTENCE reading (a backing is named for every clause). Condition 3 asks for")
+        print("      complete traceability; a sampled audit found ~half of even well-evidenced pointers under-describe")
+        print("      their clause (#387), so an [ OK ] row is necessary for a freeze, not evidence of accuracy.")
         if any_fail:
             print("      A Draft->Frozen transition is BLOCKED for each [FAIL] above, and a")
             print("      §8.1 conformance claim to it is unbacked for its untested clauses.")
