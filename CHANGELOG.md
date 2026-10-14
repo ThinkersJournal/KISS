@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.27 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- `docs/design-r24-opattrs-value-vectors.md` — R2.4 design note: a value-bearing `opattrs_value_vectors.json` (encode / equivalence / distinct kinds, ~150-250 vectors by estimate), two KISS-side derivations that must agree, Fuel as the live second party, kiss-ref's role left as a ruling. A proposal; no code, corpus or spec change. Docs only.
+
 ## 0.2.26 — 2026-10-14
 
 - **`ops-nextafter.json` — the first `nextafter` vectors, value half** (KISS-OPS-6.9-0003, ROADMAP R3.2): 40 exact-byte
