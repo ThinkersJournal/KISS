@@ -7,7 +7,7 @@
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
 2. **Version rule:** every docs/CI/test PR names the change set whose `kiss-conformance` bump covers it. The PM allocates the number
-   (0.2.1 is carried by #536; 0.2.0 was #535, Breaking; 0.1.6 was #534; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
+   (0.2.3 is carried by #538; 0.2.2 was #537; 0.2.1 #536; 0.2.0 #535, Breaking; 0.1.6 was #534; the PM allocates the next number at gate time). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump as a commit on its branch and says so in a
    comment. Review like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**, never from a side: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and
@@ -22,7 +22,7 @@
 
 ## Open KISS PRs
 
-- **#537** ROADMAP.md (docs; the PM allocates the version). After it merges: remove worktree `C:/Projects/kiss-roadmap` and the branch.
+- **#539** `conformance/corpus/ops-rounding.json` (0.2.4): the first vectors for floor/ceil/trunc/round_even. After it merges: remove worktree `C:/Projects/kiss-rounding` and the branch.
 - **This HANDOFF PR** (`docs/handoff-2026-10-13`): remove `C:/Projects/kiss-handoff2` and the branch once merged.
 
 ## Current state at origin/main 5b28bf5 (conformance 0.2.1)
@@ -33,7 +33,7 @@
   outputs derive masks `02/03/01/0a`. Design and the 24→7 accounting: `docs/design-263-cell-class.md`. `CHANGELOG.md` has 0.2.0/0.2.1.
 - **kiss-ref 0.4.0 is published** (crates.io, from kiss-ref `2583d5ef`, bound to KISS `a33282c`). Do not touch kiss-ref without a PM task.
 - **Followers** (PM-issued, theirs): Unpopped keyer, Fuel deriver (bound `sk5`), Baracuda (still `sk4` in production), Vulkane (no lane).
-- **Roadmap:** `ROADMAP.md` (when #537 is on main) is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
+- **Roadmap:** `ROADMAP.md` (on main since #537) is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)
 
@@ -43,7 +43,6 @@
 
 ## Next actions
 
-1. R0.2: draft the close-list with evidence (#263, #520, #477; confirm #298, #305, #219, #364 one at a time) and send it to the PM; closing is theirs.
-2. R1.4: ask Unpopped whether its §6.3-0011 zero-extent "active axis" wait is still open, and point at §6.3-0011/§6.5-0002.
-3. R1.6: author a vendorable vector for KISS-CLASSIFY-6.8-0002.
-4. R2.2 `trunc` decomposition + vectors (Fuel GAP-300); R2.3 NaN vectors for the signed-zero corpus (#329).
+1. R2.3: NaN vectors for the signed-zero corpus (#329) (needs a build; check C: free space first).
+2. R3.1/R3.2: freeze-gate instrument fixes (#387, #524, #144) and the Classify traceability tail (39 untraced clauses).
+3. R0.2 close-list is ready in ROADMAP §6; closing is CireSnave's. R1.1/R1.2/R1.5 and #462 are boarded (PM item 193): do not start.
