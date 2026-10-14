@@ -227,6 +227,12 @@ jobs:
         run: python tools/test_kiss_clause_position.py
       - name: Clause position (a clause must sit under its own section heading)
         run: python tools/kiss_clause_position.py
+      # The clause sidecar is the sole authoritative clause source for every sub-standard that has one
+      # (KISS-CONFORM-6.1-0007); the prose is reconciled to it by the 6.2-0004 token match (#144).
+      - name: Sidecar controls (seeded drift must be caught, a clean sidecar must pass)
+        run: python tools/test_kiss_sidecar.py
+      - name: Sidecar <-> prose clause reconciliation (6.2-0004)
+        run: python tools/kiss_sidecar.py --check
       - name: Spec<->binding enumeration consistency (cell-class set)
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency

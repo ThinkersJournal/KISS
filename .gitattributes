@@ -20,3 +20,7 @@ conformance/corpus/*.json text eol=lf
 # LF, so --renormalize stages nothing. Verify with `git ls-files --eol`, never with grep --
 # MINGW64 grep strips CR before matching, so no grep can see a line ending here (#506).
 spec/*.md text eol=lf
+
+# The clause sidecars (Appendix E) are byte-deterministic: LF, sorted keys, no whitespace. The
+# drift check byte-compares them, so a CRLF checkout must not make a clean sidecar read as drift.
+spec/sidecar/*.json text eol=lf

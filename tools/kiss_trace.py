@@ -1853,6 +1853,13 @@ def main():
         else:
             parse(path, res)
             check_doc(res)
+            # #144: where a clause sidecar exists it is the sole authoritative clause source
+            # (KISS-CONFORM-6.1-0007), so a prose clause it does not list, or a sidecar clause the
+            # prose lacks, is a violation here and not just in tools/kiss_sidecar.py --check.
+            import kiss_sidecar  # lazy: kiss_sidecar imports this module
+            if os.path.isfile(kiss_sidecar.sidecar_path(stem, spec_dir)):
+                for _d in kiss_sidecar.drift(stem, spec_dir):
+                    res.add(f"sidecar drift (6.2-0004): {_d}")
         results.append(res)
 
     # #342: reconcile spec definitions against RFC allocations. Suite-wide because an
