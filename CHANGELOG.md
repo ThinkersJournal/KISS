@@ -3,6 +3,20 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.34 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Classify storage-dtype clauses backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0005 dtypes are pure storage, 6.1-0006
+  `u32` is an ordinary storage dtype): `tests/classify_storage_dtypes.rs` holds the reference deriver and
+  `dtype_manifest.json` to the clauses. 6.1-0005: a dtype row is exactly `{token, kind, storage_bits, reserved}` (no
+  precision field), no strict-precision token exists (`f32s`, `f32_strict`, `tf32`, ... each declines as
+  `UnknownDtype`, not reserved), and a reduced-mantissa request changes the reduction key through `<mp>` while the dtype
+  component stays `f32`. 6.1-0006: `u32` is a 4-byte `uint` like `u8`/`u16`/`u64`, derives as the compute dtype of
+  elementwise (differing from `f32` only in the dtype component) and reduction cells, as data beside an `i32` index
+  operand and as the index operand, and the index role is the caller's declared slot (no slot, no `ndx`). A control
+  would catch a precision field or a u32-specific path. **They agree today**: coverage, not a defect. Scope: the
+  REFERENCE keyer only; another implementation's dispatch is what a second deriver (R3.3) adds. Floor harness 411 -> 413,
+  untested 466 -> 464 (Classify 83/120); 2 `UNBACKED.tsv` rows removed.
+
 ## 0.2.33 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **Classify float formats backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0011 the FP8 E5M2 format constants, 6.2-0002 the
