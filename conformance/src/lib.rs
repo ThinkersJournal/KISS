@@ -83,6 +83,7 @@ pub mod bundle_envelope;
 pub mod correlation_id;
 pub mod bundle_isolation;
 pub mod antifork;
+pub mod consumer_verify;
 pub mod contract;
 pub mod corpus;
 pub mod decline;

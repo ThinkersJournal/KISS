@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.41 — 2026-10-14 (allocated by the PM)
+
+- **Consumer-verify check and opt-in trust-but-verify profile shipped** (board 203 item 1; floor harness 420 -> 427, untested 446 -> 439): new `consumer_verify` module and `tests/consumer_verify.rs` back KISS-CONFORM-6.12-0001/-0002/-0003, 6.13-0011, 7.2-0001/-0003/-0004. The check reuses `comparator_for`/`compare_f32` and the `structure_key` accept-predicate; the `trust-but-verify` cargo feature (off by default) is the profile switch and never alters the default clause verdict. Scalar-unary f32 only; the declared ULP is caller-supplied (no Guarantees-tier ULP reader yet). No spec change.
+
 ## 0.2.40 — 2026-10-14 (allocated by the PM)
 
 - Portfolio hygiene (CodeRipper triage 2026-10-14), no behaviour change: `.github/CODEOWNERS` (`* @ciresnave`, WSP-001); top-level `permissions: contents: read` in `conformance.yml` and `traceability.yml` (SUP-008, 10 excessive-permissions findings; every `uses:` was already pinned to a full commit SHA); `docs/glossary.md`, an index of the vocabulary that points at each owning §3 (DOC-009; also serves kiss-ref). `HANDOFF.md` rewritten to the state at 0.2.39. No spec change; floor unmoved.
