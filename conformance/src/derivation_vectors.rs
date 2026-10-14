@@ -79,9 +79,7 @@ fn golden(mut d: DerivationVector, token: &'static str) -> DerivationVector {
     d
 }
 
-/// The vectors, in a stable order (names are the join key for consumers).
-pub fn vectors() -> Vec<DerivationVector> {
-    let mut out = Vec::new();
+fn a1_elementwise(out: &mut Vec<DerivationVector>) {
     // ---- Appendix A.1 goldens, derived from raw cells (spec-independent expected bytes) ----
     out.push(golden(
         v("a1_binary_add", "KISS-CLASSIFY-6.6-0011", "the canonical derivation golden: two inputs + output, contiguous f32 [128,256]", add_cell(&[256, 1], &[128, 256])),
@@ -100,6 +98,9 @@ pub fn vectors() -> Vec<DerivationVector> {
         ),
         "sk5|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
     ));
+}
+
+fn a1_reductions(out: &mut Vec<DerivationVector>) {
     out.push(golden(
         v("a1_reduction_trailing_axis", "KISS-CLASSIFY-6.6-0009", "keepdim [4,8]->[4,1]: rlast; output mask 02 (extent-1 axis, frame extent 8)", reduce("f32", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[1])),
         "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
@@ -140,6 +141,9 @@ pub fn vectors() -> Vec<DerivationVector> {
     ));
 
     // ---- derivation cases the token vectors cannot express ----
+}
+
+fn frame_cases(out: &mut Vec<DerivationVector>) {
     out.push(golden(
         v(
             "call_order_is_not_canonical_order",
@@ -174,6 +178,9 @@ pub fn vectors() -> Vec<DerivationVector> {
         "operand 1 [1,256] recording stride 0: byte-identical to extent1_axis_with_nonzero_stride",
         add_cell(&[0, 1], &[1, 256]),
     ));
+}
+
+fn boundary_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "flipped_inner_axis",
         "KISS-CLASSIFY-6.5-0013",
@@ -193,6 +200,9 @@ pub fn vectors() -> Vec<DerivationVector> {
         }
         out.push(v("alignment_zero_derives_v1", "KISS-CLASSIFY-6.5-0009", "alignment 0 cannot honor a packed load: v1 on every operand", c));
     }
+}
+
+fn class_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "sub_byte_dtype_i4",
         "KISS-CLASSIFY-6.5-0009",
@@ -219,6 +229,9 @@ pub fn vectors() -> Vec<DerivationVector> {
             cell(CUDA, vec![op(Input, "f32", &[n], &[1], 256), op(Output, "f32", &[n], &[1], 256)]),
         ));
     }
+}
+
+fn quantized_and_precision_cases(out: &mut Vec<DerivationVector>) {
     {
         let mut c = cell(
             CUDA,
@@ -255,7 +268,9 @@ pub fn vectors() -> Vec<DerivationVector> {
         c.math_fidelity = MathFidelity::ReducedMantissa;
         out.push(v("reduction_reduced_mantissa_only", "KISS-CLASSIFY-6.7-0013", "accumulator == compute but <mp> rm: |f32/rm (both slots spelled)", c));
     }
+}
 
+fn decline_cases(out: &mut Vec<DerivationVector>) {
     // ---- declines ----
     out.push(v(
         "decline_scale_dtype_at_operand0",
@@ -286,6 +301,18 @@ pub fn vectors() -> Vec<DerivationVector> {
         c.contraction_declared = true;
         out.push(v("decline_contraction_out_of_scope", "KISS-CLASSIFY-6.6-0016", "M/N/K roles declared: out of this corpus's scope until the batch role is ruled (KISS#543)", c));
     }
+}
+
+/// The vectors, in a stable order (names are the join key for consumers).
+pub fn vectors() -> Vec<DerivationVector> {
+    let mut out = Vec::new();
+    a1_elementwise(&mut out);
+    a1_reductions(&mut out);
+    frame_cases(&mut out);
+    boundary_cases(&mut out);
+    class_cases(&mut out);
+    quantized_and_precision_cases(&mut out);
+    decline_cases(&mut out);
     out
 }
 

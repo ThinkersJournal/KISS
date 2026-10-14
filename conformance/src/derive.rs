@@ -128,8 +128,8 @@ fn canonical_reduce(axes: &[usize], rank: usize) -> Result<Reduce, DeriveDecline
     })
 }
 
-/// Derive the `structure_key` of `cell` (§6.6-0011): the same inputs always give the same bytes.
-pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, DeriveDecline> {
+/// Validate the cell's shape and dtypes before anything is derived from it.
+fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
     if cell.contraction_declared {
         return Err(DeriveDecline::ContractionOutOfScope);
     }
@@ -145,25 +145,26 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
         }
         check_dtype(o.dtype)?;
     }
-    // canonical order (§6.6-0014): inputs and in-place operands in call order, then outputs.
+    if let Some(a) = cell.accumulator {
+        check_dtype(a)?;
+    }
+    Ok(())
+}
+
+/// Canonical operand order (§6.6-0014): inputs and in-place operands in call order, then outputs.
+fn canonical_order(cell: &DerivationCell) -> Vec<&CellOperand> {
     let mut ordered: Vec<&CellOperand> = cell
         .operands
         .iter()
         .filter(|o| matches!(o.usage, OperandUse::Input | OperandUse::InPlace))
         .collect();
     ordered.extend(cell.operands.iter().filter(|o| o.usage == OperandUse::Output));
+    ordered
+}
 
-    // primary dtype (§6.6-0005/-0021)
-    let dtypes: Vec<&str> = ordered.iter().map(|o| o.dtype).collect();
-    let primary = derive_primary_dtype(&dtypes).ok_or(DeriveDecline::ScaleDtypeAtOperand0)?;
-    if let Some(a) = cell.accumulator {
-        check_dtype(a)?;
-    }
-
-    let frame_rank = ordered.iter().map(|o| o.extents.len()).max().unwrap_or(0);
-    let ext_refs: Vec<&[i64]> = ordered.iter().map(|o| o.extents.as_slice()).collect();
-    // per-axis frame extents (maximum across operands, right-aligned; §6.5-0010)
-    let frame: Vec<i64> = (0..frame_rank)
+/// Per-axis iteration-frame extents: the maximum across operands, right-aligned (§6.5-0010).
+fn frame_extents(ordered: &[&CellOperand], frame_rank: usize) -> Vec<i64> {
+    (0..frame_rank)
         .map(|j| {
             ordered
                 .iter()
@@ -174,7 +175,73 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
                 .max()
                 .unwrap_or(1)
         })
-        .collect();
+        .collect()
+}
+
+/// The reduce spec: carried iff the class is `rdc` (§6.6-0017), and the output must be keepdim.
+fn reduce_spec(
+    cell: &DerivationCell,
+    ordered: &[&CellOperand],
+    class: &str,
+    frame_rank: usize,
+) -> Result<Reduce, DeriveDecline> {
+    if class != "rdc" {
+        return Ok(Reduce::None);
+    }
+    let r = canonical_reduce(&cell.reduced_axes, frame_rank)?;
+    for o in ordered.iter().filter(|o| o.usage == OperandUse::Output) {
+        let collapsed =
+            o.extents.len() != frame_rank || cell.reduced_axes.iter().any(|&a| o.extents[a] != 1);
+        if collapsed {
+            return Err(DeriveDecline::CollapsedReduction);
+        }
+    }
+    Ok(r)
+}
+
+/// One operand's sub-key (§6.6-0007): layout/vec/div from its OWN axes, the mask in the frame.
+fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool) -> OperandSubKey {
+    let layout = derive_layout_tag(&o.extents, &o.strides);
+    let any_own_broadcast = o.extents.iter().zip(&o.strides).any(|(&e, &s)| e > 1 && s == 0);
+    let rank = o.extents.len();
+    let bytes = dtype_storage_bytes(o.dtype).expect("closed dtype set checked by validate");
+    let vec = if layout == Contig::Broadcast || reduced_innermost || rank == 0 {
+        VecWidth::V1 // §6.5-0009 (a), (b); a rank-0 operand has no run to vectorize
+    } else {
+        derive_vec_width(o.strides[rank - 1], o.extents[rank - 1], bytes, o.alignment, any_own_broadcast)
+    };
+    OperandSubKey {
+        contig: layout,
+        bcast_mask: derive_bcast_mask_in_frame(&o.extents, &o.strides, frame),
+        vec,
+        div: derive_div_bucket_of(&o.extents),
+        flipped: o.strides.iter().any(|&s| s < 0),
+        dequant: o.dequant,
+    }
+}
+
+/// The non-contraction `(acc + mp)` field (§6.7-0013): emitted iff the accumulator differs from the
+/// compute dtype or `<mp>` is not the default; both slots are spelled when it is.
+fn precision_field(cell: &DerivationCell, primary: &str) -> Option<AccMp> {
+    let acc_deviates = cell.accumulator.is_some_and(|a| a != primary);
+    if acc_deviates || cell.math_fidelity != ACC_MP_DEFAULT_MP {
+        Some(AccMp { acc: cell.accumulator.unwrap_or(primary).to_string(), mp: cell.math_fidelity })
+    } else {
+        None
+    }
+}
+
+/// Derive the `structure_key` of `cell` (§6.6-0011): the same inputs always give the same bytes.
+pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, DeriveDecline> {
+    validate(cell)?;
+    let ordered = canonical_order(cell);
+
+    // primary dtype (§6.6-0005/-0021)
+    let dtypes: Vec<&str> = ordered.iter().map(|o| o.dtype).collect();
+    let primary = derive_primary_dtype(&dtypes).ok_or(DeriveDecline::ScaleDtypeAtOperand0)?;
+
+    let frame_rank = ordered.iter().map(|o| o.extents.len()).max().unwrap_or(0);
+    let frame = frame_extents(&ordered, frame_rank);
 
     // cell class (§6.5-0015) from the operands (use + own extents) and the declared facts.
     let class_ops: Vec<(OperandUse, &[i64])> = ordered.iter().map(|o| (o.usage, o.extents.as_slice())).collect();
@@ -185,55 +252,15 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
     };
     let class = derive_cell_class(&class_ops, facts);
 
-    // reduce spec: carried iff the class is `rdc` (§6.6-0017); a keepdim output is required.
-    let reduce = if class == "rdc" {
-        let r = canonical_reduce(&cell.reduced_axes, frame_rank)?;
-        for o in ordered.iter().filter(|o| o.usage == OperandUse::Output) {
-            let collapsed = o.extents.len() != frame_rank
-                || cell.reduced_axes.iter().any(|&a| o.extents[a] != 1);
-            if collapsed {
-                return Err(DeriveDecline::CollapsedReduction);
-            }
-        }
-        r
-    } else {
-        Reduce::None
-    };
+    let reduce = reduce_spec(cell, &ordered, class, frame_rank)?;
     let reduced_innermost = match reduce {
         Reduce::None => false,
         Reduce::All | Reduce::Trailing => true,
         Reduce::Subset(m) => frame_rank > 0 && m & (1 << (frame_rank - 1)) != 0,
     };
+    let operands: Vec<OperandSubKey> = ordered.iter().map(|o| sub_key(o, &frame, reduced_innermost)).collect();
 
-    // per-operand sub-keys (§6.6-0007): layout/vec/div from the OWN axes, mask in the frame.
-    let mut operands = Vec::with_capacity(ordered.len());
-    for o in &ordered {
-        let layout = derive_layout_tag(&o.extents, &o.strides);
-        let any_own_broadcast = o.extents.iter().zip(&o.strides).any(|(&e, &s)| e > 1 && s == 0);
-        let rank = o.extents.len();
-        let bytes = dtype_storage_bytes(o.dtype).expect("closed dtype set checked above");
-        let vec = if layout == Contig::Broadcast || reduced_innermost || rank == 0 {
-            VecWidth::V1 // §6.5-0009 (a), (b); a rank-0 operand has no run to vectorize
-        } else {
-            derive_vec_width(o.strides[rank - 1], o.extents[rank - 1], bytes, o.alignment, any_own_broadcast)
-        };
-        operands.push(OperandSubKey {
-            contig: layout,
-            bcast_mask: derive_bcast_mask_in_frame(&o.extents, &o.strides, &frame),
-            vec,
-            div: derive_div_bucket_of(&o.extents),
-            flipped: o.strides.iter().any(|&s| s < 0),
-            dequant: o.dequant,
-        });
-    }
-
-    let compute = primary;
-    let acc_deviates = cell.accumulator.is_some_and(|a| a != compute);
-    let acc_mp = if acc_deviates || cell.math_fidelity != ACC_MP_DEFAULT_MP {
-        Some(AccMp { acc: cell.accumulator.unwrap_or(compute).to_string(), mp: cell.math_fidelity })
-    } else {
-        None
-    };
+    let ext_refs: Vec<&[i64]> = ordered.iter().map(|o| o.extents.as_slice()).collect();
     let pairs: Vec<(&[i64], &[i64])> =
         ordered.iter().map(|o| (o.extents.as_slice(), o.strides.as_slice())).collect();
 
@@ -247,6 +274,6 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
         operands,
         reduce,
         contraction: None,
-        acc_mp,
+        acc_mp: precision_field(cell, primary),
     })
 }
