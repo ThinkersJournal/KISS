@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.43 — 2026-10-14 (allocated by the PM)
+
+- **Determinism import-site lint** (board 203 item 6; floor lint 34 -> 35, untested 425 -> 424): `tools/kiss_tables.py` gains `check_determinism_import_sites`, so KISS-CONFORM-6.11-0003 is lint-enforced. Synth, Consume, Emit, Contract and Conform must each spell all three KISS-Ops determinism members verbatim and may not re-spell one in a backticked or bold span (`ULP-tolerance`, `Exact-byte`, a bare `order-invariant`). Mutation-checked: a re-spelled member in a copy of `synth.md` fails the tool. Prose and test-name identifiers are out of scope by construction. No spec change.
+
 ## 0.2.42 — 2026-10-14 (allocated by the PM)
 
 - **Board 203 out-halves recorded** (ledger only; floor harness 427 unmoved, untested 439 -> 425): CireSnave ruled "I agree with the recommendations", so 14 rows move `untested` -> `blocked`, each note quoting the ruling: canonical-suite-artifact governance (6.3-0003/-0004, 8-0003/-0004/-0005/-0010; waits on #462), oracle-authoring provenance (6.5-0002/-0003/-0005; a record, not a test), and the cross-backend/emitter/lift/promotion fuzzer rows (6.6-0002/-0003/-0004/-0006/-0007; need a suite-registered emitter and a lifter outside this crate). Recategorising is a ledger statement, not coverage. No spec change.

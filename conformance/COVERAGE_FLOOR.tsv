@@ -552,8 +552,13 @@
 # note quoting the ruling. A LEDGER statement, not coverage: no test was added. `--ratchet --base-ref origin/main` said
 # "Set the floor to harness 427, lint 34, untested 425".
 #
+# board 203 item (6) (base 322d46d + #578): lint 34 -> 35, untested 425 -> 424, harness 427 unmoved. KISS-CONFORM-6.11-0003 was `untested`
+# (not harness) and is now enforced by the determinism import-site check added to tools/kiss_tables.py (a clause the lint set newly
+# gains: documentary enforcement, not a behavioural downgrade). `--ratchet --base-ref origin/main` said "the lint SET changed"; floor
+# set deliberately to harness 427, lint 35, untested 424.
+#
 # key	value
 harness	427
-lint	34
-untested	425
+lint	35
+untested	424
 proven	20

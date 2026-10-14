@@ -192,6 +192,10 @@ def check(spec_dir):
     # of the enum across the suite must carry EXACTLY the canonical member set.
     violations += check_determinism_enum(spec_dir)
 
+    # (4b) every importing sub-standard spells the determinism members verbatim
+    # (KISS-CONFORM-6.11-0003) - the member-spelling counterpart of (4)'s set check.
+    violations += check_determinism_import_sites(spec_dir)
+
     # (5) the compute-fidelity (MathFidelity) enum — owned by KISS-OPS-6.17-0001,
     # same import-never-re-fork rule as the determinism enum.
     violations += check_mathfidelity_enum(spec_dir)
@@ -250,6 +254,54 @@ def check_determinism_enum(spec_dir):
                            f"(vs KISS-OPS-6.0-0001 owner)")
     if not owner_seen:
         out.append("KISS-OPS-6.0-0001 owner: no canonical determinism enum found in ops.md")
+    return out
+
+
+# The sub-standards that IMPORT the determinism enum (KISS-CONFORM-6.11-0003): Synth, Consume,
+# Emit, Contract, and Conform (its §6.0 class selection). Ops is the owner, not an import site.
+DETERMINISM_IMPORT_SITES = ("synth", "consume", "emit", "contract", "conform")
+
+# Class-name keys: a backticked or bold span that normalises (lower-cased, letters only) to one
+# of these names a determinism class, so anything but the canonical spelling is a textual fork.
+_DETERMINISM_KEYS = {"exactbyte", "ulptolerance", "ulptol", "orderinvariant",
+                     "orderinvariantnondeterministic"}
+
+
+def import_site_violations(stem, text):
+    """One import site's violations (pure; `text` is the sub-standard's markdown).
+
+    (a) every canonical member MUST appear spelled verbatim at least once, so the import
+        is real; (b) no backticked or bold span may be a case/punctuation variant of a
+        member (`ULP-tolerance`, `Exact-byte`, a bare `order-invariant`). The brace-form
+        check (`check_determinism_enum`) already covers re-forked SETS; this covers a
+        re-spelled MEMBER. Free prose ("exact byte") and identifiers inside test names
+        are out of scope by construction: only a whole backticked/bold span is read."""
+    out = []
+    text = text.replace("\r\n", "\n")
+    for member in sorted(DETERMINISM_MEMBERS):
+        if member not in text:
+            out.append(f"{stem}.md never spells determinism class `{member}` verbatim "
+                       f"(KISS-CONFORM-6.11-0003: not an import site of the KISS-Ops enum)")
+    spans = [m.group(1) for m in re.finditer(r"`([^`\n]+)`", text)]
+    spans += [m.group(1) for m in re.finditer(r"\*\*([^*\n]+)\*\*", text)]
+    for span in spans:
+        key = re.sub(r"[^a-z]", "", span.lower())
+        if key in _DETERMINISM_KEYS and span not in DETERMINISM_MEMBERS:
+            out.append(f"{stem}.md forks the determinism class spelling: `{span}` "
+                       f"(canonical members: {sorted(DETERMINISM_MEMBERS)}; KISS-CONFORM-6.11-0003)")
+    return out
+
+
+def check_determinism_import_sites(spec_dir):
+    """KISS-CONFORM-6.11-0003: every importing sub-standard spells the KISS-Ops determinism
+    enum verbatim and does not textually fork it."""
+    out = []
+    for stem in DETERMINISM_IMPORT_SITES:
+        p = os.path.join(spec_dir, stem + ".md")
+        if not os.path.exists(p):
+            out.append(f"{stem}.md not found for the determinism import-site lint")
+            continue
+        out += import_site_violations(stem, open(p, encoding="utf-8").read())
     return out
 
 
@@ -694,6 +746,8 @@ COVERS = [
      "a sub-standard re-forks the determinism/fidelity enum instead of importing it"),
     ("KISS-OPS-6.17-0001",
      "a sub-standard re-forks the compute-fidelity (MathFidelity) enum instead of importing it"),
+    ("KISS-CONFORM-6.11-0003",
+     "an importing sub-standard (Synth/Consume/Emit/Contract/Conform) re-spells a determinism class or never spells one verbatim"),
     ("KISS-CONSUME-6.4-0001",
      "a refusal-taxonomy restatement drops/renames one of the four categories"),
     ("KISS-CONTRACT-6.2-0001",

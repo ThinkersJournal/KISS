@@ -132,5 +132,37 @@ class RealSpecIsClean(unittest.TestCase):
         self.assertEqual(kt.check_dtype_layouts(SPEC_DIR), [])
 
 
+class DeterminismImportSites(unittest.TestCase):
+    """KISS-CONFORM-6.11-0003 - the member-spelling import-site lint, with a clean control and
+    mutations that each must be caught."""
+
+    GOOD = "`exact-byte` and `ULP/tolerance` and `order-invariant/nondeterministic` are imported.\n"
+
+    def test_clean_import_site_passes(self):
+        self.assertEqual(kt.import_site_violations("synth", self.GOOD), [])
+
+    def test_respelled_member_is_a_fork(self):
+        for bad in ("`ULP-tolerance`", "`Exact-byte`", "`order-invariant`", "**exact_byte**"):
+            v = kt.import_site_violations("emit", self.GOOD + f"Class {bad} here.\n")
+            self.assertEqual(len(v), 1, (bad, v))
+            self.assertIn("forks the determinism class spelling", v[0])
+
+    def test_missing_member_is_not_an_import(self):
+        v = kt.import_site_violations("consume", "`exact-byte` and `ULP/tolerance` only.\n")
+        self.assertEqual(len(v), 1)
+        self.assertIn("order-invariant/nondeterministic", v[0])
+
+    def test_prose_and_identifiers_are_out_of_scope(self):
+        v = kt.import_site_violations(
+            "contract", self.GOOD + "an exact byte compare; `test_x_exact_byte`; ULP tolerance.\n")
+        self.assertEqual(v, [])
+
+    def test_committed_spec_is_clean_and_control_has_hits(self):
+        self.assertEqual(kt.check_determinism_import_sites(SPEC_DIR), [])
+        # control: the lint's population is non-empty (all five sub-standards were read)
+        for stem in kt.DETERMINISM_IMPORT_SITES:
+            self.assertTrue(os.path.exists(os.path.join(SPEC_DIR, stem + ".md")), stem)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
