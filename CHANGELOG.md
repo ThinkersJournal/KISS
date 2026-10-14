@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.2 — 2026-10-13 — docs
+
+- `ROADMAP.md`: the ordered list of what each sub-standard must reach and what each consumer needs. No spec,
+  harness or corpus change.
+
 ## 0.2.1 — 2026-10-11 — corrective
 
 The spec rule is **unchanged** from 0.2.0 (Classify §6.6-0008 as amended by #520); the published goldens
