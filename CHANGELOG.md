@@ -5,7 +5,7 @@ second number.
 
 ## 0.2.40 — 2026-10-14 (allocated by the PM)
 
-- Portfolio hygiene (CodeRipper triage 2026-10-14), no behaviour change: `.github/CODEOWNERS` (`* @ciresnave`, WSP-001); top-level `permissions: contents: read` in `conformance.yml` and `traceability.yml` (SUP-008, 10 excessive-permissions findings; every `uses:` was already pinned to a full commit SHA); `docs/glossary.md`, an index of the vocabulary that points at each owning §3 (DOC-009; also serves kiss-ref). No spec change; floor unmoved.
+- Portfolio hygiene (CodeRipper triage 2026-10-14), no behaviour change: `.github/CODEOWNERS` (`* @ciresnave`, WSP-001); top-level `permissions: contents: read` in `conformance.yml` and `traceability.yml` (SUP-008, 10 excessive-permissions findings; every `uses:` was already pinned to a full commit SHA); `docs/glossary.md`, an index of the vocabulary that points at each owning §3 (DOC-009; also serves kiss-ref). `HANDOFF.md` rewritten to the state at 0.2.39. No spec change; floor unmoved.
 
 ## 0.2.39 — 2026-10-14 (allocated by the PM)
 
