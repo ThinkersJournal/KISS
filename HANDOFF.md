@@ -54,7 +54,7 @@ None (origin/main at conformance 0.2.20, 2026-10-14; this HANDOFF PR carries 0.2
    into `crates/kiss-ref-conformance/fixtures/kiss-corpus/`, add to the `FILES` list in `tests/kiss_corpus_vectors.rs`, update
    `PROVENANCE.md`, CHANGELOG. If kiss-ref cannot reproduce an integer/bool cell that is a [FINDING] (kiss-ref models no native Bool lane).
 2. R3.2 Ops, remaining candidates with a vector subject: `nextafter` value arm (6.9-0003; its typed-decline half has no vector form, so do
-   not back the clause), ~~`atan2` quadrants (6.9-0001)~~ done in this change (0.2.22, `ops-atan2-quadrants.json`, libm-backed oracle, not yet through kiss-ref), `sqrt` correct rounding (6.8-0003). The rest of Ops
+   not back the clause), ~~`atan2` quadrants (6.9-0001)~~ done in this change (0.2.22, `ops-atan2-quadrants.json`, libm-backed oracle, not yet through kiss-ref), ~~`sqrt` correct rounding (6.8-0003)~~ done (0.2.23, `ops-sqrt-rounding.json`, first arm only). The rest of Ops
    (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
 3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) — large; needs a design note before code.
 4. Waiting, do not start: R1.1/R1.2/R1.5/R1.8 and #462 (boarded, PM item 193); `ctr` derivation vectors wait on #543; Fuel's reply on
