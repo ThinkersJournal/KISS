@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.38 — 2026-10-14 (allocated by the PM)
+
+- Ledger notes only: the 30 bare `untested` KISS-GRAMMAR rows in `conformance/UNBACKED.tsv` each record what was searched for and a control (no synthesis channel, recognizer, KISS-Ops lookup or `op_identity` mapping in the reference crate). No category change, no test added; floor unmoved (harness 419, untested 447). No spec change.
+
 ## 0.2.37 — 2026-10-14 (allocated by the PM)
 
 - **Conform 6.13-0003 backed** (floor harness 418 -> 419, untested 448 -> 447): `test_conform_classify_exact_byte_and_registry_bundle` re-emits every bundled golden token under the exact-byte comparator and checks the bundled registry snapshot is versioned and has a row for every namespace the vectors name (renaming the `vulkan` row reds it).
