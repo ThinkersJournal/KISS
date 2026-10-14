@@ -88,13 +88,11 @@ fn find_msvc_default() -> Option<Msvc> {
                 else {
                     continue;
                 };
-                let Some(sdk_name) = sdk.file_name() else { continue };
-                let sdk_name = sdk_name.to_string_lossy().into_owned();
-                let inc = ver.join("include");
+                let Some(sdk_name) = sdk.file_name().map(|n| n.to_string_lossy().into_owned()) else { continue };
                 let s = |p: PathBuf| p.to_string_lossy().into_owned();
                 let include = format!(
                     "{};{};{};{}",
-                    s(inc),
+                    s(ver.join("include")),
                     s(kit.join(format!(r"Include\{sdk_name}\ucrt"))),
                     s(kit.join(format!(r"Include\{sdk_name}\um"))),
                     s(kit.join(format!(r"Include\{sdk_name}\shared"))),
