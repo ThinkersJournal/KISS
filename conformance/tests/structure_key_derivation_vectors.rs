@@ -72,6 +72,22 @@ fn test_derivation_vectors_pairs_that_must_agree_or_differ() {
     assert!(tok("work_class_1025_is_grid").contains("|grid|"));
 }
 
+// The innermost ACTIVE axis is axis `rank-1` whatever its extent (§6.3-0011, §6.3-0002, §6.5-0012): the
+// two worked examples of the clause, and the innermost-extent-0 case a consumer held open. Each token's
+// operand sub-key is `<layout>/<mask>/<width>/<bucket>/<flag>`; the bucket is its fourth `/` part. The
+// three buckets are DIFFERENT, so a deriver that skips unit/zero axes (or reads axis 0) cannot pass.
+#[test]
+fn derivation_vectors_innermost_axis_is_rank_minus_1_including_extents_one_and_zero() {
+    let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Token(t) => t,
+        Expect::Decline(e) => panic!("{name} declines: {e:?}"),
+    };
+    let bucket = |t: &str| t.split('|').nth(7).unwrap().split(';').next().unwrap().split('/').nth(3).unwrap().to_string();
+    assert_eq!(bucket(&tok("innermost_axis_extent_one_is_axis_rank_minus_1")), "da", "[4,1]: axis 1, E = 1");
+    assert_eq!(bucket(&tok("innermost_axis_extent_eight_after_unit_axis")), "d8", "[1,8]: axis 1, E = 8");
+    assert_eq!(bucket(&tok("innermost_axis_extent_zero_is_axis_rank_minus_1")), "da", "[8,0]: axis 1, E = 0, not d8");
+}
+
 // Backs: KISS-CLASSIFY-6.6-0014 — operands derive in CANONICAL order (inputs and in-place operands in
 // call order, then outputs), whatever order the caller listed them; an in-place operand is one input,
 // counted once, and is not repeated among the outputs.

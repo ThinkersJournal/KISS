@@ -202,6 +202,35 @@ fn boundary_cases(out: &mut Vec<DerivationVector>) {
     }
 }
 
+/// KISS-CLASSIFY-6.3-0011: the innermost ACTIVE axis is axis `rank-1`, including when its extent is `1`
+/// (no non-unit exclusion) and, by §6.3-0002 + §6.5-0012, including when it is `0` (bucket `da`). The
+/// first two are the clause's own worked examples (`[4,1]`, `[1,8]`); the third is the case a
+/// consumer (Unpopped) held open: `[8,0]` derives its bucket from axis 1 (`E = 0`), NOT from the outer
+/// axis. No earlier vector had an innermost extent of `0`.
+fn innermost_axis_cases(out: &mut Vec<DerivationVector>) {
+    let unary = |extents: &[i64], strides: &[i64]| {
+        cell(CUDA, vec![op(Input, "f32", extents, strides, 256), op(Output, "f32", extents, strides, 256)])
+    };
+    out.push(v(
+        "innermost_axis_extent_one_is_axis_rank_minus_1",
+        "KISS-CLASSIFY-6.3-0011",
+        "[4,1]: innermost active axis is axis 1 (extent 1: bucket da, width v1), not axis 0 (the clause's worked example)",
+        unary(&[4, 1], &[1, 1]),
+    ));
+    out.push(v(
+        "innermost_axis_extent_eight_after_unit_axis",
+        "KISS-CLASSIFY-6.3-0011",
+        "[1,8]: innermost active axis is axis 1 (extent 8: bucket d8) (the clause's worked example)",
+        unary(&[1, 8], &[8, 1]),
+    ));
+    out.push(v(
+        "innermost_axis_extent_zero_is_axis_rank_minus_1",
+        "KISS-CLASSIFY-6.5-0012",
+        "[8,0]: innermost active axis is axis 1 with E = 0: bucket da (6.5-0012 'covering ... E = 0'), NOT d8 from the outer axis",
+        unary(&[8, 0], &[1, 1]),
+    ));
+}
+
 fn class_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "sub_byte_dtype_i4",
@@ -316,6 +345,7 @@ pub fn vectors() -> Vec<DerivationVector> {
     a1_reductions(&mut out);
     frame_cases(&mut out);
     boundary_cases(&mut out);
+    innermost_axis_cases(&mut out);
     class_cases(&mut out);
     quantized_and_precision_cases(&mut out);
     decline_cases(&mut out);
