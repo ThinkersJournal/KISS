@@ -21,3 +21,7 @@ publish = false
 # default so `cargo test` needs no GPU/CUDA; enable with `--features cuda`. Adds
 # no crate dependency — the test shells out to `nvcc` and gates on it at runtime.
 cuda = []
+# Opt-in trust-but-verify profile (KISS-Conform §7.2-0003): promotes the consumer-verify check
+# to build-gating for an implementation that advertises it. Off by default; never alters the
+# default clause set (§7.2-0004).
+trust-but-verify = []

@@ -542,8 +542,13 @@
 # rebuilding the branch on the moved main, not kept from either side: `--ratchet --base-ref origin/main` said
 # "Set the floor to harness 396, lint 33, untested 479".
 #
+# board 203 item (1) (base 64e0cd8): harness 420 -> 427, untested 446 -> 439. Seven KISS-CONFORM clauses that had no subject
+# (6.12-0001/-0002/-0003, 6.13-0011, 7.2-0001/-0003/-0004) are now harness-backed by tests/consumer_verify.rs against the new
+# consumer_verify module (the executable consumer-verify check + the opt-in trust-but-verify profile). RE-DERIVED from the tool:
+# `--ratchet --base-ref origin/main` said "Set the floor to harness 427, lint 34, untested 439".
+#
 # key	value
-harness	420
+harness	427
 lint	34
-untested	446
+untested	439
 proven	20
