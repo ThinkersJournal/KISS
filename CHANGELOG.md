@@ -3,6 +3,12 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.24 — 2026-10-14
+
+- `HANDOFF.md` rewritten to the state at 0.2.23 (R3.2 atan2/sqrt vectors, kiss-ref 0.4.2-0.4.4 re-vendors, the PARTIAL
+  treatment of 6.8-0003, next actions). Docs only. `conformance/Cargo.toml` is set to 0.2.24: it had stayed at 0.2.21
+  while 0.2.22 and 0.2.23 landed (their entries are in this file; the crate manifest was not bumped).
+
 ## 0.2.23 — 2026-10-14
 
 - **`ops-sqrt-rounding.json` — the first `sqrt` vectors** (KISS-OPS-6.8-0003, ROADMAP R3.2): 24 f32 cells, class
