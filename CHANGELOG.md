@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.21 — 2026-10-14
+
+- `HANDOFF.md` rewritten to the state at 0.2.20 (R3.1 sidecars, integer/bool vectors, next actions). Docs only.
+
 ## 0.2.20 — 2026-10-14
 
 - **`ops-compare-bool.json` — the first comparison and `bool` vectors** (KISS-OPS-6.2-0005 / -0006, ROADMAP R3.2): 181

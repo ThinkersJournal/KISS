@@ -22,9 +22,9 @@
 
 ## Open KISS PRs
 
-KISS#553-slot: the sidecar PR (0.2.17) if open; otherwise none (origin/main `055ed018`, 2026-10-14, conformance 0.2.16). kiss-ref 0.4.1 merged (#54).
+None (origin/main at conformance 0.2.20, 2026-10-14; this HANDOFF PR carries 0.2.21 if open). kiss-ref 0.4.1 merged (#54); no open kiss-ref PR.
 
-## Current state at origin/main 055ed018 (conformance 0.2.16)
+## Current state at origin/main (conformance 0.2.20)
 
 - **#263 landed** (`sk5`, derived 7-class `cell_class`, `contract_version` 3); design in `docs/design-263-cell-class.md`.
   kiss-ref 0.4.0 is published (bound to `a33282c`); corpus re-pin is kiss-ref#54. Touch kiss-ref only on a PM task.
@@ -35,7 +35,11 @@ KISS#553-slot: the sidecar PR (0.2.17) if open; otherwise none (origin/main `055
 - **First second-party derivation runs** (Fuel#358, Baracuda): rulings in KISS#547. **Owed by implementations:** collapsed
   reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped: reduced innermost axis -> `v1`
   (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
-- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null` until ruled (second ASK sent).
+- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null`/UNSET until CireSnave rules (PM item 193; option C amends Appendix E).
+- **Integer / bool vectors (R3.2 Ops, 0.2.19-0.2.20):** `ops-int-wrap.json` (440, 6.2-0002) and `ops-compare-bool.json` (181,
+  6.2-0005/-0006). Both opt-in; **not yet run through kiss-ref or Fuel** (Fuel has a [NOTICE] for int-wrap, no reply). 6.2-0007 is
+  deliberately unbacked (bitwise/reduction/scan arms uncovered). Ratchet floor: harness 405, untested 472. OPS untraced 85.
+- **#387:** `--freeze-ready` now says existence-not-accuracy and prints PROVEN per sub-standard (0.2.16); the instrument/wording choice is boarded (PM 193).
 - **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)
@@ -46,7 +50,12 @@ KISS#553-slot: the sidecar PR (0.2.17) if open; otherwise none (origin/main `055
 
 ## Next actions
 
-1. R3.1: traceability ACCURACY (#387) and the clause sidecar (#144) — design first; both are instruments, not text.
-2. R3.2: the remaining untested Classify clauses are lint-bound or restatements (see KISS#542 body); look at Ops (88) next, starting with clauses consumers cite.
+1. **kiss-ref re-vendor** (kiss-ref PR, PM allocates): vendor `ops-int-wrap.json` + `ops-compare-bool.json` at the KISS main that has them
+   into `crates/kiss-ref-conformance/fixtures/kiss-corpus/`, add to the `FILES` list in `tests/kiss_corpus_vectors.rs`, update
+   `PROVENANCE.md`, CHANGELOG. If kiss-ref cannot reproduce an integer/bool cell that is a [FINDING] (kiss-ref models no native Bool lane).
+2. R3.2 Ops, remaining candidates with a vector subject: `nextafter` value arm (6.9-0003; its typed-decline half has no vector form, so do
+   not back the clause), `atan2` quadrants (6.9-0001; class ULP, certify), `sqrt` correct rounding (6.8-0003). The rest of Ops
+   (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
 3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) — large; needs a design note before code.
-4. Waiting, do not start: R1.1/R1.2/R1.5/R1.8 and #462 (boarded, PM item 193); `ctr` derivation vectors wait on #543.
+4. Waiting, do not start: R1.1/R1.2/R1.5/R1.8 and #462 (boarded, PM item 193); `ctr` derivation vectors wait on #543; Fuel's reply on
+   `ops-int-wrap.json`; Unpopped sk5 keyer; the four-way sk5 table.
