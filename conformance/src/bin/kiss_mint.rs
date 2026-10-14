@@ -9,6 +9,7 @@
 //!   corpus/ops-int-wrap.json          — KISS-OPS-6.2-0002: i8..u64 add/sub/mul wrap at the boundaries
 //!   corpus/ops-compare-bool.json      — KISS-OPS-6.2-0005/-0006: comparison -> one-byte bool mask; bool consumers read non-zero as true
 //!   corpus/ops-atan2-quadrants.json   — KISS-OPS-6.9-0001: f32 atan2 four-quadrant + signed-zero + inf cells, class ULP (never exact-byte, §6.8-0005)
+//!   corpus/ops-sqrt-rounding.json     — KISS-OPS-6.8-0003: f32 sqrt, class ULP bound 0 (the correctly-rounded arm; hard cases, exact squares, subnormals, +-0, +inf)
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -526,6 +527,71 @@ fn atan2_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.9-0001", &cells)
 }
 
+// ---- sqrt correct-rounding bundle (KISS-OPS-6.8-0003) ------------------------------------------
+//
+// WHY: §6.8-0003 pins `sqrt` as CORRECTLY ROUNDED on any target that guarantees it. A `sqrt` built as
+// `x * rsqrt(x)` or `exp(0.5 * log x)` passes a 2-ULP gate and is wrong by one ulp on specific inputs.
+//
+// SCOPE — what a vector can and cannot say: the clause has two arms. This bundle pins the FIRST
+// (correctly rounded: class ULP, `ulp_bound` 0, i.e. the exact result). A target that does not guarantee
+// correct rounding is held to its DECLARED tier (§6.8-0001) by the contract, not by this file; such a
+// target is expected to fail these cells, and a runner applies them only where the guarantee is claimed.
+// The expected value is Rust `f32::sqrt` (IEEE 754 correctly rounded on every Rust target); the test
+// recomputes each cell from an independent integer square root. Under the ULP comparator a zero result's
+// SIGN is not discriminated (totalOrder distance 0 between +0 and -0), so `sqrt(-0) = -0` is carried in the
+// cell but not enforced by it.
+//
+// EMITTED: exact squares, non-squares at odd and even exponents, one ulp either side of 1, 2 and 4, the
+// largest finite, the smallest normal, the largest and smallest subnormal, +-0, +inf.
+// NOT EMITTED: negative operands and NaN (a NaN is minted; which NaN is #396), f64 and narrow dtypes.
+fn sqrt_inputs() -> [(u32, &'static str); 24] {
+    [
+        (0x0000_0000, "zero"),
+        (0x8000_0000, "signed-zero"),
+        (0x3F80_0000, "exact-square"), // 1
+        (0x4080_0000, "exact-square"), // 4
+        (0x3E80_0000, "exact-square"), // 0.25
+        (0x4010_0000, "exact-square"), // 2.25
+        (0x3F80_0001, "one-ulp"),      // 1 + ulp
+        (0x3F7F_FFFF, "one-ulp"),      // 1 - ulp/2
+        (0x3F80_0003, "one-ulp"),
+        (0x4000_0000, "irrational"), // 2
+        (0x4000_0001, "irrational"), // 2 + ulp
+        (0x4040_0000, "irrational"), // 3
+        (0x4081_0000, "irrational"), // 4.03125
+        (0x4049_0FDB, "irrational"), // pi
+        (0x4120_0000, "irrational"), // 10
+        (0x3F00_0000, "irrational"), // 0.5
+        (0x7F7F_FFFF, "largest-finite"),
+        (0x7F7F_FFFE, "large"),
+        (0x0080_0000, "smallest-normal"),
+        (0x0080_0001, "smallest-normal"),
+        (0x007F_FFFF, "subnormal"), // largest subnormal
+        (0x0000_0001, "subnormal"), // smallest subnormal
+        (0x0000_0003, "subnormal"),
+        (0x7F80_0000, "inf"),
+    ]
+}
+
+fn sqrt_cell(tc: usize, bits: u32, tag: &str) -> String {
+    let r = f32::from_bits(bits).sqrt();
+    format!(
+        "    {{\"tcId\": {tc}, \"op\": \"sqrt\", \"dtype\": \"f32\", \"rounding\": \"roundTiesToEven\", \
+         \"inputs\": [{{\"role\":\"x\",\"dtype\":\"f32\",\"bits\":\"{}\"}}], \
+         \"expected\": {{\"dtype\":\"f32\",\"bits\":\"{}\"}}, \
+         \"class\": \"ULP\", \"ulp_bound\": 0, \"provenance\": \"oracle\", \
+         \"tags\": [\"{tag}\",\"6.8-0003\"], \
+         \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": 24}}}}",
+        hex(&bits.to_be_bytes()),
+        hex(&r.to_bits().to_be_bytes()),
+    )
+}
+
+fn sqrt_doc() -> String {
+    let cells: Vec<String> = sqrt_inputs().iter().enumerate().map(|(i, (b, t))| sqrt_cell(i + 1, *b, t)).collect();
+    bundle_doc("OPS", "KISS-OPS-6.8-0003", &cells)
+}
+
 // ---- comparison-mask + bool-normalization bundle (KISS-OPS-6.2-0005 / -0006) -----------------
 //
 // WHY: §6.2-0005 pins a comparison's result as a one-byte `bool` mask, byte 0 or 1 — "an `f32`
@@ -757,5 +823,6 @@ fn main() {
     write_bundle("/corpus/ops-int-wrap.json", &int_wrap_doc());
     write_bundle("/corpus/ops-compare-bool.json", &compare_bool_doc());
     write_bundle("/corpus/ops-atan2-quadrants.json", &atan2_doc());
+    write_bundle("/corpus/ops-sqrt-rounding.json", &sqrt_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }
