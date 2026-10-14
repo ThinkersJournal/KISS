@@ -3,6 +3,16 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.14 — 2026-10-14
+
+- **`ops-transcendental-nan.json` gains one vector (12 → 13): f64 `log` of a signaling NaN** (tcId 13,
+  `7FF0000000000001` → `7FF8000000000000`). Fuel's macOS CI leg measured Apple's f32 `logf` returning the
+  sNaN UNCHANGED (expf/sinf, and every x86 libm, quiet it): a reference that computes the NaN through a platform
+  libm rather than the §6.13 decomposition is not portable on this cell, and the f64 `log` had no cell to say
+  whether Apple's `log` does the same. Appended, so tcIds 1–12 are unchanged. **Consumers that pin this file's
+  vector count re-pin it** (kiss-ref's `kiss_corpus_vectors.rs` pins 12; vendoring this file without that edit
+  fails its blob/count guard, by design). No spec change.
+
 ## 0.2.13 — 2026-10-14
 
 - **GitHub Actions pinned to commit SHAs** (PM task, portfolio pin patch 2026-10-14): 15 mutable refs in

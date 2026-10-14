@@ -140,6 +140,10 @@ fn transcendental_nan_doc() -> String {
         nan_cell_f32(10, "sin", f32::NEG_INFINITY.to_bits(), A_SIN),
         nan_cell_f64(11, "log", (-1.0f64).to_bits(), A_LOG),
         nan_cell_f64(12, "sin", f64::INFINITY.to_bits(), A_SIN),
+        // Family B, f64 (appended: tcIds stay monotone). f64 `log` of a signaling NaN: Fuel measured Apple's f32 `logf` returning the sNaN UNCHANGED
+        // (a platform-libm result that a decomposition-computed reference would not give); the f64
+        // `log` was unmeasured because this corpus had no cell for it.
+        nan_cell_f64(13, "log", SNAN64, B),
     ];
     // The shared `ulp_metric` header says "totalOrder distance"; for THESE cells that is the wrong
     // comparator (a first-time reader, Fuel 2026-10-14, failed log(-1) on a negative qNaN).
