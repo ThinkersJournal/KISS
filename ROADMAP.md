@@ -66,7 +66,7 @@ Each consumer's binding today:
 | R1.3 | **Block-granularity collision above bucket saturation** (#222 candidate 2): block counts ≥ 16 derive identical cells. | Unpopped (same file, line 137) | recorded as a known limitation; **[rule]** only if someone wants finer buckets |
 | R1.4 | **Rule the open reading Unpopped still waits on**: §6.3-0011 "active axis" for zero extents. The spec text (§6.3-0011, §6.5-0002) now pins it; confirm with Unpopped it is no longer open and tell them where. | Unpopped CHANGELOG 0.13.0 | **[go]** — a question, then a pointer |
 | R1.5 | **Give `VariantFidelity` a home** (KISS-Emit category-(c) gap) or rule it stays out. | Unpopped `docs/deferred.md` ~448–462 | **[rule]** |
-| R1.6 | **A vector for KISS-CLASSIFY-6.8-0002** (target-capability matching) — none is vendorable today. | Unpopped `docs/deferred.md` ~1041 | **[go]** |
+| R1.6 | ~~A vector for KISS-CLASSIFY-6.8-0002~~ — **already exists**: `target_match_vectors` (8 pairs, `expect_match` verdicts, vocabulary-blind) in `structure_key_vectors.json` since #392 (2026-09-05). Unpopped's note that none is vendorable is stale; tell them. | Unpopped `docs/deferred.md` ~1041 | **done** (answer sent) |
 | R1.7 | **Namespace vocabulary decisions that are not ours**: widen the `cuda:` manifest from the 4-row dispatch set to the 13-token set is Baracuda's `vocabulary_version` call; KISS's part is only keeping `spec/namespaces/cuda.md` current. | Baracuda `CHANGELOG.md` alpha.91 | **[wait: PM/Baracuda]** |
 
 ### R2 — consumer asks that need new spec
@@ -106,7 +106,7 @@ Ordered by what unblocks a freeze claim, not by count.
 |---|---|---|
 | **Fuel** | R0.3 (answer) → R1.1 (Announce op identity) → R2.2 (`trunc`) → R2.3 (NaN corpus) → R2.5 (RFCs) | GAP-350 Baracuda's `sk5` keyer; its own Semantics op-DAG (KISS-Contract §6.4-0001) and `OpAttrs` canonical bytes; MX dtypes outside the closed set; SeamHello lacks availability list / contract-query frames; `revision_hash` is `u64` where KISS pins 32 bytes (`docs/outreach/kiss-conformance-and-divergences.md`, dated 2026-07-14 — may be stale) |
 | **Baracuda** | R1.7 (decision is its own) → R2.7 (open the thread) → R1.1 | `sk4`→`sk5` keyer and `contract_version` 3 (PM task issued); parses versions permissively where §6.7-0002 says MUST-reject; `rall`/`rlast` read side (agenda B2/E3, July — verify) |
-| **Unpopped** | R1.4 (pointer) → R1.6 (vector) → R1.2 (ruling) → R1.5 | re-vendor from `5b28bf5`. Its README holds re-vendoring of the dtype/op manifests "until the CRLF/LF generator fix lands": **measured here, both generators' `--stdout` paths already emit LF** (`python tools/kiss_dtypes.py --emit-manifest --stdout`, `…kiss_ops.py…`: 0 `` bytes at `5b28bf5`), so that hold is stale |
+| **Unpopped** | R1.4 (pointer) → R1.2 (ruling) → R1.5 | re-vendor from `5b28bf5`. Its README holds re-vendoring of the dtype/op manifests "until the CRLF/LF generator fix lands": **measured here, both generators' `--stdout` paths already emit LF** (`python tools/kiss_dtypes.py --emit-manifest --stdout`, `…kiss_ops.py…`: 0 `` bytes at `5b28bf5`), so that hold is stale |
 | **kiss-ref** | R2.4 (OpAttrs oracle) | models no `structure_key`/Contract by design; the `#[non_exhaustive]` reservation landed at 0.4.0; `op_manifest.json` now lists the §6.18 complex ops (`all_ops` = 122; #305's premise no longer holds — close it, R0.2) |
 | **lightbulb** | R2.1 (attention observability) | pinned at kiss-ref **0.2.0** — two minors behind 0.4.0; bumping is lightbulb's/the PM's |
 
