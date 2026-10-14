@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.42 — 2026-10-14 (allocated by the PM)
+
+- **Board 203 out-halves recorded** (ledger only; floor harness 427 unmoved, untested 439 -> 425): CireSnave ruled "I agree with the recommendations", so 14 rows move `untested` -> `blocked`, each note quoting the ruling: canonical-suite-artifact governance (6.3-0003/-0004, 8-0003/-0004/-0005/-0010; waits on #462), oracle-authoring provenance (6.5-0002/-0003/-0005; a record, not a test), and the cross-backend/emitter/lift/promotion fuzzer rows (6.6-0002/-0003/-0004/-0006/-0007; need a suite-registered emitter and a lifter outside this crate). Recategorising is a ledger statement, not coverage. No spec change.
+
 ## 0.2.41 — 2026-10-14 (allocated by the PM)
 
 - **Consumer-verify check and opt-in trust-but-verify profile shipped** (board 203 item 1; floor harness 420 -> 427, untested 446 -> 439): new `consumer_verify` module and `tests/consumer_verify.rs` back KISS-CONFORM-6.12-0001/-0002/-0003, 6.13-0011, 7.2-0001/-0003/-0004. The check reuses `comparator_for`/`compare_f32` and the `structure_key` accept-predicate; the `trust-but-verify` cargo feature (off by default) is the profile switch and never alters the default clause verdict. Scalar-unary f32 only; the declared ULP is caller-supplied (no Guarantees-tier ULP reader yet). No spec change.

@@ -547,8 +547,13 @@
 # consumer_verify module (the executable consumer-verify check + the opt-in trust-but-verify profile). RE-DERIVED from the tool:
 # `--ratchet --base-ref origin/main` said "Set the floor to harness 427, lint 34, untested 439".
 #
+# board 203 items 3/4/5 out-halves: untested 439 -> 425, harness 427 and lint 34 unmoved. Fourteen ruled-OUT rows
+# (6.3-0003/-0004, 8-0003/-0004/-0005/-0010, 6.5-0002/-0003/-0005, 6.6-0002/-0003/-0004/-0006/-0007) move untested -> blocked, each
+# note quoting the ruling. A LEDGER statement, not coverage: no test was added. `--ratchet --base-ref origin/main` said
+# "Set the floor to harness 427, lint 34, untested 425".
+#
 # key	value
 harness	427
 lint	34
-untested	439
+untested	425
 proven	20
