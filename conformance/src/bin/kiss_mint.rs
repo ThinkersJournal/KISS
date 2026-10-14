@@ -8,6 +8,7 @@
 //!                                        cells (ties, zero signs, integral, inf, subnormal); no NaN (#396).
 //!   corpus/ops-int-wrap.json          — KISS-OPS-6.2-0002: i8..u64 add/sub/mul wrap at the boundaries
 //!   corpus/ops-compare-bool.json      — KISS-OPS-6.2-0005/-0006: comparison -> one-byte bool mask; bool consumers read non-zero as true
+//!   corpus/ops-atan2-quadrants.json   — KISS-OPS-6.9-0001: f32 atan2 four-quadrant + signed-zero + inf cells, class ULP (never exact-byte, §6.8-0005)
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -453,6 +454,74 @@ fn int_wrap_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.2-0002", &cells)
 }
 
+// ---- atan2 quadrant bundle (KISS-OPS-6.9-0001) -----------------------------------------------
+//
+// WHY: §6.9-0001 pins `atan2(y=a, x=b)` as the FOUR-quadrant arctangent with the IEEE 754 +-0
+// conventions (the sign of a zero operand selects the quadrant). `atan(y/x)` passes every x > 0 cell
+// and fails every x < 0 / x = +-0 cell; the corpus carried no `atan2` cell at all.
+//
+// CLASS: ULP, never exact-byte (§6.8-0005 / `test_ops_atan2_class_is_ulp`). The expected value is
+// libm-backed: f64 `atan2` rounded once to f32. That is NOT a correctly-rounded oracle (there is no
+// `atan2` hp atom yet), so `ulp_bound` is the declared tier (4), and every ordinary cell sits well
+// away from a rounding boundary; the special cells (+-0, +-inf) are fixed by IEEE 754 Annex F
+// (+-pi, +-pi/2, +-pi/4, +-3pi/4, +-0) and carry the same class.
+//
+// EMITTED: one ordinary cell per quadrant and per axis direction, the signed-zero matrix
+// (y,x in {+0,-0}), y = +-0 against a finite x of each sign, x = +-0 against a finite y of each sign,
+// and the +-inf matrix. NOT EMITTED: NaN operands (which NaN is #396's question), f64/narrow dtypes.
+fn atan2_doc() -> String {
+    const POS0: u32 = 0x0000_0000;
+    const NEG0: u32 = 0x8000_0000;
+    const ONE: u32 = 0x3F80_0000;
+    const NEG1: u32 = 0xBF80_0000;
+    const TWO: u32 = 0x4000_0000;
+    const NEG2: u32 = 0xC000_0000;
+    const PINF: u32 = 0x7F80_0000;
+    const NINF: u32 = 0xFF80_0000;
+    let cells_in: [(u32, u32, &str); 28] = [
+        (ONE, ONE, "quadrant-1"),
+        (ONE, NEG1, "quadrant-2"),
+        (NEG1, NEG1, "quadrant-3"),
+        (NEG1, ONE, "quadrant-4"),
+        (TWO, ONE, "quadrant-1"),
+        (ONE, NEG2, "quadrant-2"),
+        (NEG2, NEG1, "quadrant-3"),
+        (NEG1, TWO, "quadrant-4"),
+        (POS0, POS0, "signed-zero"),
+        (POS0, NEG0, "signed-zero"),
+        (NEG0, POS0, "signed-zero"),
+        (NEG0, NEG0, "signed-zero"),
+        (POS0, ONE, "y-zero"),
+        (NEG0, ONE, "y-zero"),
+        (POS0, NEG1, "y-zero"),
+        (NEG0, NEG1, "y-zero"),
+        (ONE, POS0, "x-zero"),
+        (ONE, NEG0, "x-zero"),
+        (NEG1, POS0, "x-zero"),
+        (NEG1, NEG0, "x-zero"),
+        (PINF, PINF, "inf"),
+        (PINF, NINF, "inf"),
+        (NINF, PINF, "inf"),
+        (NINF, NINF, "inf"),
+        (ONE, PINF, "inf"),
+        (ONE, NINF, "inf"),
+        (PINF, ONE, "inf"),
+        (NINF, NEG1, "inf"),
+    ];
+    let mut cells = Vec::new();
+    for (i, (yb, xb, tag)) in cells_in.iter().enumerate() {
+        let r = f64::atan2(f32::from_bits(*yb) as f64, f32::from_bits(*xb) as f64) as f32;
+        cells.push(format!(
+            "    {{\"tcId\": {tc}, \"op\": \"atan2\", \"dtype\": \"f32\", \"rounding\": \"roundTiesToEven\",              \"inputs\": [{{\"role\":\"a\",\"dtype\":\"f32\",\"bits\":\"{}\"}},              {{\"role\":\"b\",\"dtype\":\"f32\",\"bits\":\"{}\"}}],              \"expected\": {{\"dtype\":\"f32\",\"bits\":\"{}\"}},              \"class\": \"ULP\", \"ulp_bound\": 4, \"provenance\": \"oracle\",              \"tags\": [\"{tag}\",\"6.9-0001\"],              \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": 24}}}}",
+            hex(&yb.to_be_bytes()),
+            hex(&xb.to_be_bytes()),
+            hex(&r.to_bits().to_be_bytes()),
+            tc = i + 1,
+        ));
+    }
+    bundle_doc("OPS", "KISS-OPS-6.9-0001", &cells)
+}
+
 // ---- comparison-mask + bool-normalization bundle (KISS-OPS-6.2-0005 / -0006) -----------------
 //
 // WHY: §6.2-0005 pins a comparison's result as a one-byte `bool` mask, byte 0 or 1 — "an `f32`
@@ -683,5 +752,6 @@ fn main() {
     write_bundle("/corpus/ops-rounding.json", &rounding_doc());
     write_bundle("/corpus/ops-int-wrap.json", &int_wrap_doc());
     write_bundle("/corpus/ops-compare-bool.json", &compare_bool_doc());
+    write_bundle("/corpus/ops-atan2-quadrants.json", &atan2_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }

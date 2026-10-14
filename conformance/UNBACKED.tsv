@@ -472,7 +472,6 @@ KISS-OPS-6.3-0005	test_ops_floor_ops_justified_atoms	untested
 KISS-OPS-6.8-0002	test_ops_transcendental_no_cross_lang_identity	untested	
 KISS-OPS-6.8-0003	test_ops_sqrt_correctly_rounded_or_ulp	untested	
 KISS-OPS-6.8-0004	test_ops_special_function_atoms	untested	
-KISS-OPS-6.9-0001	test_ops_atan2_quadrants	untested	
 KISS-OPS-6.9-0003	test_ops_nextafter_own_lattice	untested	
 KISS-OPS-7.1-0001	test_ops_mandatory_core_is_floor	untested	
 KISS-OPS-7.1-0002	test_ops_unknown_op_typed_decline	untested	
