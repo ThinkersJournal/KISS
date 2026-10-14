@@ -1,4 +1,4 @@
-<!-- Written 2026-10-14 against origin/main 507f691 (conformance 0.2.35). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-14 against origin/main ff12265 (conformance 0.2.39; #576 carries 0.2.40). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.2.35). `conformance/Cargo.toml` and the top `CHANGELOG.md`
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.2.39; #576 = 0.2.40). `conformance/Cargo.toml` and the top `CHANGELOG.md`
    heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,37 +28,38 @@
 
 ## Open PRs
 
-None on KISS (main = 507f691, conformance 0.2.35). kiss-ref main = 0.4.5 (all re-vendors merged: int/bool, atan2, sqrt, nextafter);
-kiss-ref is a **non-party** for OpAttrs (PM ruling). This HANDOFF PR carries 0.2.36 if open.
+**KISS#576** (hygiene, 0.2.40, PM-allocated): `.github/CODEOWNERS`, workflow `permissions: contents: read`, `docs/glossary.md` index,
+plus this HANDOFF. Waiting on checks and the PM's gate; on merge: `git worktree remove C:/Projects/kiss-hyg`, delete branch `kiss-hygiene`.
+CodeRipper rules read the COMMITTED tree: an uncommitted fix still shows as a finding. Build it from a worktree of coderipper `origin/main`
+with `CARGO_TARGET_DIR` in the scratchpad; the binary under `C:/Projects/coderipper/target/debug` is stale.
 
-## State at 0.2.35
+## State at 0.2.39 (main ff12265)
 
-- **Floor** harness 418, lint 34, untested 448, proven 20. Classify 88/120. 539 clauses without a harness test: 446 untested, 34 lint,
-  21 blocked, 12 definitional, 20 attested, 4 untestable, 2 decredited.
-- **R3.2 Ops vectors all landed** (opt-in, no spec change): `ops-int-wrap` (440), `ops-compare-bool` (181), `ops-atan2-quadrants` (28),
-  `ops-sqrt-rounding` (24, 6.8-0003 first arm: PARTIAL), `ops-nextafter` (40, value half: PARTIAL). kiss-ref reproduces all.
-  Fuel measured int-wrap: 275 PASS / 0 FAIL / 55 ERROR (i8, GAP-356) / 110 NOT-EXPRESSIBLE.
-- **R2.4 slice 1 landed:** `opattrs_value_vectors.json` (133 encode, 7 equivalences, 112 distinct; 15 of 17 ops) by a generic encoder,
-  cross-checked vs the hand encoders and Appendix E.2. **Live OpAttrs pair count is 0**: Fuel's `to_canonical_bytes` is an envelope that
-  diverges from 6.19.3 (its GAP-305, OPEN); Baracuda emits none. Not independent evidence (E6).
-- **Spec finding, a [rule] (R1.9, board 193, not ours):** `reduce`/`prefix_scan` carry sk4 `accumulator`+`math_precision` (6 bytes) but
-  6.19.2 pins no ordinal table for `math_precision`; Appendix E.2 and `encode_reduce`/`encode_prefix_scan` still show 4 bytes. Not minted.
-- **R1.4 done:** `structure_key_derivation_vectors.json` is 36 vectors (blob 697aa543); `[8,0]` -> `da` per 6.3-0011+6.3-0002+6.5-0012,
-  reference-deriver output not an independent golden.
-- **Classify tail:** the 6 `untested` rows (6.0-0001, 6.1-0012, 6.3-0004, 6.3-0009, 6.3-0010, 6.8-0017) each say what was searched for.
-  They need a SUBJECT (a quant-record model, a symbolic-extent model, a complex byte reader): ask the architect on the board if that is
-  a spec change; do not write tests with no subject.
+- **Floor** harness 420, lint 34, untested 446, proven 20. Every KISS-GRAMMAR and KISS-CONFORM `untested` row now carries a reason
+  (#574, #575); none is bare. Re-measure with `python tools/kiss_trace.py --report` at the ref you work from.
+- **Backed this session:** CONFORM-6.13-0003 (#573), 6.13-0012 (#575). PARTIAL, floor unmoved: 6.13-0008 (no Contract-side opaque embed),
+  6.13-0009 (Grammar vectors 2 of 5; G2/G3/G5 unrendered). GRAMMAR-6.6-0003/-0004/-0005 stay untested: the crate has no cell-class field
+  and validates neither op names nor role tokens; a test needs new reference behaviour.
+- **R1.4 CLOSED:** Unpopped 0.16.0 derives `[8,0]` as `da/v1`, matching our 36-vector file. **Classify:** 88 backed / 32 ledgered /
+  0 untraced of 120; the 6 `untested` rows have no subject and wait on an architect ruling.
+- **GAP-305** (Fuel's OpAttrs encoder diverges from 6.19.3) is OPEN, owned by the fuel lane, queued after nn .13. Live OpAttrs pair count 0.
+- Earlier state unchanged: R3.2 Ops vectors landed (int-wrap, compare-bool, atan2, sqrt PARTIAL, nextafter PARTIAL); R2.4 slice 1 landed;
+  R1.9 (`reduce`/`prefix_scan` `math_precision` ordinal table) is a [rule] not minted.
 
 ## Waiting (do not start)
 
-- **R1.1** (Announce op identity), **R1.2** (#222 scale-dtype keying), **R1.5** (VariantFidelity), **R1.8/#543** (batch role; `ctr` vectors,
-  6.6-0012/-0016), **R1.9**, #462 (signer), #387 instrument, sidecar fields: all [rule], boarded under PM 193. Timing is CireSnave's.
-- Fuel (idle, queued): body-diff of its clause-derived OpAttrs vectors vs our file (will send a [FINDING]); re-vendor of the 36-vector
-  derivation file; Unpopped: whether it reads `[8,0]` as `da` (no reply yet). Baracuda sk5 keyer, Unpopped sk5 keyer, four-way sk5 table.
+- **Board 203 (CireSnave): the ~40 Conform rows with no subject.** My [ASK] recommended: consumer-verify check IN (with a profile
+  feature), structural op-DAG equality IN, IR-DAG fuzzer SPLIT (generator in; cross-backend/emitter rows out -> `blocked`), canonical
+  suite artifact OUT (needs a signer, #462), oracle provenance record OUT, determinism-enum import-site lint IN. **No recategorisation
+  and no tests until ruled.**
+- Board 193/201 [rule] items: R1.1, R1.2, R1.5, R1.8/#543, R1.9, #462, #387 instrument, sidecar fields. Timing is CireSnave's.
+- Fuel: body-diff of its clause-derived OpAttrs vectors (will send a [FINDING]); re-vendor of the 36-vector file. Baracuda/Unpopped sk5
+  keyers, four-way sk5 table.
 - Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 
 ## Next actions
 
-1. Read `list_peers`, `check_messages`; answer any [FINDING] from Fuel/Unpopped by re-measuring at their `origin/main` first.
-2. Take the next **[go]** in `ROADMAP.md`; R2.4 and R3.2 have none left until a second encoder or R1.9 lands. If none, ask the PM.
+1. `git fetch`; read `gh pr view 576`; if merged, clean up (above). Read `list_peers` / `check_messages` (the PM's id rotates: match cwd
+   `C:\Projects`); answer any [FINDING] by re-measuring at the sender's `origin/main` first.
+2. If board 203 is ruled, the rulings define the next slices; otherwise no [go] item exists: report [STATUS] to the PM and idle.
 3. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext]: nothing to build from inside this repo.
