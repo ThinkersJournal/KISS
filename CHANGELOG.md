@@ -12,8 +12,9 @@ second number.
   **Scope:** only the FIRST arm of 6.8-0003 is pinned; a target that does not guarantee correct rounding is held to
   its declared tier (6.8-0001) by the contract, and is expected to fail these cells (a runner applies them where the
   guarantee is claimed). The sign of a zero result is not discriminated by the ULP comparator. `mint_sqrt.rs`
-  recomputes every cell from an independent exact integer square root with explicit RNE (not `f32::sqrt`). Backs
-  6.8-0003: floor harness 406 -> 407, untested 471 -> 470. Regenerating the other bundles is byte-identical.
+  recomputes every cell from an independent exact integer square root with explicit RNE (not `f32::sqrt`).
+  **6.8-0003 is counted as PARTIAL, not backed:** the floor does not move (harness 406, untested 471) and its
+  `UNBACKED.tsv` row stays `untested` with a note saying what is covered (the 6.2-0007 precedent). Regenerating the other bundles is byte-identical.
   Opt-in file; not yet run through kiss-ref or Fuel. No spec change.
 
 ## 0.2.22 — 2026-10-14

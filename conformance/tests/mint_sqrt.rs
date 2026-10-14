@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! `sqrt` correct-rounding vectors (KISS-OPS-6.8-0003, first arm). Every cell's expected value is
+//! `sqrt` correct-rounding vectors (§6.8-0003, first arm; the clause is NOT counted as backed). Every cell's expected value is
 //! recomputed from an INDEPENDENT exact integer square root with explicit round-to-nearest-even (not
 //! `f32::sqrt`, which `kiss_mint` uses), and the cells are checked to include the inputs on which a
 //! "within 1-2 ULP" implementation is wrong. The clause's second arm (a target that does not guarantee
@@ -54,10 +54,10 @@ fn model(x: f32) -> f32 {
     (q as f64 * 2f64.powi(p)) as f32
 }
 
-// Backs: KISS-OPS-6.8-0003 — first arm only: `sqrt` is correctly rounded (class ULP, bound 0) on the
-// hard cases, exact squares, subnormals and the extremes; the declared-tier arm is not a vector.
+// Deliberately NOT a backing test for the clause (§6.8-0003 has two arms and this pins one): the
+// vector instrument is checked here, and the ledger row stays `untested` with a note saying so.
 #[test]
-fn test_ops_sqrt_correctly_rounded_or_ulp() {
+fn sqrt_first_arm_cells_match_the_integer_model() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-sqrt-rounding.json"))
         .expect("bundle committed; run `cargo run --bin kiss_mint`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
