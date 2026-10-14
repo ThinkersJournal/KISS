@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.9 — 2026-10-14
+
+- **The freeze hard-fail the `strict` job promised now exists** (#524): `tools/kiss_freeze_gate.py` reads each
+  spec's front-matter `Maturity stage`; any sub-standard that is **Frozen** in the tree MUST pass
+  `kiss_trace.py --freeze-ready <SUB>` or the blocking `kiss-trace` job fails (a promotion in the PR and a
+  regression of an already-Frozen sub-standard are both caught). Three outcomes kept apart — CLEAN 0, BLOCKED 1,
+  DECLINED 2 (an unreadable stage row or base ref is inconclusive, not a pass). Because the whole tree is
+  Draft, the controls (`tools/test_kiss_freeze_gate.py`, 10 tests, run in CI) seed the red and run the real
+  `--freeze-ready` once to show the BLOCKED arm is not an artifact of an injected callable. **Not covered:**
+  who signed (#462), traceability accuracy (#387), conditions 1 and 2. CI/tooling only; no spec, harness or
+  corpus change.
+
 ## 0.2.8 — 2026-10-14
 
 - **New corpus artifact `conformance/corpus/structure_key_derivation_vectors.json`** (30 cells; R3.3) and the
