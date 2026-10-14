@@ -29,9 +29,32 @@ fn newest_subdir(root: &Path) -> Option<PathBuf> {
     dirs.pop()
 }
 
-/// Discover an MSVC toolchain by globbing the default VS install roots. Returns
-/// `None` if none is present (the differential slice then skips gracefully).
+/// The environment variable that swaps the C compiler the harness drives (#139). It must name a
+/// `cl.exe`-compatible driver — `clang-cl.exe` is the intended second toolchain — and the MSVC
+/// install is still used for the INCLUDE/LIB search paths. **Set but unusable is a hard error, never
+/// a silent fall back to `cl.exe`**: that fallback would make a "second toolchain" run a first-toolchain
+/// run with a green result, which is exactly the diversity-asserted-never-exercised defect #139 is.
+pub const COMPILER_OVERRIDE_ENV: &str = "KISS_C_COMPILER";
+
+/// Discover the C toolchain: MSVC by default, or the `cl`-compatible driver named by
+/// [`COMPILER_OVERRIDE_ENV`] (with MSVC's include/lib paths). Returns `None` if no MSVC is present
+/// (the differential slice then skips gracefully); panics if the override is set and unusable.
 pub fn find_msvc() -> Option<Msvc> {
+    let mut m = find_msvc_default()?;
+    if let Some(p) = std::env::var_os(COMPILER_OVERRIDE_ENV) {
+        let p = PathBuf::from(p);
+        assert!(
+            p.is_file(),
+            "{COMPILER_OVERRIDE_ENV} is set to {p:?}, which is not a file: refusing to fall back to cl.exe \
+             (a second-toolchain run must not silently be a first-toolchain run)"
+        );
+        m.cl = p;
+    }
+    Some(m)
+}
+
+/// Discover an MSVC toolchain by globbing the default VS install roots.
+fn find_msvc_default() -> Option<Msvc> {
     // VS install roots to probe (Community/Professional/Enterprise/BuildTools).
     let vs_roots = [
         r"C:\Program Files\Microsoft Visual Studio",
@@ -122,6 +145,24 @@ pub fn compile_c_to_dll(msvc: &Msvc, src: &Path, out_dir: &Path) -> Result<PathB
 mod tests {
     use super::*;
     use std::io::Write;
+
+    /// #139: when the override is set, the compiler that actually runs is the one named — and it is
+    /// not MSVC. `clang-cl --version` prints "clang version"; `cl.exe` prints its banner on stderr
+    /// and rejects `--version`. A run that silently used the default would fail here.
+    #[test]
+    fn the_override_compiler_is_the_one_that_runs() {
+        let Some(over) = std::env::var_os(COMPILER_OVERRIDE_ENV) else {
+            return; // default leg: the override is not exercised (the windows-clang-cl job sets it)
+        };
+        let msvc = crate::runtime_gate_some!("msvc", find_msvc());
+        assert_eq!(msvc.cl, PathBuf::from(&over), "find_msvc must return the overridden driver");
+        let out = Command::new(&msvc.cl).arg("--version").output().expect("spawn the override compiler");
+        let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+        assert!(
+            text.to_lowercase().contains("clang"),
+            "the override compiler does not identify as clang: {text}"
+        );
+    }
 
     #[test]
     fn compiles_a_trivial_c_kernel_to_a_dll() {

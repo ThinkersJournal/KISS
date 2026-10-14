@@ -3,6 +3,16 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.10 — 2026-10-14
+
+- **A second C toolchain for the differential slice** (#139, ROADMAP R3.4): `KISS_C_COMPILER` swaps the
+  harness's `cl.exe` for a `cl`-compatible driver (`clang-cl`), keeping MSVC's include/lib paths; set-but-
+  unusable panics instead of silently falling back to `cl.exe`. New CI job `windows-clang-cl` runs the whole
+  suite that way and **fails, never skips, if LLVM is absent**; a test asserts the compiler that runs
+  identifies as clang. Not a required status context. **Not demonstrated by this PR's author on this box**
+  (no clang here): the job is the evidence, and a red there is a finding about the harness, not about this
+  change. The loader stays Win32-only; portability is a separate question. No spec, corpus or artifact change.
+
 ## 0.2.9 — 2026-10-14
 
 - **The freeze hard-fail the `strict` job promised now exists** (#524): `tools/kiss_freeze_gate.py` reads each

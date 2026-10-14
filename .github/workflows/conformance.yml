@@ -121,6 +121,31 @@ jobs:
           name: runlist-windows
           path: runlist-windows.txt
 
+  # A SECOND C toolchain (#139). Every C artifact the harness differences was produced by MSVC
+  # `cl.exe`, so an accidental toolchain-ism was invisible: toolchain independence was asserted
+  # (KISS-CONFORM-6.5-0015 keys on ABI properties) and never demonstrated. This leg runs the same
+  # suite with the compiler swapped for `clang-cl` (KISS_C_COMPILER, harness/msvc.rs). The runner
+  # image ships LLVM; the first step FAILS if it is absent rather than skipping — a skipped second
+  # toolchain is the single-toolchain run this job exists to replace. Not a required status context
+  # (branch protection is unchanged); it is evidence, and a red here is a real finding.
+  windows-clang-cl:
+    runs-on: windows-latest
+    env:
+      KISS_C_COMPILER: C:\Program Files\LLVM\bin\clang-cl.exe
+    steps:
+      - uses: actions/checkout@v7
+      - name: The second toolchain is present (fail, never skip)
+        shell: bash
+        run: |
+          if [ ! -f "$KISS_C_COMPILER" ]; then
+            echo "::error title=clang-cl missing::$KISS_C_COMPILER is not on this runner; a skipped second toolchain would be a single-toolchain run reported green (#139)"
+            exit 1
+          fi
+          "$KISS_C_COMPILER" --version
+      - name: Reference conformance harness under clang-cl (the §6.13-0006 differential slice)
+        working-directory: conformance
+        run: cargo test
+
   # MSRV (#369). `rust-version` was DECLARED and never MEASURED -- nothing had ever built
   # at the declared floor, so the number was unverified in BOTH directions. This is the
   # first measurement, and it can come back wrong either way; rows 2 and 3 of the table in
