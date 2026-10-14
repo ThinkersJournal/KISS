@@ -53,11 +53,13 @@ Each consumer's binding today:
 | # | Item | Why / who needs it | State |
 |---|---|---|---|
 | R0.1 | **Refresh `HANDOFF.md`** to current state (it still describes the #263 decision as pending). | every restarted KISS session reads it first | **[go]** — first item after this file |
-| R0.2 | **Close the issues the merged work answered** (#263, #520, #477 at least; confirm #298, #305, #219, #364 against `origin/main` before closing, one at a time). | the board reads open issues as open work; consumers cite them (#520 is quoted in Unpopped's CHANGELOG as "raised with the PM") | **[go]**; closing is the PM's/maintainer's act — I draft the list with evidence |
+| R0.2 | **Close the issues the merged work answered** (#263, #520, #477 at least; confirm #298, #305, #219, #364 against `origin/main` before closing, one at a time). | the board reads open issues as open work; consumers cite them (#520 is quoted in Unpopped's CHANGELOG as "raised with the PM") | **ready list below**; closing is CireSnave's, not the lane's |
 | R0.3 | **Answer Fuel GAP-349** (`F8E6M2`): *reserved at sk5 means a `structure_key` using it in any dtype position typed-declines (§6.1-0001/-0013); nothing forbids an implementation computing it internally, and nothing lets it be advertised through a key until a future additive schema event activates it.* Fuel keeps it internal or stops computing it — a Fuel choice, not a KISS one. | Fuel `docs/gaps.md` GAP-349, "architect ruling (PM 2026-10-11)" | **[go]** (answer; no spec change needed) |
 | R0.4 | **Re-measure the differentials at `5b28bf5`** now that Fuel binds `sk5` (the 2026-10-09 results doc is against `904a4b4` and `sk4`). | Fuel, Unpopped, Baracuda each cite that doc for "what passes" | **[wait: Baracuda sk5 keyer (fuel GAP-350)]** for a four-way result; Fuel + Unpopped legs can be re-run now |
 
 ### R1 — finish what the `sk5` event left open (spec-side, consumer-visible)
+
+**R1.1, R1.2, R1.5 and the freeze-signer question (#462) are boarded for CireSnave as one item (PM board 193, 2026-10-14); none is started.**
 
 | # | Item | Needed by | State |
 |---|---|---|---|
@@ -74,7 +76,7 @@ Each consumer's binding today:
 | # | Item | Needed by | State |
 |---|---|---|---|
 | R2.1 | **Attention observability** — a second output slot (per-key column-sum of post-softmax weights) via `output_views`. Open "four-way (Lightbulb / Fuel / Baracuda / KISS)". | lightbulb `docs/superpowers/notes/capability-regression-audit.md` L36 | **[rule]** — an Ops/Contract shape; needs a proposal first |
-| R2.2 | **`trunc` has no spec decomposition** (KISS-OPS-6.3-0003); no vector can catch an error. | Fuel GAP-300 | **[go]** — author the decomposition + vectors |
+| R2.2 | **Vectors for the four rounding atoms.** Fuel GAP-300 reads "`trunc` has no spec decomposition"; it is a **primitive-floor atom** (§6.7: no decomposition by design), so what was missing is a *vector* — the oracle corpus carried none for `floor`/`ceil`/`trunc`/`round_even`. | Fuel GAP-300 | **in review: KISS#539** (`ops-rounding.json`, 72 f32 cells, no NaN cell — #396) |
 | R2.3 | **NaN vectors for `max_prop` vs `fmax_ieee`** — Fuel's vendored corpus has 0 of 77 with a NaN; the newer `ops-*-nan` files exist but Fuel has not vendored them (unmeasured). KISS side: #329 (the signed-zero file has no NaN vectors). | Fuel `PROVENANCE.md` "WHAT THIS CORPUS DOES NOT COVER" | **[go]** (#329) + Fuel re-vendors |
 | R2.4 | **Reference wire codec + per-op OpAttrs bytes** with a cross-implementation byte comparison (#504, #502, #23). OpAttrs has **no** cross-implementation oracle today. | kiss-ref (models none), every OpAttrs consumer | **[go]**, large |
 | R2.5 | **`randombits` basis slot, shape-rule expression vocabulary** — filed by Fuel as outreach RFCs; `dims`/`with_dim` are registered *experimental* (umbrella §6.4.1) pending ≥2 dissimilar implementations. | Fuel `docs/outreach/kiss-rfc-*.md` | **[rule]** per RFC; promotion needs Baracuda as the second consumer |
@@ -104,7 +106,7 @@ Ordered by what unblocks a freeze claim, not by count.
 
 | Consumer | Needs from KISS, in order | Gaps it reports that are **not** KISS's to close |
 |---|---|---|
-| **Fuel** | R0.3 (answer) → R1.1 (Announce op identity) → R2.2 (`trunc`) → R2.3 (NaN corpus) → R2.5 (RFCs) | GAP-350 Baracuda's `sk5` keyer; its own Semantics op-DAG (KISS-Contract §6.4-0001) and `OpAttrs` canonical bytes; MX dtypes outside the closed set; SeamHello lacks availability list / contract-query frames; `revision_hash` is `u64` where KISS pins 32 bytes (`docs/outreach/kiss-conformance-and-divergences.md`, dated 2026-07-14 — may be stale) |
+| **Fuel** | R0.3 (answer) → R1.1 (Announce op identity) → R2.2 (rounding vectors, #539) → R2.3 (NaN corpus) → R2.5 (RFCs) | GAP-350 Baracuda's `sk5` keyer; its own Semantics op-DAG (KISS-Contract §6.4-0001) and `OpAttrs` canonical bytes; MX dtypes outside the closed set; SeamHello lacks availability list / contract-query frames; `revision_hash` is `u64` where KISS pins 32 bytes (`docs/outreach/kiss-conformance-and-divergences.md`, dated 2026-07-14 — may be stale) |
 | **Baracuda** | R1.7 (decision is its own) → R2.7 (open the thread) → R1.1 | `sk4`→`sk5` keyer and `contract_version` 3 (PM task issued); parses versions permissively where §6.7-0002 says MUST-reject; `rall`/`rlast` read side (agenda B2/E3, July — verify) |
 | **Unpopped** | R1.4 (pointer) → R1.2 (ruling) → R1.5 | re-vendor from `5b28bf5`. Its README holds re-vendoring of the dtype/op manifests "until the CRLF/LF generator fix lands": **measured here, both generators' `--stdout` paths already emit LF** (`python tools/kiss_dtypes.py --emit-manifest --stdout`, `…kiss_ops.py…`: 0 `` bytes at `5b28bf5`), so that hold is stale |
 | **kiss-ref** | R2.4 (OpAttrs oracle) | models no `structure_key`/Contract by design; the `#[non_exhaustive]` reservation landed at 0.4.0; `op_manifest.json` now lists the §6.18 complex ops (`all_ops` = 122; #305's premise no longer holds — close it, R0.2) |
@@ -117,3 +119,18 @@ Ordered by what unblocks a freeze claim, not by count.
 - Finishing an item deletes it or moves it to `CHANGELOG.md`; a roadmap that accretes done work is a log.
 - A **[rule]** item is never started on a peer's say-so; the PM brings CireSnave's answer verbatim.
 - Numbers move with `origin/main`; **re-run the commands in §2 before quoting any of them**.
+
+## 6. R0.2 — issues the merged work answered (ready list; closing is CireSnave's)
+
+Each verified at `origin/main` `5b28bf5`.
+
+| Issue | Evidence |
+|---|---|
+| #263 | ruled D, landed KISS#535; `docs/design-263-cell-class.md` |
+| #520 | KISS-CLASSIFY-6.6-0008 amended in #535; goldens corrected in #536 |
+| #477 | `math_fidelity`, `contract_version` 3 in #535 |
+| #305 | `op_manifest.json` `all_ops` = 122 and contains all 15 KISS-OPS-6.18-0001 ops (set membership) |
+| #219 | KISS-CLASSIFY-6.6-0019 defines the weight role as a caller hint (#245); discriminating vector #248 |
+| #364 | Appendix C shows all seven blocks: `test_appendix_c_shows_every_block_the_codec_renders` passes (#496) |
+
+**Not on the list:** #298 (ops.md still states no per-op operand structure) and #222 (the collection; candidate 1 is a ruling).
