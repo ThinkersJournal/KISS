@@ -6,6 +6,7 @@
 //!                                        computed NaN must be QUIET (§6.16-0010 / §6.8-0010).
 //!   corpus/ops-rounding.json          — KISS-OPS-6.7-0001/-0002: f32 floor/ceil/trunc/round_even exact-byte
 //!                                        cells (ties, zero signs, integral, inf, subnormal); no NaN (#396).
+//!   corpus/ops-int-wrap.json          — KISS-OPS-6.2-0002: i8..u64 add/sub/mul wrap at the boundaries
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -407,6 +408,50 @@ fn rounding_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.7-0001", &cells)
 }
 
+// ---- integer-wrapping bundle (KISS-OPS-6.2-0002) -------------------------------------------
+//
+// WHY: §6.2-0002 pins integer add/sub/mul as WRAPPING two's-complement modulo 2^bits — not
+// saturating, not trapping — and the corpus carried no integer cell at all (ops-arith.json is f32).
+// An implementation that saturates passes every float vector.
+//
+// EMITTED: for each of i8/u8/i16/u16/i32/u32/i64/u64, the five raw bit patterns that sit on the
+// wrap boundaries — 0, 1, 2^(n-1)-1 (signed max), 2^(n-1) (signed min), 2^n-1 (unsigned max / -1)
+// — in every ordered pair for `sub` (not commutative) and every unordered pair for `add`/`mul`.
+// Add, sub and mul on raw two's-complement patterns are the SAME bit operation for signed and
+// unsigned lanes, so one pattern list serves both; what differs is how a reader interprets the
+// cell, and `tests/mint_int_wrap.rs` interprets it both ways against an i128 model.
+// NOT EMITTED: i4/u4 (sub-byte packing is its own clause), division/shift, and the §6.2-0002 words
+// "MUST NOT be undefined behavior" — a vector can only show the defined result, not the absence of UB.
+fn int_wrap_doc() -> String {
+    let lanes: [(&str, u32); 8] =
+        [("i8", 8), ("u8", 8), ("i16", 16), ("u16", 16), ("i32", 32), ("u32", 32), ("i64", 64), ("u64", 64)];
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for (dtype, bits) in lanes {
+        let mask: u64 = if bits == 64 { u64::MAX } else { (1u64 << bits) - 1 };
+        let pats: [u64; 5] = [0, 1, (1u64 << (bits - 1)) - 1, 1u64 << (bits - 1), mask];
+        let nbytes = (bits / 8) as usize;
+        let be = |v: u64| v.to_be_bytes()[8 - nbytes..].to_vec();
+        for op in ["add", "sub", "mul"] {
+            for (i, &a) in pats.iter().enumerate() {
+                for (j, &b) in pats.iter().enumerate() {
+                    if op != "sub" && j < i {
+                        continue; // commutative: unordered pairs only
+                    }
+                    let r = match op {
+                        "add" => a.wrapping_add(b),
+                        "sub" => a.wrapping_sub(b),
+                        _ => a.wrapping_mul(b),
+                    } & mask;
+                    cells.push(emit_cell(tc, op, dtype, &[&be(a), &be(b)], &be(r), "\"int-wrap\",\"6.2-0002\""));
+                    tc += 1;
+                }
+            }
+        }
+    }
+    bundle_doc("OPS", "KISS-OPS-6.2-0002", &cells)
+}
+
 // ---- f32/f64 min/max NaN bundle (#329) -----------------------------------------------------
 //
 // WHY: `max_prop`/`min_prop` (NaN-propagating) and `fmax_ieee`/`fmin_ieee` (NaN-suppressing) differ
@@ -523,5 +568,6 @@ fn main() {
     write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());
     write_bundle("/corpus/ops-narrow-select-nan.json", &narrow_select_nan_doc());
     write_bundle("/corpus/ops-rounding.json", &rounding_doc());
+    write_bundle("/corpus/ops-int-wrap.json", &int_wrap_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }

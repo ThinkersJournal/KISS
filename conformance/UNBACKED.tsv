@@ -462,7 +462,6 @@ KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution	untested
 KISS-OPS-6.19-0039	test_ops_index_ref_wire_form	untested	
 KISS-OPS-6.19-0040	test_ops_index_outputs_root_list	untested	
 KISS-OPS-6.2-0001	test_ops_float_ieee754	untested	
-KISS-OPS-6.2-0002	test_ops_int_wrapping	untested	
 KISS-OPS-6.2-0005	test_ops_compare_result_zero_one	untested	
 KISS-OPS-6.2-0006	test_ops_bool_normalization	untested	
 KISS-OPS-6.2-0007	test_ops_u32_ordinary_dtype	untested	
