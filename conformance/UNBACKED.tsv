@@ -76,14 +76,11 @@ KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	attested	spec decl
 KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-CLASSIFY-6.0-0001	test_classify_determinism_class_exact_byte	untested	
 KISS-CLASSIFY-6.0-0002	test_classify_special_value_bit_patterns	untested	
-KISS-CLASSIFY-6.1-0002	test_classify_dtype_bit_widths	untested	
-KISS-CLASSIFY-6.1-0003	test_classify_dtype_numeric_kinds	untested	
 KISS-CLASSIFY-6.1-0005	test_classify_dtypes_are_pure_storage	untested	
 KISS-CLASSIFY-6.1-0006	test_classify_u32_is_ordinary_storage	untested	
 KISS-CLASSIFY-6.1-0007	test_classify_bool_encoding	untested	
 KISS-CLASSIFY-6.1-0011	test_classify_e5m2_format	untested	
 KISS-CLASSIFY-6.1-0012	test_classify_complex_interleaved_layout	untested	
-KISS-CLASSIFY-6.2-0001	test_classify_numeric_kind_set_closed	untested	
 KISS-CLASSIFY-6.2-0002	test_classify_float_special_values_pinned	untested	
 KISS-CLASSIFY-6.3-0002	test_classify_operand_active_axes_only	untested	
 KISS-CLASSIFY-6.3-0004	test_classify_extent_is_capacity	untested	

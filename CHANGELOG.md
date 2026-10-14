@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.31 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Classify dtype-table clauses backed** (ROADMAP R3.2, KISS-CLASSIFY-6.1-0002 bit widths, 6.1-0003 numeric kinds,
+  6.2-0001 the closed kind set): `tests/classify_dtype_table_clauses.rs` parses the clauses' own enumerations
+  (`` `f16`/`bf16` = 16; ...``, `` `float`: `f16`, ...``) from `spec/classify.md` at compile time and holds them against
+  `corpus/dtype_manifest.json` (the artifact Fuel, Baracuda and kiss-ref vendor) and `structure_key::DTYPES`, in both
+  directions, over all 24 dtypes; independent anchors guard against a parser that returns a plausible wrong map; a control
+  proves a changed width, a missing dtype, a changed kind and an extra dtype are each reported. **They agree today**, so this
+  is coverage, not a defect. Scope: it pins the clauses' enumerated facts; it exercises no implementation's storage (a
+  foreign reader, R4.1). Floor harness 406 -> 409, untested 471 -> 468 (Classify 79/120); 3 `UNBACKED.tsv` rows removed.
+  Not touched: 6.1-0007 (bool: its normalization half is Ops'), 6.1-0011/-0012 (formats and layout need a byte-level subject).
+
 ## 0.2.30 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - **`structure_key_derivation_vectors.json` 33 -> 36 vectors: the innermost axis is axis `rank-1` whatever its extent**
