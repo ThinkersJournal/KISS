@@ -1,4 +1,4 @@
-<!-- Written 2026-10-14 against origin/main ff12265 (conformance 0.2.39; #576 carries 0.2.40). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-14 against origin/main (conformance 0.3.1, after #581). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.2.39; #576 = 0.2.40). `conformance/Cargo.toml` and the top `CHANGELOG.md`
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.1). `conformance/Cargo.toml` and the top `CHANGELOG.md`
    heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,38 +28,29 @@
 
 ## Open PRs
 
-**KISS#576** (hygiene, 0.2.40, PM-allocated): `.github/CODEOWNERS`, workflow `permissions: contents: read`, `docs/glossary.md` index,
-plus this HANDOFF. Waiting on checks and the PM's gate; on merge: `git worktree remove C:/Projects/kiss-hyg`, delete branch `kiss-hygiene`.
-CodeRipper rules read the COMMITTED tree: an uncommitted fix still shows as a finding. Build it from a worktree of coderipper `origin/main`
-with `CARGO_TARGET_DIR` in the scratchpad; the binary under `C:/Projects/coderipper/target/debug` is stale.
+None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (0.2.41), #578 14 OUT rows -> blocked (0.2.42),
+#579 determinism import-site lint (0.2.43), #580 structural op-DAG equality (0.2.44), #582 math_fidelity ordinals (0.3.0, wire-breaking),
+#581 IR-DAG generator + self-check (0.3.1). KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate.
 
-## State at 0.2.39 (main ff12265)
+## State at 0.3.1
 
-- **Floor** harness 420, lint 34, untested 446, proven 20. Every KISS-GRAMMAR and KISS-CONFORM `untested` row now carries a reason
-  (#574, #575); none is bare. Re-measure with `python tools/kiss_trace.py --report` at the ref you work from.
-- **Backed this session:** CONFORM-6.13-0003 (#573), 6.13-0012 (#575). PARTIAL, floor unmoved: 6.13-0008 (no Contract-side opaque embed),
-  6.13-0009 (Grammar vectors 2 of 5; G2/G3/G5 unrendered). GRAMMAR-6.6-0003/-0004/-0005 stay untested: the crate has no cell-class field
-  and validates neither op names nor role tokens; a test needs new reference behaviour.
-- **R1.4 CLOSED:** Unpopped 0.16.0 derives `[8,0]` as `da/v1`, matching our 36-vector file. **Classify:** 88 backed / 32 ledgered /
-  0 untraced of 120; the 6 `untested` rows have no subject and wait on an architect ruling.
-- **GAP-305** (Fuel's OpAttrs encoder diverges from 6.19.3) is OPEN, owned by the fuel lane, queued after nn .13. Live OpAttrs pair count 0.
-- Earlier state unchanged: R3.2 Ops vectors landed (int-wrap, compare-bool, atan2, sqrt PARTIAL, nextafter PARTIAL); R2.4 slice 1 landed;
-  R1.9 (`reduce`/`prefix_scan` `math_precision` ordinal table) is a [rule] not minted.
+- **Floor** harness 430, lint 35, untested 421 (tool, base origin/main). Re-measure with `python tools/kiss_trace.py --report`.
+- **PARTIAL, floor unmoved:** 6.9-0003 (no emitter/lifter), 6.6-0001 (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated),
+  6.13-0008, 6.13-0009. 6.6-0002/-0003/-0004/-0006/-0007 are `blocked` (need a suite emitter and lifter).
+- **Board 201 pin:** `math_fidelity` u8 {0 reserved, 1 bit-stable, 2 reduced-mantissa}; accumulator 0x00 or 1-based dtype ordinal;
+  Appendix E.2 six-byte reduce/scan forms; 167 generic vectors, `not_emitted` empty. Clause field renamed from `math_precision` (PM reading).
+- **GAP-305** (Fuel's OpAttrs encoder vs 6.19.3) is owned by the fuel lane; it follows our 6.19.2 pin.
+- Unpopped `WeightRoleNotDeclared` decline name is Unpopped-local; needs a PM/architect ruling and version before KISS mints it.
 
 ## Waiting (do not start)
 
-- **Board 203 (CireSnave): the ~40 Conform rows with no subject.** My [ASK] recommended: consumer-verify check IN (with a profile
-  feature), structural op-DAG equality IN, IR-DAG fuzzer SPLIT (generator in; cross-backend/emitter rows out -> `blocked`), canonical
-  suite artifact OUT (needs a signer, #462), oracle provenance record OUT, determinism-enum import-site lint IN. **No recategorisation
-  and no tests until ruled.**
-- Board 193/201 [rule] items: R1.1, R1.2, R1.5, R1.8/#543, R1.9, #462, #387 instrument, sidecar fields. Timing is CireSnave's.
-- Fuel: body-diff of its clause-derived OpAttrs vectors (will send a [FINDING]); re-vendor of the 36-vector file. Baracuda/Unpopped sk5
-  keyers, four-way sk5 table.
+- Board 193 [rule] items: R1.1, R1.2, R1.5, R1.8/#543, #462, #387 instrument, sidecar fields. Timing is CireSnave's.
+- Fuel's OpAttrs vector body-diff and 36-vector re-vendor; Baracuda/Unpopped sk5 keyers, four-way sk5 table.
 - Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 
 ## Next actions
 
-1. `git fetch`; read `gh pr view 576`; if merged, clean up (above). Read `list_peers` / `check_messages` (the PM's id rotates: match cwd
-   `C:\Projects`); answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. If board 203 is ruled, the rulings define the next slices; otherwise no [go] item exists: report [STATUS] to the PM and idle.
+1. `git fetch`; `list_peers` / `check_messages` (PM id rotates: match cwd `C:\Projects`; last 5ecd7z4b). Answer any [FINDING] by
+   re-measuring at the sender's `origin/main` first.
+2. No unblocked own-roadmap row exists: report [STATUS] to the PM and idle until a [TASK] or ruling arrives.
 3. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext]: nothing to build from inside this repo.
