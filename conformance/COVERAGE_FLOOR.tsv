@@ -543,7 +543,7 @@
 # "Set the floor to harness 396, lint 33, untested 479".
 #
 # key	value
-harness	400
+harness	402
 lint	34
-untested	477
+untested	475
 proven	20

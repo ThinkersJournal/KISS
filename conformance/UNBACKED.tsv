@@ -98,9 +98,7 @@ KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0005	test_classify_index_width_boundary	lint:kiss_vocab	the index-width codes ix32/ix64 drift between §6.5-0005 and derive_index_width
 KISS-CLASSIFY-6.5-0008	test_classify_size_class_enum	lint:kiss_vocab	the SizeClass structure_key token-code set drifts between §6.5 and the reference code_enum!
-KISS-CLASSIFY-6.6-0011	test_classify_structure_key_derivation_canonical	untested	
 KISS-CLASSIFY-6.6-0012	test_classify_derivation_input_tuple	untested	
-KISS-CLASSIFY-6.6-0014	test_classify_operand_canonical_order	untested	
 KISS-CLASSIFY-6.6-0016	test_classify_contraction_axis_roles	untested	
 KISS-CLASSIFY-6.7-0011	test_classify_token_is_only_wire_form	untested	
 KISS-CLASSIFY-6.8-0017	test_namespace_vocabulary_manifest_sufficiency_named	untested	
