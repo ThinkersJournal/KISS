@@ -128,7 +128,9 @@ fn canonical_reduce(axes: &[usize], rank: usize) -> Result<Reduce, DeriveDecline
     })
 }
 
-/// Validate the cell's shape and dtypes before anything is derived from it.
+/// Validate the cell's shape and dtypes before anything is derived from it. Only an UNKNOWN dtype is
+/// refused here (its storage width is needed for the per-operand vector width); a RESERVED dtype is
+/// refused only where it occupies a key position — the primary dtype and the accumulator (§6.1-0001).
 fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
     if cell.contraction_declared {
         return Err(DeriveDecline::ContractionOutOfScope);
@@ -143,7 +145,9 @@ fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
         if o.extents.len() != o.strides.len() || o.extents.len() > MAX_RANK as usize {
             return Err(DeriveDecline::BadShape);
         }
-        check_dtype(o.dtype)?;
+        if !DTYPES.contains(&o.dtype) {
+            return Err(DeriveDecline::UnknownDtype);
+        }
     }
     if let Some(a) = cell.accumulator {
         check_dtype(a)?;
@@ -239,6 +243,7 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
     // primary dtype (§6.6-0005/-0021)
     let dtypes: Vec<&str> = ordered.iter().map(|o| o.dtype).collect();
     let primary = derive_primary_dtype(&dtypes).ok_or(DeriveDecline::ScaleDtypeAtOperand0)?;
+    check_dtype(primary)?; // a reserved dtype in the key's dtype field (§6.1-0001)
 
     let frame_rank = ordered.iter().map(|o| o.extents.len()).max().unwrap_or(0);
     let frame = frame_extents(&ordered, frame_rank);

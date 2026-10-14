@@ -3,6 +3,21 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.11 — 2026-10-14
+
+- **Three clarifications from the first second-party derivation runs** (Fuel#358/GAP-354, Baracuda's harness):
+  KISS-CLASSIFY-6.1-0001 now names the key's **dtype positions** (a non-primary operand's dtype is not one, so
+  a reserved dtype there derives a key; an unknown dtype in any operand still declines); 6.6-0009 states the
+  **producer side** (a deriver given a reduced axis at or beyond the rank MUST decline — the token it would emit
+  is one a reader rejects); 6.6-0014 states that the canonical order is the **caller's** presentation (6.6-0012).
+  No valid token changes. **Artifact change** (`structure_key_derivation_vectors.json`, 32 → 33 vectors):
+  `decline_reserved_dtype` now puts the reserved dtype at operand 0 (a key position) — the first draft put it at
+  operand 1 and **both Fuel and Baracuda correctly did not decline it**; new vector
+  `reserved_dtype_at_non_primary_operand_derives` pins the derives-a-token reading; the `cell_note` and the
+  `call_order_is_not_canonical_order` note no longer say canonicalization is the deriver's job. Reference
+  deriver follows. Still owed by implementations (clause text unchanged, MUST already stated): collapsed
+  reduction output must decline (6.6-0009), reduced axis out of range must decline.
+
 ## 0.2.10 — 2026-10-14
 
 - **A second C toolchain for the differential slice** (#139, ROADMAP R3.4): `KISS_C_COMPILER` swaps the
