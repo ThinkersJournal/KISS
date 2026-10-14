@@ -83,7 +83,7 @@ KISS-CLASSIFY-6.3-0009	test_classify_quant_carried_not_keyed	untested	looked for
 KISS-CLASSIFY-6.3-0010	test_classify_symbolic_extent_flags_live_length	untested	looked for a symbolic_extent record {axis, kind} in conformance/src: none (see 6.3-0004); control: optional operand records exist (dequant). Nothing to key or not key
 KISS-CLASSIFY-6.3-0012	test_classify_quant_sidecar_projection	lint:kiss_tables	the quantization-sidecar projection table drifts from the `quant` record fields of §6.3-0009
 KISS-CLASSIFY-6.4-0001	test_classify_max_rank_is_8	lint:kiss_wire	MAX_RANK drifts between §6.4-0001 and structure_key.rs
-KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk4) and SCHEMA_VERSION
+KISS-CLASSIFY-6.4-0003	test_classify_structure_key_version_matches_codec	lint:kiss_vocab	the structure_key schema version drifts between §6.4-0003 (sk5) and SCHEMA_VERSION
 KISS-CLASSIFY-6.5-0001	test_classify_layout_tag_enum	lint:kiss_vocab	the Contig structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0003	test_classify_vec_width_enum	lint:kiss_vocab	the VecWidth structure_key token-code set drifts between §6.5 and the reference code_enum!
 KISS-CLASSIFY-6.5-0004	test_classify_div_bucket_enum	lint:kiss_vocab	the DivBucket structure_key token-code set drifts between §6.5 and the reference code_enum!
@@ -125,7 +125,6 @@ KISS-CONFORM-6.12-0002	test_conform_consumer_verify_reuses_oracle	untested
 KISS-CONFORM-6.12-0003	test_conform_consumer_verify_not_gating	untested	
 KISS-CONFORM-6.13-0001	test_conform_announce_exact_byte_pod	blocked	#144 no sidecar: "every Announce POD clause" has no machine-readable enumeration; becomes a lint once one exists
 KISS-CONFORM-6.13-0002	test_conform_announce_freeze_gate	blocked	no foreign envelope reader; freeze governance (KISS-ANNOUNCE-8-0006, untested); AND the two-seed count (#260, ruled option A) -- the clause obliges "the two" SeamHello seeds while KISS-Announce schedules them to converge to one. That third obstacle was NOT in this note until 2026-08-20 and would have been met only by whoever cleared the first two and believed they were finished. Reference bytes + provenance frozen in conformance/SEAM-SEED-ATTESTATION.md so the evidence does not expire with the second seed. (#173, previously listed here, is CLOSED: the term is bound to KISS-ANNOUNCE's SeamHello.)
-KISS-CONFORM-6.13-0003	test_conform_classify_exact_byte_and_registry_bundle	untested	
 KISS-CONFORM-6.13-0004	test_conform_classify_freeze_gate	blocked	freeze governance (§8-0006); no out-of-namespace usage evidence artifact exists
 KISS-CONFORM-6.13-0006c	test_conform_ops_dissimilar_impls_agree	blocked	#176 no external implementor: both differential fixtures are in-suite, and neither declares a lowering-module manifest for the §6.5-0002 disjointness test — freeze-blocking
 KISS-CONFORM-6.13-0007	test_conform_ops_transcendental_and_split	untestable	#172 — rejects a declared ULP over a KISS-Ops ceiling that KISS-OPS-6.8-0001 abolished (#39)
@@ -354,9 +353,9 @@ KISS-GRAMMAR-6.5-0002	test_grammar_rebasing_is_additive_no_bump	untested
 KISS-GRAMMAR-6.5-0003	test_grammar_independent_cadence	untested	
 KISS-GRAMMAR-6.5-0004	test_grammar_nonprimitive_resolvable_to_floor	untested	
 KISS-GRAMMAR-6.5-0005	test_grammar_frozen_shape_membership	untested	
-KISS-GRAMMAR-6.6-0003	test_grammar_cell_class_is_classify_token	untested	
-KISS-GRAMMAR-6.6-0004	test_grammar_op_name_exists_in_ops	untested	
-KISS-GRAMMAR-6.6-0005	test_grammar_operand_role_token_vocabulary	untested	
+KISS-GRAMMAR-6.6-0003	test_grammar_cell_class_is_classify_token	untested	looked for a cell-class reference on an advertisable op (a cell_class field or role on grammar::Node::Op/Region) in conformance/src/grammar.rs: none (0 matches for cell_class/CellClass); control: the same file models op_name, operand roles and extracts, so the search finds the fields it has. The clause is conditional ("where an advertisable op references a cell class") and the reference region model has no such reference, so there is no subject to hold to the seven Classify codes. Needs a Grammar field that carries a cell class before a test can discriminate.
+KISS-GRAMMAR-6.6-0004	test_grammar_op_name_exists_in_ops	untested	looked for a typed decline on an op_name absent from the KISS-Ops op set of the pinned ops_version (an Unknown*/UnknownOp variant in grammar::Decline, or a lookup against corpus/op_manifest.json in encode): none; Decline has only BindSetMismatch and BindIndexOutOfRange. Control: test_grammar_op_name_spelling shows encode carries an unlisted name (activate) verbatim, so the reference encoder accepts what the clause says MUST decline. A test needs an op-name validator keyed on ops_version; that is new reference-crate behaviour, not a test of existing code.
+KISS-GRAMMAR-6.6-0005	test_grammar_operand_role_token_vocabulary	untested	looked for a closed operand-role set (data/cond/index/address) checked on RoleEntry.role in conformance/src/grammar.rs: none; encode_operand_roles writes whatever role string it is given. Control: DEFAULT_ROLE = "data" exists and the default-entry elision tests pass, so role handling is present but unvalidated. Same missing subject as 6.6-0004: an op/role vocabulary checker keyed on the pinned ops_version.
 KISS-GRAMMAR-6.7-0001	test_grammar_op_identity_is_advertisable_tag	untested	
 KISS-GRAMMAR-6.7-0002	test_grammar_region_maps_to_semantics_dag	untested	
 KISS-GRAMMAR-6.7-0003	test_grammar_op_identity_distinct_from_structure_key	untested	
