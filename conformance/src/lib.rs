@@ -112,6 +112,7 @@ pub mod reference_vectors;
 pub mod semantics;
 pub mod shape_expr;
 pub mod structural;
+pub mod structural_dag;
 pub mod structure_key;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
