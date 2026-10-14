@@ -469,7 +469,8 @@ fn int_wrap_doc() -> String {
 // EMITTED: one ordinary cell per quadrant and per axis direction, the signed-zero matrix
 // (y,x in {+0,-0}), y = +-0 against a finite x of each sign, x = +-0 against a finite y of each sign,
 // and the +-inf matrix. NOT EMITTED: NaN operands (which NaN is #396's question), f64/narrow dtypes.
-fn atan2_doc() -> String {
+/// The (y, x, tag) operand bit patterns of the atan2 bundle.
+fn atan2_inputs() -> [(u32, u32, &'static str); 28] {
     const POS0: u32 = 0x0000_0000;
     const NEG0: u32 = 0x8000_0000;
     const ONE: u32 = 0x3F80_0000;
@@ -478,7 +479,7 @@ fn atan2_doc() -> String {
     const NEG2: u32 = 0xC000_0000;
     const PINF: u32 = 0x7F80_0000;
     const NINF: u32 = 0xFF80_0000;
-    let cells_in: [(u32, u32, &str); 28] = [
+    [
         (ONE, ONE, "quadrant-1"),
         (ONE, NEG1, "quadrant-2"),
         (NEG1, NEG1, "quadrant-3"),
@@ -507,9 +508,12 @@ fn atan2_doc() -> String {
         (ONE, NINF, "inf"),
         (PINF, ONE, "inf"),
         (NINF, NEG1, "inf"),
-    ];
+    ]
+}
+
+fn atan2_doc() -> String {
     let mut cells = Vec::new();
-    for (i, (yb, xb, tag)) in cells_in.iter().enumerate() {
+    for (i, (yb, xb, tag)) in atan2_inputs().iter().enumerate() {
         let r = f64::atan2(f32::from_bits(*yb) as f64, f32::from_bits(*xb) as f64) as f32;
         cells.push(format!(
             "    {{\"tcId\": {tc}, \"op\": \"atan2\", \"dtype\": \"f32\", \"rounding\": \"roundTiesToEven\",              \"inputs\": [{{\"role\":\"a\",\"dtype\":\"f32\",\"bits\":\"{}\"}},              {{\"role\":\"b\",\"dtype\":\"f32\",\"bits\":\"{}\"}}],              \"expected\": {{\"dtype\":\"f32\",\"bits\":\"{}\"}},              \"class\": \"ULP\", \"ulp_bound\": 4, \"provenance\": \"oracle\",              \"tags\": [\"{tag}\",\"6.9-0001\"],              \"certificate\": {{\"hardness_margin_bits\": 0, \"stabilized_precision_bits\": 24}}}}",
