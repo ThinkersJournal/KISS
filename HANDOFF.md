@@ -1,4 +1,4 @@
-<!-- Written 2026-10-11 against origin/main 755ab69 (no open PRs). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-13 against origin/main 5b28bf5. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -22,25 +22,28 @@
 
 ## Open KISS PRs
 
-None as of origin/main 755ab69 (2026-10-11). #530-#533 merged 2026-10-09; their worktrees and branches are removed.
+- **#537** ROADMAP.md (docs; the PM allocates the version). After it merges: remove worktree `C:/Projects/kiss-roadmap` and the branch.
+- **This HANDOFF PR** (`docs/handoff-2026-10-13`): remove `C:/Projects/kiss-handoff2` and the branch once merged.
 
-## kiss-ref (separate repo `C:\Projects\kiss-ref`, ThinkersJournal/kiss-ref; no lane exists, the KISS lane does its work)
+## Current state at origin/main 5b28bf5 (conformance 0.2.1)
 
-- Rebind to KISS `904a4b4` is MERGED (#48-#51): workspace is **0.4.0, unpublished**. Evidence sent to the PM 2026-10-09 (fe23926): tests, `cargo package`,
-  dry-runs OK for classify-vocab and ops-vocab; kiss-ref-core's dry-run can only pass after the two vocab crates are on crates.io, so publish
-  order is classify-vocab, ops-vocab, (wait for index), ref-core. **Publish needs CireSnave's yes per crate**; the PM brings it. Do not publish.
-- **HELD TASK:** when the PM says "publish go" (not before; no TBD date in a CHANGELOG), open ONE kiss-ref PR in a fresh worktree: rename CHANGELOG `[Unreleased]` -> `[0.4.0]` with that day's date and fix `DESIGN.md:3` ("published on crates.io (0.3.x)"). The PM gates it and publishes from a clean export. CHANGELOG lists what 0.4.0 does not model. READMEs have no install lines (checked).
-- Not closed (say if wanted): OpAttrs bytes, the `MathFidelity` type, a native Bool tensor lane.
-- kiss-ref `origin/main` is fe23926 (checked 2026-10-11); no kiss-ref worktree of mine remains.
+- **#263 ruled D and landed (#535, #536):** `structure_key` is `sk5`, field 1 is the **derived** 7-class `cell_class`
+  (`ctr ndx rdc ew1 ew2 ew3 oth`, Classify §6.5-0015); no op→family table exists; Contract `contract_version` 3
+  (`math_fidelity`); `dequant_form` keyed as the optional sixth sub-key component; extent-1 mask fix; keepdim reduction
+  outputs derive masks `02/03/01/0a`. Design and the 24→7 accounting: `docs/design-263-cell-class.md`. `CHANGELOG.md` has 0.2.0/0.2.1.
+- **kiss-ref 0.4.0 is published** (crates.io, from kiss-ref `2583d5ef`, bound to KISS `a33282c`). Do not touch kiss-ref without a PM task.
+- **Followers** (PM-issued, theirs): Unpopped keyer, Fuel deriver (bound `sk5`), Baracuda (still `sk4` in production), Vulkane (no lane).
+- **Roadmap:** `ROADMAP.md` (when #537 is on main) is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
-## Waiting on others (do not start)
+## Held / waiting (do not start)
 
-- **#263 op->family mapping:** CireSnave decides A/B/C (board 166); I recommend B. **#520 + #477 wire event** (sk bump + contract_version bump, with the
-  already-obligated `dequant_form` key slot): version numbers unallocated until #263 is decided. Memo and proposal are in #531.
-- **Fuel:** re-vendor KISS corpus and stop emitting `f8e6m2` (reserved by #517); answer its questions on KISS-CLASSIFY-6.1-0013 if it asks.
-- Dependabot first Monday report **2026-10-12**: read the Dependabot tab and tell the PM. Ubuntu 26 runner **2026-10-19**: if CI breaks, tell the PM first.
+- **R1.1 Announce op identity in every lookup** (`docs/design-263-cell-class.md` §6): own PR, own `list_version`; **timing is CireSnave's**.
+- **#222 candidate 1** (quantized `ctr` scale dtype keying) and **VariantFidelity's home**: need a ruling.
+- Dependabot Monday reports; Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first.
 
 ## Next actions
 
-- Nothing unblocked. Idle until the PM assigns work (likely: the wire event after the #263 decision, or "publish go" for kiss-ref).
-- This HANDOFF PR (docs/handoff-2026-10-11) is open for the PM's gate; remove worktree `C:/Projects/kiss-handoff` and the branch once merged.
+1. R0.2: draft the close-list with evidence (#263, #520, #477; confirm #298, #305, #219, #364 one at a time) and send it to the PM; closing is theirs.
+2. R1.4: ask Unpopped whether its §6.3-0011 zero-extent "active axis" wait is still open, and point at §6.3-0011/§6.5-0002.
+3. R1.6: author a vendorable vector for KISS-CLASSIFY-6.8-0002.
+4. R2.2 `trunc` decomposition + vectors (Fuel GAP-300); R2.3 NaN vectors for the signed-zero corpus (#329).
