@@ -148,7 +148,7 @@ fn frame_cases(out: &mut Vec<DerivationVector>) {
         v(
             "call_order_is_not_canonical_order",
             "KISS-CLASSIFY-6.6-0014",
-            "the output listed FIRST in call order: the canonical order (inputs, then outputs) still yields the a1_binary_add token",
+            "the output listed FIRST in call order: this reference canonicalizes (a convenience — the caller's job per §6.6-0012) and yields the a1_binary_add token; a deriver that takes canonical order reports NOT-EXPRESSIBLE here",
             cell(
                 CUDA,
                 vec![
@@ -281,7 +281,13 @@ fn decline_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "decline_reserved_dtype",
         "KISS-CLASSIFY-6.1-0001",
-        "a reserved dtype (f8e6m2) in a dtype position",
+        "a reserved dtype (f8e4m3fnuz) at operand 0 — the key's dtype field (a KEY position): typed decline",
+        cell(CUDA, vec![op(Input, "f8e4m3fnuz", &[8], &[1], 256), op(Input, "f8e4m3fnuz", &[8], &[1], 256), op(Output, "f8e4m3fnuz", &[8], &[1], 256)]),
+    ));
+    out.push(v(
+        "reserved_dtype_at_non_primary_operand_derives",
+        "KISS-CLASSIFY-6.1-0001",
+        "a reserved dtype (f8e6m2) at operand 1 is NOT a key position (§6.6-0015): the cell derives a token, no decline — two independent derivers (Fuel, Baracuda) agreed against the first draft of this corpus on exactly this",
         cell(CUDA, vec![op(Input, "f16", &[8], &[1], 256), op(Input, "f8e6m2", &[8], &[1], 256), op(Output, "f16", &[8], &[1], 256)]),
     ));
     out.push(v(
@@ -373,7 +379,7 @@ pub fn emit_json() -> String {
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.6-0011\",\n");
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
     s.push_str("  \"scope_note\": \"Every cell class except ctr. A dense-contraction cell needs the batch role, which no clause defines (KISS#543); a cell that declares contraction roles is a decline here, not a guess. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
-    s.push_str("  \"cell_note\": \"operands are listed in CALL order; the canonical order (§6.6-0014: inputs and in-place operands in call order, then outputs) is the deriver's job. reduced_axes are frame axes, 0 = outermost; index_operand is a call-order slot. accumulator null = the compute dtype.\",\n");
+    s.push_str("  \"cell_note\": \"operands are listed in CALL order. The canonical order (§6.6-0014: inputs and in-place operands in call order, then outputs) is the CALLER's presentation (§6.6-0012); this reference reorders as a convenience, and a deriver whose input contract is canonical order reports NOT-EXPRESSIBLE on vector call_order_is_not_canonical_order, which is not a defect. reduced_axes are frame axes, 0 = outermost; index_operand is a call-order slot. accumulator null = the compute dtype.\",\n");
     s.push_str("  \"vectors\": [\n");
     let vs = vectors();
     for (i, d) in vs.iter().enumerate() {

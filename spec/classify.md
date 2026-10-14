@@ -489,7 +489,15 @@ where it fixes storage bytes.
   unknown token — but has **no computation semantics at this schema version**: a
   `structure_key` using a reserved dtype in **any** dtype position MUST be
   answered with a typed decline (§6.7-0009) distinct from the unknown-token
-  decline (decline vectors: `reserved_fnuz_dtypes_typed_decline`). Activating a
+  decline (decline vectors: `reserved_fnuz_dtypes_typed_decline`). The **dtype
+  positions** of a key are its dtype field (field 2) and the dtype coordinates the
+  non-contraction and contraction fields carry (§6.7-0006 `<wdt>`/`<acc>`/`<out>`,
+  §6.7-0013 `<acc>`); a non-primary operand's dtype is **not** a key position
+  (§6.6-0015), so a cell whose non-primary operand carries a reserved dtype derives a
+  key without declining — the reserved dtype's absence of computation semantics is the
+  kernel's concern, not the key's. An **unknown** token (outside the closed set) in
+  any operand is a different matter: its storage width is unknown, so the per-operand
+  vector width (§6.5-0009) cannot be derived and the cell declines. Activating a
   reserved spelling is a future additive schema event.
   *Test:* `accepts_every_closed_cell_class_and_dtype`.
 - **KISS-CLASSIFY-6.1-0002** — Each dtype MUST have the exact storage bit width in
@@ -1185,7 +1193,11 @@ form (§6.7-0011).
   MUST decline distinctly, so a consumer can tell "wrong spelling of the empty set" from
   "a reduction over an axis the rank does not have."** A collapsed (rank-reduced)
   reduction output MUST be rejected with a typed decline (§7.1-0002) rather than
-  keyed, so that reductions over different axis sets never collide. *Test:*
+  keyed, so that reductions over different axis sets never collide. A **deriver**
+  given a reduced-axis hint that names an axis at or beyond the iteration rank MUST
+  likewise decline with a typed decline rather than emit a token: the bit it would
+  have to set is out of range, and the token it would emit is one a reader MUST reject
+  (§6.7-0005, §6.7-0009). *Test:*
   `a1_reduction_rank1_all_axes`.
 - **KISS-CLASSIFY-6.6-0010** — A **dense-contraction cell** is defined as a cell
   whose `cell_class` is `ctr` (§6.5-0006). The `contraction` field MUST be present
@@ -1233,7 +1245,11 @@ form (§6.7-0011).
   accumulator) MUST appear **exactly once** in the canonical order — classified as an
   **input** and placed at its position in the input call order — and MUST NOT also be
   listed among the outputs; it therefore contributes exactly one per-operand sub-key
-  and is counted exactly once in `n_operands`. *Test:*
+  and is counted exactly once in `n_operands`. The canonical order is the **caller's**
+  presentation of the derivation input (§6.6-0012 — "the canonically-ordered operand
+  descriptors"): a deriver whose input contract is the canonical order does not
+  reorder, and is conformant; one that accepts call order and canonicalizes is a
+  convenience, not an obligation. *Test:*
   `test_classify_operand_canonical_order`.
 - **KISS-CLASSIFY-6.6-0015** — Outside a dense-contraction (`ctr`) cell, a
   `structure_key` keys only the primary (operand-0) dtype (§6.6-0005); per-operand
