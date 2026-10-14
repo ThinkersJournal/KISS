@@ -462,9 +462,7 @@ KISS-OPS-6.19-0036	test_ops_opattrs_noncarrier_axis_resolution	untested
 KISS-OPS-6.19-0039	test_ops_index_ref_wire_form	untested	
 KISS-OPS-6.19-0040	test_ops_index_outputs_root_list	untested	
 KISS-OPS-6.2-0001	test_ops_float_ieee754	untested	
-KISS-OPS-6.2-0005	test_ops_compare_result_zero_one	untested	
-KISS-OPS-6.2-0006	test_ops_bool_normalization	untested	
-KISS-OPS-6.2-0007	test_ops_u32_ordinary_dtype	untested	
+KISS-OPS-6.2-0007	test_ops_u32_ordinary_dtype	untested	the comparison path has cells (ops-compare-bool.json u32 rows) and arithmetic wrap has them (ops-int-wrap.json); the bitwise, reduction and scan arms and the no-index-only-class clause have none
 KISS-OPS-6.2-0008	test_ops_const_bits_roundtrip	untested	
 KISS-OPS-6.3-0001	test_ops_primitive_floor_set	lint:kiss_ops	the primitive-floor op set drifts between the §6.3-0001 clause and the §2.7 table
 KISS-OPS-6.3-0002	test_ops_floor_is_mandatory_core	untested	
