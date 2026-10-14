@@ -3,6 +3,12 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.37 — 2026-10-14 (allocated by the PM)
+
+- **Conform 6.13-0003 backed** (floor harness 418 -> 419, untested 448 -> 447): `test_conform_classify_exact_byte_and_registry_bundle` re-emits every bundled golden token under the exact-byte comparator and checks the bundled registry snapshot is versioned and has a row for every namespace the vectors name (renaming the `vulkan` row reds it).
+- Grammar 6.6-0003/-0004/-0005 stay `untested`, now recording what was searched for: the reference region model has no cell-class field and `encode` validates neither op names nor role tokens. No reference behaviour invented.
+- ROADMAP: R1.4 CLOSED (Unpopped 0.16.0 derives `[8,0]` as `da`/`v1`); R3.2 Classify re-measured 88 backed / 32 ledgered / 0 untraced. No spec change.
+
 ## 0.2.36 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - `HANDOFF.md` rewritten to the state at 0.2.35 (R3.2 Ops vectors, R2.4 slice 1, R1.4, the Classify tail and its dispositions, the bash-suite wrapper, what waits on rulings). Docs only; floor unmoved (418/34/448).
