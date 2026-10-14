@@ -3,6 +3,15 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.6 — 2026-10-14
+
+- **`ops-transcendental-nan.json` gains a `harness_rule` header key** (the key the two minmax files already carry)
+  stating that its cells — class `ULP` with a NaN expected (`nan_provenance` computed) — are compared by NaN-ness
+  and quietness per KISS-CONFORM-6.8-0010, never by totalOrder distance, sign or payload. The shared `ulp_metric`
+  line read "totalOrder distance" and a first-time reader (Fuel) failed `log(-1)` against a negative qNaN. **One
+  file changes (12 vectors untouched); no vector, no schema key a loader needs.** Consumers that vendor it
+  re-vendor; nothing else moves.
+
 ## 0.2.5 — 2026-10-14
 
 - **New corpus artifact `conformance/corpus/ops-minmax-nan.json`** (44 exact-byte vectors, minted by `kiss_mint`,

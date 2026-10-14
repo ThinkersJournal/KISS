@@ -141,7 +141,12 @@ fn transcendental_nan_doc() -> String {
         nan_cell_f64(11, "log", (-1.0f64).to_bits(), A_LOG),
         nan_cell_f64(12, "sin", f64::INFINITY.to_bits(), A_SIN),
     ];
-    bundle_doc("OPS", "KISS-CONFORM-6.8-0010", &cells)
+    // The shared `ulp_metric` header says "totalOrder distance"; for THESE cells that is the wrong
+    // comparator (a first-time reader, Fuel 2026-10-14, failed log(-1) on a negative qNaN).
+    const RULE: &str = "every cell here has class ULP and a NaN expected (nan_provenance computed): that is a COMPUTED NaN \
+(KISS-CONFORM-6.8-0010). Compare NaN-ness and QUIETNESS only; do NOT compare totalOrder distance, and never the sign or \
+payload. ulp_bound applies to a non-NaN expected value only.";
+    bundle_doc_with_rule("OPS", "KISS-CONFORM-6.8-0010", Some(RULE), &cells)
 }
 
 // ---- narrow-float sign-edit MOVE bundle (§6.16-0009/-0011, increment 1) --------------------
@@ -474,6 +479,13 @@ fn minmax_nan_doc() -> String {
 /// Assemble a bundle document from its cells. Header strings are shared across bundles so the
 /// arith bundle regenerates byte-for-byte.
 fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String {
+    bundle_doc_with_rule(substandard, spec_clause, None, cells)
+}
+
+/// As [`bundle_doc`], with an optional `harness_rule` header key (the key
+/// `ops-minmax-ordinary.json` / `ops-minmax-signed-zero.json` already carry): how a runner must
+/// compare THIS bundle's cells, where the shared `ulp_metric` line would mislead.
+fn bundle_doc_with_rule(substandard: &str, spec_clause: &str, rule: Option<&str>, cells: &[String]) -> String {
     let mut doc = String::new();
     doc.push_str("{\n");
     doc.push_str("  \"schema\": \"kiss-oracle-vectors-v1.json\",\n");
@@ -485,6 +497,9 @@ fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String 
     doc.push_str("  \"byte_order\": \"hex is the value's bytes most-significant first, left to right\",\n");
     doc.push_str("  \"hex_encoding\": \"uppercase hex bytes; ' ' and '\u{00b7}' are grouping marks (lib.rs::parse_hex)\",\n");
     doc.push_str("  \"ulp_metric\": \"integer totalOrder distance (lib.rs::ulp_distance_f32)\",\n");
+    if let Some(r) = rule {
+        doc.push_str(&format!("  \"harness_rule\": \"{r}\",\n"));
+    }
     doc.push_str("  \"vectors\": [\n");
     doc.push_str(&cells.join(",\n"));
     doc.push_str("\n  ]\n}\n");
