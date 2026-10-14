@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.16 — 2026-10-14
+
+- **`--freeze-ready` stops saying `may freeze`** (#387, ROADMAP R3.1): an `[ OK ]` row now reads "every clause has a backing; whether each backing demonstrates its clause is NOT measured", and the summary carries a NOTE that `satisfy` is an existence reading (a sampled audit found about half of even well-evidenced pointers under-describe their clause). It also prints, per sub-standard, `proven / backed / clauses` — the existing `// Proven:` tier (#278) broken out by sub-standard (sums to the 20 the main report gives): **REPORTS, never gates** (#387 option B, PM-directed). Output only: the predicate, the exit codes and the parsed row/summary shapes are unchanged. Which condition-3 wording, or a per-conjunct obligation, to adopt is a ruling, asked separately.
+
 ## 0.2.15 — 2026-10-14
 
 - `ROADMAP.md` (R2.7 count 13 of 13; header says which figures are 0.2.14-fresh) and `HANDOFF.md` refreshed to `9ea8c05d`; names kiss-ref#54. Docs only.
