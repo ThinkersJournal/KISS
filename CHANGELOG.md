@@ -3,6 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.13 — 2026-10-14
+
+- **GitHub Actions pinned to commit SHAs** (PM task, portfolio pin patch 2026-10-14): 15 mutable refs in
+  `.github/workflows/conformance.yml` and `traceability.yml` (`actions/checkout`, `upload-artifact`,
+  `download-artifact`, `setup-python`) now name the latest release's SHA with the tag in a trailing comment;
+  node24 runtimes. CI/tooling only; no spec, harness or corpus change.
+
 ## 0.2.12 — 2026-10-14
 
 - `ROADMAP.md` statuses (R0.1, R0.3, R0.4, R3.1, R3.4) and `HANDOFF.md` refreshed to current state. Docs only.
