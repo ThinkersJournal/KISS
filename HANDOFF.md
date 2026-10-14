@@ -59,7 +59,7 @@
    so do **not** back the clause: count it PARTIAL as 6.8-0003 was, floor unmoved, UNBACKED note, test not citing the clause). The rest of
    Ops (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
 2. kiss-ref re-vendor of `ops-nextafter.json` (own kiss-ref PR, PM-allocated number, tests/fixtures only; the runner already handles f32/f64 exact-byte binary ops). Then R3.2 has no vector candidate left: ask the PM what is next.
-3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) -- large; needs a design note before code.
+3. R2.4 slice 1 landed (0.2.28, `opattrs_value_vectors.json`, generic encoder, KISS-only). Owed: slice 2 = a [NOTICE] to Fuel with the file + blob hash, relay their PASS/FAIL as a [FINDING] (re-measure Fuel first). kiss-ref stays a non-party (PM ruled). Open spec finding: `math_precision`/`accumulator` wire ordinals unpinned, E.2 stale (reduce/prefix_scan not minted); a ruling, not ours. #502 injectivity clause is a separate spec PR.
 4. Method that worked: mint in `conformance/src/bin/kiss_mint.rs` (keep each fn under 50 lines, Codacy), an independent-model test, run every
    python `kiss-trace` step plus `cargo clippy --all-targets --all-features` locally (`approx_constant` is blocking), README bound figures
    by `tools/kiss_readme_coverage.py`. Write scripts to files with the Write tool: multi-line python heredocs with quotes broke the Bash tool.

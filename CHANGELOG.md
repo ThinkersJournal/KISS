@@ -3,6 +3,25 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.28 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **`opattrs_value_vectors.json` — the first value-bearing OpAttrs vectors** (R2.4 slice 1, #504;
+  `docs/design-r24-opattrs-value-vectors.md`): 133 `encode` vectors (attribute tuple -> exact bytes), 7 default-resolution
+  equivalences (§6.19-0005) and 112 distinct pairs, for the 15 carrier ops whose schema is fully pinned. Minted by a
+  **generic** schema-driven encoder over the parsed §6.19.2 ordinals and §6.19.3 table (`src/opattrs_value.rs`, bin
+  `emit_opattrs_value_vectors`); `tests/opattrs_value_vectors.rs` requires it to agree with the hand encoders in
+  `opattrs.rs` on every vector they cover (110 of 133; `max_pool`, `rms_norm`, `layer_norm` are generic-only), reproduces
+  Appendix E.2's gather/scatter/reduce_var/avg_pool blobs, and carries controls (swapped field order, unknown token,
+  missing field, out-of-range axis). **Same author and same reading of the spec as the hand encoders: a target for a
+  second party (Fuel), not independent evidence; umbrella 5.3 condition 1 is not discharged.**
+- **FINDING recorded in the artifact (`not_emitted`): `reduce` and `prefix_scan` are NOT minted.** §6.19-0025/-0026 add
+  `accumulator` and `math_precision` (sk4, 6 bytes), but §6.19.2 pins no ordinal table for `math_precision` (the clause
+  says "the `<mp>` enum ordinal of §6.7-0006", which spells the values `st`/`rm` as text), and Appendix E.2 and the hand
+  encoders (`encode_reduce`, `encode_prefix_scan`) still show the pre-sk4 4-byte form. A byte for an unpinned field would
+  be fabricated, so the generator refuses; a test turns red if either side is fixed so the list is revisited. The spec
+  needs a ruling on the `math_precision` wire ordinals (and a refresh of E.2); that is not made here.
+- No spec change; no existing file changed; clause ledger and floor unmoved (406/34/471). Opt-in; not yet run by Fuel.
+
 ## 0.2.27 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - `docs/design-r24-opattrs-value-vectors.md` — R2.4 design note: a value-bearing `opattrs_value_vectors.json` (encode / equivalence / distinct kinds, ~150-250 vectors by estimate), two KISS-side derivations that must agree, Fuel as the live second party, kiss-ref's role left as a ruling. A proposal; no code, corpus or spec change. Docs only.
