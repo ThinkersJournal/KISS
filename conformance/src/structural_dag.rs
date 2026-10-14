@@ -93,59 +93,75 @@ impl<'a> Parser<'a> {
         self.nodes.push(Node { op: op.into(), attrs, args });
         self.nodes.len() - 1
     }
+    /// `name(<raw literal>)` for a scalar-source leaf (`const(0.5)`, `const(pi/2)`, `input(0)`):
+    /// the literal runs to the matching `)` and rides as the node's attrs.
+    fn literal(&mut self, name: &str) -> Result<usize, DagError> {
+        let st = self.i;
+        let mut depth = 1;
+        while self.i < self.s.len() && depth > 0 {
+            match self.s[self.i] {
+                b'(' => depth += 1,
+                b')' => depth -= 1,
+                _ => {}
+            }
+            self.i += 1;
+        }
+        if depth != 0 {
+            return Err(DagError::Parse("unterminated scalar-source literal".into()));
+        }
+        let lit = self.s[st..self.i - 1].to_vec();
+        Ok(self.push(name, lit, vec![]))
+    }
+
+    /// `name(arg, ...)` after the opening `(`.
+    fn call(&mut self, name: &str) -> Result<usize, DagError> {
+        let mut args = Vec::new();
+        self.ws();
+        if self.s.get(self.i) == Some(&b')') {
+            self.i += 1;
+            return Ok(self.push(name, vec![], args));
+        }
+        loop {
+            args.push(self.expr()?);
+            self.ws();
+            match self.s.get(self.i) {
+                Some(b',') => self.i += 1,
+                Some(b')') => {
+                    self.i += 1;
+                    return Ok(self.push(name, vec![], args));
+                }
+                _ => return Err(DagError::Parse(format!("expected , or ) at byte {}", self.i))),
+            }
+        }
+    }
+
+    /// A bare name: a formal input is ONE node however often it is named (the textual form's
+    /// occurrences are uses of the same operand, not distinct nodes); any other name is a symbol
+    /// leaf (a monoid name such as `sum`).
+    fn leaf(&mut self, name: String) -> usize {
+        match self.inputs.iter().position(|n| *n == name) {
+            Some(k) => {
+                let attrs = k.to_string().into_bytes();
+                match self.nodes.iter().position(|n| n.op == "input" && n.attrs == attrs) {
+                    Some(i) => i,
+                    None => self.push("input", attrs, vec![]),
+                }
+            }
+            None => self.push("sym", name.into_bytes(), vec![]),
+        }
+    }
+
     fn expr(&mut self) -> Result<usize, DagError> {
         let name = self.ident().ok_or_else(|| DagError::Parse(format!("expected a name at byte {}", self.i)))?;
         self.ws();
-        if self.i < self.s.len() && self.s[self.i] == b'(' {
-            self.i += 1;
-            if SCALAR_SOURCES.contains(&name.as_str()) {
-                // raw literal up to the matching ')' (const(0.5), const(pi/2), input(0)).
-                let st = self.i;
-                let mut depth = 1;
-                while self.i < self.s.len() && depth > 0 {
-                    match self.s[self.i] {
-                        b'(' => depth += 1,
-                        b')' => depth -= 1,
-                        _ => {}
-                    }
-                    self.i += 1;
-                }
-                if depth != 0 {
-                    return Err(DagError::Parse("unterminated scalar-source literal".into()));
-                }
-                let lit = self.s[st..self.i - 1].to_vec();
-                return Ok(self.push(&name, lit, vec![]));
-            }
-            let mut args = Vec::new();
-            self.ws();
-            if self.i < self.s.len() && self.s[self.i] == b')' {
-                self.i += 1;
-            } else {
-                loop {
-                    args.push(self.expr()?);
-                    self.ws();
-                    match self.s.get(self.i) {
-                        Some(b',') => self.i += 1,
-                        Some(b')') => {
-                            self.i += 1;
-                            break;
-                        }
-                        _ => return Err(DagError::Parse(format!("expected , or ) at byte {}", self.i))),
-                    }
-                }
-            }
-            Ok(self.push(&name, vec![], args))
-        } else if let Some(k) = self.inputs.iter().position(|n| *n == name) {
-            // a formal input is ONE node however often it is named (the textual form's
-            // occurrences are uses of the same operand, not distinct nodes).
-            let attrs = k.to_string().into_bytes();
-            match self.nodes.iter().position(|n| n.op == "input" && n.attrs == attrs) {
-                Some(i) => Ok(i),
-                None => Ok(self.push("input", attrs, vec![])),
-            }
+        if self.s.get(self.i) != Some(&b'(') {
+            return Ok(self.leaf(name));
+        }
+        self.i += 1;
+        if SCALAR_SOURCES.contains(&name.as_str()) {
+            self.literal(&name)
         } else {
-            // a bare name that is not a formal input (a monoid name such as `sum`, a symbol).
-            Ok(self.push("sym", name.into_bytes(), vec![]))
+            self.call(&name)
         }
     }
 }
