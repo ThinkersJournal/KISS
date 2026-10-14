@@ -206,6 +206,13 @@ jobs:
       # after the #508 sweep; text is covered by REUSE.toml and is never stamped in-file.
       - name: Every code file carries its SPDX header (blocking, #508)
         run: python tools/kiss_spdx.py --check
+      # BLOCKING. The manifest version and the newest CHANGELOG heading are one number written in two
+      # places; #558/#559 each added an entry and neither bumped `conformance/Cargo.toml`, and nothing
+      # failed (0.2.21 vs 0.2.23). The controls prove the gate fails on drift and on an absent reading.
+      - name: Manifest version equals the newest CHANGELOG heading (controls)
+        run: python tools/test_kiss_version_sync.py
+      - name: Manifest version equals the newest CHANGELOG heading (blocking)
+        run: python tools/kiss_version_sync.py
       - name: Shared-enumeration consistency (dtype set + determinism enum)
         run: python tools/kiss_tables.py
       # A metadata block wedged inside a requirement is not a style defect: a phrase

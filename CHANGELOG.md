@@ -3,6 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.25 — 2026-10-14
+
+- **`tools/kiss_version_sync.py` — the manifest version must equal the newest CHANGELOG heading** (blocking, in the
+  `kiss-trace` job, with controls in `tools/test_kiss_version_sync.py`). The manifest had stayed at 0.2.21 while
+  0.2.22 and 0.2.23 landed (#558, #559 each wrote an entry and neither bumped it) and nothing failed. The controls
+  fail on drift (the real 0.2.21 vs 0.2.23 shape), fail on an absent reading rather than pass, and refuse to read a
+  dependency's `version =` as the crate's. CI/tooling only; no spec or corpus change.
+
 ## 0.2.24 — 2026-10-14
 
 - `HANDOFF.md` rewritten to the state at 0.2.23 (R3.2 atan2/sqrt vectors, kiss-ref 0.4.2-0.4.4 re-vendors, the PARTIAL
