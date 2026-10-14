@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.22 — 2026-10-14
+
+- **`ops-atan2-quadrants.json` — the first `atan2` vectors** (KISS-OPS-6.9-0001, ROADMAP R3.2): 28 f32 cells,
+  class **ULP** (`ulp_bound` 4, never exact-byte, §6.8-0005): one ordinary cell per quadrant (two magnitudes
+  each), the signed-zero matrix (`y,x` in `{+0,-0}`), `y = +-0` and `x = +-0` against finite operands of each sign,
+  and the `+-inf` matrix (`+-pi/4`, `+-3pi/4`, `+-0`, `+-pi`, `+-pi/2`). `atan(y/x)` passes every `x > 0` cell and
+  fails every `x < 0` and `x = +-0` cell. **Oracle caveat:** expected values are f64 libm `atan2` rounded once to
+  f32, not correctly rounded (no `atan2` hp atom exists); the special cells are fixed by IEEE 754 Annex F.
+  `mint_atan2.rs` recomputes every special cell from a hard-coded rule table (not `f64::atan2`) and asserts
+  quadrant membership for the ordinary ones. Backs 6.9-0001: floor harness 405 -> 406, untested 472 -> 471.
+  Regenerating the other bundles is byte-identical. Opt-in file; not yet run through kiss-ref or Fuel. No spec change.
+
 ## 0.2.21 — 2026-10-14
 
 - `HANDOFF.md` rewritten to the state at 0.2.20 (R3.1 sidecars, integer/bool vectors, next actions). Docs only.
