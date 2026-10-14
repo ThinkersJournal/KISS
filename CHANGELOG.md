@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.44 — 2026-10-14 (number proposed; the PM allocates at gate time)
+
+- **Structural op-DAG equality comparator shipped** (board 203 item 2; floor harness 427 -> 429, untested 424 -> 422): new `structural_dag` module and `tests/structural_dag.rs` back KISS-CONFORM-6.9-0001 and -0002. It resolves non-primitive nodes through the KISS-Ops §6.13 decomposition rows read from `spec/ops.md`, normalizes node/edge order and commutative operand order, and compares node sets, edge sets and OpAttrs bytes; an unreadable (let-bound) decomposition is a typed decline, never a silent primitive. 6.9-0003 stays `untested`, recorded PARTIAL: no emitter or lifter exists, so no round-trip runs. Nothing is re-bracketed (KISS-Ops declares no associativity property). No spec change.
+
 ## 0.2.43 — 2026-10-14 (allocated by the PM)
 
 - **Determinism import-site lint** (board 203 item 6; floor lint 34 -> 35, untested 425 -> 424): `tools/kiss_tables.py` gains `check_determinism_import_sites`, so KISS-CONFORM-6.11-0003 is lint-enforced. Synth, Consume, Emit, Contract and Conform must each spell all three KISS-Ops determinism members verbatim and may not re-spell one in a backticked or bold span (`ULP-tolerance`, `Exact-byte`, a bare `order-invariant`). Mutation-checked: a re-spelled member in a copy of `synth.md` fails the tool. Prose and test-name identifiers are out of scope by construction. No spec change.

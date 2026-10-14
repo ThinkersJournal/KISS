@@ -557,8 +557,13 @@
 # gains: documentary enforcement, not a behavioural downgrade). `--ratchet --base-ref origin/main` said "the lint SET changed"; floor
 # set deliberately to harness 427, lint 35, untested 424.
 #
+# board 203 item (2) (base 322d46d + #578/#579): harness 427 -> 429, untested 424 -> 422, lint 35 unmoved. KISS-CONFORM-6.9-0001 and
+# -0002 are now harness-backed by tests/structural_dag.rs against the new structural_dag module. 6.9-0003 stays untested, recorded
+# PARTIAL (no emitter/lifter): floor unmoved for it. RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said "Set the floor
+# to harness 429, lint 35, untested 422".
+#
 # key	value
-harness	427
+harness	429
 lint	35
-untested	424
+untested	422
 proven	20
