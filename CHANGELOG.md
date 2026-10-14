@@ -5,7 +5,7 @@ second number.
 
 ## 0.3.1 — 2026-10-14 (allocated by the PM)
 
-- **IR-DAG generator and validity self-check (the IN half of board 203 item 3)** (floor harness 429 -> 430, untested 437 -> 436): new `fuzz` module and `tests/fuzz_gen.rs`. A seeded generator of valid scalar-expression DAGs over the ops whose arity the KISS-Ops §6.13 table fixes (ops that resolve through an unreadable decomposition are excluded, and the self-check caught that during development), a typed validity check, and a malformed/near-boundary generator (forward edge, self loop, unknown op, arity +/-1, input index at the bound, root past the end) plus the Grammar codec's `BindSetMismatch`/`BindIndexOutOfRange` declines back KISS-CONFORM-6.6-0005. 6.6-0001 stays `untested`, recorded PARTIAL: roles, ranks, dtypes and OpAttrs sub-vocabularies are not generated. The cross-backend rows stay `blocked`. No spec change.
+- **IR-DAG generator and validity self-check (the IN half of board 203 item 3)** (floor harness 429 -> 430, untested 422 -> 421): new `fuzz` module and `tests/fuzz_gen.rs`. A seeded generator of valid scalar-expression DAGs over the ops whose arity the KISS-Ops §6.13 table fixes (ops that resolve through an unreadable decomposition are excluded, and the self-check caught that during development), a typed validity check, and a malformed/near-boundary generator (forward edge, self loop, unknown op, arity +/-1, input index at the bound, root past the end) plus the Grammar codec's `BindSetMismatch`/`BindIndexOutOfRange` declines back KISS-CONFORM-6.6-0005. 6.6-0001 stays `untested`, recorded PARTIAL: roles, ranks, dtypes and OpAttrs sub-vocabularies are not generated. The cross-backend rows stay `blocked`. No spec change.
 
 ## 0.3.0 — 2026-10-14 (allocated by the PM)
 
