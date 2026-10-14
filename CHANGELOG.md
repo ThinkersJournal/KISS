@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.12 — 2026-10-14
+
+- `ROADMAP.md` statuses (R0.1, R0.3, R0.4, R3.1, R3.4) and `HANDOFF.md` refreshed to current state. Docs only.
+
 ## 0.2.11 — 2026-10-14
 
 - **Three clarifications from the first second-party derivation runs** (Fuel#358/GAP-354, Baracuda's harness):

@@ -52,10 +52,10 @@ Each consumer's binding today:
 
 | # | Item | Why / who needs it | State |
 |---|---|---|---|
-| R0.1 | **Refresh `HANDOFF.md`** to current state (it still describes the #263 decision as pending). | every restarted KISS session reads it first | **[go]** — first item after this file |
+| R0.1 | ~~Refresh `HANDOFF.md`~~ **done (#538); refreshed again with this change.** | every restarted KISS session reads it first | **done** |
 | R0.2 | **Close the issues the merged work answered** (#263, #520, #477 at least; confirm #298, #305, #219, #364 against `origin/main` before closing, one at a time). | the board reads open issues as open work; consumers cite them (#520 is quoted in Unpopped's CHANGELOG as "raised with the PM") | **ready list below**; closing is CireSnave's, not the lane's |
-| R0.3 | **Answer Fuel GAP-349** (`F8E6M2`): *reserved at sk5 means a `structure_key` using it in any dtype position typed-declines (§6.1-0001/-0013); nothing forbids an implementation computing it internally, and nothing lets it be advertised through a key until a future additive schema event activates it.* Fuel keeps it internal or stops computing it — a Fuel choice, not a KISS one. | Fuel `docs/gaps.md` GAP-349, "architect ruling (PM 2026-10-11)" | **[go]** (answer; no spec change needed) |
-| R0.4 | **Re-measure the differentials at `5b28bf5`** now that Fuel binds `sk5` (the 2026-10-09 results doc is against `904a4b4` and `sk4`). | Fuel, Unpopped, Baracuda each cite that doc for "what passes" | **[wait: Baracuda sk5 keyer (fuel GAP-350)]** for a four-way result; Fuel + Unpopped legs can be re-run now |
+| R0.3 | ~~Answer Fuel GAP-349~~ **done**: answered from §6.1-0001/-0013; Fuel recorded it. | Fuel `docs/gaps.md` GAP-349 | **done** |
+| R0.4 | **Re-measure the differentials.** Partly done as the *derivation* runs: Fuel (#358/GAP-354: 25 pass, 10 anchors byte-match) and Baracuda (19 pass / 8 fail at unpopped-vocab 0.16.0, sk4) reported against `structure_key_derivation_vectors.json`; the token-vector runs at current main are Fuel's. The four-way sk5 table needs Baracuda on the unpopped sk5 keyer (GAP-350). | Fuel, Unpopped, Baracuda | **[wait: Unpopped sk5 keyer]** |
 
 ### R1 — finish what the `sk5` event left open (spec-side, consumer-visible)
 
@@ -91,10 +91,10 @@ Ordered by what unblocks a freeze claim, not by count.
 
 | # | Item | State |
 |---|---|---|
-| R3.1 | **The freeze-gate instruments tell the truth**: `--freeze-ready` measures existence, not accuracy (#387); the hard-fail promised by the strict job is not implemented (#524); three umbrella passages disagree on who signs (#462); no clause sidecar (#144). | **[go]**; #462 touches governance → **[rule]** for the signer |
+| R3.1 | **The freeze-gate instruments tell the truth.** **Done (0.2.9, #545):** the blocking Draft→Frozen hard-fail (#524) with 10 seeded controls. **Open:** `--freeze-ready` measures existence, not accuracy (#387); who signs (#462, boarded); no clause sidecar (#144). | **[go]** for #387/#144; **[rule]** for the signer |
 | R3.2 | **Classify first** (closest: 81/120). 39 untraced clauses; start with the ones consumers cite. Then Ops (88), Announce (34), Consume (28), Emit (38), Grammar (37), Contract (74), Conform (88), Synth (99). | **[go]**, the long tail; each is a test, a lint row, or an honest ledger category |
 | R3.3 | **Condition 1 per-field provenance — derivation corpus.** ~~the report~~ **non-`ctr` cells done (0.2.8)**: `structure_key_derivation_vectors.json` (32 vectors: raw operands + hints -> token or typed decline) and the reference emit-derivation stage `derive.rs`; ten vectors reproduce A.1 goldens derived from raw cells. Still open: `ctr` cells (blocked on R1.8 / #543 — the batch role), and a **second deriver** run over it (Fuel/Unpopped/Baracuda), which is what makes a field count as independently derived. | **[wait: #543 for ctr; consumers for the cross-run]** |
-| R3.4 | **Single-toolchain differential** (#139): toolchain independence is asserted, never demonstrated. | **[go]** |
+| R3.4 | ~~Single-toolchain differential~~ **done (0.2.10, #546):** `KISS_C_COMPILER` + the `windows-clang-cl` job runs the suite under clang-cl, fails (never skips) if LLVM is absent; passed on its first CI run. The loader is still Win32-only. | **done** |
 
 ### R4 — freeze (not ours to complete)
 

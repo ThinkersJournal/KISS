@@ -22,18 +22,20 @@
 
 ## Open KISS PRs
 
-- **#539** `conformance/corpus/ops-rounding.json` (0.2.4): the first vectors for floor/ceil/trunc/round_even. After it merges: remove worktree `C:/Projects/kiss-rounding` and the branch.
-- **This HANDOFF PR** (`docs/handoff-2026-10-13`): remove `C:/Projects/kiss-handoff2` and the branch once merged.
+None as of origin/main `ae16d2a` (2026-10-14, conformance 0.2.11).
 
-## Current state at origin/main 5b28bf5 (conformance 0.2.1)
+## Current state at origin/main ae16d2a (conformance 0.2.11)
 
-- **#263 ruled D and landed (#535, #536):** `structure_key` is `sk5`, field 1 is the **derived** 7-class `cell_class`
-  (`ctr ndx rdc ew1 ew2 ew3 oth`, Classify §6.5-0015); no op→family table exists; Contract `contract_version` 3
-  (`math_fidelity`); `dequant_form` keyed as the optional sixth sub-key component; extent-1 mask fix; keepdim reduction
-  outputs derive masks `02/03/01/0a`. Design and the 24→7 accounting: `docs/design-263-cell-class.md`. `CHANGELOG.md` has 0.2.0/0.2.1.
-- **kiss-ref 0.4.0 is published** (crates.io, from kiss-ref `2583d5ef`, bound to KISS `a33282c`). Do not touch kiss-ref without a PM task.
-- **Followers** (PM-issued, theirs): Unpopped keyer, Fuel deriver (bound `sk5`), Baracuda (still `sk4` in production), Vulkane (no lane).
-- **Roadmap:** `ROADMAP.md` (on main since #537) is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
+- **#263 landed** (`sk5`, derived 7-class `cell_class`, `contract_version` 3); design in `docs/design-263-cell-class.md`.
+  kiss-ref 0.4.0 is published (bound to `a33282c`); do not touch kiss-ref without a PM task.
+- **New instruments since:** `ops-rounding.json` (72) and `ops-minmax-nan.json` (44, Fuel cosigned 44/44 and 72/72);
+  the cell-carrying `structure_key_derivation_vectors.json` (33 vectors, 10 anchored to Appendix A.1) with its reference
+  deriver `conformance/src/derive.rs`; the blocking freeze hard-fail (`tools/kiss_freeze_gate.py`); a second C
+  toolchain (`KISS_C_COMPILER`, CI job `windows-clang-cl`).
+- **First second-party derivation runs** (Fuel#358, Baracuda): rulings in KISS#547. **Owed by implementations:** collapsed
+  reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped: reduced innermost axis -> `v1`
+  (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
+- **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)
 
@@ -43,6 +45,7 @@
 
 ## Next actions
 
-1. R2.3: NaN vectors for the signed-zero corpus (#329) (needs a build; check C: free space first).
-2. R3.1/R3.2: freeze-gate instrument fixes (#387, #524, #144) and the Classify traceability tail (39 untraced clauses).
-3. R0.2 close-list is ready in ROADMAP §6; closing is CireSnave's. R1.1/R1.2/R1.5 and #462 are boarded (PM item 193): do not start.
+1. R3.1: traceability ACCURACY (#387) and the clause sidecar (#144) — design first; both are instruments, not text.
+2. R3.2: the remaining untested Classify clauses are lint-bound or restatements (see KISS#542 body); look at Ops (88) next, starting with clauses consumers cite.
+3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) — large; needs a design note before code.
+4. Waiting, do not start: R1.1/R1.2/R1.5/R1.8 and #462 (boarded, PM item 193); `ctr` derivation vectors wait on #543.
