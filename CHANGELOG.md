@@ -3,6 +3,16 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.7 — 2026-10-14
+
+- **Two Classify clauses gain real tests** (`conformance/tests/classify_tail.rs`, R3.2): KISS-CLASSIFY-6.6-0005
+  (`test_classify_structure_key_primary_dtype`: operand-0 by position, scale-at-0 is undefined, field 2 is the
+  derived primary) and KISS-CLASSIFY-6.7-0012 (`test_classify_reduction_accumulator_coordinate`: absent = the
+  compute-dtype diagonal, a deviating accumulator is carried from the closed dtype set and round-trips,
+  unknown/reserved spellings decline, the redundant diagonal is not a second spelling of "absent"). Their
+  `UNBACKED.tsv` rows are removed; the coverage floor moves harness 398 → 400, untested 479 → 477. No spec,
+  corpus or published-artifact change.
+
 ## 0.2.6 — 2026-10-14
 
 - **`ops-transcendental-nan.json` gains a `harness_rule` header key** (the key the two minmax files already carry)
