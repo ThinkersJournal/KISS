@@ -55,10 +55,10 @@
 
 ## Next actions
 
-1. R3.2 Ops, the one remaining candidate with a vector subject: `nextafter` value arm (6.9-0003; its typed-decline half has no vector form,
+1. DONE in this change (0.2.26, `ops-nextafter.json`, PARTIAL like 6.8-0003): R3.2 Ops `nextafter` value arm (6.9-0003; its typed-decline half has no vector form,
    so do **not** back the clause: count it PARTIAL as 6.8-0003 was, floor unmoved, UNBACKED note, test not citing the clause). The rest of
    Ops (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
-2. After that merges: the kiss-ref re-vendor, as its own kiss-ref PR with the PM-allocated number (tests/fixtures only).
+2. kiss-ref re-vendor of `ops-nextafter.json` (own kiss-ref PR, PM-allocated number, tests/fixtures only; the runner already handles f32/f64 exact-byte binary ops). Then R3.2 has no vector candidate left: ask the PM what is next.
 3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) -- large; needs a design note before code.
 4. Method that worked: mint in `conformance/src/bin/kiss_mint.rs` (keep each fn under 50 lines, Codacy), an independent-model test, run every
    python `kiss-trace` step plus `cargo clippy --all-targets --all-features` locally (`approx_constant` is blocking), README bound figures

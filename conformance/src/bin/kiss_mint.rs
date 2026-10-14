@@ -10,6 +10,7 @@
 //!   corpus/ops-compare-bool.json      — KISS-OPS-6.2-0005/-0006: comparison -> one-byte bool mask; bool consumers read non-zero as true
 //!   corpus/ops-atan2-quadrants.json   — KISS-OPS-6.9-0001: f32 atan2 four-quadrant + signed-zero + inf cells, class ULP (never exact-byte, §6.8-0005)
 //!   corpus/ops-sqrt-rounding.json     — KISS-OPS-6.8-0003: f32 sqrt, class ULP bound 0 (the correctly-rounded arm; hard cases, exact squares, subnormals, +-0, +inf)
+//!   corpus/ops-nextafter.json         — KISS-OPS-6.9-0003 (value arm): f32/f64 nextafter on the dtype's own lattice, exact-byte (zero crossing, signed zeros, subnormal/normal boundary, max finite <-> inf)
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -592,6 +593,102 @@ fn sqrt_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.8-0003", &cells)
 }
 
+// ---- nextafter value-arm bundle (KISS-OPS-6.9-0003) --------------------------------------------
+//
+// WHY: §6.9-0003 pins `nextafter(a, b)` as the next representable value after `a` toward `b` in the
+// dtype's OWN lattice. A promote-through-f64 `nextafter` returns the f64 neighbour of an f32 value,
+// which is not a representable f32 step; and the zero / subnormal / infinity edges are where hand-rolled
+// bit stepping goes wrong.
+//
+// SCOPE: only the VALUE half. The clause's second half (reject f16/bf16/f8e4m3fn/f8e5m2 with a typed
+// decline) has no vector form (a vector carries an expected VALUE, not a decline), so 6.9-0003 is counted
+// PARTIAL by the ledger, not backed. Class exact-byte (determinism.rs: `nextafter` is exact-byte).
+// EMITTED: f32 and f64, each over the same 14 (a, b) shapes plus 6 raw-bit edge pairs (40 cells). NOT EMITTED: NaN operands (#396).
+const NEXTAFTER_SHAPES: [(&str, [f64; 2]); 14] = [
+    ("up", [1.0, 2.0]),
+    ("down", [1.0, 0.0]),
+    ("equal", [1.0, 1.0]),
+    ("zero-up", [0.0, 1.0]),
+    ("zero-down", [0.0, -1.0]),
+    ("negative-up", [-1.0, 0.0]),
+    ("pow2-down", [2.0, 1.0]),
+    ("to-inf", [1.0, f64::INFINITY]),
+    ("to-neg-inf", [1.0, f64::NEG_INFINITY]),
+    ("inf-down", [f64::INFINITY, 0.0]),
+    ("neg-inf-up", [f64::NEG_INFINITY, 0.0]),
+    ("signed-zero-equal", [0.0, -0.0]),
+    ("signed-zero-equal", [-0.0, 0.0]),
+    ("negative-down", [-1.0, -2.0]),
+];
+
+fn next_toward_f32(a: f32, b: f32) -> f32 {
+    if a.is_nan() || b.is_nan() {
+        return f32::NAN;
+    }
+    if a == b {
+        return b;
+    }
+    if a == 0.0 {
+        let tiny = f32::from_bits(1);
+        return if b > 0.0 { tiny } else { -tiny };
+    }
+    let bits = a.to_bits();
+    let up = (b > a) == (a > 0.0);
+    f32::from_bits(if up { bits + 1 } else { bits - 1 })
+}
+
+fn next_toward_f64(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        return f64::NAN;
+    }
+    if a == b {
+        return b;
+    }
+    if a == 0.0 {
+        let tiny = f64::from_bits(1);
+        return if b > 0.0 { tiny } else { -tiny };
+    }
+    let bits = a.to_bits();
+    let up = (b > a) == (a > 0.0);
+    f64::from_bits(if up { bits + 1 } else { bits - 1 })
+}
+
+/// The extra edge pairs expressed as raw bit patterns (they are not exact f64 literals in both lanes).
+fn nextafter_edge_pairs() -> [(&'static str, (u64, u64), (u32, u32)); 6] {
+    [
+        ("max-to-inf", (0x7FEF_FFFF_FFFF_FFFF, 0x7FF0_0000_0000_0000), (0x7F7F_FFFF, 0x7F80_0000)),
+        ("neg-max-to-neg-inf", (0xFFEF_FFFF_FFFF_FFFF, 0xFFF0_0000_0000_0000), (0xFF7F_FFFF, 0xFF80_0000)),
+        ("min-subnormal-to-zero", (0x0000_0000_0000_0001, 0), (0x0000_0001, 0)),
+        ("neg-min-subnormal-to-zero", (0x8000_0000_0000_0001, 0), (0x8000_0001, 0)),
+        ("min-normal-down", (0x0010_0000_0000_0000, 0), (0x0080_0000, 0)),
+        ("max-subnormal-up", (0x000F_FFFF_FFFF_FFFF, 0x0010_0000_0000_0000), (0x007F_FFFF, 0x0080_0000)),
+    ]
+}
+
+fn nextafter_doc() -> String {
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    let mut push = |dtype: &str, a: &[u8], b: &[u8], r: &[u8], tag: &str| {
+        let tags = format!("\"{tag}\",\"6.9-0003\"");
+        cells.push(emit_cell(tc, "nextafter", dtype, &[a, b], r, &tags));
+        tc += 1;
+    };
+    for (tag, [a, b]) in NEXTAFTER_SHAPES {
+        let (a32, b32) = (a as f32, b as f32);
+        let r32 = next_toward_f32(a32, b32);
+        push("f32", &a32.to_bits().to_be_bytes(), &b32.to_bits().to_be_bytes(), &r32.to_bits().to_be_bytes(), tag);
+        let r64 = next_toward_f64(a, b);
+        push("f64", &a.to_bits().to_be_bytes(), &b.to_bits().to_be_bytes(), &r64.to_bits().to_be_bytes(), tag);
+    }
+    for (tag, (a64, b64), (a32, b32)) in nextafter_edge_pairs() {
+        let r32 = next_toward_f32(f32::from_bits(a32), f32::from_bits(b32));
+        push("f32", &a32.to_be_bytes(), &b32.to_be_bytes(), &r32.to_bits().to_be_bytes(), tag);
+        let r64 = next_toward_f64(f64::from_bits(a64), f64::from_bits(b64));
+        push("f64", &a64.to_be_bytes(), &b64.to_be_bytes(), &r64.to_bits().to_be_bytes(), tag);
+    }
+    bundle_doc("OPS", "KISS-OPS-6.9-0003", &cells)
+}
+
 // ---- comparison-mask + bool-normalization bundle (KISS-OPS-6.2-0005 / -0006) -----------------
 //
 // WHY: §6.2-0005 pins a comparison's result as a one-byte `bool` mask, byte 0 or 1 — "an `f32`
@@ -824,5 +921,6 @@ fn main() {
     write_bundle("/corpus/ops-compare-bool.json", &compare_bool_doc());
     write_bundle("/corpus/ops-atan2-quadrants.json", &atan2_doc());
     write_bundle("/corpus/ops-sqrt-rounding.json", &sqrt_doc());
+    write_bundle("/corpus/ops-nextafter.json", &nextafter_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }
