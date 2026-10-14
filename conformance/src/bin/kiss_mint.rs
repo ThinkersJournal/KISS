@@ -398,6 +398,79 @@ fn rounding_doc() -> String {
     bundle_doc("OPS", "KISS-OPS-6.7-0001", &cells)
 }
 
+// ---- f32/f64 min/max NaN bundle (#329) -----------------------------------------------------
+//
+// WHY: `max_prop`/`min_prop` (NaN-propagating) and `fmax_ieee`/`fmin_ieee` (NaN-suppressing) differ
+// ONLY on a NaN operand, and until this bundle the corpus carried no f32/f64 NaN selection cell:
+// the 48 signed-zero + 24 ordinary vectors all pass for an implementation with the two arms
+// SWAPPED. The narrow dtypes already have NaN cells (ops-narrow-select-nan.json); f32 and f64 did not.
+//
+// EMITTED (every cell has a NaN operand, so §6.15's NaN arm decides and no value comparison runs):
+//   PROPAGATING arm: the NaN operand is selected and MOVED — payload and sign exact (§6.16-0009):
+//     NaN in a, NaN in b, a signaling NaN in each position, a NEGATIVE-signed quiet NaN, and
+//     both-NaN (returns a, distinct payloads so the survivor is observable).
+//   IEEE arm: the NaN is suppressed and the finite survivor's bits move: NaN in a, NaN in b,
+//     a signaling NaN in each position; both-NaN returns b (distinct payloads).
+// NOT EMITTED: inf and subnormal operands (no NaN -> covered by the value arm of
+// ops-minmax-ordinary/-signed-zero); bf16/f16/f8 (ops-narrow-select-nan.json); a sNaN QUIETING
+// claim — a MOVED NaN keeps its bits, §6.16-0010 quieting applies to COMPUTED NaNs only.
+/// One float lane's NaN fixtures for the min/max bundle (bit patterns as integers, widest first).
+struct MmLane {
+    name: &'static str,
+    bytes: usize,
+    qa: u64,   // quiet NaN, payload A
+    qb: u64,   // quiet NaN, payload B (distinct)
+    sa: u64,   // signaling NaN
+    sb: u64,   // signaling NaN, distinct
+    negq: u64, // quiet NaN with the SIGN bit set
+    one: u64,  // 1.0
+}
+
+const MM_LANES: [MmLane; 2] = [
+    MmLane { name: "f32", bytes: 4, qa: 0x7FC1_2345, qb: 0x7FD5_5555, sa: 0x7F81_2345, sb: 0x7F80_0001, negq: 0xFFC0_1234, one: 0x3F80_0000 },
+    MmLane {
+        name: "f64",
+        bytes: 8,
+        qa: 0x7FF8_0000_0000_1234,
+        qb: 0x7FFA_AAAA_AAAA_AAAA,
+        sa: 0x7FF0_0000_0000_1234,
+        sb: 0x7FF0_0000_0000_0001,
+        negq: 0xFFF8_0000_0000_1234,
+        one: 0x3FF0_0000_0000_0000,
+    },
+];
+
+/// The cells of one lane: the propagating arm (6 per op) then the IEEE arm (5 per op).
+fn minmax_nan_lane_cells(d: &MmLane, tc: &mut u32, cells: &mut Vec<String>) {
+    let by = |v: u64| -> Vec<u8> { v.to_be_bytes()[8 - d.bytes..].to_vec() };
+    let (qa, qb, sa, sb, nq, one) = (by(d.qa), by(d.qb), by(d.sa), by(d.sb), by(d.negq), by(d.one));
+    for op in ["max_prop", "min_prop"] {
+        let t = "\"moved-nan\",\"select-propagate\",\"6.16-0009\"";
+        for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb), (&nq, &one), (&qa, &qb)] {
+            cells.push(select_cell(*tc, op, d.name, a, b, t));
+            *tc += 1;
+        }
+    }
+    for op in ["fmax_ieee", "fmin_ieee"] {
+        let t = "\"moved-survivor\",\"select-ieee-suppress\",\"6.15\"";
+        for (a, b) in [(&qa, &one), (&one, &qb), (&sa, &one), (&one, &sb)] {
+            cells.push(select_cell(*tc, op, d.name, a, b, t));
+            *tc += 1;
+        }
+        cells.push(select_cell(*tc, op, d.name, &qa, &qb, "\"moved-nan\",\"select-ieee-both-nan\",\"6.15\""));
+        *tc += 1;
+    }
+}
+
+fn minmax_nan_doc() -> String {
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for d in &MM_LANES {
+        minmax_nan_lane_cells(d, &mut tc, &mut cells);
+    }
+    bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
+}
+
 /// Assemble a bundle document from its cells. Header strings are shared across bundles so the
 /// arith bundle regenerates byte-for-byte.
 fn bundle_doc(substandard: &str, spec_clause: &str, cells: &[String]) -> String {
@@ -431,4 +504,5 @@ fn main() {
     write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());
     write_bundle("/corpus/ops-narrow-select-nan.json", &narrow_select_nan_doc());
     write_bundle("/corpus/ops-rounding.json", &rounding_doc());
+    write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
 }

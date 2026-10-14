@@ -3,6 +3,19 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.5 — 2026-10-14
+
+- **New corpus artifact `conformance/corpus/ops-minmax-nan.json`** (44 exact-byte vectors, minted by `kiss_mint`,
+  `KISS-OPS-6.16-0009`; #329): f32 and f64 NaN cells for `max_prop`, `min_prop`, `fmax_ieee`, `fmin_ieee` — NaN in
+  `a`, in `b`, signaling and quiet, a negative-signed NaN, and both-NaN with distinct payloads. Before it no f32/f64
+  corpus cell carried a NaN, so the 72 existing minmax vectors passed for an implementation with the propagating and
+  IEEE arms swapped. **Acceptance demonstrated:** `mint_minmax_nan.rs` computes each cell from the §6.13
+  decomposition on native floats and asserts that a prop↔ieee swap differs from the published bytes on **every**
+  cell. **Independent check:** kiss-ref 0.4.0's evaluator (`eval_op`) reproduces all 44 exact-byte (run in a scratch
+  kiss-ref worktree with the file vendored; not committed there). Not covered: inf/subnormal operands (no NaN; the
+  value arm is covered by ops-minmax-ordinary/-signed-zero) and narrow dtypes (ops-narrow-select-nan.json).
+  `test_fns` figure 711 → 712. Consumers vendor the file; nothing existing changes.
+
 ## 0.2.4 — 2026-10-13
 
 - **New corpus artifact `conformance/corpus/ops-rounding.json`** (72 f32 exact-byte vectors, minted by `kiss_mint`,
