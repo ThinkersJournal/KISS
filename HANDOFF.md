@@ -1,4 +1,4 @@
-<!-- Written 2026-10-13 against origin/main 5b28bf5. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-14 against origin/main 6aeb9b6 (0.2.23). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -20,42 +20,46 @@
 8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; objections from Fuel/Baracuda/Unpopped go
    through the PM too (`list_peers`, re-resolve IDs by cwd; they rotate).
 
-## Open KISS PRs
+## Open PRs
 
-None (origin/main at conformance 0.2.20, 2026-10-14; this HANDOFF PR carries 0.2.21 if open). kiss-ref 0.4.1 merged (#54); no open kiss-ref PR.
+- KISS: none (origin/main at conformance 0.2.23, `6aeb9b6`; this HANDOFF PR is docs only, number allocated by the PM).
+- **kiss-ref#57** (`ops-sqrt-rounding` re-vendor, 0.4.4): [READY] sent, 7/7 green; the PM gates. No local worktree; the branch is `revendor-sqrt`.
+  If merged, nothing is owed. kiss-ref main is 0.4.3 (#55 int/bool 0.4.2, #56 atan2 0.4.3).
 
-## Current state at origin/main (conformance 0.2.20)
+## Current state at origin/main (conformance 0.2.23)
 
 - **#263 landed** (`sk5`, derived 7-class `cell_class`, `contract_version` 3); design in `docs/design-263-cell-class.md`.
-  kiss-ref 0.4.0 is published (bound to `a33282c`); corpus re-pin is kiss-ref#54. Touch kiss-ref only on a PM task.
-- **New instruments since:** `ops-rounding.json` (72) and `ops-minmax-nan.json` (44, Fuel cosigned 44/44 and 72/72);
-  the cell-carrying `structure_key_derivation_vectors.json` (33 vectors, 10 anchored to Appendix A.1) with its reference
-  deriver `conformance/src/derive.rs`; the blocking freeze hard-fail (`tools/kiss_freeze_gate.py`); a second C
-  toolchain (`KISS_C_COMPILER`, CI job `windows-clang-cl`); `ops-transcendental-nan.json` is 13 vectors (0.2.14, f64 `log` sNaN).
-- **First second-party derivation runs** (Fuel#358, Baracuda): rulings in KISS#547. **Owed by implementations:** collapsed
-  reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped: reduced innermost axis -> `v1`
-  (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
-- **Sidecar (#144, option A):** `tools/kiss_sidecar.py` (`--check`; `--write` seeds once, refused over an existing one). Done: all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null`/UNSET until CireSnave rules (PM item 193; option C amends Appendix E).
-- **Integer / bool vectors (R3.2 Ops, 0.2.19-0.2.20):** `ops-int-wrap.json` (440, 6.2-0002) and `ops-compare-bool.json` (181,
-  6.2-0005/-0006). Both opt-in; **not yet run through kiss-ref or Fuel** (Fuel has a [NOTICE] for int-wrap, no reply). 6.2-0007 is
-  deliberately unbacked (bitwise/reduction/scan arms uncovered). Ratchet floor: harness 405, untested 472. OPS untraced 85.
-- **#387:** `--freeze-ready` now says existence-not-accuracy and prints PROVEN per sub-standard (0.2.16); the instrument/wording choice is boarded (PM 193).
+  Touch kiss-ref only on a PM task (the PM has been issuing them per re-vendor).
+- **Instruments:** `ops-rounding.json` (72), `ops-minmax-nan.json` (44), `ops-transcendental-nan.json` (13), the cell-carrying
+  `structure_key_derivation_vectors.json` (33) with `conformance/src/derive.rs`, the blocking freeze hard-fail
+  (`tools/kiss_freeze_gate.py`), a second C toolchain (`KISS_C_COMPILER`, CI job `windows-clang-cl`).
+- **R3.2 Ops vectors this session (all opt-in, no spec change):** `ops-int-wrap.json` (440, 6.2-0002) and `ops-compare-bool.json`
+  (181, 6.2-0005/-0006): kiss-ref 621/621 (#55); Fuel measured int-wrap: 275 PASS, 0 FAIL, 55 typed ERROR (all i8, Fuel GAP-356),
+  110 NOT-EXPRESSIBLE (u16/u64). `ops-atan2-quadrants.json` (28, 6.9-0001, class ULP bound 4, libm-backed oracle, BACKED; kiss-ref
+  28/28 #56). `ops-sqrt-rounding.json` (24, 6.8-0003 first arm, class ULP bound 0; **counted PARTIAL**: the floor did not move, the
+  UNBACKED row stays `untested` with a note, and the test deliberately does not cite the clause; kiss-ref 24/24 in #57).
+- **Ratchet floor:** harness 406, lint 34, untested 471, proven 20. 6.2-0007 stays unbacked (bitwise/reduction/scan arms uncovered).
+- **ULP comparator caveat:** totalOrder distance does not discriminate `+0`/`-0`; atan2 and sqrt zero-sign cells are carried, not enforced.
+- **Owed by implementations:** collapsed reduction output must decline, reduced axis out of range must decline (6.6-0009); Unpopped:
+  reduced innermost axis -> `v1` (6.5-0009(b)). Re-vendor `structure_key_derivation_vectors.json` at blob `299811b1`.
+- **Sidecar (#144, option A):** done for all nine (0.2.17, 0.2.18). `determinism_class` / `wire_abi_schema_version` stay `null`/UNSET until
+  CireSnave rules (PM item 193; option C amends Appendix E). **#387:** instrument/wording choice boarded (PM 193).
 - **Roadmap:** `ROADMAP.md` is the ordered list. Take the next **[go]** item without asking; never start a **[rule]** item.
 
 ## Held / waiting (do not start)
 
 - **R1.1 Announce op identity in every lookup** (`docs/design-263-cell-class.md` §6): own PR, own `list_version`; **timing is CireSnave's**.
-- **#222 candidate 1** (quantized `ctr` scale dtype keying) and **VariantFidelity's home**: need a ruling.
+- **#222 candidate 1** (quantized `ctr` scale dtype keying) and **VariantFidelity's home**: need a ruling. R1.2/R1.5/R1.8/#462: boarded, PM 193.
+- `ctr` derivation vectors wait on #543; Unpopped sk5 keyer; the four-way sk5 table; Fuel's replies.
 - Dependabot Monday reports; Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first.
 
 ## Next actions
 
-1. **kiss-ref re-vendor** (kiss-ref PR, PM allocates): vendor `ops-int-wrap.json` + `ops-compare-bool.json` at the KISS main that has them
-   into `crates/kiss-ref-conformance/fixtures/kiss-corpus/`, add to the `FILES` list in `tests/kiss_corpus_vectors.rs`, update
-   `PROVENANCE.md`, CHANGELOG. If kiss-ref cannot reproduce an integer/bool cell that is a [FINDING] (kiss-ref models no native Bool lane).
-2. R3.2 Ops, remaining candidates with a vector subject: `nextafter` value arm (6.9-0003; its typed-decline half has no vector form, so do
-   not back the clause), ~~`atan2` quadrants (6.9-0001)~~ done in this change (0.2.22, `ops-atan2-quadrants.json`, libm-backed oracle, not yet through kiss-ref), ~~`sqrt` correct rounding (6.8-0003)~~ first arm vectored (0.2.23, `ops-sqrt-rounding.json`; clause stays unbacked, PARTIAL). The rest of Ops
-   (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
-3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) — large; needs a design note before code.
-4. Waiting, do not start: R1.1/R1.2/R1.5/R1.8 and #462 (boarded, PM item 193); `ctr` derivation vectors wait on #543; Fuel's reply on
-   `ops-int-wrap.json`; Unpopped sk5 keyer; the four-way sk5 table.
+1. R3.2 Ops, the one remaining candidate with a vector subject: `nextafter` value arm (6.9-0003; its typed-decline half has no vector form,
+   so do **not** back the clause: count it PARTIAL as 6.8-0003 was, floor unmoved, UNBACKED note, test not citing the clause). The rest of
+   Ops (decomposition/level/registry/version/complex) has no subject in the harness: a design question, not a vector batch.
+2. After that merges: the kiss-ref re-vendor, as its own kiss-ref PR with the PM-allocated number (tests/fixtures only).
+3. R2.4: OpAttrs cross-implementation byte comparison (#504/#502) -- large; needs a design note before code.
+4. Method that worked: mint in `conformance/src/bin/kiss_mint.rs` (keep each fn under 50 lines, Codacy), an independent-model test, run every
+   python `kiss-trace` step plus `cargo clippy --all-targets --all-features` locally (`approx_constant` is blocking), README bound figures
+   by `tools/kiss_readme_coverage.py`. Write scripts to files with the Write tool: multi-line python heredocs with quotes broke the Bash tool.
