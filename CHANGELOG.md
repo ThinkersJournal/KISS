@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.2.26 — 2026-10-14
+
+- **`ops-nextafter.json` — the first `nextafter` vectors, value half** (KISS-OPS-6.9-0003, ROADMAP R3.2): 40 exact-byte
+  cells, f32 and f64 over 14 shapes plus 6 raw-bit edge pairs: up/down, equal operands (return `b`, so
+  `nextafter(+0,-0)` is `-0`), zero crossing to the smallest subnormal, `+-inf` both ways, max finite <-> inf, the
+  subnormal/normal boundary, a power-of-two boundary, and a step onto zero that keeps `a`'s sign. A promote-through-f64
+  `nextafter` returns the f64 neighbour of an f32 value (for `1.0` toward `2.0` that is `1.0` again). `mint_nextafter.rs`
+  recomputes every cell from an independent monotone-key model. **6.9-0003 is counted as PARTIAL, not backed:** its
+  typed-decline half (f16/bf16/f8e4m3fn/f8e5m2) has no vector form, so the floor does not move (harness 406, untested
+  471) and the `UNBACKED.tsv` row stays `untested` with a note. Regenerating the other bundles is byte-identical.
+  Opt-in file; not yet run through kiss-ref or Fuel. No spec change.
+
 ## 0.2.25 — 2026-10-14
 
 - **`tools/kiss_version_sync.py` — the manifest version must equal the newest CHANGELOG heading** (blocking, in the
