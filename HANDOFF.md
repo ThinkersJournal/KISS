@@ -44,7 +44,7 @@ None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (
 
 ## Waiting (do not start)
 
-- Board 193 [rule] items: R1.1, R1.2, R1.5, R1.8/#543, #462, #387 instrument, sidecar fields. Timing is CireSnave's.
+- Board 193: R1.1 B, R1.2 A, R1.5 B RULED 2026-10-15 (ROADMAP records them; R1.1+R1.2 ride the next `structure_key` bump). Still [rule]: R1.8/#543, #462, #387 instrument, sidecar fields.
 - Fuel's OpAttrs vector body-diff and 36-vector re-vendor; Baracuda/Unpopped sk5 keyers, four-way sk5 table.
 - Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 
