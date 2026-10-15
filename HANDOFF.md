@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.1). `conformance/Cargo.toml` and the top `CHANGELOG.md`
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.2). `conformance/Cargo.toml` and the top `CHANGELOG.md`
    heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -44,7 +44,7 @@ None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (
 
 ## Waiting (do not start)
 
-- Board 193 [rule] items: R1.1, R1.2, R1.5, R1.8/#543, #462, #387 instrument, sidecar fields. Timing is CireSnave's.
+- Board 193: R1.1 B, R1.2 A, R1.5 B RULED 2026-10-15 (ROADMAP records them; R1.1+R1.2 ride the next `structure_key` bump). Still [rule]: R1.8/#543, #462, #387 instrument, sidecar fields.
 - Fuel's OpAttrs vector body-diff and 36-vector re-vendor; Baracuda/Unpopped sk5 keyers, four-way sk5 table.
 - Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 

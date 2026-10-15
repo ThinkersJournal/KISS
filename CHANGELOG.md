@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.3.3 — 2026-10-15 (number proposed; the PM allocates at gate time)
+
+- ROADMAP.md and HANDOFF.md record the board 193 rulings R1.1 B, R1.2 A, R1.5 B (docs only, no behaviour change; wire text waits for the next `structure_key` bump).
+
 ## 0.3.2 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
 - HANDOFF.md rewritten for the post-board-203/201 state (docs only, no behaviour change).
