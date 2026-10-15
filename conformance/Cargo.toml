@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 [package]
 name = "kiss-conformance"
+<<<<<<< HEAD
 version = "0.3.3"
+=======
+version = "0.3.4"
+>>>>>>> 42af87a (spec(umbrella,conform): freeze needs three signatures; Appendix E determinism_class optional, wire_abi_schema_version per sub-standard (board 193 #462))
 edition = "2021"
 rust-version = "1.77"  # f32::round_ties_even (round_even oracle)
 license = "MIT OR Apache-2.0"
