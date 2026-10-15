@@ -3,15 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-<<<<<<< HEAD
-## 0.3.3 — 2026-10-15 (number proposed; the PM allocates at gate time)
-
-- ROADMAP.md and HANDOFF.md record the board 193 rulings R1.1 B, R1.2 A, R1.5 B (docs only, no behaviour change; wire text waits for the next `structure_key` bump).
-=======
 ## 0.3.4 — 2026-10-15 (number proposed; the PM allocates at gate time; stacked after #584's 0.3.3)
 
 - **Board 193 #462 ruled (CireSnave verbatim: "Editor and auditor and me. Yes, make desterminism_class optional. wire_abi_schema_version = each sub-standard's own schema string.")**: a freeze needs three signatures (editor-of-record, AUDIT role, steward's signatory); umbrella §5.3/§7.1/§7.3 and the four restatements (Conform §3, §8-0006, §7 role list, Consume §10, Emit 8.2-0004) reconciled. Appendix E: `determinism_class` OPTIONAL (absent = n/a); `wire_abi_schema_version` = the sub-standard's own §8 schema string, UNSET plus one ask where none is stated. Text only; sidecars and `kiss_sidecar.py` follow in a later PR. No clause ID added or retired.
->>>>>>> 42af87a (spec(umbrella,conform): freeze needs three signatures; Appendix E determinism_class optional, wire_abi_schema_version per sub-standard (board 193 #462))
+
+## 0.3.3 — 2026-10-15 (number proposed; the PM allocates at gate time)
+
+- ROADMAP.md and HANDOFF.md record the board 193 rulings R1.1 B, R1.2 A, R1.5 B (docs only, no behaviour change; wire text waits for the next `structure_key` bump).
 
 ## 0.3.2 — 2026-10-14 (number proposed; the PM allocates at gate time)
 
