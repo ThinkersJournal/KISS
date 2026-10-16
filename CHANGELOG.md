@@ -3,6 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.3 — 2026-10-16 (number proposed; the PM allocates at gate time)
+
+- **Reference `ctr` derivation stage (ROADMAP R3.3).** `derive_structure_key` now derives dense-contraction cells: `DerivationCell.contraction: Option<ContractionRoles>` replaces the boolean `contraction_declared` and the `ContractionOutOfScope` decline. The roles are caller hints (§6.6-0012): M, N and K as **operand axes** `{operand, axis}`, batch axes as iteration-frame axes (§6.6-0023), the weight and scale as call-order operand slots.
+  - **Spec clarification, no wire change (§6.6-0016):** M, N and K name an axis of an operand, not a frame axis. Under right-alignment `lhs [M,K]` and `rhs [K,N]` share frame axes, so a frame axis cannot name them (the §2.8(d) example `[8,4096] . [4096,4096]` has frame axis 0 = 4096, not M = 8). Batch axes stay frame axes. §6.6-0019's coverage note is rewritten: `<wdt>` is now derived from a cell, and `ctr_weight_role_not_operand_one` is a live detector.
+  - **Artifact:** `structure_key_derivation_vectors.json` gains 15 `ctr` vectors (rank-2 to rank-4, batched and not, quantized weight/scale, accumulator + `rm`, and the weight-first undeclared-accumulator trap, warned about in §6.7-0006) and 12 role-hint declines (`ContractionAxisInvalid`, `RoleSlotOutOfRange`, `ContractionNoOutput`, the five batch declines, a reserved weight dtype). `decline_contraction_out_of_scope` is removed. Each cell gains a `contraction` object; `contraction_declared` is kept (true iff it is non-null). Expected bytes are reference output, not hand-derived goldens: a second deriver is what makes them count.
+  - **Consumers:** a deriver reading the artifact now has `ctr` cells to reproduce; nothing about an existing token changes (`sk6`, no regeneration).
+  - Floor: KISS-CLASSIFY-6.6-0012 and -0016 move from blocked to backed.
+
 ## 0.4.2 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - **Batch role defined (ROADMAP R1.8, KISS#543; ruled by the PM 2026-10-16 as option A, the editor's recommendation).** New KISS-CLASSIFY-6.6-0023: the batch axes of a `ctr` cell are a caller-declared role hint (never inferred from rank, position or extent, as for the weight, §6.6-0019); the cell is batched iff the declared set is non-empty (a declared axis of extent 1 is batched); the `b<class>` class is that of the product of the batch extents (saturating, §6.5-0008); a batch axis that is out of range, duplicated, also an M/N/K axis, absent from the output or of extent below 1 is a typed decline. §6.6-0012, §6.6-0016, §6.7-0006 and the cell-class table amended to point at it. Code: `derive_batch_class`, `size_class_of`, `BatchRoleDecline`; test ``test_classify_batch_role_derivation`.
