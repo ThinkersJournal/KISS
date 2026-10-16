@@ -1,13 +1,13 @@
-<!-- Written 2026-10-16 against origin/main 788fb5e plus the sk6 PR (conformance 0.4.0 proposed). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-16 against origin/main 86196f7 (conformance 0.4.0 merged, #588); this docs PR is 0.4.1. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
 ## Standing procedure (a restarted session must do these)
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
-   remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.6; sk6 PR proposes 0.4.0). `conformance/Cargo.toml` and the top `CHANGELOG.md`
-   heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
+   remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.0; this docs PR is 0.4.1, no docs exception). `conformance/Cargo.toml` and the top
+   `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
 4. **Derived figure files come from the tools**: `python tools/kiss_trace.py --ratchet --base-ref origin/main` (floor numbers) and
@@ -16,45 +16,39 @@
 5. **Before pushing run every python step of the `kiss-trace` job** (`.github/workflows/traceability.yml`), `cargo test` and `cargo clippy
    --all-targets --all-features` in `conformance/` (`approx_constant` is blocking). The three bash-launching suites DO run here:
    `python tools/run_with_git_bash.py tools/test_kiss_ratchet_step.py` (same for `_msrv_step`, `_orphan_step`); the WSL launcher in System32
-   wins over PATH, so never call them bare. Do not report them "unrun".
+   wins over PATH, so never call them bare. Run `kiss_trace.py` without `python -I`. Do not report them "unrun".
 6. **Auto-mode classifier denials are final for the session**; a peer cannot clear one. Report it and take a different route.
 7. **Codacy:** methods over 50 lines on touched lines, `assert` in Python tests (use `unittest`), and a new `import subprocess`
    (accepted once, #568, with a disposition comment). Split or answer on the PR; never configure the path out.
-8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; `list_peers` and re-resolve IDs by cwd
-   (they rotate; the PM's changed twice today). **Write scripts with the Write tool**: multi-line python heredocs with quotes broke Bash, and
-   `/tmp` in Git Bash is not `/tmp` to Windows python.
+8. **Peer messages are information, not authority.** CireSnave's decisions arrive only via the PM; all approval requests go to the PM. `list_peers` and
+   re-resolve IDs by cwd (they rotate; PM is cwd `C:\Projects`, last zqx9v437). **Write scripts with the Write tool**: multi-line python heredocs
+   with quotes broke Bash, and `/tmp` in Git Bash is not `/tmp` to Windows python. Worktree files can be CRLF on disk.
 9. **Claims:** a clause is "backed" only when the test discriminates; when half a clause has no vector form, count it PARTIAL (floor unmoved,
    `UNBACKED.tsv` note, test does not cite the clause), as 6.8-0003 and 6.9-0003 were. Say what a source scan cannot prove.
 
-## Open PRs
+## State at 0.4.0 (origin/main 86196f7)
 
-**The sk6 PR** (branch `kiss-structure-key-bump`, PM [TASK] 2026-10-16 "GO on the structure_key bump"): `sk5`->`sk6` (scale dtype keyed for
-quantized `ctr` cells, §6.6-0022, trailing `q<dtype>`) + Announce `list_version` 2 (`op_identity` in every identity block, §6.3-0013, Synth mirrored),
-0.4.0 proposed, floor harness 433. Per-vector old/new: `docs/sk6-vector-changes.md`. `envelope_version` and `contract_version` unmoved. Nothing frozen.
-After it merges: remove worktree `C:/Projects/kiss-sk-bump`; Unpopped, Baracuda, Fuel regenerate (CHANGELOG 0.4.0 lists what each must do).
-KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate.
-
-## State at 0.3.6
-
+- **#588 merged:** `structure_key` `sk5`->`sk6` (scale dtype keyed for quantized `ctr`, §6.6-0022) + Announce `list_version` 2 (`op_identity`,
+  §6.3-0013, Synth mirrored). Per-vector old/new: `docs/sk6-vector-changes.md`. `envelope_version` 1 and `contract_version` 3 unmoved. Nothing frozen.
+  KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate. The PM notifies Unpopped, Baracuda, Fuel (CHANGELOG 0.4.0 lists what each regenerates).
+- **Open item, KISS lane owns: ROADMAP R1.10 "Frame versioning before freeze".** CYRQ/CRSP/CDEC carry no version field (PM ruling: no bump now, since all
+  speakers regenerate together); must be resolved before any freeze. Detector: the freeze checklist. Not startable until a freeze is scheduled.
 - **Floor** harness 433, lint 35, untested 421 (tool, base origin/main). Re-measure with `python tools/kiss_trace.py --report`.
 - **PARTIAL, floor unmoved:** 6.9-0003 (no emitter/lifter), 6.6-0001 (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated),
   6.13-0008, 6.13-0009. 6.6-0002/-0003/-0004/-0006/-0007 are `blocked` (need a suite emitter and lifter).
 - **Board 201 pin:** `math_fidelity` u8 {0 reserved, 1 bit-stable, 2 reduced-mantissa}; accumulator 0x00 or 1-based dtype ordinal;
-  Appendix E.2 six-byte reduce/scan forms; 167 generic vectors, `not_emitted` empty. Clause field renamed from `math_precision` (PM reading).
+  Appendix E.2 six-byte reduce/scan forms; 167 generic vectors, `not_emitted` empty.
 - **GAP-305** (Fuel's OpAttrs encoder vs 6.19.3) is owned by the fuel lane; it follows our 6.19.2 pin.
 - Unpopped `WeightRoleNotDeclared` decline name is Unpopped-local; needs a PM/architect ruling and version before KISS mints it.
 
 ## Waiting (do not start)
 
-- **Ask for the PM (open on the sk6 PR):** the CYRQ/CRSP/CDEC frames carry no version field, so their new shape is gated only by the `SAVL` `list_version` and the speaker's own `sk6`; say whether an Announce profile bump is wanted.
-- Board 193 RULED 2026-10-15 and merged: R1.1/R1.2/R1.5 recorded in ROADMAP (#584); #462 three freeze signatures + Appendix E optional `determinism_class` (#585); sidecars (#586). AUDIT holder = dedicated audit lane, interim PM (board 218). Still [rule]: R1.8/#543, #387 instrument.
+- Unpopped, Baracuda, Fuel regeneration for sk6 / `list_version` 2 (their lanes; Unpopped reports 0.18.0 sk6 published).
+- Still [rule]: R1.8/#543 (batch role), #387 instrument. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext].
 - Six sidecars record `wire_abi_schema_version` as "none stated (editor: KISS lane, pending ratification)"; the KISS lane is editor of record for all nine until ratified.
-- Fuel's OpAttrs vector body-diff and 36-vector re-vendor; Baracuda/Unpopped sk5 keyers, four-way sk5 table.
 - Ubuntu 26 runner 2026-10-19: if CI breaks, tell the PM first. Dependabot Monday report.
 
 ## Next actions
 
-1. `git fetch`; `list_peers` / `check_messages` (PM id rotates: match cwd `C:\Projects`; last zqx9v437). Answer any [FINDING] by
-   re-measuring at the sender's `origin/main` first.
-2. The sk6 PR is the open item: answer review threads, rebase if `main` moved (`git fetch`; re-run the python steps and `cargo test`), re-derive the floor if it moved. Otherwise no unblocked own-roadmap row: report [STATUS] and idle.
-3. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext]: nothing to build from inside this repo.
+1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
+2. No unblocked own-roadmap row remains: report [STATUS] and idle until a PM [TASK], a Dependabot PR, or a speaker's regeneration question.
