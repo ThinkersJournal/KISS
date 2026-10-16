@@ -1,4 +1,4 @@
-<!-- Written 2026-10-16 against origin/main f88d389 (conformance 0.4.3); this docs PR proposes 0.4.4. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-16 against origin/main 3688cfe (conformance 0.4.5); this docs PR proposes 0.4.6. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.3; this docs PR proposes 0.4.4; no docs exception). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.5; this docs PR proposes 0.4.6; no docs exception). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,11 +28,13 @@
 
 ## Open PR
 
-None. **#591 merged (0.4.3):** reference `ctr` stage in `derive.rs`; M/N/K are operand axes `{operand, axis}`, batch axes frame axes, weight/scale call-order slots;
-15 `ctr` + 12 decline vectors; floor harness 436. Unpopped, Fuel, Baracuda were told (second-deriver run). Spec 6.7-0006 warns: a weight-first call order makes
-`<acc>` default to operand 0's dtype (the primary dtype, = the weight's only when the weight is operand 0) unless declared.
+None. **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
+MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
+Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
+Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 0's dtype unless declared.
 
-## State at 0.4.3 (origin/main f88d389)
+## State at 0.4.5 (origin/main 3688cfe)
 
 - **#588 merged:** `structure_key` `sk5`->`sk6` (scale dtype keyed for quantized `ctr`, §6.6-0022) + Announce `list_version` 2 (`op_identity`,
   §6.3-0013, Synth mirrored). Per-vector old/new: `docs/sk6-vector-changes.md`. `envelope_version` 1 and `contract_version` 3 unmoved. Nothing frozen.
@@ -57,4 +59,5 @@ None. **#591 merged (0.4.3):** reference `ctr` stage in `derive.rs`; M/N/K are o
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. No unblocked own row (R1.10 needs a scheduled freeze; the second-deriver run is the other lanes'). Answer second-deriver questions on the `ctr` vectors; Dependabot Monday.
+2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): the empty-reason `untested` rows, Grammar and Conform first, then Ops, Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
+3. Dependabot Monday (2026-10-19); answer second-deriver questions on the `ctr` vectors.
