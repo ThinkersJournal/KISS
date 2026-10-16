@@ -1921,8 +1921,9 @@ prose is reconciled to it only by the deterministic clause-ID-token match of §6
   - `sub_standard_token` — string, the sub-standard identifier (e.g. `KISS-OPS`).
   - `wire_abi_schema_version` — string, **each sub-standard's own schema-version string** as that
     sub-standard's §8 states it for its axis (§8-0001; e.g. the KISS-Classify `structure_key`
-    version token). Where a sub-standard states none, the value is UNSET and one question is put to
-    that sub-standard's editor-of-record; nothing is guessed.
+    version token). Where a sub-standard states none, the value is the literal
+    `none stated (editor: <editor-of-record>, pending ratification)` and the field counts as UNSET;
+    nothing is guessed.
   - `generator` — string enumerant, one of `canonical-schema` (POD tiers, §6.1-0006) or
     `hand-maintained` (non-POD tiers), recording how the sidecar was produced.
   - `clauses` — array of clause objects, in ascending clause-ID order.

@@ -69,8 +69,28 @@ class SidecarDrift(unittest.TestCase):
         """Regenerating from prose is #144 option B and inverts 6.1-0007."""
         self.assertEqual(s.main(["--write", STEM]), 2)
 
-    def test_unset_fields_are_counted_not_hidden(self):
-        self.assertEqual(s.unset_count(self.doc), 1 + len(self.doc["clauses"]))
+    def test_unset_schema_string_is_counted_not_hidden(self):
+        """consume states no schema string, so it is UNSET; contract states `3`, so it is not."""
+        self.assertEqual(s.unset_count(self.doc), 1)
+        _, contract = s.load("contract")
+        self.assertEqual(contract["wire_abi_schema_version"], "3")
+        self.assertEqual(s.unset_count(contract), 0)
+
+    def test_absent_determinism_class_is_valid(self):
+        self.assertTrue(all("determinism_class" not in c for c in self.doc["clauses"]))
+        self.assertEqual(s.drift(STEM), [])
+
+    def test_a_non_enumerant_determinism_class_is_drift(self):
+        doc = json.loads(s.dumps(self.doc))
+        doc["clauses"][0]["determinism_class"] = "n/a"
+        with self.seeded(doc):
+            self.assertTrue(any("not an enumerant" in p for p in s.drift(STEM)))
+
+    def test_a_valid_determinism_class_is_not_drift(self):
+        doc = json.loads(s.dumps(self.doc))
+        doc["clauses"][0]["determinism_class"] = "exact-byte"
+        with self.seeded(doc):
+            self.assertEqual(s.drift(STEM), [])
 
 
 if __name__ == "__main__":
