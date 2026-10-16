@@ -270,8 +270,7 @@ A sub-standard advances Draft → Frozen only when all three conditions are met 
 2. **A non-native foreign reader consumes the wire.** A reader written outside the reference language reproduces or parses the exact bytes, with endianness, pointer width, and structure padding checked (the adversarial-outsider checklist).
 3. **The sub-standard's KISS-Conform suite exists and passes**, with complete bidirectional clause-to-test traceability.
 
-The **KISS-Conform AUDIT role signs the freeze transition**, jointly with the sub-standard's
-editor-of-record (§7.1) and never the authoring role alone. "Frozen" means "has a passing conformance gate and a demonstrated second dissimilar implementation from the document alone," never merely "the authors declared it stable." A sub-standard citing this gate refers to it as "umbrella §5.3" so the reference resolves from the public documents alone.
+The freeze transition requires **three signatures** — the sub-standard's editor-of-record (§7.1), the KISS-Conform AUDIT role, and the steward's signatory (CireSnave; ratified 2026-10-15, KISS#462). **All three are REQUIRED**; no one or two of them suffice, and the authoring role never signs alone. **AUDIT: dedicated audit lane (not yet instantiated); interim PM.** The AUDIT role is held by a dedicated read-only audit lane that never authors the sub-standard it signs; until that lane exists the portfolio PM signs the AUDIT slot, and the freeze record states so. No person is named. "Frozen" means "has a passing conformance gate and a demonstrated second dissimilar implementation from the document alone," never merely "the authors declared it stable." A sub-standard citing this gate refers to it as "umbrella §5.3" so the reference resolves from the public documents alone.
 
 ---
 
@@ -319,7 +318,7 @@ Both entries activate the two §6.20-0005 tags that were allocated-reserved befo
 ### 7.1 Roles
 
 - **Steward — ThinkersJournal.** Hosts the specification text, the extension and namespace registries, the free-certification registry, and the conformance-suite distribution. The steward does not author sub-standards, does not arbitrate technical disputes within a sub-standard, and does not police conformance claims. Custody is held in trust for the interested-cosignatory community; when external parties join, the non-profit is formalized and org/crate ownership transfers to it.
-- **Editor-of-record — one per sub-standard.** Holds the pen for that sub-standard: allocates clause IDs, integrates ratified changes, and signs maturity-stage advances jointly with the KISS-Conform AUDIT role. There is a single editor per sub-standard, not design-by-committee. Editor assignments are recorded in the governance record; a sub-standard whose editor is not yet ratified marks its §0 editor field "proposed, pending ratification."
+- **Editor-of-record — one per sub-standard.** Holds the pen for that sub-standard: allocates clause IDs, integrates ratified changes, and signs maturity-stage advances jointly with the KISS-Conform AUDIT role (a freeze additionally needs the steward's signatory, §5.3). There is a single editor per sub-standard, not design-by-committee. Editor assignments are recorded in the governance record; a sub-standard whose editor is not yet ratified marks its §0 editor field "proposed, pending ratification."
 - **Interested cosignatories.** Projects and parties that build consumers, providers, emitters, or otherwise depend on a sub-standard. (A *cosignatory* is a co-signer of the suite's governance — a stakeholder with standing to comment and vote; the term is not "consignatory," which concerns consignment of goods.) They receive comment and vote on proposed changes to the sub-standards that affect them. An editor requests comment from affected cosignatories before deciding a cross-party-visible change.
 
 ### 7.2 The RFC process
@@ -328,7 +327,7 @@ Every surfaced ambiguity or proposed change becomes a **numbered RFC** — a Git
 
 ### 7.3 Advancing a maturity stage
 
-A sub-standard advances a maturity stage when its stage-transition criteria (§5.2, and for freeze §5.3) are met and **the transition is signed by the KISS-Conform AUDIT role**, not by the authoring editor alone. The audit confirms traceability is complete, that a second dissimilar implementation was built from the document alone, that the adversarial-outsider checklist passed, and — for a freeze — that the full freeze gate is met. The signed transition is recorded in §0 front-matter and in the RFC record.
+A sub-standard advances a maturity stage when its stage-transition criteria (§5.2, and for freeze §5.3) are met and **the transition is signed by the KISS-Conform AUDIT role jointly with the editor-of-record**, not by the authoring editor alone; **a freeze additionally requires the steward's signatory (§5.3)**. The audit confirms traceability is complete, that a second dissimilar implementation was built from the document alone, that the adversarial-outsider checklist passed, and — for a freeze — that the full freeze gate is met. The signed transition is recorded in §0 front-matter and in the RFC record.
 
 ---
 

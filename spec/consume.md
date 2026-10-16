@@ -1086,7 +1086,7 @@ non-editor cosignatory for round-trip-table clauses and for any clause changed b
 reference implementation found it difficult — are stated in KISS-Emit §10 and apply here
 identically. Maturity-stage advances are signed by the
 **KISS-Conform AUDIT role** jointly with the editor (umbrella §7.3), not by the authoring editor
-alone. The **specification text** is CC0 1.0 Universal (umbrella §9.1); the **reference crates** are
+alone; a freeze additionally needs the steward's signatory (umbrella §5.3). The **specification text** is CC0 1.0 Universal (umbrella §9.1); the **reference crates** are
 MIT-OR-Apache-2.0 (umbrella §9.2); the **conformance suite** carries the mark policy of umbrella
 §9.3; the **patent grant** is the royalty-free grant with defensive termination of umbrella §9.4.
 Project and product names in this document are confined to non-normative examples, provenance, and

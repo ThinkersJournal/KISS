@@ -1042,8 +1042,8 @@ bump rule table (below) states, per kind of change, which axis moves.
   consumer** has certified the round-trip of §6.7 against an emitter's output. *Test:*
   `test_emit_freeze_precondition_second_consumer_roundtrip`.
 - **KISS-EMIT-8.2-0004** — The Draft → Frozen transition MUST be signed by the
-  KISS-Conform AUDIT role **jointly with the editor-of-record** (umbrella §7.1), and never by the
-  authoring editor alone — both signatures are required. *Test:*
+  KISS-Conform AUDIT role **jointly with the editor-of-record** (umbrella §7.1) **and the steward's signatory** (umbrella §5.3), and never by the
+  authoring editor alone — all three signatures are required. *Test:*
   `test_emit_freeze_signed_by_audit_role`.
 
 ---

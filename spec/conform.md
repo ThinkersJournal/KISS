@@ -60,7 +60,7 @@ harness, an IR-DAG fuzzer emitting to every backend, and negative/decline vector
 the **determinism-class-aware comparators** that decide what a passing run means;
 **per-sub-standard-per-version keying** so a frozen version's suite is immutable; and
 the **freeze gate** — the adversarial-outsider checklist that every sub-standard must
-pass, signed by the KISS-Conform AUDIT role, before Draft→Frozen. KISS-Conform is what
+pass, signed by the KISS-Conform AUDIT role (with the editor-of-record and the steward's signatory, umbrella §5.3), before Draft→Frozen. KISS-Conform is what
 turns "the authors declared it stable" into "has a passing conformance gate and a
 demonstrated second dissimilar implementation from the document alone."
 
@@ -359,7 +359,7 @@ manifest from KISS-Emit. It re-defines none of them: Conform tests them.
   exemption (§8, umbrella §5.3).
 - **AUDIT role** — the KISS-Conform role that co-signs a maturity transition with the
   sub-standard's editor-of-record (umbrella §7.1), never the authoring/design editor
-  alone; attempts a second dissimilar implementation from the document
+  alone (a freeze also needs the steward's signatory, umbrella §5.3); attempts a second dissimilar implementation from the document
   alone and reports every ambiguity (umbrella §5.3, §7.3).
 - **Wire/ABI schema version** — the version axis Conform keys conformance on (umbrella
   §5.1): the KISS-Announce envelope version, the KISS-Classify `structure_key` version, the
@@ -1483,7 +1483,7 @@ version)`; the reference **crate** carries an ordinary semver that moves on any 
   clean** by provenance tag, §6.5-0003); and negative/decline coverage passes (never-panic fuzz
   clean within the pinned time/memory bounds, §6.7-0004). The transition MUST be **signed by the
   KISS-Conform AUDIT role** **jointly with the sub-standard's editor-of-record** (umbrella
-  §7.1), and never by the authoring editor alone. ⚠️ Both signatures are REQUIRED: *"not the
+  §7.1) **and the steward's signatory** (umbrella §5.3), and never by the authoring editor alone. ⚠️ All three signatures are REQUIRED: *"not the
   authoring editor alone"* forbids an editor-only signature and is satisfied by an AUDIT-only one,
   which is the excluded-editor reading this clause rejects. *Test:*
   `test_conform_freeze_gate_checklist` (checklist gate; AUDIT-signed).
@@ -1701,7 +1701,7 @@ applies reflexively to itself, umbrella §3.3).
   freeze-gate checklist or the comparator-selection rule is coordinated across all affected parties
   as a numbered RFC before it is wired.
 - **AUDIT role separation:** the KISS-Conform **AUDIT role** signs every maturity transition
-  across the suite (jointly with the editor-of-record, never the authoring/design editor alone),
+  across the suite (jointly with the editor-of-record, never the authoring/design editor alone; a freeze also needs the steward's signatory, umbrella §5.3),
   attempts a second dissimilar implementation
   from the document alone, and reports every ambiguity as a numbered RFC (umbrella §5.3, §7.3;
   design charter §5, informative). For KISS-Conform's own freeze, the AUDIT role MUST be
@@ -1919,20 +1919,23 @@ prose is reconciled to it only by the deterministic clause-ID-token match of §6
   order, no insignificant whitespace, and LF line endings, so the file is byte-comparable (§6.0-0003).
 - **Top-level fields (all REQUIRED).**
   - `sub_standard_token` — string, the sub-standard identifier (e.g. `KISS-OPS`).
-  - `wire_abi_schema_version` — string, the wire/ABI schema version this sidecar is stamped for
-    (§8-0001).
+  - `wire_abi_schema_version` — string, **each sub-standard's own schema-version string** as that
+    sub-standard's §8 states it for its axis (§8-0001; e.g. the KISS-Classify `structure_key`
+    version token). Where a sub-standard states none, the value is UNSET and one question is put to
+    that sub-standard's editor-of-record; nothing is guessed.
   - `generator` — string enumerant, one of `canonical-schema` (POD tiers, §6.1-0006) or
     `hand-maintained` (non-POD tiers), recording how the sidecar was produced.
   - `clauses` — array of clause objects, in ascending clause-ID order.
-- **Clause object fields (all REQUIRED).**
+- **Clause object fields (REQUIRED except `determinism_class`).**
   - `clause_id` — string matching `KISS-<SUB>-<section>-<nnnn>` (umbrella §3.3).
   - `section` — string, the owning section (e.g. `6.8`).
   - `keyword` — string enumerant, one of `MUST` / `MUST NOT` / `SHALL` / `SHOULD` / `MAY`.
   - `normative` — boolean; `true` iff `keyword` ∈ {`MUST`, `MUST NOT`, `SHALL`}; coverage is
     measured against `normative: true` clauses only (§6.1-0005).
-  - `determinism_class` — string enumerant drawn verbatim from the KISS-Ops enum
-    `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`, or `n/a` for a non-numeric
-    structural clause; selects the comparator (§6.8).
+  - `determinism_class` — **OPTIONAL**; when present, a string enumerant drawn verbatim from the
+    KISS-Ops enum `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}`, selecting the
+    comparator (§6.8). **Absent means `n/a`** (a non-numeric or structural clause); a sidecar MUST NOT
+    carry a value outside the enum.
   - `status` — string enumerant, one of `live` or `retired`; a `retired` ID is permanently burned
     and MUST NOT be re-mapped (§6.2-0003).
 - **Determinism.** Two regenerations of a POD-tier sidecar from the same canonical schema MUST be
