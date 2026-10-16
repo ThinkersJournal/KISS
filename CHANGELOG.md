@@ -6,7 +6,7 @@ second number.
 ## 0.4.4 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - HANDOFF rewritten for the post-#591 state.
-- **Correction to 0.4.3 (§6.7-0006 warning):** the undeclared-accumulator default is **operand 0's dtype**, not "the weight's" (they coincide only when the weight is operand 0). The vector `ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype` is renamed `..._defaults_to_operand0_dtype`; its bytes are unchanged. The warning now names `ctr_quantized_scale_e8m0` as the case where the weight is NOT operand 0.
+- **Correction to 0.4.3 (§6.7-0006 warning):** the undeclared-accumulator default is **operand 0's dtype**, not "the weight's" (they coincide only when the weight is operand 0). The vector `ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype` is renamed `..._defaults_to_operand0_dtype`; its bytes are unchanged. New vector `ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype` (weight at slot 1, accumulator undeclared) pins the case where the weight is NOT operand 0.
 
 ## 0.4.3 — 2026-10-16 (number proposed; the PM allocates at gate time)
 

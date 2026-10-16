@@ -168,6 +168,8 @@ fn test_classify_weight_and_scale_roles_in_cells() {
     assert_ne!(tok("ctr_quantized_scale_e8m0"), tok("ctr_quantized_scale_f16"));
     // weight at operand 0, scale at operand 1: wdt is the declared weight (i4), not the operand-1 dtype.
     assert_eq!(ctr("ctr_weight_role_not_operand_one"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
+    // weight NOT at operand 0, accumulator undeclared: operand 0's bf16, not the weight's i4.
+    assert_eq!(ctr("ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
     // the trap: undeclared accumulator on a weight-first call order defaults to the weight's i4 (the primary dtype);
     // the two cells differ in <acc> only.
     assert_eq!(ctr("ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/i4/bf16/st/qf8e8m0");

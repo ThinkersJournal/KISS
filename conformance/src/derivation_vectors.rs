@@ -492,6 +492,12 @@ fn ctr_quant_cases(out: &mut Vec<DerivationVector>) {
         quant("f16", 1, Some(2), [0, 1, 2]),
     ));
     out.push(v(
+        "ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype",
+        "KISS-CLASSIFY-6.7-0006",
+        "[activation bf16, weight i4 (slot 1), scale], NO accumulator declared: <acc> is operand 0's dtype bf16 (/i4/bf16/bf16), NOT the weight's i4. Pairs with the weight-first vector, where operand 0 IS the weight (/i4/i4/bf16): the default follows operand 0, never the weight role",
+        quant("f8e8m0", 1, Some(2), [0, 1, 2]),
+    ));
+    out.push(v(
         "ctr_quantized_no_scale_designated",
         "KISS-CLASSIFY-6.6-0022",
         "the same operands, no scale designated: the q coordinate is omitted, never empty",

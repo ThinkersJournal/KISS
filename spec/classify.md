@@ -1499,7 +1499,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   not the activation's `bf16`: a well-formed token (`.../i4/i4/bf16/st/qf8e8m0`) that names the
   weight's storage type as the accumulator. **The default is operand 0's dtype, never "the
   weight's"**: with the activation first (`[activation bf16, weight i4, scale]`, weight at slot 1)
-  an undeclared accumulator is `bf16` (`ctr_quantized_scale_e8m0`, `.../i4/bf16/bf16/st/qf8e8m0`),
+  an undeclared accumulator is `bf16` (`ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype`, `.../i4/bf16/bf16/st/qf8e8m0`),
   and the two coincide only when the weight is operand 0. A weight-first caller MUST declare the
   accumulator explicitly (`.../i4/bf16/bf16/st/qf8e8m0`); the two derivation vectors
   `ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype` and
