@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.1 — 2026-10-16 (number allocated by the PM)
+
+- HANDOFF.md rewritten for the post-#588 state (docs only, no behaviour change).
+
 ## 0.4.0 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - **BREAKING (wire, pre-1.0 so the second number moves): the `structure_key` bump `sk5` → `sk6`, with the Announce `list_version` `1` → `2`** (board 193 R1.2 A + R1.1 B, one regeneration event; PM [TASK] "GO on the structure_key bump now"). Nothing is frozen. Per-vector old/new: `docs/sk6-vector-changes.md` (105 changed rows: 101 are the `sk5|` → `sk6|` prefix alone, the other 4 are the announce frames; 6 added; 0 removed).
