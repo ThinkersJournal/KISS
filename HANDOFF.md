@@ -28,7 +28,7 @@
 
 ## Open PR
 
-None. **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**#595** (branch `tests/r3.2-grammar-conform`, worktree `C:/Projects/kiss-r32`; remove after merge): R3.2 Ops, `kiss_ops.py` lints the §6.13 decomposition graph; 6.3-0003/-0004, 6.14-0002/-0003/-0005 `untested`->`lint:kiss_ops`; floor lint 40, untested 416; all trace steps green, awaiting gate (no version allocated). **#594** = this HANDOFF. Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
@@ -59,5 +59,5 @@ Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): the empty-reason `untested` rows, Grammar and Conform first, then Ops, Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
+2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar and Conform have NO empty-reason rows left; Ops has 73 left after #595 (6.1-0001..3, 6.11-*, 6.13-*, 6.17-*, 6.18-*, 6.19-* are candidates), then Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
 3. Dependabot Monday (2026-10-19); answer second-deriver questions on the `ctr` vectors.
