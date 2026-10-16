@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.3.5 — 2026-10-15 (number proposed; the PM allocates at gate time)
+
+- **Sidecars follow the #462 ruling (board 193):** `determinism_class` is dropped from every clause (OPTIONAL, absent = n/a; 768 `null`s removed) and `kiss_sidecar.py` no longer writes it and rejects a present non-enumerant. `wire_abi_schema_version` is set where the sub-standard states its own string: announce `1`, classify `5`, contract `3`. Still UNSET, one ask each to the editor-of-record: conform, consume, emit, grammar, ops, synth. No clause text, clause ID or freeze state changes.
+
 ## 0.3.4 — 2026-10-15 (number proposed; the PM allocates at gate time; stacked after #584's 0.3.3)
 
 - **Board 193 #462 ruled (CireSnave verbatim: "Editor and auditor and me. Yes, make desterminism_class optional. wire_abi_schema_version = each sub-standard's own schema string.")**: a freeze needs three signatures (editor-of-record, AUDIT role, steward's signatory); umbrella §5.3/§7.1/§7.3 and the four restatements (Conform §3, §8-0006, §7 role list, Consume §10, Emit 8.2-0004) reconciled. Appendix E: `determinism_class` OPTIONAL (absent = n/a); `wire_abi_schema_version` = the sub-standard's own §8 schema string, UNSET plus one ask where none is stated. Text only; sidecars and `kiss_sidecar.py` follow in a later PR. No clause ID added or retired.

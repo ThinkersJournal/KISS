@@ -12,10 +12,10 @@ every sub-standard that HAS one. This tool does two things:
                     keyword) must equal the sidecar's. Any difference is DRIFT and exits 1. With no
                     STEM, every sidecar present is checked.
 
-Two Appendix E fields are NOT derivable from prose and are RULING-PENDING: `determinism_class` and
-`wire_abi_schema_version`. They are written as JSON `null` and counted in every report as UNSET — a
-sidecar with an unset field is NOT Appendix-E-valid (it would be rejected by 6.1-0007) and says so.
-Nothing here invents a value for them.
+Two Appendix E fields are not derivable from prose; both were ruled 2026-10-15 (board 193 #462):
+`determinism_class` is OPTIONAL per clause (absent = n/a, so the tool never writes it), and
+`wire_abi_schema_version` is each sub-standard's own schema string where its §8 states one. Where
+none is stated the field is `null` and counted UNSET (one ask per sub-standard); nothing is guessed.
 """
 import argparse
 import json
@@ -35,7 +35,11 @@ KEYWORD = re.compile(r"\b(MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|MAY NO
 KEYWORD_ENUM = {"MUST": "MUST", "MUST NOT": "MUST NOT", "SHALL": "SHALL", "SHALL NOT": "SHALL",
                 "SHOULD": "SHOULD", "SHOULD NOT": "SHOULD", "MAY": "MAY", "MAY NOT": "MAY"}
 NORMATIVE = {"MUST", "MUST NOT", "SHALL"}
-UNSET_FIELDS = ("determinism_class",)  # per clause; `wire_abi_schema_version` is top level
+DETERMINISM_ENUM = {"exact-byte", "ULP/tolerance", "order-invariant/nondeterministic"}
+# Each sub-standard's own schema string, taken only where its §8 states a value (board 193 #462).
+# Absent stems stay UNSET: announce `envelope_version` 1 (6.0-0001), classify `STRUCTURE_KEY_VERSION`
+# 5 (6.4-0003), contract `contract_version` 3 (6.1-0008).
+SCHEMA_STRING = {"announce": "1", "classify": "5", "contract": "3"}
 
 
 def prose_clauses(stem, spec_dir=None):
@@ -58,7 +62,6 @@ def build(stem):
         section = cid.split("-")[2]
         clauses.append({
             "clause_id": cid,
-            "determinism_class": None,        # RULING PENDING (#144 second ask) — never guessed
             "keyword": kw,
             "normative": (kw in NORMATIVE) if kw else None,
             "section": section,
@@ -68,7 +71,7 @@ def build(stem):
         "clauses": clauses,
         "generator": "hand-maintained",
         "sub_standard_token": "KISS-" + stem.upper(),
-        "wire_abi_schema_version": None,      # RULING PENDING — never guessed
+        "wire_abi_schema_version": SCHEMA_STRING.get(stem),  # None = UNSET: not stated in the sub-standard
     }
 
 
@@ -88,8 +91,7 @@ def load(stem, spec_dir=None):
 
 
 def unset_count(doc):
-    n = 1 if doc.get("wire_abi_schema_version") is None else 0
-    return n + sum(1 for c in doc["clauses"] for f in UNSET_FIELDS if c.get(f) is None)
+    return 1 if doc.get("wire_abi_schema_version") is None else 0
 
 
 def drift(stem, spec_dir=None):
@@ -103,6 +105,11 @@ def drift(stem, spec_dir=None):
     side = {c["clause_id"]: c.get("keyword") for c in doc["clauses"]}
     if [c["clause_id"] for c in doc["clauses"]] != sorted(side):
         problems.append("clauses are not in ascending clause-ID order, or an ID repeats")
+    for c in doc["clauses"]:
+        # Appendix E: OPTIONAL, so absent is valid; a present value must be an enumerant.
+        if "determinism_class" in c and c["determinism_class"] not in DETERMINISM_ENUM:
+            problems.append(f"{c['clause_id']}: determinism_class {c['determinism_class']!r} is not an "
+                            f"enumerant (omit the field for n/a)")
     prose = dict(prose_clauses(stem, spec_dir))
     for cid in sorted(set(prose) - set(side)):
         problems.append(f"{cid}: in the prose, not in the sidecar (the sidecar is authoritative: add it there)")
@@ -151,8 +158,9 @@ def main(argv=None):
             _, doc = load(stem)
             p = drift(stem)
             tag = "FAIL" if p else " ok "
-            print(f"  [{tag}] {stem:<9} {len(doc['clauses']):>4} clauses; {unset_count(doc)} field(s) UNSET "
-                  f"(ruling pending; not Appendix-E-valid until set)")
+            note = ("wire_abi_schema_version: no schema string stated in the sub-standard; one ask"
+                    if unset_count(doc) else f"wire_abi_schema_version {doc['wire_abi_schema_version']!r}")
+            print(f"  [{tag}] {stem:<9} {len(doc['clauses']):>4} clauses; {unset_count(doc)} field(s) UNSET ({note})")
             for line in p[:10]:
                 print(f"           {line}")
             if len(p) > 10:
