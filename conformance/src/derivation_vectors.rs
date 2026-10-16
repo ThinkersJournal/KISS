@@ -7,8 +7,9 @@
 //! the derivation itself byte-comparable across parties — the instrument freeze condition 1 (umbrella
 //! §5.3: each field *independently derived*) asks for.
 //!
-//! **Scope:** every cell class except `ctr`; the batch role is undefined (KISS#543), so contraction
-//! cells are declared out of scope in the artifact rather than guessed.
+//! **Scope:** every cell class except `ctr`; the batch role is ruled (KISS-CLASSIFY-6.6-0023, KISS#543) but the
+//! reference contraction derivation stage is not built yet, so contraction cells are declared out
+//! of scope in the artifact rather than guessed.
 //!
 //! **Provenance of `expected`:** emitted by [`crate::derive::derive_structure_key`] at generation time.
 //! Where the vector reproduces a KISS-CLASSIFY Appendix A.1 golden the spec token is carried as
@@ -334,7 +335,7 @@ fn decline_cases(out: &mut Vec<DerivationVector>) {
     {
         let mut c = add_cell(&[256, 1], &[128, 256]);
         c.contraction_declared = true;
-        out.push(v("decline_contraction_out_of_scope", "KISS-CLASSIFY-6.6-0016", "M/N/K roles declared: out of this corpus's scope until the batch role is ruled (KISS#543)", c));
+        out.push(v("decline_contraction_out_of_scope", "KISS-CLASSIFY-6.6-0016", "M/N/K roles declared: out of this corpus's scope until the reference contraction stage exists (R3.3; batch role: KISS-CLASSIFY-6.6-0023)", c));
     }
 }
 
@@ -408,7 +409,7 @@ pub fn emit_json() -> String {
     s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.6-0011\",\n");
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
-    s.push_str("  \"scope_note\": \"Every cell class except ctr. A dense-contraction cell needs the batch role, which no clause defines (KISS#543); a cell that declares contraction roles is a decline here, not a guess. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
+    s.push_str("  \"scope_note\": \"Every cell class except ctr. The batch role of a dense-contraction cell is ruled (KISS-CLASSIFY-6.6-0023, KISS#543) but the reference contraction derivation stage is not built yet; a cell that declares contraction roles is a decline here, not a guess. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
     s.push_str("  \"cell_note\": \"operands are listed in CALL order. The canonical order (§6.6-0014: inputs and in-place operands in call order, then outputs) is the CALLER's presentation (§6.6-0012); this reference reorders as a convenience, and a deriver whose input contract is canonical order reports NOT-EXPRESSIBLE on vector call_order_is_not_canonical_order, which is not a defect. reduced_axes are frame axes, 0 = outermost; index_operand is a call-order slot. accumulator null = the compute dtype.\",\n");
     s.push_str("  \"vectors\": [\n");
     let vs = vectors();

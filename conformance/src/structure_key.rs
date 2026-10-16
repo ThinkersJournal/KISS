@@ -868,6 +868,85 @@ pub fn derive_scale_dtype<'a>(operand_dtypes: &[&'a str], scale_slot: Option<usi
     })
 }
 
+/// §6.5-0008: the contraction size class of one extent (`≤ 8` tiny, `9..=128` small,
+/// `129..=2048` mid, `> 2048` large).
+#[must_use]
+pub fn size_class_of(extent: i64) -> SizeClass {
+    match extent {
+        ..=8 => SizeClass::Tiny,
+        9..=128 => SizeClass::Small,
+        129..=2048 => SizeClass::Medium,
+        _ => SizeClass::Large,
+    }
+}
+
+/// A typed decline from [`derive_batch_class`] (§6.6-0023, §7.1-0002): a malformed batch-axis
+/// role hint is never silently ignored or dropped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BatchRoleDecline {
+    /// A batch axis is not an iteration-frame axis.
+    AxisOutOfRange,
+    /// The same axis is listed twice in the batch set.
+    DuplicateAxis,
+    /// A batch axis is also an M, N or K axis.
+    OverlapsContractionRole,
+    /// A batch axis is absent from the output operand.
+    NotInOutput,
+    /// A batch axis has an extent below 1.
+    NonPositiveExtent,
+}
+
+impl BatchRoleDecline {
+    /// The stable wire spelling of the decline.
+    #[must_use]
+    pub fn wire(&self) -> &'static str {
+        match self {
+            Self::AxisOutOfRange => "BatchAxisOutOfRange",
+            Self::DuplicateAxis => "BatchAxisDuplicate",
+            Self::OverlapsContractionRole => "BatchAxisOverlapsContractionRole",
+            Self::NotInOutput => "BatchAxisNotInOutput",
+            Self::NonPositiveExtent => "BatchAxisNonPositiveExtent",
+        }
+    }
+}
+
+/// §6.6-0023: the `b<class>` coordinate of a dense-contraction (`ctr`) cell, from the caller's
+/// batch-axis role hint. The batch axes are declared, never inferred from rank, position or
+/// extent (as for the weight, §6.6-0019). The cell is batched **iff** `batch_axes` is non-empty
+/// (so a declared axis of extent 1 is batched), and the class is that of the **product** of the
+/// batch extents (§6.5-0008). `frame_extents` are the iteration-frame (frame-max, §6.6-0013)
+/// extents; `mnk_axes` are the M, N, K axes (§6.6-0016); `out_axes` are the frame axes the
+/// output operand covers.
+///
+/// # Errors
+/// A [`BatchRoleDecline`] when a batch axis is out of range, duplicated, shared with an M/N/K
+/// axis, absent from the output, or of extent below 1.
+pub fn derive_batch_class(
+    frame_extents: &[i64],
+    batch_axes: &[usize],
+    mnk_axes: &[usize],
+    out_axes: &[usize],
+) -> Result<Option<SizeClass>, BatchRoleDecline> {
+    let mut product: i64 = 1;
+    for (i, &axis) in batch_axes.iter().enumerate() {
+        let extent = *frame_extents.get(axis).ok_or(BatchRoleDecline::AxisOutOfRange)?;
+        if batch_axes[..i].contains(&axis) {
+            return Err(BatchRoleDecline::DuplicateAxis);
+        }
+        if mnk_axes.contains(&axis) {
+            return Err(BatchRoleDecline::OverlapsContractionRole);
+        }
+        if !out_axes.contains(&axis) {
+            return Err(BatchRoleDecline::NotInOutput);
+        }
+        if extent < 1 {
+            return Err(BatchRoleDecline::NonPositiveExtent);
+        }
+        product = product.saturating_mul(extent);
+    }
+    Ok((!batch_axes.is_empty()).then(|| size_class_of(product)))
+}
+
 /// §6.5-0010 + §6.6-0013: the work-class **total element count** — the product,
 /// over the iteration-frame axes, of each axis's iteration-frame extent, where the
 /// iteration-frame extent of an axis is the **maximum extent across operands** at
