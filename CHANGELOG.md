@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.5 — 2026-10-16 (number proposed; the PM allocates at gate time)
+
+- **Clarification, no wire change, no regeneration (ruled A by the PM 2026-10-16, from Baracuda's FINDING on a full-precision f32 FMA cell keyed `.../f32/f32/f32/rm`):** KISS-OPS-6.17-0003 states that `reduced-mantissa-permitted` (`rm`) is a permission, never an obligation: a kernel that does not round operands is admitted under `rm`, and a contracting (FMA) kernel cannot claim `bit-stable` (§6.17-0002). §6.17-0005's verification wording says a probe finding no narrowed input passes. Ledger: 6.17-0003 stays `untested`, with the reason recorded (no kernel subject in `conformance/`, so a vector would be vacuous). A third value for full-precision-with-FMA is a ROADMAP row, not this change.
+
 ## 0.4.4 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - HANDOFF rewritten for the post-#591 state.
