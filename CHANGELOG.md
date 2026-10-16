@@ -5,7 +5,7 @@ second number.
 
 ## 0.3.5 — 2026-10-15 (number proposed; the PM allocates at gate time)
 
-- **Sidecars follow the #462 ruling (board 193):** `determinism_class` is dropped from every clause (OPTIONAL, absent = n/a; 768 `null`s removed) and `kiss_sidecar.py` no longer writes it and rejects a present non-enumerant. `wire_abi_schema_version` is set where the sub-standard states its own string: announce `1`, classify `5`, contract `3`. Still UNSET, one ask each to the editor-of-record: conform, consume, emit, grammar, ops, synth. No clause text, clause ID or freeze state changes.
+- **Sidecars follow the #462 ruling (board 193):** `determinism_class` is dropped from every clause (OPTIONAL, absent = n/a; 768 `null`s removed) and `kiss_sidecar.py` no longer writes it and rejects a present non-enumerant. `wire_abi_schema_version` is set where the sub-standard states its own string: announce `1`, classify `5`, contract `3`. Recorded "none stated (editor: KISS lane, pending ratification)" (the KISS lane is editor of record for all nine until ratified; §8 read in each): conform, consume, emit, grammar (the `1` in its vectors is illustrative), ops, synth. No clause text, clause ID or freeze state changes.
 
 ## 0.3.4 — 2026-10-15 (number proposed; the PM allocates at gate time; stacked after #584's 0.3.3)
 

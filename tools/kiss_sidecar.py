@@ -15,7 +15,7 @@ every sub-standard that HAS one. This tool does two things:
 Two Appendix E fields are not derivable from prose; both were ruled 2026-10-15 (board 193 #462):
 `determinism_class` is OPTIONAL per clause (absent = n/a, so the tool never writes it), and
 `wire_abi_schema_version` is each sub-standard's own schema string where its §8 states one. Where
-none is stated the field is `null` and counted UNSET (one ask per sub-standard); nothing is guessed.
+none is stated the field records `NOT_STATED` and is counted UNSET; nothing is guessed.
 """
 import argparse
 import json
@@ -40,6 +40,9 @@ DETERMINISM_ENUM = {"exact-byte", "ULP/tolerance", "order-invariant/nondetermini
 # Absent stems stay UNSET: announce `envelope_version` 1 (6.0-0001), classify `STRUCTURE_KEY_VERSION`
 # 5 (6.4-0003), contract `contract_version` 3 (6.1-0008).
 SCHEMA_STRING = {"announce": "1", "classify": "5", "contract": "3"}
+# Recorded in the field itself (Appendix E rejects unknown fields): the KISS lane is the editor of
+# record for every sub-standard until editors are ratified, so it resolves the ask by reading §8.
+NOT_STATED = "none stated (editor: KISS lane, pending ratification)"
 
 
 def prose_clauses(stem, spec_dir=None):
@@ -71,7 +74,7 @@ def build(stem):
         "clauses": clauses,
         "generator": "hand-maintained",
         "sub_standard_token": "KISS-" + stem.upper(),
-        "wire_abi_schema_version": SCHEMA_STRING.get(stem),  # None = UNSET: not stated in the sub-standard
+        "wire_abi_schema_version": SCHEMA_STRING.get(stem, NOT_STATED),
     }
 
 
@@ -91,7 +94,7 @@ def load(stem, spec_dir=None):
 
 
 def unset_count(doc):
-    return 1 if doc.get("wire_abi_schema_version") is None else 0
+    return 1 if doc.get("wire_abi_schema_version") in (None, NOT_STATED) else 0
 
 
 def drift(stem, spec_dir=None):
@@ -158,7 +161,7 @@ def main(argv=None):
             _, doc = load(stem)
             p = drift(stem)
             tag = "FAIL" if p else " ok "
-            note = ("wire_abi_schema_version: no schema string stated in the sub-standard; one ask"
+            note = ("wire_abi_schema_version: no schema string stated in the sub-standard"
                     if unset_count(doc) else f"wire_abi_schema_version {doc['wire_abi_schema_version']!r}")
             print(f"  [{tag}] {stem:<9} {len(doc['clauses']):>4} clauses; {unset_count(doc)} field(s) UNSET ({note})")
             for line in p[:10]:
