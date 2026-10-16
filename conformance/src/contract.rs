@@ -955,7 +955,7 @@ pub fn appendix_c_capabilities_block() -> Vec<u8> {
         5,
         "capabilities",
         &[
-            ("accept_predicate", Value::Str("sk5|ew2|f32".into())),
+            ("accept_predicate", Value::Str("sk6|ew2|f32".into())),
             ("supported_dtype_set", Value::Str("[f32]".into())),
             ("awkward_layout_strategy", Value::Str("decline".into())),
             ("in_place_eligible_variants", Value::Str("[]".into())),

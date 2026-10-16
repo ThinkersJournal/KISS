@@ -83,11 +83,11 @@ fn a1_elementwise(out: &mut Vec<DerivationVector>) {
     // ---- Appendix A.1 goldens, derived from raw cells (spec-independent expected bytes) ----
     out.push(golden(
         v("a1_binary_add", "KISS-CLASSIFY-6.6-0011", "the canonical derivation golden: two inputs + output, contiguous f32 [128,256]", add_cell(&[256, 1], &[128, 256])),
-        "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
     ));
     out.push(golden(
         v("a1_binary_add_operand1_broadcast_axis0", "KISS-CLASSIFY-6.6-0008", "operand 1 stride [0,1]: layout br, mask 01, v1", add_cell(&[0, 1], &[128, 256])),
-        "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-",
+        "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-",
     ));
     out.push(golden(
         v(
@@ -96,22 +96,22 @@ fn a1_elementwise(out: &mut Vec<DerivationVector>) {
             "f16 [64,128]: v8 (8*2 = 16 bytes), d16, ix32, grid",
             cell(CUDA, vec![op(Input, "f16", &[64, 128], &[128, 1], 256), op(Output, "f16", &[64, 128], &[128, 1], 256)]),
         ),
-        "sk5|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
+        "sk6|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
     ));
 }
 
 fn a1_reductions(out: &mut Vec<DerivationVector>) {
     out.push(golden(
         v("a1_reduction_trailing_axis", "KISS-CLASSIFY-6.6-0009", "keepdim [4,8]->[4,1]: rlast; output mask 02 (extent-1 axis, frame extent 8)", reduce("f32", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[1])),
-        "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
+        "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
     ));
     out.push(golden(
         v("a1_reduction_all_axes", "KISS-CLASSIFY-6.6-0009", "keepdim [4,8]->[1,1]: rall; output mask 03", reduce("f32", &[4, 8], &[8, 1], &[1, 1], &[1, 1], &[0, 1])),
-        "sk5|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
+        "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
     ));
     out.push(golden(
         v("a1_reduction_rank1", "KISS-CLASSIFY-6.6-0009", "rank-1 [8]->[1]: all-axes AND trailing; rall wins the tie", reduce("f32", &[8], &[1], &[1], &[1], &[0])),
-        "sk5|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
+        "sk6|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
     ));
     out.push(golden(
         v(
@@ -120,14 +120,14 @@ fn a1_reductions(out: &mut Vec<DerivationVector>) {
             "[2,4,3,5]->[2,1,3,1] reducing axes 1 and 3: bitmask x0a; output mask 0a",
             reduce("f32", &[2, 4, 3, 5], &[60, 15, 5, 1], &[2, 1, 3, 1], &[3, 3, 1, 1], &[1, 3]),
         ),
-        "sk5|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
+        "sk6|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
     ));
     {
         let mut c = reduce("f16", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[1]);
         c.accumulator = Some("f32");
         out.push(golden(
             v("a1_reduction_f16_accumulates_f32", "KISS-CLASSIFY-6.7-0013", "accumulator f32 != compute f16: |f32/st carried", c),
-            "sk5|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
+            "sk6|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
         ));
     }
     out.push(golden(
@@ -137,7 +137,7 @@ fn a1_reductions(out: &mut Vec<DerivationVector>) {
             "an in-place operand appears once, as an input; n_operands = 2",
             cell(CUDA, vec![op(InPlace, "f32", &[128, 256], &[256, 1], 256), op(Input, "f32", &[128, 256], &[256, 1], 256)]),
         ),
-        "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
     ));
 
     // ---- derivation cases the token vectors cannot express ----
@@ -158,7 +158,7 @@ fn frame_cases(out: &mut Vec<DerivationVector>) {
                 ],
             ),
         ),
-        "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
     ));
     out.push(v(
         "lower_rank_operand_in_frame",

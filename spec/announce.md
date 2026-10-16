@@ -52,10 +52,10 @@ either. Across it the two sides perform three staged acts, from coarse to fine:
    provider-level capabilities (which sub-standards each speaks, whether the
    provider answers contract queries, whether it builds on miss).
 2. **Kernel availability** — the provider names the kernels it can serve by
-   **identity only** — the pair `(structure_key, revision_hash)` — so a consumer
+   **identity only** — the triple `(structure_key, op_identity, revision_hash)` — so a consumer
    can tell a cache **hit** from a **miss** without downloading anything heavy.
 3. **Contract-query kickoff** — on a miss, the consumer requests the full contract
-   for a `structure_key` (optionally pinned to a `revision_hash`); the provider
+   for a `structure_key` and `op_identity` (optionally pinned to a `revision_hash`); the provider
    returns it (the already-exists branch of KISS-Synth provision) or returns a typed
    decline.
 
@@ -89,8 +89,8 @@ shape:
 
 - The handshake envelope is *tiny and fixed* — provider-level capability only.
 - Availability is *identity only* — just enough for a consumer to de-duplicate
-  against its own cache (`structure_key` says "which cell", `revision_hash` says
-  "which build of it").
+  against its own cache (`structure_key` says "which cell", `op_identity` says "which
+  op computes in it", `revision_hash` says "which build of it").
 - The heavy per-kernel description is *fetched on demand* on a cache miss.
 
 This is why the announce carries identity, not capability: capability duplicated in
@@ -199,7 +199,12 @@ what is *inside* them — those are KISS-Classify and KISS-Contract respectively
 - **revision_hash** — a fixed 32-byte, opaque, provider-assigned identifier of a
   specific build/revision of the kernel behind a `structure_key`, compared only for
   byte-for-byte equality (no hash algorithm implied).
-- **Availability record** — the identity pair `(structure_key, revision_hash)`.
+- **op_identity** — the KISS-Contract Identity `op_identity` (contract §6.3-0003) of the
+  kernel: a bare KISS-Ops op name or a full KISS-Grammar advertisable-op tag. Treated here
+  as an opaque, length-delimited byte string, compared byte-for-byte for equality only. A
+  `structure_key` names a *cell* that many unrelated ops share (KISS-Classify §6.5-0015,
+  §6.6-0002); the `op_identity` is what tells them apart.
+- **Availability record** — the identity triple `(structure_key, op_identity, revision_hash)`.
 - **Contract** — the per-kernel document owned by KISS-Contract; treated here as an
   opaque, self-delimiting payload.
 - **Typed decline** — a structured refusal drawn from the enumerable decline-code set
@@ -367,7 +372,7 @@ envelope; all multi-byte integers little-endian):
 ### 6.3 Kernel availability (identity only)
 
 - **KISS-ANNOUNCE-6.3-0001** — A provider MUST announce each available kernel as an
-  **availability record** consisting solely of the pair `(structure_key,
+  **availability record** consisting solely of the triple `(structure_key, op_identity,
   revision_hash)`. *Test:* `test_announce_availability_is_identity_pair`.
 - **KISS-ANNOUNCE-6.3-0002** — An availability record MUST NOT carry any per-kernel
   capability, usage/ABI, dispatch, guarantee, or semantics field; such facts are
@@ -389,13 +394,17 @@ envelope; all multi-byte integers little-endian):
   `SAVL` (wire bytes `53 41 56 4C`, u32 LE `0x4C564153`) at offset 0. *Test:*
   `test_announce_availability_list_tag`.
 - **KISS-ANNOUNCE-6.3-0012** — Immediately after the tag, an availability list MUST
-  carry a 1-byte `list_version` (producer writes `1`) followed by 3 MBZ bytes; a
+  carry a 1-byte `list_version` (producer writes `2`) followed by 3 MBZ bytes; a
   reader MUST reject a nonzero MBZ byte or an unsupported `list_version` with a typed
-  decline. *Test:* `test_announce_availability_list_version`.
+  decline. `list_version` `1` (the `(structure_key, revision_hash)` record, no
+  `op_identity`) is **retired**: it is unsupported, and a reader MUST decline it rather than
+  read a `1` list as a `2` list (the record shapes differ, so a misread desynchronizes every
+  later record). *Test:* `test_announce_availability_list_version`.
 - **KISS-ANNOUNCE-6.3-0005** — After the `list_version` block, an availability list
   MUST be framed as a little-endian u32 `record_count` followed by that many
   availability records, each record being a little-endian u32 `structure_key`
-  byte-length, the `structure_key` bytes, then the 32-byte `revision_hash`. *Test:*
+  byte-length, the `structure_key` bytes, a little-endian u32 `op_identity` byte-length,
+  the `op_identity` bytes (§6.3-0013), then the 32-byte `revision_hash`. *Test:*
   `test_announce_availability_framing`.
 - **KISS-ANNOUNCE-6.3-0009** — A producer MUST write a per-record `structure_key`
   byte-length in the inclusive range `[1, 4096]` (`MAX_STRUCTURE_KEY_LEN = 4096`;
@@ -409,19 +418,32 @@ envelope; all multi-byte integers little-endian):
   contain, with a typed decline and without pre-allocating on the unchecked count.
   *Test:* `test_announce_record_count_bounds`.
 - **KISS-ANNOUNCE-6.3-0006** — A consumer MUST treat an availability record as a
-  cache **hit** only when both `structure_key` and `revision_hash` match its cached
-  entry byte-for-byte, and MUST treat any other case as a **miss**. *Test:*
+  cache **hit** only when `structure_key`, `op_identity` and `revision_hash` all match its
+  cached entry byte-for-byte, and MUST treat any other case as a **miss**. Two records
+  that share a `structure_key` and a `revision_hash` but differ in `op_identity` are
+  different kernels. *Test:*
   `test_announce_hit_miss_by_full_identity`.
+
+- **KISS-ANNOUNCE-6.3-0013** — Every identity block of this standard — an availability
+  record (§6.3-0005), a contract-query request (§6.4-0001) and the echoed identity of a
+  response (§6.4-0011) — MUST carry the `op_identity` as a little-endian u32 byte-length in
+  `[1, 4096]` (`MAX_OP_IDENTITY_LEN = 4096`) followed by that many bytes, **immediately after
+  the `structure_key` bytes**. The bytes are opaque: a provider MUST NOT reinterpret, truncate
+  or re-encode them. A producer MUST NOT write, and a reader MUST reject with a typed decline
+  (and without allocating on the unchecked length), a length of `0` or `> 4096` or one that
+  exceeds the remaining input; a request that carries no `op_identity` is therefore a typed
+  decline, never a key-only lookup. **Stated limitation (sk6):** the `CYRQ`, `CRSP` and `CDEC` frames carry no version field of their own, so the `op_identity` block is not self-announcing there; the `SAVL` `list_version` governs the availability record and each speaker's `structure_key` schema (`sk6`) the rest. This is acceptable only while the standard is unfrozen and every speaker regenerates together; a frame-version decision is owed before any freeze (ROADMAP R1.10). *Test:* `test_announce_op_identity_length_bounds`.
 
 ### 6.4 Contract-query protocol
 
 - **KISS-ANNOUNCE-6.4-0001** — A contract-query **request** MUST be framed as: the
   4-byte request tag `CYRQ` (wire bytes `43 59 52 51`, u32 LE `0x51525943`); a
   little-endian u32 `structure_key` byte-length in `[1, 4096]`; the `structure_key`
-  bytes; then a 1-byte `revision_present` flag (`0` or `1`); and, only when
-  `revision_present == 1`, a 32-byte `revision_hash`. A reader MUST reject a
-  `revision_present` value other than `0` or `1`, or a `structure_key` length outside
-  `[1, 4096]`, with a typed decline. *Test:* `test_announce_query_request_shape`.
+  bytes; the `op_identity` length and bytes (§6.3-0013); then a 1-byte `revision_present`
+  flag (`0` or `1`); and, only when `revision_present == 1`, a 32-byte `revision_hash`. A
+  reader MUST reject a `revision_present` value other than `0` or `1`, a `structure_key`
+  length outside `[1, 4096]`, or an `op_identity` length outside `[1, 4096]`, with a typed
+  decline. *Test:* `test_announce_query_request_shape`.
 - **KISS-ANNOUNCE-6.4-0002** — A provider MUST answer a contract-query request with
   either (a) a contract **response** carrying the KISS-Contract document, or (b) a
   typed decline response. *Test:* `test_announce_query_response_is_contract_or_decline`.
@@ -429,20 +451,22 @@ envelope; all multi-byte integers little-endian):
   panic, abort, crash, hang, or read outside the request buffer. *Test:*
   `test_announce_query_never_panics`.
 - **KISS-ANNOUNCE-6.4-0003** — When `revision_present == 1`, a provider that returns a
-  contract MUST return the contract whose `(structure_key, revision_hash)` identity
-  matches the request exactly; if it holds no such revision and cannot provision one,
+  contract MUST return the contract whose `(structure_key, op_identity, revision_hash)`
+  identity matches the request exactly; if it holds no such revision and cannot provision one,
   it MUST return a typed decline (`UNKNOWN_REVISION` or `CANNOT_PROVISION`) rather
   than a mismatched contract. *Test:* `test_announce_query_revision_match_or_decline`.
 - **KISS-ANNOUNCE-6.4-0012** — When `revision_present == 0`, a provider that returns a
   contract MUST return the contract for the highest-ordered `revision_hash` it holds
-  for that `structure_key` (ordering = byte-for-byte lexicographic descending over the
-  32-byte value), or, if it holds none and cannot provision one, a typed decline
-  (`UNKNOWN_STRUCTURE_KEY` or `CANNOT_PROVISION`). *Test:*
+  for that `(structure_key, op_identity)` pair (ordering = byte-for-byte lexicographic
+  descending over the 32-byte value), or, if it holds none and cannot provision one, a typed
+  decline (`UNKNOWN_STRUCTURE_KEY` or `CANNOT_PROVISION`); a held `structure_key` with no
+  kernel for the requested `op_identity` is the same case, and a provider MUST NOT return
+  another op's contract for it. *Test:*
   `test_announce_query_default_revision_is_highest`.
 - **KISS-ANNOUNCE-6.4-0011** — A contract or decline **response** MUST echo the
-  `(structure_key, revision_hash)` identity it is answering for: the response carries
-  a little-endian u32 `structure_key` length, the `structure_key` bytes, a 1-byte
-  `revision_present` flag, and — when `revision_present == 1` — the 32-byte
+  `(structure_key, op_identity, revision_hash)` identity it is answering for: the response
+  carries a little-endian u32 `structure_key` length, the `structure_key` bytes, the
+  `op_identity` length and bytes (§6.3-0013), a 1-byte `revision_present` flag, and — when `revision_present == 1` — the 32-byte
   `revision_hash` the provider selected. *Test:* `test_announce_response_echoes_identity`.
 - **KISS-ANNOUNCE-6.4-0004** — A **contract response** MUST be framed as: the 4-byte
   response tag `CRSP` (wire bytes `43 52 53 50`, u32 LE `0x50535243`); the echoed
@@ -717,6 +741,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.3-0009 | `test_announce_structure_key_length_bounds` |
 | KISS-ANNOUNCE-6.3-0010 | `test_announce_record_count_bounds` |
 | KISS-ANNOUNCE-6.3-0006 | `test_announce_hit_miss_by_full_identity` |
+| KISS-ANNOUNCE-6.3-0013 | `test_announce_op_identity_length_bounds` |
 | KISS-ANNOUNCE-6.4-0001 | `test_announce_query_request_shape` |
 | KISS-ANNOUNCE-6.4-0002 | `test_announce_query_response_is_contract_or_decline` |
 | KISS-ANNOUNCE-6.4-0006 | `test_announce_query_never_panics` |
@@ -797,7 +822,7 @@ vector for `test_announce_magic_constant`, `test_announce_field_offsets_match_ta
 value is `0x0000_0003_0000_003F` (EXT bits 0–5 | FEAT bit 32 | FEAT bit 33), wire
 bytes `3F 00 00 00 03 00 00 00`. Additional negative vectors (nonzero `reserved1`,
 50-byte packed layout, big-endian magic, `profiles_len = 17`, non-ascending profiles,
-a zero live profile, an over-cap `structure_key` length, an over-cap `record_count`,
+a zero live profile, an over-cap `structure_key` length, a zero or over-cap `op_identity` length, a `list_version` 1 list, an over-cap `record_count`,
 an out-of-range `revision_present` flag) drive the §6.2 / §6.3 / §6.4 reject tests and
 are the adversarial-outsider battery for the foreign-reader freeze gate. Each message
 tag (`SEAM`/`CYRQ`/`CRSP`/`CDEC`/`SAVL`) carries a golden vector with an explicit

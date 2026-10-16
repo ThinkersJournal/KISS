@@ -9,8 +9,8 @@ use kiss_conformance::consumer_verify::{
 };
 use kiss_conformance::differential::corpus_f32;
 
-const KEY: &str = "sk5|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-";
-const OTHER_KEY: &str = "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+const KEY: &str = "sk6|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-";
+const OTHER_KEY: &str = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
 
 fn body(class: &str) -> Vec<u8> {
     format!("[section:6:guarantees]\nreference_function = negate\ndeterminism_class = {class}\n")

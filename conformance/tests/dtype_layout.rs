@@ -159,7 +159,7 @@ fn test_classify_mx_scale_format() {
     assert_eq!(exps, (-127..=127).collect::<Vec<i32>>());
 
     // f8e6m2 is RESERVED (typed decline, distinct from unknown); f8e8m0 is usable.
-    const TOK: &str = "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+    const TOK: &str = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
     assert_eq!(
         from_token(&TOK.replacen("|f32|", "|f8e6m2|", 1)),
         Err(KeyDecline::ReservedDtype),

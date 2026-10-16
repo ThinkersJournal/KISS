@@ -322,29 +322,29 @@ fn test_announce_reader_never_repairs() {
 fn test_announce_availability_is_identity_pair() {
     const HDR: usize = 12; // SAVL tag (4) + list_version block (4) + record_count (4)
     let one = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] }],
     };
     let b = one.encode();
     let footprint = b.len() - HDR;
     let key_len = one.records[0].structure_key.len();
     assert_eq!(
         footprint,
-        4 + key_len + 32,
-        "KISS-ANNOUNCE-6.3-0001: a record is exactly (u32 key_len, key, 32-byte hash) — no extra field"
+        4 + key_len + 4 + 3 + 32,
+        "KISS-ANNOUNCE-6.3-0001: a record is exactly (u32 key_len, key, u32 op_len, op, 32-byte hash) — no extra field"
     );
     assert_eq!(decode_availability_list(&b), Ok(one));
 
     // two records: back-to-back, no inter-record padding.
     let two = AvailabilityList {
-        list_version: 1,
+        list_version: LIST_VERSION,
         records: vec![
-            AvailabilityRecord { structure_key: vec![0x01], revision_hash: [0x00; 32] },
-            AvailabilityRecord { structure_key: vec![0xDE, 0xAD, 0xBE, 0xEF], revision_hash: [0xFF; 32] },
+            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01], revision_hash: [0x00; 32] },
+            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xDE, 0xAD, 0xBE, 0xEF], revision_hash: [0xFF; 32] },
         ],
     };
     let b2 = two.encode();
-    let expected = HDR + (4 + 1 + 32) + (4 + 4 + 32);
+    let expected = HDR + (4 + 1 + 4 + 3 + 32) + (4 + 4 + 4 + 3 + 32);
     assert_eq!(
         b2.len(),
         expected,
@@ -364,12 +364,12 @@ fn test_announce_revision_hash_is_32_bytes() {
     const HDR: usize = 12;
     let key = vec![0x7A, 0x7B, 0x7C, 0x7D, 0x7E];
     let list = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: key.clone(), revision_hash: [0x33; 32] }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: [0x33; 32] }],
     };
     let b = list.encode();
     // producer: the hash region is exactly 32 bytes.
-    let hash_region = b.len() - HDR - 4 - key.len();
+    let hash_region = b.len() - HDR - 4 - key.len() - 4 - 3;
     assert_eq!(hash_region, 32, "KISS-ANNOUNCE-6.3-0003: encoded revision_hash is exactly 32 bytes");
 
     // reader: chop the last hash byte (31 present) -> typed truncation decline.
@@ -395,8 +395,8 @@ fn test_announce_structure_key_is_opaque() {
 
     // via an availability record.
     let list = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: key.clone(), revision_hash: [0x55; 32] }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: [0x55; 32] }],
     };
     let decoded = decode_availability_list(&list.encode()).expect("opaque key must decode");
     assert_eq!(
@@ -405,7 +405,7 @@ fn test_announce_structure_key_is_opaque() {
     );
 
     // via a CYRQ identity block.
-    let req = QueryRequest { identity: Identity { structure_key: key.clone(), revision_hash: None } };
+    let req = QueryRequest { identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: None } };
     let back = decode_query_request(&req.encode()).expect("opaque key must decode");
     assert_eq!(
         back.identity.structure_key, key,
@@ -424,8 +424,8 @@ fn test_announce_structure_key_is_opaque() {
 fn test_announce_revision_hash_opaque_identity() {
     // all-zero hash is a valid, non-special record.
     let zero = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: vec![0x01, 0x02], revision_hash: [0u8; 32] }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01, 0x02], revision_hash: [0u8; 32] }],
     };
     let d0 = decode_availability_list(&zero.encode())
         .expect("KISS-ANNOUNCE-6.3-0008: an all-zero revision_hash MUST be a valid record");
@@ -437,8 +437,8 @@ fn test_announce_revision_hash_opaque_identity() {
         *b = (i as u8).wrapping_mul(7).wrapping_add(3);
     }
     let list = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: vec![0x09], revision_hash: arb }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x09], revision_hash: arb }],
     };
     let d = decode_availability_list(&list.encode()).unwrap();
     assert_eq!(
@@ -466,7 +466,7 @@ fn test_announce_revision_hash_opaque_identity() {
 /// distinct from the per-frame goldens §6.4-0004 / §6.4-0007.
 #[test]
 fn test_announce_response_echoes_identity() {
-    let identity = Identity { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) };
+    let identity = Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) };
 
     // CYRQ is tag(4) + identity ONLY, so the identity block == everything past the tag.
     let req = QueryRequest { identity: identity.clone() }.encode();
