@@ -1497,9 +1497,12 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   primary dtype, that of operand 0 in canonical order (§6.6-0005). In a quantized cell whose
   call order puts the **weight** first (`[weight i4, scale f8e8m0, activation bf16]`) that is `i4`,
   not the activation's `bf16`: a well-formed token (`.../i4/i4/bf16/st/qf8e8m0`) that names the
-  weight's storage type as the accumulator. Such a caller MUST declare the accumulator
-  explicitly (`.../i4/bf16/bf16/st/qf8e8m0`); the two derivation vectors
-  `ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype` and
+  weight's storage type as the accumulator. **The default is operand 0's dtype, never "the
+  weight's"**: with the activation first (`[activation bf16, weight i4, scale]`, weight at slot 1)
+  an undeclared accumulator is `bf16` (`ctr_quantized_scale_e8m0`, `.../i4/bf16/bf16/st/qf8e8m0`),
+  and the two coincide only when the weight is operand 0. A weight-first caller MUST declare the
+  accumulator explicitly (`.../i4/bf16/bf16/st/qf8e8m0`); the two derivation vectors
+  `ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype` and
   `ctr_weight_role_not_operand_one` differ in `<acc>` and nothing else. *Test:*
   `a1_dense_contraction_cuda`.
 - **KISS-CLASSIFY-6.7-0007** — The token codec MUST be **spelling-keyed, not

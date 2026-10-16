@@ -511,9 +511,9 @@ fn ctr_quant_cases(out: &mut Vec<DerivationVector>) {
         let mut c = quant("f8e8m0", 0, Some(1), [1, 2, 0]);
         c.accumulator = None; // WARNING (trap): the weight is operand 0, so the primary and compute dtype is i4 and <acc> defaults to it
         out.push(v(
-            "ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype",
+            "ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype",
             "KISS-CLASSIFY-6.7-0006",
-            "the ctr_weight_role_not_operand_one operands with NO accumulator declared: <acc> defaults to the compute dtype, which is operand 0's i4 (/i4/i4/bf16), not the activation's bf16. Differs from the declared-bf16 vector in <acc> only",
+            "the ctr_weight_role_not_operand_one operands with NO accumulator declared: <acc> defaults to the compute dtype = operand 0's dtype (here the weight, i4: /i4/i4/bf16). With the weight NOT at operand 0 (ctr_quantized_scale_e8m0, accumulator also undeclared) it is the operand-0 dtype bf16, not the weight's i4. Differs from the declared-bf16 vector in <acc> only",
             c,
         ));
     }

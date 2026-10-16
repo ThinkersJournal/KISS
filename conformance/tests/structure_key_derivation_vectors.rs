@@ -170,7 +170,7 @@ fn test_classify_weight_and_scale_roles_in_cells() {
     assert_eq!(ctr("ctr_weight_role_not_operand_one"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
     // the trap: undeclared accumulator on a weight-first call order defaults to the weight's i4 (the primary dtype);
     // the two cells differ in <acc> only.
-    assert_eq!(ctr("ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype"), "ctll/d16/i4/i4/bf16/st/qf8e8m0");
+    assert_eq!(ctr("ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/i4/bf16/st/qf8e8m0");
     let decline = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
         Expect::Decline(e) => e.wire(),
         Expect::Token(t) => panic!("{name} derived {t}"),

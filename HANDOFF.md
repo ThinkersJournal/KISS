@@ -30,7 +30,7 @@
 
 None. **#591 merged (0.4.3):** reference `ctr` stage in `derive.rs`; M/N/K are operand axes `{operand, axis}`, batch axes frame axes, weight/scale call-order slots;
 15 `ctr` + 12 decline vectors; floor harness 436. Unpopped, Fuel, Baracuda were told (second-deriver run). Spec 6.7-0006 warns: a weight-first call order makes
-`<acc>` default to the weight dtype unless the caller declares it.
+`<acc>` default to operand 0's dtype (the primary dtype, = the weight's only when the weight is operand 0) unless declared.
 
 ## State at 0.4.3 (origin/main f88d389)
 
