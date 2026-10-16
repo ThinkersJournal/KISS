@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.7 — 2026-10-16 (number allocated by the PM)
+
+- Tooling only, no spec or wire change: `tools/kiss_ops.py` lints the §6.13 decomposition graph (no floor row, every call resolves, acyclic). KISS-OPS-6.3-0003, 6.3-0004, 6.14-0002, 6.14-0003 and 6.14-0005 move from `untested` to `lint:kiss_ops`. Floor: lint 40, untested 416.
+
 ## 0.4.6 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - HANDOFF rewritten for the post-#593 state (docs only, no behaviour change).
