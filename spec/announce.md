@@ -432,7 +432,7 @@ envelope; all multi-byte integers little-endian):
   or re-encode them. A producer MUST NOT write, and a reader MUST reject with a typed decline
   (and without allocating on the unchecked length), a length of `0` or `> 4096` or one that
   exceeds the remaining input; a request that carries no `op_identity` is therefore a typed
-  decline, never a key-only lookup. *Test:* `test_announce_op_identity_length_bounds`.
+  decline, never a key-only lookup. **Stated limitation (sk6):** the `CYRQ`, `CRSP` and `CDEC` frames carry no version field of their own, so the `op_identity` block is not self-announcing there; the `SAVL` `list_version` governs the availability record and each speaker's `structure_key` schema (`sk6`) the rest. This is acceptable only while the standard is unfrozen and every speaker regenerates together; a frame-version decision is owed before any freeze (ROADMAP R1.10). *Test:* `test_announce_op_identity_length_bounds`.
 
 ### 6.4 Contract-query protocol
 
