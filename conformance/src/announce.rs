@@ -53,6 +53,8 @@ pub enum AnnounceDecline {
     StructureKeyLenOutOfRange { got: u32 },
     /// A declared `record_count` exceeded `MAX_AVAILABILITY_RECORDS` (§6.3-0010).
     RecordCountOverflow { got: u32 },
+    /// A declared `op_identity` byte-length fell outside `[1, 4096]` (§6.3-0013, §6.4-0001).
+    OpIdentityLenOutOfRange { got: u32 },
     /// A `revision_present` flag was neither `0` nor `1` (§6.4-0001).
     BadRevisionPresent { got: u8 },
 }
@@ -76,6 +78,10 @@ pub const CDEC: u32 = 0x4345_4443;
 
 /// Inclusive upper bound on a `structure_key` byte-length (§6.3-0009, §6.4-0001).
 pub const MAX_STRUCTURE_KEY_LEN: u32 = 4096;
+/// Inclusive upper bound on an `op_identity` byte-length (§6.3-0013, §6.4-0001).
+pub const MAX_OP_IDENTITY_LEN: u32 = 4096;
+/// The `list_version` a producer writes and a reader accepts (§6.3-0012); `1` is retired.
+pub const LIST_VERSION: u8 = 2;
 /// Upper bound on an availability list's `record_count` (§6.3-0010, `2^20`).
 pub const MAX_AVAILABILITY_RECORDS: u32 = 1 << 20;
 
@@ -89,11 +95,14 @@ pub mod decline_code {
     pub const UNKNOWN_REVISION: u32 = 0x0000_0006;
 }
 
-/// One availability record: the identity pair `(structure_key, revision_hash)`
-/// and nothing else (§6.3-0001). `revision_hash` is exactly 32 bytes (§6.3-0003).
+/// One availability record: the identity triple `(structure_key, op_identity,
+/// revision_hash)` and nothing else (§6.3-0001). `op_identity` is an opaque,
+/// length-delimited KISS-Contract Identity `op_identity` (§6.3-0013); `revision_hash`
+/// is exactly 32 bytes (§6.3-0003).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvailabilityRecord {
     pub structure_key: Vec<u8>,
+    pub op_identity: Vec<u8>,
     pub revision_hash: [u8; 32],
 }
 
@@ -108,8 +117,9 @@ pub struct AvailabilityList {
 impl AvailabilityList {
     /// Serialize per §6.3-0011/§6.3-0012/§6.3-0005:
     /// `SAVL` tag, `list_version` (1 byte) + 3 MBZ bytes, u32-LE `record_count`,
-    /// then each record as {u32-LE `structure_key` length, key bytes, 32-byte
-    /// `revision_hash`}. All multi-byte fields little-endian.
+    /// then each record as {u32-LE `structure_key` length, key bytes, u32-LE
+    /// `op_identity` length, op_identity bytes, 32-byte `revision_hash`}. All
+    /// multi-byte fields little-endian.
     pub fn encode(&self) -> Vec<u8> {
         let mut b = Vec::new();
         b.extend_from_slice(&SAVL.to_le_bytes()); // [0] tag  (LE => 53 41 56 4C)
@@ -119,6 +129,8 @@ impl AvailabilityList {
         for r in &self.records {
             b.extend_from_slice(&(r.structure_key.len() as u32).to_le_bytes()); // u32-LE key_len
             b.extend_from_slice(&r.structure_key);
+            b.extend_from_slice(&(r.op_identity.len() as u32).to_le_bytes()); // u32-LE op_identity len
+            b.extend_from_slice(&r.op_identity);
             b.extend_from_slice(&r.revision_hash); // 32 bytes
         }
         b
@@ -138,7 +150,7 @@ pub fn decode_availability_list(bytes: &[u8]) -> Result<AvailabilityList, Announ
         return Err(AnnounceDecline::BadTag { region: "savl", got: tag });
     }
     let list_version = bytes[4];
-    if list_version != 1 {
+    if list_version != LIST_VERSION {
         return Err(AnnounceDecline::ListVersionUnsupported { got: list_version });
     }
     if bytes[5..8] != [0, 0, 0] {
@@ -169,24 +181,47 @@ pub fn decode_availability_list(bytes: &[u8]) -> Result<AvailabilityList, Announ
         }
         let structure_key = bytes[off..off + key_len].to_vec();
         off += key_len;
+        let (op_identity, next) = read_op_identity(bytes, off)?;
+        off = next;
         if bytes.len() < off + 32 {
             return Err(AnnounceDecline::Truncated { region: "revision_hash" });
         }
         let mut revision_hash = [0u8; 32];
         revision_hash.copy_from_slice(&bytes[off..off + 32]);
         off += 32;
-        records.push(AvailabilityRecord { structure_key, revision_hash });
+        records.push(AvailabilityRecord { structure_key, op_identity, revision_hash });
     }
     Ok(AvailabilityList { list_version, records })
 }
 
-/// The echoed `(structure_key, revision_hash)` identity block shared by a
+/// Read a u32-LE-length-delimited `op_identity` at `off` (§6.3-0013): the length is
+/// checked against `[1, MAX_OP_IDENTITY_LEN]` and the remaining input before any
+/// copy, so an unchecked length never allocates. Returns the bytes and the new offset.
+fn read_op_identity(bytes: &[u8], mut off: usize) -> Result<(Vec<u8>, usize), AnnounceDecline> {
+    if bytes.len() < off + 4 {
+        return Err(AnnounceDecline::Truncated { region: "op_identity_len" });
+    }
+    let len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+    off += 4;
+    if !(1..=MAX_OP_IDENTITY_LEN).contains(&len) {
+        return Err(AnnounceDecline::OpIdentityLenOutOfRange { got: len });
+    }
+    let len = len as usize;
+    if bytes.len() < off + len {
+        return Err(AnnounceDecline::Truncated { region: "op_identity" });
+    }
+    Ok((bytes[off..off + len].to_vec(), off + len))
+}
+
+/// The echoed `(structure_key, op_identity, revision_hash)` identity block shared by a
 /// contract-query request (§6.4-0001) and a response (§6.4-0011): a u32-LE
-/// `structure_key` length, the key bytes, a 1-byte `revision_present` flag, and —
-/// only when the flag is `1` — the 32-byte `revision_hash`.
+/// `structure_key` length, the key bytes, a u32-LE `op_identity` length, the
+/// op_identity bytes, a 1-byte `revision_present` flag, and — only when the flag is
+/// `1` — the 32-byte `revision_hash`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identity {
     pub structure_key: Vec<u8>,
+    pub op_identity: Vec<u8>,
     pub revision_hash: Option<[u8; 32]>,
 }
 
@@ -194,6 +229,8 @@ impl Identity {
     fn encode_into(&self, b: &mut Vec<u8>) {
         b.extend_from_slice(&(self.structure_key.len() as u32).to_le_bytes());
         b.extend_from_slice(&self.structure_key);
+        b.extend_from_slice(&(self.op_identity.len() as u32).to_le_bytes());
+        b.extend_from_slice(&self.op_identity);
         b.push(if self.revision_hash.is_some() { 1 } else { 0 });
         if let Some(h) = &self.revision_hash {
             b.extend_from_slice(h);
@@ -218,6 +255,8 @@ impl Identity {
         }
         let structure_key = bytes[off..off + key_len].to_vec();
         off += key_len;
+        let (op_identity, next) = read_op_identity(bytes, off)?;
+        off = next;
         if bytes.len() < off + 1 {
             return Err(AnnounceDecline::Truncated { region: "revision_present" });
         }
@@ -238,11 +277,13 @@ impl Identity {
         } else {
             None
         };
-        Ok((Identity { structure_key, revision_hash }, off))
+        Ok((Identity { structure_key, op_identity, revision_hash }, off))
     }
 }
 
-/// A contract-query request (§6.4-0001): `CYRQ` tag then the identity block.
+/// A contract-query request (§6.4-0001): `CYRQ` tag then the identity block. A
+/// request with no `op_identity` is not representable: a zero length is a typed
+/// decline (§6.3-0013).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryRequest {
     pub identity: Identity,
@@ -250,7 +291,7 @@ pub struct QueryRequest {
 
 impl QueryRequest {
     /// Serialize per §6.4-0001: `CYRQ` tag, u32-LE `structure_key` length, key
-    /// bytes, 1-byte `revision_present`, and the 32-byte `revision_hash` iff present.
+    /// bytes, u32-LE `op_identity` length, op_identity bytes, 1-byte `revision_present`, and the 32-byte `revision_hash` iff present.
     pub fn encode(&self) -> Vec<u8> {
         let mut b = Vec::new();
         b.extend_from_slice(&CYRQ.to_le_bytes());
@@ -411,20 +452,20 @@ pub fn reference_envelope() -> Envelope {
     Envelope { envelope_version: 1, profiles: vec![1], capabilities: 0x0000_0003_0000_003F }
 }
 
-/// §6.3-0005 reference availability list: two records (keys AA BB CC / DE AD).
+/// §6.3-0005 reference availability list: two records (keys AA BB CC / DE AD; ops `add` / `relu`).
 pub fn reference_availability_list() -> AvailabilityList {
     AvailabilityList {
-        list_version: 1,
+        list_version: LIST_VERSION,
         records: vec![
-            AvailabilityRecord { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] },
-            AvailabilityRecord { structure_key: vec![0xDE, 0xAD], revision_hash: [0x22; 32] },
+            AvailabilityRecord { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: [0x11; 32] },
+            AvailabilityRecord { structure_key: vec![0xDE, 0xAD], op_identity: b"relu".to_vec(), revision_hash: [0x22; 32] },
         ],
     }
 }
 
-/// §6.4-0011 reference identity block, echoed by CYRQ/CRSP/CDEC: key AA BB CC, revision present.
+/// §6.4-0011 reference identity block, echoed by CYRQ/CRSP/CDEC: key AA BB CC, op `add`, revision present.
 pub fn reference_identity() -> Identity {
-    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: Some([0x11; 32]) }
 }
 
 /// §6.4-0001 reference contract-query request.

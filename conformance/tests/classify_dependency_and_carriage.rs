@@ -9,7 +9,7 @@
 //! the controls prove the scan can fail. 6.9-0002 is a behavioural round trip through the Announce
 //! availability list, which is the seam the clause names.
 
-use kiss_conformance::announce::{decode_availability_list, AvailabilityList, AvailabilityRecord};
+use kiss_conformance::announce::{decode_availability_list, AvailabilityList, AvailabilityRecord, LIST_VERSION};
 use kiss_conformance::derivation_vectors::{expect_of, vectors, Expect};
 use kiss_conformance::structure_key::from_token;
 
@@ -117,11 +117,11 @@ fn test_classify_structure_key_opaque_carry() {
         .collect();
     assert!(tokens.len() >= 30);
     let list = AvailabilityList {
-        list_version: 1,
+        list_version: LIST_VERSION,
         records: tokens
             .iter()
             .enumerate()
-            .map(|(i, t)| AvailabilityRecord { structure_key: t.clone().into_bytes(), revision_hash: [i as u8; 32] })
+            .map(|(i, t)| AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: t.clone().into_bytes(), revision_hash: [i as u8; 32] })
             .collect(),
     };
     let back = decode_availability_list(&list.encode()).expect("a well-formed list decodes");
@@ -133,8 +133,8 @@ fn test_classify_structure_key_opaque_carry() {
     }
     // opaque: the carrier does not require the bytes to be a token at all
     let junk = AvailabilityList {
-        list_version: 1,
-        records: vec![AvailabilityRecord { structure_key: vec![0xFF, 0x00, 0x7F, b'|'], revision_hash: [9; 32] }],
+        list_version: LIST_VERSION,
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xFF, 0x00, 0x7F, b'|'], revision_hash: [9; 32] }],
     };
     let jb = decode_availability_list(&junk.encode()).expect("opaque bytes carry");
     assert_eq!(jb.records[0].structure_key, [0xFF, 0x00, 0x7F, b'|']);

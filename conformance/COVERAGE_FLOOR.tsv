@@ -568,7 +568,10 @@
 # tool: `--ratchet --base-ref origin/main` said "Set the floor to harness 430, lint 35, untested 421".
 #
 # key	value
-harness	430
+# sk6 event (board 193 R1.1 B + R1.2 A): harness 430 -> 433. Three NEW clauses, each backed by a test that discriminates:
+# KISS-CLASSIFY-6.6-0022 (test_classify_quantized_scale_dtype_keyed), KISS-ANNOUNCE-6.3-0013 (test_announce_op_identity_length_bounds),
+# KISS-SYNTH-6.7-0004b (test_synth_hit_requires_op_identity). No clause was re-categorised; untested and lint are unmoved.
+harness	433
 lint	35
 untested	421
 proven	20

@@ -20,7 +20,7 @@
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 5;
+pub const SCHEMA_VERSION: u32 = 6;
 
 /// The closed cell-class set at this schema version — exactly the seven codes of
 /// Classify §6.5-0006. A token whose class field is outside this set is rejected (a
@@ -179,6 +179,12 @@ pub struct Contraction {
     pub out: String,
     /// Math-precision code (`st` bit-stable / `rm` reduced-mantissa).
     pub mp: MathFidelity,
+    /// sk6 (§6.6-0015, §6.7-0006, #222 candidate 1): the dtype token of the
+    /// caller-designated **scale operand** (§6.6-0022) of a quantized contraction, from
+    /// the closed §6.1 set. `Some` iff the caller designates a scale operand; serialized
+    /// as the optional trailing component `q<dtype>`. An `f8e8m0` and an `f16` scale are
+    /// different cells.
+    pub sdt: Option<String>,
 }
 
 /// The **default** math-precision of a non-contraction cell (§6.7-0013): the value
@@ -240,8 +246,8 @@ pub enum KeyDecline {
     /// "re-derive" signpost: distinct from `BadVersionPrefix` on the §6.1-0001
     /// reserved-vs-unknown model, so a consumer can tell "real token, wrong schema —
     /// re-derive it" from "this isn't a token". A build MAY ship a bounded decoder
-    /// arm for the previous version through the `sk5` series (§6.7-0014); this reference
-    /// build ships none and so declines every non-`sk5` version here.
+    /// arm for the previous version through the `sk6` series (§6.7-0014); this reference
+    /// build ships none and so declines every non-`sk6` version here.
     UnsupportedSchemaVersion { got: u32 },
     BadRank,
     BadWorkClass,
@@ -375,6 +381,9 @@ impl StructureKey {
             parts.push(c.acc.clone());
             parts.push(c.out.clone());
             parts.push(c.mp.code().to_string());
+            if let Some(sdt) = &c.sdt {
+                parts.push(format!("q{sdt}"));
+            }
             token.push('|');
             token.push_str(&parts.join("/"));
         } else if let Some(am) = &self.acc_mp {
@@ -473,8 +482,23 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
     // 6 `/`-parts when non-batched, 7 when batched (the batch coordinate is the only
     // conditionally-present one; its presence is unambiguous by part count + the `b`
     // prefix, which no dtype token or `<mp>` code shares).
+    // sk6: an optional trailing `q<dtype>` scale-dtype component (§6.7-0006). `q` is
+    // unambiguous: no dtype token, `<mp>` code or size class begins with it.
     let body = s.strip_prefix('c').ok_or(KeyDecline::BadContractionField)?;
-    let parts: Vec<&str> = body.split('/').collect();
+    let mut parts: Vec<&str> = body.split('/').collect();
+    let sdt = match parts.last().and_then(|l| l.strip_prefix('q')) {
+        Some(dt) => {
+            if RESERVED_DTYPES.contains(&dt) {
+                return Err(KeyDecline::ReservedDtype);
+            }
+            if !DTYPES.contains(&dt) {
+                return Err(KeyDecline::UnknownDtype);
+            }
+            parts.pop();
+            Some(dt.to_string())
+        }
+        None => None,
+    };
     if parts.len() != 6 && parts.len() != 7 {
         return Err(KeyDecline::BadContractionField);
     }
@@ -522,6 +546,7 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
         acc: acc.to_string(),
         out: out.to_string(),
         mp,
+        sdt,
     })
 }
 
@@ -826,6 +851,23 @@ pub fn derive_weight_dtype<'a>(operand_dtypes: &[&'a str], weight_slot: usize) -
     })
 }
 
+/// §6.6-0022: the scale dtype of a quantized dense-contraction (`ctr`) cell — the
+/// optional `q<dtype>` contraction coordinate (§6.7-0006). The scale operand is identified
+/// by the caller's role hint (§6.6-0012), never by position or by dtype (as for the weight,
+/// §6.6-0019). `None` (no scale operand designated) derives a key with no `q` component.
+/// `scale_slot` is the caller-hinted index into `operand_dtypes`.
+#[must_use]
+pub fn derive_scale_dtype<'a>(operand_dtypes: &[&'a str], scale_slot: Option<usize>) -> Option<&'a str> {
+    scale_slot.map(|slot| {
+        operand_dtypes.get(slot).copied().unwrap_or_else(|| {
+            panic!(
+                "§6.6-0022: scale-role hint slot {slot} is out of range for {} operand(s) —                  the caller's role hint must name an existing operand",
+                operand_dtypes.len()
+            )
+        })
+    })
+}
+
 /// §6.5-0010 + §6.6-0013: the work-class **total element count** — the product,
 /// over the iteration-frame axes, of each axis's iteration-frame extent, where the
 /// iteration-frame extent of an axis is the **maximum extent across operands** at
@@ -957,10 +999,10 @@ pub fn derive_bcast_mask(extents: &[i64], strides: &[i64]) -> u8 {
 }
 
 /// The two MX **scale** dtypes (§6.1-0013). Neither is an element value dtype, so
-/// neither is a valid operand-0 / primary dtype (§6.6-0021).
+/// neither is a valid operand-0 / primary dtype (§6.6-0022).
 pub const SCALE_DTYPES: [&str; 2] = ["f8e8m0", "f8e6m2"];
 
-/// §6.6-0005 + §6.6-0021: `structure_key.dtype` is operand-0's dtype, where operand-0
+/// §6.6-0005 + §6.6-0022: `structure_key.dtype` is operand-0's dtype, where operand-0
 /// is fixed by the canonical operand order (§6.6-0014) — and a derivation whose
 /// operand 0 is a scale-type dtype (`f8e8m0` / `f8e6m2`, §6.1-0013) **declines**
 /// (`None`): it MUST NOT emit the scale's spelling and MUST NOT substitute another

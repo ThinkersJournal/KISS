@@ -1,4 +1,4 @@
-<!-- Written 2026-10-16 against origin/main (conformance 0.3.5, after #586). A HANDOFF is current state, never a log:
+<!-- Written 2026-10-16 against origin/main 788fb5e plus the sk6 PR (conformance 0.4.0 proposed). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.5). `conformance/Cargo.toml` and the top `CHANGELOG.md`
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.3.6; sk6 PR proposes 0.4.0). `conformance/Cargo.toml` and the top `CHANGELOG.md`
    heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,13 +28,15 @@
 
 ## Open PRs
 
-None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (0.2.41), #578 14 OUT rows -> blocked (0.2.42),
-#579 determinism import-site lint (0.2.43), #580 structural op-DAG equality (0.2.44), #582 math_fidelity ordinals (0.3.0, wire-breaking),
-#581 IR-DAG generator + self-check (0.3.1). KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate.
+**The sk6 PR** (branch `kiss-structure-key-bump`, PM [TASK] 2026-10-16 "GO on the structure_key bump"): `sk5`->`sk6` (scale dtype keyed for
+quantized `ctr` cells, §6.6-0022, trailing `q<dtype>`) + Announce `list_version` 2 (`op_identity` in every identity block, §6.3-0013, Synth mirrored),
+0.4.0 proposed, floor harness 433. Per-vector old/new: `docs/sk6-vector-changes.md`. `envelope_version` and `contract_version` unmoved. Nothing frozen.
+After it merges: remove worktree `C:/Projects/kiss-sk-bump`; Unpopped, Baracuda, Fuel regenerate (CHANGELOG 0.4.0 lists what each must do).
+KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate.
 
-## State at 0.3.1
+## State at 0.3.6
 
-- **Floor** harness 430, lint 35, untested 421 (tool, base origin/main). Re-measure with `python tools/kiss_trace.py --report`.
+- **Floor** harness 433, lint 35, untested 421 (tool, base origin/main). Re-measure with `python tools/kiss_trace.py --report`.
 - **PARTIAL, floor unmoved:** 6.9-0003 (no emitter/lifter), 6.6-0001 (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated),
   6.13-0008, 6.13-0009. 6.6-0002/-0003/-0004/-0006/-0007 are `blocked` (need a suite emitter and lifter).
 - **Board 201 pin:** `math_fidelity` u8 {0 reserved, 1 bit-stable, 2 reduced-mantissa}; accumulator 0x00 or 1-based dtype ordinal;
@@ -44,7 +46,7 @@ None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (
 
 ## Waiting (do not start)
 
-- **R1.1 B + R1.2 A wire text: waits for the PM's go on the `structure_key` bump** (one regeneration event; design `docs/design-263-cell-class.md` section 6).
+- **Ask for the PM (open on the sk6 PR):** the CYRQ/CRSP/CDEC frames carry no version field, so their new shape is gated only by the `SAVL` `list_version` and the speaker's own `sk6`; say whether an Announce profile bump is wanted.
 - Board 193 RULED 2026-10-15 and merged: R1.1/R1.2/R1.5 recorded in ROADMAP (#584); #462 three freeze signatures + Appendix E optional `determinism_class` (#585); sidecars (#586). AUDIT holder = dedicated audit lane, interim PM (board 218). Still [rule]: R1.8/#543, #387 instrument.
 - Six sidecars record `wire_abi_schema_version` as "none stated (editor: KISS lane, pending ratification)"; the KISS lane is editor of record for all nine until ratified.
 - Fuel's OpAttrs vector body-diff and 36-vector re-vendor; Baracuda/Unpopped sk5 keyers, four-way sk5 table.
@@ -54,5 +56,5 @@ None. Board 203 (all six items) and board 201 are merged: #577 consumer-verify (
 
 1. `git fetch`; `list_peers` / `check_messages` (PM id rotates: match cwd `C:\Projects`; last zqx9v437). Answer any [FINDING] by
    re-measuring at the sender's `origin/main` first.
-2. No unblocked own-roadmap row exists: report [STATUS] to the PM and idle until a [TASK] or ruling arrives.
+2. The sk6 PR is the open item: answer review threads, rebase if `main` moved (`git fetch`; re-run the python steps and `cargo test`), re-derive the floor if it moved. Otherwise no unblocked own-roadmap row: report [STATUS] and idle.
 3. R3.3 second-deriver runs and R4 (foreign reader, external implementors) are [ext]: nothing to build from inside this repo.

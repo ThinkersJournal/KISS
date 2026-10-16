@@ -1895,7 +1895,7 @@ carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
-accept_predicate = sk5|ew2|f32
+accept_predicate = sk6|ew2|f32
 supported_dtype_set = [f32]
 awkward_layout_strategy = decline
 in_place_eligible_variants = []

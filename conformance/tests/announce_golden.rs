@@ -154,20 +154,24 @@ fn reference_list() -> AvailabilityList {
 // Built from labeled fields so each boundary is exact (§6.3 framing).
 const AVAIL_GOLDEN: &str = concat!(
     "53 41 56 4C ",                          // [0]  SAVL tag       (u32 LE => 53 41 56 4C)
-    "01 ",                                   // [4]  list_version = 1
+    "02 ",                                   // [4]  list_version = 2 (sk6; 1 is retired)
     "00 00 00 ",                             // [5]  3 MBZ bytes
     "02 00 00 00 ",                          // [8]  record_count = 2  (u32 LE)
     // -- record 0 --
     "03 00 00 00 ",                          // [12] structure_key len = 3 (u32 LE)
     "AA BB CC ",                             // [16] structure_key bytes
-    "11 11 11 11 11 11 11 11 ",              // [19] revision_hash = 32 * 0x11
+    "03 00 00 00 ",                          // [19] op_identity len = 3 (u32 LE)
+    "61 64 64 ",                             // [23] op_identity bytes = "add"
+    "11 11 11 11 11 11 11 11 ",              // [26] revision_hash = 32 * 0x11
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     // -- record 1 --
-    "02 00 00 00 ",                          // [51] structure_key len = 2 (u32 LE)
-    "DE AD ",                                // [55] structure_key bytes
-    "22 22 22 22 22 22 22 22 ",              // [57] revision_hash = 32 * 0x22
+    "02 00 00 00 ",                          // [58] structure_key len = 2 (u32 LE)
+    "DE AD ",                                // [62] structure_key bytes
+    "04 00 00 00 ",                          // [64] op_identity len = 4 (u32 LE)
+    "72 65 6C 75 ",                          // [68] op_identity bytes = "relu"
+    "22 22 22 22 22 22 22 22 ",              // [72] revision_hash = 32 * 0x22
     "22 22 22 22 22 22 22 22 ",
     "22 22 22 22 22 22 22 22 ",
     "22 22 22 22 22 22 22 22 ",
@@ -192,17 +196,20 @@ fn test_announce_availability_list_tag() {
 #[test]
 fn test_announce_availability_list_version() {
     let b = reference_list().encode();
-    assert_eq!(b[4], 1, "list_version == 1 at offset 4 (not record_count's low byte 02)");
+    assert_eq!(b[4], 2, "list_version == 2 at offset 4 (record_count's low byte is also 02: offset 8 disambiguates)");
     assert_eq!(&b[5..8], &[0, 0, 0], "3 MBZ bytes at offset 5");
     assert_eq!(&b[8..12], &[0x02, 0x00, 0x00, 0x00], "record_count sits at offset 8, u32 LE");
 
-    // reader: unsupported list_version -> typed decline
-    let mut bad = b.clone();
-    bad[4] = 2;
-    assert_eq!(
-        decode_availability_list(&bad),
-        Err(AnnounceDecline::ListVersionUnsupported { got: 2 })
-    );
+    // reader: unsupported list_version -> typed decline, including the retired 1
+    // (a v1 record has no op_identity, so reading it as v2 would desync).
+    for v in [0u8, 1, 3] {
+        let mut bad = b.clone();
+        bad[4] = v;
+        assert_eq!(
+            decode_availability_list(&bad),
+            Err(AnnounceDecline::ListVersionUnsupported { got: v })
+        );
+    }
     // reader: a nonzero MBZ byte -> typed decline
     let mut bad = b.clone();
     bad[5] = 1;
@@ -234,6 +241,8 @@ fn reference_identity() -> Identity {
 const IDENTITY_GOLDEN: &str = concat!(
     "03 00 00 00 ",                          // structure_key len = 3 (u32 LE)
     "AA BB CC ",                             // structure_key bytes
+    "03 00 00 00 ",                          // op_identity len = 3 (u32 LE)
+    "61 64 64 ",                             // op_identity bytes = "add"
     "01 ",                                   // revision_present = 1
     "11 11 11 11 11 11 11 11 ",              // revision_hash = 32 * 0x11
     "11 11 11 11 11 11 11 11 ",
@@ -257,8 +266,8 @@ fn test_announce_query_request_shape() {
     assert_eq!(decode_query_request(&b), Ok(req));
 
     // revision_present == 2 is NOT truthy-accepted -> typed decline.
-    // Raw request: CYRQ, key_len=1, key=[0x7A], revision_present=2.
-    let bad = [0x43, 0x59, 0x52, 0x51, 0x01, 0x00, 0x00, 0x00, 0x7A, 0x02];
+    // Raw request: CYRQ, key_len=1, key=[0x7A], op_identity len 1 = "x", revision_present=2.
+    let bad = [0x43, 0x59, 0x52, 0x51, 0x01, 0x00, 0x00, 0x00, 0x7A, 0x01, 0x00, 0x00, 0x00, 0x78, 0x02];
     assert_eq!(
         decode_query_request(&bad),
         Err(AnnounceDecline::BadRevisionPresent { got: 2 })
@@ -274,6 +283,50 @@ fn test_announce_query_request_shape() {
     assert_eq!(
         decode_query_request(&over),
         Err(AnnounceDecline::StructureKeyLenOutOfRange { got: 4097 })
+    );
+}
+
+/// Enforces: KISS-ANNOUNCE-6.3-0013 — an `op_identity` length of 0 or > 4096 is a typed
+/// decline, in a request and in an availability record; a request that carries no
+/// `op_identity` (the v1 shape: key, then `revision_present`) is NOT silently accepted.
+/// TEETH: a reader that lets a zero length through accepts an op-less lookup; a reader that
+/// skips the cap allocates on an unchecked length.
+#[test]
+fn test_announce_op_identity_length_bounds() {
+    // CYRQ, key_len=1, key=[7A], then the op_identity length.
+    let head = [0x43, 0x59, 0x52, 0x51, 0x01, 0x00, 0x00, 0x00, 0x7A];
+    let with_len = |len: [u8; 4]| {
+        let mut v = head.to_vec();
+        v.extend_from_slice(&len);
+        v.push(0x00); // a revision_present byte, so only the length is at fault
+        v
+    };
+    assert_eq!(
+        decode_query_request(&with_len([0, 0, 0, 0])),
+        Err(AnnounceDecline::OpIdentityLenOutOfRange { got: 0 })
+    );
+    assert_eq!(
+        decode_query_request(&with_len([0x01, 0x10, 0, 0])), // 0x1001 = 4097
+        Err(AnnounceDecline::OpIdentityLenOutOfRange { got: 4097 })
+    );
+    // the v1 request shape (no op_identity): `revision_present = 0` read as the low byte
+    // of an op_identity length is a truncation or a range decline, never an Ok.
+    let v1 = [0x43, 0x59, 0x52, 0x51, 0x01, 0x00, 0x00, 0x00, 0x7A, 0x00];
+    assert!(decode_query_request(&v1).is_err(), "a request without op_identity MUST decline");
+    // the same bound inside an availability record (list_version 2, one record).
+    let mut rec = reference_list().encode();
+    rec.truncate(12); // header, record_count = 2
+    rec.extend_from_slice(&[0x01, 0x00, 0x00, 0x00, 0x7A, 0x00, 0x00, 0x00, 0x00]); // key, op len 0
+    assert_eq!(
+        decode_availability_list(&rec),
+        Err(AnnounceDecline::OpIdentityLenOutOfRange { got: 0 })
+    );
+    // a length that exceeds the remaining input is a truncation, checked before any copy.
+    let mut t = head.to_vec();
+    t.extend_from_slice(&[0xFF, 0x0F, 0x00, 0x00, 0x61]); // len 4095, one byte present
+    assert_eq!(
+        decode_query_request(&t),
+        Err(AnnounceDecline::Truncated { region: "op_identity" })
     );
 }
 
@@ -347,8 +400,8 @@ fn test_announce_decline_response_framing() {
     );
     assert_golden("KISS-ANNOUNCE-6.4-0007", "cdec_response", &b, &golden);
     // Width is load-bearing: the code occupies the final 4 bytes, not 2.
-    assert_eq!(b.len(), 48, "CDEC frame = tag(4) + identity(40) + decline_code(4)");
-    assert_eq!(&b[44..48], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
+    assert_eq!(b.len(), 55, "CDEC frame = tag(4) + identity(47) + decline_code(4)");
+    assert_eq!(&b[51..55], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
 }
 
 #[test]

@@ -154,7 +154,7 @@ fn test_contract_interface_block_bytes() {
 #[test]
 fn test_contract_capabilities_block_bytes() {
     let fields: [(&str, &str); 8] = [
-        ("accept_predicate", "sk5|ew2|f32"),
+        ("accept_predicate", "sk6|ew2|f32"),
         ("supported_dtype_set", "[f32]"),
         ("awkward_layout_strategy", "decline"),
         ("in_place_eligible_variants", "[]"),
@@ -166,7 +166,7 @@ fn test_contract_capabilities_block_bytes() {
     assert_schema_arms(parse_capabilities_block, 5, "capabilities", &fields, ("count_unit", "elements"));
     assert_eq!(
         block(5, "capabilities", &fields),
-        b"[section:5:capabilities]\naccept_predicate = sk5|ew2|f32\nsupported_dtype_set = [f32]\n\
+        b"[section:5:capabilities]\naccept_predicate = sk6|ew2|f32\nsupported_dtype_set = [f32]\n\
           awkward_layout_strategy = decline\nin_place_eligible_variants = []\nindex_width = ix32\n\
           determinism_class = exact-byte\nprecision_class = strict\ncost = 1\n"
             .to_vec(),
