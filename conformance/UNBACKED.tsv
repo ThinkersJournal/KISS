@@ -400,7 +400,7 @@ KISS-OPS-6.16-0008	test_ops_dtype_layout_coversioned	lint:kiss_tables	the Ops §
 KISS-OPS-6.16-0011	test_ops_move_attaches_to_observable_output	untested	
 KISS-OPS-6.17-0001	test_ops_math_precision_enum	lint:kiss_tables	a sub-standard re-forks the compute-fidelity (MathFidelity) enum instead of importing it
 KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested	
-KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	
+KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	the admission rule (a non-rounding kernel is admitted under rm) has no subject in conformance/: the crate models cells and keys, not kernels, so a vector would be vacuous; Baracuda's cuda-emit v1 skinny f32 cell is the consumer-side check
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
 KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	

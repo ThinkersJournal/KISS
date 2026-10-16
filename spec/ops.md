@@ -1686,7 +1686,13 @@ surfaces it in a kernel's guarantees section.
   quantified bound and not an open-ended adjective — a target MUST NOT round inputs below
   this floor) and the result stays within the op's declared determinism class (§6.0); a
   kernel's contract MUST advertise the MathFidelity value so a consumer knows whether
-  bit-stable reproduction is guaranteed. *Test:* `test_ops_math_precision_reduced`.
+  bit-stable reproduction is guaranteed. **The value is a permission, never an obligation**
+  (clarification, no wire change): a target is not required to round any operand, and a
+  kernel that computes at full storage precision with no input rounding is admitted under
+  **reduced-mantissa-permitted**, as is a cell keyed `rm` (KISS-CLASSIFY §6.7-0006), which
+  names what the cell admits, not what every kernel does. A kernel that contracts
+  (fused-multiply-add) cannot claim **bit-stable** (§6.17-0002), so it advertises the value
+  that admits it, whether or not it rounds. *Test:* `test_ops_math_precision_reduced`.
 - **KISS-OPS-6.17-0004** — The MathFidelity attribute MUST be carried as a kernel-level
   (contract-guarantee) attribute and MAY be **refined per op** where a kernel guarantees a
   finer value for some ops than kernel-wide (recovering the per-operand granularity
@@ -1698,7 +1704,8 @@ surfaces it in a kernel's guarantees section.
   every determinism class: for an **exact-byte** or **ULP/tolerance** op, **bit-stable** is
   verified directly under the op's own comparator (each atom at full storage-precision
   rounding), and **reduced-mantissa-permitted** is verified by detecting a per-atom multiply
-  whose input mantissa is narrower than the §6.17-0003 floor. For an
+  whose input mantissa is narrower than the §6.17-0003 floor (a probe that finds no narrowed
+  input at all passes: the value permits rounding, it does not require it). For an
   **order-invariant/nondeterministic** op (a float reduction, scan, or contraction),
   bit-stable MUST NOT be read as pinning the contraction order (which §6.0-0004 leaves
   unpinned); it constrains **each individual multiply and add atom** to full
