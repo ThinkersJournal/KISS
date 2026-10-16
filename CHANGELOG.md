@@ -3,6 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.2 — 2026-10-16 (number proposed; the PM allocates at gate time)
+
+- **Batch role defined (ROADMAP R1.8, KISS#543; ruled by the PM 2026-10-16 as option A, the editor's recommendation).** New KISS-CLASSIFY-6.6-0023: the batch axes of a `ctr` cell are a caller-declared role hint (never inferred from rank, position or extent, as for the weight, §6.6-0019); the cell is batched iff the declared set is non-empty (a declared axis of extent 1 is batched); the `b<class>` class is that of the product of the batch extents (saturating, §6.5-0008); a batch axis that is out of range, duplicated, also an M/N/K axis, absent from the output or of extent below 1 is a typed decline. §6.6-0012, §6.6-0016, §6.7-0006 and the cell-class table amended to point at it. Code: `derive_batch_class`, `size_class_of`, `BatchRoleDecline`; test ``test_classify_batch_role_derivation`.
+  - **No wire change, no regeneration:** a single leading batch axis of a rank-3 cell derives the token the codec always carried; the clause pins what was unpinned (rank above 3, extent 1, several batch axes). `structure_key` stays `sk6`; every vector artifact is byte-identical except the text of the derivation corpus's `scope_note` and one vector `note` (the `ctr` stage is still not built).
+  - **What each speaker does:** Unpopped declares the batch axes beside M/N/K (its blocked roles); Fuel passes the declared axes instead of a scalar extent (same number at rank 3); a third deriver reads the clause.
+  - Floor harness 433 → 434 (one new clause, backed by a discriminating test); untested and lint unmoved.
+
 ## 0.4.1 — 2026-10-16 (number allocated by the PM)
 
 - HANDOFF.md rewritten for the post-#588 state (docs only, no behaviour change).

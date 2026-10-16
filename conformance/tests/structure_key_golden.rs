@@ -1589,3 +1589,59 @@ fn test_classify_quantized_scale_dtype_keyed() {
     let ew = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f32/st/qf16";
     assert!(from_token(ew).is_err(), "a scale component outside a ctr contraction field MUST decline");
 }
+
+// Backs: KISS-CLASSIFY-6.6-0023 — R1.8 / KISS#543 (option A, ruled via the PM 2026-10-16): the batch
+// axes of a `ctr` cell are a caller role hint, never inferred from rank, position or extent; the
+// cell is batched iff the hint is non-empty (a declared axis of extent 1 is batched); the `b<class>`
+// class is that of the PRODUCT of the batch extents; a malformed hint is a typed decline.
+#[test]
+fn test_classify_batch_role_derivation() {
+    // [B, M, K] x [B, K, N] -> [B, M, N]: frame axes B=0, M=1, N=2, K=3 (rank-3 batched matmul).
+    let frame = [64, 8, 4096, 512];
+    let mnk = [1, 2, 3];
+    let out = [0, 1, 2];
+    // one leading batch axis reproduces the rank-3 coordinate (B = 64 -> small).
+    assert_eq!(derive_batch_class(&frame, &[0], &mnk, &out), Ok(Some(SizeClass::Small)));
+    // no declared batch axis: not batched, the coordinate is absent -- even though the leading
+    // extent is 64, so the answer comes from the declaration and not from the extents.
+    assert_eq!(derive_batch_class(&frame, &[], &mnk, &out), Ok(None));
+    // a declared batch axis of extent 1 is batched (class tiny): "batched" is a declaration.
+    assert_eq!(derive_batch_class(&[1, 8, 4096, 512], &[0], &mnk, &out), Ok(Some(SizeClass::Tiny)));
+    // rank 4 [B0, B1, M, K] x [B0, B1, K, N]: the class is that of the PRODUCT (4 * 64 = 256 -> mid),
+    // not of either extent (tiny / small) and not of the leading one.
+    let frame4 = [4, 64, 8, 4096, 512];
+    let (mnk4, out4) = ([2, 3, 4], [0, 1, 2, 3]);
+    assert_eq!(derive_batch_class(&frame4, &[0, 1], &mnk4, &out4), Ok(Some(SizeClass::Medium)));
+    // the declaration decides which axes count: only axis 1 declared -> 64 -> small.
+    assert_eq!(derive_batch_class(&frame4, &[1], &mnk4, &out4), Ok(Some(SizeClass::Small)));
+    // the product saturates rather than overflowing: it is simply large.
+    let huge = [i64::MAX, i64::MAX, 8, 4096, 512];
+    assert_eq!(derive_batch_class(&huge, &[0, 1], &mnk4, &out4), Ok(Some(SizeClass::Large)));
+    // size-class boundaries (§6.5-0008) as the batch class uses them.
+    for (extent, class) in [(8, SizeClass::Tiny), (9, SizeClass::Small), (128, SizeClass::Small),
+                            (129, SizeClass::Medium), (2048, SizeClass::Medium), (2049, SizeClass::Large)] {
+        assert_eq!(size_class_of(extent), class, "extent {extent}");
+    }
+    // malformed hints are typed declines, never silently ignored or dropped.
+    assert_eq!(derive_batch_class(&frame, &[9], &mnk, &out), Err(BatchRoleDecline::AxisOutOfRange));
+    assert_eq!(derive_batch_class(&frame, &[0, 0], &mnk, &out), Err(BatchRoleDecline::DuplicateAxis));
+    assert_eq!(derive_batch_class(&frame, &[1], &mnk, &out), Err(BatchRoleDecline::OverlapsContractionRole));
+    assert_eq!(derive_batch_class(&frame, &[0], &mnk, &[1, 2]), Err(BatchRoleDecline::NotInOutput));
+    assert_eq!(derive_batch_class(&[0, 8, 4096, 512], &[0], &mnk, &out), Err(BatchRoleDecline::NonPositiveExtent));
+    // the coordinate it derives spells as today's token: `/b<class>` after the K-divisibility code.
+    let c = Contraction {
+        m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Medium, k_div: DivBucket::D16,
+        batch: derive_batch_class(&frame4, &[0, 1], &mnk4, &out4).unwrap(),
+        wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
+        mp: MathFidelity::Stable, sdt: None,
+    };
+    let plain = op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false);
+    let tok = key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![plain, plain, plain], Reduce::None, Some(c)).to_token();
+    assert!(tok.contains("/d16/bm/f32/f32/f32/st"), "batched spelling: {tok}");
+    // distinct wire names for the five declines.
+    let wires: std::collections::BTreeSet<_> = [
+        BatchRoleDecline::AxisOutOfRange, BatchRoleDecline::DuplicateAxis, BatchRoleDecline::OverlapsContractionRole,
+        BatchRoleDecline::NotInOutput, BatchRoleDecline::NonPositiveExtent,
+    ].iter().map(BatchRoleDecline::wire).collect();
+    assert_eq!(wires.len(), 5);
+}

@@ -6,9 +6,10 @@
 //! single facts; nothing derived a whole token from a cell (WIRE-FIRST §"No test in the repo derives a
 //! structure_key"; §6.6-0019's "emit-derivation stage … deferred").
 //!
-//! **Scope, stated:** every cell class **except `ctr`**. A dense-contraction cell needs the batch role,
-//! which no clause defines (KISS#543); a cell that declares contraction roles is out of scope here and
-//! a [`DeriveDecline::ContractionOutOfScope`] marks the boundary rather than guessing a batch rule.
+//! **Scope, stated:** every cell class **except `ctr`**. The batch role of a dense-contraction cell is ruled
+//! (KISS-CLASSIFY-6.6-0023, KISS#543; see `derive_batch_class`), but this stage does not derive `ctr`
+//! cells yet: a cell that declares contraction roles is out of scope here and a
+//! [`DeriveDecline::ContractionOutOfScope`] marks the boundary rather than guessing.
 
 use crate::structure_key::*;
 
@@ -59,7 +60,7 @@ pub enum DeriveDecline {
     CollapsedReduction,
     /// A declared reduced axis is not an axis of the frame (§6.6-0009).
     ReducedAxisOutOfRange,
-    /// The cell declares contraction roles; the batch role is undefined (KISS#543).
+    /// The cell declares contraction roles; this stage does not derive `ctr` cells yet (R3.3).
     ContractionOutOfScope,
     /// The declared index slot does not name an operand.
     IndexSlotOutOfRange,

@@ -837,7 +837,7 @@ its declared role hints; it is never a caller-chosen label and never an op famil
 
 | Class | Code | Derived when (first match wins, §6.5-0015) |
 |---|---|---|
-| dense contraction | `ctr` | the caller declares the M/N/K axis roles (§6.6-0016) |
+| dense contraction | `ctr` | the caller declares the M/N/K axis roles (§6.6-0016) and any batch axes (§6.6-0023) |
 | indexed access | `ndx` | the caller declares an index-operand role (§6.6-0012) |
 | reduction | `rdc` | a non-empty reduced-axis set is declared (§6.6-0009) |
 | elementwise, one input | `ew1` | pointwise by shape, exactly one input operand |
@@ -1226,7 +1226,7 @@ form (§6.7-0011).
 - **KISS-CLASSIFY-6.6-0012** — The `structure_key` derivation function's input MUST
   be: the canonically-ordered operand descriptors (§6.6-0014); the `target`; and the
   caller-declared **role hints** — for a dense-contraction cell the M/N/K axis-role
-  assignment (§6.6-0016) and which operand slot carries the **weight role**
+  assignment (§6.6-0016), the **batch axes** (§6.6-0023) and which operand slot carries the **weight role**
   (§6.6-0019; the weight is not identified by operand position or dtype), for an
   indexed-access cell which operand slot carries the index/address role (the KISS-Ops
   operand-role fact of §6.1-0006, supplied to the derivation as a caller role hint;
@@ -1276,7 +1276,8 @@ form (§6.7-0011).
   cell MUST be supplied by the caller as role hints (§6.6-0012); an implementation
   MUST NOT infer M/N/K from bare operand extents. The `contraction` field's M, N, K
   size classes (§6.5-0008) MUST be computed from the caller-assigned M/N/K axis
-  extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). *Test:*
+  extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). The cell's
+  batch axes are a further caller role hint with their own rule (§6.6-0023). *Test:*
   `test_classify_contraction_axis_roles`.
 - **KISS-CLASSIFY-6.6-0017** — The reduce field (§6.6-0009) MUST carry a non-`-`
   value **if and only if** the cell is a **reduction cell**, defined as a cell whose
@@ -1382,6 +1383,23 @@ form (§6.7-0011).
   of a numerically wrong cache hit, not a refinement (the two scales decode the same stored
   values to different numbers). *Test:* `test_classify_quantized_scale_dtype_keyed`.
 
+- **KISS-CLASSIFY-6.6-0023** — The **batch axes** of a dense-contraction (`ctr`) cell MUST
+  be supplied by the caller as a **role hint** (§6.6-0012): a set of iteration-frame axes
+  (§6.6-0013), possibly empty, declared alongside the M/N/K assignment of §6.6-0016. An
+  implementation MUST NOT infer a batch axis from operand rank, axis position or extent (the
+  rule §6.6-0019 states for the weight). The cell is **batched if and only if the declared set
+  is non-empty** — a declaration, not an extent test, so a declared batch axis of extent `1`
+  is batched. A batched cell's contraction field MUST carry the `b<class>` coordinate
+  (§6.7-0006), `<class>` being the §6.5-0008 size class of the **product** of the declared
+  batch axes' extents (iteration-frame extents, §6.6-0013), computed without overflow — a
+  product above `2048` is `l`; a cell with an empty set MUST omit the coordinate. A batch axis
+  MUST be a distinct iteration-frame axis, MUST NOT also be an M, N or K axis, MUST appear in
+  the output operand, and MUST have extent `>= 1`; a hint that violates this is a caller error
+  and MUST decline with a typed decline (§7.1-0002), never be silently ignored or dropped. A
+  single leading batch axis of a rank-3 cell derives exactly the token the codec has always
+  carried; the rule additionally pins every cell of rank above `3`, and a rank-3 cell with no
+  declared batch axis is not batched. *Test:* `test_classify_batch_role_derivation`.
+
 ### 6.7 The `structure_key` token codec
 
 The token is the stable string serialization of a `structure_key` — the wire form
@@ -1459,7 +1477,7 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   §6.7-0001), field 9 MUST be `c` followed by the three M/N/K size-class codes (each ∈
   `{t, s, m, l}`), then `/`-separated: the K-divisibility code (∈ `{d16, d8, d4, d2,
   da}`); a **conditionally-present** batch coordinate `b<class>` (`<class>` ∈ `{t, s, m,
-  l}`) emitted **iff the cell is batched** — a non-batched cell omits it entirely; the
+  l}`) emitted **iff the caller declared at least one batch axis** (§6.6-0023) — a non-batched cell omits it entirely; the
   weight, accumulator, and output dtype tokens `<wdt>`/`<acc>`/`<out>`, each from the
   closed §6.1 set (`<wdt>` is the dtype of the caller-designated **weight operand**,
   §6.6-0019, not the operand at any fixed position); and the math-precision code `<mp>` ∈ `{st, rm}` (`st` = bit-stable,
@@ -2330,6 +2348,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0020 | `test_classify_cell_mates_are_not_substitutable` |
 | KISS-CLASSIFY-6.6-0021 | `test_classify_scale_dtype_at_operand0_declines` |
 | KISS-CLASSIFY-6.6-0022 | `test_classify_quantized_scale_dtype_keyed` |
+| KISS-CLASSIFY-6.6-0023 | `test_classify_batch_role_derivation` |
 | KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |

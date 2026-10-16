@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**433<!-- bound:harness --> of 960<!-- bound:clauses --> normative clauses are
+**434<!-- bound:harness --> of 961<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 256<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -51,7 +51,7 @@ The remaining 527<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **419<!-- bound:untested_rows --> genuinely untested**, 34 enforced by a
 document lint, 21 `blocked`, 12 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 772<!-- bound:test_fns --> test fns, **292<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 773<!-- bound:test_fns --> test fns, **292<!-- bound:uncited_tests --> cite
 no clause at all**, so the traceability matrix cannot see them: real tests
 doing real work that no clause claims credit for. The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
@@ -181,7 +181,7 @@ default build and CI stay GPU-free.
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 32<!-- bound:synth_backed -->/131<!-- bound:synth_clauses --> and the highest Classify at 89<!-- bound:classify_backed -->/121<!-- bound:classify_clauses -->; Announce is 37<!-- bound:announce_backed -->/77<!-- bound:announce_clauses -->. Every one has a
+  Synth at 32<!-- bound:synth_backed -->/131<!-- bound:synth_clauses --> and the highest Classify at 90<!-- bound:classify_backed -->/122<!-- bound:classify_clauses -->; Announce is 37<!-- bound:announce_backed -->/77<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
