@@ -1,4 +1,4 @@
-<!-- Written 2026-10-16 against origin/main 0d5e6d8 (conformance 0.4.2); the ctr-stage PR proposes 0.4.3. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-16 against origin/main f88d389 (conformance 0.4.3); this docs PR proposes 0.4.4. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.2; the ctr-stage PR proposes 0.4.3; no docs exception). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.3; this docs PR proposes 0.4.4; no docs exception). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,22 +28,18 @@
 
 ## Open PR
 
-**Reference `ctr` derivation stage (R3.3)**, branch `kiss-ctr-stage`, worktree `C:/Projects/kiss-ctr`, proposes 0.4.3 (PR number in the
-`[READY]` I sent; read it with `gh pr list --head kiss-ctr-stage`). `derive.rs`: `DerivationCell.contraction: Option<ContractionRoles>` (M/N/K are
-OPERAND axes `{operand, axis}`; batch axes are frame axes; weight/scale are call-order slots). 15 `ctr` + 12 decline vectors; floor harness 434 -> 436
-(6.6-0012, 6.6-0016 unblocked). Interpretation to flag to the PM: M/N/K as operand axes (spec 6.6-0016 now says so; the frame cannot name them under right-alignment).
-Open question for the PM/Unpopped: a weight-first call order makes the primary dtype the weight's, so `<acc>` defaults to `i4` unless the caller declares the accumulator.
-**After it merges:** tell Unpopped, Baracuda, Fuel (a second deriver now has `ctr` cells to run); remove the worktree (`git status --porcelain` first),
-delete the branch and verify ABSENT with a positive control, then restart. Nothing else is unblocked: write HANDOFF, `lane-restart`.
+None. **#591 merged (0.4.3):** reference `ctr` stage in `derive.rs`; M/N/K are operand axes `{operand, axis}`, batch axes frame axes, weight/scale call-order slots;
+15 `ctr` + 12 decline vectors; floor harness 436. Unpopped, Fuel, Baracuda were told (second-deriver run). Spec 6.7-0006 warns: a weight-first call order makes
+`<acc>` default to the weight dtype unless the caller declares it.
 
-## State at 0.4.2 (origin/main 0d5e6d8)
+## State at 0.4.3 (origin/main f88d389)
 
 - **#588 merged:** `structure_key` `sk5`->`sk6` (scale dtype keyed for quantized `ctr`, §6.6-0022) + Announce `list_version` 2 (`op_identity`,
   §6.3-0013, Synth mirrored). Per-vector old/new: `docs/sk6-vector-changes.md`. `envelope_version` 1 and `contract_version` 3 unmoved. Nothing frozen.
   KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate. The PM notifies Unpopped, Baracuda, Fuel (CHANGELOG 0.4.0 lists what each regenerates).
 - **Open item, KISS lane owns: ROADMAP R1.10 "Frame versioning before freeze".** CYRQ/CRSP/CDEC carry no version field (PM ruling: no bump now, since all
   speakers regenerate together); must be resolved before any freeze. Detector: the freeze checklist. Not startable until a freeze is scheduled.
-- **Floor** harness 434 at origin/main (436 with the ctr PR), lint 35, untested 421 (tool). Re-measure with `python tools/kiss_trace.py --report`.
+- **Floor** harness 436, lint 35, untested 421 (tool). Re-measure with `python tools/kiss_trace.py --report`.
 - **PARTIAL, floor unmoved:** 6.9-0003 (no emitter/lifter), 6.6-0001 (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated),
   6.13-0008, 6.13-0009. 6.6-0002/-0003/-0004/-0006/-0007 are `blocked` (need a suite emitter and lifter).
 - **Board 201 pin:** `math_fidelity` u8 {0 reserved, 1 bit-stable, 2 reduced-mantissa}; accumulator 0x00 or 1-based dtype ordinal;
@@ -61,5 +57,4 @@ delete the branch and verify ABSENT with a positive control, then restart. Nothi
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. Drive the ctr-stage PR (checks, threads, `[READY]` to the PM). Once merged there is no unblocked own row (R1.10 needs a scheduled freeze; the second
-   deriver is other lanes'): clean up and restart.
+2. No unblocked own row (R1.10 needs a scheduled freeze; the second-deriver run is the other lanes'). Answer second-deriver questions on the `ctr` vectors; Dependabot Monday.

@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.4 — 2026-10-16 (number proposed; the PM allocates at gate time)
+
+- Docs only: HANDOFF rewritten for the post-#591 state. No spec, codec or artifact change.
+
 ## 0.4.3 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - **Reference `ctr` derivation stage (ROADMAP R3.3).** `derive_structure_key` now derives dense-contraction cells: `DerivationCell.contraction: Option<ContractionRoles>` replaces the boolean `contraction_declared` and the `ContractionOutOfScope` decline. The roles are caller hints (§6.6-0012): M, N and K as **operand axes** `{operand, axis}`, batch axes as iteration-frame axes (§6.6-0023), the weight and scale as call-order operand slots.
