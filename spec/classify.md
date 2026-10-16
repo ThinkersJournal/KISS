@@ -1492,7 +1492,16 @@ dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
   recognized-but-unusable decline of §6.1-0001 — an `<mp>` not in `{st, rm}`, or a wrong
   part-count) with a typed decline (§6.7-0009). The `<acc>` coordinate is the identity/lookup surface of the
   same accumulator dtype the contract declares as `accumulation_type` (KISS-CONTRACT
-  §6.8-0011). *Test:* `a1_dense_contraction_cuda`.
+  §6.8-0011). **Warning (implementers).** A caller that declares no accumulator gets `<acc>` =
+  the cell's **compute dtype** (§6.7-0013, KISS-Ops §6.17-0005), and the compute dtype is the
+  primary dtype, that of operand 0 in canonical order (§6.6-0005). In a quantized cell whose
+  call order puts the **weight** first (`[weight i4, scale f8e8m0, activation bf16]`) that is `i4`,
+  not the activation's `bf16`: a well-formed token (`.../i4/i4/bf16/st/qf8e8m0`) that names the
+  weight's storage type as the accumulator. Such a caller MUST declare the accumulator
+  explicitly (`.../i4/bf16/bf16/st/qf8e8m0`); the two derivation vectors
+  `ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype` and
+  `ctr_weight_role_not_operand_one` differ in `<acc>` and nothing else. *Test:*
+  `a1_dense_contraction_cuda`.
 - **KISS-CLASSIFY-6.7-0007** — The token codec MUST be **spelling-keyed, not
   discriminant-keyed**: adding a new dtype code MUST NOT change the bytes of any
   pre-existing token and MUST NOT bump the schema version. (A new *cell class* is

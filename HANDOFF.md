@@ -30,7 +30,7 @@
 
 **Reference `ctr` derivation stage (R3.3)**, branch `kiss-ctr-stage`, worktree `C:/Projects/kiss-ctr`, proposes 0.4.3 (PR number in the
 `[READY]` I sent; read it with `gh pr list --head kiss-ctr-stage`). `derive.rs`: `DerivationCell.contraction: Option<ContractionRoles>` (M/N/K are
-OPERAND axes `{operand, axis}`; batch axes are frame axes; weight/scale are call-order slots). 14 `ctr` + 12 decline vectors; floor harness 434 -> 436
+OPERAND axes `{operand, axis}`; batch axes are frame axes; weight/scale are call-order slots). 15 `ctr` + 12 decline vectors; floor harness 434 -> 436
 (6.6-0012, 6.6-0016 unblocked). Interpretation to flag to the PM: M/N/K as operand axes (spec 6.6-0016 now says so; the frame cannot name them under right-alignment).
 Open question for the PM/Unpopped: a weight-first call order makes the primary dtype the weight's, so `<acc>` defaults to `i4` unless the caller declares the accumulator.
 **After it merges:** tell Unpopped, Baracuda, Fuel (a second deriver now has `ctr` cells to run); remove the worktree (`git status --porcelain` first),

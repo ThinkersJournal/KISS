@@ -404,7 +404,7 @@ fn quant(scale_dtype: &'static str, weight: usize, scale: Option<usize>, order: 
 /// R3.3: the reference contraction stage. Every role is a caller hint (§6.6-0012): the vectors vary the
 /// hint and hold the operands, or the reverse, so a deriver that infers a role from extents, position or
 /// dtype gives a different token on at least one of them.
-fn ctr_cases(out: &mut Vec<DerivationVector>) {
+fn ctr_geometry_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "ctr_gemm_small_m_large_nk",
         "KISS-CLASSIFY-6.6-0016",
@@ -423,6 +423,21 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
         "K = 4100 (divisible by 4, not 8): d4, from the K axis and not from the innermost axis of the output (N = 4096 would give d16)",
         gemm("f16", &[], 8, 4096, 4100),
     ));
+    {
+        let mut c = gemm("f16", &[], 8, 4096, 4096);
+        c.accumulator = Some("f32");
+        c.math_fidelity = MathFidelity::ReducedMantissa;
+        out.push(v(
+            "ctr_accumulator_and_reduced_mantissa",
+            "KISS-CLASSIFY-6.7-0006",
+            "accumulator f32 != compute f16, <mp> rm: /f16/f32/f16/rm inside the contraction field; no separate (acc+mp) field (the two never coexist)",
+            c,
+        ));
+    }
+}
+
+/// The batch role (§6.6-0023): a declaration, classed by the product of the declared extents.
+fn ctr_batch_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "ctr_rank3_batch_declared",
         "KISS-CLASSIFY-6.6-0023",
@@ -459,17 +474,10 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
         "the same rank-4 operands, no hint: a rank above 3 is not batched by rank alone",
         gemm("f16", &[4, 64], 8, 4096, 512),
     ));
-    {
-        let mut c = gemm("f16", &[], 8, 4096, 4096);
-        c.accumulator = Some("f32");
-        c.math_fidelity = MathFidelity::ReducedMantissa;
-        out.push(v(
-            "ctr_accumulator_and_reduced_mantissa",
-            "KISS-CLASSIFY-6.7-0006",
-            "accumulator f32 != compute f16, <mp> rm: /f16/f32/f16/rm inside the contraction field; no separate (acc+mp) field (the two never coexist)",
-            c,
-        ));
-    }
+}
+
+/// The weight/scale roles of a quantized cell (§6.6-0019, §6.6-0022).
+fn ctr_quant_cases(out: &mut Vec<DerivationVector>) {
     // ---- quantized: weight and scale are role hints (§6.6-0019, §6.6-0022) ----
     out.push(v(
         "ctr_quantized_scale_e8m0",
@@ -499,7 +507,20 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
             c,
         ));
     }
-    // ---- declines: a malformed role hint is a typed decline, never ignored (§6.6-0016, -0019, -0022, -0023) ----
+    {
+        let mut c = quant("f8e8m0", 0, Some(1), [1, 2, 0]);
+        c.accumulator = None; // WARNING (trap): the weight is operand 0, so the primary and compute dtype is i4 and <acc> defaults to it
+        out.push(v(
+            "ctr_weight_first_undeclared_accumulator_defaults_to_weight_dtype",
+            "KISS-CLASSIFY-6.7-0006",
+            "the ctr_weight_role_not_operand_one operands with NO accumulator declared: <acc> defaults to the compute dtype, which is operand 0's i4 (/i4/i4/bf16), not the activation's bf16. Differs from the declared-bf16 vector in <acc> only",
+            c,
+        ));
+    }
+}
+
+/// Malformed M/N/K, weight and scale hints (§6.6-0016, -0019, -0022): each a typed decline, never ignored.
+fn ctr_role_decline_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "decline_ctr_axis_roles_not_distinct",
         "KISS-CLASSIFY-6.6-0016",
@@ -545,6 +566,10 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
         c.operands.pop();
         out.push(v("decline_ctr_no_output_operand", "KISS-CLASSIFY-6.7-0006", "no output operand: <out> has no source", c));
     }
+}
+
+/// Malformed batch-axis hints (§6.6-0023): each a typed decline, never ignored.
+fn ctr_batch_decline_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "decline_ctr_batch_axis_out_of_range",
         "KISS-CLASSIFY-6.6-0023",
@@ -579,6 +604,14 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
         "a declared batch axis of extent 0 (every operand agrees): extent below 1",
         with_batch(gemm("f16", &[0], 8, 4096, 512), &[0]),
     ));
+}
+
+fn ctr_cases(out: &mut Vec<DerivationVector>) {
+    ctr_geometry_cases(out);
+    ctr_batch_cases(out);
+    ctr_quant_cases(out);
+    ctr_role_decline_cases(out);
+    ctr_batch_decline_cases(out);
 }
 
 /// The vectors, in a stable order (names are the join key for consumers).
