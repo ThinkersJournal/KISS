@@ -7,9 +7,8 @@
 //! the derivation itself byte-comparable across parties — the instrument freeze condition 1 (umbrella
 //! §5.3: each field *independently derived*) asks for.
 //!
-//! **Scope:** every cell class except `ctr`; the batch role is ruled (KISS-CLASSIFY-6.6-0023, KISS#543) but the
-//! reference contraction derivation stage is not built yet, so contraction cells are declared out
-//! of scope in the artifact rather than guessed.
+//! **Scope:** every cell class, `ctr` included (R3.3): a dense-contraction cell carries its caller-declared
+//! role hints (M/N/K axes, batch axes, weight and scale slots; KISS-CLASSIFY-6.6-0016/-0019/-0022/-0023).
 //!
 //! **Provenance of `expected`:** emitted by [`crate::derive::derive_structure_key`] at generation time.
 //! Where the vector reproduces a KISS-CLASSIFY Appendix A.1 golden the spec token is carried as
@@ -47,7 +46,7 @@ fn cell(target: &'static str, operands: Vec<CellOperand>) -> DerivationCell {
         reduced_axes: vec![],
         accumulator: None,
         math_fidelity: MathFidelity::Stable,
-        contraction_declared: false,
+        contraction: None,
     }
 }
 
@@ -332,11 +331,254 @@ fn decline_cases(out: &mut Vec<DerivationVector>) {
         "declared reduced axis 2 in a rank-2 frame",
         reduce("f32", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[2]),
     ));
-    {
-        let mut c = add_cell(&[256, 1], &[128, 256]);
-        c.contraction_declared = true;
-        out.push(v("decline_contraction_out_of_scope", "KISS-CLASSIFY-6.6-0016", "M/N/K roles declared: out of this corpus's scope until the reference contraction stage exists (R3.3; batch role: KISS-CLASSIFY-6.6-0023)", c));
+}
+
+fn strides_of(extents: &[i64]) -> Vec<i64> {
+    let mut st = vec![1i64; extents.len()];
+    for i in (0..extents.len().saturating_sub(1)).rev() {
+        st[i] = st[i + 1] * extents[i + 1].max(1);
     }
+    st
+}
+
+fn dense(usage: OperandUse, dtype: &'static str, extents: &[i64]) -> CellOperand {
+    op(usage, dtype, extents, &strides_of(extents), 256)
+}
+
+fn axis(operand: usize, axis: usize) -> AxisRef {
+    AxisRef { operand, axis }
+}
+
+/// `lhs [..B, M, K] · rhs [..B, K, N] -> out [..B, M, N]`, row-major; roles M=(lhs, r-2), K=(lhs, r-1),
+/// N=(rhs, r-1), weight = rhs (slot 1), no scale, no batch axes declared (callers add them).
+fn gemm(dtype: &'static str, batch: &[i64], m: i64, n: i64, k: i64) -> DerivationCell {
+    let (mut l, mut r, mut o) = (batch.to_vec(), batch.to_vec(), batch.to_vec());
+    l.extend([m, k]);
+    r.extend([k, n]);
+    o.extend([m, n]);
+    let rank = l.len();
+    let mut c = cell(CUDA, vec![dense(Input, dtype, &l), dense(Input, dtype, &r), dense(Output, dtype, &o)]);
+    c.contraction = Some(ContractionRoles {
+        m: axis(0, rank - 2),
+        n: axis(1, rank - 1),
+        k: axis(0, rank - 1),
+        batch: vec![],
+        weight: 1,
+        scale: None,
+    });
+    c
+}
+
+fn with_batch(mut c: DerivationCell, axes: &[usize]) -> DerivationCell {
+    c.contraction.as_mut().expect("ctr cell").batch = axes.to_vec();
+    c
+}
+
+fn with_roles(mut c: DerivationCell, f: impl FnOnce(&mut ContractionRoles)) -> DerivationCell {
+    f(c.contraction.as_mut().expect("ctr cell"));
+    c
+}
+
+/// A quantized GEMM `[activation, weight i4, scale] -> out`, the operands listed in `order` (indices into
+/// that list), with the declared weight and scale slots.
+fn quant(scale_dtype: &'static str, weight: usize, scale: Option<usize>, order: [usize; 3]) -> DerivationCell {
+    let mut w = dense(Input, "i4", &[4096, 4096]);
+    w.dequant = Some(DequantForm::Linear);
+    let base = [dense(Input, "bf16", &[8, 4096]), w, dense(Input, scale_dtype, &[4096, 128])];
+    let mut ops: Vec<CellOperand> = order.iter().map(|&i| base[i].clone()).collect();
+    ops.push(dense(Output, "bf16", &[8, 4096]));
+    // M = activation axis 0, K = activation axis 1, N = weight axis 1 (slots follow `order`)
+    let at = |orig: usize| order.iter().position(|&i| i == orig).expect("operand present");
+    let mut c = cell(CUDA, ops);
+    c.contraction = Some(ContractionRoles {
+        m: axis(at(0), 0),
+        n: axis(at(1), 1),
+        k: axis(at(0), 1),
+        batch: vec![],
+        weight,
+        scale,
+    });
+    c
+}
+
+/// R3.3: the reference contraction stage. Every role is a caller hint (§6.6-0012): the vectors vary the
+/// hint and hold the operands, or the reverse, so a deriver that infers a role from extents, position or
+/// dtype gives a different token on at least one of them.
+fn ctr_cases(out: &mut Vec<DerivationVector>) {
+    out.push(v(
+        "ctr_gemm_small_m_large_nk",
+        "KISS-CLASSIFY-6.6-0016",
+        "the §2.8(d) worked example: lhs [8,4096] . rhs [4096,4096] -> [8,4096]; M tiny, N and K large, K divisible by 16: ctll/d16, not batched. Roles are operand axes: frame axis 0 is max(8,4096,8), so the frame extent is NOT M",
+        gemm("f16", &[], 8, 4096, 4096),
+    ));
+    out.push(v(
+        "ctr_gemm_roles_swapped_m_and_n",
+        "KISS-CLASSIFY-6.6-0016",
+        "the same operands as ctr_gemm_small_m_large_nk with the caller declaring M and N the other way round: the M/N classes follow the DECLARED axes (cl.. vs ct..), never the extents",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| std::mem::swap(&mut r.m, &mut r.n)),
+    ));
+    out.push(v(
+        "ctr_k_divisibility_from_k_axis",
+        "KISS-CLASSIFY-6.5-0012",
+        "K = 4100 (divisible by 4, not 8): d4, from the K axis and not from the innermost axis of the output (N = 4096 would give d16)",
+        gemm("f16", &[], 8, 4096, 4100),
+    ));
+    out.push(v(
+        "ctr_rank3_batch_declared",
+        "KISS-CLASSIFY-6.6-0023",
+        "[64,8,512] . [64,512,4096] -> [64,8,4096], batch axis 0 declared: /bs (64 is small)",
+        with_batch(gemm("f16", &[64], 8, 4096, 512), &[0]),
+    ));
+    out.push(v(
+        "ctr_rank3_batch_not_declared",
+        "KISS-CLASSIFY-6.6-0023",
+        "the same rank-3 operands with NO batch hint: not batched, the b coordinate is absent although the leading extent is 64",
+        gemm("f16", &[64], 8, 4096, 512),
+    ));
+    out.push(v(
+        "ctr_batch_declared_extent_one",
+        "KISS-CLASSIFY-6.6-0023",
+        "a declared batch axis of extent 1 is batched (/bt): batched is a declaration, not an extent test",
+        with_batch(gemm("f16", &[1], 8, 4096, 512), &[0]),
+    ));
+    out.push(v(
+        "ctr_rank4_two_batch_axes_product",
+        "KISS-CLASSIFY-6.6-0023",
+        "[4,64,8,512] . [4,64,512,4096]: batch axes 0 and 1 declared; the class is that of the PRODUCT 4*64 = 256 (/bm), not of either extent",
+        with_batch(gemm("f16", &[4, 64], 8, 4096, 512), &[0, 1]),
+    ));
+    out.push(v(
+        "ctr_rank4_one_batch_axis_declared",
+        "KISS-CLASSIFY-6.6-0023",
+        "the same rank-4 operands, only axis 1 declared: class of 64 (/bs). The hint decides which axes count",
+        with_batch(gemm("f16", &[4, 64], 8, 4096, 512), &[1]),
+    ));
+    out.push(v(
+        "ctr_rank4_no_batch_declared",
+        "KISS-CLASSIFY-6.6-0023",
+        "the same rank-4 operands, no hint: a rank above 3 is not batched by rank alone",
+        gemm("f16", &[4, 64], 8, 4096, 512),
+    ));
+    {
+        let mut c = gemm("f16", &[], 8, 4096, 4096);
+        c.accumulator = Some("f32");
+        c.math_fidelity = MathFidelity::ReducedMantissa;
+        out.push(v(
+            "ctr_accumulator_and_reduced_mantissa",
+            "KISS-CLASSIFY-6.7-0006",
+            "accumulator f32 != compute f16, <mp> rm: /f16/f32/f16/rm inside the contraction field; no separate (acc+mp) field (the two never coexist)",
+            c,
+        ));
+    }
+    // ---- quantized: weight and scale are role hints (§6.6-0019, §6.6-0022) ----
+    out.push(v(
+        "ctr_quantized_scale_e8m0",
+        "KISS-CLASSIFY-6.6-0022",
+        "[activation, weight i4, scale f8e8m0]: weight slot 1, scale slot 2: /i4/bf16/bf16/st/qf8e8m0",
+        quant("f8e8m0", 1, Some(2), [0, 1, 2]),
+    ));
+    out.push(v(
+        "ctr_quantized_scale_f16",
+        "KISS-CLASSIFY-6.6-0022",
+        "the same cell with an f16 scale: a different key (/qf16), because the two scales decode the same stored values to different numbers",
+        quant("f16", 1, Some(2), [0, 1, 2]),
+    ));
+    out.push(v(
+        "ctr_quantized_no_scale_designated",
+        "KISS-CLASSIFY-6.6-0022",
+        "the same operands, no scale designated: the q coordinate is omitted, never empty",
+        quant("f8e8m0", 1, None, [0, 1, 2]),
+    ));
+    {
+        let mut c = quant("f8e8m0", 0, Some(1), [1, 2, 0]);
+        c.accumulator = Some("bf16"); // weight-first call order makes the primary dtype i4, so the accumulator is declared
+        out.push(v(
+            "ctr_weight_role_not_operand_one",
+            "KISS-CLASSIFY-6.6-0019",
+            "call order [weight i4, scale f8e8m0, activation]: the weight is operand 0 and a scale sits at position 1, so a positional operand-1 read names f8e8m0 where i4 is meant. Declared weight 0, scale 1, accumulator bf16",
+            c,
+        ));
+    }
+    // ---- declines: a malformed role hint is a typed decline, never ignored (§6.6-0016, -0019, -0022, -0023) ----
+    out.push(v(
+        "decline_ctr_axis_roles_not_distinct",
+        "KISS-CLASSIFY-6.6-0016",
+        "K names the same operand axis as M",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.k = r.m),
+    ));
+    out.push(v(
+        "decline_ctr_axis_out_of_range",
+        "KISS-CLASSIFY-6.6-0016",
+        "N names axis 5 of a rank-2 operand",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.n = axis(1, 5)),
+    ));
+    out.push(v(
+        "decline_ctr_axis_operand_out_of_range",
+        "KISS-CLASSIFY-6.6-0016",
+        "M names operand slot 9 of a 3-operand cell",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.m = axis(9, 0)),
+    ));
+    out.push(v(
+        "decline_ctr_weight_slot_out_of_range",
+        "KISS-CLASSIFY-6.6-0019",
+        "the weight role names slot 7 of a 3-operand cell",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.weight = 7),
+    ));
+    out.push(v(
+        "decline_ctr_scale_slot_out_of_range",
+        "KISS-CLASSIFY-6.6-0022",
+        "the scale role names slot 7 of a 3-operand cell: not silently ignored",
+        with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.scale = Some(7)),
+    ));
+    {
+        let mut c = gemm("f16", &[], 8, 4096, 4096);
+        c.operands[1].dtype = "f8e4m3fnuz";
+        out.push(v(
+            "decline_ctr_reserved_weight_dtype",
+            "KISS-CLASSIFY-6.1-0001",
+            "the designated weight is a reserved dtype (f8e4m3fnuz): <wdt> is a key position, so unlike a sibling operand it declines",
+            c,
+        ));
+    }
+    {
+        let mut c = gemm("f16", &[], 8, 4096, 4096);
+        c.operands.pop();
+        out.push(v("decline_ctr_no_output_operand", "KISS-CLASSIFY-6.7-0006", "no output operand: <out> has no source", c));
+    }
+    out.push(v(
+        "decline_ctr_batch_axis_out_of_range",
+        "KISS-CLASSIFY-6.6-0023",
+        "batch axis 7 of a rank-3 frame",
+        with_batch(gemm("f16", &[64], 8, 4096, 512), &[7]),
+    ));
+    out.push(v(
+        "decline_ctr_batch_axis_duplicate",
+        "KISS-CLASSIFY-6.6-0023",
+        "batch axis 0 listed twice",
+        with_batch(gemm("f16", &[64], 8, 4096, 512), &[0, 0]),
+    ));
+    out.push(v(
+        "decline_ctr_batch_axis_is_an_mnk_axis",
+        "KISS-CLASSIFY-6.6-0023",
+        "batch axis 1 is frame axis 1, which M occupies",
+        with_batch(gemm("f16", &[64], 8, 4096, 512), &[1]),
+    ));
+    {
+        let mut c = with_batch(gemm("f16", &[64], 8, 4096, 512), &[0]);
+        c.operands[2] = dense(Output, "f16", &[8, 4096]);
+        out.push(v(
+            "decline_ctr_batch_axis_not_in_output",
+            "KISS-CLASSIFY-6.6-0023",
+            "the output is rank 2 in a rank-3 frame: frame axis 0 is not an output axis",
+            c,
+        ));
+    }
+    out.push(v(
+        "decline_ctr_batch_axis_zero_extent",
+        "KISS-CLASSIFY-6.6-0023",
+        "a declared batch axis of extent 0 (every operand agrees): extent below 1",
+        with_batch(gemm("f16", &[0], 8, 4096, 512), &[0]),
+    ));
 }
 
 /// The vectors, in a stable order (names are the join key for consumers).
@@ -349,6 +591,7 @@ pub fn vectors() -> Vec<DerivationVector> {
     innermost_axis_cases(&mut out);
     class_cases(&mut out);
     quantized_and_precision_cases(&mut out);
+    ctr_cases(&mut out);
     decline_cases(&mut out);
     out
 }
@@ -401,6 +644,20 @@ fn operand_json(o: &CellOperand) -> String {
     )
 }
 
+fn contraction_json(r: Option<&ContractionRoles>) -> String {
+    let Some(r) = r else { return "null".to_string() };
+    let a = |x: AxisRef| format!("{{\"operand\":{},\"axis\":{}}}", x.operand, x.axis);
+    format!(
+        "{{\"m\":{},\"n\":{},\"k\":{},\"batch_axes\":{},\"weight\":{},\"scale\":{}}}",
+        a(r.m),
+        a(r.n),
+        a(r.k),
+        ints(&r.batch.iter().map(|&x| x as i64).collect::<Vec<_>>()),
+        r.weight,
+        r.scale.map_or("null".to_string(), |x| x.to_string())
+    )
+}
+
 /// The artifact, exactly as committed (`corpus/structure_key_derivation_vectors.json`).
 pub fn emit_json() -> String {
     let mut s = String::new();
@@ -409,7 +666,7 @@ pub fn emit_json() -> String {
     s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.6-0011\",\n");
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
-    s.push_str("  \"scope_note\": \"Every cell class except ctr. The batch role of a dense-contraction cell is ruled (KISS-CLASSIFY-6.6-0023, KISS#543) but the reference contraction derivation stage is not built yet; a cell that declares contraction roles is a decline here, not a guess. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
+    s.push_str("  \"scope_note\": \"Every cell class, ctr included. A dense-contraction cell carries its caller-declared role hints in `contraction` (M/N/K as operand axes {operand, axis}, batch axes as iteration-frame axes, weight and scale as call-order operand slots); contraction_declared is true iff `contraction` is non-null. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
     s.push_str("  \"cell_note\": \"operands are listed in CALL order. The canonical order (§6.6-0014: inputs and in-place operands in call order, then outputs) is the CALLER's presentation (§6.6-0012); this reference reorders as a convenience, and a deriver whose input contract is canonical order reports NOT-EXPRESSIBLE on vector call_order_is_not_canonical_order, which is not a defect. reduced_axes are frame axes, 0 = outermost; index_operand is a call-order slot. accumulator null = the compute dtype.\",\n");
     s.push_str("  \"vectors\": [\n");
     let vs = vectors();
@@ -423,7 +680,7 @@ pub fn emit_json() -> String {
         };
         let gold = d.spec_golden.map_or("null".to_string(), js);
         s.push_str(&format!(
-            "    {{\"name\":{},\"clause\":{},\"note\":{},\"target\":{},\"operands\":[{}],\"index_operand\":{},\"reduced_axes\":{},\"accumulator\":{},\"math_fidelity\":{},\"contraction_declared\":{},\"expect\":{},\"value\":{},\"spec_golden\":{}}}{}\n",
+            "    {{\"name\":{},\"clause\":{},\"note\":{},\"target\":{},\"operands\":[{}],\"index_operand\":{},\"reduced_axes\":{},\"accumulator\":{},\"math_fidelity\":{},\"contraction_declared\":{},\"contraction\":{},\"expect\":{},\"value\":{},\"spec_golden\":{}}}{}\n",
             js(d.name),
             js(d.clause),
             js(d.note),
@@ -433,7 +690,8 @@ pub fn emit_json() -> String {
             ints(&c.reduced_axes.iter().map(|&a| a as i64).collect::<Vec<_>>()),
             acc,
             js(c.math_fidelity.code()),
-            c.contraction_declared,
+            c.contraction.is_some(),
+            contraction_json(c.contraction.as_ref()),
             js(kind),
             js(&val),
             gold,

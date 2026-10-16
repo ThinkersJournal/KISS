@@ -6,10 +6,9 @@
 //! single facts; nothing derived a whole token from a cell (WIRE-FIRST §"No test in the repo derives a
 //! structure_key"; §6.6-0019's "emit-derivation stage … deferred").
 //!
-//! **Scope, stated:** every cell class **except `ctr`**. The batch role of a dense-contraction cell is ruled
-//! (KISS-CLASSIFY-6.6-0023, KISS#543; see `derive_batch_class`), but this stage does not derive `ctr`
-//! cells yet: a cell that declares contraction roles is out of scope here and a
-//! [`DeriveDecline::ContractionOutOfScope`] marks the boundary rather than guessing.
+//! **Scope:** every cell class, `ctr` included (R3.3). A dense-contraction cell is one whose caller declares
+//! [`ContractionRoles`] (§6.6-0016/-0019/-0022/-0023): the M/N/K and batch axes and the weight and scale
+//! operand slots are role hints, never inferred from extents, position or dtype.
 
 use crate::structure_key::*;
 
@@ -38,8 +37,33 @@ pub struct DerivationCell {
     /// Accumulator dtype if it differs from the compute dtype; `None` = the compute dtype.
     pub accumulator: Option<&'static str>,
     pub math_fidelity: MathFidelity,
-    /// The caller declares M/N/K roles (a dense contraction) — out of scope, see the module doc.
-    pub contraction_declared: bool,
+    /// The caller's dense-contraction role hints (§6.6-0012); `Some` makes the cell class `ctr`.
+    pub contraction: Option<ContractionRoles>,
+}
+
+/// One axis of one operand, as a role hint names it: `operand` indexes `DerivationCell::operands` in CALL
+/// order, `axis` counts from 0 = outermost of THAT operand's own extents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AxisRef {
+    pub operand: usize,
+    pub axis: usize,
+}
+
+/// The caller-declared roles of a dense-contraction cell. M, N and K are operand axes (`lhs [M,K]`,
+/// `rhs [K,N]` share frame axes under right-alignment, so a frame axis cannot name them, §6.6-0016); the
+/// batch axes are iteration-frame axes (0 = outermost, §6.6-0013, §6.6-0023); the weight and scale are
+/// call-order operand slots.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContractionRoles {
+    pub m: AxisRef,
+    pub n: AxisRef,
+    pub k: AxisRef,
+    /// Batch axes (§6.6-0023): possibly empty; batched iff non-empty.
+    pub batch: Vec<usize>,
+    /// The weight operand (§6.6-0019): the dtype source of `<wdt>`.
+    pub weight: usize,
+    /// The scale operand of a quantized weight (§6.6-0022); `None` = no `q` coordinate.
+    pub scale: Option<usize>,
 }
 
 /// Why a cell does not derive a key. Distinct causes, distinct spellings (published in the artifact).
@@ -60,8 +84,14 @@ pub enum DeriveDecline {
     CollapsedReduction,
     /// A declared reduced axis is not an axis of the frame (§6.6-0009).
     ReducedAxisOutOfRange,
-    /// The cell declares contraction roles; this stage does not derive `ctr` cells yet (R3.3).
-    ContractionOutOfScope,
+    /// M, N or K does not name an existing operand axis, or two of them name the same one (§6.6-0016).
+    ContractionAxisInvalid,
+    /// The weight or scale role names a slot that is not an operand (§6.6-0019, §6.6-0022).
+    RoleSlotOutOfRange,
+    /// A `ctr` cell has no output operand to supply `<out>` (§6.7-0006).
+    ContractionNoOutput,
+    /// A malformed batch-axis hint (§6.6-0023), with its own typed spelling.
+    Batch(BatchRoleDecline),
     /// The declared index slot does not name an operand.
     IndexSlotOutOfRange,
 }
@@ -77,7 +107,10 @@ impl DeriveDecline {
             Self::BadShape => "BadShape",
             Self::CollapsedReduction => "CollapsedReduction",
             Self::ReducedAxisOutOfRange => "ReducedAxisOutOfRange",
-            Self::ContractionOutOfScope => "ContractionOutOfScope",
+            Self::ContractionAxisInvalid => "ContractionAxisInvalid",
+            Self::RoleSlotOutOfRange => "RoleSlotOutOfRange",
+            Self::ContractionNoOutput => "ContractionNoOutput",
+            Self::Batch(b) => b.wire(),
             Self::IndexSlotOutOfRange => "IndexSlotOutOfRange",
         }
     }
@@ -133,9 +166,6 @@ fn canonical_reduce(axes: &[usize], rank: usize) -> Result<Reduce, DeriveDecline
 /// refused here (its storage width is needed for the per-operand vector width); a RESERVED dtype is
 /// refused only where it occupies a key position — the primary dtype and the accumulator (§6.1-0001).
 fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
-    if cell.contraction_declared {
-        return Err(DeriveDecline::ContractionOutOfScope);
-    }
     if cell.operands.is_empty() || cell.operands.len() > MAX_OPERANDS {
         return Err(DeriveDecline::OperandCount);
     }
@@ -236,6 +266,55 @@ fn precision_field(cell: &DerivationCell, primary: &str) -> Option<AccMp> {
     }
 }
 
+/// The `contraction` field of a `ctr` cell (§6.7-0006) from the declared roles: M/N/K size classes from
+/// the caller-assigned operand axes (§6.6-0016), K-divisibility from the K extent, the
+/// batch class (§6.6-0023), and `<wdt>`/`<sdt>` from the hinted operands' own dtypes (§6.6-0019/-0022).
+fn contraction_field(
+    cell: &DerivationCell,
+    roles: &ContractionRoles,
+    ordered: &[&CellOperand],
+    frame: &[i64],
+    primary: &str,
+) -> Result<Contraction, DeriveDecline> {
+    let rank = frame.len();
+    let (m, n, k) = (roles.m, roles.n, roles.k);
+    if m == n || m == k || n == k {
+        return Err(DeriveDecline::ContractionAxisInvalid);
+    }
+    // the extent of a role axis and the iteration-frame axis it lands on (right-aligned, §6.5-0010)
+    let role = |r: AxisRef| -> Result<(i64, usize), DeriveDecline> {
+        let o = cell.operands.get(r.operand).ok_or(DeriveDecline::ContractionAxisInvalid)?;
+        let extent = *o.extents.get(r.axis).ok_or(DeriveDecline::ContractionAxisInvalid)?;
+        Ok((extent, rank - o.extents.len() + r.axis))
+    };
+    let ((me, ma), (ne, na), (ke, ka)) = (role(m)?, role(n)?, role(k)?);
+    let slot = |s: usize| cell.operands.get(s).ok_or(DeriveDecline::RoleSlotOutOfRange);
+    let weight = slot(roles.weight)?;
+    let scale = roles.scale.map(slot).transpose()?;
+    let out = ordered
+        .iter()
+        .find(|o| o.usage == OperandUse::Output)
+        .ok_or(DeriveDecline::ContractionNoOutput)?;
+    // frame axes the output covers (right-aligned, §6.5-0010)
+    let out_axes: Vec<usize> = (rank - out.extents.len()..rank).collect();
+    let batch = derive_batch_class(frame, &roles.batch, &[ma, na, ka], &out_axes).map_err(DeriveDecline::Batch)?;
+    for d in [weight.dtype, out.dtype].into_iter().chain(scale.map(|o| o.dtype)) {
+        check_dtype(d)?; // wdt, out and sdt are key positions (§6.1-0001)
+    }
+    Ok(Contraction {
+        m: size_class_of(me),
+        n: size_class_of(ne),
+        k: size_class_of(ke),
+        k_div: derive_div_bucket(ke),
+        batch,
+        wdt: weight.dtype.to_string(),
+        acc: cell.accumulator.unwrap_or(primary).to_string(),
+        out: out.dtype.to_string(),
+        mp: cell.math_fidelity,
+        sdt: scale.map(|o| o.dtype.to_string()),
+    })
+}
+
 /// Derive the `structure_key` of `cell` (§6.6-0011): the same inputs always give the same bytes.
 pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, DeriveDecline> {
     validate(cell)?;
@@ -252,7 +331,7 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
     // cell class (§6.5-0015) from the operands (use + own extents) and the declared facts.
     let class_ops: Vec<(OperandUse, &[i64])> = ordered.iter().map(|o| (o.usage, o.extents.as_slice())).collect();
     let facts = DeclaredFacts {
-        contraction_roles: false,
+        contraction_roles: cell.contraction.is_some(),
         index_role: cell.index_operand.is_some(),
         reduced_axes_nonempty: !cell.reduced_axes.is_empty(),
     };
@@ -270,6 +349,12 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
     let pairs: Vec<(&[i64], &[i64])> =
         ordered.iter().map(|o| (o.extents.as_slice(), o.strides.as_slice())).collect();
 
+    let contraction = cell
+        .contraction
+        .as_ref()
+        .map(|roles| contraction_field(cell, roles, &ordered, &frame, primary))
+        .transpose()?;
+
     Ok(StructureKey {
         cell_class: class.to_string(),
         dtype: primary.to_string(),
@@ -279,7 +364,7 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
         rank: frame_rank as u32,
         operands,
         reduce,
-        contraction: None,
-        acc_mp: precision_field(cell, primary),
+        contraction,
+        acc_mp: if cell.contraction.is_some() { None } else { precision_field(cell, primary) },
     })
 }

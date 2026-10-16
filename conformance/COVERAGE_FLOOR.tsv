@@ -573,7 +573,12 @@
 # KISS-SYNTH-6.7-0004b (test_synth_hit_requires_op_identity). No clause was re-categorised; untested and lint are unmoved.
 # R1.8 / KISS#543 batch role: harness 433 -> 434. One NEW clause, KISS-CLASSIFY-6.6-0023 (test_classify_batch_role_derivation); untested and lint unmoved.
 # RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said "Set the floor to harness 434, lint 35, untested 421".
-harness	434
+# R3.3 reference ctr derivation stage: harness 434 -> 436. Two clauses leave `blocked` because the derivation corpus now
+# carries contraction cells: KISS-CLASSIFY-6.6-0016 (test_classify_contraction_axis_roles: M/N/K classes and the K
+# bucket follow the DECLARED axes; swapping the hint swaps the key) and KISS-CLASSIFY-6.6-0012
+# (test_classify_derivation_input_tuple: ctr iff the caller declares the roles, each hint moves the key). Lint and
+# untested unmoved. 6.6-0019, -0022 and -0023 were already backed; their vectors are additional detectors, not new floor.
+harness	436
 lint	35
 untested	421
 proven	20

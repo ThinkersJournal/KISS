@@ -1276,7 +1276,11 @@ form (§6.7-0011).
   cell MUST be supplied by the caller as role hints (§6.6-0012); an implementation
   MUST NOT infer M/N/K from bare operand extents. The `contraction` field's M, N, K
   size classes (§6.5-0008) MUST be computed from the caller-assigned M/N/K axis
-  extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). The cell's
+  extents, and its K-divisibility bucket from the K axis extent (§6.5-0012). Each role names an
+  **axis of an operand** (which operand, which of its own axes), not an iteration-frame axis: under
+  right-alignment (§6.5-0010) `lhs [M,K]` and `rhs [K,N]` share frame axes, so the frame extent of an
+  axis is a maximum over roles and is not M, N or K. (The batch axes are the exception: they are
+  iteration-frame axes, §6.6-0023.) The cell's
   batch axes are a further caller role hint with their own rule (§6.6-0023). *Test:*
   `test_classify_contraction_axis_roles`.
 - **KISS-CLASSIFY-6.6-0017** — The reduce field (§6.6-0009) MUST carry a non-`-`
@@ -1317,23 +1321,16 @@ form (§6.7-0011).
   at operand position 1, so an implementation reading a fixed "operand-1" position
   emits the scale's dtype (e.g. `f8e8m0`) where the weight's (e.g. `i4`) is meant — a
   well-formed, byte-stable token naming the wrong type, which nothing downstream would
-  question. *Coverage (informative):* this rule is **not corpus-detectable at this
-  schema version**. The `structure_key` corpus round-trips tokens
-  (`to_token`/`from_token`); no stage derives `<wdt>` from operands, so no published
-  token can disagree with a positional emitter today. A conformance detector needs two
-  surfaces deferred to a future schema version: (1) an **emit-derivation stage** that
-  computes a token from a cell and its role hints, and (2) **cell-carrying corpus
-  vectors** the harness derives and compares. Until then the rule is an emit-side
-  obligation the reference **states in code but no live path yet applies**:
-  `derive_weight_dtype` defines the derivation and is applied only to construct the
-  `gem_weight_role_discriminator` corpus vector (and exercised by its test); no live
-  cell→token path derives `<wdt>` at this schema version — the function is the seed of
-  the deferred emit-derivation stage, not a production path. So no golden token
-  distinguishes a hint-following emitter from a positional one today: that vector
-  (operands `[i4, f8e8m0, bf16]`, `<wdt>` = the hinted weight `i4`, where a fixed
-  operand-1 read would name the scale `f8e8m0`) pins the correct bytes now but is a
-  **latent** detector — inert until an emit-derivation stage lets a foreign emitter
-  diverge from it. The
+  question. *Coverage (informative):* the reference now derives `<wdt>` from a cell. The
+  emit-derivation stage (`derive.rs`) takes the caller's weight-role slot and the
+  `ctr_weight_role_not_operand_one` derivation vector pins the bytes: call order
+  `[weight i4, scale f8e8m0, activation]` with the weight declared at slot 0 derives
+  `<wdt>` = `i4`, where a fixed operand-1 read would name `f8e8m0`. A deriver that reads
+  the weight positionally diverges from that vector, so the rule is corpus-detectable
+  from `sk6` on. *Scope of that detection:* the vector's expected bytes are reference
+  output, not a hand-derived golden, so a second independent deriver is what makes the
+  agreement count (ROADMAP R3.3); and a source scan of the reference cannot prove an
+  emitter outside this repository reads the hint. The
   "no fixed operand position identifies the weight" conclusion additionally depends on
   §6.1-0013 leaving the MX-scale **sibling** slot unpinned; if a later revision pins
   sibling placement, this clause's positional prohibition MUST be revisited. *Test:*

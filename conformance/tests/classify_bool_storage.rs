@@ -87,7 +87,7 @@ fn derive_declines_an_extents_strides_length_mismatch() {
         reduced_axes: vec![],
         accumulator: None,
         math_fidelity: MathFidelity::Stable,
-        contraction_declared: false,
+        contraction: None,
     };
     assert!(derive_structure_key(&ok).is_ok(), "control: the well-formed cell derives");
     let mut bad = ok.clone();

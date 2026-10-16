@@ -108,3 +108,96 @@ fn test_classify_operand_canonical_order() {
     assert_eq!(t.split('|').nth(2), Some("f32"));
 }
 
+
+// Backs: KISS-CLASSIFY-6.6-0016 — the M/N/K size classes and the K-divisibility bucket come from the
+// CALLER-DECLARED axes: the same operands with M and N swapped give a different key, and K's bucket comes
+// from the K axis, not from the output's innermost axis. Also backs the §2.8(d) worked example.
+#[test]
+fn test_classify_contraction_axis_roles() {
+    let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Token(t) => t,
+        Expect::Decline(e) => panic!("{name} declines: {e:?}"),
+    };
+    let ctr = |t: &str| t.split('|').nth(9).unwrap().to_string();
+    assert_eq!(ctr(&tok("ctr_gemm_small_m_large_nk")), "ctll/d16/f16/f16/f16/st", "spec §2.8(d): M tiny, N and K large, d16");
+    assert_eq!(ctr(&tok("ctr_gemm_roles_swapped_m_and_n")), "cltl/d16/f16/f16/f16/st", "hint swapped, operands held");
+    assert_ne!(tok("ctr_gemm_small_m_large_nk"), tok("ctr_gemm_roles_swapped_m_and_n"));
+    assert_eq!(ctr(&tok("ctr_k_divisibility_from_k_axis")), "ctll/d4/f16/f16/f16/st", "K = 4100 -> d4; N = 4096 would be d16");
+}
+
+// Backs: KISS-CLASSIFY-6.6-0023 — the batch coordinate is a declaration: absent when none is declared,
+// present for a declared axis of extent 1, classed by the PRODUCT of the declared extents, rank-independent.
+#[test]
+fn test_classify_batch_role_derivation_in_cells() {
+    let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Token(t) => t,
+        Expect::Decline(e) => panic!("{name} declines: {e:?}"),
+    };
+    let ctr = |name: &str| tok(name).split('|').nth(9).unwrap().to_string();
+    assert_eq!(ctr("ctr_rank3_batch_declared"), "ctlm/d16/bs/f16/f16/f16/st");
+    assert_eq!(ctr("ctr_rank3_batch_not_declared"), "ctlm/d16/f16/f16/f16/st");
+    assert_eq!(ctr("ctr_batch_declared_extent_one"), "ctlm/d16/bt/f16/f16/f16/st");
+    assert_eq!(ctr("ctr_rank4_two_batch_axes_product"), "ctlm/d16/bm/f16/f16/f16/st", "4 * 64 = 256 -> mid");
+    assert_eq!(ctr("ctr_rank4_one_batch_axis_declared"), "ctlm/d16/bs/f16/f16/f16/st", "only axis 1 declared -> 64");
+    assert_eq!(ctr("ctr_rank4_no_batch_declared"), "ctlm/d16/f16/f16/f16/st", "rank 4 alone does not batch");
+    let decline = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Decline(e) => e.wire(),
+        Expect::Token(t) => panic!("{name} derived {t}"),
+    };
+    assert_eq!(decline("decline_ctr_batch_axis_out_of_range"), "BatchAxisOutOfRange");
+    assert_eq!(decline("decline_ctr_batch_axis_duplicate"), "BatchAxisDuplicate");
+    assert_eq!(decline("decline_ctr_batch_axis_is_an_mnk_axis"), "BatchAxisOverlapsContractionRole");
+    assert_eq!(decline("decline_ctr_batch_axis_not_in_output"), "BatchAxisNotInOutput");
+    assert_eq!(decline("decline_ctr_batch_axis_zero_extent"), "BatchAxisNonPositiveExtent");
+}
+
+// Backs: KISS-CLASSIFY-6.6-0019 — <wdt> is the dtype of the DECLARED weight operand: with call order
+// [weight, scale, activation] a positional operand-1 read would name f8e8m0.
+// Backs: KISS-CLASSIFY-6.6-0022 — the scale dtype is keyed (e8m0 and f16 scales are different cells) and is
+// omitted, not empty, when no scale operand is designated.
+#[test]
+fn test_classify_weight_and_scale_roles_in_cells() {
+    let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Token(t) => t,
+        Expect::Decline(e) => panic!("{name} declines: {e:?}"),
+    };
+    let ctr = |name: &str| tok(name).split('|').nth(9).unwrap().to_string();
+    assert_eq!(ctr("ctr_quantized_scale_e8m0"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
+    assert_eq!(ctr("ctr_quantized_scale_f16"), "ctll/d16/i4/bf16/bf16/st/qf16");
+    assert_eq!(ctr("ctr_quantized_no_scale_designated"), "ctll/d16/i4/bf16/bf16/st");
+    assert_ne!(tok("ctr_quantized_scale_e8m0"), tok("ctr_quantized_scale_f16"));
+    // weight at operand 0, scale at operand 1: wdt is the declared weight (i4), not the operand-1 dtype.
+    assert_eq!(ctr("ctr_weight_role_not_operand_one"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
+    let decline = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
+        Expect::Decline(e) => e.wire(),
+        Expect::Token(t) => panic!("{name} derived {t}"),
+    };
+    assert_eq!(decline("decline_ctr_weight_slot_out_of_range"), "RoleSlotOutOfRange");
+    assert_eq!(decline("decline_ctr_scale_slot_out_of_range"), "RoleSlotOutOfRange");
+    assert_eq!(decline("decline_ctr_reserved_weight_dtype"), "ReservedDtype");
+}
+
+// Backs: KISS-CLASSIFY-6.6-0012 — the role hints are INPUTS, the cell class is not: the same operands derive
+// `ctr` iff the caller declares the contraction roles (never from shape), and every hint moves the key.
+// The index-slot and reduced-axis hints are exercised in classify_storage_dtypes.rs and the A.1 reductions.
+#[test]
+fn test_classify_derivation_input_tuple() {
+    use kiss_conformance::derive::derive_structure_key;
+    let all = vectors();
+    let gemm = &all.iter().find(|d| d.name == "ctr_gemm_small_m_large_nk").expect("ctr vector").cell;
+    let declared = derive_structure_key(gemm).expect("control: the declared cell derives");
+    assert_eq!(declared.cell_class, "ctr");
+    let mut undeclared = gemm.clone();
+    undeclared.contraction = None;
+    let k = derive_structure_key(&undeclared).expect("the same operands derive without the roles");
+    assert_ne!(k.cell_class, "ctr", "a GEMM-shaped cell is not ctr unless the caller declares the roles");
+    assert!(k.contraction.is_none() && declared.contraction.is_some());
+    // each hint is an input: changing only the hint changes the key (operands, target held).
+    let base = declared.to_token();
+    let mut c = gemm.clone();
+    c.contraction.as_mut().unwrap().scale = Some(0);
+    assert_ne!(derive_structure_key(&c).unwrap().to_token(), base, "a designated scale operand is keyed");
+    let mut c = gemm.clone();
+    c.contraction.as_mut().unwrap().batch = vec![0];
+    assert_ne!(derive_structure_key(&c).map(|k| k.to_token()), Ok(base), "a declared batch axis is keyed or declines, never ignored");
+}
