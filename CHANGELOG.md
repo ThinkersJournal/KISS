@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.10 — 2026-10-17 (number allocated by the PM in advance)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the §6.19 carrier clauses as drift guards: the §6.19-0003 clause's carrier set equals the §6.19.3 schema table, and each §6.19-0036 non-carrier has no schema row and calls a `reduce`/`prefix_scan`/`sort_network` node in its §6.13 decomposition. Both rows stay `untested` (PARTIAL, floor unmoved: no per-op encoder and no consumer subject in `conformance/`). The README's unbound ledger prose (lint, blocked, definitional counts) is brought to the ledger's real counts.
+
 ## 0.4.9 — 2026-10-17 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the §6.18 complex family. KISS-OPS-6.18-0002 (every decomposition stays inside the closure the clause names, acyclic) and 6.18-0014 (each op's determinism class is derived from its decomposition and compared with the clause lists and the table column) move from `untested` to `lint:kiss_ops`. Floor: lint 43, untested 411.
