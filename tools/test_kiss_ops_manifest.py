@@ -275,6 +275,34 @@ class DecompositionGraphTest(unittest.TestCase):
         v = self.index_violations(self.mutate("`MAX_RANK = 8` and", "`MAX_RANK = 300` and"))
         self.assertTrue(any("MAX_RANK a `u8` axis can hold" in m for m in v), v)
 
+    def atom_violations(self, ops):
+        v = []
+        self.K.check_structural_atoms(ops, v)
+        return v
+
+    def test_structural_atoms_control_is_parsed_and_clean(self):
+        region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
+        rows = {self.K._op(c[0]): c[1] for c in self.K.table_cells(region) if self.K._op(c[0])}
+        self.assertIn("keepdim", rows["reduce"])  # a parse of nothing would also be "clean"
+        self.assertIn("prefix_scan", rows)
+        self.assertEqual(self.atom_violations(self.ops), [])
+
+    def test_reduce_keepdim_no_longer_fixed_is_caught(self):
+        v = self.atom_violations(self.mutate("`keepdim`:bool `u8`:`1` (fixed, §6.11-0008) —",
+                                             "`keepdim`:bool `u8`:`0` (§6.11-0008) —"))
+        self.assertTrue(any("`reduce` row no longer fixes" in m for m in v), v)
+
+    def test_prefix_scan_gaining_keepdim_is_caught(self):
+        v = self.atom_violations(self.mutate(
+            "`exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) —",
+            "`keepdim`:bool `u8`:`1` — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) —"))
+        self.assertTrue(any("`prefix_scan` row" in m for m in v), v)
+
+    def test_scatter_output_shape_rule_drift_is_caught(self):
+        v = self.atom_violations(self.mutate("(`SameAs(dest)`, §6.11-0016)",
+                                             "(`SameAs(updates)`, §6.11-0016)"))
+        self.assertTrue(any("§6.20-0008: no longer pins" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

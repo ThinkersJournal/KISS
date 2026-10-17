@@ -524,6 +524,28 @@ def check_index_clauses(ops, v):
         v.append("§6.11-0013/-0014: §6.19-0037 no longer pins a MAX_RANK a `u8` axis can hold")
 
 
+def check_structural_atoms(ops, v):
+    """§6.11-0008: the `reduce` §6.19.3 row fixes `keepdim` at `1` and cites the clause, and the
+    length-preserving `prefix_scan` row has no `keepdim` field to drop an axis with.
+    §6.11-0016: the clause and the §6.20-0008 shape-rule enumeration both pin the `scatter` output
+    shape to `SameAs(dest)` and cite each other."""
+    region = between(ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**", where="§6.19.3 table")
+    rows = {_op(c[0]): c[1] for c in table_cells(region) if _op(c[0])}
+    if "`keepdim`:bool `u8`:`1` (fixed, §6.11-0008)" not in rows.get("reduce", ""):
+        v.append("§6.11-0008: the `reduce` row no longer fixes `keepdim` at `1` citing §6.11-0008")
+    if "keepdim" in rows.get("prefix_scan", "keepdim"):
+        v.append("§6.11-0008: the `prefix_scan` row is missing or names a `keepdim` field, but "
+                 "the op retains all axes")
+    body8 = " ".join((clause_body(ops, "6.11-0008") or "").split())
+    if "`prefix_scan` MUST retain all axes" not in body8:
+        v.append("§6.11-0008: the clause no longer says `prefix_scan` retains all axes")
+    for where, text, cite in (("§6.11-0016", clause_body(ops, "6.11-0016"), "§6.20-0008"),
+                              ("§6.20-0008", clause_body(ops, "6.20-0008"), "§6.11-0016")):
+        flat = " ".join((text or "").split())
+        if "SameAs(dest)" not in flat or cite not in flat:
+            v.append(f"{where}: no longer pins the scatter output to `SameAs(dest)` citing {cite}")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -630,6 +652,7 @@ def check(spec_dir):
     check_carrier_clauses(ops, carrier_193, decomposition_graph(ops), v)
     check_math_fidelity(ops, v)
     check_index_clauses(ops, v)
+    check_structural_atoms(ops, v)
 
     return v, sets
 
