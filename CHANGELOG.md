@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.9 — 2026-10-17 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the §6.18 complex family. KISS-OPS-6.18-0002 (every decomposition stays inside the closure the clause names, acyclic) and 6.18-0014 (each op's determinism class is derived from its decomposition and compared with the clause lists and the table column) move from `untested` to `lint:kiss_ops`. Floor: lint 43, untested 411.
+
 ## 0.4.8 — 2026-10-16 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: the §6.13 decomposition-graph lint also covers KISS-OPS-6.14-0006 (ops embedded in a structural atom's scalar body count as references); KISS-OPS-6.13-0002 and 6.14-0001 are recorded `definitional` (true by construction of the checked graph). Floor: lint 41, untested 413.
