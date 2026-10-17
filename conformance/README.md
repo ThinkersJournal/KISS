@@ -48,7 +48,7 @@ sentence describing two different measurements, agreeing with each other only be
 neither was checked.
 
 The remaining 525<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
-population: **419<!-- bound:untested_rows --> genuinely untested**, 34 enforced by a
+population: **414<!-- bound:untested_rows --> genuinely untested**, 39 enforced by a
 document lint, 21 `blocked`, 12 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
 the harness one for exactly this reason. Of this crate's 777<!-- bound:test_fns --> test fns, **292<!-- bound:uncited_tests --> cite

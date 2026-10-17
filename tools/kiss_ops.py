@@ -249,6 +249,63 @@ def transcendental_atoms(ops):
     return sorted(set(atoms))
 
 
+# Names a §6.13 decomposition body may call that are not ops: the operand/attribute accessors
+# (`input(i)`, `param(i)`, §6.13 operand-ordering conventions) and the §6.12 `const(bits)` leaf.
+DECOMP_NON_OPS = {"input", "param", "const"}
+
+
+def decomposition_refs(cell):
+    """The op tokens the FIRST backtick span of a §6.13 table `Reference decomposition`
+    cell calls, minus let-binding names and the accessors in DECOMP_NON_OPS. Only the first
+    span is the body: later spans in the cell are refinement prose, not decomposition."""
+    m = re.match(r"\s*`([^`]*)`", cell)
+    body = m.group(1) if m else ""
+    lets = set(re.findall(r"([a-z][a-z0-9_]*)\s*=", body))
+    calls = set(re.findall(r"([a-z][a-z0-9_]*)\s*\(", body))
+    return sorted(calls - lets - DECOMP_NON_OPS)
+
+
+def decomposition_graph(ops):
+    """{non-primitive op: [ops its §6.13 reference decomposition calls]}."""
+    region = between(ops, "### 6.13 Reference decompositions", "\n- **KISS-OPS-6.13-0001**")
+    graph = {}
+    for cells in table_cells(region):
+        if len(cells) >= 4 and (o := _op(cells[0])):
+            graph[o] = decomposition_refs(cells[3])
+    return graph
+
+
+def check_decomposition_graph(graph, primitive, v):
+    """§6.3-0003 / §6.3-0004 / §6.14-0002 / §6.14-0003 / §6.14-0005 over the §6.13 table.
+    Binds the DOCUMENT: that the table's graph has no floor row, no unresolved reference
+    and no cycle, and so every row reaches the floor in at most |rows| steps."""
+    for o in sorted(set(graph) & primitive):
+        v.append(f"§6.3-0003: primitive-floor op `{o}` has a §6.13 reference decomposition")
+    for o in sorted(graph):
+        for r in graph[o]:
+            if r not in primitive and r not in graph:
+                v.append(f"§6.3-0004: `{o}` decomposes into `{r}`, which is neither a "
+                         f"primitive-floor op nor a §6.13 row")
+    # Depth-first search for a cycle; `path` is the current resolution chain.
+    done, path = set(), []
+
+    def visit(o):
+        if o in path:
+            v.append("§6.14-0002/-0005: decomposition cycle "
+                     + " -> ".join(path[path.index(o):] + [o]))
+            return
+        if o in done or o not in graph:
+            return
+        path.append(o)
+        for r in graph[o]:
+            visit(r)
+        path.pop()
+        done.add(o)
+
+    for o in sorted(graph):
+        visit(o)
+
+
 def build_manifest(spec_dir):
     """Derive the op/atom coverage manifest from ops.md (§6.5-0008 checks against it)."""
     ops = open(os.path.join(spec_dir, "ops.md"), encoding="utf-8").read()
@@ -366,6 +423,10 @@ def check(spec_dir):
                 v.append(f"membership partition (§6.1-0004): {overlap} in both the "
                          f"{an} and {bn} op classes")
 
+    # (5b) decomposition graph (§6.3-0003/-0004, §6.14-0002/-0003/-0005): the §6.13 table is
+    # acyclic and every row resolves to the primitive floor, and no floor op has a row.
+    check_decomposition_graph(decomposition_graph(ops), set(floor_27), v)
+
     # (7) carrier set: §2.7 carrier sentence == §6.19.3 schema table (col 0)
     carrier_sentence = between(ops, "The carrier ops for this version are", ". Their schemas")
     carrier_27 = op_tokens(carrier_sentence)
@@ -385,6 +446,16 @@ COVERS = [
      "the primitive-floor op set drifts between the §6.3-0001 clause and the §2.7 table"),
     ("KISS-OPS-6.1-0004",
      "the primitive/non-primitive membership partition drifts between §2.7, §6.3 and §6.13"),
+    ("KISS-OPS-6.3-0003",
+     "a primitive-floor op gains a §6.13 reference decomposition"),
+    ("KISS-OPS-6.3-0004",
+     "a §6.13 decomposition calls an op that is neither a floor op nor a §6.13 row"),
+    ("KISS-OPS-6.14-0002",
+     "the §6.13 decomposition table acquires a cycle"),
+    ("KISS-OPS-6.14-0003",
+     "a §6.13 row stops reaching the primitive floor in finitely many steps"),
+    ("KISS-OPS-6.14-0005",
+     "an op appears, directly or transitively, in its own §6.13 decomposition"),
     ("KISS-OPS-6.18-0001",
      "the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables"),
     ("KISS-OPS-6.18-0016",

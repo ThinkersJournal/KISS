@@ -387,10 +387,10 @@ KISS-OPS-6.13-0002	test_ops_decomposition_strictly_lower_level	untested
 KISS-OPS-6.13-0004	test_ops_parameterized_attributes_explicit	untested	
 KISS-OPS-6.13-0008	test_ops_norm_axis_all_four	untested	
 KISS-OPS-6.14-0001	test_ops_level_assignment	untested	
-KISS-OPS-6.14-0002	test_ops_decomposition_acyclic	untested	
-KISS-OPS-6.14-0003	test_ops_resolution_terminates	untested	
+KISS-OPS-6.14-0002	test_ops_decomposition_acyclic	lint:kiss_ops	the §6.13 decomposition table acquires a cycle
+KISS-OPS-6.14-0003	test_ops_resolution_terminates	lint:kiss_ops	a §6.13 row stops reaching the primitive floor in finitely many steps
 KISS-OPS-6.14-0004	test_ops_consumer_resolves_unknown_op	untested	
-KISS-OPS-6.14-0005	test_ops_op_not_in_own_decomposition	untested	
+KISS-OPS-6.14-0005	test_ops_op_not_in_own_decomposition	lint:kiss_ops	an op appears, directly or transitively, in its own §6.13 decomposition
 KISS-OPS-6.14-0006	test_ops_embedded_body_level	untested	
 KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh	untested	
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts	lint:kiss_tables	the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner
@@ -440,8 +440,8 @@ KISS-OPS-6.2-0007	test_ops_u32_ordinary_dtype	untested	the comparison path has c
 KISS-OPS-6.2-0008	test_ops_const_bits_roundtrip	untested	
 KISS-OPS-6.3-0001	test_ops_primitive_floor_set	lint:kiss_ops	the primitive-floor op set drifts between the §6.3-0001 clause and the §2.7 table
 KISS-OPS-6.3-0002	test_ops_floor_is_mandatory_core	untested	
-KISS-OPS-6.3-0003	test_ops_floor_ops_have_no_decomposition	untested	
-KISS-OPS-6.3-0004	test_ops_decomposition_terminates_at_floor	untested	
+KISS-OPS-6.3-0003	test_ops_floor_ops_have_no_decomposition	lint:kiss_ops	a primitive-floor op gains a §6.13 reference decomposition
+KISS-OPS-6.3-0004	test_ops_decomposition_terminates_at_floor	lint:kiss_ops	a §6.13 decomposition calls an op that is neither a floor op nor a §6.13 row
 KISS-OPS-6.3-0005	test_ops_floor_ops_justified_atoms	untested	
 KISS-OPS-6.8-0002	test_ops_transcendental_no_cross_lang_identity	untested	
 KISS-OPS-6.8-0003	test_ops_sqrt_correctly_rounded_or_ulp	untested	first arm only: ops-sqrt-rounding.json (24 f32 cells, class ULP bound 0, correctly rounded) is run by mint_sqrt.rs; the declared-tier arm for a target without a correct-rounding guarantee is the contract's (6.8-0001) and has no vector form, so the clause is NOT counted as backed
