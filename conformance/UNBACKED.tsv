@@ -369,16 +369,16 @@ KISS-OPS-6.1-0004	test_ops_primitive_flags	lint:kiss_ops	the primitive/non-primi
 KISS-OPS-6.10-0001	test_ops_bitwise_integer_only	untested	
 KISS-OPS-6.11-0001	test_ops_element_map_base_access	untested	
 KISS-OPS-6.11-0008	test_ops_reduce_keepdim_broadcast	untested	
-KISS-OPS-6.11-0009	test_ops_index_dtype_set	untested	
+KISS-OPS-6.11-0009	test_ops_index_dtype_set	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the legal index dtype set {u32, i32, i64} is one set across the clause, the 6.11-0019 restatement, the 6.19-0017 enum (1..3, 0 reserved) and its byte table. The other half, that an implementation declines any other index_dtype with a typed decline, has no subject in conformance/ (no op validator).
 KISS-OPS-6.11-0011	test_ops_reduce_axes_four_categories	lint:kiss_tables	the reduce_axes four-category set drifts between Ops §6.11-0011 and Classify §6.7-0005
-KISS-OPS-6.11-0012	test_ops_index_operand_role	untested	
-KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	
-KISS-OPS-6.11-0014	test_ops_sort_network_axis_attribute	untested	
+KISS-OPS-6.11-0012	test_ops_index_operand_role	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks each of the five index ops has mandatory index_operand and index_dtype fields in its 6.19.3 OpAttrs row. That an implementation never infers index-ness from a dtype is consumer behaviour with no subject in conformance/.
+KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks each of the five index ops has a mandatory u8 axis field in its 6.19.3 row and that 6.19-0037 pins a MAX_RANK a u8 can hold. The typed decline for an out-of-range axis has no subject in conformance/.
+KISS-OPS-6.11-0014	test_ops_sort_network_axis_attribute	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the sort_network 6.19.3 row carries a u8 trailing-axis axis field and that 6.19-0037 pins a MAX_RANK a u8 can hold. The typed decline for an out-of-range axis has no subject in conformance/.
 KISS-OPS-6.11-0015	test_ops_gather_skip_base_dynamic	untested	
 KISS-OPS-6.11-0016	test_ops_scatter_dest_operand	untested	
 KISS-OPS-6.11-0017	test_ops_scatter_updates_broadcast	untested	
 KISS-OPS-6.11-0018	test_ops_structural_empty_axis	untested	
-KISS-OPS-6.11-0019	test_ops_sort_index_output_i64	untested	
+KISS-OPS-6.11-0019	test_ops_sort_index_output_i64	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks i64 is in the 6.11-0009 set and that the sort_network OpAttrs row names no index or dtype field (no wire field). That a producer emits i64 for the sort index lane has no subject in conformance/.
 KISS-OPS-6.12-0001	test_ops_scalar_source_leaves	untested	
 KISS-OPS-6.12-0002	test_ops_const_leaf_bits	untested	
 KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	
