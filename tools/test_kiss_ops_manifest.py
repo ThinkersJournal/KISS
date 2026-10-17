@@ -166,6 +166,33 @@ class DecompositionGraphTest(unittest.TestCase):
                                                     "`cadd`, `csub`, `cneg`, `cconj`, `cmul`) MUST be class"))
         self.assertTrue(any("`cdiv`" in m for m in v), v)
 
+    def carrier_violations(self, ops):
+        v = []
+        region = self.K.between(ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
+        table = [o for cells in self.K.table_cells(region) if (o := self.K._op(cells[0]))]
+        self.K.check_carrier_clauses(ops, table, self.K.decomposition_graph(ops), v)
+        return v
+
+    def test_carrier_clauses_control_is_parsed_and_clean(self):
+        region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
+        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 17)
+        self.assertEqual(self.carrier_violations(self.ops), [])
+
+    def test_carrier_clause_dropping_a_carrier_is_caught(self):
+        v = self.carrier_violations(self.mutate("index_select, embedding, scatter_add}",
+                                                "index_select, embedding}"))
+        self.assertTrue(any("scatter_add" in m for m in v), v)
+
+    def test_noncarrier_with_a_schema_row_is_caught(self):
+        v = self.carrier_violations(self.mutate("`reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`",
+                                                "`reduce_mean`, `reduce_norm2`, `logsumexp`, `reduce`, `argmax`"))
+        self.assertTrue(any("`reduce` is named a non-carrier" in m for m in v), v)
+
+    def test_noncarrier_without_an_inner_carrier_node_is_caught(self):
+        v = self.carrier_violations(self.mutate("| `cumsum` | scan | — | `prefix_scan(monoid=sum, inclusive)` |",
+                                                "| `cumsum` | scan | — | `add(x, x)` |"))
+        self.assertTrue(any("`cumsum` has no reduce/prefix_scan/sort_network" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

@@ -408,6 +408,33 @@ def build_manifest(spec_dir):
     }
 
 
+CARRIER_NODES = {"reduce", "prefix_scan", "sort_network"}
+
+
+def check_carrier_clauses(ops, carrier_table, graph, v):
+    """§6.19-0003: the clause's carrier set is exactly the ops with a §6.19.3 schema row.
+    §6.19-0036: each named non-carrier is outside that set and its §6.13 decomposition calls
+    a reduce / prefix_scan / sort_network node directly, which is where a native matcher reads
+    the axis."""
+    body3 = clause_body(ops, "6.19-0003")
+    clause = brace_set(body3) if body3 else []
+    if not clause:
+        v.append("§6.19-0003: no `{...}` carrier set found in the clause")
+    else:
+        _diff("carrier set (§6.19-0003 clause vs §6.19.3 table)", clause, carrier_table, v)
+    body36 = " ".join((clause_body(ops, "6.19-0036") or "").split())
+    m = re.search(r"OpAttrs field\):(.*?)A consumer", body36)
+    noncarriers = op_tokens(m.group(1)) if m else []
+    if not noncarriers:
+        v.append("§6.19-0036: no non-carrier op list found in the clause")
+    for o in noncarriers:
+        if o in carrier_table:
+            v.append(f"§6.19-0036: `{o}` is named a non-carrier but has a §6.19.3 schema row")
+        if not CARRIER_NODES & set(graph.get(o, [])):
+            v.append(f"§6.19-0036: `{o}` has no reduce/prefix_scan/sort_network node in its "
+                     f"§6.13 decomposition to resolve its axis from")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -510,6 +537,8 @@ def check(spec_dir):
     carrier_193 = [o for cells in table_cells(region) if (o := _op(cells[0]))]
     sets["carrier"] = sorted(set(carrier_27))
     _diff("carrier set (§2.7 sentence vs §6.19.3 table)", carrier_27, carrier_193, v)
+
+    check_carrier_clauses(ops, carrier_193, decomposition_graph(ops), v)
 
     return v, sets
 
