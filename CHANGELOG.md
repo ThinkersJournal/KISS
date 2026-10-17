@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.8 — 2026-10-16 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: the §6.13 decomposition-graph lint also covers KISS-OPS-6.14-0006 (ops embedded in a structural atom's scalar body count as references); KISS-OPS-6.13-0002 and 6.14-0001 are recorded `definitional` (true by construction of the checked graph). Floor: lint 41, untested 413.
+
 ## 0.4.7 — 2026-10-16 (number allocated by the PM)
 
 - Tooling only, no spec or wire change: `tools/kiss_ops.py` lints the §6.13 decomposition graph (no floor row, every call resolves, acyclic). KISS-OPS-6.3-0003, 6.3-0004, 6.14-0002, 6.14-0003 and 6.14-0005 move from `untested` to `lint:kiss_ops`. Floor: lint 40, untested 416.
