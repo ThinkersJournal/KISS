@@ -408,7 +408,7 @@ KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested
 KISS-OPS-6.17-0008	test_ops_accumulator_tolerance_cell_class	untested	
 KISS-OPS-6.17-0009	test_ops_accumulator_reference_value	untested	
 KISS-OPS-6.18-0001	test_ops_complex_op_set	lint:kiss_ops	the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables
-KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	untested	
+KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	lint:kiss_ops	a complex op references an op outside the closure the clause names, or gains a cycle
 KISS-OPS-6.18-0003	test_ops_complex_component_bridge	untested	
 KISS-OPS-6.18-0005	test_ops_cmul_annexg	untested	
 KISS-OPS-6.18-0007	test_ops_cabs_annexg	untested	
@@ -418,7 +418,7 @@ KISS-OPS-6.18-0010	test_ops_clog_principal_branch	untested
 KISS-OPS-6.18-0011	test_ops_csqrt_principal_branch	untested	
 KISS-OPS-6.18-0012	test_ops_cpow_principal	untested	
 KISS-OPS-6.18-0013	test_ops_complex_nan_inf_annexg	untested	
-KISS-OPS-6.18-0014	test_ops_complex_determinism_class	untested	
+KISS-OPS-6.18-0014	test_ops_complex_determinism_class	lint:kiss_ops	a complex op's determinism class stops following from its decomposition (clause lists or table column)
 KISS-OPS-6.18-0015	test_ops_complex_component_dtype	untested	
 KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	lint:kiss_ops	the advertised-vs-bridge complex split drifts between §6.18-0016 and the §6.18 tables
 KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	

@@ -107,6 +107,65 @@ class DecompositionGraphTest(unittest.TestCase):
         v = self.violations(self.mutate("reduce(sum, exp(sub(x,m)))", "reduce(sum, logsumexp(x))"))
         self.assertTrue(any("cycle logsumexp -> logsumexp" in m for m in v), v)
 
+    def test_complex_family_control_is_parsed_and_clean(self):
+        cg = self.K.complex_decomposition_graph(self.ops)
+        self.assertEqual(len(cg), 15)  # the §6.18-0001 family; a parse of nothing is also "clean"
+        self.assertEqual(cg["cre"], ["element_map"])
+        self.assertEqual(cg["cabs"], ["hypot"])
+        self.assertEqual(cg["clog"], ["cabs", "carg", "cmake", "log"])
+        v = []
+        self.K.check_complex_closure(self.ops, cg, v)
+        self.assertEqual(v, [])
+
+    def complex_violations(self, ops):
+        v = []
+        cg = self.K.complex_decomposition_graph(ops)
+        self.K.check_complex_closure(ops, cg, v)
+        self.K.check_decomposition_graph({**self.K.decomposition_graph(ops), **cg}, self.prim, v)
+        return v
+
+    def test_complex_op_outside_the_closure_is_caught(self):
+        # sinh is a real non-primitive op the §6.18-0002 closure does not name.
+        v = self.complex_violations(self.mutate("| `cabs` | complex | ULP/tolerance | `hypot(a, b)`",
+                                                "| `cabs` | complex | ULP/tolerance | `sinh(a)`"))
+        self.assertTrue(any("`cabs` references `sinh`" in m for m in v), v)
+
+    def test_complex_cycle_is_caught(self):
+        v = self.complex_violations(self.mutate("| `cabs` | complex | ULP/tolerance | `hypot(a, b)`",
+                                                "| `cabs` | complex | ULP/tolerance | `hypot(cabs(z), b)`"))
+        self.assertTrue(any("cycle cabs -> cabs" in m for m in v), v)
+
+    def test_complex_op_without_a_decomposition_is_caught(self):
+        v = self.complex_violations(self.mutate("| `cim` | imag lane → real | `element_map` reading",
+                                                "| `cim` | imag lane → real | no body, reading"))
+        self.assertTrue(any("`cim` carries no reference decomposition" in m for m in v), v)
+
+    def determinism_violations(self, ops):
+        v = []
+        self.K.check_complex_determinism(
+            ops, {**self.K.decomposition_graph(ops), **self.K.complex_decomposition_graph(ops)},
+            self.K.transcendental_atoms(ops), v)
+        return v
+
+    def test_complex_determinism_control_is_clean(self):
+        self.assertEqual(self.determinism_violations(self.ops), [])
+
+    def test_complex_determinism_table_column_drift_is_caught(self):
+        v = self.determinism_violations(self.mutate("| `cmul` | complex | exact-byte |",
+                                                    "| `cmul` | complex | ULP/tolerance |"))
+        self.assertTrue(any("`cmul` is exact-byte by its decomposition" in m for m in v), v)
+
+    def test_complex_determinism_follows_the_decomposition(self):
+        # cadd gains a transcendental atom: its derived class flips though both copies still say exact-byte.
+        v = self.determinism_violations(self.mutate("`cmake(add(a,c), add(b,d))`",
+                                                    "`cmake(add(exp(a),c), add(b,d))`"))
+        self.assertTrue(any("`cadd` is ULP/tolerance by its decomposition" in m for m in v), v)
+
+    def test_complex_determinism_clause_list_drift_is_caught(self):
+        v = self.determinism_violations(self.mutate("`cadd`, `csub`, `cneg`, `cconj`, `cmul`, `cdiv`) MUST be class",
+                                                    "`cadd`, `csub`, `cneg`, `cconj`, `cmul`) MUST be class"))
+        self.assertTrue(any("`cdiv`" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

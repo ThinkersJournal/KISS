@@ -306,6 +306,78 @@ def check_decomposition_graph(graph, primitive, v):
         visit(o)
 
 
+def complex_decomposition_graph(ops):
+    """{complex op: [ops its §6.18 reference decomposition calls]} over both §6.18 tables.
+    A bridge row's body is the bare token `element_map` (no call syntax), so a first span that
+    is a single op token counts as the one reference."""
+    graph = {}
+    for which, col in (("bridge", 2), ("advertised", 3)):
+        if which == "bridge":
+            region = between(ops, "**Component bridge (plumbing", "**Complex arithmetic (advertised")
+        else:
+            region = between(ops, "**Complex arithmetic (advertised", "\n- **KISS-OPS-6.18-0001**")
+        for cells in table_cells(region):
+            if len(cells) > col and (o := _op(cells[0])):
+                m = re.match(r"\s*`([^`]*)`", cells[col])
+                bare = m.group(1).strip() if m else ""
+                graph[o] = ([bare] if re.fullmatch(r"[a-z][a-z0-9_]{2,}", bare)
+                            else decomposition_refs(cells[col]))
+    return graph
+
+
+def check_complex_closure(ops, cgraph, v):
+    """§6.18-0002: every complex op's decomposition references only the closure the clause
+    names (its own backticked ops, the family itself, and the §6.12 leaves)."""
+    body = clause_body(ops, "6.18-0002")
+    if not body:
+        v.append("§6.18-0002: clause not found")
+        return
+    allowed = set(op_tokens(body.split("*Test:*")[0])) | set(cgraph) | DECOMP_NON_OPS
+    for o in sorted(cgraph):
+        if not cgraph[o]:
+            v.append(f"§6.18-0002: complex op `{o}` carries no reference decomposition")
+        for r in cgraph[o]:
+            if r not in allowed:
+                v.append(f"§6.18-0002: `{o}` references `{r}`, outside the closure the clause names")
+
+def reaches(graph, op, targets):
+    """True if `op`'s decomposition reaches any op in `targets`, directly or transitively."""
+    seen, stack = set(), [op]
+    while stack:
+        for r in graph.get(stack.pop(), []):
+            if r in targets:
+                return True
+            if r not in seen:
+                seen.add(r)
+                stack.append(r)
+    return False
+
+
+def check_complex_determinism(ops, graph, atoms, v):
+    """§6.18-0014: the class of each complex op FOLLOWS from its decomposition. Derive it
+    (transcendental iff the decomposition reaches a §6.8 atom), then compare with the clause's
+    two lists and with the §6.18 table's Determinism column."""
+    cgraph = complex_decomposition_graph(ops)
+    derived = {o: ("ULP/tolerance" if reaches(graph, o, set(atoms)) else "exact-byte")
+               for o in cgraph}
+    flat = " ".join((clause_body(ops, "6.18-0014") or "").split())
+    alg = re.search(r"purely-algebraic complex ops \(([^)]*)\)", flat)
+    tr = re.search(r"transcendental real atom \(([^)]*)\)", flat)
+    if not (alg and tr):
+        v.append("§6.18-0014: the two op lists were not found in the clause")
+        return
+    listed = {o: "exact-byte" for o in op_tokens(alg.group(1))}
+    listed.update({o: "ULP/tolerance" for o in op_tokens(tr.group(1).split(" via ")[0])})
+    for o in sorted(set(derived) | set(listed)):
+        if derived.get(o) != listed.get(o):
+            v.append(f"§6.18-0014: `{o}` is {derived.get(o)} by its decomposition but "
+                     f"{listed.get(o)} in the clause")
+    region = between(ops, "**Complex arithmetic (advertised", "\n- **KISS-OPS-6.18-0001**")
+    for cells in table_cells(region):
+        if len(cells) >= 4 and (o := _op(cells[0])) and cells[2].strip() != derived.get(o):
+            v.append(f"§6.18-0014: `{o}` is {derived.get(o)} by its decomposition but "
+                     f"'{cells[2].strip()}' in the §6.18 table")
+
 def build_manifest(spec_dir):
     """Derive the op/atom coverage manifest from ops.md (§6.5-0008 checks against it)."""
     ops = open(os.path.join(spec_dir, "ops.md"), encoding="utf-8").read()
@@ -425,7 +497,11 @@ def check(spec_dir):
 
     # (5b) decomposition graph (§6.3-0003/-0004, §6.14-0002/-0003/-0005): the §6.13 table is
     # acyclic and every row resolves to the primitive floor, and no floor op has a row.
-    check_decomposition_graph(decomposition_graph(ops), set(floor_27), v)
+    cgraph = complex_decomposition_graph(ops)
+    check_decomposition_graph({**decomposition_graph(ops), **cgraph}, set(floor_27), v)
+    check_complex_closure(ops, cgraph, v)
+    check_complex_determinism(ops, {**decomposition_graph(ops), **cgraph},
+                              transcendental_atoms(ops), v)
 
     # (7) carrier set: §2.7 carrier sentence == §6.19.3 schema table (col 0)
     carrier_sentence = between(ops, "The carrier ops for this version are", ". Their schemas")
@@ -454,6 +530,10 @@ COVERS = [
      "the §6.13 decomposition table acquires a cycle"),
     ("KISS-OPS-6.14-0003",
      "a §6.13 row stops reaching the primitive floor in finitely many steps"),
+    ("KISS-OPS-6.18-0002",
+     "a complex op references an op outside the closure the clause names, or gains a cycle"),
+    ("KISS-OPS-6.18-0014",
+     "a complex op's determinism class stops following from its decomposition (clause lists or table column)"),
     ("KISS-OPS-6.14-0006",
      "an op embedded in a structural atom's scalar body stops counting as a decomposition reference"),
     ("KISS-OPS-6.14-0005",
