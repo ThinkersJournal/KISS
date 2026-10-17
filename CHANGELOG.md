@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.11 — 2026-10-17 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints §6.17. KISS-OPS-6.17-0004 (no compute-precision spelling `f32s`/`st`/`rm`/`tf32` in the §6.16 storage dtype table, `f32` stays pure storage) moves from `untested` to `lint:kiss_ops`. KISS-OPS-6.17-0006 stays `untested` (PARTIAL, floor unmoved): the lint checks the TF32 pin is self-consistent (retained bits equal the §6.17-0003 floor, `u` = 2^-(bits+1), round-to-nearest-even named); a bit-for-bit rounding reference has no subject in `conformance/`. Floor: lint 44, untested 410.
+
 ## 0.4.10 — 2026-10-17 (number allocated by the PM in advance)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the §6.19 carrier clauses as drift guards: the §6.19-0003 clause's carrier set equals the §6.19.3 schema table, and each §6.19-0036 non-carrier has no schema row and calls a `reduce`/`prefix_scan`/`sort_network` node in its §6.13 decomposition. Both rows stay `untested` (PARTIAL, floor unmoved: no per-op encoder and no consumer subject in `conformance/`). The README's unbound ledger prose (lint, blocked, definitional counts) is brought to the ledger's real counts.
