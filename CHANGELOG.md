@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.13 — 2026-10-17 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops index-operand and axis clauses as drift guards: the legal index dtype set `{u32, i32, i64}` is one set across KISS-OPS-6.11-0009, 6.11-0019, the 6.19-0017 enum and its byte table; each of `gather`/`scatter`/`index_select`/`embedding`/`scatter_add` carries mandatory `axis`, `index_operand` and `index_dtype` fields in its 6.19.3 row; `sort_network` carries a `u8` trailing `axis` and no index or dtype field; 6.19-0037 pins a `MAX_RANK` a `u8` axis can hold. KISS-OPS-6.11-0009/-0012/-0013/-0014/-0019 stay `untested` with PARTIAL notes (floor unmoved: the typed declines and the producer-side `i64` have no subject in `conformance/`).
+
 ## 0.4.12 — 2026-10-17 (number proposed; the PM allocates at gate time)
 
 - Docs only, no spec, tooling or wire change: `HANDOFF.md` rewritten to the post-#599 state.

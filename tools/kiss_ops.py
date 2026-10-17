@@ -478,6 +478,52 @@ def check_math_fidelity(ops, v):
         v.append("§6.17-0006: the TF32 rounding mode is no longer named round-to-nearest-even")
 
 
+INDEX_OPS = ["embedding", "gather", "index_select", "scatter", "scatter_add"]
+
+
+def check_index_clauses(ops, v):
+    """§6.11-0009/-0019: the legal index dtype set {u32, i32, i64} is one set across the clause,
+    the §6.19 enum, the §6.11-0019 restatement and the byte table (ordinals 1..3 in that order).
+    §6.11-0012/-0013/-0014: each index op's §6.19.3 row carries `axis`, `index_operand` and
+    `index_dtype` as mandatory fields, and `sort_network` carries only `axis` (plus direction and
+    stability), so the sort index lane has no wire field (§6.11-0019)."""
+    def dtype_set(text):
+        m = re.search(r"\{([a-z0-9, ]+)\}", " ".join((text or "").split()))
+        return [t.strip() for t in m.group(1).split(",")] if m else []
+
+    want = ["u32", "i32", "i64"]
+    for where, got in (("§6.11-0009", dtype_set(clause_body(ops, "6.11-0009"))),
+                       ("§6.11-0019", dtype_set(clause_body(ops, "6.11-0019")))):
+        if got != want:
+            v.append(f"{where}: index dtype set is {got}, expected {want}")
+    enum = re.search(r"\| `index_dtype` \| enum, `u8` \| ([^\n]*)\|", ops)
+    codes = re.findall(r"`(\d)`=([A-Za-z0-9]+)", enum.group(1)) if enum else []
+    if codes != [("0", "RESERVED"), ("1", "u32"), ("2", "i32"), ("3", "i64")]:
+        v.append(f"§6.19-0017: the index_dtype enum is {codes}, not 0=RESERVED then 1..3 = "
+                 f"u32, i32, i64")
+    byte_row = re.search(r"\| `index_dtype` \(§6\.19-0017\) \| ([^|]*)\|", ops)
+    if not byte_row or [t.strip() for t in byte_row.group(1).split("/")] != want:
+        v.append("§6.19-0017: the byte table's index_dtype row no longer lists u32 / i32 / i64")
+
+    region = between(ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**", where="§6.19.3 table")
+    rows = {_op(c[0]): c[1] for c in table_cells(region) if _op(c[0])}
+    for o in INDEX_OPS:
+        for field, enc in (("axis", "`u8`"), ("index_operand", "`u8`"),
+                           ("index_dtype", "enum `u8`")):
+            if not re.search(r"`" + field + r"`:" + re.escape(enc) + r":mandatory",
+                             rows.get(o, "")):
+                v.append(f"§6.11-0012/-0013: `{o}` has no mandatory {enc} `{field}` field "
+                         f"in §6.19.3")
+    sort = rows.get("sort_network", "")
+    if "`axis`:`u8`:trailing axis `r-1` (§6.11-0014)" not in sort:
+        v.append("§6.11-0014: `sort_network` no longer carries a `u8` trailing-axis `axis` field")
+    if re.search(r"index|dtype", sort):
+        v.append("§6.11-0019: the `sort_network` OpAttrs row names an index or dtype field")
+    rank = re.search(r"MAX_RANK = (\d+)", clause_body(ops, "6.19-0037") or "")
+    if not rank or int(rank.group(1)) > 255:
+        v.append("§6.11-0013/-0014: §6.19-0037 no longer pins a MAX_RANK a `u8` axis can hold")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -583,6 +629,7 @@ def check(spec_dir):
 
     check_carrier_clauses(ops, carrier_193, decomposition_graph(ops), v)
     check_math_fidelity(ops, v)
+    check_index_clauses(ops, v)
 
     return v, sets
 
