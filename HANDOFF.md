@@ -28,7 +28,7 @@
 
 ## Last merged
 
-**#599 merged (0.4.11):** `kiss_ops.py` lints §6.17: 6.17-0004 `untested`->`lint:kiss_ops` (no compute-precision spelling in the §6.16 dtype table); 6.17-0006 stays `untested`, PARTIAL (TF32 pin self-consistent; no rounding subject in `conformance/`). No worktree or PR of mine is open. **Merged 2026-10-17:** #595-#599 (0.4.7-0.4.11). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**#599 merged (0.4.11):** `kiss_ops.py` lints §6.17: 6.17-0004 `untested`->`lint:kiss_ops` (no compute-precision spelling in the §6.16 dtype table); 6.17-0006 stays `untested`, PARTIAL (TF32 pin self-consistent; no rounding subject in `conformance/`). **Waiting:** PR #600 (this HANDOFF rewrite, 0.4.12) is with the PM's gate; on restart `gh pr view 600 --json state`, and if MERGED remove worktree `C:/Projects/kiss-handoff` (`git status --porcelain` first, then `git worktree prune`) and delete local branch `docs/handoff-0.4.11`. **Merged 2026-10-17:** #595-#599 (0.4.7-0.4.11). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
