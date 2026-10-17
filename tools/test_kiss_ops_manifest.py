@@ -193,6 +193,51 @@ class DecompositionGraphTest(unittest.TestCase):
                                                 "| `cumsum` | scan | — | `add(x, x)` |"))
         self.assertTrue(any("`cumsum` has no reduce/prefix_scan/sort_network" in m for m in v), v)
 
+    def fidelity_violations(self, ops):
+        v = []
+        self.K.check_math_fidelity(ops, v)
+        return v
+
+    def test_math_fidelity_control_is_parsed_and_clean(self):
+        region = self.K.between(self.ops, "### 6.16 Self-contained dtype bit layouts",
+                                "\n- **KISS-OPS-6.16-0001**")
+        rows = [c[0] for c in self.K.table_cells(region) if c[0].startswith("`")]
+        self.assertIn("`f32`", rows)
+        self.assertEqual(len(rows), 24)  # a parse that found nothing would also be "clean"
+        self.assertEqual(self.fidelity_violations(self.ops), [])
+
+    def test_strict_precision_dtype_row_is_caught(self):
+        v = self.fidelity_violations(self.mutate(
+            "| `f64` | 64 | float | IEEE-754 binary64",
+            "| `f32s` | 32 | float | strict binary32 |\n| `f64` | 64 | float | IEEE-754 binary64"))
+        self.assertTrue(any("`f32s` row" in m for m in v), v)
+
+    def test_fidelity_spelling_as_a_dtype_is_caught(self):
+        v = self.fidelity_violations(self.mutate(
+            "| `f64` | 64 | float | IEEE-754 binary64",
+            "| `tf32` | 32 | float | reduced mantissa |\n| `f64` | 64 | float | IEEE-754 binary64"))
+        self.assertTrue(any("`tf32` row" in m for m in v), v)
+
+    def test_f32_row_losing_pure_storage_is_caught(self):
+        v = self.fidelity_violations(self.mutate("**pure storage** — compute fidelity",
+                                                 "storage — compute fidelity"))
+        self.assertTrue(any("pure storage" in m for m in v), v)
+
+    def test_tf32_bit_count_off_the_floor_is_caught(self):
+        v = self.fidelity_violations(self.mutate("10 retained mantissa bits",
+                                                 "11 retained mantissa bits"))
+        self.assertTrue(any("floor is 10" in m for m in v), v)
+        self.assertTrue(any("2^-11 but" in m or "is 2^-12" in m for m in v), v)
+
+    def test_tf32_unit_roundoff_off_the_formula_is_caught(self):
+        v = self.fidelity_violations(self.mutate("`u = 2⁻¹¹`", "`u = 2⁻¹⁰`"))
+        self.assertTrue(any("2^-10 but" in m for m in v), v)
+
+    def test_tf32_rounding_mode_change_is_caught(self):
+        v = self.fidelity_violations(self.mutate("exponent\n  unchanged, round-to-nearest-even,",
+                                                 "exponent\n  unchanged, round-toward-zero,"))
+        self.assertTrue(any("round-to-nearest-even" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

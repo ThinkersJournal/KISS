@@ -401,9 +401,9 @@ KISS-OPS-6.16-0011	test_ops_move_attaches_to_observable_output	untested
 KISS-OPS-6.17-0001	test_ops_math_precision_enum	lint:kiss_tables	a sub-standard re-forks the compute-fidelity (MathFidelity) enum instead of importing it
 KISS-OPS-6.17-0002	test_ops_math_precision_bit_stable	untested	
 KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	the admission rule (a non-rounding kernel is admitted under rm) has no subject in conformance/: the crate models cells and keys, not kernels, so a vector would be vacuous; Baracuda's cuda-emit v1 skinny f32 cell is the consumer-side check
-KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	untested	
+KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	lint:kiss_ops	a compute-precision spelling (`f32s`, `st`, `rm`, `tf32`) enters the §6.16 storage dtype table
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
-KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	
+KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the pin is self-consistent (TF32 retained bits equal the §6.17-0003 floor, u equals 2^-(bits+1), mode named round-to-nearest-even). The other half, that a reference reproduces the rounded operand bit-for-bit with a carry into the exponent, has no subject in conformance/ (no mantissa-rounding routine exists there).
 KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested	
 KISS-OPS-6.17-0008	test_ops_accumulator_tolerance_cell_class	untested	
 KISS-OPS-6.17-0009	test_ops_accumulator_reference_value	untested	

@@ -435,6 +435,49 @@ def check_carrier_clauses(ops, carrier_table, graph, v):
                      f"§6.13 decomposition to resolve its axis from")
 
 
+FIDELITY_SPELLINGS = {"bit-stable", "reduced-mantissa-permitted", "st", "rm", "tf32", "f32s"}
+SUPERSCRIPT = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
+
+
+def check_math_fidelity(ops, v):
+    """§6.17-0004: the §6.16 storage dtype table names no compute-precision distinction: no row
+    is spelled like a MathFidelity value or a strict-precision float (`f32s`), and the `f32` row
+    says compute fidelity is the attribute, not a dtype property.
+    §6.17-0006: the pinned input-rounding is self-consistent: the TF32 retained-bit count equals
+    the §6.17-0003 floor, the clause's `u` equals 2^-(bits+1) for that count, and the mode is RNE."""
+    region = between(ops, "### 6.16 Self-contained dtype bit layouts",
+                     "\n- **KISS-OPS-6.16-0001**", where="§6.16 dtype table")
+    rows = {cells[0].strip("`"): " ".join(cells[1:]) for cells in table_cells(region)
+            if re.fullmatch(r"`[a-z][a-z0-9]*`", cells[0])}
+    if not rows:
+        v.append("§6.17-0004: no dtype rows found in the §6.16 table")
+    for tok in sorted(set(rows) & FIDELITY_SPELLINGS):
+        v.append(f"§6.17-0004: the §6.16 dtype table has a `{tok}` row, a compute-precision "
+                 f"spelling that belongs to the MathFidelity attribute, not the storage dtype set")
+    if "pure storage" not in rows.get("f32", ""):
+        v.append("§6.17-0004: the §6.16 `f32` row no longer says it is pure storage")
+
+    body3 = " ".join((clause_body(ops, "6.17-0003") or "").split())
+    body6 = " ".join((clause_body(ops, "6.17-0006") or "").split())
+    floor = re.search(r"no fewer than (\d+) explicit mantissa bits", body3)
+    bits = re.search(r"TF32\*\*.*?(\d+) retained mantissa bits", body6)
+    u = re.search(r"u = 2⁻([⁰¹²³⁴⁵⁶⁷⁸⁹]+)", body6)
+    if not (floor and bits and u):
+        v.append(f"§6.17-0006: could not read the §6.17-0003 floor ({bool(floor)}), the TF32 "
+                 f"retained-bit count ({bool(bits)}) or the TF32 `u` ({bool(u)})")
+        return
+    n_bits = int(bits.group(1))
+    u_exp = int(u.group(1).translate(SUPERSCRIPT))
+    if n_bits != int(floor.group(1)):
+        v.append(f"§6.17-0006: TF32 retains {n_bits} mantissa bits but the §6.17-0003 "
+                 f"floor is {floor.group(1)}")
+    if u_exp != n_bits + 1:
+        v.append(f"§6.17-0006: TF32 `u` is 2^-{u_exp} but 2^-(retained_mantissa_bits + 1) "
+                 f"is 2^-{n_bits + 1}")
+    if "round-to-nearest-even" not in body6:
+        v.append("§6.17-0006: the TF32 rounding mode is no longer named round-to-nearest-even")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -539,6 +582,7 @@ def check(spec_dir):
     _diff("carrier set (§2.7 sentence vs §6.19.3 table)", carrier_27, carrier_193, v)
 
     check_carrier_clauses(ops, carrier_193, decomposition_graph(ops), v)
+    check_math_fidelity(ops, v)
 
     return v, sets
 
@@ -571,6 +615,8 @@ COVERS = [
      "the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables"),
     ("KISS-OPS-6.18-0016",
      "the advertised-vs-bridge complex split drifts between §6.18-0016 and the §6.18 tables"),
+    ("KISS-OPS-6.17-0004",
+     "a compute-precision spelling (`f32s`, `st`, `rm`, `tf32`) enters the §6.16 storage dtype table"),
 ]
 
 

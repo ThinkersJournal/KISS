@@ -578,7 +578,10 @@
 # bucket follow the DECLARED axes; swapping the hint swaps the key) and KISS-CLASSIFY-6.6-0012
 # (test_classify_derivation_input_tuple: ctr iff the caller declares the roles, each hint moves the key). Lint and
 # untested unmoved. 6.6-0019, -0022 and -0023 were already backed; their vectors are additional detectors, not new floor.
+# R3.2 ops (0.4.11): lint 43 -> 44, untested 411 -> 410. KISS-OPS-6.17-0004 (no compute-precision spelling in the §6.16 storage dtype
+# table) moves `untested` -> `lint:kiss_ops`. 6.17-0006 stays `untested`, recorded PARTIAL (no mantissa-rounding subject in conformance/):
+# floor unmoved for it. RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said the lint set gained KISS-OPS-6.17-0004.
 harness	436
-lint	43
-untested	411
+lint	44
+untested	410
 proven	20
