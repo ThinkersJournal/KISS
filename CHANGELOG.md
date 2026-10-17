@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.13 — 2026-10-17 (number proposed; the PM allocates at gate time; 0.4.12 is the open HANDOFF PR #600)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops index-operand and axis clauses as drift guards: the legal index dtype set `{u32, i32, i64}` is one set across KISS-OPS-6.11-0009, 6.11-0019, the 6.19-0017 enum and its byte table; each of `gather`/`scatter`/`index_select`/`embedding`/`scatter_add` carries mandatory `axis`, `index_operand` and `index_dtype` fields in its 6.19.3 row; `sort_network` carries a `u8` trailing `axis` and no index or dtype field; 6.19-0037 pins a `MAX_RANK` a `u8` axis can hold. KISS-OPS-6.11-0009/-0012/-0013/-0014/-0019 stay `untested` with PARTIAL notes (floor unmoved: the typed declines and the producer-side `i64` have no subject in `conformance/`).
+
 ## 0.4.11 — 2026-10-17 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints §6.17. KISS-OPS-6.17-0004 (no compute-precision spelling `f32s`/`st`/`rm`/`tf32` in the §6.16 storage dtype table, `f32` stays pure storage) moves from `untested` to `lint:kiss_ops`. KISS-OPS-6.17-0006 stays `untested` (PARTIAL, floor unmoved): the lint checks the TF32 pin is self-consistent (retained bits equal the §6.17-0003 floor, `u` = 2^-(bits+1), round-to-nearest-even named); a bit-for-bit rounding reference has no subject in `conformance/`. Floor: lint 44, untested 410.

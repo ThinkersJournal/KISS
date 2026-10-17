@@ -238,6 +238,43 @@ class DecompositionGraphTest(unittest.TestCase):
                                                  "exponent\n  unchanged, round-toward-zero,"))
         self.assertTrue(any("round-to-nearest-even" in m for m in v), v)
 
+    def index_violations(self, ops):
+        v = []
+        self.K.check_index_clauses(ops, v)
+        return v
+
+    def test_index_clauses_control_is_parsed_and_clean(self):
+        region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
+        rows = {self.K._op(c[0]) for c in self.K.table_cells(region) if self.K._op(c[0])}
+        self.assertTrue(set(self.K.INDEX_OPS) | {"sort_network"} <= rows)  # a parse of nothing is "clean"
+        self.assertEqual(self.index_violations(self.ops), [])
+
+    def test_index_dtype_set_gaining_a_member_is_caught(self):
+        v = self.index_violations(self.mutate("MUST be exactly `{u32, i32,\n  i64}`",
+                                              "MUST be exactly `{u32, i32,\n  i64, u64}`"))
+        self.assertTrue(any("§6.11-0009: index dtype set" in m for m in v), v)
+
+    def test_index_dtype_enum_reordered_is_caught(self):
+        v = self.index_violations(self.mutate("`1`=u32, `2`=i32, `3`=i64 |",
+                                              "`1`=i32, `2`=u32, `3`=i64 |"))
+        self.assertTrue(any("§6.19-0017: the index_dtype enum" in m for m in v), v)
+
+    def test_index_op_row_losing_a_field_is_caught(self):
+        v = self.index_violations(self.mutate(
+            "| `embedding` | `axis`:`u8`:mandatory (§6.11-0013) —",
+            "| `embedding` | `axis`:`u8`:`0` (§6.11-0013) —"))
+        self.assertTrue(any("`embedding` has no mandatory `u8` `axis`" in m for m in v), v)
+
+    def test_sort_network_gaining_an_index_wire_field_is_caught(self):
+        v = self.index_violations(self.mutate(
+            "`stability`:bool `u8`:`1` (fixed, §6.11-0007) |",
+            "`stability`:bool `u8`:`1` (fixed, §6.11-0007) — `index_dtype`:enum `u8`:`3` |"))
+        self.assertTrue(any("§6.11-0019: the `sort_network`" in m for m in v), v)
+
+    def test_max_rank_beyond_a_u8_axis_is_caught(self):
+        v = self.index_violations(self.mutate("`MAX_RANK = 8` and", "`MAX_RANK = 300` and"))
+        self.assertTrue(any("MAX_RANK a `u8` axis can hold" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)
