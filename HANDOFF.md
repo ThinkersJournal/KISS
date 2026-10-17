@@ -1,4 +1,4 @@
-<!-- Written 2026-10-17 against origin/main 11d451a (conformance 0.4.10); this PR proposes 0.4.11. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-17 against origin/main e4eac98 (conformance 0.4.11); this PR proposes 0.4.12 (docs-only, no spec change). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.10; this PR proposes 0.4.11; no docs exception). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.11; this PR proposes 0.4.12; no docs exception). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -26,9 +26,9 @@
 9. **Claims:** a clause is "backed" only when the test discriminates; when half a clause has no vector form, count it PARTIAL (floor unmoved,
    `UNBACKED.tsv` note, test does not cite the clause), as 6.8-0003 and 6.9-0003 were. Say what a source scan cannot prove.
 
-## Open PR
+## Last merged
 
-**This PR** (branch `tests/r3.2-ops-e`, worktree `C:/Projects/kiss-r32e`; remove after merge): `kiss_ops.py` lints §6.17: 6.17-0004 `untested`->`lint:kiss_ops` (no compute-precision spelling in the §6.16 dtype table); 6.17-0006 stays `untested`, PARTIAL (TF32 pin self-consistent; no rounding subject in `conformance/`); floor lint 44, untested 410; 0.4.11. **Merged earlier today:** #595-#598 (0.4.7-0.4.10). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**#599 merged (0.4.11):** `kiss_ops.py` lints §6.17: 6.17-0004 `untested`->`lint:kiss_ops` (no compute-precision spelling in the §6.16 dtype table); 6.17-0006 stays `untested`, PARTIAL (TF32 pin self-consistent; no rounding subject in `conformance/`). No worktree or PR of mine is open. **Merged 2026-10-17:** #595-#599 (0.4.7-0.4.11). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
@@ -41,7 +41,7 @@ Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 
   KISS publish is the PM's; kiss-conformance is `publish = false`, no other crate. The PM notifies Unpopped, Baracuda, Fuel (CHANGELOG 0.4.0 lists what each regenerates).
 - **Open item, KISS lane owns: ROADMAP R1.10 "Frame versioning before freeze".** CYRQ/CRSP/CDEC carry no version field (PM ruling: no bump now, since all
   speakers regenerate together); must be resolved before any freeze. Detector: the freeze checklist. Not startable until a freeze is scheduled.
-- **Floor** harness 436, lint 44, untested 410 (tool; README bound row figure 408) once this PR merges. Re-measure with `python tools/kiss_trace.py --report`.
+- **Floor** harness 436, lint 44, untested 410 (tool; README bound row figure 408) at origin/main e4eac98. Re-measure with `python tools/kiss_trace.py --report`.
 - **PARTIAL, floor unmoved:** 6.9-0003 (no emitter/lifter), 6.6-0001 (roles/ranks/dtypes/OpAttrs sub-vocabularies not generated),
   6.13-0008, 6.13-0009. 6.6-0002/-0003/-0004/-0006/-0007 are `blocked` (need a suite emitter and lifter).
 - **Board 201 pin:** `math_fidelity` u8 {0 reserved, 1 bit-stable, 2 reduced-mantissa}; accumulator 0x00 or 1-based dtype ordinal;
@@ -59,5 +59,5 @@ Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar and Conform have NO empty-reason rows left; Ops has ~66 left. Looked at and NOT lintable/testable as a whole: 6.12-0003 (no crate subject evaluates the named constants; record a reason), 6.19-0003/-0036 (done, PARTIAL, #598), 6.17-0004/-0006 (this PR), 6.8-0001..4/8-000x (process). Candidates: 6.11-*, 6.17-0007..0009, 6.19-0001/-0002/-0013/-0039/-0040, 6.16-*; then Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
+2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar and Conform have NO empty-reason rows left; Ops has ~66 left. Looked at and NOT lintable/testable as a whole: 6.12-0003 (no crate subject evaluates the named constants; record a reason), 6.19-0003/-0036 (done, PARTIAL, #598), 6.17-0004/-0006 (#599), 6.8-0001..4/8-000x (process). Candidates: 6.11-*, 6.17-0007..0009, 6.19-0001/-0002/-0013/-0039/-0040, 6.16-*; then Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
 3. Dependabot Monday (2026-10-19); answer second-deriver questions on the `ctr` vectors.
