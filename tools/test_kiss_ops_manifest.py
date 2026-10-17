@@ -101,6 +101,12 @@ class DecompositionGraphTest(unittest.TestCase):
                                         "`div(reduce(sum, reduce_var(x)), reduced_count)`"))
         self.assertTrue(any("cycle reduce_mean -> reduce_var -> reduce_mean" in m for m in v), v)
 
+    def test_cycle_through_an_embedded_scalar_body_is_caught(self):
+        # logsumexp's `reduce(sum, exp(sub(x,m)))` pre-map is an embedded body (§6.14-0006);
+        # a cycle that exists ONLY through it must still be a cycle.
+        v = self.violations(self.mutate("reduce(sum, exp(sub(x,m)))", "reduce(sum, logsumexp(x))"))
+        self.assertTrue(any("cycle logsumexp -> logsumexp" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

@@ -454,6 +454,8 @@ COVERS = [
      "the §6.13 decomposition table acquires a cycle"),
     ("KISS-OPS-6.14-0003",
      "a §6.13 row stops reaching the primitive floor in finitely many steps"),
+    ("KISS-OPS-6.14-0006",
+     "an op embedded in a structural atom's scalar body stops counting as a decomposition reference"),
     ("KISS-OPS-6.14-0005",
      "an op appears, directly or transitively, in its own §6.13 decomposition"),
     ("KISS-OPS-6.18-0001",
