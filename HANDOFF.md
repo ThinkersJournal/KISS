@@ -1,4 +1,4 @@
-<!-- Written 2026-10-17 against origin/main 9afc205 (conformance 0.4.13); this PR proposes 0.4.14. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-18 against origin/main a1883fa (conformance 0.4.14); this PR proposes 0.4.15. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.13; this PR proposes 0.4.14; no docs exception). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.14; this PR proposes 0.4.15; no docs exception). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,7 +28,7 @@
 
 ## Last merged
 
-**#601 merged (0.4.13):** `kiss_ops.py` `check_index_clauses`: index dtype set `{u32,i32,i64}` agrees across 6.11-0009/-0019/6.19-0017; the five index ops carry mandatory `axis`/`index_operand`/`index_dtype`; `sort_network` has no index wire field. 6.11-0009/-0012/-0013/-0014/-0019 stay `untested`, PARTIAL (typed declines have no subject in `conformance/`). **Waiting:** this PR (0.4.14: `check_structural_atoms`, 6.11-0008 and 6.11-0016 PARTIAL) is with the PM's gate; on restart `gh pr list --head tools/r32-ops-6.11b --state all`, and if MERGED remove worktree `C:/Projects/kiss-r32e` (`git status --porcelain` first, then `git worktree prune`) and delete local branch `tools/r32-ops-6.11b`. **Merged 2026-10-17:** #595-#601 (0.4.7-0.4.13). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**#602 merged (0.4.14):** `check_structural_atoms` (6.11-0008, 6.11-0016 PARTIAL). **This PR (0.4.15, proposed):** `check_accumulator_clauses` in `kiss_ops.py` (6.17-0007/-0008/-0009 PARTIAL: one per-cell reference definition, float accumulator at least as wide, diagonal cell). On restart `gh pr list --head tools/r32-ops-6.17b --state all`; if MERGED, remove worktree `C:/Projects/kiss-r32f` (`git status --porcelain` first, then `git worktree prune`) and delete the local branch. Prior: **#601 (0.4.13):** index-operand and axis clauses lint, PARTIAL. **Merged 2026-10-17:** #595-#601 (0.4.7-0.4.13). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
@@ -59,5 +59,5 @@ Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar and Conform have NO empty-reason rows left; Ops has ~66 left. Looked at and NOT lintable/testable as a whole: 6.12-0003 (no crate subject evaluates the named constants; record a reason), 6.19-0003/-0036 (done, PARTIAL, #598), 6.17-0004/-0006 (#599), 6.8-0001..4/8-000x (process). 6.11-0009/-0012..-0014/-0019 (#601) and -0008/-0016 (this PR) done, PARTIAL. Candidates: 6.11-0001/-0015/-0017/-0018 (behavioural, probably record a reason), 6.17-0007..0009, 6.19-0001/-0002/-0013/-0039/-0040, 6.16-*; then Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
+2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar and Conform have NO empty-reason rows left; Ops has ~66 left. Looked at and NOT lintable/testable as a whole: 6.12-0003 (no crate subject evaluates the named constants; record a reason), 6.19-0003/-0036 (done, PARTIAL, #598), 6.17-0004/-0006 (#599), 6.8-0001..4/8-000x (process). 6.11-0009/-0012..-0014/-0019 (#601) and -0008/-0016 (this PR) done, PARTIAL. Candidates: 6.11-0001/-0015/-0017/-0018 (behavioural, probably record a reason), 6.19-0001/-0002/-0013/-0039/-0040, 6.16-*; then Announce, Consume, Emit, Contract, Synth (each a test, a lint row or an honest ledger category; re-measure counts with `kiss_trace.py --report` at `origin/main`). The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
 3. Dependabot Monday (2026-10-19); answer second-deriver questions on the `ctr` vectors.

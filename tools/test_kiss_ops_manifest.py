@@ -303,6 +303,31 @@ class DecompositionGraphTest(unittest.TestCase):
                                              "(`SameAs(updates)`, §6.11-0016)"))
         self.assertTrue(any("§6.20-0008: no longer pins" in m for m in v), v)
 
+    def accumulator_violations(self, ops):
+        v = []
+        self.K.check_accumulator_clauses(ops, v)
+        return v
+
+    def test_accumulator_clauses_control_is_parsed_and_clean(self):
+        for c in ("6.17-0007", "6.17-0008", "6.17-0009"):
+            self.assertIn("accumulat", self.K.clause_body(self.ops, c))  # a parse of nothing is "clean"
+        self.assertEqual(self.accumulator_violations(self.ops), [])
+
+    def test_reference_value_input_rounding_drift_in_0009_is_caught(self):
+        v = self.accumulator_violations(self.mutate("**each input rounded to S**",
+                                                    "**each input rounded to A**"))
+        self.assertTrue(any("§6.17-0009" in m and "each input rounded to S" in m for m in v), v)
+
+    def test_reference_value_drift_in_0007_restatement_is_caught(self):
+        v = self.accumulator_violations(self.mutate("with each input rounded to S, each accumulate",
+                                                    "with each input rounded to S, each product"))
+        self.assertTrue(any("§6.17-0007" in m and "each accumulate atom" in m for m in v), v)
+
+    def test_narrower_accumulator_allowed_is_caught(self):
+        v = self.accumulator_violations(self.mutate("**at least as wide** as the compute",
+                                                    "**no wider** as the compute"))
+        self.assertTrue(any("§6.17-0008" in m and "at least as wide" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

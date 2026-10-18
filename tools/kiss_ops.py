@@ -546,6 +546,30 @@ def check_structural_atoms(ops, v):
             v.append(f"{where}: no longer pins the scatter output to `SameAs(dest)` citing {cite}")
 
 
+REFERENCE_VALUE_PHRASES = ("ascending-index", "each input rounded to S",
+                           "each accumulate atom rounded to A", "result rounded to S",
+                           "widest permitted accumulator dtype")
+
+
+def check_accumulator_clauses(ops, v):
+    """§6.17-0007/-0009: the per-cell reference value (ascending-index evaluation, each input
+    rounded to S, each accumulate atom rounded to A, result rounded to S, widest-A cell is the
+    wide-precision reference) is one definition in both clauses.
+    §6.17-0008: the accumulator is a float dtype at least as wide as the compute dtype, the
+    storage reference is the diagonal cell, and the clause points at the §6.17-0009 reference."""
+    flat = {c: " ".join((clause_body(ops, c) or "").replace("**", "").split())
+            for c in ("6.17-0007", "6.17-0008", "6.17-0009")}
+    for c in ("6.17-0007", "6.17-0009"):
+        for phrase in REFERENCE_VALUE_PHRASES:
+            if phrase not in flat[c]:
+                v.append(f"§{c}: the per-cell reference definition no longer says '{phrase}'")
+    for phrase in ("float dtype at least as wide", "diagonal", "§6.17-0009"):
+        if phrase not in flat["6.17-0008"]:
+            v.append(f"§6.17-0008: the clause no longer says '{phrase}'")
+    if "§6.17-0008" not in flat["6.17-0009"]:
+        v.append("§6.17-0009: the clause no longer cites the §6.17-0008 tolerance-cell it defines")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -653,6 +677,7 @@ def check(spec_dir):
     check_math_fidelity(ops, v)
     check_index_clauses(ops, v)
     check_structural_atoms(ops, v)
+    check_accumulator_clauses(ops, v)
 
     return v, sets
 
