@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.15 — 2026-10-18 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops accumulator clauses as drift guards: KISS-OPS-6.17-0007 and -0009 carry one per-cell reference definition (ascending-index, each input rounded to S, each accumulate atom rounded to A, result rounded to S, widest-A cell is the wide reference), and 6.17-0008 still requires a float accumulator at least as wide as the compute dtype, names the diagonal cell and cites -0009. All three stay `untested` (PARTIAL, floor unmoved: no reduction evaluator in `conformance/`).
+
 ## 0.4.14 — 2026-10-17 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints two structural-atom clauses as drift guards: KISS-OPS-6.11-0008 (the `reduce` §6.19.3 row fixes `keepdim` at `1` citing the clause, the `prefix_scan` row has no `keepdim` field, the clause still says `prefix_scan` retains all axes) and 6.11-0016 (the clause and the §6.20-0008 enumeration both pin the `scatter` output to `SameAs(dest)` and cite each other). Both rows stay `untested` (PARTIAL, floor unmoved: no evaluator or `scatter` subject in `conformance/`).

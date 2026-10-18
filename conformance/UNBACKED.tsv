@@ -404,9 +404,9 @@ KISS-OPS-6.17-0003	test_ops_math_precision_reduced	untested	the admission rule (
 KISS-OPS-6.17-0004	test_ops_math_precision_not_dtype	lint:kiss_ops	a compute-precision spelling (`f32s`, `st`, `rm`, `tf32`) enters the §6.16 storage dtype table
 KISS-OPS-6.17-0005	test_ops_math_precision_order_invariant_scope	untested	
 KISS-OPS-6.17-0006	test_ops_math_precision_input_rounding	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the pin is self-consistent (TF32 retained bits equal the §6.17-0003 floor, u equals 2^-(bits+1), mode named round-to-nearest-even). The other half, that a reference reproduces the rounded operand bit-for-bit with a carry into the exponent, has no subject in conformance/ (no mantissa-rounding routine exists there).
-KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested	
-KISS-OPS-6.17-0008	test_ops_accumulator_tolerance_cell_class	untested	
-KISS-OPS-6.17-0009	test_ops_accumulator_reference_value	untested	
+KISS-OPS-6.17-0007	test_ops_math_precision_reproducibility_class	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the per-cell reference definition (ascending-index, each input rounded to S, each accumulate atom rounded to A, result rounded to S, widest-A cell is the wide reference) is restated intact. That a candidate's tolerance bounds reassociation error has no evaluator subject in conformance/.
+KISS-OPS-6.17-0008	test_ops_accumulator_tolerance_cell_class	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the clause still requires a float accumulator at least as wide as the compute dtype, names the diagonal cell and points at 6.17-0009. The cell-class verdict has no evaluator subject in conformance/.
+KISS-OPS-6.17-0009	test_ops_accumulator_reference_value	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the reference-value definition matches its 6.17-0007 restatement and cites 6.17-0008. No reduction evaluator subject in conformance/.
 KISS-OPS-6.18-0001	test_ops_complex_op_set	lint:kiss_ops	the complex-arithmetic op set drifts between §6.18-0001 and the §6.18 tables
 KISS-OPS-6.18-0002	test_ops_complex_no_new_primitive	lint:kiss_ops	a complex op references an op outside the closure the clause names, or gains a cycle
 KISS-OPS-6.18-0003	test_ops_complex_component_bridge	untested	
