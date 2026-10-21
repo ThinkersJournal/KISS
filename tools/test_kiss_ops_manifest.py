@@ -328,6 +328,30 @@ class DecompositionGraphTest(unittest.TestCase):
                                                     "**no wider** as the compute"))
         self.assertTrue(any("§6.17-0008" in m and "at least as wide" in m for m in v), v)
 
+    def index_ref_violations(self, ops):
+        v = []
+        self.K.check_index_ref_clauses(ops, v)
+        return v
+
+    def test_index_ref_clauses_control_is_parsed_and_clean(self):
+        for c in ("6.19-0039", "6.19-0040"):
+            self.assertIn("index", self.K.clause_body(self.ops, c))  # a parse of nothing is "clean"
+        self.assertEqual(self.index_ref_violations(self.ops), [])
+
+    def test_reserved_ref_tag_no_longer_rejected_is_caught(self):
+        v = self.index_ref_violations(self.mutate("reject it with a typed decline", "skip it"))
+        self.assertTrue(any("§6.19-0039" in m and "typed decline" in m for m in v), v)
+
+    def test_node_ref_tag_value_drift_is_caught(self):
+        v = self.index_ref_violations(self.mutate("`ref_tag = 0x01` (**node**)",
+                                                  "`ref_tag = 0x02` (**node**)"))
+        self.assertTrue(any("§6.19-0039" in m and "0x01" in m for m in v), v)
+
+    def test_index_outputs_becoming_conditional_is_caught(self):
+        v = self.index_ref_violations(self.mutate("**unconditional**, riding",
+                                                  "**optional**, riding"))
+        self.assertTrue(any("§6.19-0040" in m and "unconditional" in m for m in v), v)
+
     def test_unresolved_reference_is_caught(self):
         v = self.violations(self.mutate("`mul(x, x)` |", "`frobnicate(x, x)` |"))
         self.assertTrue(any("frobnicate" in m for m in v), v)

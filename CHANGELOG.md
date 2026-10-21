@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.16 — 2026-10-21 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops index-ref wire clauses as drift guards: KISS-OPS-6.19-0039 (`index_ref := ref_tag:u8, ref_value:varint`, tag 0x00 slot / 0x01 node, tags >= 0x02 reserved and rejected with a typed decline, node-target bounds, canonical slot) and 6.19-0040 (the `index_outputs` root list, unconditional, after `outputs`, typed decline). Both stay `untested` (PARTIAL, floor unmoved: no decoder subject in `conformance/`).
+
 ## 0.4.15 — 2026-10-18 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops accumulator clauses as drift guards: KISS-OPS-6.17-0007 and -0009 carry one per-cell reference definition (ascending-index, each input rounded to S, each accumulate atom rounded to A, result rounded to S, widest-A cell is the wide reference), and 6.17-0008 still requires a float accumulator at least as wide as the compute dtype, names the diagonal cell and cites -0009. All three stay `untested` (PARTIAL, floor unmoved: no reduction evaluator in `conformance/`).
