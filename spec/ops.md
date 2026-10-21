@@ -1678,7 +1678,13 @@ surfaces it in a kernel's guarantees section.
   a fused-multiply-add, or any other contraction that removes an intermediate rounding
   (the same per-atom-rounding requirement as §6.0-0006). Bit-stable is the guarantee
   formerly modeled as the strict-precision `f32s` dtype and MUST NOT be re-encoded as a
-  dtype. *Test:* `test_ops_math_precision_bit_stable`.
+  dtype. **Subnormals are part of full IEEE 754-2019 precision** (clarification, no wire
+  change): a kernel that flushes subnormal inputs or results to zero (FTZ/DAZ) does not
+  round at the storage dtype's full precision, so it is non-conformant under
+  **bit-stable** and MUST decline `Exact` rather than advertise the value. Whether the
+  device preserves subnormals is established by the measured result, not by a reported
+  capability property. No target-token field and no MathFidelity value advertises
+  flushing. *Test:* `test_ops_math_precision_bit_stable`.
 - **KISS-OPS-6.17-0003** — Under the **reduced-mantissa-permitted** value, a target MAY
   compute a floating-point multiply with its inputs rounded to a **reduced mantissa**
   (a mantissa narrower than the storage dtype), provided the reduced mantissa retains **no
