@@ -570,6 +570,29 @@ def check_accumulator_clauses(ops, v):
         v.append("§6.17-0009: the clause no longer cites the §6.17-0008 tolerance-cell it defines")
 
 
+def check_index_ref_clauses(ops, v):
+    """§6.19-0039: the `index_ref` wire form (`ref_tag:u8, ref_value:varint`; 0x00 slot, 0x01 node,
+    every tag >= 0x02 reserved and rejected with a typed decline, never skipped; a node target
+    >= node_count or without an index-lane product declines; an external operand is canonical
+    `slot`, never aliased through both forms).
+    §6.19-0040: the `index_outputs` root list (`count:varint, node_id:varint × count`) follows the
+    value-lane `outputs` unconditionally, `count = 0` for a value-lane-only recipe, and a listed id
+    without an index-lane product declines."""
+    flat = {c: " ".join((clause_body(ops, c) or "").replace("**", "").split())
+            for c in ("6.19-0039", "6.19-0040")}
+    for phrase in ("index_ref := ref_tag:u8, ref_value:varint", "`ref_tag = 0x00` (slot)",
+                   "`ref_tag = 0x01` (node)", "`ref_tag >= 0x02` MUST be reserved",
+                   "reject it with a typed decline", "never skip it",
+                   ">= node_count", "no index-lane product",
+                   "MUST NOT be aliased through both the `slot` and `node` forms"):
+        if phrase not in flat["6.19-0039"]:
+            v.append(f"§6.19-0039: the index_ref wire form no longer says '{phrase}'")
+    for phrase in ("index_outputs := count:varint, node_id:varint × count", "after the value-lane",
+                   "presence MUST be unconditional", "count = 0", "typed decline"):
+        if phrase not in flat["6.19-0040"]:
+            v.append(f"§6.19-0040: the index_outputs root list no longer says '{phrase}'")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -678,6 +701,7 @@ def check(spec_dir):
     check_index_clauses(ops, v)
     check_structural_atoms(ops, v)
     check_accumulator_clauses(ops, v)
+    check_index_ref_clauses(ops, v)
 
     return v, sets
 
