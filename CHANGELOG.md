@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.17 — 2026-10-21 (number proposed; the PM allocates at gate time)
+
+- Ledger and docs only, no spec, tooling or wire change: `conformance/UNBACKED.tsv` records a reason for KISS-OPS-6.19-0001, -0002, -0013 and KISS-OPS-6.12-0003 (no executable subject in `conformance/`; they stay `untested`, floor unmoved at harness 436, lint 44, untested 410). `HANDOFF.md` rewritten to the post-#604 state.
+
 ## 0.4.16 — 2026-10-21 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the Ops index-ref wire clauses as drift guards: KISS-OPS-6.19-0039 (`index_ref := ref_tag:u8, ref_value:varint`, tag 0x00 slot / 0x01 node, tags >= 0x02 reserved and rejected with a typed decline, node-target bounds, canonical slot) and 6.19-0040 (the `index_outputs` root list, unconditional, after `outputs`, typed decline). Both stay `untested` (PARTIAL, floor unmoved: no decoder subject in `conformance/`).
