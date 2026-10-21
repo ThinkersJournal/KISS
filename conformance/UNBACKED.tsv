@@ -381,7 +381,7 @@ KISS-OPS-6.11-0018	test_ops_structural_empty_axis	untested
 KISS-OPS-6.11-0019	test_ops_sort_index_output_i64	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks i64 is in the 6.11-0009 set and that the sort_network OpAttrs row names no index or dtype field (no wire field). That a producer emits i64 for the sort index lane has no subject in conformance/.
 KISS-OPS-6.12-0001	test_ops_scalar_source_leaves	untested	
 KISS-OPS-6.12-0002	test_ops_const_leaf_bits	untested	
-KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	
+KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	No crate subject in conformance/ evaluates the named constants, so no test can read their bits; recorded as a reason, not backed.
 KISS-OPS-6.13-0001	test_ops_reference_decompositions	untested	
 KISS-OPS-6.13-0002	test_ops_decomposition_strictly_lower_level	definitional	level is defined as 1+max over the decomposition graph that lint:kiss_ops checks acyclic and fully resolved (6.14-0002), so every reference is strictly lower by construction
 KISS-OPS-6.13-0004	test_ops_parameterized_attributes_explicit	untested	
@@ -421,10 +421,10 @@ KISS-OPS-6.18-0013	test_ops_complex_nan_inf_annexg	untested
 KISS-OPS-6.18-0014	test_ops_complex_determinism_class	lint:kiss_ops	a complex op's determinism class stops following from its decomposition (clause lists or table column)
 KISS-OPS-6.18-0015	test_ops_complex_component_dtype	untested	
 KISS-OPS-6.18-0016	test_ops_complex_advertised_high_level	lint:kiss_ops	the advertised-vs-bridge complex split drifts between §6.18-0016 and the §6.18 tables
-KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	
-KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs	untested	
+KISS-OPS-6.19-0001	test_ops_opattrs_channel_concept	untested	Ownership clause (KISS-Ops is the single owner of OpAttrs; no downstream sub-standard re-pins a sub-vocabulary). No executable subject in conformance/; the nearest check is tools/kiss_vocab.py drift on the enums, which is not the same claim, so no lint label is claimed.
+KISS-OPS-6.19-0002	test_ops_opattrs_distinct_from_pattern_attrs	untested	Prohibition on an implementation collapsing OpAttrs and pattern_attrs or deriving one from the other. conformance/ has no matcher or encoder subject that could do so, so a test would pass vacuously.
 KISS-OPS-6.19-0003	test_ops_opattrs_carrier_set_closed	untested	PARTIAL, floor unmoved. The set half (the clause's carrier set equals the §6.19.3 schema table) is checked by tools/kiss_ops.py as drift. The other half, that every other op has a definite-length-0 blob, has no subject in conformance/ (the crate has no per-op encoder).
-KISS-OPS-6.19-0013	test_ops_opattrs_golden_vector_conformance	untested	
+KISS-OPS-6.19-0013	test_ops_opattrs_golden_vector_conformance	untested	Freeze gate: golden vectors reproduced by two structurally dissimilar implementations. The second-implementation half is external (ROADMAP R3.3); the in-repo vectors alone do not demonstrate it.
 KISS-OPS-6.19-0014	test_ops_opattrs_monoid_enum	lint:kiss_vocab	the Monoid OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0015	test_ops_opattrs_oob_policy_enum	lint:kiss_vocab	the OobPolicy OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
 KISS-OPS-6.19-0016	test_ops_opattrs_scatter_combine_enum	lint:kiss_vocab	the ScatterCombine OpAttrs enum drifts between its §6.19 clause, the §6.19.2 table, and the reference opattrs codec
