@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.21 — 2026-10-22 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints KISS-OPS-6.13-0001 (every §6.13 row and every §6.18 complex table row carries a non-empty reference decomposition; the clause keeps saying it defines the op's pinned semantics) as a drift guard. Stays `untested`, PARTIAL, floor unmoved at harness 436, lint 44, untested 410.
+
 ## 0.4.20 — 2026-10-22 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints KISS-OPS-6.13-0008 (each of `softmax`, `log_softmax`, `rms_norm`, `layer_norm` has a mandatory `u8` `norm_axis` row in §6.19.3; the clause keeps its range and typed decline) and 6.15-0004 (`gelu` decomposes through `erf`, `gelu_tanh` through `tanh`, as distinct rows that never reach each other's op) as drift guards. Both stay `untested`, PARTIAL, floor unmoved at harness 436, lint 44, untested 410.

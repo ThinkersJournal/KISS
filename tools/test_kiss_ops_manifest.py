@@ -370,6 +370,25 @@ class DecompositionGraphTest(unittest.TestCase):
                                                   "| `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh("))
         self.assertTrue(any("§6.15-0004" in m and "`gelu`" in m and "erf" in m for m in v), v)
 
+    def carriage_violations(self, ops):
+        v = []
+        self.K.check_decomposition_carriage(ops, v)
+        return v
+
+    def test_decomposition_carriage_control_is_parsed_and_clean(self):
+        self.assertIn("MUST define", self.K.clause_body(self.ops, "6.13-0001"))  # parse of nothing is "clean"
+        self.assertEqual(self.carriage_violations(self.ops), [])
+
+    def test_empty_decomposition_cell_is_caught(self):
+        v = self.carriage_violations(self.mutate("| `sqr` | arithmetic | — | `mul(x, x)` |",
+                                                 "| `sqr` | arithmetic | — |  |"))
+        self.assertTrue(any("§6.13-0001" in m and "`sqr`" in m and "empty" in m for m in v), v)
+
+    def test_clause_losing_the_pinned_semantics_sentence_is_caught(self):
+        v = self.carriage_violations(self.mutate("that decomposition MUST define the op's pinned semantics",
+                                                 "that decomposition MAY illustrate the op"))
+        self.assertTrue(any("§6.13-0001" in m and "pinned semantics" in m for m in v), v)
+
     def index_ref_violations(self, ops):
         v = []
         self.K.check_index_ref_clauses(ops, v)
