@@ -1,4 +1,4 @@
-<!-- Written 2026-10-21 against origin/main 3c3afd1 (conformance 0.4.21); this PR proposes 0.4.22. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-21 against origin/main 3c3afd1 (conformance 0.4.22); this PR proposes 0.4.23. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.21; every pushed change bumps, docs and ledger included, CireSnave 2026-09-25). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.22; every pushed change bumps, docs and ledger included, CireSnave 2026-09-25). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,7 +28,7 @@
 
 ## Last merged
 
-**This PR (0.4.22, proposed):** ledger reasons for 6.11-0001/-0015, 6.14-0004, 6.16-0002/-0007/-0011. **#610 merged (0.4.21):** `check_decomposition_carriage` (6.13-0001 PARTIAL). **#609 merged (0.4.20):** `check_norm_and_gelu_clauses` (6.13-0008, 6.15-0004 PARTIAL). **#608 merged (0.4.19):** leaf/const/scatter/empty-axis lint (6.12-0001/-0002, 6.11-0017/-0018 PARTIAL). **#607 (0.4.18):** 6.17-0002 clarified, subnormal preservation is part of bit-stable (PM ruling 2026-10-21: no `denorm` field in `vulkan:`, no new MathFidelity value, no sk7; reopen only if a legitimate flushing kernel needs advertising). **#606 merged (0.4.17):** ledger reasons for 6.19-0001/-0002/-0013 and 6.12-0003, floor unmoved. **#604 merged (0.4.16):** `check_index_ref_clauses` (6.19-0039/-0040 PARTIAL). Prior: **#603 (0.4.15):** accumulator clauses 6.17-0007/-0008/-0009 PARTIAL. **#602 (0.4.14):** 6.11-0008/-0016 PARTIAL. Prior: **#601 (0.4.13):** index-operand and axis clauses lint, PARTIAL. **Merged 2026-10-17:** #595-#601 (0.4.7-0.4.13). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**This PR (0.4.23, proposed):** ledger reasons for ANNOUNCE 6.5-0001/-0002, 7.2-0008, 8-0001/-0002/-0003. **#611 merged (0.4.22):** reasons for 6.11-0001/-0015, 6.14-0004, 6.16-0002/-0007/-0011. **#610 merged (0.4.21):** `check_decomposition_carriage` (6.13-0001 PARTIAL). **#609 merged (0.4.20):** `check_norm_and_gelu_clauses` (6.13-0008, 6.15-0004 PARTIAL). **#608 merged (0.4.19):** leaf/const/scatter/empty-axis lint (6.12-0001/-0002, 6.11-0017/-0018 PARTIAL). **#607 (0.4.18):** 6.17-0002 clarified, subnormal preservation is part of bit-stable (PM ruling 2026-10-21: no `denorm` field in `vulkan:`, no new MathFidelity value, no sk7; reopen only if a legitimate flushing kernel needs advertising). **#606 merged (0.4.17):** ledger reasons for 6.19-0001/-0002/-0013 and 6.12-0003, floor unmoved. **#604 merged (0.4.16):** `check_index_ref_clauses` (6.19-0039/-0040 PARTIAL). Prior: **#603 (0.4.15):** accumulator clauses 6.17-0007/-0008/-0009 PARTIAL. **#602 (0.4.14):** 6.11-0008/-0016 PARTIAL. Prior: **#601 (0.4.13):** index-operand and axis clauses lint, PARTIAL. **Merged 2026-10-17:** #595-#601 (0.4.7-0.4.13). Before: **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
