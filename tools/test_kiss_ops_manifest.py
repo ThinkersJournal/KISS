@@ -351,6 +351,25 @@ class DecompositionGraphTest(unittest.TestCase):
         v = self.leaf_violations(self.mutate("perform **no writes**", "perform **one write**"))
         self.assertTrue(any("§6.11-0018" in m and "no writes" in m for m in v), v)
 
+    def norm_gelu_violations(self, ops):
+        v = []
+        self.K.check_norm_and_gelu_clauses(ops, self.K.decomposition_graph(ops), v)
+        return v
+
+    def test_norm_and_gelu_control_is_parsed_and_clean(self):
+        self.assertIn("erf", self.K.decomposition_graph(self.ops)["gelu"])  # a parse of nothing is "clean"
+        self.assertEqual(self.norm_gelu_violations(self.ops), [])
+
+    def test_layer_norm_losing_its_norm_axis_row_is_caught(self):
+        v = self.norm_gelu_violations(self.mutate("| `layer_norm` | `norm_axis`:`u8`:mandatory",
+                                                  "| `layer_norm` | `norm_axis`:`u8`:optional"))
+        self.assertTrue(any("§6.13-0008" in m and "layer_norm" in m for m in v), v)
+
+    def test_gelu_losing_erf_is_caught(self):
+        v = self.norm_gelu_violations(self.mutate("| `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), erf(",
+                                                  "| `gelu` | activation | — | `mul(mul(const(0.5), x), add(const(1), tanh("))
+        self.assertTrue(any("§6.15-0004" in m and "`gelu`" in m and "erf" in m for m in v), v)
+
     def index_ref_violations(self, ops):
         v = []
         self.K.check_index_ref_clauses(ops, v)

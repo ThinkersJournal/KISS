@@ -385,14 +385,14 @@ KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	No crate subject in con
 KISS-OPS-6.13-0001	test_ops_reference_decompositions	untested	
 KISS-OPS-6.13-0002	test_ops_decomposition_strictly_lower_level	definitional	level is defined as 1+max over the decomposition graph that lint:kiss_ops checks acyclic and fully resolved (6.14-0002), so every reference is strictly lower by construction
 KISS-OPS-6.13-0004	test_ops_parameterized_attributes_explicit	untested	
-KISS-OPS-6.13-0008	test_ops_norm_axis_all_four	untested	
+KISS-OPS-6.13-0008	test_ops_norm_axis_all_four	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks each of softmax, log_softmax, rms_norm, layer_norm has a mandatory u8 norm_axis row in 6.19.3 and the clause still pins the range and the typed decline. The decline itself has no decoder subject in conformance/.
 KISS-OPS-6.14-0001	test_ops_level_assignment	definitional	level(op) is a total function of the decomposition graph that lint:kiss_ops checks acyclic and fully resolved (6.14-0002/6.3-0004), so each op has exactly one by construction
 KISS-OPS-6.14-0002	test_ops_decomposition_acyclic	lint:kiss_ops	the §6.13 decomposition table acquires a cycle
 KISS-OPS-6.14-0003	test_ops_resolution_terminates	lint:kiss_ops	a §6.13 row stops reaching the primitive floor in finitely many steps
 KISS-OPS-6.14-0004	test_ops_consumer_resolves_unknown_op	untested	
 KISS-OPS-6.14-0005	test_ops_op_not_in_own_decomposition	lint:kiss_ops	an op appears, directly or transitively, in its own §6.13 decomposition
 KISS-OPS-6.14-0006	test_ops_embedded_body_level	lint:kiss_ops	an op embedded in a structural atom's scalar body stops counting as a decomposition reference
-KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh	untested	
+KISS-OPS-6.15-0004	test_ops_gelu_exact_vs_tanh	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks gelu decomposes through erf and gelu_tanh through tanh as distinct 6.13 rows, neither reaching the other's op. No matcher subject in conformance/ refuses to treat one as the other.
 KISS-OPS-6.16-0001	test_ops_dtype_bit_layouts	lint:kiss_tables	the Ops §6.16 dtype layout table drops/adds a token vs the Classify owner
 KISS-OPS-6.16-0002	test_ops_ieee754_dtype_encodings	untested	
 KISS-OPS-6.16-0007	test_ops_complex_storage_layout	untested	
