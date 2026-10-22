@@ -54,8 +54,8 @@ KISS-ANNOUNCE-6.4-0008	test_announce_no_query_bit_declines	untested
 KISS-ANNOUNCE-6.4-0009	test_announce_decline_code_enum	lint:kiss_wire	a decline_code value drifts between the §6.4-0009 owner and the reference codec
 KISS-ANNOUNCE-6.4-0010	test_announce_unknown_decline_code_is_generic	untested	
 KISS-ANNOUNCE-6.4-0012	test_announce_query_default_revision_is_highest	untested	
-KISS-ANNOUNCE-6.5-0001	test_announce_zero_dependency_no_driver_load	untested	
-KISS-ANNOUNCE-6.5-0002	test_announce_impl_std_only	untested	
+KISS-ANNOUNCE-6.5-0001	test_announce_zero_dependency_no_driver_load	untested	Negative property about any implementation (no driver or backend library loaded while producing or parsing). announce.rs is a pure byte codec with no loader, but a test over that one module cannot show the property for an implementation under test; recorded as a reason, not backed.
+KISS-ANNOUNCE-6.5-0002	test_announce_impl_std_only	untested	Obligation on every implementation to be std-only. conformance/Cargo.toml has an empty [dependencies] table, which is a fact about this crate, not a check that binds an implementation; no lint claims it. Recorded as a reason, not backed.
 KISS-ANNOUNCE-7.1-0003	test_announce_producer_never_exceeds_profile_cap	untested	
 KISS-ANNOUNCE-7.1-0004	test_announce_retire_by_floor_window	untested	
 KISS-ANNOUNCE-7.2-0001	test_announce_capabilities_axis_partition	untested	
@@ -64,13 +64,13 @@ KISS-ANNOUNCE-7.2-0003	test_announce_feat_bit_assignments	lint:kiss_tables	a FEA
 KISS-ANNOUNCE-7.2-0004	test_announce_sub_bit_assignments	untested	
 KISS-ANNOUNCE-7.2-0005	test_announce_reserved_range_tiers	untested	
 KISS-ANNOUNCE-7.2-0006	test_announce_unassigned_bits_zero	untested	
-KISS-ANNOUNCE-7.2-0008	test_announce_capability_registry_pr_gated	untested	
+KISS-ANNOUNCE-7.2-0008	test_announce_capability_registry_pr_gated	untested	Registry governance: a capability-bit assignment must come from a merged change to the PR-gated registry. The registry lives outside this repo, so no in-repo subject can read whether an assignment was merged; recorded as a reason, not backed.
 KISS-ANNOUNCE-7.2-0010	test_announce_sub_axis_is_presence_only	untested	
 KISS-ANNOUNCE-7.3-0001	test_announce_both_roles_emit_envelope	untested	
 KISS-ANNOUNCE-7.3-0002	test_announce_consumer_zeroes_provider_only_feat	untested	
-KISS-ANNOUNCE-8-0001	test_announce_two_version_axes_independent	untested	
-KISS-ANNOUNCE-8-0002	test_announce_shape_change_bumps_version	untested	
-KISS-ANNOUNCE-8-0003	test_announce_additive_capability_no_version_bump	untested	
+KISS-ANNOUNCE-8-0001	test_announce_two_version_axes_independent	untested	Versioning-process rule: the envelope schema version and the crate semver are independent axes. It constrains how a release is numbered, and no executable subject in conformance/ sees a release decision; recorded as a reason, not backed.
+KISS-ANNOUNCE-8-0002	test_announce_shape_change_bumps_version	untested	Versioning-process rule: a change to the envelope shape must bump envelope_version. A test sees only the current shape, never a change to it; detecting one needs a base-ref comparison that no tool here performs. Recorded as a reason, not backed.
+KISS-ANNOUNCE-8-0003	test_announce_additive_capability_no_version_bump	untested	Versioning-process rule: assigning a reserved capability bit, EXT token or SUB flag does not bump envelope_version. Like 8-0002 it concerns a change between releases, which no in-repo subject observes; recorded as a reason, not backed.
 KISS-ANNOUNCE-8-0004	test_announce_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-ANNOUNCE-8-0005	test_announce_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-ANNOUNCE-8-0006	test_announce_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
