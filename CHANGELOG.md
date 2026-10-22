@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.19 — 2026-10-22 (number proposed; the PM allocates at gate time)
+
+- Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints the restated text of KISS-OPS-6.12-0001 (the seven scalar-source leaves), 6.12-0002 (`const` carried as exact bits), 6.11-0017 (scatter `updates` broadcast, rank-0 only the degenerate case) and 6.11-0018 (the four empty-axis results) as drift guards. All four stay `untested`, PARTIAL, floor unmoved at harness 436, lint 44, untested 410; no evaluator subject exists in `conformance/`.
+
 ## 0.4.18 — 2026-10-21 (number proposed; the PM allocates at gate time)
 
 - Clarification, no wire or token change: KISS-OPS-6.17-0002 states that subnormal preservation is part of bit-stable, so a flush-to-zero kernel is non-conformant and declines `Exact`; no `denorm` field in the `vulkan:` token, no new MathFidelity value, `structure_key` stays `sk6` (PM ruling 2026-10-21, on Baracuda's recommendation and the Vulkane POC). Evidence recorded in `conformance/UNBACKED.tsv`.

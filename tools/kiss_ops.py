@@ -593,6 +593,30 @@ def check_index_ref_clauses(ops, v):
             v.append(f"§6.19-0040: the index_outputs root list no longer says '{phrase}'")
 
 
+LEAF_AND_EMPTY_AXIS_PINS = {
+    "6.12-0001": ("`input(i)`", "`const(bits)`", "`param(i)`", "`coord(axis)`", "`reduced(stage)`",
+                  "`extent(axis)` (the runtime logical extent", "`reduced_count`", "not themselves ops"),
+    "6.12-0002": ("exact dtype bit pattern", "MUST NOT be relied upon",
+                  "shape-dependent, or runtime-derived quantity"),
+    "6.11-0017": ("MUST broadcast to the write shape", "stride of `0`",
+                  "rank-0 (scalar) `updates` operand is the degenerate case",
+                  "MUST NOT restrict `updates` to rank-0"),
+    "6.11-0018": ("zero output positions", "empty gathered axis", "perform no writes",
+                  "return the `dest` operand unchanged", "empty permutation"),
+}
+
+
+def check_leaf_and_empty_axis_clauses(ops, v):
+    """§6.12-0001/-0002 (the seven scalar-source leaves, `const` carried as exact bits) and
+    §6.11-0017/-0018 (scatter `updates` broadcast, the four empty-axis results) as restated-text
+    drift guards: each clause keeps naming what it pins. They bind the document, not an evaluator."""
+    for clause, phrases in LEAF_AND_EMPTY_AXIS_PINS.items():
+        flat = " ".join((clause_body(ops, clause) or "").replace("**", "").split())
+        for phrase in phrases:
+            if phrase not in flat:
+                v.append(f"§{clause}: the clause no longer says '{phrase}'")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -702,6 +726,7 @@ def check(spec_dir):
     check_structural_atoms(ops, v)
     check_accumulator_clauses(ops, v)
     check_index_ref_clauses(ops, v)
+    check_leaf_and_empty_axis_clauses(ops, v)
 
     return v, sets
 
