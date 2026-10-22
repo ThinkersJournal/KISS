@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.22 — 2026-10-22 (number proposed; the PM allocates at gate time)
+
+- Ledger only, no spec, tooling or wire change: `conformance/UNBACKED.tsv` records a reason for KISS-OPS-6.11-0001, -0015, 6.14-0004, 6.16-0002, -0007 and -0011 (no executable subject in `conformance/`; they stay `untested`, floor unmoved at harness 436, lint 44, untested 410).
+
 ## 0.4.21 — 2026-10-22 (number proposed; the PM allocates at gate time)
 
 - Tooling and ledger only, no spec or wire change: `tools/kiss_ops.py` also lints KISS-OPS-6.13-0001 (every §6.13 row and every §6.18 complex table row carries a non-empty reference decomposition; the clause keeps saying it defines the op's pinned semantics) as a drift guard. Stays `untested`, PARTIAL, floor unmoved at harness 436, lint 44, untested 410.
