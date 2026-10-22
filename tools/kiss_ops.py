@@ -642,6 +642,30 @@ def check_norm_and_gelu_clauses(ops, graph, v):
         v.append("§6.15-0004: `gelu` and `gelu_tanh` have the same decomposition row")
 
 
+def check_decomposition_carriage(ops, v):
+    """§6.13-0001: every non-primitive op carries a reference decomposition, in the §6.13 table or
+    (complex family) the §6.18 tables, and the clause still makes that decomposition define the
+    op's pinned semantics. Binds the document: a row with an empty decomposition cell, or a table
+    that stops being read, is caught (an empty graph edge list alone cannot tell the two apart)."""
+    region = between(ops, "### 6.13 Reference decompositions", "\n- **KISS-OPS-6.13-0001**")
+    regions = {"§6.13": region,
+               "§6.18 bridge": between(ops, "**Component bridge (plumbing", "**Complex arithmetic (advertised"),
+               "§6.18 advertised": between(ops, "**Complex arithmetic (advertised",
+                                            "\n- **KISS-OPS-6.18-0001**")}
+    for where, text in regions.items():
+        rows = [c for c in table_cells(text) if len(c) >= 3 and _op(c[0])]
+        if not rows:
+            v.append(f"§6.13-0001: no decomposition rows found in {where}")
+        for c in rows:
+            if not c[-1].strip().strip("`—-"):
+                v.append(f"§6.13-0001: `{_op(c[0])}` has an empty decomposition cell in {where}")
+    flat = " ".join((clause_body(ops, "6.13-0001") or "").replace("**", "").split())
+    for phrase in ("MUST carry the reference decomposition", "MUST define the op's pinned semantics",
+                   "MUST use this decomposition"):
+        if phrase not in flat:
+            v.append(f"§6.13-0001: the clause no longer says '{phrase}'")
+
+
 def check(spec_dir):
     ops_path = os.path.join(spec_dir, "ops.md")
     if not os.path.exists(ops_path):
@@ -753,6 +777,7 @@ def check(spec_dir):
     check_index_ref_clauses(ops, v)
     check_leaf_and_empty_axis_clauses(ops, v)
     check_norm_and_gelu_clauses(ops, decomposition_graph(ops), v)
+    check_decomposition_carriage(ops, v)
 
     return v, sets
 
