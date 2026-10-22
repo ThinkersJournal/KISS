@@ -328,6 +328,29 @@ class DecompositionGraphTest(unittest.TestCase):
                                                     "**no wider** as the compute"))
         self.assertTrue(any("§6.17-0008" in m and "at least as wide" in m for m in v), v)
 
+    def leaf_violations(self, ops):
+        v = []
+        self.K.check_leaf_and_empty_axis_clauses(ops, v)
+        return v
+
+    def test_leaf_and_empty_axis_control_is_parsed_and_clean(self):
+        for c in self.K.LEAF_AND_EMPTY_AXIS_PINS:
+            self.assertTrue(self.K.clause_body(self.ops, c))  # a parse of nothing is "clean"
+        self.assertEqual(self.leaf_violations(self.ops), [])
+
+    def test_dropped_scalar_source_leaf_is_caught(self):
+        v = self.leaf_violations(self.mutate("`extent(axis)` (the runtime", "`size(axis)` (the runtime"))
+        self.assertTrue(any("§6.12-0001" in m and "extent(axis)` (the runtime" in m for m in v), v)
+
+    def test_scatter_updates_restricted_to_rank_0_is_caught(self):
+        v = self.leaf_violations(self.mutate("MUST NOT restrict `updates` to rank-0",
+                                             "MUST restrict `updates` to rank-0"))
+        self.assertTrue(any("§6.11-0017" in m and "rank-0" in m for m in v), v)
+
+    def test_empty_scatter_no_longer_a_noop_is_caught(self):
+        v = self.leaf_violations(self.mutate("perform **no writes**", "perform **one write**"))
+        self.assertTrue(any("§6.11-0018" in m and "no writes" in m for m in v), v)
+
     def index_ref_violations(self, ops):
         v = []
         self.K.check_index_ref_clauses(ops, v)

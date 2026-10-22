@@ -376,11 +376,11 @@ KISS-OPS-6.11-0013	test_ops_index_axis_attribute	untested	PARTIAL, floor unmoved
 KISS-OPS-6.11-0014	test_ops_sort_network_axis_attribute	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the sort_network 6.19.3 row carries a u8 trailing-axis axis field and that 6.19-0037 pins a MAX_RANK a u8 can hold. The typed decline for an out-of-range axis has no subject in conformance/.
 KISS-OPS-6.11-0015	test_ops_gather_skip_base_dynamic	untested	
 KISS-OPS-6.11-0016	test_ops_scatter_dest_operand	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks this clause and the 6.20-0008 shape-rule enumeration both pin the scatter output shape to SameAs(dest) and cite each other. The dest-retention and accumulation semantics have no scatter subject in conformance/.
-KISS-OPS-6.11-0017	test_ops_scatter_updates_broadcast	untested	
-KISS-OPS-6.11-0018	test_ops_structural_empty_axis	untested	
+KISS-OPS-6.11-0017	test_ops_scatter_updates_broadcast	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the clause still states the general broadcast and that rank-0 is only the degenerate case. No scatter evaluator in conformance/.
+KISS-OPS-6.11-0018	test_ops_structural_empty_axis	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the clause still states the four empty-axis results. No structural-atom evaluator in conformance/ to run an empty axis.
 KISS-OPS-6.11-0019	test_ops_sort_index_output_i64	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks i64 is in the 6.11-0009 set and that the sort_network OpAttrs row names no index or dtype field (no wire field). That a producer emits i64 for the sort index lane has no subject in conformance/.
-KISS-OPS-6.12-0001	test_ops_scalar_source_leaves	untested	
-KISS-OPS-6.12-0002	test_ops_const_leaf_bits	untested	
+KISS-OPS-6.12-0001	test_ops_scalar_source_leaves	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the clause still names all seven leaves and that they are not ops. No evaluator subject in conformance/ resolves a leaf.
+KISS-OPS-6.12-0002	test_ops_const_leaf_bits	untested	PARTIAL, floor unmoved. tools/kiss_ops.py checks the clause still pins exact-bit carriage and the const prohibition. No subject in conformance/ round-trips a const through a decoder.
 KISS-OPS-6.12-0003	test_ops_named_constant_bits	untested	No crate subject in conformance/ evaluates the named constants, so no test can read their bits; recorded as a reason, not backed.
 KISS-OPS-6.13-0001	test_ops_reference_decompositions	untested	
 KISS-OPS-6.13-0002	test_ops_decomposition_strictly_lower_level	definitional	level is defined as 1+max over the decomposition graph that lint:kiss_ops checks acyclic and fully resolved (6.14-0002), so every reference is strictly lower by construction
