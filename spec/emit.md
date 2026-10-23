@@ -475,8 +475,9 @@ named language family; this note records only *why* the criterion exists.
   2** numeric bit-identity, same-language on-device only, for the exact-byte class only.
 - **Declared subset** — the subset of KISS-Ops ops a party declares it round-trips
   structurally (tier 1). It is not the whole op set; how the subset is advertised, and
-  whether an emitter's and a consumer's subsets must be equal or merely overlap for a
-  *joint* claim, is an open question (§8) not yet pinned.
+  that an emitter's and a consumer's subsets need only **overlap** for a *joint* claim, is
+  pinned by KISS-CONSUME-7.2-0001 (a canonically-ordered, byte-exact list of KISS-Ops op names
+  in the capability channel; the claim holds over the intersection).
 - **Language-identity token** — a neutral descriptor of the target language an emitter
   emits into, recorded in the emitted kernel's contract Provenance, used to determine
   "same language" for tier 2 (§6.7-0002, §6.7-0006). KISS-Emit defines no target
@@ -993,11 +994,12 @@ and not restated here. This section pins only what is specific to KISS-Emit.
   round-trips structurally at tier 1 (§6.7-0001), and a tier-1 round-trip claim MUST be
   evaluated only over the advertised declared subset; an emitter MUST NOT claim a tier-1
   round-trip over an op outside its advertised declared subset. The wire encoding of the
-  declared-subset advertisement, and whether an emitter's and a consumer's declared
-  subsets must be **equal** or merely **overlap** for a **joint** round-trip claim, are
-  an open question (§8, Appendix A.5) **not yet pinned** and MUST be resolved before
-  freeze (umbrella §5.3); this clause pins only that a claim is bounded by the
-  advertised subset. *Test:* `test_emit_declared_subset_bounds_claim`.
+  declared-subset advertisement, and the rule that an emitter's and a consumer's declared
+  subsets need only **overlap** (not be equal) for a **joint** round-trip claim, are pinned
+  by KISS-CONSUME-7.2-0001: the advertisement is a canonically-ordered, byte-exact list of
+  KISS-Ops op names carried in the capability channel (umbrella §6.2), and a joint claim
+  holds over the **intersection** of the two subsets. This clause pins that a claim is
+  bounded by the advertised subset, and the emitter's side of that advertisement. *Test:* `test_emit_declared_subset_bounds_claim`.
 - **KISS-EMIT-7.3-0001** — Tier-2 numeric round-trip (§6.7-0002) MUST be a **negotiable
   option**, not part of the mandatory core, and MUST be claimable by an emitter only for
   the same-language, on-device, exact-byte case; an emitter that does not claim the
@@ -1271,12 +1273,12 @@ claimed targets (§6.5-0001/-0002), may KISS-Emit approach the freeze gate (§8.
 These are unresolved at this draft and are tracked as numbered RFCs in the ThinkersJournal
 RFC directory; they gate no clause above except where a clause explicitly defers to them:
 
-1. **The declared subset for tier-1 round-trip is not yet pinned** — which ops each side
-   must round-trip structurally, how the subset is advertised (a capability-bit range? a
-   manifest?), and whether the emitter's and the consumer's declared subsets must be
-   equal or merely overlap for a **joint** round-trip claim (§7.2 pins only that a claim
-   is bounded by the advertised subset; the mandatory core requires only the single-party
-   self-round-trip, §7.1-0001).
+1. **RESOLVED — the declared subset for tier-1 round-trip is pinned by
+   KISS-CONSUME-7.2-0001**: the subset is advertised as a canonically-ordered, byte-exact
+   list of KISS-Ops op names in the capability channel, and a joint claim holds over the
+   **intersection** of the emitter's and the consumer's subsets, not their equality.
+   Which ops each side must round-trip remains each party's own declaration (the mandatory
+   core requires only the single-party self-round-trip, §7.1-0001).
 2. **RESOLVED (2026-08-15) — one editor now holds both pens.** KISS-Emit and
    KISS-Consume are both edited by the neutral generator reference-impl project, so the
    no-single-pen risk this item recorded no longer applies. **What remains open is a
