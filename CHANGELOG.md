@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.24 — 2026-10-23 (number proposed; the PM allocates at gate time)
+
+- Docs only, no spec, tooling or wire change: `ROADMAP.md` puts every open issue on a row (R1.12–R1.29, R2.8, R3.5–R3.12). 23 issues verified resolved or obsolete at `a76aef0` were closed with evidence.
+
 ## 0.4.23 — 2026-10-22 (number proposed; the PM allocates at gate time)
 
 - Ledger only, no spec, tooling or wire change: `conformance/UNBACKED.tsv` records a reason for KISS-ANNOUNCE-6.5-0001, -0002, 7.2-0008, 8-0001, -0002 and -0003 (no in-repo subject observes the property; they stay `untested`, floor unmoved at harness 436, lint 44, untested 410).
