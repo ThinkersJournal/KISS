@@ -262,3 +262,10 @@ jobs:
           python tools/kiss_runlist.py \
             --leg ubuntu=runlist-ubuntu.txt \
             --leg windows=runlist-windows.txt
+
+  # Advisory, NOT a required check (CireSnave 2026-10-23: "Roll out advisory-only, non-blocking
+  # CodeRipper checks everywhere."). Pinned by SHA; findings go to the ROADMAP, never to a silenced rule.
+  portfolio:
+    permissions:
+      contents: read
+    uses: ciresnave/coderipper/.github/workflows/portfolio.yml@c665210ad0972cf3ddb7bc81bdd7800c3248a938
