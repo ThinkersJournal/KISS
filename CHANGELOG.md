@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.25 — 2026-10-23 (number proposed; the PM allocates at gate time)
+
+- Spec text, no wire change (closes KISS#3): `spec/emit.md` §7.2-0001, the Declared-subset definition and Appendix A.5 item 1 no longer say the declared subset is "not yet pinned"; they point at KISS-CONSUME-7.2-0001, which pins the advertisement (canonically-ordered, byte-exact op-name list in the capability channel) and the overlap-not-equality rule. The clause's obligations and its test are unchanged.
+
 ## 0.4.24 — 2026-10-23 (number proposed; the PM allocates at gate time)
 
 - Docs only, no spec, tooling or wire change: `ROADMAP.md` puts every open issue on a row (R1.12–R1.29, R2.8, R3.5–R3.12). 23 issues verified resolved or obsolete at `a76aef0` were closed with evidence.
