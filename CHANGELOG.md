@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.26 — 2026-10-23 (number proposed; the PM allocates at gate time)
+
+- CI only, no spec, tooling or wire change: `.github/workflows/conformance.yml` gains an advisory, non-blocking `portfolio` job that calls CodeRipper's reusable portfolio workflow (pinned by SHA). It is not a required check.
+
 ## 0.4.25 — 2026-10-23 (number proposed; the PM allocates at gate time)
 
 - Spec text, no wire change (closes KISS#3): `spec/emit.md` §7.2-0001, the Declared-subset definition and Appendix A.5 item 1 no longer say the declared subset is "not yet pinned"; they point at KISS-CONSUME-7.2-0001, which pins the advertisement (canonically-ordered, byte-exact op-name list in the capability channel) and the overlap-not-equality rule. The clause's obligations and its test are unchanged.
