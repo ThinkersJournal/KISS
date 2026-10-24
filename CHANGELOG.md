@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.34 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 35 bare-`untested` Emit rows. Most lack a subject: `conformance/` has no emitter or lifter. Emit now has no empty-reason row.
+
 ## 0.4.33 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 28 bare-`untested` Consume rows. Most lack a subject: `conformance/` has no lifter or emitter. Consume now has no empty-reason row.
