@@ -1,4 +1,4 @@
-<!-- Written 2026-10-24 against origin/main d8f2322 (conformance 0.4.66); #657 proposes 0.4.67, this PR (#658) 0.4.68. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-24 against origin/main ffa70a1 (conformance 0.4.67, #657 merged); this PR (#658) proposes 0.4.68. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -21,15 +21,15 @@
 
 ## Open PRs (all proposed numbers; the PM renumbers)
 
-- **#657 (0.4.67)** KISS#387 (a), CireSnave "Still (a)": `conformance/CONJUNCTS.tsv` + `tools/kiss_conjuncts.py`; `// Backs: KISS-X [label]`; `--freeze-ready` fails a listed clause with an uncited label; default run fails unknown clause/label. Seed gap: OPS-6.18-0017 `zero-sign-re` cited by no test. READY sent; in the PM's gate.
-- **#658 (0.4.68)** spec-to-roadmap audit (PM TASK): ROADMAP R5.1-R5.18 added (59 docs read, 18 rows, 9 need a CireSnave call, `[ASK]` sent), R3.7/R3.8 corrected, glossary fixed, this HANDOFF. Rebase over #657 for CHANGELOG/Cargo.
-- On each merge: delete the remote branch (`gh api -X DELETE repos/ThinkersJournal/KISS/git/refs/heads/<b>`, verify absent), remove worktrees `C:/Projects/kiss-r387` (r387-conjuncts) and `C:/Projects/kiss-audit` (audit-roadmap).
+- **#657 (0.4.67) MERGED** (worktree and branch gone): KISS#387 (a), CireSnave "Still (a)": `conformance/CONJUNCTS.tsv` + `tools/kiss_conjuncts.py`; `// Backs: KISS-X [label]`; `--freeze-ready` fails a listed clause with an uncited label; default run fails unknown clause/label. Seed gap: OPS-6.18-0017 `zero-sign-re` cited by no test.
+- **#658 (0.4.68)** spec-to-roadmap audit (PM TASK): ROADMAP R5.1-R5.18 added (59 docs read, 18 rows, 9 need a CireSnave call, `[ASK]` sent), R3.7/R3.8 corrected, glossary fixed, this HANDOFF. Rebased over #657; in the PM's gate.
+- On merge: delete the remote branch (`gh api -X DELETE repos/ThinkersJournal/KISS/git/refs/heads/audit-roadmap`, verify absent) and remove worktree `C:/Projects/kiss-audit`.
 
 ## Done this session (history: `git log`, CHANGELOG)
 
 #651 R3.13 done; #652-#655 KISS#136 complete (6.1-0003 carve-out text, 116+111 `harness-internal:` tags, 74 `Backs:`, orphan gate armed, 225 tagged / 0 orphans); #656 fifth Conform modality, clause text only (KISS-CONFORM-6.14-0001..0004, floor untested 387→391). Board 271 all three decisions executed except the **pair checker** (below).
 
-## Floor (origin/main d8f2322)
+## Floor (origin/main ffa70a1)
 
 harness 459, lint 44, untested **391** (387 + the four 6.14 arrivals). Re-measure: `python tools/kiss_trace.py --report`. PARTIAL, floor unmoved: 6.9-0003, 6.6-0001, 6.13-0008, 6.13-0009; 6.6-0002/-0003/-0004/-0006/-0007 `blocked` (suite emitter/lifter, R5.5).
 
@@ -45,6 +45,6 @@ harness 459, lint 44, untested **391** (387 + the four 6.14 arrivals). Re-measur
 
 ## Next actions
 
-1. `git fetch`; `list_peers`/`check_messages`. `gh pr view 657` and `658`: on merge do the cleanup above; if the gate says the base moved, rebase (procedure 2, 4).
+1. `git fetch`; `list_peers`/`check_messages`. `gh pr view 658`: on merge do the cleanup above; if the gate says the base moved, rebase (procedure 2, 4).
 2. **Build the pair checker for KISS#240 / #239 item 3** on the merged 6.14 text: mechanically check that two vectors differ in field k alone and have differing required outputs; a coordinate with no pair is recorded (6.14-0002), a missing pair fails the build (6.14-0004). Clause wording of 6.14-0001 exclusions and 6.14-0003 (no corpus as evidence) is still for CireSnave to read; do not edit it without the PM.
 3. Remaining unread ROADMAP rows: R3.10, R3.11, R3.12. **#458** (a `UNBACKED.tsv` category for a test that binds the document) has three unchosen remedies: ask the PM before building. R3.5a needs a region-format design read. R5.6 (re-triage 8 stale `#144` ledger notes) and R5.14/R5.15 are `[go]` and startable.
