@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """KISS#387 (a): the per-conjunct trace behind umbrella §5.3 condition 3.
 
 `kiss_trace.py --freeze-ready` asks whether a clause HAS a backing. It cannot ask whether the

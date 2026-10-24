@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Negative controls for tools/kiss_conjuncts.py (KISS#387 (a)).
 
 Each control is a case that must FAIL as well as one that must pass, so the check is shown able
