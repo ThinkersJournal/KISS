@@ -121,7 +121,19 @@ fn test_contract_reserved_tile_mapping() {
     // A v1 grid-stride kernel (and a geometry-agnostic kernel) is fully valid WITHOUT the reserved
     // form — it is not required in v1.
     assert!(DispatchModel::Declared(grid_stride_fields()).validate().is_ok());
-    assert!(DispatchModel::GeometryAgnostic.validate().is_ok());
+    // The geometry-agnostic control, as a DOCUMENT claim (KISS#490): the old line here
+    // (`GeometryAgnostic.validate().is_ok()`) was `Ok(()) == Ok(())` and could not fail. The
+    // intended claim is that the sentinel block alone is a complete, valid v1 Dispatch section,
+    // and that a reserved form beside it is not.
+    let sentinel = kiss_conformance::contract::appendix_c_dispatch_block();
+    assert_eq!(parse_dispatch_block(&sentinel), Ok(DispatchModel::GeometryAgnostic));
+    let mut with_reserved = sentinel.clone();
+    with_reserved.extend_from_slice(b"thread_mapping = tile_mapping
+");
+    assert!(
+        parse_dispatch_block(&with_reserved).is_err(),
+        "the sentinel plus a reserved form is not a valid v1 Dispatch section"
+    );
 
     // The reserved forms (a named `tile_mapping`, a bound `gid`) are NOT valid v1 declarations.
     let mut tiled = grid_stride_fields();

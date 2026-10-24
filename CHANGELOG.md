@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.42 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386 (R3.9, tests that cannot fail). KISS#490: `test_contract_reserved_tile_mapping` had a control `GeometryAgnostic.validate().is_ok()` that was `Ok(()) == Ok(())`; it is replaced by a document-level claim (the sentinel Dispatch block parses to `GeometryAgnostic`, and the same block with a reserved `thread_mapping = tile_mapping` beside it declines). KISS#377: new `test_conform_split_comparator_not_fourth_class` reads the `DeterminismClass` enum and requires exactly its three canonical members, so a deliberate fourth registration (with its match arms) reddens a test instead of passing on compiler exhaustiveness alone; it cites KISS-CONFORM-6.8-0005 (NAMED -> CITED).
+
 ## 0.4.41 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Complex-op oracle (R3.3 per the PM's order (c)), no spec or wire change. `semantics.rs` gains `cmake`/`cre`/`cim`, `cmul` (Annex G recovery on the spec's verbatim trigger), `carg`, `cexp`, `clog`, `csqrt`, `cpow`, with the Annex G rows that govern over the naive decomposition; `tests/semantics_complex.rs` backs nine KISS-OPS clauses (6.18-0003, -0005, -0007 to -0013): harness 451 -> 460, untested 395 -> 386, lint unmoved. Every expected value is transcribed from the clause rows, and each op is paired with its naive decomposition to show where Annex G governs. 6.18-0015 stays unbacked (c64/f32 only). Corrects the 0.4.35 ledger reasons: they said `conformance/` has no op evaluator, but `semantics.rs` already held `cadd`..`cdiv`; the 6.18-0015 row now says what the oracle does and does not cover.
