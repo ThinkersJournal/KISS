@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.63 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- KISS#136 step 1 of 3, comments only: 116 of the 301 tests that cite no clause (measured at `f286c6a`) are tests of the suite's own machinery (`hp_*`/`round_ziv` oracle-library units, the JSON parser, `harness/*`) and now carry `// harness-internal: <reason>` per KISS-CONFORM-6.1-0003. 185 remain: most look like real conformance tests that cite nothing and need a clause (a `Backs:` claim) rather than a tag, so they are triaged by file in the next PRs before the gate is armed. No tool change; `kiss_trace` floor unmoved (459/44/387).
+
 ## 0.4.62 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Spec text only, KISS#136 option A (CireSnave, board 271): KISS-CONFORM-6.1-0003 gains a carve-out for a harness-internal test, tagged `// harness-internal: <reason>`; an untagged test citing no live clause stays an orphan, and a tagged test that also cites a clause is a violation. No tool change in this PR; the gate that enforces it follows separately. Numbered 0.4.62 because #651 proposes 0.4.61.

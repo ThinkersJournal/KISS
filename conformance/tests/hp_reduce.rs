@@ -61,6 +61,7 @@ fn assert_agrees(r: &BigFloat<4>, expected: &BigFloat<4>, min_agree_bits: i32) {
 /// "octant 0, r = 1.0" is SELF-CONTRADICTORY (r must lie in [−π/4, π/4] and
 /// 1 > π/4); the review's correction is octant == 1, r = 1 − π/2 ≈ −0.5708,
 /// sin = cos(r). This test pins the CORRECT reduction.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_one_is_octant1_r_is_one_minus_half_pi() {
     let red = reduce_trig::<4>(1.0);
@@ -81,6 +82,7 @@ fn trig_one_is_octant1_r_is_one_minus_half_pi() {
 /// the classic sin(M_PI) value). octant == 2, r = π_double − π ≈ −1.2246e-16 —
 /// needs full RELATIVE precision (~53-bit cancellation) that only the wide 2/π +
 /// π/2 tables deliver.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_pi_double_near_k_pi_cancellation() {
     let red = reduce_trig::<4>(std::f64::consts::PI);
@@ -104,6 +106,7 @@ fn trig_pi_double_near_k_pi_cancellation() {
 
 /// x just below a multiple of π/2 (f64-nearest π/2 < true π/2): octant == 1 (the
 /// round-UP boundary), r ≈ 6.1e-17 tiny. Exercises the octant-1 half_set path.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_half_pi_boundary_octant1() {
     let red = reduce_trig::<4>(std::f64::consts::FRAC_PI_2);
@@ -112,6 +115,7 @@ fn trig_half_pi_boundary_octant1() {
 }
 
 /// Large |x| = 2^60: pure Payne–Hanek, no near-π special. octant 3, ebin −1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_large_2p60() {
     let red = reduce_trig::<4>(p2(60));
@@ -125,6 +129,7 @@ fn trig_large_2p60() {
 }
 
 /// Large |x| = 2^100: octant 7 (≡ 3 mod 4), ebin −1. Reaches deeper 2/π bits.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_large_2p100() {
     let red = reduce_trig::<4>(p2(100));
@@ -139,6 +144,7 @@ fn trig_large_2p100() {
 
 /// THE canonical large-arg regression `x = 1e22` (= 5^22·2^22, historic glibc
 /// misround). octant 3, ebin −1. A truncated 2/π table misrounds ~100%.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_large_1e22() {
     let red = reduce_trig::<4>(1e22);
@@ -153,6 +159,7 @@ fn trig_large_1e22() {
 
 /// The 2^1023 stressor — window `i1 ≈ 969` deep in the table; confirms the table
 /// length + guard hold at the top of the finite f64 range. octant 6, ebin −1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_large_2p1023_stressor() {
     let x = f64::from_bits(0x7FE0_0000_0000_0000); // 2^1023
@@ -169,6 +176,7 @@ fn trig_large_2p1023_stressor() {
 /// Small |x| < π/4: fast path returns octant 0, r = |x| exact — AND agrees with
 /// the general Payne–Hanek path fed the same (M, E) (spec: both give octant 0,
 /// r = |x| when |x|·2/π < 1/2).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_small_fast_path_agrees_with_general() {
     let x = 0.7f64; // < π/4 ≈ 0.7854
@@ -189,6 +197,7 @@ fn trig_small_fast_path_agrees_with_general() {
 
 /// The |x| convention: reduce_trig reduces the MAGNITUDE, so ±x give the same
 /// octant and r (the atom applies sin's odd symmetry itself).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_reduces_magnitude() {
     let pos = reduce_trig::<4>(1.0);
@@ -200,6 +209,7 @@ fn trig_reduces_magnitude() {
 /// Escalation consistency: reducing 1e22 at 512 bits agrees with the 256-bit
 /// result to the 256-bit precision (the wider table view adds correct bits, it
 /// does not move the top ones).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn trig_escalation_512_agrees_with_256() {
     let r4 = reduce_trig::<4>(1e22);
@@ -215,6 +225,7 @@ fn trig_escalation_512_agrees_with_256() {
 // ===========================================================================
 
 /// exp(1.0): k = 1, r = 1 − ln2 ≈ 0.30685 ∈ [−ln2/2, ln2/2].
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_one() {
     let red = reduce_exp::<4>(1.0);
@@ -232,6 +243,7 @@ fn exp_one() {
 
 /// exp(709): large k = 1023, still finite; |r| ≤ ln2/2. Exercises the |k|·ln2-tail
 /// error amplification (folded, rescaled to r's ULP).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_large_k_709() {
     let red = reduce_exp::<4>(709.0);
@@ -247,6 +259,7 @@ fn exp_large_k_709() {
 }
 
 /// exp near 0 (x = 2^-30): k = 0, r = x EXACT, err 0.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_near_zero() {
     let x = p2(-30);
@@ -260,6 +273,7 @@ fn exp_near_zero() {
 // log reduction (octave split)
 // ===========================================================================
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_one_is_e0_m1() {
     let red = reduce_log::<4>(1.0);
@@ -268,6 +282,7 @@ fn log_one_is_e0_m1() {
     assert_eq!(red.m.cmp(&BigFloat::<4>::from_f64(1.0)), Ordering::Equal);
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_two_is_e1_m1() {
     let red = reduce_log::<4>(2.0);
@@ -275,6 +290,7 @@ fn log_two_is_e1_m1() {
     assert_eq!(red.m.cmp(&BigFloat::<4>::from_f64(1.0)), Ordering::Equal, "log(2)=1·ln2+log(1)");
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_three_is_e2_m075() {
     let red = reduce_log::<4>(3.0);
@@ -292,6 +308,7 @@ fn log_three_is_e2_m075() {
 
 /// The trig 2/π guard FIRES for a synthetic over-range exponent (no finite f64
 /// reaches i1 > 2304, since E_max = 971 ⇒ i1_max = 2176).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 #[should_panic(expected = "2/pi table too short")]
 fn trig_guard_panics_over_range() {
@@ -301,6 +318,7 @@ fn trig_guard_panics_over_range() {
 
 /// Defense-in-depth: the `two_over_pi_window` accessor also panics past the table
 /// edge (rather than zero-filling into a silently-wrong large-|x| trig value).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 #[should_panic(expected = "past the stored table")]
 fn window_accessor_guard_panics_over_range() {
@@ -308,6 +326,7 @@ fn window_accessor_guard_panics_over_range() {
 }
 
 /// The exp/log ln2 width guard panics when ln2 is ever too short.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 #[should_panic(expected = "ln2 table too short")]
 fn ln2_guard_panics_when_too_short() {
@@ -315,6 +334,7 @@ fn ln2_guard_panics_when_too_short() {
 }
 
 /// ...and does NOT panic at the exact table width (boundary is inclusive).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn ln2_guard_ok_at_table_width() {
     require_ln2_bits(consts::LN2_BITS);

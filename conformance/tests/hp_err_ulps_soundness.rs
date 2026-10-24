@@ -130,6 +130,7 @@ fn run(name: &str, cases: &[Ref], eval: impl Fn(f64) -> (BigFloat<4>, u128)) {
     eprintln!("{name}: MAX tightness = {max} permille (d/err_ulps × 1000; a FINDING, not a claim)");
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_err_ulps_is_sound() {
     run("exp", EXP_CASES, |x| {
@@ -138,6 +139,7 @@ fn exp_err_ulps_is_sound() {
     });
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_err_ulps_is_sound() {
     run("log", LOG_CASES, |x| {
@@ -146,6 +148,7 @@ fn log_err_ulps_is_sound() {
     });
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sin_err_ulps_is_sound() {
     run("sin", SIN_CASES, |x| {
@@ -162,6 +165,7 @@ fn sin_err_ulps_is_sound() {
 /// which the small→large stress corpora above deliberately do NOT contain, and
 /// asserts none produces a saturated (vacuous) bound. Values are checked too, so a
 /// bound that is fine but a result that is wrong cannot pass.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn zero_intermediate_inputs_do_not_saturate_err() {
     let exp0 = Exp { x: 0.0 }.eval::<4>();

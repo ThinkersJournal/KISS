@@ -337,6 +337,7 @@ fn assert_bu_eq(label: &str, got: &[u64], want: &[u64]) {
 /// `2/pi` is a pure fractional bit-string: the stored 2304-bit integer is
 /// `floor((2/pi)·2^2304)`. Recompute it from a Machin `pi` in the raw big-int
 /// (2816 internal bits) and assert ALL 36 words — the low tail included.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn two_over_pi_full_width_recompute() {
     let pi = pi_scaled(QPI);
@@ -350,6 +351,7 @@ fn two_over_pi_full_width_recompute() {
 }
 
 /// `ln2 < 1`, MSB at 2^-1: stored 1152-bit significand = `floor(ln2·2^1152)`.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn ln2_full_width_recompute() {
     let ln2 = ln2_scaled(QLN);
@@ -361,6 +363,7 @@ fn ln2_full_width_recompute() {
 
 /// `1/ln2 ∈ [1,2)`, MSB at 2^0: significand = `floor((1/ln2)·2^1151)`
 /// = `floor(2^(1151+QLN)/ln2_scaled)`.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn inv_ln2_full_width_recompute() {
     let ln2 = ln2_scaled(QLN);
@@ -372,6 +375,7 @@ fn inv_ln2_full_width_recompute() {
 
 /// `pi/2 ∈ [1,2)`, MSB at 2^0: significand = `floor((pi/2)·2^1151)`
 /// = `floor(pi·2^1150)` = top bits of the Machin `pi`.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn pi_over_2_full_width_recompute() {
     let pi = pi_scaled(QPI);
@@ -382,6 +386,7 @@ fn pi_over_2_full_width_recompute() {
 }
 
 /// `sqrt2 ∈ [1,2)`: significand = `floor(sqrt2·2^1151) = isqrt(2^2303)` (exact).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sqrt2_full_width_recompute() {
     let want = isqrt(&pow2(2303));
@@ -401,6 +406,7 @@ fn sqrt2_full_width_recompute() {
 /// `a=floor(A)`, `b=floor(B)`: `2^2303 − a·b = A·eb + B·ea − ea·eb` with
 /// `ea,eb ∈ [0,1)`, hence `a·b ∈ (2^2303 − (A+B), 2^2303]` and
 /// `A+B = (ln2 + (1/ln2)/2)·2^1152 ≈ 1.414·2^1152 < 2^1153`. Assert that bound.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn reciprocal_ln2_full_width() {
     let a = table_to_bu(&consts::LN2); // = floor(ln2·2^1152), value ln2 = a·2^-1152
@@ -419,6 +425,7 @@ fn reciprocal_ln2_full_width() {
 /// 2^3455`; so `2^3455 − a·b < A+B < 2^2305`. (This identity pins `2/pi` only to
 /// ~1150 bits — the shorter operand's width; the FULL 2304-bit `2/pi` is verified
 /// by `two_over_pi_full_width_recompute`, not here.)
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn reciprocal_two_over_pi_full_width() {
     let a = table_to_bu(&consts::PI_OVER_2); // pi/2 = a·2^-1151
@@ -435,6 +442,7 @@ fn reciprocal_two_over_pi_full_width() {
 /// `sqrt2 · sqrt2 == 2` to full width. With `A = sqrt2·2^1151` (so `A² = 2^2303`)
 /// and `a=floor(A)`: `2^2303 − a² = 2A·ea − ea² ∈ [0, 2A) = [0, sqrt2·2^1152)
 /// < 2^1153`. Assert that provable bound.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sqrt2_squared_is_two() {
     let a = table_to_bu(&consts::SQRT2); // sqrt2 = a·2^-1151
@@ -455,6 +463,7 @@ fn sqrt2_squared_is_two() {
 
 /// Word 0/1/2 of the 2/pi table are the fdlibm `ipio2` 24-bit words repacked
 /// into 64-bit words (verified by hand in the design spec).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn anchors_two_over_pi_high_words() {
     assert_eq!(consts::TWO_OVER_PI[0], 0xA2F9_836E_4E44_1529);
@@ -465,6 +474,7 @@ fn anchors_two_over_pi_high_words() {
 /// The published fdlibm `ipio2[]` 24-bit words, reassembled into 64-bit words,
 /// must match the high portion of TWO_OVER_PI bit-for-bit. This is a genuinely
 /// independent published anchor covering the top ~1560 bits (26 of 36 words).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn anchors_fdlibm_ipio2_repacked() {
     // fdlibm __kernel_rem_pio2 ipio2[] (2/pi, 24-bit big-endian words).
@@ -501,6 +511,7 @@ fn anchors_fdlibm_ipio2_repacked() {
 }
 
 /// Standard libm high-words for the BigFloat significands (fdlibm / CRlibm).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn anchors_bigfloat_high_words() {
     assert_eq!(consts::LN2[0], 0xB172_17F7_D1CF_79AB);
@@ -519,6 +530,7 @@ fn anchors_bigfloat_high_words() {
 /// places, so a fat-fingered tail entry cannot silently match. (These reference
 /// words are re-derived here by the oracle — a wrong stored tail fails against a
 /// freshly-computed reference, never a copy of itself.)
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn anchors_lowest_limbs() {
     // 2/pi lowest words (indices 34, 35 of 36).
@@ -537,6 +549,7 @@ fn anchors_lowest_limbs() {
 // Structural sizing (the spec's §1.2 override of the doc's undersized figures).
 // ===========================================================================
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn table_widths_match_escalation_ceiling() {
     assert_eq!(consts::TWO_OVER_PI.len(), 36);
@@ -560,6 +573,7 @@ fn table_widths_match_escalation_ceiling() {
 
 /// The bit accessor: `p_i` is bit `63-((i-1)%64)` of word `(i-1)/64`. `p_1`
 /// (the 2^-1 coefficient) is the MSB of word 0 — and 2/pi≈0.6366 ≥ 0.5 so it is 1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn accessor_two_over_pi_bit() {
     assert_eq!(consts::two_over_pi_bit(1), 1); // MSB of 0xA2F9… = 1
@@ -577,6 +591,7 @@ fn accessor_two_over_pi_bit() {
 /// The window accessor returns the contiguous slice `p_{i0..=i1}`, MSB-first, as
 /// an LSW-first magnitude of value `Σ_{i=i0}^{i1} p_i·2^(i1-i)`. Reading exactly
 /// word 0 (`i0=1, i1=64`) must reproduce `TWO_OVER_PI[0]`.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn accessor_two_over_pi_window() {
     let (w, nbits) = consts::two_over_pi_window(1, 64);
@@ -594,6 +609,7 @@ fn accessor_two_over_pi_window() {
 
 /// `ln2::<N>()` reads the top N limbs of the 18-word table as a normalized
 /// `BigFloat<N>` with `ebin() == -1`, recording the dropped tail as error.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn accessor_ln2_reader() {
     let (v, err) = consts::ln2::<4>();
@@ -610,6 +626,7 @@ fn accessor_ln2_reader() {
     v16.check_invariant();
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn accessor_inv_ln2_pi_over_2_sqrt2_readers() {
     let (inv, _) = consts::inv_ln2::<8>();
@@ -629,6 +646,7 @@ fn accessor_inv_ln2_pi_over_2_sqrt2_readers() {
 }
 
 /// The readers round-trip against a leading-f64 sanity check.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn readers_leading_value_sanity() {
     let (ln2, _) = consts::ln2::<16>();
@@ -648,6 +666,7 @@ fn readers_leading_value_sanity() {
 // fail".)
 // ===========================================================================
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn full_width_check_catches_tail_corruption() {
     let pi = pi_scaled(QPI);

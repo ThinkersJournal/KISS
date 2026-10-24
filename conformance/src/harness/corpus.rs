@@ -101,6 +101,7 @@ pub fn tagged_axis_corpus(_seed: u64) -> Vec<AxisVector> {
 mod tests {
     use super::*;
 
+    // harness-internal: unit test of the harness corpus loader; verifies no clause
     #[test]
     fn every_vector_is_tagged_and_expected_matches_the_oracle() {
         let n = 64;
@@ -115,6 +116,7 @@ mod tests {
         }
     }
 
+    // harness-internal: unit test of the harness corpus loader; verifies no clause
     #[test]
     fn corpus_is_deterministic() {
         assert_eq!(
@@ -123,6 +125,7 @@ mod tests {
         );
     }
 
+    // harness-internal: unit test of the harness corpus loader; verifies no clause
     #[test]
     fn axis_corpus_is_tagged_and_shaped() {
         let c = tagged_axis_corpus(0xA715);

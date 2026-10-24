@@ -149,6 +149,7 @@ mod tests {
     /// #139: when the override is set, the compiler that actually runs is the one named — and it is
     /// not MSVC. `clang-cl --version` prints "clang version"; `cl.exe` prints its banner on stderr
     /// and rejects `--version`. A run that silently used the default would fail here.
+    // harness-internal: unit test of the harness MSVC compile step; verifies no clause
     #[test]
     fn the_override_compiler_is_the_one_that_runs() {
         let Some(over) = std::env::var_os(COMPILER_OVERRIDE_ENV) else {
@@ -164,6 +165,7 @@ mod tests {
         );
     }
 
+    // harness-internal: unit test of the harness MSVC compile step; verifies no clause
     #[test]
     fn compiles_a_trivial_c_kernel_to_a_dll() {
         let msvc = crate::runtime_gate_some!("msvc", find_msvc());

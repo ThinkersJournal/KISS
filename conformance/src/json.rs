@@ -193,6 +193,7 @@ mod tests {
     /// because they wrote it, and a conformant foreign parser rejects. Since these artifacts exist
     /// precisely FOR a foreign reader (KISS-*-8-0005), that is the reader who would have found it.
     /// The `\u{01}` case below fails against either private version.
+    // harness-internal: unit test of the harness JSON parser; verifies no clause
     #[test]
     fn test_json_escape_string_covers_every_c0_control() {
         assert_eq!(escape_string("a\"b"), "\"a\\\"b\"");
@@ -220,6 +221,7 @@ mod tests {
     }
     use super::*;
 
+    // harness-internal: unit test of the harness JSON parser; verifies no clause
     #[test]
     fn parses_object_array_and_utf8_grouping_mark() {
         let v = parse(r#"{"a": [1, "BF 80·00 00"], "b": true, "c": null}"#).unwrap();
@@ -231,6 +233,7 @@ mod tests {
         assert_eq!(v.get("c"), Some(&Json::Null));
     }
 
+    // harness-internal: unit test of the harness JSON parser; verifies no clause
     #[test]
     fn rejects_trailing_garbage() {
         assert!(parse("{} x").is_err());

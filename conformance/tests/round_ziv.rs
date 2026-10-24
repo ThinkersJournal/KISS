@@ -55,6 +55,7 @@ fn pow2<const N: usize>(ebin: i32) -> BigFloat<N> {
 // Decided-at-256 spec vectors (clear margin, D >> err_ulps).
 // =============================================================================
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn e_f64_decides_at_256() {
     let e = BigFloat::<4>::from_limbs_ebin(false, 1, E_MANT, FpClass::Normal);
@@ -67,6 +68,7 @@ fn e_f64_decides_at_256() {
     assert_eq!(r.cert.hardness_margin_bits, 1);
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn e_f32_direct_rounding() {
     // The SAME 256-bit value rounded DIRECTLY with F32 params (no f64 intermediate).
@@ -79,6 +81,7 @@ fn e_f32_direct_rounding() {
     assert_eq!(r.cert.hardness_margin_bits, 1);
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn ln2_f64_and_f32() {
     let ln2 = BigFloat::<4>::from_limbs_ebin(false, -1, LN2_MANT, FpClass::Normal);
@@ -91,6 +94,7 @@ fn ln2_f64_and_f32() {
     assert_eq!(r32.cert.hardness_margin_bits, 0);
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn sin1_f64_and_f32() {
     let s = BigFloat::<4>::from_limbs_ebin(false, -1, SIN1_MANT, FpClass::Normal);
@@ -110,6 +114,7 @@ fn sin1_f64_and_f32() {
 /// avail = 53 - (-1022 - (-1075)) = 0. Under the OLD `avail <= 0 => signed zero`
 /// rule this misrounded to 0x0; RNE actually rounds it UP to 0x…01 because the
 /// sticky bits push it past the midpoint. This is the spec's own anchor.
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn avail0_subnormal_rounds_up_not_to_zero() {
     let x = BigFloat::<4>::from_limbs_ebin(false, -1075, EXP_M745_MANT, FpClass::Normal);
@@ -121,6 +126,7 @@ fn avail0_subnormal_rounds_up_not_to_zero() {
 /// The other side of the same boundary: exactly 2^-1075 (the midpoint between 0
 /// and the smallest subnormal) with zero error rounds to +0 by ties-to-even
 /// (0 is even). avail == 0, D == 0, err == 0 => exact => decided.
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn avail0_exact_half_ties_to_even_zero() {
     let half = BigFloat::<4>::from_limbs_ebin(false, -1075, [MSB, 0, 0, 0], FpClass::Normal);
@@ -133,6 +139,7 @@ fn avail0_exact_half_ties_to_even_zero() {
 // Overflow / underflow / special classes (round-ziv §7).
 // =============================================================================
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn overflow_to_inf() {
     // value = 2^1024, E = 1024 > emax = 1023 -> +Inf (the exp(710) anchor shape).
@@ -142,6 +149,7 @@ fn overflow_to_inf() {
     assert_eq!(r.bits, 0x7FF0_0000_0000_0000, "+Inf");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn underflow_to_zero() {
     // value = 2^-1077, avail = 53 - 55 = -2 < 0 -> +0 (the exp(-746) anchor shape).
@@ -151,6 +159,7 @@ fn underflow_to_zero() {
     assert_eq!(r.bits, 0x0000_0000_0000_0000, "+0");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn special_classes_bypass_rounding() {
     // Inf / NaN / signed zero from the atom -> target special, decided, cert emits
@@ -192,6 +201,7 @@ fn overflow_mid_minus_5<const N: usize>() -> BigFloat<N> {
     mid.sub(&BigFloat::<N>::from_i64(5).ldexp(768)).0 // - 5 * 2^768  (a fixed real)
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn overflow_boundary_below_decides_to_max_finite() {
     // clear margin below the midpoint (D = 5 > err = 4) -> decided, max-finite.
@@ -200,6 +210,7 @@ fn overflow_boundary_below_decides_to_max_finite() {
     assert_eq!(r.bits, 0x7FEF_FFFF_FFFF_FFFF, "largest finite f64");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn overflow_boundary_straddle_does_not_decide() {
     // err interval reaches the midpoint (D = 5, err = 5) -> straddle, NOT decided.
@@ -207,6 +218,7 @@ fn overflow_boundary_straddle_does_not_decide() {
     assert!(!r.decided, "interval straddles the max-finite<->Inf midpoint => escalate");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn overflow_boundary_above_decides_to_inf() {
     // just above the midpoint (carry past max-finite), clear margin -> decided, Inf.
@@ -229,6 +241,7 @@ impl Atom for OverflowStraddle {
     }
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn overflow_boundary_escalates_to_max_finite() {
     assert!(!round_to_f64(&OverflowStraddle.eval::<4>()).decided, "straddles at 256");
@@ -247,6 +260,7 @@ fn underflow_below_mid_by_5<const N: usize>() -> BigFloat<N> {
     pow2::<N>(-1075).sub(&BigFloat::<N>::from_i64(5).ldexp(-1331)).0
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn underflow_boundary_below_decides_to_signed_zero() {
     // clear margin below the midpoint (D = 5 > err = 4) -> decided, +0 / -0.
@@ -259,6 +273,7 @@ fn underflow_boundary_below_decides_to_signed_zero() {
     assert_eq!(rn.bits, 0x8000_0000_0000_0000, "-0 (sign preserved)");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn underflow_boundary_straddle_does_not_decide() {
     // err interval reaches the midpoint (D = 5, err = 5) -> straddle, NOT decided.
@@ -266,6 +281,7 @@ fn underflow_boundary_straddle_does_not_decide() {
     assert!(!r.decided, "interval straddles the 0<->subnormal midpoint => escalate");
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn underflow_avail_neg2_is_unconditional_zero() {
     // avail <= -2: >= 2^P ULPs below the midpoint, decided even for a huge err
@@ -288,6 +304,7 @@ impl Atom for UnderflowStraddle {
     }
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn underflow_boundary_escalates_to_zero() {
     assert!(!round_to_f64(&UnderflowStraddle.eval::<4>()).decided, "straddles at 256");
@@ -305,6 +322,7 @@ fn underflow_boundary_escalates_to_zero() {
 /// 1+2^-24) to 0x3F800001. But RN-f64(X) = 1+2^-24 exactly (the 2^-60 tail is
 /// below the f64 ULP), and RN-f32 of THAT ties-to-even DOWN to 0x3F800000. The
 /// kernel must round the wide value directly to f32 and give 0x3F800001.
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn f32_single_rounding_avoids_double_rounding() {
     let x = {
@@ -332,6 +350,7 @@ fn f32_single_rounding_avoids_double_rounding() {
 /// the error interval contains the midpoint, so the single-width rounding does
 /// NOT decide (the driver must escalate). M = 1 + 2^-53 is the midpoint between
 /// 1.0 and the next double.
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn straddle_single_width_does_not_decide() {
     let one = BigFloat::<4>::from_f64(1.0);
@@ -354,6 +373,7 @@ impl Atom for MidStraddle {
     }
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 fn escalation_resolves_at_512() {
     // Single-shot at N=4 straddles...
@@ -387,6 +407,7 @@ impl Atom for AlwaysMidpoint {
     }
 }
 
+// harness-internal: unit test of the hp round-ziv rounding kernel the oracle is built on; verifies no clause
 #[test]
 #[should_panic(expected = "unresolved at 1024")]
 fn escalation_panics_when_unresolvable() {
