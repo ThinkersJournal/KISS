@@ -175,6 +175,42 @@ fn test_conform_nondeterministic_comparator() {
     // abs_tol, the 0.0 case would still accept the reassociation → this assert fails.
 }
 
+/// The variant names of `pub enum <name> { ... }` in `src`, comments and attributes skipped.
+fn enum_variants(src: &str, name: &str) -> Vec<String> {
+    let head = format!("pub enum {name} {{");
+    let start = src.find(&head).expect("enum is declared") + head.len();
+    let body = &src[start..];
+    let body = &body[..body.find('}').expect("enum body closes")];
+    body.lines()
+        .map(|l| l.split("//").next().unwrap_or("").trim())
+        .filter(|l| !l.is_empty() && !l.starts_with("#["))
+        .map(|l| l.trim_end_matches(',').trim().to_string())
+        .collect()
+}
+
+/// Enforces: KISS-CONFORM-6.8-0005 — the split comparator MUST NOT be registered as a fourth
+/// `DeterminismClass` member (KISS#377). The compiler's exhaustiveness error stops a CARELESS fourth
+/// variant but not a deliberate registration that also adds the match arms; this reads the enum
+/// itself, so adding the variant, with or without arms, reddens this test.
+/// TEETH: the enum has exactly the three canonical members; the reader is shown to count a
+/// four-member enum as four (a control: a reader that always saw three would pass the real check).
+#[test]
+fn test_conform_split_comparator_not_fourth_class() {
+    let real = enum_variants(include_str!("../src/lib.rs"), "DeterminismClass");
+    assert_eq!(
+        real,
+        ["ExactByte", "UlpTolerance", "OrderInvariant"],
+        "KISS-CONFORM-6.8-0005 / KISS-OPS-6.0-0001: the determinism class enum is exactly three members"
+    );
+    let four = "pub enum DeterminismClass {
+    ExactByte,
+    UlpTolerance, // x
+    OrderInvariant,
+    SplitComparator,
+}";
+    assert_eq!(enum_variants(four, "DeterminismClass").len(), 4, "control: the reader sees a fourth member");
+}
+
 /// KISS-CONFORM-6.8-0005 — the complex-transcendental **split comparator**: exact-bit
 /// on the sign of every zero-valued component, ULP/tolerance on the magnitude. It is a
 /// hybrid of the three canonical classes and MUST NOT be a fourth enum member.
