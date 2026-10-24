@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.64 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- KISS#136 step 2 of 3, comments and README figures only: the other 185 tests that cited no clause (measured at `f286c6a`) are triaged one by one. 74 carry new `// Backs:` lines (89 lines in all) (classify `structure_key` token declines, OPS 6.11 structural ops, 6.15 min/max, OpAttrs golden/value vectors, Announce, Contract section schemas, CONFORM 6.8 comparator and NaN provenance) and 111 carry `// harness-internal: <reason>`. The harness-internal tag has been given a real reason in every case; claims the audit found weak were downgraded to a tag (a one-ordinal-per-enum spot check does not back OPS-6.19-0014..0021; CONFORM-6.5-0003 is ruled out of tests, board 203). With the gate armed in a trial run, 0 untagged orphans and 0 misused tags remain. README `named` 232 to 216 and `uncited_tests` 301 to 225 (bound figures). `kiss_trace` floor unmoved: harness 459, lint 44, untested 387. The gate itself (orphan fails the build) is step 3.
+
 ## 0.4.63 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - KISS#136 step 1 of 3, comments only: 116 of the 301 tests that cite no clause (measured at `f286c6a`) are tests of the suite's own machinery (`hp_*`/`round_ziv` oracle-library units, the JSON parser, `harness/*`) and now carry `// harness-internal: <reason>` per KISS-CONFORM-6.1-0003. 185 remain: most look like real conformance tests that cite nothing and need a clause (a `Backs:` claim) rather than a tag, so they are triaged by file in the next PRs before the gate is armed. No tool change; `kiss_trace` floor unmoved (459/44/387).
