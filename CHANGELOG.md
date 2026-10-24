@@ -3,9 +3,16 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.31 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Docs only, no spec, tooling or wire change: `conformance/corpus/PROVENANCE.md` records the generator, version and regeneration command for `ops-int-wrap.json` (and the other ten `kiss_mint` bundles); ROADMAP R3.13 records the Windows-only failure of `tools/test_kiss_msrv_step.py`.
+
+- Note for consumers: 0.4.29 (#618) changed **normative text** — KISS-CONTRACT-6.5-0004a, 6.6-0006, 6.7-0006, 6.11-0008 (the launch-scalar symbol vocabulary of a contract); a re-vendor of `spec/` and `conformance/corpus/` is available. `kiss-conformance` is `publish = false`.
+
 ## 0.4.30 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Tests and ledger only, no spec or wire change (R3.2): `announce_frames.rs` gains producer-side tests for KISS-ANNOUNCE-6.1-0009, -0014 and -0015, read from the raw encoded bytes (harness 436 -> 439, untested 410 -> 407). 6.1-0005 stays untested with a recorded reason (the version a producer writes is a caller-supplied field, so a test would be circular). The advisory CodeRipper portfolio caller is repinned to coderipper d14a22b (CodeRipper 0.9.14, was 0.9.6; coderipper#142).
+
 
 ## 0.4.29 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
