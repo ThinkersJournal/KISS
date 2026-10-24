@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# KISS-Conform 6.14: coordinates with no discriminating pair in a vector file (KISS#240, #239 item 3).
+# <vector file> TAB <field index> TAB <category> TAB <reason>   (tools/kiss_pairs.py; fields in its FIELDS)
+# undiscriminated = no pair can be constructed (6.14-0002, the reason says why).
+# unauthored      = a pair is constructible but absent: recorded debt (6.14-0004), a row is removed when
+#                   the pair is authored and the tool fails while a row outlives its gap.
+# Measured at origin/main 9fe2b0c over 28 positive vectors.
+conformance/corpus/structure_key_vectors.json	0	undiscriminated	Single-valued by construction: field 0 names the grammar (sk6); another value is a different grammar, not a legal sk6 input.
+conformance/corpus/structure_key_vectors.json	2	unauthored	Dtype varies across vectors but never alone: every dtype change also moves the cell class, operands or contraction trailer. An ew2 cell identical but for f32 vs f16 is constructible (KISS#239 item 3).
+conformance/corpus/structure_key_vectors.json	4	unauthored	All 28 vectors are ix32. An ix64 cell (max touched offset at or above 2^31) is constructible and no vector holds one.
+conformance/corpus/structure_key_vectors.json	5	unauthored	grid occurs 20 times, warp 7, block once, but never against an otherwise identical token; the schedule follows the iteration element count, so an equal-cell pair is constructible.
+conformance/corpus/structure_key_vectors.json	8	unauthored	Reduce takes -, rall, rlast and x0a, but no two vectors differ in it alone; an rdc cell with rall vs rlast over identical operands is constructible.
