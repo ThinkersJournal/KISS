@@ -226,7 +226,7 @@ pub struct Identity {
 }
 
 impl Identity {
-    fn encode_into(&self, b: &mut Vec<u8>) {
+    pub(crate) fn encode_into(&self, b: &mut Vec<u8>) {
         b.extend_from_slice(&(self.structure_key.len() as u32).to_le_bytes());
         b.extend_from_slice(&self.structure_key);
         b.extend_from_slice(&(self.op_identity.len() as u32).to_le_bytes());
@@ -240,7 +240,7 @@ impl Identity {
     /// Decode an identity block starting at `off`; returns the block and the new
     /// offset. Truncation and out-of-range length yield a typed decline, never a
     /// panic or OOB slice (§6.4-0006).
-    fn decode_at(bytes: &[u8], mut off: usize) -> Result<(Identity, usize), AnnounceDecline> {
+    pub(crate) fn decode_at(bytes: &[u8], mut off: usize) -> Result<(Identity, usize), AnnounceDecline> {
         if bytes.len() < off + 4 {
             return Err(AnnounceDecline::Truncated { region: "structure_key_len" });
         }

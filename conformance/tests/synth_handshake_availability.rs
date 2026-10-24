@@ -145,17 +145,9 @@ fn test_synth_contract_not_pushed_to_announce() {
     assert!(crsp.len() > 12 + per_record.len(), "the announce record cannot be carrying the contract — CRSP is strictly larger by the payload");
 }
 
-// KISS-SYNTH-6.2-0003a (the contract is carried OPAQUELY; the provision path MUST
-// NOT reinterpret or re-encode its bytes) is INTENTIONALLY LEFT UNBACKED here.
-// It is a *provision-path* behavioral clause: the subject is the `PRSP` encoder,
-// which does not exist in `conformance/src` (no `PRSP` frame / provision codec).
-// A test that exercised the Announce `CRSP` carrier instead would only witness
-// CRSP's opacity, not the provision path's — a buggy `PRSP` encoder that re-encoded
-// the contract bytes would sail past it, since it never touches provision code.
-// Although §6.2-0003 pins the `PRSP` contract bytes byte-identical to the `CRSP`
-// payload, that pin is itself only verifiable once the `PRSP` codec exists. Binding
-// 0003a to a CRSP test would over-credit it, so it stays untested until a
-// provision-path codec lands (then bind it to that codec, not a proxy).
+// KISS-SYNTH-6.2-0003a (the contract is carried OPAQUELY) is backed in
+// `synth_provision_success.rs` against the `PRSP` codec (`src/synth.rs`), the provision path
+// itself, not against the Announce `CRSP` carrier.
 
 // ---- §6.7 Level 1: provider handshake (Announce SeamHello) ------------------
 
