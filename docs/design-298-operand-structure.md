@@ -1,5 +1,18 @@
 # Design — per-op operand structure in `ops.md` (KISS#298, ROADMAP R1.12)
 
+> **RETRACTION (2026-10-24, KISS lane): the premise below is out of date, and so are the
+> passages that rest on it.** This document, and the architect ruling it implements, say arity
+> is the input to `op_family` (`une`/`bin`/`ter`) and that #263 is blocked on this table. At
+> `origin/main` `893cf57` neither holds: a33282c (#263 ruling D, 2026-10-11) dropped the
+> twenty-four op-family codes, and KISS-CLASSIFY-6.5-0015 derives a 7-class `cell_class` from
+> the cell's own operands and "MUST NOT read an op name, an op family, or any property of the
+> computation, and no op-to-class table exists in this suite or is needed". **Struck: "Unblocks
+> #263's residual" (step 3 below), "Unpopped derives `op_family`" (step 4), and every statement
+> that the count feeds a family.** What survives is only the ruling's secondary motive (a closed
+> role vocabulary so a role such as `weight` is defined once, #219) and the fact that `ops.md`
+> still states no per-op operand structure. Whether that is worth a spec table with no named
+> consumer is open (ROADMAP R1.12); the 122 rows and the extractor remain valid as measurements.
+
 **Status: proposal for the PM gate. No spec, wire or tooling change in this PR.** It proposes the field,
 the role vocabulary and the 122-row content so the spec PR that follows is a transcription, not a
 design. Measured at `origin/main` `b6d0531`.
@@ -204,11 +217,10 @@ decomposition column; their window, axis and monoid are attributes, not operands
    test (`kiss_trace` clause↔test), and a sidecar update.
 2. Extends the manifest generator and its completeness check; a negative control deletes one row
    and must fail.
-3. Unblocks #263's residual: for ops no semantic family claims, `une`/`bin`/`ter` follows from the
-   count. **It changes no existing token** (KISS-CLASSIFY-7.2-0002): this PR and that one only state
-   what the families' input already was.
-4. Lands under the normative-text rule: PM + KISS + every affected agent (Unpopped derives
-   `op_family`; Fuel and Baracuda read the manifest).
+3. ~~Unblocks #263's residual (`une`/`bin`/`ter` follows from the count).~~ **Struck: `op_family` no
+   longer exists; see the retraction at the top.**
+4. Lands under the normative-text rule: PM + KISS + every affected agent (~~Unpopped derives
+   `op_family`~~ struck; Fuel and Baracuda read the manifest).
 
 ## Not decided here
 

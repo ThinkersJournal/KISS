@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.28 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Docs only, no spec, tooling or wire change: retracts the premise of the merged `docs/design-298-operand-structure.md` and ROADMAP R1.12 (arity feeds `op_family`; #263 blocked on it) — `op_family` was dropped in a33282c and KISS-CLASSIFY-6.5-0015 derives the cell class without reading an op name.
+
 ## 0.4.27 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Docs and CI only, no spec, tooling or wire change: `docs/design-298-operand-structure.md` proposes the per-op operand-structure field (count form, closed role vocabulary, 122 rows; ROADMAP R1.12, KISS#298); the advisory CodeRipper `portfolio` job is re-pinned to `30e012b7`.
