@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch storage codec for the pinned **sub-byte / FP8 dtype layouts**
-//! (KISS-Classify §6.1-0008 `s4`/`u4` nibble packing, §6.1-0009 `b1` bit packing,
+//! (KISS-Classify §6.1-0008 `i4`/`u4` nibble packing, §6.1-0009 `b1` bit packing,
 //! §6.1-0010 `e4m3` FP8 encoding).
 //!
 //! This is the Classify **storage** view: it reproduces the exact byte layout the
@@ -25,7 +25,7 @@
 // byte order, so a "high-nibble-first" unpacker (even index from the high
 // nibble) diverges immediately.
 
-/// Sign-extend a 4-bit nibble (`0..=15`) to `i8` as an `s4` value: nibbles
+/// Sign-extend a 4-bit nibble (`0..=15`) to `i8` as an `i4` value: nibbles
 /// `8..=15` are the negatives `-8..=-1`, nibbles `0..=7` stay `0..=7`
 /// (§6.1-0008, "sign-extended on read"). E.g. `0xF -> -1`, `0x8 -> -8`.
 pub fn s4_sign_extend(nibble: u8) -> i8 {
@@ -39,10 +39,10 @@ pub fn u4_zero_extend(nibble: u8) -> u8 {
     nibble & 0x0F
 }
 
-/// Pack a run of `s4` logical values into packed-pair bytes: even index → low
+/// Pack a run of `i4` logical values into packed-pair bytes: even index → low
 /// nibble, odd index → high nibble (§6.1-0008). A trailing lone even value
 /// occupies the low nibble with the high nibble zero-filled. Each value is
-/// truncated to its low 4 bits (its two's-complement `s4` pattern).
+/// truncated to its low 4 bits (its two's-complement `i4` pattern).
 pub fn s4_pack(vals: &[i8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(vals.len().div_ceil(2));
     let mut i = 0;
@@ -69,7 +69,7 @@ pub fn u4_pack(vals: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Unpack `count` `s4` logical values from packed-pair bytes: index `k` reads
+/// Unpack `count` `i4` logical values from packed-pair bytes: index `k` reads
 /// the **low** nibble of byte `k/2` when `k` is even and the **high** nibble
 /// when `k` is odd, then sign-extends (§6.1-0008). Panics if `bytes` is too
 /// short for `count` values.

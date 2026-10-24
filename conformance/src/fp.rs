@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! From-scratch f32 <-> reduced-float converters for the three non-IEEE storage
 //! dtypes KISS-Ops pins directly in §6.16: `bf16` (§6.16-0003), `e4m3`
-//! (§6.16-0004, OCP OFP8), and `e5m2` (§6.16-0005, OCP OFP8).
+//! (§6.16-0004, OCP OFP8), and `f8e5m2` (§6.16-0005, OCP OFP8).
 //!
 //! This is a validating reference oracle: every encoder reproduces the exact
 //! byte a conformant op must emit, computed from the spec-pinned bit layout and
@@ -17,8 +17,8 @@
 //!     (`S.1111.111`); its max finite is ±448 (`S.1111.110`), *not* ±480, because
 //!     the all-ones-mantissa slot at the top exponent is the NaN. Conversion
 //!     **saturates** overflow to ±448 (§6.16-0004).
-//!   * **e5m2** (OCP OFP8) *does* have IEEE-style inf/NaN at exponent field 31,
-//!     yet f32->e5m2 conversion of an overflowing **finite** value still
+//!   * **f8e5m2** (OCP OFP8) *does* have IEEE-style inf/NaN at exponent field 31,
+//!     yet f32->f8e5m2 conversion of an overflowing **finite** value still
 //!     **saturates** to ±57344 (`S.11110.11`) rather than emitting infinity
 //!     (§6.16-0005).
 //!
@@ -169,16 +169,16 @@ pub fn e4m3_to_f32(b: u8) -> f32 {
 // overflow to ±57344 rather than emitting inf. §6.16-0005.
 // ---------------------------------------------------------------------------
 
-/// Encoded 7-bit magnitude of the largest finite `e5m2` value, ±57344 = `S.11110.11`.
+/// Encoded 7-bit magnitude of the largest finite `f8e5m2` value, ±57344 = `S.11110.11`.
 pub const E5M2_MAX_FINITE_MAG: u8 = 0x7B;
-/// The `e5m2` positive-infinity magnitude, `S.11111.00`.
+/// The `f8e5m2` positive-infinity magnitude, `S.11111.00`.
 pub const E5M2_INF_MAG: u8 = 0x7C;
-/// A quiet `e5m2` NaN magnitude, `S.11111.10`.
+/// A quiet `f8e5m2` NaN magnitude, `S.11111.10`.
 pub const E5M2_NAN_MAG: u8 = 0x7E;
 
-/// Encode an `f32` as an `e5m2` (OCP OFP8) byte, round-half-to-even. A finite
+/// Encode an `f32` as an `f8e5m2` (OCP OFP8) byte, round-half-to-even. A finite
 /// value that overflows the format **saturates** to ±57344 rather than emitting
-/// an infinity (§6.16-0005), even though e5m2 *has* an infinity encoding. An
+/// an infinity (§6.16-0005), even though f8e5m2 *has* an infinity encoding. An
 /// infinite input maps to the infinity encoding (the format has one).
 pub fn f32_to_e5m2(x: f32) -> u8 {
     let sign = if x.is_sign_negative() { 0x80 } else { 0 };
@@ -191,7 +191,7 @@ pub fn f32_to_e5m2(x: f32) -> u8 {
     sign | fp8_magnitude(x.abs(), 2, 15, E5M2_MAX_FINITE_MAG as u32)
 }
 
-/// Decode an `e5m2` byte to `f32`. Exponent field 31 is IEEE-style: mantissa 0 is
+/// Decode an `f8e5m2` byte to `f32`. Exponent field 31 is IEEE-style: mantissa 0 is
 /// infinity, any nonzero mantissa is NaN.
 pub fn e5m2_to_f32(b: u8) -> f32 {
     let sign = if b & 0x80 != 0 { -1.0 } else { 1.0 };
