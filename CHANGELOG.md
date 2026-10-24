@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.41 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Complex-op oracle (R3.3 per the PM's order (c)), no spec or wire change. `semantics.rs` gains `cmake`/`cre`/`cim`, `cmul` (Annex G recovery on the spec's verbatim trigger), `carg`, `cexp`, `clog`, `csqrt`, `cpow`, with the Annex G rows that govern over the naive decomposition; `tests/semantics_complex.rs` backs nine KISS-OPS clauses (6.18-0003, -0005, -0007 to -0013): harness 451 -> 460, untested 395 -> 386, lint unmoved. Every expected value is transcribed from the clause rows, and each op is paired with its naive decomposition to show where Annex G governs. 6.18-0015 stays unbacked (c64/f32 only). Corrects the 0.4.35 ledger reasons: they said `conformance/` has no op evaluator, but `semantics.rs` already held `cadd`..`cdiv`; the 6.18-0015 row now says what the oracle does and does not cover.
+
 ## 0.4.40 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - **Correction** (PM ruling 2026-10-24: fix the example, not the clauses): the Appendix C worked contract violated KISS-CONTRACT-6.7-0002 and 6.9-0003, which `check_record_consistency` (0.4.39) made detectable. Appendix C and its golden document now conform, with no normative clause change: the Identity and Capabilities `accept_predicate` are both the real strided `ew2` cell token `sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-` (the old Identity value `ew2/f32,f32,f32/strided/cuda:sm89` and Capabilities value `sk6|ew2|f32` were neither the same nor a valid `structure_key`; the target component now equals `target_capability`), and the Provenance `revision_hash` is `4:deadbeef`, the Identity value. Regenerated `corpus/contract_vectors.json` (golden bytes, `len`/`crc32`, and the single-fault declines derived from it); `contract_section_schemas.rs` fixtures follow. A foreign reader that pinned the old golden bytes must re-pin; `contract_version` and the wire are unmoved. New regression test `appendix_c_golden_document_is_record_consistent`.

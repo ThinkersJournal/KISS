@@ -452,3 +452,159 @@ pub fn sin(x: f32) -> f32 {
     }
     f32::from_bits(round_atom_to_f32(&Sin { x: x as f64 }).bits as u32)
 }
+
+// ---- §6.18 complex family beyond the algebraic four (c32 / `c64` storage) ----
+//
+// The reference decompositions of §6.18, transcribed, with the ISO C99/C11 Annex G special-value
+// rows that GOVERN over the naive decomposition on an infinite or NaN lane (§6.18-0013). Finite
+// transcendental results are computed in f64 and rounded once (the ULP/tolerance class,
+// §6.18-0014); every zero sign, branch endpoint and special value is exact (§6.18-0017).
+// Rows the spec leaves with unspecified signs (`±0 ± i0`, `±∞ + iNaN`) take the positive sign.
+
+/// `cmake(x, y)` — a raw-lane move (§6.18-0003): no arithmetic, so signed zero and NaN payload
+/// of each lane survive.
+pub fn cmake(x: f32, y: f32) -> C32 { [x, y] }
+
+/// `cre(z)` — the real lane, offset 0 (§6.18-0003).
+pub fn cre(z: C32) -> f32 { z[0] }
+
+/// `cim(z)` — the imaginary lane, offset 1 (§6.18-0003).
+pub fn cim(z: C32) -> f32 { z[1] }
+
+/// Annex G recovery helper: `copysign(isinf(x) ? 1 : 0, x)`.
+fn inf_to_one(x: f32) -> f32 {
+    copysign(if x.is_infinite() { 1.0 } else { 0.0 }, x)
+}
+
+/// `cmul` — `(ac − bd) + (ad + bc)i` over the real atoms, plus the Annex G infinity recovery
+/// with the spec's verbatim trigger (§6.18-0005): recovery applies if and only if BOTH result
+/// components are NaN AND at least one operand has an infinite lane. With only one NaN
+/// component, or no infinite operand lane, the computed value stands.
+pub fn cmul(z: C32, w: C32) -> C32 {
+    let (a, b) = (z[0], z[1]);
+    let (c, d) = (w[0], w[1]);
+    let x = sub(mul(a, c), mul(b, d));
+    let y = add(mul(a, d), mul(b, c));
+    let z_inf = a.is_infinite() || b.is_infinite();
+    let w_inf = c.is_infinite() || d.is_infinite();
+    if !(x.is_nan() && y.is_nan()) || !(z_inf || w_inf) {
+        return [x, y];
+    }
+    let (mut a, mut b, mut c, mut d) = (a, b, c, d);
+    if z_inf {
+        a = inf_to_one(a);
+        b = inf_to_one(b);
+        if c.is_nan() { c = copysign(0.0, c); }
+        if d.is_nan() { d = copysign(0.0, d); }
+    }
+    if w_inf {
+        c = inf_to_one(c);
+        d = inf_to_one(d);
+        if a.is_nan() { a = copysign(0.0, a); }
+        if b.is_nan() { b = copysign(0.0, b); }
+    }
+    let inf = f32::INFINITY;
+    [mul(inf, sub(mul(a, c), mul(b, d))), mul(inf, add(mul(a, d), mul(b, c)))]
+}
+
+/// `carg(z)` — `atan2(b, a)`, the principal argument in `[−π, +π]` (§6.18-0008); the IEEE ±0
+/// quadrant conventions of `atan2` select the sign of a zero and the ±π endpoint.
+pub fn carg(z: C32) -> f32 {
+    (z[1] as f64).atan2(z[0] as f64) as f32
+}
+
+/// `cexp` — `exp(a)·(cos b + i·sin b)` for finite arguments; for an infinite or NaN lane the
+/// Annex G `cexp` rows govern (§6.18-0009).
+pub fn cexp(z: C32) -> C32 {
+    let (a, b) = (z[0], z[1]);
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    if a.is_finite() && b.is_finite() {
+        let ea = exp(a);
+        return [mul(ea, (b as f64).cos() as f32), mul(ea, (b as f64).sin() as f32)];
+    }
+    if b.is_infinite() {
+        // cexp(x + i∞) = NaN + iNaN (finite x); cexp(+∞ + i∞) = ±∞ + iNaN;
+        // cexp(−∞ + i∞) = ±0 ± i0; cexp(NaN + i∞) = NaN + iNaN.
+        return if a.is_finite() { [nan, nan] } else if a == inf { [inf, nan] } else if a == -inf { [0.0, 0.0] } else { [nan, nan] };
+    }
+    if b.is_nan() {
+        // cexp(x + iNaN) = NaN + iNaN (finite x); cexp(+∞ + iNaN) = ±∞ + iNaN;
+        // cexp(−∞ + iNaN) = ±0 ± i0; cexp(NaN + iNaN) = NaN + iNaN.
+        return if a == inf { [inf, nan] } else if a == -inf { [0.0, 0.0] } else { [nan, nan] };
+    }
+    // b is finite here and a is infinite or NaN.
+    if a.is_nan() {
+        // cexp(NaN + i0) = NaN + i0; cexp(NaN + iy) = NaN + iNaN (nonzero y).
+        return if b == 0.0 { [nan, b] } else { [nan, nan] };
+    }
+    if a == inf {
+        // cexp(+∞ + i0) = +∞ + i0; cexp(+∞ + iy) = +∞·(cos y + i·sin y).
+        return if b == 0.0 {
+            [inf, b]
+        } else {
+            [copysign(inf, (b as f64).cos() as f32), copysign(inf, (b as f64).sin() as f32)]
+        };
+    }
+    // a == −∞: cexp(−∞ + iy) = +0·(cos y + i·sin y), the signs coming from cos y / sin y.
+    [copysign(0.0, (b as f64).cos() as f32), copysign(0.0, (b as f64).sin() as f32)]
+}
+
+/// `clog` — `cmake(log(cabs z), carg z)`, the principal logarithm (§6.18-0010), with the Annex G
+/// rows governing on an infinite or NaN lane and at the origin.
+pub fn clog(z: C32) -> C32 {
+    let (a, b) = (z[0], z[1]);
+    let nan = f32::NAN;
+    if a.is_infinite() || b.is_infinite() {
+        // +∞ real part; the imaginary part is atan2 (π/2, π, 0, 3π/4, π/4 by the IEEE table)
+        // unless a lane is NaN, which makes it NaN.
+        let im = if a.is_nan() || b.is_nan() { nan } else { carg(z) };
+        return [f32::INFINITY, im];
+    }
+    if a.is_nan() || b.is_nan() {
+        return [nan, nan];
+    }
+    if a == 0.0 && b == 0.0 {
+        // clog(−0 + i0) = −∞ + iπ; clog(+0 + i0) = −∞ + i0 (and ±π / ±0 by the sign of b).
+        return [f32::NEG_INFINITY, carg(z)];
+    }
+    [(((a as f64).hypot(b as f64)).ln()) as f32, carg(z)]
+}
+
+/// `csqrt` — the principal square root (§6.18-0011): `m = cabs z`,
+/// `cmake(sqrt((m + a)/2), copysign(1, b)·sqrt((m − a)/2))` for finite arguments, with the
+/// Annex G rows governing on an infinite or NaN lane and at ±0 + i0.
+pub fn csqrt(z: C32) -> C32 {
+    let (a, b) = (z[0], z[1]);
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    if b.is_infinite() {
+        return [inf, b]; // csqrt(x + i∞) = +∞ + i∞, any x including ±∞ and NaN
+    }
+    if b.is_nan() {
+        return if a == inf { [inf, nan] } else if a == -inf { [nan, inf] } else { [nan, nan] };
+    }
+    if a.is_nan() {
+        return [nan, nan];
+    }
+    if a.is_infinite() {
+        return if a < 0.0 { [0.0, copysign(inf, b)] } else { [inf, copysign(0.0, b)] };
+    }
+    if a == 0.0 && b == 0.0 {
+        return [0.0, b];
+    }
+    let m = (a as f64).hypot(b as f64);
+    let re = ((m + a as f64) / 2.0).sqrt() as f32;
+    let im = copysign(1.0, b) * (((m - a as f64) / 2.0).sqrt() as f32);
+    [re, im]
+}
+
+/// `cpow(z, w)` — the principal `cexp(cmul(w, clog z))` (§6.18-0012), composed from the GOVERNED
+/// `clog`, `cmul` and `cexp` so non-finite and zero inputs are fully determined; `cpow(z, 0)` is
+/// `1 + 0i` for every `z`, NaN included.
+pub fn cpow(z: C32, w: C32) -> C32 {
+    if w[0] == 0.0 && w[1] == 0.0 {
+        return [1.0, 0.0];
+    }
+    cexp(cmul(w, clog(z)))
+}
