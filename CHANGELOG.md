@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.52 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- ROADMAP R3.14 recorded as ruled: CireSnave 2026-10-24 (board 269) chose (b) now, (a) later, when the first foreign reader exists. Also logs ROADMAP R3.5a (KISS#352 residue: no ULP-class moved-NaN vector; 0 of 78 moved rows). Docs only; no spec, test, src or wire change.
+
 ## 0.4.51 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - HANDOFF only: R3.2, R3.3 and R3.9 are done, so the next-actions list now names the unblocked rows (R3.5, R3.7, R3.6, OPS-6.18-0015) and what waits (R3.14 on CireSnave). No spec, test or wire change; floor unmoved at harness 459 / untested 387.
