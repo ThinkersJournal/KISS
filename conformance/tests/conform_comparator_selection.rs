@@ -194,6 +194,7 @@ fn enum_variants(src: &str, name: &str) -> Vec<String> {
 /// itself, so adding the variant, with or without arms, reddens this test.
 /// TEETH: the enum has exactly the three canonical members; the reader is shown to count a
 /// four-member enum as four (a control: a reader that always saw three would pass the real check).
+/// Backs: KISS-CONFORM-6.8-0005 [not-fourth-class]
 #[test]
 fn test_conform_split_comparator_not_fourth_class() {
     let real = enum_variants(include_str!("../src/lib.rs"), "DeterminismClass");
@@ -214,6 +215,7 @@ fn test_conform_split_comparator_not_fourth_class() {
 /// KISS-CONFORM-6.8-0005 — the complex-transcendental **split comparator**: exact-bit
 /// on the sign of every zero-valued component, ULP/tolerance on the magnitude. It is a
 /// hybrid of the three canonical classes and MUST NOT be a fourth enum member.
+// Backs: KISS-CONFORM-6.8-0005 [zero-sign-re, magnitude-ulp]
 #[test]
 fn test_conform_split_comparator() {
     // Clause: KISS-CONFORM-6.8-0005. `compare_c32_transcendental` is a FREE FUNCTION,

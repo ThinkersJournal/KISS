@@ -1,0 +1,15 @@
+# KISS-Conform — the per-conjunct trace ledger (KISS#387 (a); board 271 "Still (a)").
+#
+# One row per CONJUNCT of a clause that is a conjunction: clause <TAB> label <TAB> statement.
+# A test discharges a conjunct with `// Backs: KISS-X-n-nnnn [label]`; a listed clause is TRACED
+# for `kiss_trace.py --freeze-ready` only when every label below is cited by some test. A clause
+# with one conjunct is not listed. Which clauses are conjunctions is editorial: this file proves
+# each LISTED conjunct is cited, not that the list is complete. See tools/kiss_conjuncts.py.
+KISS-CONFORM-6.8-0005	zero-sign-re	Exact-bit sign of a zero-valued REAL component.
+KISS-CONFORM-6.8-0005	zero-sign-im	Exact-bit sign of a zero-valued IMAGINARY component.
+KISS-CONFORM-6.8-0005	magnitude-ulp	ULP/tolerance comparison of the component magnitude.
+KISS-CONFORM-6.8-0005	not-fourth-class	The split comparator is not registered as a fourth enum member.
+KISS-OPS-6.18-0017	zero-sign-re	Exact-bit sign of a zero-valued REAL component of carg/clog/csqrt/cexp.
+KISS-OPS-6.18-0017	zero-sign-im	Exact-bit sign of a zero-valued IMAGINARY component of carg/clog/csqrt/cexp.
+KISS-OPS-6.18-0017	pi-endpoint	Exact-bit selection of the +pi / -pi branch endpoint.
+KISS-OPS-6.18-0017	magnitude-ulp	ULP/tolerance comparison of the component magnitudes.

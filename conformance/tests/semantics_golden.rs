@@ -529,6 +529,9 @@ fn test_ops_decomposition_accuracy_refinement() {
 /// A plain ULP comparator cannot see a wrong sign of zero (ulp_distance(-0,+0)==1),
 /// so it PASSES a +0.0 result where -0.0 is pinned; the split comparator CATCHES
 /// it exact-bit. Teeth: this is the divergence between the two comparators.
+/// It exercises the IMAGINARY zero only (the real-zero sign is `test_conform_split_comparator`'s).
+/// Backs: KISS-OPS-6.18-0017 [zero-sign-im, pi-endpoint, magnitude-ulp]
+/// Backs: KISS-CONFORM-6.8-0005 [zero-sign-im]
 #[test]
 fn test_ops_complex_branch_sign_exact() {
     // A carg-style result with a signed-zero imaginary component: -0.0 is pinned,

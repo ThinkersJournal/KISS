@@ -83,6 +83,8 @@ import subprocess
 import sys
 from collections import defaultdict
 
+from kiss_conjuncts import conjunct_cites, read_conjuncts, structural_problems, uncited
+
 # A clause identifier: KISS-<SUB>-<section>-<4 digits>[optional atomicity letter].
 CLAUSE_ID = r"KISS-[A-Z]+-\d+(?:\.\d+)?-\d{4}[a-z]?"
 
@@ -543,6 +545,8 @@ def discover_tests(conf_dir, collisions=None):
                     # the §6.1-0003 harness-internal tag: None when absent, else its reason
                     # (possibly empty, which main() reports as a violation).
                     "internal": _internal_reason(_leading_comment(src, m.start())),
+                    # KISS#387 (a): conjunct citations `// Backs: KISS-X [label]` (kiss_conjuncts).
+                    "conj_cites": conjunct_cites(scope),
                     # PROVEN markers (#278): {cid: (subject, ref)} of well-formed proof
                     # testimony, and the clause ids of any malformed `Proven:` (flagged,
                     # never counted). A proof is credited only where the SAME test also
@@ -2443,6 +2447,14 @@ def main():
             bar = "#" * int(round(20.0 * b / n)) if n else ""
             print(f"      {sub:<9} {b:>4}/{n:<4} {100.0*b/n:>5.1f}%  {bar}")
 
+    # KISS#387 (a): the per-conjunct ledger. A structural fault (unknown clause, unknown label) is
+    # wrong at any time, so it fails here; an UNCITED conjunct fails only the freeze gate below.
+    conj_ledger, conj_problems = read_conjuncts(conf_dir)
+    conj_problems += structural_problems(conj_ledger, harness, set(clause_test))
+    for prob in conj_problems:
+        any_fail = note_fail("conjunct_ledger")
+        print(f"  [FAIL] CONJUNCTS.tsv: {prob}")
+
     if args.freeze_ready:
         # umbrella §5.3 condition 3 — "The sub-standard's KISS-Conform suite exists
         # and passes, with complete bidirectional clause-to-test traceability."
@@ -2480,6 +2492,17 @@ def main():
             else:
                 ready += 1
                 print(f"      [ OK ] {sub:<9} {tot:>3}/{tot:<4} traced (harness+lint) — every clause has a backing; whether each backing demonstrates its clause is NOT measured (#387)")
+        # KISS#387 (a): a listed clause is traced only when EVERY conjunct is cited by some test.
+        for sub in targets:
+            gap = uncited(conj_ledger, harness, sub_of, sub)
+            if gap:
+                any_fail = note_fail("freeze_ready_conjunct")
+                if not any(sub_of(c) == sub and not accounted(c) for c in unbacked):
+                    ready -= 1  # it printed [ OK ] above on existence alone
+                n_lbl = sum(len(v) for v in gap.values())
+                print(f"      [FAIL] {sub:<9} {n_lbl} listed conjunct(s) of {len(gap)} clause(s) cited by no test")
+                for cid, labels in list(gap.items())[:3]:
+                    print(f"                 e.g. {cid} [{', '.join(labels)}]")
         print()
         print(f"      {ready} of {len(targets)} sub-standard(s) satisfy §5.3 condition 3.")
         print("      NOTE: `satisfy` is an EXISTENCE reading (a backing is named for every clause). Condition 3 asks for")
