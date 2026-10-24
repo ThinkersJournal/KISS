@@ -1855,7 +1855,7 @@ contract_kind = kiss-contract
 contract_version = 3
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = ew2/f32,f32,f32/strided/cuda:sm89
+accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
 op_identity = add
 target_capability = cuda:sm89
 ```
@@ -1905,7 +1905,7 @@ carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
-accept_predicate = sk6|ew2|f32
+accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
 supported_dtype_set = [f32]
 awkward_layout_strategy = decline
 in_place_eligible_variants = []
@@ -1941,7 +1941,7 @@ carries `cost_provenance` (equal to the Guarantees value above) and MUST NOT car
 [section:7:provenance]
 kernel_source = authored
 revision_base = r0
-revision_hash = abc
+revision_hash = 4:deadbeef
 cost_provenance = measured
 negotiation_metadata = 0:
 ```

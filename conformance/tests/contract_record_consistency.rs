@@ -239,3 +239,13 @@ fn record_check_declines_malformed_input_without_panicking() {
         let _ = check_record_consistency(&c[..n]); // must not panic on any prefix
     }
 }
+
+/// Not a bound clause: the Appendix C golden document (the foreign-reader target of 8-0004 and
+/// 8-0005) is itself a consistent record. It was not, before 0.4.40: its Identity and Capabilities
+/// `accept_predicate` disagreed (and neither was a valid `structure_key`), and its Identity and
+/// Provenance `revision_hash` were spelled differently. Appendix C and this golden were corrected
+/// together, so a regression in either shows here.
+#[test]
+fn appendix_c_golden_document_is_record_consistent() {
+    assert_eq!(check_record_consistency(&appendix_c_golden_document()), Ok(()));
+}

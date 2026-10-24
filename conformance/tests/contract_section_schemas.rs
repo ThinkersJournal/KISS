@@ -154,7 +154,7 @@ fn test_contract_interface_block_bytes() {
 #[test]
 fn test_contract_capabilities_block_bytes() {
     let fields: [(&str, &str); 8] = [
-        ("accept_predicate", "sk6|ew2|f32"),
+        ("accept_predicate", "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-"),
         ("supported_dtype_set", "[f32]"),
         ("awkward_layout_strategy", "decline"),
         ("in_place_eligible_variants", "[]"),
@@ -166,7 +166,7 @@ fn test_contract_capabilities_block_bytes() {
     assert_schema_arms(parse_capabilities_block, 5, "capabilities", &fields, ("count_unit", "elements"));
     assert_eq!(
         block(5, "capabilities", &fields),
-        b"[section:5:capabilities]\naccept_predicate = sk6|ew2|f32\nsupported_dtype_set = [f32]\n\
+        b"[section:5:capabilities]\naccept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-\nsupported_dtype_set = [f32]\n\
           awkward_layout_strategy = decline\nin_place_eligible_variants = []\nindex_width = ix32\n\
           determinism_class = exact-byte\nprecision_class = strict\ncost = 1\n"
             .to_vec(),
@@ -184,7 +184,7 @@ fn test_contract_provenance_block_bytes() {
     let fields: [(&str, &str); 5] = [
         ("kernel_source", "authored"),
         ("revision_base", "r0"),
-        ("revision_hash", "abc"),
+        ("revision_hash", "4:deadbeef"),
         ("cost_provenance", "measured"),
         ("negotiation_metadata", "0:"),
     ];
@@ -192,7 +192,7 @@ fn test_contract_provenance_block_bytes() {
     assert_eq!(
         block(7, "provenance", &fields),
         b"[section:7:provenance]\nkernel_source = authored\nrevision_base = r0\n\
-          revision_hash = abc\ncost_provenance = measured\nnegotiation_metadata = 0:\n"
+          revision_hash = 4:deadbeef\ncost_provenance = measured\nnegotiation_metadata = 0:\n"
             .to_vec(),
         "KISS-CONTRACT-6.9-0001: Provenance block bytes"
     );

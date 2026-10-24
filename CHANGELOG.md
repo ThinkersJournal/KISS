@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.40 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- **Correction** (PM ruling 2026-10-24: fix the example, not the clauses): the Appendix C worked contract violated KISS-CONTRACT-6.7-0002 and 6.9-0003, which `check_record_consistency` (0.4.39) made detectable. Appendix C and its golden document now conform, with no normative clause change: the Identity and Capabilities `accept_predicate` are both the real strided `ew2` cell token `sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-` (the old Identity value `ew2/f32,f32,f32/strided/cuda:sm89` and Capabilities value `sk6|ew2|f32` were neither the same nor a valid `structure_key`; the target component now equals `target_capability`), and the Provenance `revision_hash` is `4:deadbeef`, the Identity value. Regenerated `corpus/contract_vectors.json` (golden bytes, `len`/`crc32`, and the single-fault declines derived from it); `contract_section_schemas.rs` fixtures follow. A foreign reader that pinned the old golden bytes must re-pin; `contract_version` and the wire are unmoved. New regression test `appendix_c_golden_document_is_record_consistent`.
+
 ## 0.4.39 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Reference record-consistency validator `contract::check_record_consistency` (R3.2/R3.3 per the PM's order (b)), no spec or wire change. Backs four Contract clauses (6.3-0009, 6.7-0002, 6.9-0003, 6.9-0006): harness 447 -> 451, untested 399 -> 395, lint unmoved. New: `IDENTITY_FIELDS`, `GUARANTEES_FIELDS`, `parse_identity_block`, `parse_guarantees_block`, `RecordDecline`. Finding, not fixed here: the Appendix C golden document does NOT satisfy 6.7-0002 (Identity accept_predicate `ew2/f32,f32,f32/strided/cuda:sm89`, Capabilities `sk6|ew2|f32`) nor 6.9-0003 (Identity `4:deadbeef`, Provenance `abc`); changing the golden is a frozen-surface decision for the PM.
