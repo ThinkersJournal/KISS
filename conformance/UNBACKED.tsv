@@ -34,37 +34,37 @@
 # adds a newly-unbacked one as bare `untested`.
 #
 # clause_id	test_name	category	note
-KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte	untested	
+KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte	untested	Obligation on the whole of KISS-Conform (every exact-bytes clause is compared byte-exact, never with tolerance); it is a property of the harness's comparators across all tests, not of one subject, and a single test would only show its own comparison. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56	lint:kiss_wire	the 56-byte envelope size drifts between §6.1-0001 and ENVELOPE_LEN
 KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1	untested	Producer-side: the version a producer writes is a caller-supplied field of `Envelope` and the library has no producer constant, so a test could only assert the value its own fixture passed (circular). The reader side, which rejects any other value, is backed by 6.2-0003. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap	lint:kiss_wire	the profiles cap 16 drifts between §6.1-0007 and MAX_PROFILES
-KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length	untested	
-KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability	untested	
-KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	
-KISS-ANNOUNCE-6.3-0007	test_announce_revision_hash_compared_bytewise	untested	
+KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length	untested	The reference `announce::decode` has one envelope version and checks length first; with a single version the order of prefix-read and length-check is not observable from its output, and no second version exists to make it so. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability	untested	Entailed by the closed-form record footprint already pinned under 6.3-0001 (no field beyond the identity triple fits); a second test would re-read the same evidence and over-credit. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	Obligation on a consumer's cache; conformance/ has an availability-list codec but no consumer or cache, so hit/miss has no subject to run. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.3-0007	test_announce_revision_hash_compared_bytewise	untested	Obligation on a consumer comparing revision_hash; conformance/ has no consumer or comparison function (only the codec), so a test could only exercise the language's `==` on arrays. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.3-0009	test_announce_structure_key_length_bounds	lint:kiss_wire	MAX_STRUCTURE_KEY_LEN drifts between §6.3-0009 and announce.rs
 KISS-ANNOUNCE-6.3-0010	test_announce_record_count_bounds	lint:kiss_wire	MAX_AVAILABILITY_RECORDS drifts between §6.3-0010 and announce.rs
-KISS-ANNOUNCE-6.4-0002	test_announce_query_response_is_contract_or_decline	untested	
-KISS-ANNOUNCE-6.4-0003	test_announce_query_revision_match_or_decline	untested	
-KISS-ANNOUNCE-6.4-0005	test_announce_query_bit_implies_endpoint	untested	
-KISS-ANNOUNCE-6.4-0008	test_announce_no_query_bit_declines	untested	
+KISS-ANNOUNCE-6.4-0002	test_announce_query_response_is_contract_or_decline	untested	Obligation on a provider; conformance/ has an Announce byte codec (announce.rs) but no provider, so no in-repo subject can answer a query. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.4-0003	test_announce_query_revision_match_or_decline	untested	Obligation on a provider; conformance/ has an Announce byte codec (announce.rs) but no provider, so no in-repo subject can answer a query. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.4-0005	test_announce_query_bit_implies_endpoint	untested	Obligation on a provider that advertises FEAT bit 33; conformance/ has no provider and no capability-bit constants, so the bit-implies-endpoint link has no subject. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.4-0008	test_announce_no_query_bit_declines	untested	Obligation on a provider; conformance/ has an Announce byte codec (announce.rs) but no provider, so no in-repo subject can answer a query. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.4-0009	test_announce_decline_code_enum	lint:kiss_wire	a decline_code value drifts between the §6.4-0009 owner and the reference codec
-KISS-ANNOUNCE-6.4-0010	test_announce_unknown_decline_code_is_generic	untested	
-KISS-ANNOUNCE-6.4-0012	test_announce_query_default_revision_is_highest	untested	
+KISS-ANNOUNCE-6.4-0010	test_announce_unknown_decline_code_is_generic	untested	Obligation on a consumer receiving a CDEC frame; the library encodes CDEC (`DeclineResponse::encode`) but has no CDEC decoder or consumer, so there is nothing that receives an unknown code. Recorded as a reason, not backed.
+KISS-ANNOUNCE-6.4-0012	test_announce_query_default_revision_is_highest	untested	Obligation on a provider; conformance/ has an Announce byte codec (announce.rs) but no provider, so no in-repo subject can answer a query. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.5-0001	test_announce_zero_dependency_no_driver_load	untested	Negative property about any implementation (no driver or backend library loaded while producing or parsing). announce.rs is a pure byte codec with no loader, but a test over that one module cannot show the property for an implementation under test; recorded as a reason, not backed.
 KISS-ANNOUNCE-6.5-0002	test_announce_impl_std_only	untested	Obligation on every implementation to be std-only. conformance/Cargo.toml has an empty [dependencies] table, which is a fact about this crate, not a check that binds an implementation; no lint claims it. Recorded as a reason, not backed.
-KISS-ANNOUNCE-7.1-0003	test_announce_producer_never_exceeds_profile_cap	untested	
-KISS-ANNOUNCE-7.1-0004	test_announce_retire_by_floor_window	untested	
-KISS-ANNOUNCE-7.2-0001	test_announce_capabilities_axis_partition	untested	
-KISS-ANNOUNCE-7.2-0002	test_announce_ext_bit_assignments	untested	
+KISS-ANNOUNCE-7.1-0003	test_announce_producer_never_exceeds_profile_cap	untested	The reference encoder enforces the 16-profile cap with a debug_assert only, so its behaviour on 17 profiles differs between debug and release builds; the decoder side (reject profiles_len > cap) is backed by 6.2-0005. A producer test would be build-profile dependent. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.1-0004	test_announce_retire_by_floor_window	untested	Retirement floor is an implementation's own declared setting; the crate declares no floor, so there is no subject whose advertised profiles could be compared to one. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.2-0001	test_announce_capabilities_axis_partition	untested	The capability axis partition (EXT/FEAT/SUB) has no constants in announce.rs; the reference only carries `capabilities` as an opaque u64, so a test would restate the spec's numbers. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.2-0002	test_announce_ext_bit_assignments	untested	EXT-bit assignments are registered outside this crate and announce.rs has no assignment table, so there is no subject whose interpretation could be checked. Recorded as a reason, not backed.
 KISS-ANNOUNCE-7.2-0003	test_announce_feat_bit_assignments	lint:kiss_tables	a FEAT capability bit's name drifts between the §7.2 definition and the §7.2-0003 clause
-KISS-ANNOUNCE-7.2-0004	test_announce_sub_bit_assignments	untested	
-KISS-ANNOUNCE-7.2-0005	test_announce_reserved_range_tiers	untested	
-KISS-ANNOUNCE-7.2-0006	test_announce_unassigned_bits_zero	untested	
+KISS-ANNOUNCE-7.2-0004	test_announce_sub_bit_assignments	untested	SUB-bit assignments have no constants or interpreter in announce.rs (capabilities is an opaque u64), so no subject interprets them. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.2-0005	test_announce_reserved_range_tiers	untested	Tier sub-ranges have no constants or interpreter in announce.rs; a test would restate the spec's table. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.2-0006	test_announce_unassigned_bits_zero	untested	Producer must zero unassigned capability bits, but announce.rs defines no assigned-bit set and writes whatever u64 it is given; there is no producer subject that decides bits. Recorded as a reason, not backed.
 KISS-ANNOUNCE-7.2-0008	test_announce_capability_registry_pr_gated	untested	Registry governance: a capability-bit assignment must come from a merged change to the PR-gated registry. The registry lives outside this repo, so no in-repo subject can read whether an assignment was merged; recorded as a reason, not backed.
-KISS-ANNOUNCE-7.2-0010	test_announce_sub_axis_is_presence_only	untested	
-KISS-ANNOUNCE-7.3-0001	test_announce_both_roles_emit_envelope	untested	
-KISS-ANNOUNCE-7.3-0002	test_announce_consumer_zeroes_provider_only_feat	untested	
+KISS-ANNOUNCE-7.2-0010	test_announce_sub_axis_is_presence_only	untested	Negative property of any implementation (never read a version from SUB bits); announce.rs treats capabilities as opaque and has no SUB reader, so absence of such reading cannot be observed. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.3-0001	test_announce_both_roles_emit_envelope	untested	Two halves: both roles emit the same 56-byte envelope (announce.rs has no role distinction) and negotiation is order-independent (only the commutativity of `negotiate` is checkable). Half has no subject, so it is not counted as backed. Recorded as a reason, not backed.
+KISS-ANNOUNCE-7.3-0002	test_announce_consumer_zeroes_provider_only_feat	untested	Role rule about provider-only FEAT bits; announce.rs has no roles or bit constants, so there is no consumer subject that sets or zeroes them. Recorded as a reason, not backed.
 KISS-ANNOUNCE-8-0001	test_announce_two_version_axes_independent	untested	Versioning-process rule: the envelope schema version and the crate semver are independent axes. It constrains how a release is numbered, and no executable subject in conformance/ sees a release decision; recorded as a reason, not backed.
 KISS-ANNOUNCE-8-0002	test_announce_shape_change_bumps_version	untested	Versioning-process rule: a change to the envelope shape must bump envelope_version. A test sees only the current shape, never a change to it; detecting one needs a base-ref comparison that no tool here performs. Recorded as a reason, not backed.
 KISS-ANNOUNCE-8-0003	test_announce_additive_capability_no_version_bump	untested	Versioning-process rule: assigning a reserved capability bit, EXT token or SUB flag does not bump envelope_version. Like 8-0002 it concerns a change between releases, which no in-repo subject observes; recorded as a reason, not backed.
