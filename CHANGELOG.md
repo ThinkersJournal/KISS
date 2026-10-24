@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.60 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- HANDOFF rewritten to current state (R3.8 progress, #136 waiting on CireSnave). Docs only.
+
 ## 0.4.59 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.8 KISS#498, docs only: `docs/design-498-two-level-backing.md`. Reading `kiss_trace.py` at `3e994b0` shows citations are already many-to-one (`cited` is clause to a set of tests); only the §9 pointer is one-to-one, so the defect is the `tier_cited_other` report label (20 clauses) conflating a stale pointer with a second test adding a level. Recommends a report-only split after measuring those 20, and a level qualifier on `Backs:` only if a second instance appears. No tool, spec, test or wire change; floor unmoved. Numbered 0.4.59 because #647 proposes 0.4.58.
