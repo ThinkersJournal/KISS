@@ -988,7 +988,7 @@ contract_kind = kiss-contract
 contract_version = 3
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = ew2/f32,f32,f32/strided/cuda:sm89
+accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
 op_identity = add
 target_capability = cuda:sm89
 ";
@@ -1003,7 +1003,7 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
             ("contract_version", Value::Str("3".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
-            ("accept_predicate", Value::Str("ew2/f32,f32,f32/strided/cuda:sm89".into())),
+            ("accept_predicate", Value::Str("sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-".into())),
             ("op_identity", Value::Str("add".into())),
             ("target_capability", Value::Str("cuda:sm89".into())),
         ],
@@ -1080,7 +1080,7 @@ pub fn appendix_c_capabilities_block() -> Vec<u8> {
         5,
         "capabilities",
         &[
-            ("accept_predicate", Value::Str("sk6|ew2|f32".into())),
+            ("accept_predicate", Value::Str("sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-".into())),
             ("supported_dtype_set", Value::Str("[f32]".into())),
             ("awkward_layout_strategy", Value::Str("decline".into())),
             ("in_place_eligible_variants", Value::Str("[]".into())),
@@ -1187,7 +1187,7 @@ pub fn appendix_c_provenance_block() -> Vec<u8> {
         &[
             ("kernel_source", Value::Str("authored".into())),
             ("revision_base", Value::Str("r0".into())),
-            ("revision_hash", Value::Str("abc".into())),
+            ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
             ("cost_provenance", Value::Str("measured".into())),
             ("negotiation_metadata", Value::Str("0:".into())),
         ],
