@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.70 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Comments only, KISS#147: 15 doc-comment lines in `conformance/src/{dtype,fp,integer}.rs` respelled from the retired `s4`/`e5m2` to `i4`/`f8e5m2`. No code, no behaviour. Numbered 0.4.70 because #659 (0.4.69) merged first.
+
 ## 0.4.69 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Spec text, KISS#379 (PM ruling A, 2026-10-24): KISS-Consume §8.1 now states the schema version's value, **1 by construction**. It records existing behaviour; no behaviour changes. Closes the uncomplyable half of KISS-CONSUME-8.1-0001(b). Numbered 0.4.69 because #658 proposes 0.4.68.
