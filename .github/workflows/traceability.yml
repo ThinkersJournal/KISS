@@ -46,6 +46,10 @@ jobs:
       # test proving the instrument can fail was itself never executed.
       - name: kiss_trace gate discovery + gate-only reporting (negative controls)
         run: python tools/test_kiss_trace_gates.py
+      # A `*Test:*` tag followed by a name list binds only its first name; the check that
+      # makes that loud (#400) is shown to red on the list and stay quiet on a single name.
+      - name: kiss_trace partial-bind check (negative controls)
+        run: python tools/test_kiss_trace_partial_bind.py
       # The citation audit reports on the integrity of the coverage numbers, so its
       # OWN discrimination is what must run: the controls prove it does not simply
       # flag every reverse citation. The audit itself is non-gating by design — it

@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.54 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.6 KISS#400 option 3, tooling only, no spec, src, corpus or wire change; floor unmoved. A `*Test:*` tag followed by a name list (`` `a`, `b` ``, also `;` `+` `&` `/` `and` `or`) bound only its first name and nothing reported it, so a clause read as naming two tests while the tracer recorded one. `kiss_trace` now reports it as a violation. Measured at `origin/main` 4c4d890: 961 `*Test:*` tags over the 12 spec files, 0 list continuations, so the check is clean on the corpus and fires on a fixture (`tools/test_kiss_trace_partial_bind.py`, born-red: 9 failures without the check, the two single-name controls pass either way). It does not give a clause two tests; options 1 and 2 of #400 (a per-conjunct model) are not taken. The new test is wired into the `kiss-trace` job.
+
 ## 0.4.53 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.7 KISS#239 items 1 and 2, tools tests only, no spec, src, corpus or wire change; floor unmoved. `tools/test_kiss_dtypes_manifest.py` pinned `storage_bits` for 4 of 24 dtype arms and `kind` for 2; it now pins `(kind, storage_bits, reserved)` for all 24 against a table transcribed from the spec, and the token count per width (the 8-bit cluster is nine). A control applies five same-width mutations and an `i16`/`u16` kind exchange to a copy of the real manifest and requires each be reported; a mutation of the normative §6.1 table row for `i16` was caught by both new tests. Item 3 (a discriminating swap vector in the corpus) is not done: it needs a vector home in KISS-Conform.

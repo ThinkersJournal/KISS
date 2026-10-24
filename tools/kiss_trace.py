@@ -96,6 +96,11 @@ RE_HEAD = re.compile(r"^#{1,6}\s+.*$", re.M)
 # A `*Test:*` tag inside a clause block. `\s*` spans a line wrap between the tag
 # and its backtick-quoted test name.
 RE_TEST = re.compile(r"\*Test:\*\s*`([A-Za-z][A-Za-z0-9_]*)`")
+# A name LIST after one tag (`*Test:* `a`, `b``): RE_TEST binds only `a`, so a clause author who
+# wrote two names reads as naming two tests while the tracer recorded one (#400). Anchored at the
+# END of a matched tag, so it fires only on a separator then another backticked identifier, not
+# on prose that happens to quote a name later in the line.
+RE_TEST_LIST_CONT = re.compile(r"\s*(?:,|;|\+|&|/|and\b|or\b)\s*`[A-Za-z][A-Za-z0-9_]*`")
 
 # A clause that DECLARES ITSELF a checklist gate: its `*Test:*` names a human AUDIT
 # procedure, not a function. The suite writes this as `(checklist gate; ...)` right
@@ -1403,6 +1408,7 @@ class DocResult:
         self.terms = {}      # clause_id -> distinctive terms (#246)
         self.attested = set()   # clause_ids the spec declares CHECKLIST GATES (#505)
         self.matrix = []     # (clause_id, test, line)
+        self.partial = []    # (clause_id, line): a *Test:* tag followed by a name list (#400)
         self.violations = []
 
     def add(self, msg):
@@ -1548,6 +1554,9 @@ def parse(path, res):
         end = next(b for b in boundaries if b > pos)
         block = text[pos:end]
         res.body.append((cid, lineno(pos), RE_TEST.findall(block)))
+        for tm in RE_TEST.finditer(block):
+            if RE_TEST_LIST_CONT.match(block, tm.end()):
+                res.partial.append((cid, lineno(pos + tm.start())))
         res.terms[cid] = clause_terms(block)
         if RE_CHECKLIST_GATE.search(block):
             res.attested.add(cid)
@@ -1675,6 +1684,11 @@ def check_doc(res):
             res.add(f"{msg}: ... and {len(ids) - 8} more")
     report_set(body_ids - matrix_ids, "clause defined in body but missing from §9 matrix")
     report_set(matrix_ids - body_ids, "clause in §9 matrix but no body definition")
+
+    # 3b. a name list after one tag binds only its first name, silently (#400): make it loud.
+    for cid, ln in res.partial:
+        res.add(f"*Test:* tag is followed by a name list and binds only its first name: {cid} (line {ln}); "
+                "one test per tag, so name the clause's other test(s) with `Backs:`/`Enforces` citations")
 
     # 4. one test per body clause, and body test == matrix test
     matrix_test = {c: t for c, t, _ in res.matrix}
