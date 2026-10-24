@@ -2333,13 +2333,13 @@ def main():
     print(f"      {n_uncited} executable tests cite no clause and are not named by one: "
           f"{n_tagged} tagged harness-internal, {len(orphans)} orphans.")
     if orphans:
-        any_fail = True
+        any_fail = note_fail("orphan_test")
         print(f"  ORPHAN TEST (KISS-CONFORM-6.1-0003): {len(orphans)} executable tests cite no live "
               f"clause and carry no `// harness-internal: <reason>` tag.")
         for t in orphans:
             print(f"      {t}  ({harness[t]['file']})")
     if bad_tags:
-        any_fail = True
+        any_fail = note_fail("harness_internal_tag")
         print(f"  HARNESS-INTERNAL TAG MISUSED (KISS-CONFORM-6.1-0003): {len(bad_tags)}")
         for t, why in bad_tags:
             print(f"      {t}  ({harness[t]['file']}): {why}")
