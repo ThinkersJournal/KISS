@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.47 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#385, tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386. `test_synth_decline_taxonomy_complete` (KISS-SYNTH-6.6-0003f) enumerated the crate side from a hard-coded six-entry array, so a seventh `pub const` in `announce::decline_code` passed the whole suite (the comment claimed otherwise). It now also reads the constants the SOURCE declares inside `pub mod decline_code` and requires them to be exactly the six; the issue's own mutation (`PROVISION_TIMEOUT = 0x7`) reddens it, and a control shows the reader counts a seventh on a synthetic module. Of the issue's options this takes (ii), a source-level check; (i), an enum with an exhaustive match, would change the public `decline_code` API and is not taken. It cites the clause (NAMED -> CITED, README `named` 234 -> 233).
+
 ## 0.4.46 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 KISS#376, tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386. `test_classify_target_fixed_width_juxtaposition` (KISS-CLASSIFY-6.8-0006) validated constants it declared itself, so no change to the spec or the code could redden it. It now reads the `vulkan:sg64.ops-….arith-…` fields from `classify.md` Appendix A and `spec/namespaces/vulkan.md` (which must agree) and runs the fixed-width and delimiter checks on those; controls show the checks reject a non-single-byte juxtaposed member, an unsorted field, an undelimited variable-width field and a same-width delimited one. The issue's own mutation (`ops-abclqrstvw` -> `ops-abclqrstvwXY9` in the spec) now reddens it. It cites the clause (NAMED -> CITED, README `named` 235 -> 234). Design call taken: parse the spec in the harness, rather than move the check to `kiss_vocab.py` or pin the transcription.
