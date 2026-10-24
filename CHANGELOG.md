@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.33 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 28 bare-`untested` Consume rows. Most lack a subject: `conformance/` has no lifter or emitter. Consume now has no empty-reason row.
+
 ## 0.4.32 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Ledger only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for the 20 remaining bare-`untested` Announce rows (6.0-0001, 6.2-0010, 6.3-0002/-0006/-0007, 6.4-0002/-0003/-0005/-0008/-0010/-0012, 7.1-0003/-0004, 7.2-0001/-0002/-0004/-0005/-0006/-0010, 7.3-0001/-0002; 6.1-0005 got its reason in 0.4.30). Announce now has no empty-reason row; most lack a subject because `announce.rs` is a byte codec with no provider, consumer, role or capability-bit table. Also keeps the `# 0.9.14` comment on the CodeRipper portfolio pin.
