@@ -581,7 +581,7 @@
 # R3.2 ops (0.4.11): lint 43 -> 44, untested 411 -> 410. KISS-OPS-6.17-0004 (no compute-precision spelling in the §6.16 storage dtype
 # table) moves `untested` -> `lint:kiss_ops`. 6.17-0006 stays `untested`, recorded PARTIAL (no mantissa-rounding subject in conformance/):
 # floor unmoved for it. RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said the lint set gained KISS-OPS-6.17-0004.
-harness	436
+harness	439
 lint	44
-untested	410
+untested	407
 proven	20

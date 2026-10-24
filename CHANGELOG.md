@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.30 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Tests and ledger only, no spec or wire change (R3.2): `announce_frames.rs` gains producer-side tests for KISS-ANNOUNCE-6.1-0009, -0014 and -0015, read from the raw encoded bytes (harness 436 -> 439, untested 410 -> 407). 6.1-0005 stays untested with a recorded reason (the version a producer writes is a caller-supplied field, so a test would be circular). The advisory CodeRipper portfolio caller is repinned to coderipper d14a22b (CodeRipper 0.9.14, was 0.9.6; coderipper#142).
+
 ## 0.4.29 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Spec text and reference-evaluator change, no wire change (KISS#410, R1.14): `spec/contract.md` §6.5-0004a defines **the launch-scalar symbol vocabulary of a contract** as the symbols its own Interface `positional_signature` declares (not the whole class table), and §6.6-0006, §6.7-0006 and §6.11-0008 now say "of this contract" and use one spelling. The reference `LaunchScalars.ws_bytes` becomes `Option<i64>` so an undeclared workspace declines `UnknownSymbol` instead of reading as `0` (**breaking for a caller constructing `LaunchScalars`**; the crate is pre-1.0). A new test pins that the same expression is accepted where its class is declared and declines where it is not.
