@@ -585,7 +585,11 @@
 # 6.4-0001 (artifact first), 6.4-0001b (frame layout), 6.4-0001c (PRSP vs CRSP tag), 6.4-0001d (format tag), 6.2-0003 (contract length-delimited, equal to the CRSP payload),
 # 6.2-0003a (opaque), 6.2-0003b (not parsed by the host), 6.2-0004 (inner framing independent of the PRSP prefix). Lint unmoved. NOT bound: 6.4-0001a, 6.3-0006/-0006a, 6.2-0006
 # (provider or contract-Identity halves have no subject). RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
-harness	447
+# R3.3 contract record-consistency validator (0.4.39): harness 447 -> 451, untested 399 -> 395. `contract::check_record_consistency` backs four
+# KISS-CONTRACT clauses that were left unbacked until a record-consistency validator existed: 6.3-0009 (Identity kind/version equal the header), 6.7-0002 (Capabilities
+# accept_predicate equals Identity), 6.9-0003 (Provenance revision_hash equals Identity), 6.9-0006 (Provenance cost_provenance equals Guarantees). Lint unmoved.
+# RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
+harness	451
 lint	44
-untested	399
+untested	395
 proven	20

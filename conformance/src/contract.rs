@@ -600,6 +600,131 @@ pub fn parse_provenance_block(block: &[u8]) -> Result<Vec<(String, String)>, Sec
     parse_section_block(block, 7, "provenance", &PROVENANCE_FIELDS, &["audited_status"])
 }
 
+// ---------------------------------------------------------------------------
+// Record consistency — the cross-section equalities of a live contract record.
+// ---------------------------------------------------------------------------
+
+/// The Identity section's field schema (§6.3-0001), in the pinned §6.11-0005 order.
+pub const IDENTITY_FIELDS: [&str; 7] = [
+    "contract_kind",
+    "contract_version",
+    "kernel_name",
+    "revision_hash",
+    "accept_predicate",
+    "op_identity",
+    "target_capability",
+];
+/// The Guarantees section's field schema (§6.8-0001), in the pinned §6.11-0005 order.
+pub const GUARANTEES_FIELDS: [&str; 8] = [
+    "reference_function",
+    "per_backend_ulp_tiers",
+    "determinism_class",
+    "math_fidelity",
+    "accumulation_type",
+    "bit_stability",
+    "audited_status",
+    "cost_provenance",
+];
+
+/// Read + validate an Identity section block (§6.3-0001).
+pub fn parse_identity_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(block, 1, "identity", &IDENTITY_FIELDS, &[])
+}
+
+/// Read + validate a Guarantees section block (§6.8-0001).
+pub fn parse_guarantees_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(block, 6, "guarantees", &GUARANTEES_FIELDS, &[])
+}
+
+/// A typed decline from [`check_record_consistency`]. Never a panic.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RecordDecline {
+    /// The transport framing was malformed.
+    Framing(ContractDecline),
+    /// A section the check needs is absent from the body.
+    MissingSection(&'static str),
+    /// A section's field schema was violated.
+    Section { section: &'static str, decline: SectionDecline },
+    /// An Identity `contract_kind` / `contract_version` disagrees with the transport header (§6.3-0009).
+    IdentityHeaderMismatch { field: &'static str, identity: String, header: String },
+    /// The Capabilities `accept_predicate` differs from the Identity one (§6.7-0002).
+    AcceptPredicateMismatch { identity: String, capabilities: String },
+    /// The Provenance `revision_hash` differs from the Identity one (§6.9-0003).
+    RevisionHashMismatch { identity: String, provenance: String },
+    /// The Provenance `cost_provenance` differs from the Guarantees one (§6.9-0006).
+    CostProvenanceMismatch { guarantees: String, provenance: String },
+}
+
+fn field<'a>(fields: &'a [(String, String)], key: &str) -> &'a str {
+    // parse_section_block guarantees every schema key is present exactly once.
+    fields.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str()).unwrap_or("")
+}
+
+/// The block of the section with heading `[section:<id>:<name>]`, up to the next heading.
+fn section_block<'a>(body: &'a [u8], id: u8, name: &str) -> Option<&'a [u8]> {
+    let heading = format!("[section:{id}:{name}]\n").into_bytes();
+    let mut start = None;
+    let mut off = 0;
+    for line in body.split_inclusive(|&b| b == b'\n') {
+        if let Some(s) = start {
+            if line.starts_with(b"[section:") {
+                return Some(&body[s..off]);
+            }
+        } else if line == heading.as_slice() {
+            start = Some(off);
+        }
+        off += line.len();
+    }
+    start.map(|s| &body[s..])
+}
+
+/// Check the cross-section equalities a live contract record must satisfy, after the §6.1
+/// transport framing has read cleanly: the Identity `contract_kind`/`contract_version` equal the
+/// header's (§6.3-0009); the Capabilities `accept_predicate` equals the Identity one (§6.7-0002);
+/// the Provenance `revision_hash` equals the Identity one (§6.9-0003); the Provenance
+/// `cost_provenance` equals the Guarantees one (§6.9-0006). Values are compared as their
+/// serialized text, byte for byte. A typed decline on the first disagreement; never a panic.
+pub fn check_record_consistency(doc: &[u8]) -> Result<(), RecordDecline> {
+    let header = read_document(doc).map_err(RecordDecline::Framing)?;
+    // read_document succeeded, so the header line ends in an LF and the body follows it.
+    let lf = doc.iter().position(|&b| b == b'\n').unwrap_or(0);
+    let body = &doc[lf + 1..];
+    let get = |id: u8, name: &'static str| section_block(body, id, name).ok_or(RecordDecline::MissingSection(name));
+    let wrap = |section: &'static str| move |decline| RecordDecline::Section { section, decline };
+
+    let identity = parse_identity_block(get(1, "identity")?).map_err(wrap("identity"))?;
+    let guarantees = parse_guarantees_block(get(6, "guarantees")?).map_err(wrap("guarantees"))?;
+    let capabilities = parse_capabilities_block(get(5, "capabilities")?).map_err(wrap("capabilities"))?;
+    let provenance = parse_provenance_block(get(7, "provenance")?).map_err(wrap("provenance"))?;
+
+    for (key, header_value) in [
+        ("contract_kind", header.contract_kind.as_str()),
+        ("contract_version", header.contract_version.as_str()),
+    ] {
+        let id_value = field(&identity, key);
+        if id_value != header_value {
+            return Err(RecordDecline::IdentityHeaderMismatch {
+                field: if key == "contract_kind" { "contract_kind" } else { "contract_version" },
+                identity: id_value.to_string(),
+                header: header_value.to_string(),
+            });
+        }
+    }
+    let (a, b) = (field(&identity, "accept_predicate"), field(&capabilities, "accept_predicate"));
+    if a != b {
+        return Err(RecordDecline::AcceptPredicateMismatch { identity: a.into(), capabilities: b.into() });
+    }
+    let (a, b) = (field(&identity, "revision_hash"), field(&provenance, "revision_hash"));
+    if a != b {
+        return Err(RecordDecline::RevisionHashMismatch { identity: a.into(), provenance: b.into() });
+    }
+    let (a, b) = (field(&guarantees, "cost_provenance"), field(&provenance, "cost_provenance"));
+    if a != b {
+        return Err(RecordDecline::CostProvenanceMismatch { guarantees: a.into(), provenance: b.into() });
+    }
+    Ok(())
+}
+
 /// Parse exactly 8 lowercase-hex digits into a `u32` (the `crc32=` field form).
 fn parse_crc_hex(s: &str) -> Option<u32> {
     if s.len() == 8 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) {
