@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.62 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Spec text only, KISS#136 option A (CireSnave, board 271): KISS-CONFORM-6.1-0003 gains a carve-out for a harness-internal test, tagged `// harness-internal: <reason>`; an untagged test citing no live clause stays an orphan, and a tagged test that also cites a clause is a violation. No tool change in this PR; the gate that enforces it follows separately. Numbered 0.4.62 because #651 proposes 0.4.61.
+
 ## 0.4.61 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - ROADMAP R3.13 marked done, docs only: `tools/run_with_git_bash.py` already makes the three bash-launching suites run on Windows with WSL; re-run green at `fb39fdf`.
