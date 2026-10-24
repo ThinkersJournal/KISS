@@ -345,7 +345,13 @@ def check_mathfidelity_enum(spec_dir):
         otext = open(ops, encoding="utf-8").read()
         m = re.search(r"the\s+([a-z]+)-member enum `\{[^}]*bit-stable", otext)
         words = {"two": 2, "three": 3}
-        if m and words.get(m.group(1)) not in (None, len(MATHFIDELITY_MEMBERS)):
+        # A count word that cannot be read is a failed check, not a pass (#159): a reworded
+        # clause must not switch this comparison off without a sound.
+        if not m:
+            out.append("§6.17-0001 count word: no 'N-member enum {... bit-stable' phrase found")
+        elif m.group(1) not in words:
+            out.append(f"§6.17-0001 count word '{m.group(1)}-member' is not one this lint can read")
+        elif words[m.group(1)] != len(MATHFIDELITY_MEMBERS):
             out.append(f"§6.17-0001 says '{m.group(1)}-member' but the enum has "
                        f"{len(MATHFIDELITY_MEMBERS)} members")
     return out
@@ -384,7 +390,12 @@ def check_refusal_taxonomy(spec_dir):
                 out.append(f"§6.4-0001 owner is missing categor(y/ies): {miss}")
             cw = re.search(r"MUST be exactly the\s+(\w+)\s+categories", body)
             words = {"four": 4}
-            if cw and words.get(cw.group(1)) not in (None, len(REFUSAL_MEMBERS)):
+            # Unreadable count word = failed check, not a pass (#159).
+            if not cw:
+                out.append("§6.4-0001 count word: no 'MUST be exactly the N categories' phrase found")
+            elif cw.group(1) not in words:
+                out.append(f"§6.4-0001 count word '{cw.group(1)}' is not one this lint can read")
+            elif words[cw.group(1)] != len(REFUSAL_MEMBERS):
                 out.append(f"§6.4-0001 says '{cw.group(1)}' but names {len(REFUSAL_MEMBERS)}")
         else:
             out.append("KISS-CONSUME-6.4-0001 owner clause not found")

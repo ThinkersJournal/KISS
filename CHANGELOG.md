@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.58 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.8 KISS#159, tooling only; no spec, corpus, wire or floor change. Re-read at `origin/main` 3e994b0: the 6 `if sm and hm` sites in `kiss_wire.py` and the 2 in `kiss_vocab.py` the issue names already have an `else` that appends a violation ("not found on both sides"), so those no longer skip silently. The two that did are the count-word comparisons in `kiss_tables.py` (`§6.17-0001 two-member`, `§6.4-0001 exactly the four categories`): a missing phrase or a word outside the lint's table (`words.get(..) not in (None, n)`) switched the check off with no output. Each is now a violation. `tools/test_kiss_tables.py` gains 6 controls; with the fix reverted 4 fail (the wrong-word and clean-spec controls pass either way, by design). Not done: a per-group minimum on the printed `kiss_wire` counts (the miss is already reported, so the count backstop would only repeat it).
+
 ## 0.4.57 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.8 KISS#137, tooling plus two test renames; no spec, corpus or wire change, floor unmoved. `kiss_trace.discover_tests` keys by bare fn name, so a same-named `#[test]` in two files silently replaced the first and its citations. It now reports each repeat and `kiss_trace.py` fails with `DUPLICATE TEST NAME`. Measured at `origin/main` 9b746f6 by an independent walk that records every occurrence: 811 `#[test]` fns, 809 names, 2 collisions (`oracle_is_self_consistent_under_fuzz`, `corpus_is_reproducible`, in `differential.rs` and `integer_differential.rs`); the integer copies are renamed `int_*`, no clause cites either name. Control: with the renames reverted the tool prints both and exits `VIOLATIONS FOUND`. `tools/test_kiss_trace_duplicates.py` (2 controls) is wired into the `kiss-trace` job. #136, #498 and #159 of R3.8 remain open.
