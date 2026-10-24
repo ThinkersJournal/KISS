@@ -265,6 +265,9 @@ RE_RUST_TEST_CFG = re.compile(
 # (absent toolchain, absent device) declares it this way, because a bare
 # `eprintln!("SKIP"); return;` is invisible here — such a test reports `ok`
 # while asserting nothing, and the clause it backs is credited anyway.
+# KISS-CONFORM-6.1-0003 carve-out (KISS#136): a test of the suite's own machinery says so on a
+# comment line directly above it. The reason is mandatory; an empty one is reported, not honoured.
+RE_HARNESS_INTERNAL = re.compile(r"^//\s*harness-internal:[ 	]*(.*)$", re.M)
 RE_RUNTIME_GATE = re.compile(r"runtime_gate(?:_some)?!\(\s*\"([a-z0-9_-]+)\"")
 
 # spec order: umbrella first (must define no clauses), then the nine sub-standards.
@@ -436,6 +439,33 @@ def _leading_comment(src, start):
     return "\n".join(lines)
 
 
+def _internal_reason(leading):
+    """The reason on a `// harness-internal: <reason>` line, '' if the tag has none, None if absent."""
+    m = RE_HARNESS_INTERNAL.search(leading)
+    return m.group(1).strip() if m else None
+
+
+def find_orphans(harness, named_tests):
+    """(orphans, bad_tags) per KISS-CONFORM-6.1-0003.
+
+    An orphan cites no clause, is not named by a clause matrix row, and is not tagged
+    harness-internal. A bad tag is a tag with no reason, or one on a test that DOES bear on a
+    clause (it cites one or is named by a row), so the tag cannot hide a test the matrix should see.
+    """
+    orphans, bad = [], []
+    for t, i in sorted(harness.items()):
+        bears = bool(i["clauses"]) or t in named_tests
+        tag = i["internal"]
+        if tag is None:
+            if not bears:
+                orphans.append(t)
+        elif not tag:
+            bad.append((t, "the harness-internal tag has no reason"))
+        elif bears:
+            bad.append((t, "tagged harness-internal but cites or is named by a clause"))
+    return orphans, bad
+
+
 def discover_tests(conf_dir, collisions=None):
     """Every executable test function in the conformance harness.
 
@@ -510,6 +540,9 @@ def discover_tests(conf_dir, collisions=None):
                     # read as a false negative.
                     "tokens": {t.lower() for t in RE_WORD.findall(scope)},
                     "cited_raw": set(RE_CLAUSE_ID.findall(scope)),
+                    # the §6.1-0003 harness-internal tag: None when absent, else its reason
+                    # (possibly empty, which main() reports as a violation).
+                    "internal": _internal_reason(_leading_comment(src, m.start())),
                     # PROVEN markers (#278): {cid: (subject, ref)} of well-formed proof
                     # testimony, and the clause ids of any malformed `Proven:` (flagged,
                     # never counted). A proof is credited only where the SAME test also
@@ -2032,8 +2065,7 @@ def main():
     dangling = {cid: sorted(ts) for cid, ts in cited_all.items() if cid not in all_clause_ids}
 
     # Executable tests that cite no clause at all: real work the matrix cannot see.
-    orphans = sorted(t for t, i in harness.items()
-                     if not i["clauses"] and t not in set(clause_test.values()))
+    orphans, bad_tags = find_orphans(harness, set(clause_test.values()))
 
     # ---- the CATEGORY of each unbacked clause (why it has no harness test) ----
     # Priority: a live lint that declares it (authoritative, self-verifying) wins;
@@ -2292,9 +2324,25 @@ def main():
                 by_gate[harness[t]["gate"]] += 1
             detail = ", ".join(f"{g.split(':', 1)[1]}={n}" for g, n in sorted(by_gate.items()))
             print(f"          {len(rt_only):>4} runtime gated ({detail}) — declared via runtime_gate!")
+    # The README binds this count (kiss_readme_coverage `uncited_tests`), so it prints whether or not
+    # anything is an orphan: tests that cite no clause and no matrix row names, tagged or not.
+    named_tests = set(clause_test.values())
+    n_uncited = sum(1 for t, i in harness.items() if not i["clauses"] and t not in named_tests)
+    n_tagged = sum(1 for t, i in harness.items()
+                   if not i["clauses"] and t not in named_tests and i["internal"])
+    print(f"      {n_uncited} executable tests cite no clause and are not named by one: "
+          f"{n_tagged} tagged harness-internal, {len(orphans)} orphans.")
     if orphans:
-        print(f"      {len(orphans)} executable tests cite no clause — real work the "
-              f"matrix cannot see.")
+        any_fail = note_fail("orphan_test")
+        print(f"  ORPHAN TEST (KISS-CONFORM-6.1-0003): {len(orphans)} executable tests cite no live "
+              f"clause and carry no `// harness-internal: <reason>` tag.")
+        for t in orphans:
+            print(f"      {t}  ({harness[t]['file']})")
+    if bad_tags:
+        any_fail = note_fail("harness_internal_tag")
+        print(f"  HARNESS-INTERNAL TAG MISUSED (KISS-CONFORM-6.1-0003): {len(bad_tags)}")
+        for t, why in bad_tags:
+            print(f"      {t}  ({harness[t]['file']}): {why}")
 
     # ---- the honest category breakdown of the clauses with NO harness test ----
     print("-" * 68)

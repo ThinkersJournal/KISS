@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.65 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- KISS#136 step 3 of 3, tool: `kiss_trace` now fails the build on an orphan test (KISS-CONFORM-6.1-0003): a test that cites no live clause, is not named by a §9 row and carries no `// harness-internal: <reason>` tag, or a tag with no reason, or a tag on a test that cites or is named by a clause. It prints each by name. The README-bound `uncited_tests` line is kept (225 tests, all 225 tagged, 0 orphans at `f52185b`). New controls `tools/test_kiss_trace_orphans.py` (9 cases, wired into `traceability.yml`); a planted untagged test turned the run red (exit 1, named) and removing it restored exit 0. No spec or wire change; floor unmoved (459/44/387). Closes KISS#136.
+
 ## 0.4.64 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - KISS#136 step 2 of 3, comments and README figures only: the other 185 tests that cited no clause (measured at `f286c6a`) are triaged one by one. 74 carry new `// Backs:` lines (89 lines in all) (classify `structure_key` token declines, OPS 6.11 structural ops, 6.15 min/max, OpAttrs golden/value vectors, Announce, Contract section schemas, CONFORM 6.8 comparator and NaN provenance) and 111 carry `// harness-internal: <reason>`. The harness-internal tag has been given a real reason in every case; claims the audit found weak were downgraded to a tag (a one-ordinal-per-enum spot check does not back OPS-6.19-0014..0021; CONFORM-6.5-0003 is ruled out of tests, board 203). With the gate armed in a trial run, 0 untagged orphans and 0 misused tags remain. README `named` 232 to 216 and `uncited_tests` 301 to 225 (bound figures). `kiss_trace` floor unmoved: harness 459, lint 44, untested 387. The gate itself (orphan fails the build) is step 3.
