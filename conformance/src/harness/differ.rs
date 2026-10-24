@@ -124,6 +124,7 @@ mod tests {
     use super::*;
     use crate::harness::corpus::tagged_corpus;
 
+    // harness-internal: unit test of the harness differ; verifies no clause
     #[test]
     fn identical_outputs_have_no_divergences() {
         let c = tagged_corpus(1, 16);
@@ -131,6 +132,7 @@ mod tests {
         assert!(run_binary(&outs, &c).is_empty());
     }
 
+    // harness-internal: unit test of the harness differ; verifies no clause
     #[test]
     fn a_single_wrong_output_is_caught_with_its_index() {
         let c = tagged_corpus(1, 16);
@@ -141,6 +143,7 @@ mod tests {
         assert_eq!(d[0].index, 3);
     }
 
+    // harness-internal: unit test of the harness differ; verifies no clause
     #[test]
     fn axis_reduce_catches_out_of_band_and_wrong_max() {
         // Sum: within band accepted, outside caught.
@@ -164,6 +167,7 @@ mod tests {
     /// NaN-blind, so it would PASS such a vector regardless of payload/sign (§6.8-0010(a)) — a
     /// control that cannot fail. The guard fires on the provenance tag; without it run_binary
     /// silently accepts the wrong comparator. Proves the guard is not dead.
+    // harness-internal: unit test of the harness differ; verifies no clause
     #[test]
     #[should_panic(expected = "must route through corpus_differential")]
     fn a_moved_nan_op_is_refused_entry() {
@@ -180,6 +184,7 @@ mod tests {
     /// the op is no longer the final `::` segment, the guard must FAIL CLOSED, never silently stop
     /// guarding. Goes red if the fail-closed arm is dropped or the match reverts to `contains`
     /// (under `contains`, this unparseable string matches no tag and would pass — a silent inert guard).
+    // harness-internal: unit test of the harness differ; verifies no clause
     #[test]
     #[should_panic(expected = "unrecognized provenance format")]
     fn an_unexpected_provenance_format_fails_closed() {

@@ -36,6 +36,7 @@ const SIN_ANCHORS: &[(f64, u64, u32)] = &[
 // MSRV is 1.77 (a const literal for a 2^849 value is impractical). It lives in the test below, where
 // `from_bits` is a non-const call and covers the same f64+f32 obligations plus the discrimination.
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sin_f64_matches_oracle_anchors() {
     for &(x, want64, _want32) in SIN_ANCHORS {
@@ -47,6 +48,7 @@ fn sin_f64_matches_oracle_anchors() {
     }
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sin_f32_matches_oracle_anchors() {
     for &(x, _want64, want32) in SIN_ANCHORS {
@@ -64,6 +66,7 @@ fn sin_f32_matches_oracle_anchors() {
 /// 2304-bit 2/π table, returns the 3-oracle-agreed sin ≈ 1.0; a plausible-but-wrong
 /// `sin(fmod(x, 2π))` (double-precision argument reduction — what a lesser implementation writes)
 /// loses all significance and lands FAR from 1.0. A named, wrong implementation this anchor kills.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn sin_deep_cancellation_reddens_naive_reduction() {
     let x = f64::from_bits(0x7506AC5B262CA1FF); // 6381956970095103 · 2^797 (exact); |x mod π/2| ≈ 2^-61

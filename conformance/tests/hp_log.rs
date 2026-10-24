@@ -30,6 +30,7 @@ const LOG_ANCHORS: &[(f64, u64, u32)] = &[
     (1e-10, 0xC037069E2AA2AA5B, 0xC1B834F1),              // large octave e ≈ -34
 ];
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_f64_matches_oracle_anchors() {
     for &(x, want64, _want32) in LOG_ANCHORS {
@@ -41,6 +42,7 @@ fn log_f64_matches_oracle_anchors() {
     }
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_f32_matches_oracle_anchors() {
     for &(x, _want64, want32) in LOG_ANCHORS {
@@ -60,6 +62,7 @@ fn log_f32_matches_oracle_anchors() {
 /// instead of the correct ≈ −744.44 — off by ~35 = 51·ln2. The atom (frexp subnormal branch)
 /// returns the 3-oracle value (MPFR ≡ Arb ≡ mpmath). Values live here, not in the const array:
 /// a subnormal's exact f64 needs `f64::from_bits`, const-stable only since Rust 1.83 (MSRV 1.77).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn log_subnormal_reddens_naive_decompose() {
     // Smallest subnormal 2^-1074 (extreme leading-zero shift) and largest subnormal (full mantissa).

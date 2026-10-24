@@ -35,6 +35,7 @@ const EXP_ANCHORS: &[(f64, u64, u32)] = &[
     (-87.0, 0x381666D0DAD2961D, 0x00B33687),              // f32 subnormal result
 ];
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_f64_matches_oracle_anchors() {
     for &(x, want64, _want32) in EXP_ANCHORS {
@@ -46,6 +47,7 @@ fn exp_f64_matches_oracle_anchors() {
     }
 }
 
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn exp_f32_matches_oracle_anchors() {
     for &(x, _want64, want32) in EXP_ANCHORS {

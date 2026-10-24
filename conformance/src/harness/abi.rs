@@ -95,6 +95,7 @@ mod tests {
         }
     }
 
+    // harness-internal: unit test of the harness kernel-call marshalling; verifies no clause
     #[test]
     fn marshals_and_invokes_over_slices() {
         let a = [1.0f32, -2.0, 0.5];
@@ -103,6 +104,7 @@ mod tests {
         assert_eq!(out, vec![11.0, 18.0, 0.75]);
     }
 
+    // harness-internal: unit test of the harness kernel-call marshalling; verifies no clause
     #[test]
     fn empty_input_yields_empty_output() {
         let out = invoke_binary(rust_add, &[], &[]);
@@ -119,6 +121,7 @@ mod tests {
         unsafe { *o = s / n as f32 };
     }
 
+    // harness-internal: unit test of the harness kernel-call marshalling; verifies no clause
     #[test]
     fn marshals_and_invokes_a_reduction() {
         let xs = [1.0f32, 2.0, 3.0, 4.0];
@@ -150,6 +153,7 @@ mod tests {
         }
     }
 
+    // harness-internal: unit test of the harness kernel-call marshalling; verifies no clause
     #[test]
     fn marshals_and_invokes_an_axis_reduction() {
         // 2×3, reduce axis 1 (each row) → 2 output cells (extents_out [2, 1]).

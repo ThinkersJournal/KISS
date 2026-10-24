@@ -72,6 +72,7 @@ mod tests {
     use crate::harness::msvc;
     use std::io::Write;
 
+    // harness-internal: unit test of the harness dynamic-library loader; verifies no clause
     #[test]
     fn loads_a_dll_and_calls_its_export() {
         let m = crate::runtime_gate_some!("msvc", msvc::find_msvc());
@@ -96,6 +97,7 @@ mod tests {
         assert_eq!(o, [11.0, 22.0, 33.0]);
     }
 
+    // harness-internal: unit test of the harness dynamic-library loader; verifies no clause
     #[test]
     fn missing_symbol_is_a_typed_error_not_a_panic() {
         let m = crate::runtime_gate_some!("msvc", msvc::find_msvc());

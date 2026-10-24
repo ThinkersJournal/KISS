@@ -22,6 +22,7 @@ const AB: u64 = 0xAAAA_AAAA_AAAA_AAAB;
 // --- C: constructors (exact) ------------------------------------------------
 
 /// C1 — from_f64(1.0) @ N=4: exp=-255, mant=[0x8000..,0,0,0], ebin=0, exact.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn c1_from_f64_one() {
     let x = BigFloat::<4>::from_f64(1.0);
@@ -34,6 +35,7 @@ fn c1_from_f64_one() {
 }
 
 /// C2 — from_f64(3.0): exp=-254, mant=[0xC000..,0,0,0], ebin=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn c2_from_f64_three() {
     let x = BigFloat::<4>::from_f64(3.0);
@@ -45,6 +47,7 @@ fn c2_from_f64_three() {
 
 /// C3 — from_f64 of the smallest subnormal double 2^-1074 (0x00..01): the
 /// clz-normalize branch. exp=-1329, mant=[0x8000..,0,0,0], ebin=-1074.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn c3_from_f64_min_subnormal() {
     let x = BigFloat::<4>::from_f64(f64::from_bits(1));
@@ -58,6 +61,7 @@ fn c3_from_f64_min_subnormal() {
 // --- M: multiply ------------------------------------------------------------
 
 /// M0 — exact: 3.0 * 3.0 = 9.0. exp=-252, mant=[0x9000..,0,0,0], err=0.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn m0_mul_exact() {
     let three = BigFloat::<4>::from_f64(3.0);
@@ -70,6 +74,7 @@ fn m0_mul_exact() {
 
 /// M1 — truncate: (2^255+1, e0)*(2^255+2, e0). The low 2^1 is dropped, R=0.
 /// exp=255, mant=[0x8000..,0,0,3], err=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn m1_mul_truncate() {
     let a = BigFloat::<4>::from_limbs(false, 0, [MSB, 0, 0, 1], FpClass::Normal);
@@ -82,6 +87,7 @@ fn m1_mul_truncate() {
 
 /// M2 — tie to even, rounds UP: (2^255+1)*(2^255+2^254). R=1,S=0 tie; retained
 /// value is odd -> up. exp=255, mant=[0xC000..,0,0,2], err=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn m2_mul_tie_to_even_up() {
     let a = BigFloat::<4>::from_limbs(false, 0, [MSB, 0, 0, 1], FpClass::Normal);
@@ -96,6 +102,7 @@ fn m2_mul_tie_to_even_up() {
 
 /// S1 — massive cancellation, EXACT: 1.0 - (1 - 2^-100) = 2^-100. The result
 /// exp drops ~100 (to -355); no bits are rounded so err=0.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn s1_sub_cancellation_exact() {
     let one = BigFloat::<4>::one();
@@ -114,6 +121,7 @@ fn s1_sub_cancellation_exact() {
 
 /// A1 — guard/sticky: 1.0 + 2^-300 = 1.0. The addend lands entirely in the
 /// sticky region (R=0), so it rounds away but is inexact => err=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn a1_add_guard_sticky() {
     let one = BigFloat::<4>::one();
@@ -129,6 +137,7 @@ fn a1_add_guard_sticky() {
 
 /// D1 — GENERAL div (restoring long division): 1.0 / 3.0. Correctly rounded
 /// RNE (rounds up in the last limb). exp=-257, mant=[0xAA..AA x3, 0xAA..AB].
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn d1_div_general() {
     let (r, err) = BigFloat::<4>::from_f64(1.0).div(&BigFloat::<4>::from_f64(3.0));
@@ -140,6 +149,7 @@ fn d1_div_general() {
 }
 
 /// D2 — div_small cross-checks D1: from_f64(1.0).div_small(3) is bit-identical.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn d2_div_small_matches_general() {
     let d1 = BigFloat::<4>::from_f64(1.0).div(&BigFloat::<4>::from_f64(3.0));
@@ -153,6 +163,7 @@ fn d2_div_small_matches_general() {
 }
 
 /// D3 — div_small exact: 7.0 / 7 = 1.0, err=0.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn d3_div_small_exact() {
     let (r, err) = BigFloat::<4>::from_f64(7.0).div_small(7);
@@ -162,6 +173,7 @@ fn d3_div_small_exact() {
 }
 
 /// D4 — div_small exact halving: 1.0 / 2 = 0.5. exp=-256, mant=[0x8000..], err=0.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn d4_div_small_half() {
     let (r, err) = BigFloat::<4>::from_f64(1.0).div_small(2);
@@ -176,6 +188,7 @@ fn d4_div_small_half() {
 /// X1 — abs_diff_limbs with a cross-limb borrow: |2^64 - (2^64 - 1)| = 1.
 /// The two operands share an exponent; the difference borrows from limb 2
 /// down through limb 3, yielding the big-int 1 = [0,0,0,1].
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn x1_abs_diff_cross_limb_borrow() {
     let a = BigFloat::<4>::from_limbs(false, 0, [0, 0, 1, 0], FpClass::Normal); // 2^64
@@ -185,6 +198,7 @@ fn x1_abs_diff_cross_limb_borrow() {
 }
 
 /// X2 — cmp: 1.0 < 1 + 2^-52 (the next double after 1.0).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn x2_cmp_less() {
     let one = BigFloat::<4>::from_f64(1.0);
@@ -198,6 +212,7 @@ fn x2_cmp_less() {
 
 /// round_to_i64 on small magnitudes and the ties-to-even boundary, all within
 /// |value| < 2^62. Ties round to the EVEN neighbour (2.5 -> 2, 3.5 -> 4).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn round_to_i64_small_and_ties_to_even() {
     let f = |x: f64| BigFloat::<4>::from_f64(x).round_to_i64();
@@ -228,6 +243,7 @@ fn round_to_i64_small_and_ties_to_even() {
 
 /// W1 — widen::<8> preserves value: from_f64(1.0)@N4 -> N8. exp=-511,
 /// mant=[0x8000.., 7 zeros], ebin() still 0 (width-invariant).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn w1_widen_preserves_value() {
     let x4 = BigFloat::<4>::from_f64(1.0);
@@ -241,6 +257,7 @@ fn w1_widen_preserves_value() {
 // --- signed zero + convention spot checks -----------------------------------
 
 /// Signed zero is carried and distinguished; +0 and -0 compare Equal.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn signed_zero() {
     let pz = BigFloat::<4>::zero(false);
@@ -257,6 +274,7 @@ fn signed_zero() {
 }
 
 /// dist_gt_err compares the big-int distance against the u128 err bound.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn dist_gt_err_basic() {
     // D = 5, err = 4 -> D > err
@@ -274,6 +292,7 @@ fn dist_gt_err_basic() {
 // zero-extended) at each width, and 1/3 rounds up in its last limb at every N.
 
 /// N=8: from_f64(1.0) has exp=-511 but the same ebin=0 as N=4.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn e1_width8_one() {
     let x = BigFloat::<8>::from_f64(1.0);
@@ -285,6 +304,7 @@ fn e1_width8_one() {
 
 /// N=8: div(1,3) is re-derived at 512-bit precision — ebin=-2 (width-invariant),
 /// mant = [0xAA.. x7, 0xAA..AB], err=1; div_small(3) agrees bit-for-bit.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn e2_width8_div_one_third() {
     let (r, err) = BigFloat::<8>::from_f64(1.0).div(&BigFloat::<8>::from_f64(3.0));
@@ -300,6 +320,7 @@ fn e2_width8_div_one_third() {
 }
 
 /// N=16: 1024-bit div(1,3) — ebin=-2, mant = [0xAA.. x15, 0xAA..AB], err=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn e3_width16_div_one_third() {
     let (r, err) = BigFloat::<16>::from_f64(1.0).div(&BigFloat::<16>::from_f64(3.0));
@@ -313,6 +334,7 @@ fn e3_width16_div_one_third() {
 
 /// widen::<8> then narrow::<4> round-trips an EXACT value with zero recorded
 /// error in both directions (1.0 fits in 4 limbs).
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn e4_widen_narrow_roundtrip_exact() {
     let x4 = BigFloat::<4>::from_f64(1.0);
@@ -327,6 +349,7 @@ fn e4_widen_narrow_roundtrip_exact() {
 /// narrow of an INEXACT wide value keeps the top M limbs (truncation) and
 /// records +1 error for the dropped tail. Narrowing 1/3@N8 to N4 yields the
 /// TRUNCATED [0xAA.. x4] (one ULP below the correctly-rounded N4 value), err=1.
+// harness-internal: unit test of the hp high-precision float library the oracle is built on; verifies no clause
 #[test]
 fn e5_narrow_records_dropped_tail() {
     let third8 = BigFloat::<8>::from_f64(1.0).div(&BigFloat::<8>::from_f64(3.0)).0;

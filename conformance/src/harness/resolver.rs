@@ -97,6 +97,7 @@ mod tests {
     // expression as the body would only catch an edit, never a reversion to the
     // (unsound, too-tight) 1× band. So this asserts BOTH the exact 2× value AND
     // that it is strictly greater than the 1× value — a revert to 1× fails here.
+    // harness-internal: unit test of the harness tolerance resolver; verifies no clause
     #[test]
     fn abs_tol_is_the_reassociation_band_over_n() {
         let xs = [1.0f32, -2.0, 3.0, -4.0, 5.0];
@@ -109,6 +110,7 @@ mod tests {
             "the tolerance must be the 2x band, not the 1x single-order-vs-exact band");
     }
 
+    // harness-internal: unit test of the harness tolerance resolver; verifies no clause
     #[test]
     fn axis_oracle_and_per_row_band() {
         let d = [1.0f32, -2.0, 3.0, 4.0, 5.0, 6.0]; // [2,3]
