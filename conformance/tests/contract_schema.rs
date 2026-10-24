@@ -459,21 +459,10 @@ fn test_contract_guarantees_cost_provenance() {
     );
 }
 
-// KISS-CONTRACT-6.9-0006 (Provenance `cost_provenance` MUST equal the Guarantees
-// `cost_provenance`; MUST NOT carry one that disagrees) and KISS-CONTRACT-6.9-0003
-// (Provenance `revision_hash` MUST equal the Identity `revision_hash` byte-for-byte;
-// MUST NOT carry one that disagrees) are INTENTIONALLY LEFT UNBACKED here.
-// Both are runtime *value-equality* obligations between two fields of a live
-// contract record. A doc-lint that only checks the field is spelled identically in
-// both schema blocks (and, for 0006, that the `{declared, measured}` domain matches
-// across §6.8-0006/§6.9-0006) proves a NECESSARY PRECONDITION — the equality is
-// well-formed — but NOT the equality itself: a record carrying a Provenance value
-// that DISAGREES with the Identity/Guarantees value would pass a schema-presence
-// lint and still violate the clause. The in-tree behavioral surface here is the
-// §6.6-0006 dispatch-expression acceptor (`dispatch_expr::eval`), which has no
-// contract-record consistency validator to drive these cross-field equalities.
-// Binding them to the schema doc-lints would over-credit, so they stay untested
-// until a record-consistency validator exists to exercise the disagreement path.
+// KISS-CONTRACT-6.9-0006 and KISS-CONTRACT-6.9-0003 (Provenance values equal the Guarantees and
+// Identity values) are runtime value-equalities between two fields of a live record. They are backed in
+// `contract_record_consistency.rs` against `contract::check_record_consistency`, which drives the
+// disagreement path; a schema-presence lint here could not.
 
 // ===========================================================================
 // (B) Behavioral back via the in-tree §6.6-0006 acceptor.
