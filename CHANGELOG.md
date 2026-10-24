@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.38 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Reference codec for the KISS-Synth provision-success frame `PRSP` (`conformance/src/synth.rs`, R3.2 per the PM's go), no spec or wire change. Backs eight Synth clauses (6.4-0001, -0001b, -0001c, -0001d, 6.2-0003, -0003a, -0003b, -0004): harness 439 -> 447, untested 407 -> 399, lint unmoved. `announce::Identity::{encode_into, decode_at}` become `pub(crate)` so the PRSP echo reuses Announce's identity block. Not bound (provider or contract-Identity halves have no subject): 6.4-0001a, 6.3-0006/-0006a, 6.2-0006.
+
 ## 0.4.37 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 96 bare-`untested` Synth rows. `conformance/` has the reused Announce CYRQ/CDEC codec but no PRSP codec, provider or consumer. Every sub-standard now has no empty-reason `untested` row.

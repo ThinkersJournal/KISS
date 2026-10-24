@@ -581,7 +581,11 @@
 # R3.2 ops (0.4.11): lint 43 -> 44, untested 411 -> 410. KISS-OPS-6.17-0004 (no compute-precision spelling in the §6.16 storage dtype
 # table) moves `untested` -> `lint:kiss_ops`. 6.17-0006 stays `untested`, recorded PARTIAL (no mantissa-rounding subject in conformance/):
 # floor unmoved for it. RE-DERIVED from the tool: `--ratchet --base-ref origin/main` said the lint set gained KISS-OPS-6.17-0004.
-harness	439
+# R3.3/Synth PRSP codec (0.4.38): harness 439 -> 447, untested 407 -> 399. `conformance/src/synth.rs` (the PRSP provision-success frame) backs eight Synth clauses:
+# 6.4-0001 (artifact first), 6.4-0001b (frame layout), 6.4-0001c (PRSP vs CRSP tag), 6.4-0001d (format tag), 6.2-0003 (contract length-delimited, equal to the CRSP payload),
+# 6.2-0003a (opaque), 6.2-0003b (not parsed by the host), 6.2-0004 (inner framing independent of the PRSP prefix). Lint unmoved. NOT bound: 6.4-0001a, 6.3-0006/-0006a, 6.2-0006
+# (provider or contract-Identity halves have no subject). RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
+harness	447
 lint	44
-untested	407
+untested	399
 proven	20

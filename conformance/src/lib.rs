@@ -115,6 +115,7 @@ pub mod structural;
 pub mod structural_dag;
 pub mod fuzz;
 pub mod structure_key;
+pub mod synth;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
 /// (KISS-Conform §6.8). Only `ExactByte` is exercised in this slice; the POD
