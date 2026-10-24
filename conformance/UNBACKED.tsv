@@ -457,102 +457,102 @@ KISS-OPS-8-0003	test_ops_floor_or_semantics_change_bumps_version	untested	Govern
 KISS-OPS-8-0004	test_ops_retired_tokens_burned	untested	Retired op tokens and clause IDs must not be reused; this is a property of the history of the spec, which no snapshot-level test in conformance/ can see (a ratchet over the git history would be a tools/ change, not a conformance/ test). Recorded as a reason, not backed.
 KISS-OPS-8-0005	test_ops_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-OPS-8-0006	test_ops_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
-KISS-SYNTH-6.0-0001	test_synth_determinism_class_exact_byte	untested	
-KISS-SYNTH-6.0-0001a	test_synth_determinism_class_no_tolerance	untested	
-KISS-SYNTH-6.0-0001b	test_synth_determinism_class_not_reforked	untested	
-KISS-SYNTH-6.2-0001	test_synth_response_artifact_contract_or_decline	untested	
-KISS-SYNTH-6.2-0001a	test_synth_response_no_third_outcome	untested	
-KISS-SYNTH-6.2-0002	test_synth_every_kernel_carries_contract	untested	
-KISS-SYNTH-6.2-0002a	test_synth_no_artifact_without_contract	untested	
-KISS-SYNTH-6.2-0003	test_synth_contract_length_delimited	untested	
-KISS-SYNTH-6.2-0003a	test_synth_contract_opaque	untested	
-KISS-SYNTH-6.2-0003b	test_synth_contract_not_parsed_by_host	untested	
-KISS-SYNTH-6.2-0004	test_synth_contract_inner_framing_independent	untested	
-KISS-SYNTH-6.2-0004a	test_synth_invalid_contract_no_launch	untested	
-KISS-SYNTH-6.2-0004b	test_synth_invalid_contract_typed_error	untested	
-KISS-SYNTH-6.2-0004c	test_synth_no_empty_contract_import	untested	
-KISS-SYNTH-6.2-0005	test_synth_artifact_abi_described_by_contract	untested	
-KISS-SYNTH-6.2-0005a	test_synth_no_out_of_band_abi	untested	
-KISS-SYNTH-6.2-0005b	test_synth_consumer_binds_from_contract	untested	
-KISS-SYNTH-6.2-0006	test_synth_response_identity_consistent	untested	
-KISS-SYNTH-6.2-0006a	test_synth_identity_mismatch_rejected	untested	
-KISS-SYNTH-6.2-0007	test_synth_capability_only_in_contract	untested	
-KISS-SYNTH-6.2-0008	test_synth_returned_contract_content_valid	untested	
-KISS-SYNTH-6.2-0008a	test_synth_content_validity_checked	untested	
-KISS-SYNTH-6.3-0001	test_synth_hit_and_miss_same_protocol	untested	
-KISS-SYNTH-6.3-0001a	test_synth_no_separate_jit_tag	untested	
-KISS-SYNTH-6.3-0002	test_synth_build_on_miss_is_jit	untested	
-KISS-SYNTH-6.3-0003	test_synth_no_provision_bit_declines_miss	untested	
-KISS-SYNTH-6.3-0003a	test_synth_miss_no_silent_omit	untested	
-KISS-SYNTH-6.3-0003b	test_synth_miss_no_indefinite_block	untested	
-KISS-SYNTH-6.3-0003c	test_synth_miss_no_empty_artifact	untested	
-KISS-SYNTH-6.3-0004	test_synth_revision_pinned_build	untested	
-KISS-SYNTH-6.3-0004a	test_synth_revision_pinned_no_mismatch	untested	
-KISS-SYNTH-6.3-0005	test_synth_default_revision_provision	untested	
-KISS-SYNTH-6.3-0006	test_synth_success_echo_revision_present	untested	
-KISS-SYNTH-6.3-0006a	test_synth_success_echo_revision_hash	untested	
-KISS-SYNTH-6.4-0001	test_synth_artifact_is_first_element	untested	
-KISS-SYNTH-6.4-0001a	test_synth_success_requires_artifact	untested	
-KISS-SYNTH-6.4-0001b	test_synth_provision_success_prsp_frame	untested	
-KISS-SYNTH-6.4-0001c	test_synth_success_distinct_from_contract_only	untested	
-KISS-SYNTH-6.4-0001d	test_synth_artifact_format_tag	untested	
-KISS-SYNTH-6.4-0002	test_synth_artifact_revision_hash_opaque	untested	
-KISS-SYNTH-6.4-0002a	test_synth_artifact_revision_hash_no_algo	untested	
-KISS-SYNTH-6.4-0003	test_synth_no_verify_precondition	untested	
-KISS-SYNTH-6.4-0003a	test_synth_no_verify_wire_precondition	untested	
-KISS-SYNTH-6.4-0003b	test_synth_no_withhold_pending_verify	untested	
-KISS-SYNTH-6.4-0004	test_synth_consumer_verify_should	untested	
-KISS-SYNTH-6.5-0001	test_synth_fidelity_is_contract_guarantees	untested	
-KISS-SYNTH-6.5-0001a	test_synth_no_parallel_fidelity	untested	
-KISS-SYNTH-6.5-0002	test_synth_determinism_enum_imported	untested	
-KISS-SYNTH-6.5-0002a	test_synth_determinism_enum_not_reforked	untested	
-KISS-SYNTH-6.5-0002b	test_synth_determinism_enum_no_override	untested	
-KISS-SYNTH-6.5-0003	test_synth_mathprecision_imported	untested	
-KISS-SYNTH-6.5-0003a	test_synth_mathprecision_not_reforked	untested	
-KISS-SYNTH-6.5-0003b	test_synth_mathprecision_not_dtype	untested	
-KISS-SYNTH-6.5-0003c	test_synth_mathprecision_not_conflated	untested	
-KISS-SYNTH-6.5-0004	test_synth_class_selects_comparator	untested	
-KISS-SYNTH-6.5-0004a	test_synth_order_invariant_tolerance_declared	untested	
-KISS-SYNTH-6.5-0004b	test_synth_provider_no_byte_identity_claim	untested	
-KISS-SYNTH-6.5-0004c	test_synth_consumer_no_byte_identity_expect	untested	
-KISS-SYNTH-6.6-0001c	test_synth_bounded_latency	untested	
-KISS-SYNTH-6.6-0003	test_synth_map_unknown_structure_key	untested	
-KISS-SYNTH-6.6-0003a	test_synth_map_cannot_provision	untested	
-KISS-SYNTH-6.6-0003c	test_synth_map_query_not_supported	untested	
-KISS-SYNTH-6.6-0003d	test_synth_map_version_unsupported	untested	
-KISS-SYNTH-6.6-0003e	test_synth_map_unknown_revision	untested	
-KISS-SYNTH-6.6-0003g	test_synth_no_mismatched_code	untested	
-KISS-SYNTH-6.6-0005a	test_synth_decline_no_core_reuse	untested	
-KISS-SYNTH-6.6-0006	test_synth_unknown_decline_generic	untested	
-KISS-SYNTH-6.6-0006a	test_synth_unknown_decline_never_panics	untested	
-KISS-SYNTH-6.6-0007	test_synth_no_query_bit_declines	untested	
-KISS-SYNTH-6.6-0007a	test_synth_no_query_bit_no_silent_drop	untested	
-KISS-SYNTH-6.6-0008	test_synth_build_failure_declines	untested	
-KISS-SYNTH-6.6-0008a	test_synth_build_failure_no_leak	untested	
-KISS-SYNTH-6.7-0001	test_synth_handshake_defers_to_announce	untested	
-KISS-SYNTH-6.7-0001a	test_synth_no_parallel_handshake	untested	
-KISS-SYNTH-6.7-0005	test_synth_level3_provision	untested	
-KISS-SYNTH-6.7-0005a	test_synth_no_separate_transaction	untested	
-KISS-SYNTH-7.1-0001	test_synth_mandatory_core	untested	
-KISS-SYNTH-7.1-0001a	test_synth_core_unclaimed_declines	untested	
-KISS-SYNTH-7.1-0002	test_synth_feature_bits	untested	
-KISS-SYNTH-7.1-0002a	test_synth_feature_bits_not_reforked	untested	
-KISS-SYNTH-7.1-0002b	test_synth_query_bit_implies_endpoint	untested	
-KISS-SYNTH-7.1-0002c	test_synth_provision_bit_builds_on_miss	untested	
-KISS-SYNTH-7.1-0003	test_synth_version_via_profile	untested	
-KISS-SYNTH-7.1-0003a	test_synth_no_second_version_channel	untested	
-KISS-SYNTH-7.1-0003b	test_synth_version_mismatch_declines	untested	
-KISS-SYNTH-7.1-0004	test_synth_decline_registry	untested	
-KISS-SYNTH-7.1-0004a	test_synth_no_unregistered_core_code	untested	
-KISS-SYNTH-7.1-0004b	test_synth_unknown_bit_not_hard_gated	untested	
-KISS-SYNTH-7.1-0005	test_synth_provision_bit_requires_query_bit	untested	
-KISS-SYNTH-8-0001	test_synth_two_version_axes	untested	
-KISS-SYNTH-8-0001a	test_synth_semver_no_wire_implication	untested	
-KISS-SYNTH-8-0002	test_synth_shape_change_bumps_version	untested	
-KISS-SYNTH-8-0002a	test_synth_shape_change_rfc_coordinated	untested	
-KISS-SYNTH-8-0003	test_synth_additive_no_bump	untested	
-KISS-SYNTH-8-0003a	test_synth_additive_no_wire_version_bump	untested	
+KISS-SYNTH-6.0-0001	test_synth_determinism_class_exact_byte	untested	Obligation on the whole of KISS-Conform (every structural clause is compared byte-exact, never with tolerance); it is a property of the harness's comparators across all tests, not of one subject. Recorded as a reason, not backed.
+KISS-SYNTH-6.0-0001a	test_synth_determinism_class_no_tolerance	untested	Obligation on the whole of KISS-Conform (every structural clause is compared byte-exact, never with tolerance); it is a property of the harness's comparators across all tests, not of one subject. Recorded as a reason, not backed.
+KISS-SYNTH-6.0-0001b	test_synth_determinism_class_not_reforked	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0001	test_synth_response_artifact_contract_or_decline	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0001a	test_synth_response_no_third_outcome	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0002	test_synth_every_kernel_carries_contract	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0002a	test_synth_no_artifact_without_contract	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0003	test_synth_contract_length_delimited	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0003a	test_synth_contract_opaque	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0003b	test_synth_contract_not_parsed_by_host	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0004	test_synth_contract_inner_framing_independent	untested	The contract's inner framing must fail loudly independently of the PRSP length prefix. The contract reader (read_document) declines malformed framing under the KISS-CONTRACT-6.1 rows, but the independence from a PRSP prefix needs a PRSP codec, which conformance/ lacks. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0004a	test_synth_invalid_contract_no_launch	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0004b	test_synth_invalid_contract_typed_error	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0004c	test_synth_no_empty_contract_import	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0005	test_synth_artifact_abi_described_by_contract	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0005a	test_synth_no_out_of_band_abi	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0005b	test_synth_consumer_binds_from_contract	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0006	test_synth_response_identity_consistent	untested	The returned contract's Identity must equal the echoed identity block. The Identity block codec is in announce.rs, but the contract Identity has no reader and the echo travels in the PRSP frame, which conformance/ lacks. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0006a	test_synth_identity_mismatch_rejected	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0007	test_synth_capability_only_in_contract	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0008	test_synth_returned_contract_content_valid	untested	Required-core content-validity of the returned contract, checked by a consumer or the harness; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.2-0008a	test_synth_content_validity_checked	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0001	test_synth_hit_and_miss_same_protocol	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0001a	test_synth_no_separate_jit_tag	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0002	test_synth_build_on_miss_is_jit	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0003	test_synth_no_provision_bit_declines_miss	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0003a	test_synth_miss_no_silent_omit	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0003b	test_synth_miss_no_indefinite_block	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0003c	test_synth_miss_no_empty_artifact	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0004	test_synth_revision_pinned_build	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0004a	test_synth_revision_pinned_no_mismatch	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0005	test_synth_default_revision_provision	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0006	test_synth_success_echo_revision_present	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.3-0006a	test_synth_success_echo_revision_hash	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001	test_synth_artifact_is_first_element	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001a	test_synth_success_requires_artifact	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001b	test_synth_provision_success_prsp_frame	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001c	test_synth_success_distinct_from_contract_only	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001d	test_synth_artifact_format_tag	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0002	test_synth_artifact_revision_hash_opaque	untested	Pins or depends on the PRSP provision-success frame; the CYRQ request and CDEC decline are reused Announce frames and are covered, but conformance/ has no PRSP codec (no PRSP or artifact_format_tag in src), and a PRSP encoder faked inside a test would be a local re-implementation that proves nothing about a provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0002a	test_synth_artifact_revision_hash_no_algo	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0003	test_synth_no_verify_precondition	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0003a	test_synth_no_verify_wire_precondition	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0003b	test_synth_no_withhold_pending_verify	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0004	test_synth_consumer_verify_should	untested	SHOULD-level obligation on a consumer to verify an artifact against its contract's Guarantees. conformance/ has consumer_verify.rs, the check a consumer would reuse (covered under its own rows), but no consumer receives an artifact to verify. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0001	test_synth_fidelity_is_contract_guarantees	untested	Obligation about where a provided kernel's fidelity lives (the returned contract's Guarantees); conformance/ has no provider returning a kernel and no reader of the Guarantees block beyond parse_guarantees_class. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0001a	test_synth_no_parallel_fidelity	untested	Obligation about where a provided kernel's fidelity lives (the returned contract's Guarantees); conformance/ has no provider returning a kernel and no reader of the Guarantees block beyond parse_guarantees_class. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0002	test_synth_determinism_enum_imported	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0002a	test_synth_determinism_enum_not_reforked	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0002b	test_synth_determinism_enum_no_override	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0003	test_synth_mathprecision_imported	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0003a	test_synth_mathprecision_not_reforked	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0003b	test_synth_mathprecision_not_dtype	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0003c	test_synth_mathprecision_not_conflated	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0004	test_synth_class_selects_comparator	untested	Obligation about where a provided kernel's fidelity lives (the returned contract's Guarantees); conformance/ has no provider returning a kernel and no reader of the Guarantees block beyond parse_guarantees_class. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0004a	test_synth_order_invariant_tolerance_declared	untested	Obligation about where a provided kernel's fidelity lives (the returned contract's Guarantees); conformance/ has no provider returning a kernel and no reader of the Guarantees block beyond parse_guarantees_class. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0004b	test_synth_provider_no_byte_identity_claim	untested	Claim restriction (no byte-identity assertion for a non-exact-byte op); conformance/ has no provider or consumer making such a claim to check. Recorded as a reason, not backed.
+KISS-SYNTH-6.5-0004c	test_synth_consumer_no_byte_identity_expect	untested	Claim restriction (no byte-identity assertion for a non-exact-byte op); conformance/ has no provider or consumer making such a claim to check. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0001c	test_synth_bounded_latency	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003	test_synth_map_unknown_structure_key	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003a	test_synth_map_cannot_provision	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003c	test_synth_map_query_not_supported	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003d	test_synth_map_version_unsupported	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003e	test_synth_map_unknown_revision	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0003g	test_synth_no_mismatched_code	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0005a	test_synth_decline_no_core_reuse	untested	A producer must not reuse a core decline value for a different meaning. The core values are pinned in announce.rs (decline_code) and covered there; a producer's use of them is provider behaviour, and conformance/ has no producer. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0006	test_synth_unknown_decline_generic	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0006a	test_synth_unknown_decline_never_panics	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0007	test_synth_no_query_bit_declines	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0007a	test_synth_no_query_bit_no_silent_drop	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0008	test_synth_build_failure_declines	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.6-0008a	test_synth_build_failure_no_leak	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.7-0001	test_synth_handshake_defers_to_announce	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.7-0001a	test_synth_no_parallel_handshake	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-6.7-0005	test_synth_level3_provision	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.7-0005a	test_synth_no_separate_transaction	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0001	test_synth_mandatory_core	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0001a	test_synth_core_unclaimed_declines	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0002	test_synth_feature_bits	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0002a	test_synth_feature_bits_not_reforked	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0002b	test_synth_query_bit_implies_endpoint	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0002c	test_synth_provision_bit_builds_on_miss	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0003	test_synth_version_via_profile	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0003a	test_synth_no_second_version_channel	untested	Ownership or no-fork rule (the vocabulary or mechanism is owned by another sub-standard and Synth must not re-define it); absence of a redefinition cannot be shown by a test on one subject, and a test would only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0003b	test_synth_version_mismatch_declines	untested	Maps a failure kind to a decline code. The CDEC frame and the pinned decline_code values are in announce.rs and covered under their own rows, but which code a provider emits for which situation is provider behaviour, and conformance/ has no provider. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0004	test_synth_decline_registry	untested	Non-core decline codes must come from the experimental or vendor ranges of the PR-gated registry. The extension-range floors are checked by synth_decline_taxonomy.rs under KISS-SYNTH-6.6-0005; the origin of an assigned code in a merged registry change is process, not a property of the text. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0004a	test_synth_no_unregistered_core_code	untested	Negative rule on provider or consumer behaviour (must not assume, require, withhold or define something); conformance/ has no provider or consumer, and the absence of a behaviour cannot be shown by a test. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0004b	test_synth_unknown_bit_not_hard_gated	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-7.1-0005	test_synth_provision_bit_requires_query_bit	untested	Obligation on a provision consumer; conformance/ has no consumer that receives a provision response, so no in-repo subject binds, launches or rejects anything. Recorded as a reason, not backed.
+KISS-SYNTH-8-0001	test_synth_two_version_axes	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-8-0001a	test_synth_semver_no_wire_implication	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-8-0002	test_synth_shape_change_bumps_version	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-8-0002a	test_synth_shape_change_rfc_coordinated	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-8-0003	test_synth_additive_no_bump	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
+KISS-SYNTH-8-0003a	test_synth_additive_no_wire_version_bump	untested	Governance rule about wire or crate versions and extension assignment; no in-repo subject changes a frame, a version or a registry, so a test could only restate the spec text. Recorded as a reason, not backed.
 KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
-KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	
+KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
