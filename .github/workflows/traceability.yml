@@ -53,6 +53,9 @@ jobs:
       # discover_tests keys by fn name; a repeat across files must fail loudly, not overwrite (#137).
       - name: kiss_trace duplicate-test-name check (negative controls)
         run: python tools/test_kiss_trace_duplicates.py
+      # An orphan test fails the build unless it is tagged harness-internal (KISS-CONFORM-6.1-0003, #136).
+      - name: kiss_trace orphan-test check (negative controls)
+        run: python tools/test_kiss_trace_orphans.py
       # A discovery step that can fail must fail, not shrink (KISS-CONFORM-6.5-0016, #148).
       # The controls run first: a lint that flags every form, or none, is no evidence.
       - name: kiss_io_discard controls
