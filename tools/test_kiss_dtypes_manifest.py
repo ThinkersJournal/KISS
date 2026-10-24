@@ -20,6 +20,51 @@ def _emit():
     ).stdout
 
 
+# Hand-transcribed from the KISS-Classify §6.1-0001 table (spec/classify.md, the 24 rows), NOT
+# derived from the manifest: a table copied from the artifact under test could not disagree with
+# it. (token, kind, storage_bits, reserved). KISS#239: width is necessary but nowhere near
+# sufficient to identify a type, so every arm is pinned by identity, not spot-checked.
+SPEC_ARMS = (
+    ("f16", "float", 16, False), ("bf16", "float", 16, False),
+    ("f32", "float", 32, False), ("f64", "float", 64, False),
+    ("i8", "int", 8, False), ("i16", "int", 16, False),
+    ("u8", "uint", 8, False), ("u16", "uint", 16, False),
+    ("i32", "int", 32, False), ("i64", "int", 64, False),
+    ("u32", "uint", 32, False), ("u64", "uint", 64, False),
+    ("bool", "bool", 8, False),
+    ("f8e4m3fn", "float", 8, False), ("f8e4m3fnuz", "float", 8, True),
+    ("f8e5m2", "float", 8, False), ("f8e5m2fnuz", "float", 8, True),
+    ("f8e8m0", "float", 8, False), ("f8e6m2", "float", 8, True),
+    ("i4", "int", 4, False), ("u4", "uint", 4, False), ("b1", "uint", 1, False),
+    ("c64", "complex", 64, False), ("c128", "complex", 128, False),
+)
+
+# Tokens per storage width, from the same table: the 8-bit cluster alone is nine tokens.
+SPEC_WIDTH_CARDINALITY = {1: 1, 4: 2, 8: 9, 16: 4, 32: 3, 64: 4, 128: 1}
+
+
+def _arm_failures(dtypes):
+    """Every disagreement between a manifest's `dtypes` rows and SPEC_ARMS, as strings.
+    Empty means each of the 24 arms matches on (kind, storage_bits, reserved) and the
+    per-width token counts match."""
+    out = []
+    by = {d["token"]: d for d in dtypes}
+    for token, kind, bits, reserved in SPEC_ARMS:
+        d = by.get(token)
+        if d is None:
+            out.append(f"{token}: missing")
+            continue
+        got = (d["kind"], d["storage_bits"], d["reserved"])
+        if got != (kind, bits, reserved):
+            out.append(f"{token}: manifest {got}, spec {(kind, bits, reserved)}")
+    counts = {}
+    for d in dtypes:
+        counts[d["storage_bits"]] = counts.get(d["storage_bits"], 0) + 1
+    if counts != SPEC_WIDTH_CARDINALITY:
+        out.append(f"per-width token counts {sorted(counts.items())}, spec {sorted(SPEC_WIDTH_CARDINALITY.items())}")
+    return out
+
+
 class DtypeManifestTest(unittest.TestCase):
     def test_emit_manifest_has_all_24_sk4_dtypes_with_metadata(self):
         m = json.loads(_emit())
@@ -55,6 +100,42 @@ class DtypeManifestTest(unittest.TestCase):
         self.assertEqual(by["c64"]["kind"], "complex")
         self.assertEqual(by["f8e8m0"]["kind"], "float")    # unsigned MX scale, float kind
         self.assertEqual(set(m["kinds"]), {"float", "int", "uint", "bool", "complex"})
+
+    def test_every_arm_is_pinned_by_identity_and_width_cardinality(self):
+        """KISS#239 items 1 and 2: all 24 arms, not a spot-check. `(kind, storage_bits,
+        reserved)` for each token, and exactly N tokens per width, against a table
+        transcribed from spec/classify.md §6.1-0001."""
+        self.assertEqual(len(SPEC_ARMS), 24)
+        self.assertEqual(sum(SPEC_WIDTH_CARDINALITY.values()), 24)
+        self.assertEqual(_arm_failures(json.loads(_emit())["dtypes"]), [])
+
+    def test_arm_pin_detects_a_same_width_swap(self):
+        """The control for the test above: a same-width swap preserves the token SET and
+        every width count, so only the per-arm identity pin can see it. Each mutation is
+        applied to a copy of the real manifest and MUST be reported (a pin that cannot
+        fail is the defect #239 names)."""
+        dtypes = json.loads(_emit())["dtypes"]
+        self.assertEqual(_arm_failures(dtypes), [])  # unmutated: clean, so a hit below is the mutation
+        swaps = (
+            ("i16", "kind", "uint"),               # same width, kind swap
+            ("f8e5m2", "storage_bits", 16),        # width moved within the FP8 cluster
+            ("f8e4m3fn", "reserved", True),        # usable arm marked reserved
+            ("f8e6m2", "reserved", False),         # reserved arm marked usable
+            ("bf16", "kind", "int"),               # same-width 16b float turned integer
+        )
+        for token, field, value in swaps:
+            with self.subTest(token=token, field=field):
+                mutated = [dict(d) for d in dtypes]
+                row = next(d for d in mutated if d["token"] == token)
+                self.assertNotEqual(row[field], value)
+                row[field] = value
+                self.assertTrue(any(f.startswith(token + ":") for f in _arm_failures(mutated)))
+        # a pure token-for-token exchange of two same-width rows' metadata
+        mutated = [dict(d) for d in dtypes]
+        a = next(d for d in mutated if d["token"] == "i16")
+        b2 = next(d for d in mutated if d["token"] == "u16")
+        a["kind"], b2["kind"] = b2["kind"], a["kind"]
+        self.assertEqual(len(_arm_failures(mutated)), 2)
 
     def test_committed_manifest_matches_spec_byte_for_byte(self):
         """The committed dtype_manifest.json MUST equal a fresh generation BYTE FOR
