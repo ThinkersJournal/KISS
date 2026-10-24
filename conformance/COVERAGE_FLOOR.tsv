@@ -592,7 +592,12 @@
 # R3.3 complex-op oracle (0.4.41): harness 451 -> 460, untested 395 -> 386. `semantics.rs` gains cmake/cre/cim, cmul (Annex G recovery, verbatim trigger), carg, cexp, clog, csqrt, cpow
 # (the Annex G rows governing over the naive decomposition) and `tests/semantics_complex.rs` backs nine KISS-OPS-6.18 clauses: -0003, -0005, -0007, -0008, -0009, -0010, -0011, -0012, -0013.
 # Lint unmoved. NOT bound: 6.18-0015 (the oracle is c64/f32 only; no c128 evaluator). RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
-harness	460
+# R3.9 KISS#378 (0.4.49): harness 460 -> 459, untested 386 -> 387. KISS-CONSUME-6.4-0007 is DE-CREDITED (PM ruling 2026-10-24, CireSnave's standing rule: every claim earned):
+# its named test was a document lint credited with an implementational obligation (no lifter in conformance/). The spec's `*Test:*` pointer and its §9 row now name the owed
+# differential `test_consume_taxonomy_structure_based_differential` (ROADMAP R3.14), the ledger row is `decredited`, and the old test is renamed
+# `test_consume_taxonomy_doc_lint_four_categories`. A DE-CREDITING, not a regression: the gap did not change, only our knowledge of it. Lint unmoved.
+# RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
+harness	459
 lint	44
-untested	386
+untested	387
 proven	20
