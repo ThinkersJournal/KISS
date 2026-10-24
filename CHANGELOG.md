@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.36 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 69 bare-`untested` Contract rows. `conformance/` reads the document framing and the key set of three section blocks, but has no value reader, cross-field validator, resolver or contract producer. Contract now has no empty-reason row.
+
 ## 0.4.35 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 34 bare-`untested` Ops rows (complex-op semantics, op registry and version governance, bitwise decline, IEEE conformance and others). Most lack a subject: `conformance/` has no op evaluator. Ops now has no empty-reason row.

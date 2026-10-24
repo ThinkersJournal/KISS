@@ -1,4 +1,4 @@
-<!-- Written 2026-10-24 against origin/main d076986 (conformance 0.4.34); this PR proposes 0.4.35. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-24 against origin/main ead7cdb (conformance 0.4.35); this PR proposes 0.4.36. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -6,7 +6,7 @@
 
 1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`;
    remove it after the merge (`git status --porcelain` first, then `git worktree prune`). Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.34; every pushed change bumps, docs and ledger included, CireSnave 2026-09-25). `conformance/Cargo.toml` and the top
+2. **Version rule:** the PM allocates the number at gate time (latest merged 0.4.35; every pushed change bumps, docs and ledger included, CireSnave 2026-09-25). `conformance/Cargo.toml` and the top
    `CHANGELOG.md` heading must be bumped TOGETHER: `tools/kiss_version_sync.py` is a blocking gate (#561). Pre-1.0 a breaking change moves the second number.
 3. **Dependabot PRs** (weekly Monday, one grouped PR): whoever merges one adds the patch bump on its branch and says so in a comment. Review
    like #526: `using:` in the new tag's `action.yml`, release notes vs KISS's inputs, Node annotation, the 5 required contexts.
@@ -28,7 +28,7 @@
 
 ## Last merged
 
-**This PR (0.4.35, proposed):** ledger reasons for the 34 bare-`untested` Ops rows (floor unmoved). **#623 merged (0.4.34):** reasons for the 35 Emit rows. **#622 merged (0.4.33):** reasons for the 28 Consume rows. **#621 merged (0.4.32):** reasons for the 20 remaining Announce rows. **#620 merged (0.4.30):** producer tests for ANNOUNCE 6.1-0009/-0014/-0015 (harness 439, untested 407), reason for 6.1-0005. **#612 merged (0.4.23):** reasons for ANNOUNCE 6.5-x, 7.2-0008, 8-000x. **#611 merged (0.4.22):** reasons for 6.11-0001/-0015, 6.14-0004, 6.16-0002/-0007/-0011. **#610 merged (0.4.21):** `check_decomposition_carriage` (6.13-0001 PARTIAL). **#609-#604 (0.4.20-0.4.16):** lints and PARTIAL rows for 6.13-x, 6.12-x, 6.19-0039/-0040; **#607 (0.4.18):** 6.17-0002 clarified, subnormal preservation is part of bit-stable (PM ruling 2026-10-21: no `denorm` field, no new MathFidelity value; reopen only if a flushing kernel needs advertising). **#603-#595 (0.4.7-0.4.15):** accumulator, index-operand and axis clause lints, PARTIAL, floor unmoved. **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
+**This PR (0.4.36, proposed):** ledger reasons for the 69 bare-`untested` Contract rows (floor unmoved). **#624 merged (0.4.35):** Ops rows. **#623 (0.4.34):** Emit rows. **#611-#622 (0.4.22-0.4.33):** reasons for Consume and Announce rows, producer tests for ANNOUNCE 6.1-0009/-0014/-0015 (harness 439). **#610 merged (0.4.21):** `check_decomposition_carriage` (6.13-0001 PARTIAL). **#609-#604 (0.4.20-0.4.16):** lints and PARTIAL rows for 6.13-x, 6.12-x, 6.19-0039/-0040; **#607 (0.4.18):** 6.17-0002 clarified, subnormal preservation is part of bit-stable (PM ruling 2026-10-21: no `denorm` field, no new MathFidelity value; reopen only if a flushing kernel needs advertising). **#603-#595 (0.4.7-0.4.15):** accumulator, index-operand and axis clause lints, PARTIAL, floor unmoved. **#593 merged (0.4.5):** `rm` is a permission, never an obligation (ops 6.17-0003/-0005; PM ruled A on Baracuda's FINDING). A non-rounding kernel is admitted
 under an `rm` key; an FMA kernel cannot claim `st` (6.17-0002), so it gets a decline on `st` keys until ROADMAP **R1.11** (a full-precision-with-contraction
 MathFidelity value, a wire change, `[rule]`, not started). 6.17-0003 stays `untested` with its reason (no kernel subject in `conformance/`). Unpopped: no objection;
 Fuel never replied to the notice. **#591 (0.4.3):** reference `ctr` stage in `derive.rs`; 15 `ctr` + 12 decline vectors; second-deriver run is the other lanes'.
@@ -59,5 +59,5 @@ Spec 6.7-0006 warns: a weight-first call order makes `<acc>` default to operand 
 ## Next actions
 
 1. `git fetch`; `list_peers` / `check_messages`. Answer any [FINDING] by re-measuring at the sender's `origin/main` first.
-2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar, Conform, Announce, Consume, Emit and Ops have NO empty-reason rows left. Left with bare `untested`: Contract (69), Synth (96) (re-measure with an awk over `conformance/UNBACKED.tsv`: category `untested`, empty note). Check each clause for a real subject first (`conformance/` has codecs, oracle, derive, consumer-verify; no provider, consumer, lifter or emitter) and write a test where one exists, a reason where not. The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
+2. **BEGIN the next unblocked own row, do not wait:** ROADMAP **R3.2** long tail ([go]): Grammar, Conform, Announce, Consume, Emit, Ops and Contract have NO empty-reason rows left. Left with bare `untested`: Synth (96). After that, tests where a subject exists: Contract has a framing reader, 3 block key-set readers and `dispatch_expr::eval`; a record-consistency validator (6.9-0003/-0006, 6.3-0009, 6.7-0002) would back several rows at once (re-measure with an awk over `conformance/UNBACKED.tsv`: category `untested`, empty note). Check each clause for a real subject first (`conformance/` has codecs, oracle, derive, consumer-verify; no provider, consumer, lifter or emitter) and write a test where one exists, a reason where not. The PM (2026-10-16) also named R3.3 `ctr` follow-ups. R1.10 needs a scheduled freeze; R1.11 is `[rule]`.
 3. Dependabot Monday (next 2026-10-26); answer second-deriver questions on the `ctr` vectors.
