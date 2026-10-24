@@ -57,7 +57,7 @@ pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
 /// precedence: all-axes (0xFFFF) beats trailing-only (0xFFFE) beats subset mask.
 /// A reduction never emits 0x0000 (§6.19-0038).
 pub fn reduce_axes_reduction(reduced: &[usize], rank: usize) -> u16 {
-    assert!((1..=8).contains(&rank), "rank out of range 1..=MAX_RANK(8)");
+    assert!((1..=MAX_RANK as usize).contains(&rank), "rank out of range 1..=MAX_RANK");
     let set: BTreeSet<usize> = reduced.iter().copied().collect();
     assert!(!set.is_empty() && set.iter().all(|&k| k < rank), "reduced axes out of range");
     let all: BTreeSet<usize> = (0..rank).collect();
@@ -74,7 +74,7 @@ pub fn reduce_axes_reduction(reduced: &[usize], rank: usize) -> u16 {
 /// (§6.19-0020 scan precedence): trailing axis of a rank>1 operand -> 0xFFFE,
 /// otherwise the single-bit subset mask. Never 0xFFFF, never 0x0000.
 pub fn reduce_axes_scan(axis: usize, rank: usize) -> u16 {
-    assert!((1..=8).contains(&rank) && axis < rank, "scan axis/rank out of range");
+    assert!((1..=MAX_RANK as usize).contains(&rank) && axis < rank, "scan axis/rank out of range");
     if rank > 1 && axis == rank - 1 {
         0xFFFE
     } else {
@@ -89,7 +89,7 @@ fn push_u16_le(out: &mut Vec<u8>, v: u16) {
 /// A window-parameter vector (§6.19-0023): `u8` count then count × `u32` LE, in
 /// the given (ascending spatial-axis) order — never sorted.
 pub fn window_param_vector(elems: &[u32]) -> Vec<u8> {
-    assert!(elems.len() <= 8, "window vector longer than MAX_RANK(8)");
+    assert!(elems.len() <= MAX_RANK as usize, "window vector longer than MAX_RANK");
     let mut out = vec![elems.len() as u8];
     for &e in elems {
         out.extend_from_slice(&e.to_le_bytes());
@@ -235,6 +235,24 @@ pub enum Decline {
     /// A bounded field exceeded its pinned maximum (§6.19-0027, §6.19-0037):
     /// `axis` must be < MAX_RANK, `index_operand` < MAX_OPERANDS.
     FieldOutOfRange { field: &'static str, value: u8, max: u8 },
+}
+
+/// Read a window/permutation parameter vector (§6.19-0023): `u8` count then count x `u32` LE. A count
+/// above `MAX_RANK` is a typed decline, never a panic or an over-read (§6.19-0037: "a reader MUST
+/// reject any such out-of-range field with a typed decline"); a blob shorter than its count declares
+/// is `TruncatedBlob`. Bytes after the last element are not inspected.
+pub fn decode_window_param_vector(blob: &[u8]) -> Result<Vec<u32>, Decline> {
+    let Some(&count) = blob.first() else {
+        return Err(Decline::TruncatedBlob { need: 1, got: 0 });
+    };
+    if count > MAX_RANK {
+        return Err(Decline::FieldOutOfRange { field: "window_vector_len", value: count, max: MAX_RANK });
+    }
+    let need = 1 + 4 * count as usize;
+    if blob.len() < need {
+        return Err(Decline::TruncatedBlob { need, got: blob.len() });
+    }
+    Ok(blob[1..need].chunks_exact(4).map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect())
 }
 
 /// The pinned shared-anchor bounds for the OpAttrs channel of this op-set

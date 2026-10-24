@@ -261,6 +261,26 @@ fn test_ops_opattrs_max_rank_operands_pinned() {
         decode_gather(&[0, 0x01, 8, 0x01]),
         Err(Decline::FieldOutOfRange { field: "index_operand", value: 8, max: 8 })
     );
+    // arm (4), KISS#419: a window/permutation vector longer than MAX_RANK is a typed decline from the
+    // reader. The bound is MAX_RANK itself: 8 elements decode, 9 decline with the count named, and the
+    // decoder never reads past the blob (a count the blob cannot satisfy is TruncatedBlob).
+    let eight: Vec<u32> = (0..8).collect();
+    assert_eq!(decode_window_param_vector(&window_param_vector(&eight)), Ok(eight));
+    let mut nine = vec![9u8];
+    nine.extend(std::iter::repeat(0u8).take(36));
+    assert_eq!(
+        decode_window_param_vector(&nine),
+        Err(Decline::FieldOutOfRange { field: "window_vector_len", value: 9, max: 8 })
+    );
+    assert_eq!(decode_window_param_vector(&[99]), Err(Decline::FieldOutOfRange { field: "window_vector_len", value: 99, max: 8 }));
+    assert_eq!(decode_window_param_vector(&[2, 1, 0, 0, 0]), Err(Decline::TruncatedBlob { need: 9, got: 5 }));
+    assert_eq!(decode_window_param_vector(&[]), Err(Decline::TruncatedBlob { need: 1, got: 0 }));
+    // arm (3), KISS#419: a subset mask with a bit at a position >= MAX_RANK. With MAX_RANK = 8 the low
+    // byte holds exactly positions 0..=7, so 0x00FF is the widest legal mask and the first value with a
+    // bit at position 8 (0x0100) opens the reserved band the reader declines.
+    assert!(validate_reduce_axes(0x00FF).is_ok());
+    assert_eq!(validate_reduce_axes(0x0100), Err(Decline::ReservedReduceAxes { value: 0x0100 }));
+    assert_eq!(validate_reduce_axes(0x8000), Err(Decline::ReservedReduceAxes { value: 0x8000 }));
 }
 
 // ---- §6.19.1 general encoding invariants ------------------------------------

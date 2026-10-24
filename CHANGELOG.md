@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.43 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#419 (KISS-OPS-6.19-0037), no spec or wire change; floor unmoved at harness 460 / untested 386. Arm (4): new `opattrs::decode_window_param_vector`, the reader the clause requires (a count above `MAX_RANK` is a typed `FieldOutOfRange`, a short blob is `TruncatedBlob`); before, the only guard was an encoder `assert!(len <= 8)` that nothing exercised, so the bound could be raised to 99 with no test red. Arm (3): the existing `validate_reduce_axes` already declines a mask bit at position >= `MAX_RANK` (0x0100 and up); it is now asserted in the named test. The three hard-coded `8`s in `opattrs.rs` (rank, scan, window) now reference `MAX_RANK`, so the co-versioning obligation moves them together.
+
 ## 0.4.42 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386 (R3.9, tests that cannot fail). KISS#490: `test_contract_reserved_tile_mapping` had a control `GeometryAgnostic.validate().is_ok()` that was `Ok(()) == Ok(())`; it is replaced by a document-level claim (the sentinel Dispatch block parses to `GeometryAgnostic`, and the same block with a reserved `thread_mapping = tile_mapping` beside it declines). KISS#377: new `test_conform_split_comparator_not_fourth_class` reads the `DeterminismClass` enum and requires exactly its three canonical members, so a deliberate fourth registration (with its match arms) reddens a test instead of passing on compiler exhaustiveness alone; it cites KISS-CONFORM-6.8-0005 (NAMED -> CITED).
