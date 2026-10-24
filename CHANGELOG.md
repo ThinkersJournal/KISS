@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.37 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 96 bare-`untested` Synth rows. `conformance/` has the reused Announce CYRQ/CDEC codec but no PRSP codec, provider or consumer. Every sub-standard now has no empty-reason `untested` row.
+
 ## 0.4.36 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Ledger and HANDOFF only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for all 69 bare-`untested` Contract rows. `conformance/` reads the document framing and the key set of three section blocks, but has no value reader, cross-field validator, resolver or contract producer. Contract now has no empty-reason row.
