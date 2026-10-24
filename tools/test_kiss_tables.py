@@ -7,6 +7,7 @@ Unit + integration tests for kiss_tables.py. Stdlib unittest only:
     python tools/test_kiss_tables.py
 """
 import os
+import re
 import sys
 import unittest
 
@@ -119,6 +120,26 @@ class QuantProjection(unittest.TestCase):
 
     def test_a_missing_clause_is_a_violation_not_a_pass(self):
         self.assertTrue(kt.quant_projection_violations("no clauses here"))
+
+
+class CountWordIsNeverSkipped(unittest.TestCase):
+    """KISS#159: a count word the lint cannot read is a violation, not a skipped check."""
+    W = {"four": 4}
+
+    def test_missed_anchor_is_a_violation(self):
+        self.assertTrue(kt._count_word_violation(None, self.W, 4, "x"))
+
+    def test_unknown_word_is_a_violation(self):
+        m = re.search(r"(\w+) cats", "five cats")
+        self.assertTrue(kt._count_word_violation(m, self.W, 4, "x"))
+
+    def test_wrong_word_is_a_violation(self):
+        m = re.search(r"(\w+) cats", "four cats")
+        self.assertTrue(kt._count_word_violation(m, self.W, 5, "x"))
+
+    def test_matching_word_is_clean(self):
+        m = re.search(r"(\w+) cats", "four cats")
+        self.assertEqual(kt._count_word_violation(m, self.W, 4, "x"), [])
 
 
 class RealSpecIsClean(unittest.TestCase):

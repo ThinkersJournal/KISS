@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.58 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.8 KISS#159 (the count-word half), tooling only; no spec, corpus or wire change, floor unmoved. `kiss_tables.py` skipped its two count-word checks (`<n>-member` MathFidelity, `exactly the <n> categories` refusal taxonomy) silently when the anchor missed or the word was outside the lint's table. Both now go through `_count_word_violation`: a missed anchor or an unknown word is a violation. Clean on the shipped spec (`kiss_tables.py` RESULT: CLEAN at `origin/main` 3e994b0, which says both anchors match today). `kiss_wire.py` and `kiss_vocab.py` already report their misses at that ref. `tools/test_kiss_tables.py` +4 controls. #136 (needs a spec ruling: orphan gate vs carve-out) and #498 (1:1 model) of R3.8 remain open.
+
 ## 0.4.57 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.8 KISS#137, tooling plus two test renames; no spec, corpus or wire change, floor unmoved. `kiss_trace.discover_tests` keys by bare fn name, so a same-named `#[test]` in two files silently replaced the first and its citations. It now reports each repeat and `kiss_trace.py` fails with `DUPLICATE TEST NAME`. Measured at `origin/main` 9b746f6 by an independent walk that records every occurrence: 811 `#[test]` fns, 809 names, 2 collisions (`oracle_is_self_consistent_under_fuzz`, `corpus_is_reproducible`, in `differential.rs` and `integer_differential.rs`); the integer copies are renamed `int_*`, no clause cites either name. Control: with the renames reverted the tool prints both and exits `VIOLATIONS FOUND`. `tools/test_kiss_trace_duplicates.py` (2 controls) is wired into the `kiss-trace` job. #136, #498 and #159 of R3.8 remain open.

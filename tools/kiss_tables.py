@@ -343,12 +343,23 @@ def check_mathfidelity_enum(spec_dir):
     ops = os.path.join(spec_dir, "ops.md")
     if os.path.exists(ops):
         otext = open(ops, encoding="utf-8").read()
-        m = re.search(r"the\s+([a-z]+)-member enum `\{[^}]*bit-stable", otext)
-        words = {"two": 2, "three": 3}
-        if m and words.get(m.group(1)) not in (None, len(MATHFIDELITY_MEMBERS)):
-            out.append(f"§6.17-0001 says '{m.group(1)}-member' but the enum has "
-                       f"{len(MATHFIDELITY_MEMBERS)} members")
+        out += _count_word_violation(
+            re.search(r"the\s+([a-z]+)-member enum `\{[^}]*bit-stable", otext),
+            {"two": 2, "three": 3}, len(MATHFIDELITY_MEMBERS), "§6.17-0001 '<n>-member'")
     return out
+
+
+def _count_word_violation(m, words, size, what):
+    """A count word beside an enum must match the enum's size. A missed anchor or a word
+    outside `words` is a violation, never a skip: the check would otherwise vanish when
+    the spec is reworded (KISS#159)."""
+    if not m:
+        return [f"{what}: count word not found (anchor drifted, check not run)"]
+    if m.group(1) not in words:
+        return [f"{what}: count word '{m.group(1)}' is not in the lint's table {sorted(words)}"]
+    if words[m.group(1)] != size:
+        return [f"{what} says '{m.group(1)}' but the enum has {size} members"]
+    return []
 
 
 # The KISS-Consume refusal taxonomy owned by KISS-CONSUME-6.4-0001. The two whole-input
@@ -382,10 +393,9 @@ def check_refusal_taxonomy(spec_dir):
             miss = sorted(t for t in REFUSAL_MEMBERS if t not in body)
             if miss:
                 out.append(f"§6.4-0001 owner is missing categor(y/ies): {miss}")
-            cw = re.search(r"MUST be exactly the\s+(\w+)\s+categories", body)
-            words = {"four": 4}
-            if cw and words.get(cw.group(1)) not in (None, len(REFUSAL_MEMBERS)):
-                out.append(f"§6.4-0001 says '{cw.group(1)}' but names {len(REFUSAL_MEMBERS)}")
+            out += _count_word_violation(
+                re.search(r"MUST be exactly the\s+(\w+)\s+categories", body),
+                {"four": 4}, len(REFUSAL_MEMBERS), "§6.4-0001 'exactly the <n> categories'")
         else:
             out.append("KISS-CONSUME-6.4-0001 owner clause not found")
     # (b) every DOWNSTREAM parenthetical full-set restatement must carry all four.
