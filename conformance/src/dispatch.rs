@@ -35,6 +35,38 @@ pub struct DispatchFields {
     pub addressing_rule: String,
 }
 
+/// The five geometry field names of §6.6-0001 in wire order. `validate` and the tests iterate THIS list,
+/// so a field added to [`DispatchFields`] and to this list is covered by both (KISS#380).
+pub const GEOMETRY_FIELDS: [&str; 5] =
+    ["invocation_domain", "workgroup_sizing", "count_to_grid", "thread_mapping", "addressing_rule"];
+
+impl DispatchFields {
+    /// The value of the field named `name` (one of [`GEOMETRY_FIELDS`]).
+    pub fn field(&self, name: &str) -> &str {
+        match name {
+            "invocation_domain" => &self.invocation_domain,
+            "workgroup_sizing" => &self.workgroup_sizing,
+            "count_to_grid" => &self.count_to_grid,
+            "thread_mapping" => &self.thread_mapping,
+            "addressing_rule" => &self.addressing_rule,
+            other => panic!("not a Dispatch geometry field: {other}"),
+        }
+    }
+
+    /// Set the field named `name` (one of [`GEOMETRY_FIELDS`]).
+    pub fn set_field(&mut self, name: &str, value: &str) {
+        let slot = match name {
+            "invocation_domain" => &mut self.invocation_domain,
+            "workgroup_sizing" => &mut self.workgroup_sizing,
+            "count_to_grid" => &mut self.count_to_grid,
+            "thread_mapping" => &mut self.thread_mapping,
+            "addressing_rule" => &mut self.addressing_rule,
+            other => panic!("not a Dispatch geometry field: {other}"),
+        };
+        *slot = value.to_string();
+    }
+}
+
 /// A kernel's Dispatch section (§6.6). The section is **always present** (§6.11-0004 requires all
 /// seven blocks); what varies is its content: `GeometryAgnostic` carries the sentinel line
 /// `dispatch_model = geometry-agnostic` (§6.6-0007, as resolved by #456/#480), `Declared` carries
@@ -251,14 +283,8 @@ impl DispatchModel {
             DispatchModel::GeometryAgnostic => return Ok(()),
             DispatchModel::Declared(f) => f,
         };
-        for (name, val) in [
-            ("invocation_domain", &f.invocation_domain),
-            ("workgroup_sizing", &f.workgroup_sizing),
-            ("count_to_grid", &f.count_to_grid),
-            ("thread_mapping", &f.thread_mapping),
-            ("addressing_rule", &f.addressing_rule),
-        ] {
-            if val.trim().is_empty() {
+        for name in GEOMETRY_FIELDS {
+            if f.field(name).trim().is_empty() {
                 return Err(format!(
                     "§6.6-0007: partial Dispatch section — `{name}` is empty; declare all five \
                      fields or carry the `dispatch_model = geometry-agnostic` sentinel line"

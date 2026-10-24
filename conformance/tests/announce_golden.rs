@@ -210,13 +210,19 @@ fn test_announce_availability_list_version() {
             Err(AnnounceDecline::ListVersionUnsupported { got: v })
         );
     }
-    // reader: a nonzero MBZ byte -> typed decline
-    let mut bad = b.clone();
-    bad[5] = 1;
-    assert_eq!(
-        decode_availability_list(&bad),
-        Err(AnnounceDecline::ReservedNonZero { region: "savl_mbz" })
-    );
+    // reader: a nonzero MBZ byte -> typed decline, at EACH of the three MBZ offsets (KISS#386): a
+    // reader guarding only byte 5 would pass a single-offset check.
+    for off in 5..8 {
+        for v in [1u8, 0x80, 0xFF] {
+            let mut bad = b.clone();
+            bad[off] = v;
+            assert_eq!(
+                decode_availability_list(&bad),
+                Err(AnnounceDecline::ReservedNonZero { region: "savl_mbz" }),
+                "a nonzero MBZ byte ({v:#x}) at offset {off} must decline"
+            );
+        }
+    }
 }
 
 /// Enforces: KISS-ANNOUNCE-6.3-0005 — the availability-list framing: tag, version

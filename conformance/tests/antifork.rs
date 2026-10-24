@@ -6,7 +6,10 @@
 
 use kiss_conformance::antifork::{emit_op_tag, no_fabricated_tag, UnknownOp};
 
-const VOCAB: &[&str] = &["add", "mul", "exp", "matmul", "gather", "reduce"];
+// `gelu` is a member so that `gelu_fast` below is a PREFIX near-miss of a real name (KISS#382): without
+// it no candidate shares a prefix with any member, and a re-basing `candidate.starts_with(name)`
+// mutation is unreachable.
+const VOCAB: &[&str] = &["add", "mul", "exp", "matmul", "gather", "reduce", "gelu"];
 
 /// §6.4-0012 — every emitted op tag is a confirmed KISS-Ops name; an unrecognized op
 /// typed-declines rather than fabricating a tag.

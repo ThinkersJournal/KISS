@@ -144,4 +144,9 @@ fn test_ops_e5m2_layout() {
 
     // --- sign preserved ----------------------------------------------------
     assert_eq!(f32_to_e5m2(-57344.0), 0xFB);
+    // KISS#383: -57344.0 is the max finite magnitude EXACTLY, so it shows sign preservation but not
+    // saturation. NEGATIVE finite overflow saturates to -max (0xFB) and never becomes -inf (0xFC).
+    assert_eq!(f32_to_e5m2(-1e30), 0xFB, "negative finite overflow saturates, never -inf");
+    assert_eq!(f32_to_e5m2(-100000.0), 0xFB);
+    assert_eq!(f32_to_e5m2(f32::NEG_INFINITY), 0x80 | E5M2_INF_MAG, "an infinite input is still -inf");
 }
