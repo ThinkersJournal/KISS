@@ -19,6 +19,7 @@ pub struct Msvc {
 /// Newest immediate subdirectory of `root` (lexicographically greatest name),
 /// or `None` if `root` has no subdirectories.
 fn newest_subdir(root: &Path) -> Option<PathBuf> {
+    // io-discard-ok: toolchain probe, an unreadable root means "no MSVC here"; find_msvc() returns None and the callers skip through a declared runtime gate
     let mut dirs: Vec<PathBuf> = std::fs::read_dir(root)
         .ok()?
         .filter_map(|e| e.ok())
@@ -66,6 +67,7 @@ fn find_msvc_default() -> Option<Msvc> {
             continue;
         }
         // <root>\<edition-year>\<Community|...>\VC\Tools\MSVC\<ver>\bin\Hostx64\x64\cl.exe
+        // io-discard-ok: toolchain probe, an unreadable year or edition directory is a candidate that is not installed
         for year in std::fs::read_dir(root).ok().into_iter().flatten().filter_map(|e| e.ok()).map(|e| e.path()) {
             for edition in std::fs::read_dir(&year).ok().into_iter().flatten().filter_map(|e| e.ok()).map(|e| e.path()) {
                 let msvc_root = edition.join(r"VC\Tools\MSVC");

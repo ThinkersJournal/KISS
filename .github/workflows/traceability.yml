@@ -50,6 +50,12 @@ jobs:
       # makes that loud (#400) is shown to red on the list and stay quiet on a single name.
       - name: kiss_trace partial-bind check (negative controls)
         run: python tools/test_kiss_trace_partial_bind.py
+      # A discovery step that can fail must fail, not shrink (KISS-CONFORM-6.5-0016, #148).
+      # The controls run first: a lint that flags every form, or none, is no evidence.
+      - name: kiss_io_discard controls
+        run: python tools/test_kiss_io_discard.py
+      - name: Silent filesystem-read discard lint
+        run: python tools/kiss_io_discard.py
       # The citation audit reports on the integrity of the coverage numbers, so its
       # OWN discrimination is what must run: the controls prove it does not simply
       # flag every reverse citation. The audit itself is non-gating by design — it
