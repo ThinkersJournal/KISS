@@ -94,7 +94,7 @@ fn correspondence_rows(emit_md: &str) -> Vec<Row> {
     rows
 }
 
-/// KISS-EMIT-6.7-0008 AND KISS-CONFORM-6.11-0001 — the cross-standard document lint.
+/// Enforces: KISS-EMIT-6.7-0008 AND KISS-CONFORM-6.11-0001 — the cross-standard document lint.
 /// The emit↔consume correspondence table in emit.md pairs each KISS-Emit §6.7
 /// round-trip clause with its KISS-Consume §6.6 counterpart. Teeth: (a) exactly 6
 /// rows covering §6.7-0001..0005 + §6.7-0009 ↔ §6.6-0001..0006 -- the emit side is

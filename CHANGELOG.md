@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.45 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#381, tests only (comments), no spec, src or wire change; floor unmoved at harness 460 / untested 386. KISS-EMIT-9.2-0001 puts bidirectional traceability in the conformance definition, and none of the 28 Emit named tests cited a clause. Of the issue's three readings this takes (ii): every one of the 28 gains `Enforces: KISS-EMIT-<id>` in its doc comment (`test_emit_spellable_is_not_computable` had no doc comment and gets one), so NAMED 264 -> 235 and CITED rises by the same. Readings (i) and (iii), which would soften the clause, are not taken. `test_emit_traceability_complete` now states its scope: it checks the document against itself, no instrument checks that each test cites its clause, and `kiss_cite_form` polices only the spelling.
+
 ## 0.4.44 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 batch 2, no spec or wire change; floor unmoved at harness 460 / untested 386. Five tests that could not fail now can: KISS#380 (CONTRACT-6.6-0007: `validate` and the test iterate one `GEOMETRY_FIELDS` list, every field is blanked and a destructure fails to compile if the struct grows; `DispatchFields::{field, set_field}` added), KISS#382 (`gelu` added to the anti-fork VOCAB so `gelu_fast` is a prefix near-miss), KISS#383 (f8e5m2 negative finite overflow saturates to 0xFB, never -inf), KISS#384 (new `test_ops_opattrs_framer_does_not_parse_inside`: blobs no schema accepts are framed verbatim), KISS#386 (ANNOUNCE-6.3-0012: all three MBZ offsets decline).
