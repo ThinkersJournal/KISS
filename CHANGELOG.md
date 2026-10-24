@@ -5,7 +5,7 @@ second number.
 
 ## 0.4.52 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
-- ROADMAP R3.14 recorded as ruled: CireSnave 2026-10-24 (board 269) chose (b) now, (a) later, when the first foreign reader exists. Docs only; no spec, test, src or wire change.
+- ROADMAP R3.14 recorded as ruled: CireSnave 2026-10-24 (board 269) chose (b) now, (a) later, when the first foreign reader exists. Also logs ROADMAP R3.5a (KISS#352 residue: no ULP-class moved-NaN vector; 0 of 78 moved rows). Docs only; no spec, test, src or wire change.
 
 ## 0.4.51 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
