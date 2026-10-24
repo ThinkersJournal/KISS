@@ -436,7 +436,7 @@ def _leading_comment(src, start):
     return "\n".join(lines)
 
 
-def discover_tests(conf_dir):
+def discover_tests(conf_dir, collisions=None):
     """Every executable test function in the conformance harness.
 
     Returns {test_name: {"file", "gate", "clauses"}}. Rust's own test harness is
@@ -451,6 +451,12 @@ def discover_tests(conf_dir):
     cited by a real test is backed even if the spec's `*Test:*` name and the
     harness's fn name have drifted, because the citation — not the name — is
     what actually ties a requirement to executable code.
+
+    The result is keyed by bare fn name, which Rust does not require to be unique
+    across files (different integration-test binaries both run). A repeat would
+    silently overwrite the first occurrence and its citations (#137), so when a
+    `collisions` list is passed each repeat is appended to it as
+    `(name, first_file, repeat_file)`; the caller turns that into a failure.
     """
     found = {}
     if not os.path.isdir(conf_dir):
@@ -480,6 +486,8 @@ def discover_tests(conf_dir):
                 # because a citation legitimately lives in the doc comment.
                 rt = RE_RUNTIME_GATE.search(body)
                 proven_well, proven_bad = _proven_markers(scope)
+                if collisions is not None and name in found:
+                    collisions.append((name, found[name]["file"], rel))
                 found[name] = {
                     "file": rel,
                     # A compile-time `cfg` gate and a declared runtime gate are the
@@ -1908,7 +1916,8 @@ def main():
             suite_violations.append(f"clause id {cid} appears in multiple docs: {', '.join(sorted(docs))}")
 
     # ---- check 2: BINDING — does the named test actually exist? ----
-    harness = discover_tests(conf_dir)
+    name_collisions = []
+    harness = discover_tests(conf_dir, name_collisions)
     ledger = read_ledger(ledger_path)
     lint_cov = discover_lint_coverage(here)
 
@@ -2351,6 +2360,14 @@ def main():
               f"{'/'.join(CLAIM_CATEGORIES)} with no note — a category that makes a CLAIM must say why:")
         for cid in missing_note[:6]:
             print(f"          - {cid}")
+
+    if name_collisions:
+        any_fail = note_fail("duplicate_test_name")
+        print("-" * 68)
+        print(f"  DUPLICATE TEST NAME: {len(name_collisions)} fn name(s) repeat across files; the "
+              f"inventory is keyed by name, so one occurrence and its citations are lost (#137):")
+        for name, first, again in name_collisions[:8]:
+            print(f"          - {name} in {first} and {again}")
 
     if dangling:
         any_fail = note_fail("dangling_citation")

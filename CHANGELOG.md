@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.57 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.8 KISS#137, tooling plus two test renames; no spec, corpus or wire change, floor unmoved. `kiss_trace.discover_tests` keys by bare fn name, so a same-named `#[test]` in two files silently replaced the first and its citations. It now reports each repeat and `kiss_trace.py` fails with `DUPLICATE TEST NAME`. Measured at `origin/main` 9b746f6 by an independent walk that records every occurrence: 811 `#[test]` fns, 809 names, 2 collisions (`oracle_is_self_consistent_under_fuzz`, `corpus_is_reproducible`, in `differential.rs` and `integer_differential.rs`); the integer copies are renamed `int_*`, no clause cites either name. Control: with the renames reverted the tool prints both and exits `VIOLATIONS FOUND`. `tools/test_kiss_trace_duplicates.py` (2 controls) is wired into the `kiss-trace` job. #136, #498 and #159 of R3.8 remain open.
+
 ## 0.4.56 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - ROADMAP R3.6 records #148 and #400 (loud half) done and #484 as process, not code; HANDOFF rewritten to current state (it was over its 8KB ceiling). Docs only; no spec, test, src or wire change.

@@ -128,7 +128,7 @@ fn unsigned_shr_is_logical_and_agrees() {
 // ---- self-consistency and corpus reproducibility (Conform §6.5) -------------
 
 #[test]
-fn oracle_is_self_consistent_under_fuzz() {
+fn int_oracle_is_self_consistent_under_fuzz() {
     let corpus = int_corpus::<i64>(7, 300);
     assert!(diff_int_binary(add, add, &corpus).is_empty());
     assert!(diff_int_binary(mul, mul, &corpus).is_empty());
@@ -138,7 +138,7 @@ fn oracle_is_self_consistent_under_fuzz() {
 }
 
 #[test]
-fn corpus_is_reproducible() {
+fn int_corpus_is_reproducible() {
     // same seed/n -> identical corpus (deterministic fuzzer reproducibility).
     let a: Vec<u64> = int_corpus::<i64>(42, 100).iter().map(|x| x.to_bits_u64()).collect();
     let b: Vec<u64> = int_corpus::<i64>(42, 100).iter().map(|x| x.to_bits_u64()).collect();
