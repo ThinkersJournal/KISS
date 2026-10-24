@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.53 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.7 KISS#239 items 1 and 2, tools tests only, no spec, src, corpus or wire change; floor unmoved. `tools/test_kiss_dtypes_manifest.py` pinned `storage_bits` for 4 of 24 dtype arms and `kind` for 2; it now pins `(kind, storage_bits, reserved)` for all 24 against a table transcribed from the spec, and the token count per width (the 8-bit cluster is nine). A control applies five same-width mutations and an `i16`/`u16` kind exchange to a copy of the real manifest and requires each be reported; a mutation of the normative §6.1 table row for `i16` was caught by both new tests. Item 3 (a discriminating swap vector in the corpus) is not done: it needs a vector home in KISS-Conform.
+
 ## 0.4.52 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - ROADMAP R3.14 recorded as ruled: CireSnave 2026-10-24 (board 269) chose (b) now, (a) later, when the first foreign reader exists. Also logs ROADMAP R3.5a (KISS#352 residue: no ULP-class moved-NaN vector; 0 of 78 moved rows). Docs only; no spec, test, src or wire change.
