@@ -5,7 +5,7 @@ second number.
 
 ## 0.4.30 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
-- Tests and ledger only, no spec or wire change (R3.2): `announce_frames.rs` gains producer-side tests for KISS-ANNOUNCE-6.1-0009, -0014 and -0015, read from the raw encoded bytes (harness 436 -> 439, untested 410 -> 407). 6.1-0005 stays untested with a recorded reason (the version a producer writes is a caller-supplied field, so a test would be circular).
+- Tests and ledger only, no spec or wire change (R3.2): `announce_frames.rs` gains producer-side tests for KISS-ANNOUNCE-6.1-0009, -0014 and -0015, read from the raw encoded bytes (harness 436 -> 439, untested 410 -> 407). 6.1-0005 stays untested with a recorded reason (the version a producer writes is a caller-supplied field, so a test would be circular). The advisory CodeRipper portfolio caller is repinned to coderipper d14a22b (CodeRipper 0.9.14, was 0.9.6; coderipper#142).
 
 ## 0.4.29 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
