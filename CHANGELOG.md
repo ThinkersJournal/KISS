@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.59 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.8 KISS#498, docs only: `docs/design-498-two-level-backing.md`. Reading `kiss_trace.py` at `3e994b0` shows citations are already many-to-one (`cited` is clause to a set of tests); only the §9 pointer is one-to-one, so the defect is the `tier_cited_other` report label (20 clauses) conflating a stale pointer with a second test adding a level. Recommends a report-only split after measuring those 20, and a level qualifier on `Backs:` only if a second instance appears. No tool, spec, test or wire change; floor unmoved. Numbered 0.4.59 because #647 proposes 0.4.58.
+
 ## 0.4.58 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.8 KISS#159, tooling only; no spec, corpus, wire or floor change. Re-read at `origin/main` 3e994b0: the 6 `if sm and hm` sites in `kiss_wire.py` and the 2 in `kiss_vocab.py` the issue names already have an `else` that appends a violation ("not found on both sides"), so those no longer skip silently. The two that did are the count-word comparisons in `kiss_tables.py` (`§6.17-0001 two-member`, `§6.4-0001 exactly the four categories`): a missing phrase or a word outside the lint's table (`words.get(..) not in (None, n)`) switched the check off with no output. Each is now a violation. `tools/test_kiss_tables.py` gains 6 controls; with the fix reverted 4 fail (the wrong-word and clean-spec controls pass either way, by design). Not done: a per-group minimum on the printed `kiss_wire` counts (the miss is already reported, so the count backstop would only repeat it).
