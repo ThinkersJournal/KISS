@@ -509,7 +509,14 @@ enum (§6.0). See umbrella §3 for the full statement.
 - **KISS-CONFORM-6.1-0003** — The matrix MUST be **total in direction 2 (test → clause)**:
   every named conformance test MUST cite at least one clause ID that is **live** (present in a
   current sidecar and not retired). A test citing no live clause is an orphan and is a
-  build-fail (§6.2-0002 / §6.2-0003). *Test:* `test_conform_every_test_cites_clause`.
+  build-fail (§6.2-0002 / §6.2-0003). The one exception is a **harness-internal test**: a
+  test of the suite's own machinery (a hash function, the JSON parser, library loading) that
+  verifies no clause of any sub-standard. It MUST carry an adjacent tag line
+  `// harness-internal: <reason>` (Python: `# harness-internal: <reason>`) with a non-empty
+  reason; a tagged test is not an orphan. An untagged test that cites no live clause is an
+  orphan, and a tagged test that also cites a live clause MUST be reported as a violation, so
+  the tag cannot be used to hide a test that does bear on a clause.
+  *Test:* `test_conform_every_test_cites_clause`.
 - **KISS-CONFORM-6.1-0004** — The matrix MUST be **derived, not hand-authored**: a lint MUST
   parse each sub-standard's sidecar for the authoritative clause set and cross-reference it
   against the `#[cite(...)]`-style clause annotations each test carries; an implementation
