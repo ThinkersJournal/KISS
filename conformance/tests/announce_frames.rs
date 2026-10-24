@@ -194,6 +194,73 @@ fn test_announce_trailing_profiles_zero() {
     }
 }
 
+/// Reads the live profile slots straight from the encoded bytes (offsets 10..42), never through
+/// `decode`, so the producer tests below cannot be satisfied by a reader that repairs input.
+fn live_profiles_from_bytes(b: &[u8]) -> Vec<u16> {
+    let len = u16::from_le_bytes(b[8..10].try_into().unwrap()) as usize;
+    (0..len).map(|i| u16::from_le_bytes(b[10 + i * 2..12 + i * 2].try_into().unwrap())).collect()
+}
+
+/// Enforces: KISS-ANNOUNCE-6.1-0009 — a producer MUST write `profiles[0..profiles_len]` in
+/// strictly ascending order with no duplicate values.
+/// TEETH: checked on the raw encoded bytes for every length 1..=16 and for a sparse set, so an
+/// encoder that reorders the set or emits a repeated value fails.
+#[test]
+fn test_announce_profiles_strictly_ascending() {
+    let mut sets: Vec<Vec<u16>> = (1u16..=16).map(|n| (1..=n).collect()).collect();
+    sets.push(vec![2, 7, 300, 65535]);
+    for profiles in sets {
+        let e = Envelope { envelope_version: 1, profiles: profiles.clone(), capabilities: 0 };
+        let got = live_profiles_from_bytes(&e.encode());
+        assert_eq!(got, profiles, "KISS-ANNOUNCE-6.1-0009: live slots must round-trip in order");
+        assert!(
+            got.windows(2).all(|w| w[0] < w[1]),
+            "KISS-ANNOUNCE-6.1-0009: profiles {got:?} MUST be strictly ascending, no duplicates"
+        );
+    }
+}
+
+/// Enforces: KISS-ANNOUNCE-6.1-0015 — a producer MUST write a value `>= 1` to every `profiles`
+/// entry at index `< profiles_len` (0 is reserved for absence/padding).
+/// TEETH: every live slot of the raw bytes is nonzero for the saturated and reference envelopes,
+/// and the slot just past `profiles_len` is zero, so a producer that shifts the set by one (writing
+/// a 0 first) fails on the live side and one that pads with a live value fails on the other.
+#[test]
+fn test_announce_live_profiles_nonzero() {
+    for e in [reference(), saturated()] {
+        let b = e.encode();
+        let len = u16::from_le_bytes(b[8..10].try_into().unwrap()) as usize;
+        assert_eq!(len, e.profiles.len());
+        for (i, p) in live_profiles_from_bytes(&b).into_iter().enumerate() {
+            assert!(p >= 1, "KISS-ANNOUNCE-6.1-0015: live profile slot {i} MUST be >= 1");
+        }
+        if len < MAX_PROFILES {
+            let o = 10 + len * 2;
+            assert_eq!(&b[o..o + 2], &[0u8; 2], "KISS-ANNOUNCE-6.1-0015: slot {len} is padding, 0");
+        }
+    }
+}
+
+/// Enforces: KISS-ANNOUNCE-6.1-0014 — `magic` (offset 0, size 4) and `envelope_version` (offset 4,
+/// size 1) MUST occupy those fixed offsets and sizes in every envelope version.
+/// TEETH: the prefix is read from the raw bytes for every version value 0..=255, not just 1, so an
+/// encoder that moves either field for a future version is caught; a version byte is exactly one
+/// byte (255 survives, no widening into reserved0).
+#[test]
+fn test_announce_fixed_prefix_stable_across_versions() {
+    for v in 0u8..=255 {
+        let e = Envelope { envelope_version: v, profiles: vec![1], capabilities: 0 };
+        let b = e.encode();
+        assert_eq!(
+            u32::from_le_bytes(b[0..4].try_into().unwrap()),
+            MAGIC,
+            "KISS-ANNOUNCE-6.1-0014: magic MUST stay at offset 0..4 for version {v}"
+        );
+        assert_eq!(b[4], v, "KISS-ANNOUNCE-6.1-0014: envelope_version MUST stay at offset 4 for version {v}");
+        assert_eq!(&b[5..8], &[0u8; 3], "KISS-ANNOUNCE-6.1-0014: version is one byte; reserved0 untouched");
+    }
+}
+
 // ---- §6.2 reader hard-reject discipline -------------------------------------
 
 /// Enforces: KISS-ANNOUNCE-6.2-0007 — on any rejection, a reader MUST return a

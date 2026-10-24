@@ -36,11 +36,8 @@
 # clause_id	test_name	category	note
 KISS-ANNOUNCE-6.0-0001	test_announce_determinism_class_exact_byte	untested	
 KISS-ANNOUNCE-6.1-0001	test_announce_envelope_size_is_56	lint:kiss_wire	the 56-byte envelope size drifts between §6.1-0001 and ENVELOPE_LEN
-KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1	untested	
+KISS-ANNOUNCE-6.1-0005	test_announce_version_field_is_1	untested	Producer-side: the version a producer writes is a caller-supplied field of `Envelope` and the library has no producer constant, so a test could only assert the value its own fixture passed (circular). The reader side, which rejects any other value, is backed by 6.2-0003. Recorded as a reason, not backed.
 KISS-ANNOUNCE-6.1-0007	test_announce_profiles_len_within_cap	lint:kiss_wire	the profiles cap 16 drifts between §6.1-0007 and MAX_PROFILES
-KISS-ANNOUNCE-6.1-0009	test_announce_profiles_strictly_ascending	untested	
-KISS-ANNOUNCE-6.1-0014	test_announce_fixed_prefix_stable_across_versions	untested	
-KISS-ANNOUNCE-6.1-0015	test_announce_live_profiles_nonzero	untested	
 KISS-ANNOUNCE-6.2-0010	test_announce_reads_prefix_before_length	untested	
 KISS-ANNOUNCE-6.3-0002	test_announce_availability_carries_no_capability	untested	
 KISS-ANNOUNCE-6.3-0006	test_announce_hit_miss_by_full_identity	untested	
