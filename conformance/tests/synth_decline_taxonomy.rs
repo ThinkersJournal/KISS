@@ -162,6 +162,23 @@ fn core_decline_codes() -> [(u32, &'static str); 6] {
     ]
 }
 
+/// The names of the `pub const NAME: u32 = …;` items declared inside `pub mod decline_code { … }` in
+/// `src`, read from the SOURCE so a constant added to the module is seen (KISS#385). Enumerating by
+/// transcription, as `core_decline_codes` does, can only detect changes to things already transcribed.
+fn declared_decline_consts(src: &str) -> BTreeSet<String> {
+    let head = "pub mod decline_code {";
+    let start = src.find(head).expect("decline_code module is declared") + head.len();
+    let body = &src[start..];
+    let body = &body[..body.find("
+}").expect("decline_code module closes")];
+    body.lines()
+        .map(str::trim)
+        .filter_map(|l| l.strip_prefix("pub const "))
+        .filter_map(|l| l.split(':').next())
+        .map(|n| n.trim().to_string())
+        .collect()
+}
+
 /// A reference identity: key `AA BB CC`, revision pinned to 32×`0x11`.
 fn identity_present() -> Identity {
     Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
@@ -416,7 +433,7 @@ fn test_synth_map_malformed_request() {
     }
 }
 
-/// KISS-SYNTH-6.6-0003f — the provision decline taxonomy MUST be complete over
+/// Enforces: KISS-SYNTH-6.6-0003f — the provision decline taxonomy MUST be complete over
 /// EXACTLY the closed set of six failure kinds; the empty-profile-intersection
 /// handshake failure is owned by KISS-Announce and is NOT a member.
 /// TEETH (DOC-LINT): extract the six failure-kind code NAMES enumerated in the
@@ -424,7 +441,8 @@ fn test_synth_map_malformed_request() {
 /// six crate core `decline_code` constant names (count == 6, values contiguous 1..6);
 /// and assert the handshake failure — referenced by the crate variant
 /// `AnnounceDecline::NoMutualProfile` (a symbol, never an Announce clause-id) — is
-/// NOT a member of the taxonomy set. Adding a 7th core kind, dropping one, or leaking
+/// NOT a member of the taxonomy set, and that the constants the crate SOURCE declares are exactly those six.
+/// Adding a 7th core kind, dropping one, or leaking
 /// the handshake failure into the set all fail.
 #[test]
 fn test_synth_decline_taxonomy_complete() {
@@ -439,6 +457,22 @@ fn test_synth_decline_taxonomy_complete() {
         "KISS-SYNTH-6.6-0003f: the §6.6-0003f taxonomy enumeration and the crate core decline codes \
          must be the same closed set of six (a 7th kind, a dropped kind, or a leaked failure fails)"
     );
+
+    // CLOSURE UPWARD (KISS#385): the constants the crate source DECLARES are exactly the six, so a
+    // seventh `pub const` in `decline_code` reddens this test instead of passing unseen. The reader
+    // is shown to count a seventh on a synthetic module (the real source cannot be extended here).
+    let declared = declared_decline_consts(include_str!("../src/announce.rs"));
+    assert_eq!(
+        declared, crate_names,
+        "KISS-SYNTH-6.6-0003f: `decline_code` declares constants beyond (or short of) the closed set of six"
+    );
+    let seven = "pub mod decline_code {
+    pub const A: u32 = 1;
+    pub const B: u32 = 2;
+    pub const SEVENTH: u32 = 7;
+}
+";
+    assert_eq!(declared_decline_consts(seven).len(), 3, "control: the reader counts every declared constant");
 
     // values contiguous 1..6 (the closed set has no gap / no extension code).
     let mut values: Vec<u32> = core_decline_codes().iter().map(|&(v, _)| v).collect();
