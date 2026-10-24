@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.56 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- ROADMAP R3.6 records #148 and #400 (loud half) done and #484 as process, not code; HANDOFF rewritten to current state (it was over its 8KB ceiling). Docs only; no spec, test, src or wire change.
+
 ## 0.4.55 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.6 KISS#148, tooling only, no spec, test, corpus or wire change; floor unmoved. New `tools/kiss_io_discard.py`: a lint for a filesystem read (`read_dir`, `read_to_string`, `fs::read(`, `File::open`) whose `Result` is discarded in the same statement by `.ok()`, `.flatten()`, `unwrap_or_default()` or `let Ok(..) =`, the short form KISS-CONFORM-6.5-0016 forbids. The line is drawn at the I/O call, not at a "discovery context" (that boundary is not textual); a deliberate probe carries `// io-discard-ok: <reason>`. Measured at `origin/main` 3ecc83b, enumerated from `git ls-files` (172 Rust files): 3 statements, all in `conformance/src/harness/msvc.rs` (a toolchain probe where `find_msvc()` returns `None` and the callers skip through a declared runtime gate); each now carries a reason comment, no behaviour change. 0 other instances in `conformance/` or `tools/`; the instances #148 was filed for were already fixed. It cannot see an error swallowed across a function boundary, `let _ =`, an ignored `Err` arm, or non-filesystem I/O; a clean run does not say the code propagates its I/O errors. `tools/test_kiss_io_discard.py` has 15 controls (each discard form flagged, each propagating form clean, the exemption honoured and refused without a reason); both wired into the `kiss-trace` job. Does not back a ledger row, so the floor is unmoved.
