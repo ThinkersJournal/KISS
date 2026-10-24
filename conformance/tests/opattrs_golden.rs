@@ -442,6 +442,37 @@ fn test_ops_opattrs_definite_length_prefix() {
     assert_eq!(ap.len(), 4 * (1 + 2 * 4) + 1, "definite length = 4 vectors + 1 flag = 37");
 }
 
+/// Enforces: KISS-OPS-6.19-0010 — the embedding layer frames the OpAttrs blob length-prefixed and
+/// MUST NOT parse inside it (KISS#384). A parsing framer and an opaque one emit identical bytes for
+/// every blob both handle, so the discriminating input is a blob the framer CANNOT parse.
+/// TEETH: blobs that are not valid OpAttrs for any op (arbitrary bytes, a future vector kind, lengths
+/// that match no schema) are framed as a `u16`-LE length then the bytes VERBATIM, and the frame grows by
+/// exactly the blob length. A framer that validated and dropped or rejected unfamiliar bytes (e.g. an
+/// `n*4+1` well-formedness check) fails. NOT caught: a framer that reads the bytes and ignores what it
+/// read, which has no observable consequence.
+#[test]
+fn test_ops_opattrs_framer_does_not_parse_inside() {
+    use kiss_conformance::grammar::encode_tag;
+    let empty = encode_tag("relu", &[], &[], 1);
+    let blobs: [&[u8]; 5] = [
+        &[0xDE, 0xAD, 0xBE, 0xEF, 0xFF, 0x00, 0x7F],
+        &[0xFF],
+        &[0x09, 0, 0, 0, 0],
+        &[0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09],
+        &[0u8; 300],
+    ];
+    for blob in blobs {
+        let out = encode_tag("relu", blob, &[], 1);
+        assert_eq!(out.len(), empty.len() + blob.len(), "the frame grows by exactly the blob length");
+        let mut framed = (blob.len() as u16).to_le_bytes().to_vec();
+        framed.extend_from_slice(blob);
+        assert!(
+            out.windows(framed.len()).any(|w| w == framed.as_slice()),
+            "u16-LE length then the blob VERBATIM, for blob {blob:?}"
+        );
+    }
+}
+
 /// KISS-OPS-6.19-0012 (`test_ops_opattrs_opaque_embedding_byte_compare`): the
 /// embedding layer distinguishes two ops by a bytewise blob compare alone. Two
 /// producers resolving the SAME attributes emit byte-identical blobs, and two

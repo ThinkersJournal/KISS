@@ -11,7 +11,7 @@
 
 use kiss_conformance::dispatch::{
     is_thread_index_free, parse_dispatch_block, parse_dispatch_from_document, DispatchDecline,
-    DispatchFields, DispatchModel,
+    DispatchFields, DispatchModel, GEOMETRY_FIELDS,
 };
 
 /// A standard grid-stride Dispatch: thread-index-free coefficients only.
@@ -87,9 +87,26 @@ fn test_contract_dispatch_optional() {
     // The two pre-existing non-vacuous enum-level assertions stay: a full declaration validates,
     // and a partial one (an empty field) is rejected (§6.6-0007 no-partial).
     assert!(DispatchModel::Declared(grid_stride_fields()).validate().is_ok());
-    let mut empty_field = grid_stride_fields();
-    empty_field.addressing_rule = "".into();
-    assert!(DispatchModel::Declared(empty_field).validate().is_err());
+    // KISS#380: "all five fields" is demonstrated for EACH of the five, not one. The list is the
+    // validator's own (`GEOMETRY_FIELDS`), and the exhaustive destructure below fails to compile if
+    // the struct gains a field the list does not name, so a sixth field cannot be added unnoticed.
+    let DispatchFields { invocation_domain: _, workgroup_sizing: _, count_to_grid: _, thread_mapping: _, addressing_rule: _ } =
+        grid_stride_fields();
+    assert_eq!(
+        GEOMETRY_FIELDS,
+        ["invocation_domain", "workgroup_sizing", "count_to_grid", "thread_mapping", "addressing_rule"],
+        "§6.6-0001: the five geometry fields in wire order"
+    );
+    for blank in GEOMETRY_FIELDS {
+        for empty in ["", "   "] {
+            let mut partial = grid_stride_fields();
+            partial.set_field(blank, empty);
+            assert!(
+                DispatchModel::Declared(partial).validate().is_err(),
+                "§6.6-0007: a Dispatch section with `{blank}` = {empty:?} was accepted"
+            );
+        }
+    }
 }
 
 /// §6.6-0004 — thread_mapping/addressing_rule are thread-index-free structural declarations; a

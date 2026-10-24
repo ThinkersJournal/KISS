@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.44 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 batch 2, no spec or wire change; floor unmoved at harness 460 / untested 386. Five tests that could not fail now can: KISS#380 (CONTRACT-6.6-0007: `validate` and the test iterate one `GEOMETRY_FIELDS` list, every field is blanked and a destructure fails to compile if the struct grows; `DispatchFields::{field, set_field}` added), KISS#382 (`gelu` added to the anti-fork VOCAB so `gelu_fast` is a prefix near-miss), KISS#383 (f8e5m2 negative finite overflow saturates to 0xFB, never -inf), KISS#384 (new `test_ops_opattrs_framer_does_not_parse_inside`: blobs no schema accepts are framed verbatim), KISS#386 (ANNOUNCE-6.3-0012: all three MBZ offsets decline).
+
 ## 0.4.43 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 KISS#419 (KISS-OPS-6.19-0037), no spec or wire change; floor unmoved at harness 460 / untested 386. Arm (4): new `opattrs::decode_window_param_vector`, the reader the clause requires (a count above `MAX_RANK` is a typed `FieldOutOfRange`, a short blob is `TruncatedBlob`); before, the only guard was an encoder `assert!(len <= 8)` that nothing exercised, so the bound could be raised to 99 with no test red. Arm (3): the existing `validate_reduce_axes` already declines a mask bit at position >= `MAX_RANK` (0x0100 and up); it is now asserted in the named test. The three hard-coded `8`s in `opattrs.rs` (rank, scan, window) now reference `MAX_RANK`, so the co-versioning obligation moves them together.
