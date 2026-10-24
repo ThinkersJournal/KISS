@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.46 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#376, tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386. `test_classify_target_fixed_width_juxtaposition` (KISS-CLASSIFY-6.8-0006) validated constants it declared itself, so no change to the spec or the code could redden it. It now reads the `vulkan:sg64.ops-….arith-…` fields from `classify.md` Appendix A and `spec/namespaces/vulkan.md` (which must agree) and runs the fixed-width and delimiter checks on those; controls show the checks reject a non-single-byte juxtaposed member, an unsorted field, an undelimited variable-width field and a same-width delimited one. The issue's own mutation (`ops-abclqrstvw` -> `ops-abclqrstvwXY9` in the spec) now reddens it. It cites the clause (NAMED -> CITED, README `named` 235 -> 234). Design call taken: parse the spec in the harness, rather than move the check to `kiss_vocab.py` or pin the transcription.
+
 ## 0.4.45 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 KISS#381, tests only (comments), no spec, src or wire change; floor unmoved at harness 460 / untested 386. KISS-EMIT-9.2-0001 puts bidirectional traceability in the conformance definition, and none of the 28 Emit named tests cited a clause. Of the issue's three readings this takes (ii): every one of the 28 gains `Enforces: KISS-EMIT-<id>` in its doc comment (`test_emit_spellable_is_not_computable` had no doc comment and gets one), so NAMED 264 -> 235 and CITED rises by the same. Readings (i) and (iii), which would soften the clause, are not taken. `test_emit_traceability_complete` now states its scope: it checks the document against itself, no instrument checks that each test cites its clause, and `kiss_cite_form` polices only the spelling.
