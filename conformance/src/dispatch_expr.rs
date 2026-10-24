@@ -12,7 +12,7 @@
 //! Left-associative; the subscript binds tighter than `* /`, which bind tighter
 //! than `+ -`.
 //!
-//! The launch-scalar vocabulary (§6.5-0004a) splits into:
+//! The launch-scalar symbol vocabulary of a contract (§6.5-0004a: the symbols its own Interface declares) splits into:
 //!   * **array** symbols (`array_len_kind = rank`, §6.11-0006): `extents{i}`,
 //!     `strides{i}`, `idx_extents{i}` — spelled with the operand index appended
 //!     (`extents0`, `strides0`, `idx_extents0`, …) — REQUIRE a `[k]` subscript.
@@ -44,7 +44,9 @@ pub struct LaunchScalars {
     /// `off[operand]` — a scalar base offset per operand (class-4).
     pub off: Vec<i64>,
     /// The shared-memory/workspace byte count.
-    pub ws_bytes: i64,
+    /// `None` = the Interface declares no workspace (classes 6/7 absent), so `ws_bytes` is outside
+    /// this contract's vocabulary and declines `UnknownSymbol` (§6.5-0004a).
+    pub ws_bytes: Option<i64>,
     /// `param[field]` — declared op params.
     pub param: Vec<i64>,
 }
@@ -62,7 +64,7 @@ pub enum EvalMode {
 /// expression with one of these, never a panic (KISS-Conform §6.7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Decline {
-    /// An identifier that names no symbol in the launch-scalar vocabulary.
+    /// An identifier that names no symbol in this contract's launch-scalar symbol vocabulary.
     UnknownSymbol(String),
     /// A `[k]` subscript applied to a scalar symbol (`n`, `off{i}`, `ws_bytes`,
     /// `param{i}`).
@@ -343,7 +345,9 @@ fn resolve_scalar(name: &str, s: &LaunchScalars) -> Result<i64, Decline> {
     let (base, idx) = split_ident(name);
     match (base, idx) {
         ("n", None) => Ok(s.n),
-        ("ws_bytes", None) => Ok(s.ws_bytes),
+        ("ws_bytes", None) => s
+            .ws_bytes
+            .ok_or_else(|| Decline::UnknownSymbol(name.to_string())),
         ("off", Some(i)) => s
             .off
             .get(i as usize)

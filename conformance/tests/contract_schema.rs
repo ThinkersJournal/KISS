@@ -489,7 +489,7 @@ fn launch_scalars() -> LaunchScalars {
         strides: vec![vec![4, 1]],
         idx_extents: vec![],
         off: vec![0],
-        ws_bytes: 0,
+        ws_bytes: None,
         param: vec![],
     }
 }

@@ -898,6 +898,16 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   | 7 | workspace byte size | `ws_bytes` | i64 | present with the workspace pointer |
   | 8 | scalar op params | `param{i}` | the op's scalar compute dtype | op has scalar params |
 
+  The **launch-scalar symbol vocabulary of a contract** is the set of symbols of the launch-scalar
+  classes that contract's own Interface `positional_signature` declares (§6.5-0004b), each class
+  present exactly when its "present when" predicate holds — **not** the symbol column of the whole
+  table. A symbol of a class the Interface does not declare (for example `strides0` in a fully
+  packed cell, `off0` in an unsliced kernel, `ws_bytes` without a workspace pointer) is outside
+  that contract's vocabulary. This is the set every later reference to "the launch-scalar symbol
+  vocabulary" denotes (§6.6-0006, §6.7-0006, §6.11-0008): the set is the **document's**, not the
+  standard's. It is the same set §6.5-0006 already bounds Dispatch by ("MUST NOT reference in
+  Dispatch a launch scalar absent from the Interface").
+
 - **KISS-CONTRACT-6.5-0004b** — Each present launch scalar MUST carry a declared type and a
   declared position in the `positional_signature`; an implementation MUST NOT emit a launch
   scalar without a declared type or without a declared position. *Test:*
@@ -1011,7 +1021,7 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 - **KISS-CONTRACT-6.6-0006** — Each Dispatch derivation field (`invocation_domain`,
   `workgroup_sizing`, `count_to_grid`, `thread_mapping`, `addressing_rule`) MUST be a
   machine-evaluable expression, not free prose, in the pinned expression grammar: an
-  expression is an ASCII string over the launch-scalar symbol vocabulary (§6.5-0004a /
+  expression is an ASCII string over the launch-scalar symbol vocabulary of this contract (§6.5-0004a /
   §6.7-0006), non-negative decimal integer literals, the binary operators `+ - * /`, the
   function `ceil_div(a, b)`, parentheses, and the **element-subscript operator** `sym[k]`,
   where `sym` is one of the rank-length array launch-scalar symbols (§6.5-0004a — exactly the
@@ -1028,7 +1038,7 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   surface and is driver-owned) and are NOT subject to the non-negative-integer post-condition,
   since class-2 strides may be negative. An implementation MUST NOT carry a Dispatch derivation
   field the grammar does not accept, MUST NOT reference a symbol absent from the launch-scalar
-  vocabulary, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
+  symbol vocabulary of this contract, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
   subscript, and MUST NOT use an out-of-bounds subscript; each such case is a typed decline.
   *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
 - **KISS-CONTRACT-6.6-0007** — A **geometry-agnostic** kernel — one launched grid-stride from a
@@ -1106,12 +1116,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   declare a precision class the Guarantees ULP tiers contradict. *Test:*
   `test_contract_precision_class_consistent`.
 - **KISS-CONTRACT-6.7-0006** — The Capabilities `cost` MUST carry a cost **class** plus cost
-  **expressions** over the launch-scalar symbol vocabulary (for example a coefficient times
+  **expressions** over the launch-scalar symbol vocabulary of this contract (for example a coefficient times
   `n`), spelled as expressions over the Interface launch-scalar symbols (§6.5) in the grammar
   of §6.6-0006; the Capabilities `cost` is the **single authoritative home** for cost
   magnitude (§6.8-0007). An implementation MUST NOT carry a bare per-element scalar in place
   of a shape-parameterized cost expression, and MUST NOT reference a symbol absent from the
-  launch-scalar vocabulary. *Test:* `test_contract_cost_expressions`.
+  launch-scalar symbol vocabulary of this contract. *Test:* `test_contract_cost_expressions`.
 
 ### 6.8 Guarantees section
 
@@ -1435,7 +1445,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   `workgroup_sizing`, `count_to_grid`, `thread_mapping`, `addressing_rule`) MUST be encoded as a
   string value (§6.11-0001) carrying a machine-evaluable expression in the pinned grammar of
   §6.6-0006; a reader MUST reject, with a typed decline, a Dispatch field that is not an
-  expression the §6.6-0006 grammar accepts over the launch-scalar symbol vocabulary. *Test:*
+  expression the §6.6-0006 grammar accepts over the launch-scalar symbol vocabulary of the contract being read. *Test:*
   `test_contract_text_dispatch`.
 - **KISS-CONTRACT-6.11-0009** — The `op_identity` value MUST be encoded as a single string
   value (§6.11-0001, LF-free) in the pinned canonical spelling

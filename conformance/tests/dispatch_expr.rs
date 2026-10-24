@@ -14,7 +14,7 @@ fn scalars() -> LaunchScalars {
         strides: vec![vec![4, 1]],
         idx_extents: vec![],
         off: vec![0],
-        ws_bytes: 0,
+        ws_bytes: None,
         param: vec![],
     }
 }
@@ -35,6 +35,27 @@ fn test_contract_dispatch_expressions_machine_evaluable() {
     let mut neg = scalars();
     neg.strides[0][0] = -4;
     assert_eq!(eval("off0 + strides0[0]", &neg, EvalMode::Structural).unwrap(), -4);
+}
+
+#[test]
+fn dispatch_symbols_are_the_contracts_own_vocabulary() {
+    // KISS-CONTRACT-6.5-0004a / 6.6-0006: the vocabulary is the symbols THIS contract's Interface
+    // declares, not the whole class table. The same expression is accepted where the class is
+    // declared and declines where it is not -- the two readings of #410 split exactly here.
+    let strided = scalars();
+    assert_eq!(eval("strides0[1]", &strided, EvalMode::Domain), Ok(1));
+    let mut packed = scalars();
+    packed.strides = vec![]; // fully packed cell: class 2 not declared
+    assert!(matches!(eval("strides0[1]", &packed, EvalMode::Domain), Err(Decline::UnknownSymbol(_))));
+    let mut unsliced = scalars();
+    unsliced.off = vec![]; // unsliced kernel: class 4 not declared
+    assert!(matches!(eval("off0", &unsliced, EvalMode::Structural), Err(Decline::UnknownSymbol(_))));
+    let mut ws = scalars();
+    assert!(matches!(eval("ws_bytes", &ws, EvalMode::Domain), Err(Decline::UnknownSymbol(_))));
+    ws.ws_bytes = Some(4096); // classes 6/7 declared
+    assert_eq!(eval("ws_bytes", &ws, EvalMode::Domain), Ok(4096));
+    // `n` is class 3, present in EVERY contract, so it is always in the vocabulary.
+    assert_eq!(eval("n", &packed, EvalMode::Domain), Ok(24));
 }
 
 #[test]
