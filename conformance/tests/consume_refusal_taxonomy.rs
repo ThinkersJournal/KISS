@@ -582,6 +582,13 @@ fn test_consume_refusal_inexpressible_residue() {
 /// so dropping/renaming a category from the structure-based list fails. It must also
 /// reference §6.1 (the structure-based recognition anchor it inherits) — if the anti-sniffing
 /// rule is decoupled from §6.1 recognition, fails.
+///
+/// SCOPE (KISS#378, instance of KISS#458): this is a DOCUMENT lint and nothing more. It binds what the
+/// clause TEXT says; it cannot observe a consumer categorizing by structure or by sniffing, because
+/// `conformance/` has no lifter and the subject is out of repo by design. The clause is credited to it
+/// at the NAMED tier all the same, so that credit does not measure the implementational obligation.
+/// The differential that would (name/structure-divergent inputs) is ROADMAP R3.14 and needs
+/// CireSnave's ruling; it is deliberately not built here.
 #[test]
 fn test_consume_taxonomy_structure_based() {
     let consume = read_spec("consume.md");
