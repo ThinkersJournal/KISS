@@ -760,7 +760,7 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
 - **KISS-CONSUME-6.4-0007** — Category assignment MUST itself be **structure-based** (§6.1): an
   implementation MUST NOT decide `not-a-kernel`, `wrong-op-class`,
   `unrecognized-but-expressible`, or `inexpressible-residue` by substring, keyword, symbol, or
-  comment sniffing. *Test:* `test_consume_taxonomy_structure_based`.
+  comment sniffing. *Test:* `test_consume_taxonomy_structure_based_differential`.
 - **KISS-CONSUME-6.4-0008** — The categories partition into **whole-input typed declines** and
   **residue tags**: `not-a-kernel` and `wrong-op-class` MUST be returned as **typed declines** for
   the request under §6.4 **Phase A** — no contract is produced for that request (the sole exception
@@ -1046,7 +1046,7 @@ any normative MUST without a mapped test and on any test citing a retired or non
 | KISS-CONSUME-6.4-0004 | `test_consume_refusal_wrong_op_class` |
 | KISS-CONSUME-6.4-0005 | `test_consume_refusal_unrecognized_but_expressible` |
 | KISS-CONSUME-6.4-0006 | `test_consume_refusal_inexpressible_residue` |
-| KISS-CONSUME-6.4-0007 | `test_consume_taxonomy_structure_based` |
+| KISS-CONSUME-6.4-0007 | `test_consume_taxonomy_structure_based_differential` |
 | KISS-CONSUME-6.4-0008 | `test_consume_decline_vs_residue_partition` |
 | KISS-CONSUME-6.4-0009 | `test_consume_decline_code_closed_set` |
 | KISS-CONSUME-6.4-0010 | `test_consume_blocker_reason_open_seeded_set` |

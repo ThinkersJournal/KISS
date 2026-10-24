@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.49 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- **De-crediting** (PM ruling 2026-10-24: every claim earned; harness 460 -> 459, untested 386 -> 387, lint unmoved): `KISS-CONSUME-6.4-0007` (category assignment is structure-based) no longer holds a credit. Its named test was a document lint with no consumer to observe, so the credit did not measure the clause's obligation. The `*Test:*` pointer in `spec/consume.md` (clause and §9 row; pointer text only, no normative sentence changes) now names the owed differential `test_consume_taxonomy_structure_based_differential`; the ledger row is `decredited` (a real test is still OWED, ROADMAP R3.14, needs CireSnave's ruling); the old test is renamed `test_consume_taxonomy_doc_lint_four_categories` and its scope comment says the credit was withdrawn. Reported by the ratchet as an honest de-crediting, not a regression; README bound figures follow.
+
 ## 0.4.48 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 KISS#378 option (b) (PM ruling 2026-10-24), comment and ROADMAP only; no spec, src, test-logic or wire change, floor unmoved at harness 460 / untested 386. `test_consume_taxonomy_structure_based` is a document lint credited with an implementational obligation (KISS-CONSUME-6.4-0007, no lifter in the repo). Its doc comment now says so and names the gap as an instance of KISS#458. New ROADMAP row R3.14 records option (a), a `consume_categorization_vectors.json` differential with a reference structural categorizer, as needing CireSnave's ruling because it mints a freeze surface and a source-neutral input format. Not done, and why: de-crediting the clause (precedent KISS#187) would mean changing the `*Test:*` pointer in the Consume spec so the name stops resolving, which moves the floor and edits spec text, not a ledger note; offered to the PM as the alternative.

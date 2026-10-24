@@ -585,12 +585,13 @@ fn test_consume_refusal_inexpressible_residue() {
 ///
 /// SCOPE (KISS#378, instance of KISS#458): this is a DOCUMENT lint and nothing more. It binds what the
 /// clause TEXT says; it cannot observe a consumer categorizing by structure or by sniffing, because
-/// `conformance/` has no lifter and the subject is out of repo by design. The clause is credited to it
-/// at the NAMED tier all the same, so that credit does not measure the implementational obligation.
-/// The differential that would (name/structure-divergent inputs) is ROADMAP R3.14 and needs
+/// `conformance/` has no lifter and the subject is out of repo by design. The clause was credited to it
+/// at the NAMED tier, which did not measure the implementational obligation, so the credit was withdrawn
+/// (0.4.49: the spec's `*Test:*` pointer now names the owed differential and the ledger row is
+/// `decredited`). The differential (name/structure-divergent inputs) is ROADMAP R3.14 and needs
 /// CireSnave's ruling; it is deliberately not built here.
 #[test]
-fn test_consume_taxonomy_structure_based() {
+fn test_consume_taxonomy_doc_lint_four_categories() {
     let consume = read_spec("consume.md");
     let block = clause_block(&consume, "KISS-CONSUME-6.4-0007");
     // Exclude the `*Test:*` tag's backticked fn name from the category token set.
