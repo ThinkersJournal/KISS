@@ -50,6 +50,9 @@ jobs:
       # makes that loud (#400) is shown to red on the list and stay quiet on a single name.
       - name: kiss_trace partial-bind check (negative controls)
         run: python tools/test_kiss_trace_partial_bind.py
+      # KISS#387 (a): the per-conjunct ledger and its citation grammar, shown able to red.
+      - name: kiss_conjuncts per-conjunct trace (negative controls)
+        run: python tools/test_kiss_conjuncts.py
       # discover_tests keys by fn name; a repeat across files must fail loudly, not overwrite (#137).
       - name: kiss_trace duplicate-test-name check (negative controls)
         run: python tools/test_kiss_trace_duplicates.py
