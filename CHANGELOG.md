@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.48 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#378 option (b) (PM ruling 2026-10-24), comment and ROADMAP only; no spec, src, test-logic or wire change, floor unmoved at harness 460 / untested 386. `test_consume_taxonomy_structure_based` is a document lint credited with an implementational obligation (KISS-CONSUME-6.4-0007, no lifter in the repo). Its doc comment now says so and names the gap as an instance of KISS#458. New ROADMAP row R3.14 records option (a), a `consume_categorization_vectors.json` differential with a reference structural categorizer, as needing CireSnave's ruling because it mints a freeze surface and a source-neutral input format. Not done, and why: de-crediting the clause (precedent KISS#187) would mean changing the `*Test:*` pointer in the Consume spec so the name stops resolving, which moves the floor and edits spec text, not a ledger note; offered to the PM as the alternative.
+
 ## 0.4.47 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - R3.9 KISS#385, tests only, no spec, src or wire change; floor unmoved at harness 460 / untested 386. `test_synth_decline_taxonomy_complete` (KISS-SYNTH-6.6-0003f) enumerated the crate side from a hard-coded six-entry array, so a seventh `pub const` in `announce::decline_code` passed the whole suite (the comment claimed otherwise). It now also reads the constants the SOURCE declares inside `pub mod decline_code` and requires them to be exactly the six; the issue's own mutation (`PROVISION_TIMEOUT = 0x7`) reddens it, and a control shows the reader counts a seventh on a synthetic module. Of the issue's options this takes (ii), a source-level check; (i), an enum with an exhaustive match, would change the public `decline_code` API and is not taken. It cites the clause (NAMED -> CITED, README `named` 234 -> 233).
