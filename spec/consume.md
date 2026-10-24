@@ -930,6 +930,9 @@ KISS-Consume carries the two umbrella version axes (umbrella §5.1) and does not
   input-structure-graph representation (§6.1-0004), the refusal-taxonomy category set and spellings
   (§6.4), the residue-recording schema (§6.3), and the round-trip tier statements (§6.6). It changes
   only when that surface changes. It is the axis KISS-Conform keys conformance on.
+  **The KISS-Consume schema version is 1 by construction**: the surface above is as this document
+  states it, no earlier surface has been published, and the value moves to 2 on the first change that
+  KISS-CONSUME-8.1-0001 requires to bump it.
 - **Published-crate semver** — the ordinary semantic version of the reference crate(s); it changes
   on any code release, including recognition-coverage improvements that broaden the lifted portion
   without changing the observable behavior surface.
