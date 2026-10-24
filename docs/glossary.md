@@ -18,7 +18,7 @@ Sub-standards: **Ops** `spec/ops.md`, **Classify** `spec/classify.md`, **Grammar
 | **accept_predicate** | The Contract Identity field that holds the kernel's `structure_key`: the admissibility predicate a consumer matches against. | Contract §3 |
 | **admissibility predicate** | A total function over an invocation's derivation inputs that decides whether a kernel specialization applies to it. The `structure_key` is its serialization. | Classify §3 |
 | **advertisable op** | A KISS-Ops op *name* decorated with pattern attributes. It is not a second op vocabulary: every advertisable op re-bases onto an Ops name. | Grammar §3 |
-| **availability record** | The pair `(structure_key, revision_hash)` a provider announces for a kernel. | Announce §3 |
+| **availability record** | The identity triple `(structure_key, op_identity, revision_hash)` a provider announces for a kernel. | Announce §3 |
 | **canonical suite artifact** | The single steward-published, versioned bundle of matrix, vectors and signature set that a conformance claim is made against. | Conform §3 |
 | **cell class** | The coarse structural class of a cell, one of seven: `ctr`, `ndx`, `rdc`, `ew1`, `ew2`, `ew3`, `oth`. A closed set; an eighth is a schema-version event. | Classify §6.5-0006 |
 | **clause ID** | The stable identifier of one normative clause, `KISS-<STANDARD>-<section>-<nnnn>`. Retired IDs stay burned and are never reused. | umbrella §3.3, Conform §3 |
@@ -41,7 +41,7 @@ Sub-standards: **Ops** `spec/ops.md`, **Classify** `spec/classify.md`, **Grammar
 | **re-basing** | Declaring an advertisable op by naming an existing or newly added Ops name and decorating it; additive, no shape bump. | Grammar §3 |
 | **residue** | The recorded un-liftable remainder of a partial lift: a connected group of nodes the lifter could not map. | Consume §3 |
 | **revision_hash** | An opaque 32-byte, provider-assigned identifier of one build of a kernel. | Announce §3, Contract §3 |
-| **`sk5`** | The `structure_key` token prefix at schema version 5; the version is part of the token. | Classify §6.4-0003 |
+| **`sk6`** | The `structure_key` token prefix at schema version 6; the version is part of the token. | Classify §6.4-0003 |
 | **sidecar** | A sub-standard's machine-readable clause file; the sole authoritative source the traceability matrix is built from. | Conform §3 |
 | **specialization cell** | One layout/dtype/target class a kernel is built for; the thing a `structure_key` names. | Classify §3 |
 | **structure_key** | The admissibility predicate identifying one specialization cell, serialized as a pipe-delimited token. A cache hit needs it and the `revision_hash`. | Classify §3 |

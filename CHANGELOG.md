@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.68 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Docs only: the portfolio PM's spec-to-roadmap audit (CireSnave's idea, 2026-10-24). `ROADMAP.md` gains R5.1-R5.18, the work that design docs, rfcs, July plans and the nine specs record but no row tracked, each with its source and state (not started). R3.7 and R3.8 are corrected for #646, #647, #653-#655 and #656. `docs/glossary.md` now states the availability record as the identity triple and the `sk6` prefix, as Announce §3 and Classify 6.4-0003 do. R5.11 records the Unpopped N2 NaN ruling (option (a), later, no text now).
+
 ## 0.4.67 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - KISS#387 option (a), board 271 ("Still (a)"), tool and ledger only, no normative text: a per-conjunct trace behind umbrella §5.3 condition 3. `conformance/CONJUNCTS.tsv` lists a multi-conjunct clause's conjuncts; a test discharges one with `// Backs: KISS-X-n-nnnn [label]`; `kiss_trace.py --freeze-ready` fails a listed clause while any label is cited by no test, and the default run fails a ledger row or citation naming no live clause or label. Seeded with KISS-CONFORM-6.8-0005 (4 conjuncts, all cited) and KISS-OPS-6.18-0017 (4; `zero-sign-re` is cited by no test, because `test_ops_complex_branch_sign_exact` exercises the imaginary zero only: the complementary pair #387 describes, now a named gap). The ledger proves each LISTED conjunct is cited, not that the list is complete nor that the citing test discriminates. New controls `tools/test_kiss_conjuncts.py`, wired into `traceability.yml`.
