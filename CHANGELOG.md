@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.50 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- R3.9 KISS#313, tests only, no spec, src or wire change; floor unmoved at harness 459 / untested 387. `test_conform_emit_consume_correspondence_lint` compares Emit against Consume, so a mandate re-added to BOTH twins (Emit §6.7-0004 and Consume §6.6-0004) stays green while each contradicts its own document's §-0002. New `test_conform_roundtrip_no_comparator_mandate_remains` is the issue's cheap first cut, stated as a TRIPWIRE for one known phrase and not a coherence check: across Emit §6.7-0001..0005 + -0009 and Consume §6.6-0001..0006, "comparator" may appear only as a quoted citation in a sentence that says it was excised. Re-adding the mandate to both twins keeps the correspondence lint green and reddens this one. The general within-document coherence check the issue also proposes is not built.
+
 ## 0.4.49 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - **De-crediting** (PM ruling 2026-10-24: every claim earned; harness 460 -> 459, untested 386 -> 387, lint unmoved): `KISS-CONSUME-6.4-0007` (category assignment is structure-based) no longer holds a credit. Its named test was a document lint with no consumer to observe, so the credit did not measure the clause's obligation. The `*Test:*` pointer in `spec/consume.md` (clause and §9 row; pointer text only, no normative sentence changes) now names the owed differential `test_consume_taxonomy_structure_based_differential`; the ledger row is `decredited` (a real test is still OWED, ROADMAP R3.14, needs CireSnave's ruling); the old test is renamed `test_consume_taxonomy_doc_lint_four_categories` and its scope comment says the credit was withdrawn. Reported by the ratchet as an honest de-crediting, not a regression; README bound figures follow.
