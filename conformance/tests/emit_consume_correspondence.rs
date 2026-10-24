@@ -200,3 +200,86 @@ fn test_conform_emit_consume_correspondence_lint() {
         "correspondence: consume side of the table does not cover exactly §6.6-0001..0006"
     );
 }
+
+// ---------------------------------------------------------------------------
+// KISS#313 — a within-document tripwire for the excised "declared comparator" mandate.
+// ---------------------------------------------------------------------------
+
+/// The round-trip clause family on each side: Emit §6.7-0001..0005 + -0009, Consume §6.6-0001..0006.
+const EMIT_ROUNDTRIP: [&str; 6] = [
+    "KISS-EMIT-6.7-0001",
+    "KISS-EMIT-6.7-0002",
+    "KISS-EMIT-6.7-0003",
+    "KISS-EMIT-6.7-0004",
+    "KISS-EMIT-6.7-0005",
+    "KISS-EMIT-6.7-0009",
+];
+const CONSUME_ROUNDTRIP: [&str; 6] = [
+    "KISS-CONSUME-6.6-0001",
+    "KISS-CONSUME-6.6-0002",
+    "KISS-CONSUME-6.6-0003",
+    "KISS-CONSUME-6.6-0004",
+    "KISS-CONSUME-6.6-0005",
+    "KISS-CONSUME-6.6-0006",
+];
+
+/// Occurrences of "comparator" in `block` that are NOT a quoted citation of the excised mandate: an
+/// occurrence is allowed only inside a double-quoted span AND in a sentence that says the phrase was
+/// "excised" or belongs to a "previous revision". Anything else is a live mandate (or an unexplained
+/// mention) and is returned with its context.
+fn live_comparator_mentions(block: &str) -> Vec<String> {
+    let text = norm(block);
+    let lower = text.to_lowercase();
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(p) = lower[from..].find("comparator") {
+        let at = from + p;
+        let quoted = text[..at].matches('"').count() % 2 == 1;
+        let lo = at.saturating_sub(260);
+        let hi = (at + 260).min(text.len());
+        let window = &lower[floor_char(&lower, lo)..floor_char(&lower, hi)];
+        let explained = window.contains("excised") || window.contains("previous revision");
+        if !(quoted && explained) {
+            out.push(text[floor_char(&text, lo)..floor_char(&text, hi)].to_string());
+        }
+        from = at + "comparator".len();
+    }
+    out
+}
+
+fn floor_char(s: &str, mut i: usize) -> usize {
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
+/// KISS#313 — a TRIPWIRE, not a coherence check. `test_conform_emit_consume_correspondence_lint` compares
+/// the two documents against each other, so a mandate re-added to BOTH twins (Emit §6.7-0004 and Consume
+/// §6.6-0004, which correspond) leaves it green while each twin contradicts its own document's §-0002. This
+/// asserts the one known phrase family: after the excision of the "declared comparator" verification mandate
+/// (Emit §6.7-0002/-0004, Consume §6.6-0004), "comparator" appears in the round-trip family only as a
+/// quoted citation of the excised wording. It does not generalise to other within-document contradictions.
+/// TEETH: the real spec is clean; a live mandate re-added to either document, or to both, is reported; an
+/// unquoted or unexplained mention is reported; the quoted-and-explained form is not.
+#[test]
+fn test_conform_roundtrip_no_comparator_mandate_remains() {
+    let emit = read_spec("emit.md");
+    let consume = read_spec("consume.md");
+    for id in EMIT_ROUNDTRIP {
+        let live = live_comparator_mentions(clause_block(&emit, id));
+        assert!(live.is_empty(), "{id}: a comparator mandate stands in the round-trip block: {live:?}");
+    }
+    for id in CONSUME_ROUNDTRIP {
+        let live = live_comparator_mentions(clause_block(&consume, id));
+        assert!(live.is_empty(), "{id}: a comparator mandate stands in the round-trip block: {live:?}");
+    }
+
+    // Controls: the detector reports a live mandate and accepts the excision note.
+    let mandate = "bit-identity MUST be claimed only for an exact-byte op, and MUST compare under that op's declared comparator.";
+    assert_eq!(live_comparator_mentions(mandate).len(), 1, "an unquoted mandate is reported");
+    let quoted_only = "the phrase \"plus its declared comparator\" stands here.";
+    assert_eq!(live_comparator_mentions(quoted_only).len(), 1, "quoted but unexplained is reported");
+    let excised = "the phrase \"plus its declared comparator\" was excised with the same mandate for the same reason.";
+    assert!(live_comparator_mentions(excised).is_empty(), "a quoted citation of the excision is allowed");
+}
