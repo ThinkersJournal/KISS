@@ -274,7 +274,7 @@ fn section_refs(text: &str, major: &str) -> BTreeSet<String> {
 // §6.1 — vendor/source-language neutrality
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.1-0005 — KISS-Emit MUST NOT define, mandate, or bless a source
+/// Enforces: KISS-EMIT-6.1-0005 — KISS-Emit MUST NOT define, mandate, or bless a source
 /// language or grammar; no normative clause pins a target syntax. Teeth: a
 /// spec-grounded blocklist of the document's OWN informative examples of leaked/
 /// blessed target-language surface (`Slang`, `CUDA`, `cuda:`, `sqrtf`, `0.5f`,
@@ -357,7 +357,7 @@ fn test_emit_defines_no_source_language() {
 // §7 — capability / mandatory-core partition
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-7.1-0001 — the mandatory core every conforming emitter MUST satisfy.
+/// Enforces: KISS-EMIT-7.1-0001 — the mandatory core every conforming emitter MUST satisfy.
 /// Teeth: (1) the tier-1 structural SELF-round-trip (§6.7-0001) is IN the §7.1 core
 /// enumeration while the tier-2 numeric round-trip (§6.7-0002) is NOT — and the
 /// tier-2-is-a-negotiable-option declaration, located in §7 BY CONTENT
@@ -423,7 +423,7 @@ fn test_emit_mandatory_core() {
 // §8 — the EMIT_ABI_VERSION bump-rule table, partitioned across two clauses
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-8.1-0001 — a change altering the normative-input schema, the partition
+/// Enforces: KISS-EMIT-8.1-0001 — a change altering the normative-input schema, the partition
 /// boundary, the declared-subset advertisement, or the round-trip tier wording MUST
 /// bump `EMIT_ABI_VERSION`. Teeth: parse the §8 table; the concept set of the rows
 /// whose axis moves `EMIT_ABI_VERSION` must EQUAL the concept set §8.1-0001 actually
@@ -488,7 +488,7 @@ fn test_emit_abi_version_bump_rule() {
     }
 }
 
-/// KISS-EMIT-8.1-0002 — a change PRESERVING the input schema, partition boundary,
+/// Enforces: KISS-EMIT-8.1-0002 — a change PRESERVING the input schema, partition boundary,
 /// declared-subset advertisement, and round-trip tier wording MUST NOT bump
 /// `EMIT_ABI_VERSION` and bumps only the crate semver. Complement of §8.1-0001:
 /// collect the §8 rows whose axis is `crate semver only` and assert (a) §8.1-0002
@@ -543,7 +543,7 @@ fn test_emit_no_abi_bump_on_compatible_change() {
 // §9 — conformance: prerequisite closure and traceability
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-9.1-0001 — a KISS-Emit conformance claim MUST be prerequisite-closed over
+/// Enforces: KISS-EMIT-9.1-0001 — a KISS-Emit conformance claim MUST be prerequisite-closed over
 /// KISS-Emit's incoming STRUCTURAL edges: it MUST include a claim to KISS-Ops,
 /// KISS-Classify, and KISS-Contract. Teeth: the prerequisite NAME set the §9.1-0001
 /// clause lists (minus KISS-Emit itself) must EQUAL the STRUCTURAL upstream-edge NAME
@@ -577,7 +577,7 @@ fn test_emit_claim_prerequisite_closed() {
     );
 }
 
-/// KISS-EMIT-9.2-0001 — every normative clause maps to at least one named test and
+/// Enforces: KISS-EMIT-9.2-0001 — every normative clause maps to at least one named test and
 /// each test cites its clause (bidirectional traceability), kept in sync by the
 /// KISS-Conform lint. Teeth: build two INDEPENDENT clause→test maps from emit.md — one
 /// from every defined clause body's own `*Test:*` tag, the other from the §9
@@ -585,6 +585,9 @@ fn test_emit_claim_prerequisite_closed() {
 /// without a matching matrix row, a matrix row for a clause that no longer exists, or
 /// ANY test-name mismatch between a clause's tag and its matrix row, breaks the map
 /// equality. Both maps guarded non-empty (≥40) so it cannot go vacuous.
+/// Scope (KISS#381): this checks that the DOCUMENT agrees with itself (clause tags vs the §9 matrix). That each
+/// named test EXISTS is `kiss_trace`'s check, and that each test cites its clause is checked by no instrument (the
+/// 28 citations were added by hand in 0.4.45; `kiss_cite_form` polices only their spelling). This test does not read the harness.
 #[test]
 fn test_emit_traceability_complete() {
     let emit = read_spec("emit.md");

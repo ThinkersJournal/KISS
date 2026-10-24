@@ -150,7 +150,7 @@ fn dtype_tokens(ops: &str) -> BTreeSet<String> {
 // §6.0 — determinism/fidelity class and imported enums
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.0-0001 — every structural obligation in §6–§9 is determinism-class
+/// Enforces: KISS-EMIT-6.0-0001 — every structural obligation in §6–§9 is determinism-class
 /// EXACT-BYTE, evaluated with a byte-exact comparator and NEVER with a tolerance or
 /// order-invariant comparator. Teeth: the class Emit selects (exact-byte) plus the
 /// comparators it forbids must, between them, account for every member of the
@@ -189,7 +189,7 @@ fn test_emit_determinism_class_exact_byte() {
     );
 }
 
-/// KISS-EMIT-6.0-0002 — the MathFidelity compute-fidelity attribute
+/// Enforces: KISS-EMIT-6.0-0002 — the MathFidelity compute-fidelity attribute
 /// `{bit-stable, reduced-mantissa-permitted}` is imported VERBATIM from KISS-Ops
 /// §6.17. Teeth: the two enum SETS (Emit's and Ops') must be equal — same members,
 /// same spelling. A silent re-spell or fork fails.
@@ -215,7 +215,7 @@ fn test_emit_mathprecision_imported_verbatim() {
     }
 }
 
-/// KISS-EMIT-6.0-0003 — the canonical determinism/fidelity enum
+/// Enforces: KISS-EMIT-6.0-0003 — the canonical determinism/fidelity enum
 /// `{exact-byte, ULP/tolerance, order-invariant/nondeterministic}` is owned by
 /// KISS-Ops §6.0-0001 and imported by KISS-Emit VERBATIM. Teeth: the three-member
 /// enum SET parsed out of emit.md must equal the SET parsed out of ops.md — same
@@ -242,7 +242,7 @@ fn test_emit_determinism_enum_imported_verbatim() {
     }
 }
 
-/// KISS-EMIT-6.0-0004 — MathFidelity is ORTHOGONAL to the determinism class and is
+/// Enforces: KISS-EMIT-6.0-0004 — MathFidelity is ORTHOGONAL to the determinism class and is
 /// NOT a dtype. Teeth: no MathFidelity enum member appears as a token in the
 /// KISS-Ops §6.16 dtype set — the intersection of the two SETS is empty. This guards
 /// exactly the anti-pattern §6.17 warns against: MathFidelity re-modeled as a
@@ -279,7 +279,7 @@ fn test_emit_mathprecision_orthogonal_not_dtype() {
 // §6.2 — the complete lowering partition (total and disjoint)
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.2-0001 — the lowering partition is DISJOINT: no decision falls in both
+/// Enforces: KISS-EMIT-6.2-0001 — the lowering partition is DISJOINT: no decision falls in both
 /// the driver-may-spell set (§6.3) and the emitter-must-supply set (§6.4). Teeth:
 /// extract the two decision-clause SETS; every §6.3 clause that makes a bucket
 /// placement assigns `driver` (never `emitter`) and every §6.4 clause assigns
@@ -335,7 +335,7 @@ fn test_emit_partition_disjoint() {
     // — so it is deliberately omitted; the teeth are the mis-placement asserts above.)
 }
 
-/// KISS-EMIT-6.2-0002 — constant spelling and special-float-value spelling are
+/// Enforces: KISS-EMIT-6.2-0002 — constant spelling and special-float-value spelling are
 /// placed emitter-must-supply (§6.4-0001, §6.4-0002) and MUST NOT be defaulted onto
 /// the driver side. Teeth: the two decisions, keyed by their bold decision labels,
 /// live only on the emitter side (their homes assign emitter-must-supply) and NO
@@ -384,7 +384,7 @@ fn test_emit_constants_are_emitter_supplied() {
     );
 }
 
-/// KISS-EMIT-6.2-0003 — a lowering decision that HAS a target-language surface and is
+/// Enforces: KISS-EMIT-6.2-0003 — a lowering decision that HAS a target-language surface and is
 /// NOT proven target-independent by the §6.5 audit defaults to emitter-must-supply;
 /// the driver set holds a surface-bearing spelling only once the audit has proven it.
 /// Teeth: classify each §6.3 driver decision by its own surface self-declaration; the
@@ -438,7 +438,7 @@ fn test_emit_unproven_decision_defaults_to_emitter() {
     );
 }
 
-/// KISS-EMIT-6.2-0004 — completeness by closure: any decision NOT enumerated on the
+/// Enforces: KISS-EMIT-6.2-0004 — completeness by closure: any decision NOT enumerated on the
 /// closed driver-may-spell side defaults to emitter-must-supply; the emitter side is
 /// the open complement and there is NO third bucket. Teeth: scan every
 /// `"<bucket> decision"` placement token used across §6.3 + §6.4; the SET of bucket
@@ -487,7 +487,7 @@ fn test_emit_partition_complete_by_closure() {
     }
 }
 
-/// KISS-EMIT-6.2-0005 — a STRUCTURAL decision (renders no target-language surface:
+/// Enforces: KISS-EMIT-6.2-0005 — a STRUCTURAL decision (renders no target-language surface:
 /// op-DAG topology, operand binding, index/address arithmetic, control-flow
 /// scaffolding) is neutral by construction and audit-EXEMPT — not subject to the
 /// §6.2-0003 audit-default. Teeth: the structural categories the clause enumerates
@@ -537,7 +537,7 @@ fn test_emit_structural_decisions_audit_exempt() {
 // §6.3 — audit-exempt companion (bonus, clean structural teeth)
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.3-0006 — of the driver-may-spell decisions, the structural ones
+/// Enforces: KISS-EMIT-6.3-0006 — of the driver-may-spell decisions, the structural ones
 /// (§6.3-0001/0002/0003/0005) are audit-EXEMPT and only the infix operator spellings
 /// (§6.3-0004), which DO render a surface, are audit-GATED; an implementation MUST NOT
 /// treat a structural driver decision as gated nor the infix operators as exempt.

@@ -341,7 +341,7 @@ fn find_64_clause<'a>(emit: &'a str, pred: impl Fn(&str) -> bool) -> &'a str {
 // §6.3 — the driver-may-spell set, cross-checked against the A.2 trace.
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.3-0001 — the op-DAG structure / topology walk MUST be a driver-may-spell,
+/// Enforces: KISS-EMIT-6.3-0001 — the op-DAG structure / topology walk MUST be a driver-may-spell,
 /// no-surface (structural, audit-exempt) decision. Teeth: the normative clause's own
 /// bucket + surface self-declaration must AGREE with the independent Appendix-A.2 trace
 /// row that places topology (driver-may-spell / structural), and both must carry the
@@ -381,7 +381,7 @@ fn test_emit_driver_spells_dag_topology() {
     );
 }
 
-/// KISS-EMIT-6.3-0002 — operand binding in KISS-Classify canonical order MUST be a
+/// Enforces: KISS-EMIT-6.3-0002 — operand binding in KISS-Classify canonical order MUST be a
 /// driver-may-spell, no-surface (structural) decision. Teeth: the normative clause's
 /// bucket + surface self-declaration must AGREE with the Appendix-A.2 'Bind (…) in
 /// canonical order' row (driver-may-spell / structural). One-sided bucket/surface drift
@@ -420,7 +420,7 @@ fn test_emit_driver_spells_operand_binding() {
     );
 }
 
-/// KISS-EMIT-6.3-0003 — signed-stride index / address arithmetic (with the grid-stride
+/// Enforces: KISS-EMIT-6.3-0003 — signed-stride index / address arithmetic (with the grid-stride
 /// thread→element mapping) MUST be a driver-may-spell, no-surface (structural) decision.
 /// Teeth: the normative clause's bucket + surface self-declaration must AGREE with the
 /// Appendix-A.2 index-arithmetic row (which cites §6.3-0003 and §6.3-0005 together;
@@ -459,7 +459,7 @@ fn test_emit_driver_spells_index_arithmetic() {
     );
 }
 
-/// KISS-EMIT-6.3-0004 — the strictly-universal infix operator spellings (`+ - * /`) are
+/// Enforces: KISS-EMIT-6.3-0004 — the strictly-universal infix operator spellings (`+ - * /`) are
 /// the ONE driver-side decision that DOES render a target-language surface; the placement
 /// is driver-may-spell only AFTER the §6.5 audit proves it universal, and defaults to
 /// emitter-must-supply absent that proof. Teeth: independently compute the surface-bearing
@@ -525,7 +525,7 @@ fn test_emit_infix_operators_gated_on_audit() {
     );
 }
 
-/// KISS-EMIT-6.3-0005 — control-flow / loop scaffolding derived from the Dispatch launch
+/// Enforces: KISS-EMIT-6.3-0005 — control-flow / loop scaffolding derived from the Dispatch launch
 /// model MUST be a driver-may-spell, no-surface (structural) decision. Teeth: the
 /// normative clause's bucket + surface self-declaration must AGREE with the Appendix-A.2
 /// index/grid row that also cites §6.3-0005 (driver-may-spell / structural). One-sided
@@ -568,7 +568,7 @@ fn test_emit_driver_spells_control_flow() {
 // §6.4 — the emitter-must-supply set, cross-checked against §3 and KISS-Ops §6.16.
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.4-0003 — transcendental / declared-ULP atom spelling (`exp`, `log`,
+/// Enforces: KISS-EMIT-6.4-0003 — transcendental / declared-ULP atom spelling (`exp`, `log`,
 /// `sin`, `cos`, `sqrt`, `erf`, …) MUST be an emitter-must-supply decision, and the
 /// neutral driver MUST NOT spell it as a mandated polynomial. Teeth: the atom set the
 /// clause names must be non-trivial and a SUBSET of the INDEPENDENT §3 `Declared-ULP
@@ -609,7 +609,7 @@ fn test_emit_transcendental_spelling_emitter_supplied() {
     );
 }
 
-/// KISS-EMIT-6.4-0004 — target-specific type spelling (`f16`, `bf16`, `e4m3fn`, `e5m2`,
+/// Enforces: KISS-EMIT-6.4-0004 — target-specific type spelling (`f16`, `bf16`, `e4m3fn`, `e5m2`,
 /// `c32`, `c64`) MUST be an emitter-must-supply decision. Teeth: the normative clause's
 /// bucket must AGREE with the Appendix-A.2 'f32 type surface spelling' row (emitter-must-
 /// supply / surface), AND every dtype the clause enumerates must be a REAL KISS-Ops §6.16
@@ -664,7 +664,7 @@ fn test_emit_type_spelling_emitter_supplied() {
 // §6.5 — the pre-freeze neutrality-audit scope (freeze-gate governance).
 // ---------------------------------------------------------------------------
 
-/// KISS-EMIT-6.5-0001 — the recorded neutrality audit MUST cover EVERY surface-bearing
+/// Enforces: KISS-EMIT-6.5-0001 — the recorded neutrality audit MUST cover EVERY surface-bearing
 /// driver-side decision (at this schema version, the §6.3-0004 infix operators), MUST
 /// exclude the structural (§6.2-0005) decisions, and its recorded manifest MUST be a
 /// freeze precondition. Teeth: the set of §6.3 ids the audit clause names is set-compared
@@ -706,7 +706,7 @@ fn test_emit_neutrality_audit_manifest_is_freeze_precondition() {
     );
 }
 
-/// KISS-EMIT-6.5-0002 — the recorded audit MUST move every surface-bearing driver-side
+/// Enforces: KISS-EMIT-6.5-0002 — the recorded audit MUST move every surface-bearing driver-side
 /// operator it could not prove target-independent to the emitter-must-supply sweep, and
 /// the §6.3-0004 boundary is provisional until proven. Teeth: the set of §6.3 ids the
 /// clause marks provisional is set-compared against the independently-computed surface-
@@ -749,7 +749,7 @@ fn test_emit_audit_moves_unproven_spelling() {
     );
 }
 
-/// KISS-EMIT-6.5-0003 — the recorded audit MUST find every `const_lit` sibling on the
+/// Enforces: KISS-EMIT-6.5-0003 — the recorded audit MUST find every `const_lit` sibling on the
 /// driver side and reclassify it to the emitter-must-supply constant home. Teeth: the
 /// clause must require the const_lit sibling hunt and reclassification to emitter-must-
 /// supply, and the constant-spelling home — located BY CONTENT (the §6.4 clause carrying

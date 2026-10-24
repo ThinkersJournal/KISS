@@ -51,6 +51,9 @@ fn clause_block<'a>(md: &'a str, id: &str) -> &'a str {
     &rest[..end]
 }
 
+/// Enforces: KISS-EMIT-6.4-0006 — a document lint (see the module doc): the distinction the inference
+/// needs in order to be refusable is carried, as two defined terms, a distinct clause that names both and
+/// forbids the inference, and a route to §6.8's typed decline.
 #[test]
 fn test_emit_spellable_is_not_computable() {
     let emit = read_spec("emit.md");
