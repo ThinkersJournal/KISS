@@ -290,49 +290,69 @@ fn test_classify_target_capability_set_owned_by_namespace() {
     }
 }
 
-/// KISS-CLASSIFY-6.8-0006 — a juxtaposed member set requires a fixed-width
+/// The first `vulkan:sg64.ops-….arith-….cm-` token in `doc`, as `(ops_field, arith_field)`. The
+/// namespace's fields are READ from the spec text, never declared here (KISS#376).
+fn namespace_fields(doc: &str) -> Option<(String, String)> {
+    let at = doc.find("vulkan:sg64.ops-")?;
+    let token = doc[at..].split(|c: char| c.is_whitespace() || c == '`').next()?;
+    let mut parts = token.split('.');
+    let (_ns, ops, arith) = (parts.next()?, parts.next()?, parts.next()?);
+    (ops.starts_with("ops-") && arith.starts_with("arith-")).then(|| (ops.to_string(), arith.to_string()))
+}
+
+/// The juxtaposed field's member alphabet is fixed-width (one byte) and strictly ascending.
+fn check_juxtaposed_field(field: &str) -> Result<(), String> {
+    let members = field.strip_prefix("ops-").ok_or("ops field prefix")?;
+    if !members.chars().all(|c| c.is_ascii_lowercase()) {
+        return Err(format!("juxtaposed field `{field}` contains a non-single-byte member"));
+    }
+    if !members.chars().zip(members.chars().skip(1)).all(|(a, b)| a < b) {
+        return Err(format!("juxtaposed field `{field}` is not strictly ascending"));
+    }
+    Ok(())
+}
+
+/// The variable-length field separates its members and has members of differing width.
+fn check_delimited_field(field: &str) -> Result<(), String> {
+    let names: Vec<&str> = field.strip_prefix("arith-").ok_or("arith field prefix")?.split('-').collect();
+    if names.len() < 2 {
+        return Err(format!("field `{field}` carries several members but shows no delimiter"));
+    }
+    if names.iter().all(|n| n.len() == names[0].len()) {
+        return Err(format!("the members of `{field}` are all the same width; it has no teeth"));
+    }
+    if !names.iter().zip(names.iter().skip(1)).all(|(a, b)| a < b) {
+        return Err(format!("`{field}` members are not sorted"));
+    }
+    Ok(())
+}
+
+/// Enforces: KISS-CLASSIFY-6.8-0006 — a juxtaposed member set requires a fixed-width
 /// alphabet; variable-length member names require an explicit delimiter.
+///
+/// The fields are READ from the spec — Appendix A's derived example in `classify.md` and the
+/// `vulkan.md` vocabulary document, which must agree — not transcribed into this file (KISS#376: a
+/// test over a self-declared copy was invariant under every change to the thing the clause governs).
+/// TEETH: appending a non-single-byte member to the spec's `ops-` field fails the check, shown here
+/// on a synthetic document and, when run, on an edited spec.
 #[test]
 fn test_classify_target_fixed_width_juxtaposition() {
-    // Transcribed from spec Appendix A, not parsed by a vocabulary crate.
-    const OPS_FIELD: &str = "ops-abclqrstvw";
-    const ARITH_FIELD: &str = "arith-dot8-f16-i8-st16-st8";
+    let classify = namespace_fields(include_str!("../../spec/classify.md"))
+        .expect("KISS-CLASSIFY-6.8-0006: classify.md carries a vulkan: derived example");
+    let vulkan = namespace_fields(include_str!("../../spec/namespaces/vulkan.md"))
+        .expect("KISS-CLASSIFY-6.8-0006: vulkan.md carries a vulkan: token");
+    assert_eq!(classify, vulkan, "KISS-CLASSIFY-6.8-0006: the two spec documents disagree on the fields");
+    let (ops, arith) = classify;
+    check_juxtaposed_field(&ops).unwrap_or_else(|e| panic!("KISS-CLASSIFY-6.8-0006: {e}"));
+    check_delimited_field(&arith).unwrap_or_else(|e| panic!("KISS-CLASSIFY-6.8-0006: {e}"));
 
-    // The juxtaposed field's alphabet is fixed-width: every member is exactly
-    // one byte, so concatenation is uniquely decodable by construction.
-    let ops = OPS_FIELD.strip_prefix("ops-").expect("ops field prefix");
-    assert!(
-        ops.chars().all(|c| c.is_ascii_lowercase()),
-        "KISS-CLASSIFY-6.8-0006: juxtaposed field `{OPS_FIELD}` contains a \
-         non-single-byte member; juxtaposition requires a fixed-width alphabet"
-    );
-    assert!(
-        ops.chars().zip(ops.chars().skip(1)).all(|(a, b)| a < b),
-        "KISS-CLASSIFY-6.8-0006: juxtaposed field `{OPS_FIELD}` is not strictly \
-         ascending; without a canonical order one member set has several \
-         spellings"
-    );
-
-    // The variable-length field must NOT juxtapose. Its members differ in
-    // length, so concatenation would be decodable only contingently.
-    let arith = ARITH_FIELD.strip_prefix("arith-").expect("arith field prefix");
-    let names: Vec<&str> = arith.split('-').collect();
-    assert!(
-        names.len() > 1,
-        "KISS-CLASSIFY-6.8-0006: field `{ARITH_FIELD}` carries several members \
-         but shows no delimiter; a variable-length alphabet must separate them"
-    );
-    assert!(
-        names.iter().any(|n| n.len() != names[0].len()),
-        "KISS-CLASSIFY-6.8-0006: the {} members of `{ARITH_FIELD}` are all the \
-         same width, so this vector cannot distinguish a delimiter requirement \
-         from a fixed-width alphabet — it has no teeth as written",
-        names.len()
-    );
-    assert!(
-        names.iter().zip(names.iter().skip(1)).all(|(a, b)| a < b),
-        "KISS-CLASSIFY-6.8-0006: `{ARITH_FIELD}` members are not sorted"
-    );
+    // Controls: the checks reject what the clause forbids, so passing above is not vacuous.
+    let doc = "`vulkan:sg64.ops-abclqrstvwXY9.arith-dot8-f16.cm-16`";
+    let (bad_ops, _) = namespace_fields(doc).expect("the extractor reads a synthetic token");
+    assert!(check_juxtaposed_field(&bad_ops).is_err(), "a juxtaposed non-single-byte member must fail");
+    assert!(check_juxtaposed_field("ops-bca").is_err(), "an unsorted juxtaposed field must fail");
+    assert!(check_delimited_field("arith-dot8f16i8").is_err(), "an undelimited variable-width field must fail");
+    assert!(check_delimited_field("arith-ab-cd-ef").is_err(), "a same-width delimited field has no teeth");
 }
 
 /// KISS-CLASSIFY-6.8-0007 — the digest primitive is pinned: FNV-1a 64 over the
