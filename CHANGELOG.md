@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.69 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Spec text, KISS#379 (PM ruling A, 2026-10-24): KISS-Consume §8.1 now states the schema version's value, **1 by construction**. It records existing behaviour; no behaviour changes. Closes the uncomplyable half of KISS-CONSUME-8.1-0001(b). Numbered 0.4.69 because #658 proposes 0.4.68.
+
 ## 0.4.68 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Docs only: the portfolio PM's spec-to-roadmap audit (CireSnave's idea, 2026-10-24). `ROADMAP.md` gains R5.1-R5.18, the work that design docs, rfcs, July plans and the nine specs record but no row tracked, each with its source and state (not started). R3.7 and R3.8 are corrected for #646, #647, #653-#655 and #656. `docs/glossary.md` now states the availability record as the identity triple and the `sk6` prefix, as Announce §3 and Classify 6.4-0003 do. R5.11 records the Unpopped N2 NaN ruling (option (a), later, no text now).
