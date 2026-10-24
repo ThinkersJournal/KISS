@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 import json
 import re
 import sys
@@ -14,7 +15,8 @@ T = {}
 
 def put(names, count, roles, src):
     for n in names.split():
-        assert n not in T, n
+        if n in T:
+            raise SystemExit('duplicate row for op: ' + n)
         T[n] = (count, roles, src)
 
 
@@ -43,12 +45,14 @@ put('element_map', 'n (variadic)', 'operand*', 'KISS-OPS-6.11-0001: the base acc
 
 missing = sorted(set(ops) - set(T))
 extra = sorted(set(T) - set(ops))
-assert not missing and not extra, (missing, extra)
+if missing or extra:
+    raise SystemExit('row set differs from all_ops: missing=%s extra=%s' % (missing, extra))
 
 # positive control: arities we know independently from the spec's own formulas
 known = {'add': '2', 'select': '3', 'neg': '1', 'layer_norm': '3', 'matmul': '2', 'scatter': '3', 'cmake': '2', 'sqr': '1'}
 for k, v in known.items():
-    assert T[k][0] == v, k
+    if T[k][0] != v:
+        raise SystemExit('positive control failed: %s has count %s, spec says %s' % (k, T[k][0], v))
 
 # cross-check against the clean §6.13 bodies: free variables a,b => 2; only x => 1
 s = spec[spec.index('### 6.13 Reference'):spec.index('### 6.14')]
@@ -70,7 +74,8 @@ for op, body in rows:
     if T[op][0] != want:
         bad.append((op, want, T[op][0]))
 print('cross-checked', checked, 'ops against §6.13 bodies; mismatches:', bad)
-assert checked >= 40 and not bad
+if checked < 40 or bad:
+    raise SystemExit('cross-check failed: checked=%d mismatches=%s' % (checked, bad))
 
 
 lines = spec.split('\n')
@@ -142,7 +147,7 @@ for o in ops:
             kind = 'formula'
     kinds[o] = kind
     if pick:
-        txt = bodytext(pick[2]).replace('|', '\|')
+        txt = bodytext(pick[2]).replace('|', r'\|')
         txt = (txt[:95] + '…') if len(txt) > 95 else txt
         anchor = 'ops.md:%d (§%s) — %s' % (pick[0], pick[1], txt)
     else:
