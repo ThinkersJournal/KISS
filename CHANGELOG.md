@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.71 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Tool and ledger only, no normative text: `tools/kiss_pairs.py`, the mechanical pair checker behind KISS-CONFORM-6.14 (KISS#240, #239 item 3). Over `structure_key_vectors.json` (28 positive vectors) it finds, per token field, the vector pairs that differ in that field alone: cell_class 2, target 3, rank 1, operands 6, contraction 10. **Five fields have none**: schema (single-valued by construction, `undiscriminated`), and dtype, index_width (all 28 are `ix32`), schedule and reduce, recorded as `unauthored` debt in `conformance/UNDISCRIMINATED.tsv`. The check fails a field with no pair and no ledger row, and a row that outlives its gap, so the debt can be named once and cannot grow; authoring the four pairs retires it. Controls `tools/test_kiss_pairs.py`, wired into `traceability.yml`. The four 6.14 clauses stay `untested` in `UNBACKED.tsv` (the floor is unmoved): this tool covers one vector file and token fields only. Numbered 0.4.71 because #660 (0.4.70) merged.
+
 ## 0.4.70 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Comments only, KISS#147: 15 doc-comment lines in `conformance/src/{dtype,fp,integer}.rs` respelled from the retired `s4`/`e5m2` to `i4`/`f8e5m2`. No code, no behaviour. Numbered 0.4.70 because #659 (0.4.69) merged first.

@@ -53,6 +53,11 @@ jobs:
       # KISS#387 (a): the per-conjunct ledger and its citation grammar, shown able to red.
       - name: kiss_conjuncts per-conjunct trace (negative controls)
         run: python tools/test_kiss_conjuncts.py
+      # KISS-CONFORM-6.14: a token field with no discriminating pair needs a ledger row; a stale row fails (#240).
+      - name: kiss_pairs discriminating-pair check (controls, then the tool)
+        run: |
+          python tools/test_kiss_pairs.py
+          python tools/kiss_pairs.py
       # discover_tests keys by fn name; a repeat across files must fail loudly, not overwrite (#137).
       - name: kiss_trace duplicate-test-name check (negative controls)
         run: python tools/test_kiss_trace_duplicates.py
