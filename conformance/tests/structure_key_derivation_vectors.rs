@@ -5,6 +5,7 @@
 use kiss_conformance::derivation_vectors::{emit_json, expect_of, vectors, Expect};
 use kiss_conformance::structure_key::from_token;
 
+// harness-internal: checks the committed derivation-vectors JSON equals a fresh generation; artifact freshness, no clause is verified.
 #[test]
 fn test_derivation_vectors_artifact_is_fresh() {
     let committed = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/structure_key_derivation_vectors.json"))
@@ -76,6 +77,8 @@ fn test_derivation_vectors_pairs_that_must_agree_or_differ() {
 // two worked examples of the clause, and the innermost-extent-0 case a consumer held open. Each token's
 // operand sub-key is `<layout>/<mask>/<width>/<bucket>/<flag>`; the bucket is its fourth `/` part. The
 // three buckets are DIFFERENT, so a deriver that skips unit/zero axes (or reads axis 0) cannot pass.
+// Backs: KISS-CLASSIFY-6.3-0011 — the innermost axis is rank-1 even at extent 1 or 0: [4,1] buckets `da` and [1,8] buckets `d8`, so a deriver skipping unit axes fails.
+// Backs: KISS-CLASSIFY-6.5-0012 — the divisibility bucket of the innermost extent: E = 8 gives d8, E = 1 and E = 0 give `da`.
 #[test]
 fn derivation_vectors_innermost_axis_is_rank_minus_1_including_extents_one_and_zero() {
     let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {

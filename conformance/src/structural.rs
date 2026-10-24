@@ -592,6 +592,7 @@ mod structural_tests {
         assert_eq!(reduce_f32(&[-0.0], Monoid::Max).to_bits(), (-0.0f32).to_bits());
     }
 
+    // Backs: KISS-OPS-6.11-0003 — prefix_scan is length-preserving, one output per input position
     #[test]
     fn exclusive_scan_starts_at_identity_and_is_length_preserving() {
         // KISS-OPS-6.11-0003: length-preserving; exclusive out[0] = identity.
@@ -603,6 +604,7 @@ mod structural_tests {
         assert_eq!(exc.len(), 3);
     }
 
+    // Backs: KISS-OPS-6.11-0004 — a negative gather index is always out-of-bounds, no from-end wrap
     #[test]
     fn gather_negative_index_is_oob_never_wraps() {
         // KISS-OPS-6.11-0004: negative index always OOB, no from-end wrap.
@@ -613,6 +615,7 @@ mod structural_tests {
         assert_eq!(gather_f32(&d, &[5], OobRead::Clamp), vec![Some(30.0)]); // clamp to len-1
     }
 
+    // Backs: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
     #[test]
     fn scatter_assign_highest_source_index_wins() {
         // KISS-OPS-6.11-0006: last-writer-in-iteration-order tie-break.
@@ -621,6 +624,7 @@ mod structural_tests {
         assert_eq!(dest[0], 3.0);
     }
 
+    // Backs: KISS-OPS-6.11-0005 — an out-of-bounds scatter write is skipped, destination unchanged
     #[test]
     fn scatter_oob_write_is_skipped() {
         // KISS-OPS-6.11-0005: OOB writes skipped, dest unchanged there.
@@ -629,6 +633,7 @@ mod structural_tests {
         assert_eq!(dest, [7.0, 8.0]);
     }
 
+    // Backs: KISS-OPS-6.11-0010 — fp atomic-max scattering a NaN yields NaN
     #[test]
     fn scatter_atomic_max_propagates_nan() {
         // KISS-OPS-6.11-0010: fp atomic-max/min are NaN-propagating.
@@ -676,6 +681,7 @@ mod structural_tests {
         assert_eq!(Combine::AtomicMin.class_f32(), DeterminismClass::ExactByte);
     }
 
+    // harness-internal: oracle/comparator self-consistency (the monoid-aware comparator's +-0 canonicalization), not a spec clause
     #[test]
     fn reduce_max_signed_zero_is_order_dependent_in_bits() {
         // The signed-zero hazard the ExactByte class must NOT be compared naively for:
@@ -696,6 +702,7 @@ mod structural_tests {
         assert!(compare_monoid_reduced_f32(Monoid::Max, 1.0, 2.0, 0.0, 0.0).is_err());
     }
 
+    // Backs: KISS-OPS-6.11-0003 — length-preserving: an empty input scans to an empty output
     #[test]
     fn empty_prefix_scan_is_empty() {
         // KISS-OPS-6.11-0003: prefix_scan is length-preserving, so an empty input yields an
@@ -705,6 +712,7 @@ mod structural_tests {
         assert_eq!(prefix_scan_f32(&[], Monoid::Max, ScanKind::Inclusive), Vec::<f32>::new());
     }
 
+    // harness-internal: pins an oracle choice for a degenerate case the spec explicitly leaves unpinned
     #[test]
     fn gather_clamp_empty_is_pinned_none() {
         // Out-of-contract degenerate (§6.11-0004 does not pin): Clamp over empty data
@@ -717,6 +725,7 @@ mod structural_tests {
         );
     }
 
+    // harness-internal: tolerance-bound helper arithmetic, not a spec clause
     #[test]
     fn reassoc_bound_is_zero_below_three_addends() {
         // Fewer than three addends have no reassociation freedom (a+b == b+a bit for
@@ -743,6 +752,7 @@ mod structural_tests {
         assert!(compare_scattered_f32(Combine::Assign, &a, &b, 0.0, 0.0).is_err());
     }
 
+    // Backs: KISS-OPS-6.11-0002 — reduce folds over the named axis set with the given monoid
     #[test]
     fn reduce_axis2_folds_the_named_axis() {
         // row-major [2,3]: rows [1,2,3],[4,5,6]

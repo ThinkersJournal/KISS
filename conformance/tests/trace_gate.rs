@@ -190,6 +190,7 @@ fn test_conform_build_fails_untested_must() {
 /// the prefix check is NEUTRAL — any failure here is the existence check alone. If this ever
 /// passes, the existence check does NOT subsume the prefix check and it must not be removed.
 /// Convention 9: the seed asserts it applied.
+// harness-internal: proves the trace gate tool's forward-existence check subsumes its removed test_-prefix check (#247, tool design)
 #[test]
 fn test_conform_existence_subsumes_the_prefix_check() {
     assert_gate_accepts_a_wellformed_suite("ctl_subsume");

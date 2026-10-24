@@ -155,6 +155,7 @@ fn test_contract_bundle_envelope_shared_provenance() {
 /// The shared types are *literally* the same across levels: a per-cell
 /// provenance's fields drop into the bundle envelope unchanged (type-identity of
 /// `RevisionBase` / `DerivationLineage`), which is the mechanical no-fork witness.
+// Backs: KISS-CONTRACT-6.9-0009 — the bundle-level revision_base and derivation_lineage are the identical shared types as the per-cell provenance (no bundle-local definition)
 #[test]
 fn test_shared_types_are_type_identical() {
     let per_cell = CellProvenance {

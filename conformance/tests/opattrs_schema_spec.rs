@@ -20,6 +20,7 @@ const EXPECTED_OPS: usize = 17;
 /// under-specified extraction in this repo produced exactly that — a well-formed count that was
 /// simply short. Pinning the expected total makes a narrowing REDDEN instead of reading as a
 /// clean run over less text.
+// harness-internal: pins the population of the suite's own spec-table parser (17 pre-registered rows); counts rows, does not check the carrier-op names
 #[test]
 fn test_opattrs_table_parses_to_the_preregistered_population() {
     let schemas = opattrs_schema::parse_table();
@@ -55,6 +56,7 @@ fn test_opattrs_table_parses_to_the_preregistered_population() {
 /// ⚠️ Note what this does NOT claim: that the clause PROSE and the table agree on field order.
 /// It claims only that every op the table declares is named by some §6.19.3 clause. Comparing
 /// the orders is a separate, harder check and asserting it here would overstate what is tested.
+// harness-internal: cross-check between the suite's two spec parsers (table reading vs clause-coverage reading), no clause asserted
 #[test]
 fn test_every_table_op_is_named_by_a_clause() {
     let schemas = opattrs_schema::parse_table();
@@ -89,6 +91,7 @@ fn test_every_table_op_is_named_by_a_clause() {
 /// `Variable` never occurs, the enum's third arm is dead and a future `vec` field would be
 /// silently mis-sized — so this asserts the arm is LIVE, which is a claim about the spec rather
 /// than about the parser.
+// harness-internal: reachability check on the suite's own width classifier (Variable arm is live), no clause asserted
 #[test]
 fn test_variable_width_fields_exist_and_are_not_silently_sized() {
     let schemas = opattrs_schema::parse_table();
@@ -119,6 +122,7 @@ fn test_variable_width_fields_exist_and_are_not_silently_sized() {
 }
 
 /// The fixed-width ops must report a width that is the SUM of their fields, not a guess.
+// harness-internal: arithmetic self-consistency of the suite's own schema parser (fixed width == sum of field widths), no clause asserted
 #[test]
 fn test_fixed_width_ops_sum_their_fields() {
     let schemas = opattrs_schema::parse_table();
@@ -138,6 +142,7 @@ fn test_fixed_width_ops_sum_their_fields() {
 /// Without this the artifact is a snapshot: the spec moves, the generator follows, and the
 /// committed file keeps describing the old ABI while every test passes. A foreign party
 /// reproducing the STALE file would then be measured against a spec nobody holds.
+// harness-internal: freshness of the committed opattrs_vectors.json artifact against its generator, no clause asserted
 #[test]
 fn test_opattrs_vectors_artifact_is_fresh() {
     let committed = std::fs::read_to_string(concat!(
@@ -168,6 +173,7 @@ fn test_opattrs_vectors_artifact_is_fresh() {
 /// and ascending from 0, offsets strictly derived from preceding widths — so that a spec-side
 /// reordering propagates into the emitted bytes and reddens the freshness test above. The
 /// mutation drill that proves it is run against the spec table and recorded in the PR.
+// harness-internal: offsets of the suite's own parsed schema equal the sum of preceding widths (parser/artifact self-consistency), no clause asserted
 #[test]
 fn test_field_order_is_carried_and_offsets_follow_it() {
     let schemas = opattrs_schema::parse_table();

@@ -95,6 +95,7 @@ fn canonical_qnan(dtype: &str) -> Vec<u8> {
     }
 }
 
+// harness-internal: corpus bundle self-consistency against an independent raw-bit oracle and test-local wrong models; no implementation under test
 #[test]
 fn narrow_move_nan_bundle_round_trips_and_discriminates() {
     let text = std::fs::read_to_string(concat!(

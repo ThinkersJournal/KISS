@@ -97,6 +97,7 @@ fn artifact_hex(json_text: &str, id: &str) -> String {
 
 /// (1) FRESHNESS — the committed artifact is byte-identical to a fresh generation. If this fails,
 /// regenerate: `cargo run --bin emit_grammar_vectors > conformance/corpus/grammar_vectors.json`.
+// harness-internal: freshness of the committed grammar_vectors.json artifact against its generator, no clause asserted
 #[test]
 fn test_grammar_vectors_artifact_is_fresh() {
     let committed = std::fs::read_to_string(committed_path())
@@ -115,6 +116,7 @@ fn test_grammar_vectors_artifact_is_fresh() {
 ///
 /// A mismatch is a DECISION, escalated per-instance, never reconciled silently: the appendix is
 /// hand-maintained and is as likely to be the wrong side as the codec.
+// harness-internal: agreement between the suite's own codec output and the hand-transcribed informative Appendix A.1 hex (fixture/appendix consistency), no clause asserted
 #[test]
 fn test_grammar_vectors_match_appendix_a1() {
     let md = read_spec();
@@ -149,6 +151,7 @@ fn test_grammar_vectors_match_appendix_a1() {
 /// ⚠️ WITHOUT THIS, A PARTIAL ARTIFACT IS INDISTINGUISHABLE FROM A COMPLETE ONE. That is the whole
 /// defect #466 reports one level up: a corpus that does not state its own population lets a reader
 /// conclude the gate ranges over more than it does.
+// harness-internal: checks the generated artifact states its own rendered/unrendered population, no clause asserted
 #[test]
 fn test_grammar_vectors_state_their_own_population() {
     let json = grammar::emit_grammar_vectors_json();
@@ -180,6 +183,7 @@ fn test_grammar_vectors_state_their_own_population() {
 /// three times across `grammar_golden.rs`, `grammar_canonical.rs` and `grammar_tag.rs` — identical
 /// in substance at the time (the only textual difference was a trailing comma), so this pins a
 /// hazard closed rather than repairing a drift.
+// harness-internal: single-definition check between the suite's library builders and its generated artifact, no clause asserted
 #[test]
 fn test_grammar_golden_regions_are_singly_defined() {
     let regions = grammar::golden_regions();
@@ -207,6 +211,7 @@ fn test_grammar_golden_regions_are_singly_defined() {
 ///
 /// This test reads the appendix INDEPENDENTLY of the library's parser and requires the two to
 /// agree, so a change to either side that the other does not follow reddens.
+// harness-internal: checks the suite's declared-vector list is derived from the spec appendix by an independent scan (generator self-consistency), no clause asserted
 #[test]
 fn test_grammar_declared_vectors_are_derived_from_the_appendix() {
     let md = read_spec();
@@ -255,6 +260,7 @@ fn test_grammar_declared_vectors_are_derived_from_the_appendix() {
 /// ⚠️ AN UNDECLARED RENDERED VECTOR IS A RAISE, NOT AN EXTRA ROW. If the codec renders a vector the
 /// appendix does not name, no count reveals it — the artifact simply carries one more entry. The
 /// generator asserts instead, so the artifact cannot claim a vector the specification does not.
+// harness-internal: checks every vector the suite's generator renders is declared in the appendix (generator self-consistency), no clause asserted
 #[test]
 fn test_grammar_rendered_vectors_are_all_declared() {
     let declared = grammar::declared_appendix_vectors();

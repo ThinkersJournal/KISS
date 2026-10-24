@@ -164,6 +164,7 @@ fn test_classify_numeric_kind_set_closed() {
 
 // ---- controls: the comparison must be able to go red ------------------------------------------
 
+// harness-internal: negative control showing the clause-versus-manifest diff helper reports a changed width, missing dtype, wrong kind and extra dtype; checks the test machinery only.
 #[test]
 fn control_a_wrong_width_a_missing_dtype_and_a_wrong_kind_are_all_caught() {
     let mut bits = clause_bit_widths();

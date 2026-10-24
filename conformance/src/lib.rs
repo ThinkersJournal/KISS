@@ -359,6 +359,7 @@ pub fn assert_golden(clause: &str, name: &str, actual: &[u8], golden_hex: &str) 
 mod core_tests {
     use super::*;
 
+    // harness-internal: tests the suite's own hex parser/formatter (parse_hex / hex)
     #[test]
     fn hex_roundtrip() {
         assert_eq!(parse_hex("01 FF FF 01"), vec![0x01, 0xFF, 0xFF, 0x01]);
@@ -367,6 +368,7 @@ mod core_tests {
         assert_eq!(parse_hex("02·03 00 00 00·03 00 00 00").len(), 9);
     }
 
+    // harness-internal: unit test of the harness exact-byte comparator on one equal and one differing pair; too weak to back KISS-CONFORM-6.8-0001
     #[test]
     fn exact_byte_comparator() {
         assert!(compare(DeterminismClass::ExactByte, &[1, 2], &[1, 2]).is_ok());

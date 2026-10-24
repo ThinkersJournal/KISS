@@ -410,6 +410,7 @@ fn test_announce_decline_response_framing() {
     assert_eq!(&b[51..55], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
 }
 
+// Backs: KISS-ANNOUNCE-6.1-0004 — the encoded envelope begins with the SEAM magic in wire order (53 45 41 4D)
 #[test]
 fn hex_of_golden_is_stable() {
     // documents the exact wire bytes in the test output on demand

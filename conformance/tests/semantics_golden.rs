@@ -35,6 +35,7 @@ fn max_propagates_nan_but_fmax_suppresses_it() {
     assert_eq!(fmax_ieee(3.0, 5.0), 5.0);
 }
 
+// Backs: KISS-OPS-6.15-0001 — min_prop keeps a NaN operand while fmin_ieee returns the non-NaN operand (distinct ops)
 #[test]
 fn min_propagates_nan_but_fmin_suppresses_it() {
     let nan = f32::NAN;
@@ -45,6 +46,7 @@ fn min_propagates_nan_but_fmin_suppresses_it() {
     assert_eq!(min_prop(3.0, 5.0), 3.0);
 }
 
+// Backs: KISS-OPS-6.2-0009 — the non-primitive max_prop's NaN behavior is its decomposition's: operand a itself, payload preserved
 #[test]
 fn max_prop_returns_the_nan_operand_bit_for_bit() {
     // the §6.15 decomposition returns operand `a` itself when it is NaN, so the
@@ -53,6 +55,7 @@ fn max_prop_returns_the_nan_operand_bit_for_bit() {
     assert_eq!(max_prop(nan, 5.0).to_bits(), nan.to_bits());
 }
 
+// Backs: KISS-OPS-6.15-0001 — on a +-0 tie fmax_ieee returns operand a, not a b-biased result
 #[test]
 fn signed_zero_follows_cmp_ge_operand_order() {
     // fmax_ieee(-0, +0): both numbers, cmp_ge(-0,+0) is true (equal) -> returns a.
@@ -109,6 +112,7 @@ fn signed_zero_follows_cmp_ge_operand_order() {
 /// minmax ops. Catches a `>`-spelled tie (`a > b ? a : b` — b on ties), the
 /// exact cross-implementation divergence that motivated the set, and any
 /// tie-normalizing lowering (e.g. `+0.0` on every tie).
+// Backs: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f32)
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_f32() {
     let ops: [(&str, fn(f32, f32) -> f32); 4] = [
@@ -130,6 +134,7 @@ fn minmax_signed_zero_ties_keep_operand_a_f32() {
 }
 
 /// The 16 f64 rows — the same decompositions at the f64 compute dtype.
+// Backs: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f64)
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_f64() {
     let ops: [(&str, fn(f64, f64) -> f64); 4] = [
@@ -181,6 +186,7 @@ fn minmax_signed_zero_ties_keep_operand_a_bf16_roundtrip() {
 
 // ---- relu is NOT max(x, 0) ---------------------------------------------------
 
+// Backs: KISS-OPS-6.15-0002 — relu is NaN-propagating and -0.0-preserving
 #[test]
 fn relu_propagates_nan_and_preserves_negative_zero() {
     assert!(relu(f32::NAN).is_nan(), "relu propagates NaN");
@@ -204,6 +210,7 @@ fn relu_diverges_from_max_x_zero_at_nan() {
 
 // ---- the comparators themselves (Conform §6.8) ------------------------------
 
+// Backs: KISS-CONFORM-6.8-0001 — the exact-byte comparator is a bit-identical compare (+-0 differ)
 #[test]
 fn exact_byte_f32_distinguishes_signed_zero_and_nan() {
     assert!(compare_f32(DeterminismClass::ExactByte, -0.0, -0.0, 0).is_ok());
@@ -212,6 +219,7 @@ fn exact_byte_f32_distinguishes_signed_zero_and_nan() {
     assert!(compare_f32(DeterminismClass::ExactByte, n, n, 0).is_ok());
 }
 
+// Backs: KISS-CONFORM-6.8-0002 — the ULP comparator accepts within the declared ULP bound and rejects beyond it
 #[test]
 fn ulp_comparator_measures_distance() {
     let x = 1.0f32;
@@ -224,6 +232,9 @@ fn ulp_comparator_measures_distance() {
 
 // ---- broadened primitive floor: sign-bit, sign/step, rounding, comparisons --
 
+// Backs: KISS-OPS-6.4-0003 — neg flips the sign bit, neg(-0.0) is +0.0
+// Backs: KISS-OPS-6.4-0004 — abs clears the sign bit, abs(-0.0) is +0.0
+// Backs: KISS-OPS-6.9-0002 — copysign takes the sign bit of b, including a signed zero
 #[test]
 fn sign_bit_atoms_signed_zero() {
     assert!(bits_eq(neg(0.0), -0.0));
@@ -236,6 +247,7 @@ fn sign_bit_atoms_signed_zero() {
     assert!(bits_eq(copysign(3.0, -0.0), -3.0)); // sign of a signed zero carries
 }
 
+// Backs: KISS-OPS-6.2-0009 — sign(NaN)=0 and step(NaN)=0 are the pinned results of the decompositions
 #[test]
 fn sign_and_step_at_nan_and_zero() {
     assert_eq!(sign(2.0), 1.0);
@@ -315,6 +327,7 @@ fn test_ops_hypot_inf_nan() {
     assert_eq!(hypot(3.0, 4.0), 5.0);
 }
 
+// harness-internal: cross-checks the host f32 exp against an f64 oracle under an arbitrary stand-in bound, not a declared tier
 #[test]
 fn transcendental_agrees_within_declared_ulp() {
     // §6.8: a transcendental's semantics is "the named function to within a

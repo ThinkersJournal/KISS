@@ -115,6 +115,7 @@ fn test_conform_structural_not_source_bytes() {
 
 /// An op this module cannot read is a typed decline, never a silent primitive (guards the
 /// "equal" verdicts above against a table that quietly read too little).
+// harness-internal: guard that the decomposition-table reader declines an unreadable row rather than treating it as a primitive
 #[test]
 fn structural_dag_unreadable_decomposition_declines() {
     let t = table();

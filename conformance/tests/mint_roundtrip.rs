@@ -3,6 +3,7 @@
 //! signed-zero add cell (the point of the slice: -0 vs +0 is normative, exact-byte).
 use kiss_conformance::corpus;
 
+// harness-internal: corpus bundle loads through the reader and carries the expected cell (minter/fixture self-consistency)
 #[test]
 fn frozen_arith_bundle_loads_and_has_signed_zero_cell() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-arith.json"))

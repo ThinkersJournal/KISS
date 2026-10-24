@@ -23,6 +23,7 @@ fn committed_path() -> std::path::PathBuf {
 
 /// (1) FRESHNESS — the committed artifact is byte-identical to a fresh generation. If this fails,
 /// regenerate: `cargo run --bin emit_contract_vectors > conformance/corpus/contract_vectors.json`.
+// harness-internal: freshness of the committed contract_vectors.json artifact against its generator, no clause asserted
 #[test]
 fn test_contract_vectors_artifact_is_fresh() {
     let committed = std::fs::read_to_string(committed_path())
@@ -40,6 +41,7 @@ fn test_contract_vectors_artifact_is_fresh() {
 /// `op_dag`; and the assembled golden document reads cleanly as a self-consistent contract (§6.11).
 /// A mismatch is a spec↔codec DECISION, escalated per-instance, never reconciled silently — the
 /// appendix is hand-maintained, as likely wrong as the codec.
+// harness-internal: agreement between the suite's own codec rendering and the hand-transcribed Appendix C golden (fixture self-consistency), no clause asserted
 #[test]
 fn test_contract_vectors_render_matches_appendix_c() {
     let identity = contract::appendix_c_identity_block();
@@ -76,6 +78,7 @@ fn test_contract_vectors_render_matches_appendix_c() {
 /// so it passed with the codec rendering seven blocks against an appendix showing three. A test
 /// named "render matches appendix C" that cannot see a four-block divergence is the vacuity
 /// family: its name is a claim about coverage its assertions do not make.
+// harness-internal: checks the spec's Appendix C prose shows every block the suite's own codec renders (appendix/fixture agreement), no clause asserted
 #[test]
 fn test_appendix_c_shows_every_block_the_codec_renders() {
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/contract.md"))
@@ -133,6 +136,7 @@ fn test_appendix_c_shows_every_block_the_codec_renders() {
 /// The 16(d) note is gone because its subject is gone. What replaces it is not silence: two real
 /// limits are stated in the artifact itself -- the Dispatch sentinel (so a foreign reader never
 /// exercises the five-field geometry path) and the AUDIT-checklist nature of §8-0004/-0005.
+// harness-internal: checks the generated artifact states its own partiality, no clause asserted
 #[test]
 fn test_contract_vectors_states_what_remains_partial() {
     let json = contract::emit_contract_vectors_json();
@@ -153,6 +157,7 @@ fn test_contract_vectors_states_what_remains_partial() {
 
 /// The decline set carries every single-fault corruption with its exact typed decline — DIFFABLE:
 /// a foreign reader byte-diffs each malformed document and checks the pinned decline, not "an error".
+// harness-internal: checks the generated artifact carries every decline vector the suite defines, no clause asserted
 #[test]
 fn test_contract_vectors_carry_the_decline_set() {
     let json = contract::emit_contract_vectors_json();
@@ -173,6 +178,7 @@ fn test_contract_vectors_carry_the_decline_set() {
 /// re-spell the foreign-reader artifact. The wildcard-free match in `wire_tag()` forces a NEW variant
 /// to be given a spelling (compile error otherwise); this test pins the spellings themselves and
 /// checks the emitted artifact carries only pinned tags — no `{:?}` Debug string leaks in.
+// harness-internal: pins the suite's own decline wire-tag spellings used as the artifact's `expect` schema, no clause asserted
 #[test]
 fn test_contract_decline_wire_tags() {
     use kiss_conformance::contract::ContractDecline::*;

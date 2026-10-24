@@ -182,6 +182,7 @@ fn test_classify_float_special_values_pinned() {
 
 // ---- controls: the independent decode must discriminate, or the comparison above proves nothing ----
 
+// harness-internal: negative control showing the test file's independent float decoder discriminates bias and convention; checks the test machinery only.
 #[test]
 fn control_the_decode_distinguishes_formats_and_catches_a_wrong_bias() {
     // a wrong bias or a wrong convention changes what a pinned pattern means

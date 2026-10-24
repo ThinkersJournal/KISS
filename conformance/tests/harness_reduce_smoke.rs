@@ -5,6 +5,7 @@ mod common;
 use common::compile_and_load_reduce;
 use kiss_conformance::harness::abi::invoke_reduce;
 
+// harness-internal: reduce-fixture compile/load/invoke smoke test of the harness's own loader
 #[test]
 fn reduce_fixtures_compile_load_and_run() {
     let a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load_reduce("mean_a"));

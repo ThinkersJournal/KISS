@@ -24,6 +24,7 @@ fn add_alt_i32(a: i32, b: i32) -> i32 {
     ((a as u32).wrapping_add(b as u32)) as i32
 }
 
+// harness-internal: differential-loop control: an independent wrapping-add agrees with the integer oracle over the corpus
 #[test]
 fn correct_add_candidate_agrees_over_the_whole_corpus() {
     let corpus = int_corpus::<i32>(SEED, N);
@@ -38,6 +39,7 @@ fn saturating_add_i32(a: i32, b: i32) -> i32 {
     a.saturating_add(b)
 }
 
+// harness-internal: differential teeth check: a planted mutant must be caught by the harness oracle
 #[test]
 fn differential_catches_the_saturating_add_bug() {
     let corpus = int_corpus::<i32>(SEED, N);
@@ -60,6 +62,7 @@ fn saturating_abs_i32(a: i32) -> i32 {
     if a == i32::MIN { i32::MAX } else { a.wrapping_abs() }
 }
 
+// harness-internal: differential teeth check: a planted mutant must be caught by the harness oracle
 #[test]
 fn differential_catches_the_saturating_abs_bug() {
     let corpus = int_corpus::<i32>(SEED, N);
@@ -80,6 +83,7 @@ fn logical_shr_i32(a: i32, amt: u32) -> i32 {
     ((a as u32) >> amt) as i32
 }
 
+// harness-internal: differential teeth check: a planted mutant must be caught by the harness oracle
 #[test]
 fn differential_catches_the_always_logical_shr_bug() {
     let corpus = int_corpus::<i32>(SEED, N);
@@ -113,6 +117,7 @@ fn differential_catches_the_always_logical_shr_bug() {
 
 // ---- unsigned shr is ALREADY logical — the same candidate agrees on u32 ------
 
+// harness-internal: differential control: the correct candidate agrees with the harness oracle
 #[test]
 fn unsigned_shr_is_logical_and_agrees() {
     // on an unsigned dtype the pinned shr IS logical, so a logical candidate must
@@ -127,6 +132,7 @@ fn unsigned_shr_is_logical_and_agrees() {
 
 // ---- self-consistency and corpus reproducibility (Conform §6.5) -------------
 
+// harness-internal: each integer oracle function agrees with itself over the fuzz corpus (oracle self-consistency)
 #[test]
 fn int_oracle_is_self_consistent_under_fuzz() {
     let corpus = int_corpus::<i64>(7, 300);
@@ -137,6 +143,7 @@ fn int_oracle_is_self_consistent_under_fuzz() {
     assert!(diff_int_unary(abs, abs, &corpus).is_empty());
 }
 
+// harness-internal: the seeded integer corpus generator is deterministic and contains the pinned edge values (generator self-check)
 #[test]
 fn int_corpus_is_reproducible() {
     // same seed/n -> identical corpus (deterministic fuzzer reproducibility).

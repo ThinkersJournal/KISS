@@ -28,6 +28,7 @@ fn reduce_empty_axis_yields_monoid_identity() {
     assert_eq!(reduce_f32(&[], Monoid::Min), f32::INFINITY); // dtype maximum
 }
 
+// Backs: KISS-OPS-6.11-0002 — reduce folds with the sum/prod/max/min monoid (golden fold values)
 #[test]
 fn reduce_ordinary_values() {
     // Golden multiset {1,2,3,4}: sum=10, prod=24, max=4, min=1.
@@ -81,6 +82,7 @@ fn scan_is_length_preserving() {
     assert_eq!(prefix_scan_f32(&[], Monoid::Sum, ScanKind::Inclusive), Vec::<f32>::new());
 }
 
+// Backs: KISS-OPS-6.11-0003 — prefix_scan computes an inclusive or exclusive running monoid fold
 #[test]
 fn scan_inclusive_vs_exclusive_golden() {
     // cumsum = prefix_scan(sum, inclusive) (§6.13 table).
@@ -105,6 +107,7 @@ fn scan_inclusive_vs_exclusive_golden() {
     );
 }
 
+// Backs: KISS-OPS-6.11-0003 — exclusive running max fold: out[0] is the identity, then the prefix max
 #[test]
 fn scan_exclusive_max_first_is_identity() {
     // exclusive max: out[0] = -inf (Max identity), then the running max of the prefix.
@@ -136,6 +139,7 @@ fn gather_oob_policies() {
     assert_eq!(gather_f32(&d, &[0], OobRead::Clamp), vec![Some(10.0)]);
 }
 
+// Backs: KISS-OPS-6.11-0004 — a negative gather index is always out-of-bounds, never a from-end wrap
 #[test]
 fn gather_negative_index_never_wraps() {
     // KISS-OPS-6.11-0004: a negative index (signed dtype) is ALWAYS OOB, no from-end wrap.
@@ -158,6 +162,7 @@ fn gather_preserves_read_datum_bits() {
 
 // ---- scatter: combine algebra + OOB skip (§6.11-0005/-0006/-0010) ------------
 
+// Backs: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
 #[test]
 fn scatter_assign_last_writer_in_iteration_order_wins() {
     // KISS-OPS-6.11-0006: pinned tie-break — the highest source (row-major) index wins.
@@ -192,6 +197,7 @@ fn scatter_atomic_max_min_nan_propagating() {
     assert_eq!(c[0], 5.0);
 }
 
+// Backs: KISS-OPS-6.11-0006 — assign, atomic-max and atomic-min combines are deterministic (exact-byte class)
 #[test]
 fn scatter_deterministic_combines_are_exact_byte() {
     // KISS-OPS-6.11-0006: assign / atomic-max / atomic-min are deterministic (exact-byte).
@@ -232,6 +238,7 @@ fn atomic_add_two_orderings_diverge_but_agree_order_invariantly() {
     assert!(compare_order_invariant(&a, &b, tol, 0.0).is_ok());
 }
 
+// harness-internal: checks the order-invariant comparator helper still rejects a real error (comparator self-test)
 #[test]
 fn order_invariant_still_catches_a_real_error() {
     // The comparator is not a rubber stamp: a divergence far beyond the reassociation
@@ -347,6 +354,7 @@ fn differential_scatter_atomic_add_reproducible() {
     );
 }
 
+// harness-internal: differential teeth check against a test-local wrong gather, not an assertion about the spec
 #[test]
 fn differential_catches_gather_ignoring_oob_policy() {
     // Reproducible data + index arrays; the index array deliberately spans OOB on

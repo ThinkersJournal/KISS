@@ -24,6 +24,7 @@ fn fixture() -> (Decompositions, OpSigs) {
     (t, s)
 }
 
+// harness-internal: tests the fuzz DAG generator; KISS-CONFORM-6.6-0001 is recorded PARTIAL in UNBACKED.tsv because the generator models no roles, ranks, dtypes or OpAttrs, so this test does not cite it
 #[test]
 fn fuzz_generator_valid_dags_reproducible_and_encodable() {
     let (t, s) = fixture();

@@ -126,6 +126,7 @@ fn test_classify_u32_is_ordinary_storage() {
 
 // ---- control: the comparisons above can fail ----------------------------------------------------
 
+// harness-internal: negative control showing the sibling tests' manifest-shape and u8/u32 comparisons can fail; checks the test machinery only.
 #[test]
 fn control_a_precision_field_or_an_index_only_dtype_would_be_caught() {
     // a row with an extra field would not match the pinned four-key shape

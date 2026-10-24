@@ -36,7 +36,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 **459<!-- bound:harness --> of 961<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 232<!-- bound:named --> are
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 216<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
@@ -51,9 +51,9 @@ The remaining 502<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **384<!-- bound:untested_rows --> genuinely untested**, 44 enforced by a
 document lint, 33 `blocked`, 14 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 811<!-- bound:test_fns --> test fns, **301<!-- bound:uncited_tests --> cite
-no clause at all**, so the traceability matrix cannot see them: real tests
-doing real work that no clause claims credit for. The +111 in this PR are the Plan B
+the harness one for exactly this reason. Of this crate's 811<!-- bound:test_fns --> test fns, **225<!-- bound:uncited_tests --> cite
+no backing clause**: each is either named by a §9 row or tagged `// harness-internal: <reason>`
+(KISS-CONFORM-6.1-0003), and the 185 that were neither were cited or tagged one by one (KISS#136). The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
 and the minter round-trip/discrimination tests — infrastructure that tests the ORACLE and
 the MINTER, not a spec clause; the op-obligation backing (§6.16-0010) is cited separately.

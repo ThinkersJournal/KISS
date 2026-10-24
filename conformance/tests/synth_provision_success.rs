@@ -250,6 +250,7 @@ fn test_synth_contract_inner_framing_independent() {
 /// Not a bound clause: the echoed identity of a success always carries `revision_present == 1`
 /// and the 32-byte hash (§6.3-0006 / §6.3-0006a, frame half only). An unpinned identity is neither
 /// encodable nor decodable here.
+// harness-internal: the suite's own PRSP frame codec refuses an echo without a pinned revision; the Synth 6.3-0006/-0006a provider obligations are recorded unbacked (UNBACKED.tsv)
 #[test]
 fn test_synth_prsp_echo_requires_revision() {
     let mut s = success();

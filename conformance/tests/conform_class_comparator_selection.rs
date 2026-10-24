@@ -39,6 +39,7 @@ fn test_conform_ops_class_comparator_selection() {
     ).is_err());
 }
 
+// harness-internal: pins a harness-specific signed-zero canonicalisation for Max reduce; no KISS-CONFORM clause states that rule
 // Regression guard: a Max reduce advertised exact-byte can legitimately return -0.0 in
 // one fold order and +0.0 in another (the ±0-across-order exception). Sourcing the class
 // from the advertisement must NOT lose the monoid's ±0 canonicalization that the

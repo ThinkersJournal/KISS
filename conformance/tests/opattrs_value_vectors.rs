@@ -166,6 +166,7 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
     })
 }
 
+// harness-internal: freshness of a committed generated artifact against its generator, no clause asserted
 #[test]
 fn committed_artifact_is_the_generator_output() {
     let committed = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/opattrs_value_vectors.json"))
@@ -177,6 +178,7 @@ fn committed_artifact_is_the_generator_output() {
     );
 }
 
+// harness-internal: cross-check of the suite's generic encoder against its own hand encoders (self-consistency, no clause asserted)
 #[test]
 fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
     let (mut compared, mut skipped) = (0, 0);
@@ -194,6 +196,10 @@ fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
     assert_eq!(compared + skipped, POPULATION, "population is pinned");
 }
 
+// Backs: KISS-OPS-6.19-0027 — the gather clamp blob is exactly the bytes `00 02 01 02` (axis, oob_policy, index_operand, index_dtype in order)
+// Backs: KISS-OPS-6.19-0028 — the scatter atomic-add blob is exactly `00 02 01 01 03` (axis, combine, fixed-skip oob_policy, index_operand, index_dtype)
+// Backs: KISS-OPS-6.19-0030 — the reduce_var blob is exactly `FF FF 01 00` (reduce_axes u16, fixed keepdim, bessel_correction)
+// Backs: KISS-OPS-6.19-0032 — the non-square avg_pool blob is the exact 37 bytes (four window vectors then count_include_pad)
 #[test]
 fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
     let enc = |op: &str, a: Attrs| encode(op, &a).expect("encodes");
@@ -222,6 +228,8 @@ fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
     );
 }
 
+// Backs: KISS-OPS-6.19-0020 — rank-1 sole axis and a rank-3 full reduction encode 0xFFFF (never 0x0001/0x0007), trailing 0xFFFE, subset mask otherwise
+// Backs: KISS-OPS-6.19-0038 — an empty axis set (0x0000) is refused, never emitted
 #[test]
 fn rank_sensitivity_of_reduce_axes_matches_the_spec_examples() {
     // §6.19-0020 / Appendix E.1: the rank is NOT in the blob, so these share or split bytes by design
@@ -234,6 +242,7 @@ fn rank_sensitivity_of_reduce_axes_matches_the_spec_examples() {
     assert!(ov::reduce_axes_word(&[2], 2).is_err());
 }
 
+// harness-internal: the byte equality is asserted inside equivalences(); this body only counts the pairs
 #[test]
 fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     let eqs = equivalences();
@@ -247,6 +256,7 @@ fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     }
 }
 
+// harness-internal: non-vacuity check of the suite's own generated vector population (distinct pairs recorded), no clause asserted
 #[test]
 fn every_variation_that_differs_is_recorded_distinct_and_none_is_vacuous() {
     let vs = encode_vectors();
@@ -260,6 +270,8 @@ fn every_variation_that_differs_is_recorded_distinct_and_none_is_vacuous() {
     }
 }
 
+// Backs: KISS-OPS-6.19-0025 — the reduce blob is exactly 6 bytes `01 FF FF 01 00 01`, math_fidelity ordinal 1|2 never 0, a non-float accumulator is refused
+// Backs: KISS-OPS-6.19-0026 — every prefix_scan blob is the 6-byte monoid/reduce_axes/exclusivity/accumulator/math_fidelity form with the fidelity byte 1 or 2
 #[test]
 fn reduce_and_prefix_scan_are_minted_at_six_bytes_with_the_pinned_ordinals() {
     // board 201 ("Accept Fuel's table.") pinned `math_fidelity`; nothing is withheld any more.
@@ -302,6 +314,7 @@ fn reduce_and_prefix_scan_are_minted_at_six_bytes_with_the_pinned_ordinals() {
     }
 }
 
+// harness-internal: guards the suite's `is_fixed` keepdim special case against drift in the spec prose; asserts text, not an implementation
 #[test]
 fn the_fixed_keepdim_exception_is_still_what_the_clause_says() {
     // `is_fixed` special-cases `keepdim` because the table row omits it; the clause is the authority
@@ -314,6 +327,7 @@ fn the_fixed_keepdim_exception_is_still_what_the_clause_says() {
 
 // ---- controls: the cross-check must be able to go red -----------------------------------------
 
+// harness-internal: negative control proving the suite's hand-vs-generic cross-check can go red
 #[test]
 fn control_a_swapped_field_order_is_caught() {
     let mut schema = parse_table().into_iter().find(|s| s.op == "gather").unwrap();
@@ -327,6 +341,7 @@ fn control_a_swapped_field_order_is_caught() {
     }
 }
 
+// Backs: KISS-OPS-6.19-0037 — an encoder refuses to emit an axis field >= MAX_RANK (axis 8)
 #[test]
 fn control_a_wrong_token_or_missing_field_is_refused_not_guessed() {
     let mut a: Attrs = ov::base_attrs("gather").unwrap();

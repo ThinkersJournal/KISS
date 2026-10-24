@@ -6,6 +6,7 @@ mod common;
 use common::compile_and_load;
 use kiss_conformance::harness::abi::invoke_binary;
 
+// harness-internal: C fixture compile/load/invoke smoke test of the harness's own loader
 #[test]
 fn all_three_fixtures_compile_load_and_run() {
     let add_a = kiss_conformance::runtime_gate_some!("msvc", compile_and_load("add_a"));

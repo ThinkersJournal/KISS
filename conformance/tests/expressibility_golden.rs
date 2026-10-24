@@ -147,6 +147,7 @@ const NESTED_ADD_MUL_BYTES_HEX: &str =
 /// always byte-lex-less than any Op node's, whose first byte is `0x01`, so
 /// the canonical order is always `[Bind2, mul]` regardless of which was
 /// authored first).
+// Backs: KISS-GRAMMAR-6.4-0010 — a commutative root orders its (Op-subtree, Bind-leaf) operands by unsigned-byte-lex of their canonical subtree serializations regardless of authored order
 #[test]
 fn nested_op_interior_consumers_and_opattrs_with_commutative_sibling_reordering() {
     let authored_mul_first = nested_add_mul_sig([2, 3]);
@@ -200,6 +201,7 @@ const SUB_SIGNATURE_HASH_HEX: &str = "3cda77a1e825ea1f";
 /// version `1` / OpAttrs wire version `1`. Object keys ascending code-point
 /// order, no insignificant whitespace, LF-only (there is none here — the
 /// whole document is one line).
+// Backs: KISS-CONFORM-6.10-0006 — the add signature set serializes to the exact Appendix F JSON (key order, signature_hash, bytes)
 #[test]
 fn full_set_json_matches_appendix_f_golden() {
     let add_bytes = kiss_conformance::parse_hex(ADD_BYTES_HEX);
@@ -235,6 +237,7 @@ fn valid_sub_set() -> SignatureSet {
 /// golden; only the `add` set was previously asserted end-to-end through
 /// `serialize_set`, leaving the `sub` golden JSON doc unexercised by anything
 /// but the raw `bytes` check). Mirrors `full_set_json_matches_appendix_f_golden`.
+// Backs: KISS-CONFORM-6.10-0006 — the sub signature set serializes to the exact Appendix F JSON (key order, signature_hash, bytes)
 #[test]
 fn full_set_json_matches_appendix_f_golden_for_sub() {
     let sub_bytes = kiss_conformance::parse_hex(SUB_BYTES_HEX);
@@ -262,6 +265,7 @@ fn full_set_json_matches_appendix_f_golden_for_sub() {
 /// rather than merely preserving an input that happened to already be sorted
 /// (the previously-only-tested one-signature sets never exercised this sort
 /// at all).
+// Backs: KISS-CONFORM-6.10-0006 — the signatures array is serialized ascending by each signature's bytes even when authored sub-then-add
 #[test]
 fn serialize_set_orders_signatures_ascending_by_bytes() {
     let set = SignatureSet {
@@ -298,6 +302,7 @@ fn reject_set_declines_missing_owner() {
     assert!(reject_set(valid.as_bytes()).is_ok());
 }
 
+// Backs: KISS-CONFORM-6.10-0006 — a reader rejects a set carrying an unknown field with a typed decline
 #[test]
 fn reject_set_declines_unknown_field() {
     let valid = String::from_utf8(serialize_set(&valid_set())).unwrap();
@@ -312,6 +317,7 @@ fn reject_set_declines_unknown_field() {
     );
 }
 
+// Backs: KISS-CONFORM-6.10-0006 — a reader rejects a set whose owner violates the KISS-OPS enumerant with a typed decline
 #[test]
 fn reject_set_declines_bad_owner_enumerant() {
     let valid = String::from_utf8(serialize_set(&valid_set())).unwrap();
@@ -326,6 +332,7 @@ fn reject_set_declines_bad_owner_enumerant() {
 /// cannot catch it) but is NOT an array (a bare number here) must still be
 /// declined -- Appendix F requires `signatures` to be an array, and
 /// present-but-wrong-shaped is as much a schema violation as absent.
+// Backs: KISS-CONFORM-6.10-0006 — a reader rejects a set whose `signatures` is present but not the Appendix F array, with a typed decline
 #[test]
 fn reject_set_declines_non_array_signatures() {
     let valid = String::from_utf8(serialize_set(&valid_set())).unwrap();

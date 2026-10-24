@@ -102,6 +102,7 @@ fn run_ondevice(src: &str, extra_nvcc_args: &[&str]) -> (i32, String) {
 
 /// The kernel matches the from-scratch oracle on real hardware over the full corpus
 /// of ordered pairs, bit-exactly (KISS-Ops §6.15 `fmax_ieee`; Conform §6.5/§6.6).
+// harness-internal: non-normative on-device slice (nvcc-gated): the suite's own fmax_ieee kernel matches the suite's own oracle
 #[test]
 fn fmax_ieee_matches_oracle_on_device() {
     kiss_conformance::runtime_gate!("cuda", nvcc_present());
@@ -120,6 +121,7 @@ fn fmax_ieee_matches_oracle_on_device() {
 /// order-dependent sign of ±0 that §6.15 pins) MUST be caught. This asserts the
 /// differential slice has teeth (Conform §6.5), not merely that the correct kernel
 /// happens to pass.
+// harness-internal: non-normative on-device slice (nvcc-gated) negative control: the suite's own device differential has teeth
 #[test]
 fn fmaxf_intrinsic_is_caught_on_device() {
     kiss_conformance::runtime_gate!("cuda", nvcc_present());
@@ -143,6 +145,7 @@ fn fmaxf_intrinsic_is_caught_on_device() {
 /// NaN / normalizes -0.0) so the check has teeth (`NAIVE_REF divergences>0`). A pass
 /// certifies the reference generator conformant for this op; this is where "the spec
 /// is testable" becomes "the reference generator is conformant."
+// harness-internal: non-normative on-device slice (nvcc-gated): a reference-generator kernel matches the suite's own relu oracle
 #[test]
 fn generated_relu_add_matches_kiss_on_device() {
     kiss_conformance::runtime_gate!("cuda", nvcc_present());
