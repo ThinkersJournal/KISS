@@ -15,7 +15,7 @@
 //! Dtype coverage is the §6.16-0006 / §6.2-0002 **ordinary** integer set:
 //! `s8`→[`i8`], `s16`→[`i16`], `u8`→[`u8`], `u16`→[`u16`], `i32`→[`i32`],
 //! `u32`→[`u32`], `u64`→[`u64`], `i64`→[`i64`]; `i32` is the signed-32 token.
-//! Sub-byte `s4`/`u4` (packing owned by the data-vocabulary sub-standard,
+//! Sub-byte `i4`/`u4` (packing owned by the data-vocabulary sub-standard,
 //! §6.16-0006) and `b1` binary-GEMM (a §6.16-0006 reduction, not an atom) are
 //! deliberately out of this slice.
 //!
