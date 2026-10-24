@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.32 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Ledger only, no spec, test or wire change (R3.2, floor unmoved at harness 439 / untested 407): records a reason for the 20 remaining bare-`untested` Announce rows (6.0-0001, 6.2-0010, 6.3-0002/-0006/-0007, 6.4-0002/-0003/-0005/-0008/-0010/-0012, 7.1-0003/-0004, 7.2-0001/-0002/-0004/-0005/-0006/-0010, 7.3-0001/-0002; 6.1-0005 got its reason in 0.4.30). Announce now has no empty-reason row; most lack a subject because `announce.rs` is a byte codec with no provider, consumer, role or capability-bit table. Also keeps the `# 0.9.14` comment on the CodeRipper portfolio pin.
+
 ## 0.4.31 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Docs only, no spec, tooling or wire change: `conformance/corpus/PROVENANCE.md` records the generator, version and regeneration command for `ops-int-wrap.json` (and the other ten `kiss_mint` bundles); ROADMAP R3.13 records the Windows-only failure of `tools/test_kiss_msrv_step.py`.
