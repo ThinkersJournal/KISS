@@ -132,6 +132,46 @@ class RealSpecIsClean(unittest.TestCase):
         self.assertEqual(kt.check_dtype_layouts(SPEC_DIR), [])
 
 
+class CountWordIsNotSkippedSilently(unittest.TestCase):
+    """#159: a count word the lint cannot read used to switch its comparison off."""
+
+    def _spec_dir(self, stem, old, new):
+        import tempfile
+        text = open(os.path.join(SPEC_DIR, stem + ".md"), encoding="utf-8").read().replace("\r\n", "\n")
+        self.assertEqual(text.count(old), 1, "the mutation anchor must hit exactly once")
+        d = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, d, True)
+        with open(os.path.join(d, stem + ".md"), "w", encoding="utf-8") as fh:
+            fh.write(text.replace(old, new))
+        return d
+
+    def test_shipped_spec_is_clean(self):
+        self.assertEqual(kt.check_mathfidelity_enum(SPEC_DIR), [])
+        self.assertEqual(kt.check_refusal_taxonomy(SPEC_DIR), [])
+
+    def test_mathfidelity_wrong_word_still_caught(self):
+        v = kt.check_mathfidelity_enum(self._spec_dir("ops", "the two-member enum", "the three-member enum"))
+        self.assertTrue(any("three-member" in x for x in v), v)
+
+    def test_mathfidelity_unreadable_word_is_a_violation(self):
+        v = kt.check_mathfidelity_enum(self._spec_dir("ops", "the two-member enum", "the five-member enum"))
+        self.assertTrue(any("five-member" in x and "can read" in x for x in v), v)
+
+    def test_mathfidelity_missing_phrase_is_a_violation(self):
+        v = kt.check_mathfidelity_enum(self._spec_dir("ops", "the two-member enum", "the enum"))
+        self.assertTrue(any("count word" in x for x in v), v)
+
+    def test_refusal_unreadable_word_is_a_violation(self):
+        v = kt.check_refusal_taxonomy(self._spec_dir("consume", "MUST be exactly the four categories",
+                                                      "MUST be exactly the seven categories"))
+        self.assertTrue(any("seven" in x and "can read" in x for x in v), v)
+
+    def test_refusal_missing_phrase_is_a_violation(self):
+        v = kt.check_refusal_taxonomy(self._spec_dir("consume", "MUST be exactly the four categories",
+                                                      "MUST be the four categories"))
+        self.assertTrue(any("count word" in x for x in v), v)
+
+
 class DeterminismImportSites(unittest.TestCase):
     """KISS-CONFORM-6.11-0003 - the member-spelling import-site lint, with a clean control and
     mutations that each must be caught."""
