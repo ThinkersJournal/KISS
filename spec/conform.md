@@ -25,7 +25,7 @@
 | Title | KISS-Conform |
 | Sub-standard ID | KISS-CONFORM |
 | Tier | **Cross-cutting.** The ninth and cross-cutting sub-standard: it owns conformance and depends on and TESTS all eight other sub-standards; it gates every freeze. It is what makes the other eight provable. |
-| Maturity stage | **Draft** (first-draft proposal; the traceability mechanism, the four modalities, the comparator model, and the freeze gate are NOT yet frozen — the freeze gate of §8 is unmet, and KISS-Conform freezes only after it self-applies its own gate). |
+| Maturity stage | **Draft** (first-draft proposal; the traceability mechanism, the five modalities, the comparator model, and the freeze gate are NOT yet frozen — the freeze gate of §8 is unmet, and KISS-Conform freezes only after it self-applies its own gate). |
 | Editor of record | **Proposed, pending ratification** — a conformance-suite reference-impl project holds the pen and requests comment from every sub-standard editor (Conform tests them all); the ratified governance record does not yet finalize an editor for KISS-Conform. |
 | Reference language | The implementation language of the reference conformance-harness crate, named in the ratified governance record; "foreign reader" (§8-0006) means an implementation written **outside** this named reference language. |
 | Steward | ThinkersJournal |
@@ -55,8 +55,9 @@ KISS-Conform owns the **conformance machinery of the entire suite**: the single,
 machine-readable, **bidirectional clause↔test traceability matrix** that joins every
 normative clause across all eight other sub-standards to a named conformance test;
 the **build-fail gate** that makes an uncovered normative surface un-buildable; the
-**four test modalities** (golden byte-vectors, an independent CPU-oracle differential
-harness, an IR-DAG fuzzer emitting to every backend, and negative/decline vectors);
+**five test modalities** (golden byte-vectors, an independent CPU-oracle differential
+harness, an IR-DAG fuzzer emitting to every backend, negative/decline vectors, and
+discriminating vector pairs);
 the **determinism-class-aware comparators** that decide what a passing run means;
 **per-sub-standard-per-version keying** so a frozen version's suite is immutable; and
 the **freeze gate** — the adversarial-outsider checklist that every sub-standard must
@@ -150,7 +151,7 @@ distinct from the generate-time structural gate so two independently-built suite
 disagree on whether a sub-standard "builds." This is the concrete realization of the
 obligation every one of the eight sub-standards forward-references verbatim.
 
-### 2.4 Four modalities — what a passing run means
+### 2.4 Five modalities — what a passing run means
 
 Two independent conformance-suite implementations must agree on what "passing" means, so
 each modality is pinned tightly enough to leave no room for interpretation:
@@ -185,6 +186,16 @@ each modality is pinned tightly enough to leave no room for interpretation:
   result. Each vector pins the exact decline code — or the exact residue structural
   signature — the implementation must emit; the never-panic obligation is delivered both as
   fixed vectors and as a fuzz campaign with pinned time/memory bounds.
+- **Discriminating vector pairs** — for each clause that pins a *coordinate* (a field, role,
+  dtype, ordinal or flag whose value changes the required output), a pair of otherwise
+  identical **legal** inputs that differ in that coordinate alone and whose required outputs
+  differ. The other four modalities cannot supply this: golden vectors pin that a legal input
+  yields its bytes, the oracle checks numerical agreement, the fuzzer looks for crashes and
+  divergence, and decline vectors pin that an *illegal* input is refused. A rule can be
+  stated normatively, implemented wrongly, and pass all four when every vector happens to
+  agree in the coordinate under test; only a pair constructed to differ can fail there. A
+  corpus of real artifacts cannot supply it either, because it samples what is published,
+  which is the population that never exercises the constrained cases.
 
 ### 2.5 The comparator is selected, never chosen
 
@@ -1401,6 +1412,32 @@ atomic clause with its own append-only ID and dedicated test.
   exemption** (§8-0007), and MUST sign every maturity transition via the AUDIT role (§8-0006).
   *Test:* `test_conform_all_build_gate_and_keying`.
 
+### 6.14 Modality 5 — discriminating vector pairs
+
+A *coordinate* is a field, role, dtype token, ordinal, flag or other input dimension that a
+normative clause makes the required output depend on. A *discriminating pair* for a coordinate
+is two **legal** inputs identical in every other coordinate and different in that one, whose
+required outputs differ.
+
+- **KISS-CONFORM-6.14-0001** — For each normative clause that pins a coordinate, the suite's
+  vector set MUST contain at least one **discriminating pair** for that coordinate. A pair in
+  which either input is illegal does not count (that is a negative vector, §6.7), nor does a pair
+  that differs in more than one coordinate, nor one whose required outputs are equal. *Test:*
+  `test_conform_discriminating_pair_per_coordinate`.
+- **KISS-CONFORM-6.14-0002** — Where no discriminating pair can be constructed for a
+  coordinate a clause pins, the clause's matrix row MUST record **why**, and the suite MUST
+  report that coordinate as undiscriminated rather than omit it. An undiscriminated coordinate
+  is a finding about the clause (the coordinate may not vary independently of another), not a
+  pass. *Test:* `test_conform_undiscriminated_coordinate_recorded`.
+- **KISS-CONFORM-6.14-0003** — Whether a discriminating pair exists MUST be decided
+  **mechanically over the vector set** (for a token grammar, whether two vectors differ in
+  field *k* alone with differing required outputs), not by author assertion, and a suite MUST
+  NOT offer the number of positive vectors, or a corpus of real-world artifacts, as evidence
+  that this clause is met. *Test:* `test_conform_discrimination_decided_mechanically`.
+- **KISS-CONFORM-6.14-0004** — A missing discriminating pair MUST fail the suite **build**
+  (§6.2) when the vector set is authored, not first at the freeze gate (§8-0006). *Test:*
+  `test_conform_missing_pair_fails_build`.
+
 ---
 
 ## 7. Capability, Profile & Extension model
@@ -1408,9 +1445,9 @@ atomic clause with its own append-only ID and dedicated test.
 ### 7.1 Mandatory core
 
 - **KISS-CONFORM-7.1-0001** — The KISS-Conform **mandatory core** MUST be: the bidirectional
-  traceability matrix (§6.1) and its build-fail gate (§6.2); the four test modalities (golden
+  traceability matrix (§6.1) and its build-fail gate (§6.2); the five test modalities (golden
   byte-vectors §6.4, the independent CPU-oracle differential harness §6.5, the IR-DAG fuzzer
-  §6.6, and negative/decline vectors §6.7); and the determinism-class-aware comparators (§6.8),
+  §6.6, negative/decline vectors §6.7, and discriminating vector pairs §6.14); and the determinism-class-aware comparators (§6.8),
   applied to whatever DAG-aligned subset of sub-standards the suite's **declared coverage set**
   (§6.1-0008) names. An implementation that cannot produce the traceability gate and the four
   modalities does not conform to KISS-Conform at all. *Test:* `test_conform_mandatory_core`.
@@ -1542,7 +1579,7 @@ version)`; the reference **crate** carries an ordinary semver that moves on any 
 
 An implementation conforms to KISS-Conform at a given suite schema version if it (a) produces the
 bidirectional traceability matrix and the build-fail gate exactly per §6.1–§6.2, implements the
-four modalities per §6.4–§6.7, and selects comparators per §6.0 / §6.8 for that version; (b)
+five modalities per §6.4–§6.7 and §6.14, and selects comparators per §6.0 / §6.8 for that version; (b)
 passes the unmodified canonical KISS-Conform suite (§8-0010) for KISS-Conform at that version;
 and (c) satisfies the DAG prerequisite closure. KISS-Conform's upstream edges are **test
 dependencies** on all eight other sub-standards: a KISS-Conform suite that tests a sub-standard
@@ -1672,6 +1709,10 @@ the traceability lint.
 | KISS-CONFORM-6.13-0022 | `test_conform_contract_semantics_to_floor` |
 | KISS-CONFORM-6.13-0023 | `test_conform_contract_malformed_decline` |
 | KISS-CONFORM-6.13-0024 | `test_conform_contract_freeze_gate` |
+| KISS-CONFORM-6.14-0001 | `test_conform_discriminating_pair_per_coordinate` |
+| KISS-CONFORM-6.14-0002 | `test_conform_undiscriminated_coordinate_recorded` |
+| KISS-CONFORM-6.14-0003 | `test_conform_discrimination_decided_mechanically` |
+| KISS-CONFORM-6.14-0004 | `test_conform_missing_pair_fails_build` |
 | KISS-CONFORM-7.1-0001 | `test_conform_mandatory_core` |
 | KISS-CONFORM-7.1-0002 | `test_conform_harness_typed_decline` |
 | KISS-CONFORM-7.2-0001 | `test_conform_consumer_verify_profile` |
@@ -1782,7 +1823,7 @@ never-panic taxonomy on the provision/JIT path; KISS-Consume §9.1-0002 out-of-c
 decline-or-residue across the four-category refusal taxonomy (decline vs residue chosen per
 §6.7-0005); and KISS-Emit dtype/op/schedule typed decline on the JIT path.
 
-**A.5 Provenance / acknowledgments.** The bidirectional traceability matrix, the four modalities,
+**A.5 Provenance / acknowledgments.** The bidirectional traceability matrix, the five modalities,
 the determinism-class-aware comparators, the per-sub-standard-per-version keying, and the
 adversarial-outsider freeze checklist derive from a conformance-harness reference crate (the
 traceability lint, golden-vector harness, oracle-differential engine, IR-DAG fuzzer, and
@@ -2035,7 +2076,7 @@ an identified clause `KISS-CONFORM-<section>-<nnnn>` with a mapped `test_conform
 KISS-Conform is the cross-cutting root of the suite's test relation: it depends on and TESTS all
 eight other sub-standards, is depended on by none, imports the determinism/fidelity enum from
 KISS-Ops, and closes every forward-referenced conformance obligation in §6.13. It defines the
-bidirectional clause↔test traceability matrix and the build-fail gate, the four test modalities, the
+bidirectional clause↔test traceability matrix and the build-fail gate, the five test modalities, the
 determinism-class-aware comparators, per-sub-standard-per-version keying, and the adversarial-outsider
 freeze gate that — signed by the AUDIT role, with the reference implementation running the same
 unmodified public canonical suite with no exemption — is what makes the other eight provable. Project

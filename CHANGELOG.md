@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.66 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- Spec text, KISS#240 / board 271 item 1 (CireSnave: "1: A"): a fifth Conform modality, **discriminating vector pairs**, as new §6.14 with KISS-CONFORM-6.14-0001..0004. For each clause that pins a coordinate the vector set must hold a pair of otherwise identical legal inputs differing in that coordinate alone whose required outputs differ (-0001); where none can be built the row records why and the coordinate is reported undiscriminated (-0002); existence is decided mechanically over the vectors, never by count of positives or a real-world corpus (-0003); a missing pair fails the build at authoring time (-0004). Enumerations of "four modalities" now say five (front matter, §1, §2.4, §7.1-0001, §9, A.5, README, umbrella). Four clauses arrive with no test: `UNBACKED.tsv` +4 `untested`, floor untested 387 to 391 (an arrival, not a loss; harness 459 and lint 44 unmoved), README bound figures 961/502/384 to 965/506/388. Sidecar +4 ids. The pair checker (KISS#240, #239 item 3) is built on this text in a later PR. Numbered 0.4.66 because #655 proposes 0.4.65.
+
 ## 0.4.65 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - KISS#136 step 3 of 3, tool: `kiss_trace` now fails the build on an orphan test (KISS-CONFORM-6.1-0003): a test that cites no live clause, is not named by a §9 row and carries no `// harness-internal: <reason>` tag, or a tag with no reason, or a tag on a test that cites or is named by a clause. It prints each by name. The README-bound `uncited_tests` line is kept (225 tests, all 225 tagged, 0 orphans at `f52185b`). New controls `tools/test_kiss_trace_orphans.py` (9 cases, wired into `traceability.yml`); a planted untagged test turned the run red (exit 1, named) and removing it restored exit 0. No spec or wire change; floor unmoved (459/44/387). Closes KISS#136.
