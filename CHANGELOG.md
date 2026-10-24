@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.61 — 2026-10-24 (number proposed; the PM allocates at gate time)
+
+- ROADMAP R3.13 marked done, docs only: `tools/run_with_git_bash.py` already makes the three bash-launching suites run on Windows with WSL; re-run green at `fb39fdf`.
+
 ## 0.4.60 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - HANDOFF rewritten to current state (R3.8 progress, #136 waiting on CireSnave). Docs only.
