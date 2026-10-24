@@ -132,6 +132,10 @@ KISS-CONFORM-6.13-0018	test_conform_all_build_gate_and_keying	blocked	#144 no si
 KISS-CONFORM-6.13-0019	test_conform_announce_golden_vectors	untestable	#174 — "version-negotiation frames" name no KISS-Announce artifact
 KISS-CONFORM-6.13-0022	test_conform_contract_semantics_to_floor	untested	looked for a resolver that takes a Contract Semantics DAG to the primitive floor through the oracle in conformance/src: none; contract.rs serializes the DAG (serialize_op_dag) and decomp_grammar.rs parses scalar bodies, but nothing resolves a DAG node by node. control: serialize_op_dag and parse_scalar_body exist.
 KISS-CONFORM-6.13-0024	test_conform_contract_freeze_gate	blocked	freeze governance (§8-0006): ≥2 dissimilar impls from the text alone; §5.3 external implementor
+KISS-CONFORM-6.14-0001	test_conform_discriminating_pair_per_coordinate	untested	
+KISS-CONFORM-6.14-0002	test_conform_undiscriminated_coordinate_recorded	untested	
+KISS-CONFORM-6.14-0003	test_conform_discrimination_decided_mechanically	untested	
+KISS-CONFORM-6.14-0004	test_conform_missing_pair_fails_build	untested	
 KISS-CONFORM-6.2-0003	test_conform_build_fails_retired_cite	blocked	#144 no retired/burned clause-ID registry exists to check a cite against
 KISS-CONFORM-6.2-0004	test_conform_build_fails_drift	blocked	#144 drift = prose<->sidecar token match; no sidecar exists to compare against
 KISS-CONFORM-6.2-0005	test_conform_gate_is_generate_time	untested	realized outside the crate: the clause<->test join and its build-fail gate are tools/kiss_trace.py plus the CI job `kiss-trace`, exercised by tools/test_kiss_trace_gates.py. looked for the same obligation as a named test in conformance/tests: none. control: kiss_trace.py enforces the ledger ratchet this file is read by, so the tool exists and runs. Not claimed backed here: no lint category is declared for it, so the label `lint:kiss_trace` would outrun what the tool declares it covers. The compile/generate-time property is the CI job being a required context on main.

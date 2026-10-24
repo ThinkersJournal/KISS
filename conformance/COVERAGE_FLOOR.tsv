@@ -599,5 +599,5 @@
 # RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
 harness	459
 lint	44
-untested	387
+untested	391
 proven	20
