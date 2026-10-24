@@ -47,6 +47,7 @@ fn model64(a: u64, b: u64) -> u64 {
 
 // Deliberately NOT a backing test for the clause (§6.9-0003 has a decline half no vector can carry):
 // the vector instrument is checked here and the ledger row stays `untested` with a note.
+// harness-internal: checks the frozen nextafter corpus bundle against an independent key model (file states it is deliberately not a backing test)
 #[test]
 fn nextafter_value_cells_match_the_monotone_key_model() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-nextafter.json"))

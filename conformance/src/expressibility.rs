@@ -409,11 +409,13 @@ mod tests {
     // string (no update steps run) -- this is the algorithm's own defining
     // constant, not an external oracle, but it does pin that `fnv1a64` does
     // not e.g. accidentally run one spurious update on empty input.
+    // harness-internal: unit test of the suite's own FNV-1a-64 hash function, verifies no clause
     #[test]
     fn fnv1a64_empty_is_the_offset_basis() {
         assert_eq!(fnv1a64(&[]), 0xcbf2_9ce4_8422_2325);
     }
 
+    // harness-internal: unit test of the suite's own FNV-1a-64 hash function, verifies no clause
     #[test]
     fn fnv1a64_is_deterministic_and_input_sensitive() {
         let a = fnv1a64(b"add-signature-bytes");
@@ -423,6 +425,7 @@ mod tests {
         assert_ne!(a, c, "different input should (overwhelmingly likely) hash differently");
     }
 
+    // harness-internal: unit test of the suite's own hash-rendering helper (16 lowercase hex digits), verifies no clause
     #[test]
     fn signature_hash_hex_is_16_lowercase_hex_digits() {
         let h = signature_hash_hex(b"\x01\x02\x03");

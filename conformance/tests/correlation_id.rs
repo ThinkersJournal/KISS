@@ -39,6 +39,7 @@ fn test_announce_correlation_id_echoed_when_present() {
     assert_eq!(&resp_tail[1..9], &req_id, "bytes echoed unchanged");
 }
 
+// Backs: KISS-ANNOUNCE-6.4-0013 — a reader accepts a frame with no correlation field (empty tail or correlation_present == 0), and an omitted field adds no bytes
 #[test]
 fn test_announce_correlation_id_absent_is_valid() {
     // KISS-ANNOUNCE-6.4-0013: the field is OPTIONAL and reserved — a synchronous
@@ -62,6 +63,7 @@ fn test_announce_correlation_id_absent_is_valid() {
     assert_eq!(echo(None), None);
 }
 
+// Backs: KISS-ANNOUNCE-6.4-0013 — a reader rejects a correlation_present value other than 0 or 1 (and a truncated id) with a typed error, never a panic
 #[test]
 fn test_announce_correlation_bad_present_flag_declines() {
     // KISS-ANNOUNCE-6.4-0013: a correlation_present other than 0 or 1 is a typed

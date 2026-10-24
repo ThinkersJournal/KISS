@@ -20,6 +20,7 @@ const NEG0_32: u32 = 0x8000_0000;
 
 // ---- exp: NaN/±Inf front door, over/underflow clamp, finite delegation --------
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn exp_f64_special_and_boundary() {
     assert!(exp_f64(f64::NAN).is_nan(), "exp(NaN) = NaN");
@@ -34,6 +35,7 @@ fn exp_f64_special_and_boundary() {
     assert_eq!(exp_f64(0.0), 1.0, "exp(0) = 1");
 }
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn exp_f32_special_and_boundary() {
     assert!(exp(f32::NAN).is_nan(), "exp(NaN) = NaN");
@@ -48,6 +50,7 @@ fn exp_f32_special_and_boundary() {
 
 // ---- log: NaN/domain/zero/Inf front door, finite delegation -------------------
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn log_f64_special_and_boundary() {
     assert!(log_f64(f64::NAN).is_nan(), "log(NaN) = NaN");
@@ -61,6 +64,7 @@ fn log_f64_special_and_boundary() {
     assert_eq!(log_f64(2.0).to_bits(), 0x3FE6_2E42_FEFA_39EF, "log(2) = ln2 via the atom");
 }
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn log_f32_special_and_boundary() {
     assert!(log(f32::NAN).is_nan(), "log(NaN) = NaN");
@@ -72,6 +76,7 @@ fn log_f32_special_and_boundary() {
 
 // ---- sin: NaN/±Inf front door (both mint NaN), finite delegation --------------
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn sin_f64_special_and_boundary() {
     assert!(sin_f64(f64::NAN).is_nan(), "sin(NaN) = NaN");
@@ -82,6 +87,7 @@ fn sin_f64_special_and_boundary() {
     assert_eq!(sin_f64(1.0).to_bits(), 0x3FEA_ED54_8F09_0CEE, "sin(1) via the atom");
 }
 
+// harness-internal: oracle front-door special-value anchors (oracle-validated bits), not a spec clause
 #[test]
 fn sin_f32_special_and_boundary() {
     assert!(sin(f32::NAN).is_nan(), "sin(NaN) = NaN");

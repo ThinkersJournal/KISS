@@ -27,6 +27,7 @@ fn committed() -> String {
 }
 
 /// (1) FRESHNESS — the committed artifact is byte-identical to a fresh generation.
+// harness-internal: freshness of the committed announce_vectors.json artifact against its generator, no clause asserted
 #[test]
 fn test_announce_vectors_artifact_is_fresh() {
     assert_eq!(
@@ -41,6 +42,7 @@ fn test_announce_vectors_artifact_is_fresh() {
 /// bytes, under its clause id. This is the SINGLE-DEFINITION half (the artifact consumes the one
 /// library source, not a copy) and the codec-side of APPENDIX-AGREEMENT; announce_golden.rs closes
 /// the loop by asserting those same builders against the §2.5 transcribed appendix hex.
+// harness-internal: checks the generated artifact is rendered from the suite's own library builders (single-source), no clause asserted
 #[test]
 fn test_announce_vectors_render_the_library_builders() {
     let json = announce::emit_announce_vectors_json();
@@ -69,6 +71,7 @@ fn test_announce_vectors_render_the_library_builders() {
 /// (3) POPULATION STATED — the 16(d) principle: the artifact names what it covers AND what it does
 /// not, so its partiality is stated, not discovered. A staged corpus with no stated boundary is
 /// indistinguishable from a complete one.
+// harness-internal: checks the generated artifact states its own coverage population, no clause asserted
 #[test]
 fn test_announce_vectors_state_their_population() {
     let json = announce::emit_announce_vectors_json();

@@ -59,6 +59,7 @@ fn canon(dtype: &str) -> (Vec<u8>, Vec<u8>) {
     }
 }
 
+// harness-internal: corpus bundle self-consistency against the semantics oracle and comparator; no implementation under test
 #[test]
 fn transcendental_nan_bundle_round_trips_computed_and_quiet() {
     let text = std::fs::read_to_string(concat!(

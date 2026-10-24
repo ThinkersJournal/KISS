@@ -46,6 +46,7 @@ fn test_structure_key_vectors_artifact_is_fresh() {
 /// (2) Every positive vector's key serializes to its pinned token (the Appendix-A
 /// spec-tie) and round-trips byte-identically — the same both-directions check the
 /// golden test makes, so the artifact's tokens carry the same guarantee.
+// Backs: KISS-CLASSIFY-6.7-0008 — every published positive key serializes to its pinned token and from_token(token) re-serializes byte-identically.
 #[test]
 fn positive_vectors_serialize_and_round_trip() {
     for v in positive_vectors() {
@@ -58,6 +59,7 @@ fn positive_vectors_serialize_and_round_trip() {
 }
 
 /// (3) Every decline vector's malformed input yields the pinned typed decline.
+// Backs: KISS-CLASSIFY-6.7-0009 — every published malformed token is rejected with its pinned typed KeyDecline.
 #[test]
 fn decline_vectors_answer_the_pinned_decline() {
     for d in decline_vectors() {
@@ -219,6 +221,7 @@ fn scan_sk4_token_literals(src: &str) -> Vec<String> {
 /// (4-coverage) The artifact is a superset of every full `sk6|` token literal the
 /// frozen golden test pins — bound by scanning the golden source, additively, without
 /// refactoring it. A golden cell dropped from the artifact fails here, naming the token.
+// harness-internal: checks the generated vectors artifact covers every token literal in the golden test source; no clause is verified.
 #[test]
 fn artifact_covers_every_golden_token_literal() {
     let golden_src = include_str!("structure_key_golden.rs");
@@ -252,6 +255,7 @@ fn artifact_covers_every_golden_token_literal() {
 /// are pairwise distinct against a PINNED count (asserted counts are pinned, not computed:
 /// a new variant is an E0004 in decline_wire, and this count is the deliberate second
 /// gate). Discrimination proven by seeding a duplicate name in the PR #161 review.
+// harness-internal: the harness's own KeyDecline-to-wire-string mapping is injective; a property of the reference code, not of a clause.
 #[test]
 fn decline_wire_kinds_are_injective() {
     let kinds = all_decline_wire_kinds();
@@ -276,6 +280,7 @@ fn decline_wire_kinds_are_injective() {
 /// claims. THAT IS AN IMPROVEMENT, not a regression. The fix is to update `coverage_note` in
 /// `src/reference_vectors.rs` AND the pinned counts in THIS test to the new numbers. Do NOT
 /// delete vectors to make this green — that reverts the very improvement the guard detects.
+// harness-internal: keeps the artifact's coverage_note text true against the artifact's own vectors; no clause is verified.
 #[test]
 fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
@@ -354,6 +359,7 @@ fn check_pinned_coverage(what: &str, observed: usize, pinned: usize, detail: Str
 /// the positive byte-match green because every published `(acc+mp)` positive genuinely
 /// deviates). Make the "covered here" half of the note executable: if the redundant decline
 /// vector were removed, the note would be a lie and this test names why.
+// harness-internal: checks the artifact still publishes the RedundantAccMpField decline vector its coverage_note claims; presence of a fixture, not a decode check.
 #[test]
 fn rule_d_is_covered_by_a_redundant_decline_vector() {
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
@@ -374,6 +380,7 @@ fn rule_d_is_covered_by_a_redundant_decline_vector() {
 /// the "gap unclosed" direction — the reader searches, finds nothing, concludes coverage is
 /// missing. This catches the rotted/wrong-citation class that put `kiss_dtype_manifest` (a
 /// nonexistent tool) into the note before this guard existed.
+// harness-internal: checks the repo paths cited in the artifact's coverage_note exist; documentation hygiene of the artifact.
 #[test]
 fn coverage_note_cited_paths_exist() {
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json()).expect("valid JSON");
@@ -446,6 +453,7 @@ fn doc_field_arity(ns: &str) -> usize {
 /// happened: `vulkan.md` reached v4 (five fields) while this artifact published a
 /// four-field token, and three consumers byte-matched it because every one of them
 /// copied the token from here rather than deriving it.
+// harness-internal: checks the generator's pinned vocabulary-version/arity table agrees with spec/namespaces/*.md; generator-versus-document consistency.
 #[test]
 fn reference_vectors_match_the_namespace_documents() {
     use kiss_conformance::reference_vectors::*;
@@ -470,6 +478,7 @@ fn reference_vectors_match_the_namespace_documents() {
 ///
 /// Unconditional is the point: a field that appears only when something moves is
 /// indistinguishable from a field nobody remembered to write.
+// harness-internal: checks the emitted artifact JSON states a vocabulary version for every namespace its vectors embed; generator output shape.
 #[test]
 fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
     use kiss_conformance::reference_vectors::*;
@@ -582,6 +591,7 @@ fn test_published_declines_are_injective_by_token() {
 /// foreign emitter derives this cell (§6.6-0019's coverage note) — but the artifact CAN fail:
 /// flatten the operands to one dtype and the two resolutions collapse to identical bytes, which
 /// is exactly what would silently destroy the detector.
+// harness-internal: shows the corpus vector would change bytes under a positional weight read; it indexes the slot it is given, so no implementation's weight-role inference is checked.
 #[test]
 fn gem_weight_role_vector_discriminates_in_bytes() {
     let operand_dtypes = ["i4", "f8e8m0", "bf16"]; // [weight, weight_scale, activation]

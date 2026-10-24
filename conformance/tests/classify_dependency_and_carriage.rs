@@ -142,6 +142,7 @@ fn test_classify_structure_key_opaque_carry() {
 
 // ---- controls: the scans must be able to go red ------------------------------------------------
 
+// harness-internal: negative control showing the import, driver-load and dependency source scanners flag what they should; checks the test machinery only.
 #[test]
 fn control_the_scans_flag_what_they_are_meant_to_flag() {
     assert_eq!(crate_imports("use crate::opattrs::encode_reduce; // x"), ["opattrs"]);

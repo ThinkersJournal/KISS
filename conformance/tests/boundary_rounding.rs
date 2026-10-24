@@ -49,6 +49,7 @@ fn test_conform_boundary_decision_compute_dtype() {
     assert!(xr == tr, "cmp_eq on compute-dtype-rounded operands is true");
 }
 
+// harness-internal: narrows the operand itself, so it is weaker than test_conform_boundary_decision_compute_dtype, the test that carries the 6.5-0006 citation
 #[test]
 fn test_conform_boundary_rounding_underflow_sign_and_step() {
     // A magnitude nonzero in f64 but rounding to 0.0 in f32 (below half the

@@ -22,6 +22,7 @@ fn fmax_alt(a: f32, b: f32) -> f32 {
 const SEED: u64 = 0xC0FFEE;
 const N: usize = 400;
 
+// harness-internal: differential-loop control: two correct fmax implementations agree over the fuzz corpus
 #[test]
 fn correct_candidate_agrees_over_the_whole_corpus() {
     let corpus = corpus_f32(SEED, N);
@@ -29,6 +30,7 @@ fn correct_candidate_agrees_over_the_whole_corpus() {
     assert!(divs.is_empty(), "a correct fmax candidate diverged: {:?}", divs.first());
 }
 
+// harness-internal: differential-loop teeth: the loop flags fmax_ieee vs max_prop only at NaN operands (oracle/loop self-check)
 #[test]
 fn differential_catches_the_nan_propagation_bug() {
     // The exact bug the spec's four-way min/max split guards against: implementing
@@ -44,6 +46,7 @@ fn differential_catches_the_nan_propagation_bug() {
     );
 }
 
+// harness-internal: differential-loop teeth: the loop flags relu vs naive max(x,0) at NaN (oracle/loop self-check)
 #[test]
 fn relu_diverges_from_max_x_zero_under_fuzz() {
     // relu is NOT max(x,0): they diverge (deterministically) at NaN.
@@ -53,6 +56,7 @@ fn relu_diverges_from_max_x_zero_under_fuzz() {
     assert!(divs.iter().any(|d| d.a.is_nan()), "the NaN divergence must appear");
 }
 
+// harness-internal: each oracle function agrees with itself over the fuzz corpus (oracle self-consistency)
 #[test]
 fn oracle_is_self_consistent_under_fuzz() {
     // sanity: each oracle agrees with itself over the whole corpus (0 divergences)
@@ -63,6 +67,7 @@ fn oracle_is_self_consistent_under_fuzz() {
     assert!(diff_binary(copysign, copysign, &corpus).is_empty());
 }
 
+// harness-internal: the seeded fuzz-corpus generator is deterministic and includes NaN/inf (generator self-check)
 #[test]
 fn corpus_is_reproducible() {
     // same seed -> byte-identical corpus (deterministic fuzzer reproducibility)

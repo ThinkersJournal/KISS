@@ -574,6 +574,7 @@ fn test_consume_refusal_inexpressible_residue() {
     );
 }
 
+// harness-internal: document lint of KISS-CONSUME-6.4-0007, whose credit is deliberately withdrawn (decredited, KISS#378/#458)
 /// KISS-CONSUME-6.4-0007 — category assignment MUST itself be structure-based (§6.1): an
 /// implementation MUST NOT decide any of the four categories by substring, keyword, symbol,
 /// or comment sniffing. Teeth: the anti-sniffing sentence must enumerate ALL FOUR category

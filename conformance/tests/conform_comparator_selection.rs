@@ -302,6 +302,7 @@ fn test_conform_comparator_selection_rule() {
 /// a pure Max/Min fold is a MOVE, so its NaN is compared EXACT-BYTE (payload included). This is
 /// the first real application of §6.16-0011, and it convicted `order_invariant_agree`'s old
 /// unconditional both-NaN match — live on the §5.3 foreign-kernel differential (harness/differ).
+// Backs: KISS-CONFORM-6.8-0010 — an arithmetic fold's NaN (Sum/AtomicAdd) is compared by NaN-ness and quietness with payload waived; a Max (moved) fold's NaN is exact-byte
 #[test]
 fn test_conform_reduction_nan_quietness_by_fold_class() {
     let qnan = f32::from_bits(0x7FC0_0000); // quiet

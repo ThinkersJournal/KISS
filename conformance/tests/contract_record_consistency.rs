@@ -104,6 +104,7 @@ fn control() -> Vec<u8> {
     doc(&Knobs::default())
 }
 
+// harness-internal: control case of the reference record-consistency validator (a validator self-check, no clause asserted on its own)
 #[test]
 fn control_record_is_consistent_and_framing_valid() {
     assert!(read_document(&control()).is_ok(), "the control reads cleanly at the framing layer");
@@ -220,6 +221,7 @@ fn test_contract_cost_provenance_consistent() {
 /// Not a bound clause: the validator is a typed decline, never a panic, on malformed input. A
 /// document with a missing section, a framing error, or a block that violates its field schema
 /// declines with the matching variant.
+// harness-internal: the reference validator must be a typed decline, not a panic, on malformed input (validator robustness)
 #[test]
 fn record_check_declines_malformed_input_without_panicking() {
     assert!(matches!(check_record_consistency(b""), Err(RecordDecline::Framing(_))));
@@ -245,6 +247,7 @@ fn record_check_declines_malformed_input_without_panicking() {
 /// `accept_predicate` disagreed (and neither was a valid `structure_key`), and its Identity and
 /// Provenance `revision_hash` were spelled differently. Appendix C and this golden were corrected
 /// together, so a regression in either shows here.
+// harness-internal: fixture self-consistency of the Appendix C golden document against the suite's own validator
 #[test]
 fn appendix_c_golden_document_is_record_consistent() {
     assert_eq!(check_record_consistency(&appendix_c_golden_document()), Ok(()));

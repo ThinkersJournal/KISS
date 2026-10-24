@@ -85,6 +85,7 @@ fn promote_select(op: &str, a: &[u8], b: &[u8], dtype: &str) -> Option<Vec<u8>> 
     Some(from_f32(dtype, r))
 }
 
+// harness-internal: corpus bundle self-consistency against the semantics oracle and test-local wrong models; no implementation under test
 #[test]
 fn narrow_select_nan_bundle_round_trips_and_discriminates() {
     let text = std::fs::read_to_string(concat!(

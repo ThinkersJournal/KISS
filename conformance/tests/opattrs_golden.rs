@@ -29,6 +29,7 @@ fn e2_reduce_sum_f32_accumulator_reduced_mantissa() {
     assert_golden("KISS-OPS-6.19-0025", "reduce_sum_f32_acc_rm", &b, "01 FF FF 01 03 02");
 }
 
+// Backs: KISS-OPS-6.19-0025 — math_fidelity encodes as ordinal 1=bit-stable / 2=reduced-mantissa and the fidelity byte of a reduce blob is never the reserved 0
 #[test]
 fn math_fidelity_ordinals_are_pinned_and_reserved_zero_is_never_emitted() {
     // §6.19.2: {1=bit-stable, 2=reduced-mantissa-permitted}, 0 reserved.
@@ -146,6 +147,7 @@ fn e2_im2col_channel_major() {
 
 // ---- E.1 sub-vocabulary ordinals + reduce_axes multiplex --------------------
 
+// harness-internal: spot-checks one ordinal per OpAttrs enum, so a swap of the unchecked arms would pass; it earns no credit for the lint-enforced enum clauses 6.19-0014 to 6.19-0021
 #[test]
 fn e1_sub_vocabulary_ordinals() {
     assert_eq!(Monoid::Sum.ordinal(), 0x01);
@@ -158,6 +160,7 @@ fn e1_sub_vocabulary_ordinals() {
     assert_eq!(ColumnOrdering::TapMajor.ordinal(), 0x02);
 }
 
+// Backs: KISS-OPS-6.19-0020 — rank-aware precedence: full set and rank-1 sole axis are 0xFFFF (never 0x0007), trailing 0xFFFE, subset mask otherwise; scan trailing 0xFFFE else single-bit
 #[test]
 fn e1_reduce_axes_multiplex() {
     // E.1: all-axes / trailing(rank>1) / subset{axis0} / subset{axis0,axis2}
@@ -192,6 +195,7 @@ fn e3_default_resolution_byte_equality() {
 
 // ---- Conform modality 4: negative / decline vectors (§6.7) ------------------
 
+// Backs: KISS-OPS-6.19-0006 — a reader rejects the reserved ordinal 0 in an enum slot (gather oob_policy=0) with a typed decline
 #[test]
 fn negative_reserved_zero_ordinal_declines() {
     // A gather blob carrying the reserved oob_policy ordinal 0 must be refused
@@ -203,11 +207,13 @@ fn negative_reserved_zero_ordinal_declines() {
     );
 }
 
+// harness-internal: reader robustness on a short OpAttrs blob; no clause requires the decline (6.19-0027 says exactly four fields, 6.19-0037 covers range declines only)
 #[test]
 fn negative_truncated_blob_declines() {
     assert_eq!(decode_gather(&[0x00, 0x01, 0x01]), Err(Decline::TruncatedBlob { need: 4, got: 3 }));
 }
 
+// Backs: KISS-OPS-6.19-0037 — a reader declines a reduce_axes subset mask with a bit at position >= MAX_RANK (0x0100, 0xFFFD) while 0x00FF and 0xFFFE stay valid
 #[test]
 fn negative_reserved_reduce_axes_band_declines() {
     assert_eq!(validate_reduce_axes(0x0100), Err(Decline::ReservedReduceAxes { value: 0x0100 }));
@@ -233,6 +239,7 @@ fn test_ops_opattrs_reduce_axes_zero_unreachable() {
     assert!(validate_reduce_axes(0xFFFF).is_ok()); // all-axes sentinel
 }
 
+// Backs: KISS-OPS-6.19-0004 — a reader replays the gather schema positionally (axis, oob_policy, index_operand, index_dtype) from `00 02 01 02`
 #[test]
 fn positive_decode_roundtrip() {
     let (axis, oob, idx_op, idt) = decode_gather(&[0x00, 0x02, 0x01, 0x02]).unwrap();

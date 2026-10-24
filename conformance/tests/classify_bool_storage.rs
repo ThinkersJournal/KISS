@@ -68,6 +68,7 @@ fn test_classify_bool_encoding() {
 
 // The reference deriver refuses an operand whose extents and strides disagree in length, so nothing past the
 // declared rank is ever read (the §6.3-0002 clause is otherwise unrepresentable here: Vec, not a padded array).
+// harness-internal: the reference deriver's own input validation (Vec lengths must agree); the §6.3-0002 padded-array clause is unrepresentable in this harness.
 #[test]
 fn derive_declines_an_extents_strides_length_mismatch() {
     let operand = |e: &[i64], s: &[i64]| CellOperand {

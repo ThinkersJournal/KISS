@@ -254,6 +254,7 @@ fn floor_char(s: &str, mut i: usize) -> usize {
     i
 }
 
+// harness-internal: tripwire on the Emit and Consume spec text (KISS#313); a spec lint, no clause is checked literally
 /// KISS#313 — a TRIPWIRE, not a coherence check. `test_conform_emit_consume_correspondence_lint` compares
 /// the two documents against each other, so a mandate re-added to BOTH twins (Emit §6.7-0004 and Consume
 /// §6.6-0004, which correspond) leaves it green while each twin contradicts its own document's §-0002. This

@@ -24,6 +24,7 @@ fn f8(bits: u8) -> Vec<u8> {
 /// implementations). Born-red: a promote-and-round impl that fails to set the quiet
 /// bit ships an sNaN where a qNaN is expected → reds. Waivers: a different quiet
 /// payload, or the opposite sign, MUST pass.
+// Backs: KISS-CONFORM-6.8-0010 — computed bf16 NaN: sNaN actual vs qNaN expected is a quietness mismatch; differing payload or sign passes
 #[test]
 fn computed_nan_born_red_and_payload_sign_waived_bf16() {
     // BORN-RED: sNaN actual vs qNaN expected → quietness mismatch.
@@ -49,6 +50,7 @@ fn computed_nan_born_red_and_payload_sign_waived_bf16() {
 /// preserved. The EXPECTED cell carries the OUTPUT bytes (the moved sNaN 0x7F81), so
 /// this is a byte-exact compare of actual-vs-EXPECTED, NOT "result == input" (a
 /// sign-flipping neg/abs would carry the post-edit bits in expected).
+// Backs: KISS-CONFORM-6.8-0010 — clause (a): a moved bf16 NaN compares exact-byte (quieting or a sign flip is a mismatch)
 #[test]
 fn moved_nan_born_red_bf16() {
     // Conformant: the moved sNaN is preserved byte-for-byte.
@@ -83,6 +85,7 @@ fn moved_nan_born_red_bf16() {
 /// COMPUTED born-red that guards quietness is on bf16 (which admits sNaN) and stays
 /// GREEN through a byte/sign regression. Deliberate vacuity, PINNED (the "NARROW
 /// OVERRIDE — do not simplify" shape, as a test rather than a comment).
+// Backs: KISS-CONFORM-6.8-0010 — f8e4m3fn (single NaN encoding): the quietness comparison is vacuous, any NaN pair of either sign matches
 #[test]
 fn f8e4m3fn_computed_arm_accepts_any_nan_over_enforcement_pin() {
     assert!(!admits_snan("f8e4m3fn"), "f8e4m3fn admits no sNaN (§6.16-0004)");

@@ -145,6 +145,7 @@ pub fn check_advertisement(
 mod tests {
     use super::*;
 
+    // harness-internal: unit test of the oracle op-class table; the None arms are oracle behaviour, not a clause
     #[test]
     fn atom_class_is_some_for_atoms_none_for_folds() {
         assert_eq!(atom_determinism_class("add"), Some(DeterminismClass::ExactByte));
@@ -154,6 +155,8 @@ mod tests {
         assert_eq!(atom_determinism_class("not_an_op"), None);
     }
 
+    // Backs: KISS-OPS-6.0-0004 — a float sum/prod reduce is order-invariant/nondeterministic
+    // Backs: KISS-OPS-6.0-0002 — a max/min reduce is exact-byte
     #[test]
     fn op_true_class_covers_atoms_and_folds() {
         use crate::structural::Monoid;
@@ -169,6 +172,7 @@ mod tests {
         assert_eq!(op_true_class("reduce", None), None);
     }
 
+    // harness-internal: tests the advertisement-honesty lint and the permissiveness helper, not an op's class
     #[test]
     fn honesty_rejects_only_too_permissive() {
         use DeterminismClass::*;
@@ -184,6 +188,7 @@ mod tests {
         assert_eq!(check_advertisement(ExactByte, OrderInvariant), Ok(ExactByte));
     }
 
+    // Backs: KISS-OPS-6.0-0008 — selection is keyed on the comparison op-family while the comparison atom's own class stays exact-byte
     #[test]
     fn is_selection_producer_keys_on_comparison_family() {
         // §6.0-0008: "selection" is keyed on the comparison op-family (semantics), not a

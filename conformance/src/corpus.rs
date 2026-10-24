@@ -203,6 +203,7 @@ mod tests {
       ]
     }"#;
 
+    // harness-internal: tests the suite's own corpus loader decoding a sample bundle
     #[test]
     fn loads_a_cell_with_decoded_bits_and_class() {
         let c = load(SAMPLE).unwrap();
@@ -218,12 +219,14 @@ mod tests {
         assert_eq!(cell.provenance, "oracle");
     }
 
+    // Backs: KISS-CONFORM-6.5-0017 — a vector `class` outside the three-member determinism enum (`split`) is rejected, never admitted as a fourth class value
     #[test]
     fn rejects_split_as_a_class() {
         let bad = SAMPLE.replace("\"exact-byte\"", "\"split\"");
         assert!(load(&bad).is_err(), "split is not a determinism class (§6.8-0005)");
     }
 
+    // harness-internal: loader refusal of a reference-observed provenance token; provenance is ruled out of tests (board 203, 6.5-0003)
     #[test]
     fn rejects_reference_observed_provenance() {
         let bad = SAMPLE.replace("\"oracle\"", "\"reference-observed\"");
@@ -235,6 +238,7 @@ mod tests {
     const ADD_PROV: &str = "\"provenance\": \"oracle\",";
     const ADD_PROV_NAN: &str = "\"provenance\": \"oracle\", \"nan_provenance\": \"computed\",";
 
+    // harness-internal: corpus loader's own nan_provenance schema rule (NaN output must carry provenance); no clause requires this field
     #[test]
     fn nan_output_without_provenance_is_declined() {
         // §6.8-0010/§6.16-0010 biconditional ARM 1: a NaN `expected` MUST carry provenance.
@@ -243,6 +247,7 @@ mod tests {
         assert!(e.contains("nan_provenance"), "a NaN output without provenance must decline: {e}");
     }
 
+    // harness-internal: corpus loader's own nan_provenance schema rule (non-NaN output must not carry provenance); no clause requires this field
     #[test]
     fn provenance_on_a_non_nan_output_is_declined() {
         // biconditional ARM 2 (the arm an implication would silently drop): a non-NaN
@@ -252,6 +257,7 @@ mod tests {
         assert!(e.contains("non-NaN"), "provenance on a non-NaN output must decline: {e}");
     }
 
+    // harness-internal: corpus loader's own nan_provenance schema rule (valid NaN+provenance pairing loads); no clause requires this field
     #[test]
     fn nan_output_with_provenance_loads() {
         // the valid pairing — NaN expected + provenance — loads and carries it.
@@ -263,6 +269,7 @@ mod tests {
         );
     }
 
+    // harness-internal: corpus loader's own nan_provenance token set (moved|computed); no clause requires this field
     #[test]
     fn rejects_unknown_nan_provenance_token() {
         let bad = SAMPLE

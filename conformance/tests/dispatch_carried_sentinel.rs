@@ -31,6 +31,7 @@ fn clause<'a>(doc: &'a str, id: &str) -> &'a str {
     &rest[..end]
 }
 
+// harness-internal: spec-prose consistency guard (reads contract.md text for a #480 contradiction); asserts no implementation behaviour and no clause's obligation
 #[test]
 fn test_dispatch_sentinel_is_carried_not_absent() {
     let doc = contract();

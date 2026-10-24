@@ -62,6 +62,7 @@ fn test_ops_determinism_class_advertised() {
 // parse_guarantees_class must read the GUARANTEES value, not the earlier
 // Capabilities one. Regression-guards the block-scoping against a refactor back
 // to an unscoped whole-body scan.
+// harness-internal: regression guard for the block scoping of the suite's own Guarantees parser (parse_guarantees_class), not a spec obligation
 #[test]
 fn guarantees_class_not_confused_with_capabilities() {
     let mut body = b"[section:1:identity]\n".to_vec();

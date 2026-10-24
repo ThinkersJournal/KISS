@@ -56,6 +56,7 @@ fn model(x: f32) -> f32 {
 
 // Deliberately NOT a backing test for the clause (§6.8-0003 has two arms and this pins one): the
 // vector instrument is checked here, and the ledger row stays `untested` with a note saying so.
+// harness-internal: checks the frozen sqrt corpus bundle against an independent integer model (file states it is deliberately not a backing test)
 #[test]
 fn sqrt_first_arm_cells_match_the_integer_model() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-sqrt-rounding.json"))

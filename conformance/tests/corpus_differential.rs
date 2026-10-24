@@ -34,12 +34,14 @@ fn run_against(c: &Corpus, f: impl Fn(f32, f32) -> f32) -> Result<(), String> {
     Ok(())
 }
 
+// harness-internal: a known-correct add candidate passes the bundled corpus (corpus/runner self-consistency)
 #[test]
 fn reference_add_passes_every_cell() {
     let c = bundle();
     run_against(&c, kiss_conformance::semantics::add).expect("reference add is conformant");
 }
 
+// Backs: KISS-CONFORM-6.8-0001 — a (-0)+(-0)->+0 result is rejected on the exact-byte compare (tcId 2), not passed by value-equality
 #[test]
 fn a_normalize_to_plus_zero_add_is_caught() {
     let c = bundle();
@@ -84,6 +86,7 @@ fn bf16_is_nan(x: u16) -> bool {
 /// The shared fixture's contract, enforced rather than described. Both consumers assert
 /// that a raw-bit path and a promote→round path AGREE; a NaN in this set would make that
 /// claim false and both blocks would red for a reason neither is about.
+// harness-internal: asserts the shared bf16 sample fixture is NaN-free (fixture self-check)
 #[test]
 fn bf16_non_nan_samples_contain_no_nan() {
     for &x in BF16_NON_NAN_SAMPLES {
@@ -172,6 +175,7 @@ fn eval_minmax(cell: &Cell) -> Vec<u8> {
 
 /// The 48 signed-zero tie cells (16 rows × f32/f64/bf16) all pass against the
 /// reference oracle under the exact-byte (raw-bits) comparator.
+// harness-internal: the reference oracle passes the bundled minmax tie corpus (corpus/oracle self-consistency)
 #[test]
 fn reference_minmax_passes_every_signed_zero_tie_cell() {
     let c = minmax_bundle();
@@ -188,6 +192,7 @@ fn reference_minmax_passes_every_signed_zero_tie_cell() {
 /// divergence the kiss-ref↔Baracuda step-2 recipe differential caught (fixed by
 /// Baracuda@7297f17d). It fails precisely the two mixed-sign seam cells, and
 /// ONLY a raw-bits compare can see it — the float value-compare is vacuous.
+// Backs: KISS-CONFORM-6.8-0001 — a b-biased max tie (+0 for -0) equals by float value but is rejected on raw bits at exactly the two seam cells
 #[test]
 fn a_b_biased_tie_max_is_caught() {
     let c = minmax_bundle();
@@ -263,6 +268,7 @@ fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
 /// "all tests pass" would NOT distinguish from the unwired (present-but-inert) state.
 /// A COMPUTED-NaN bf16 cell (expected quiet) is compared against an sNaN actual: the
 /// integrated path must red. Its MOVED sibling (a select) still bit-compares.
+// Backs: KISS-CONFORM-6.8-0010 — a computed-NaN cell passes a quiet NaN of any payload and fails an sNaN actual on quietness
 #[test]
 fn a_conformance_run_can_now_fail_on_a_quietness_violation() {
     use kiss_conformance::nan_provenance::NanProvenance;
@@ -293,6 +299,7 @@ fn a_conformance_run_can_now_fail_on_a_quietness_violation() {
 /// All 24 strict-inequality cells pass against the reference oracle (same
 /// `eval_minmax` as the tie set — the difference is the DATA, which is where the
 /// max-from-min discrimination lives).
+// harness-internal: the reference oracle passes the bundled minmax ordinary corpus (corpus/oracle self-consistency)
 #[test]
 fn reference_minmax_passes_every_ordinary_cell() {
     let c = ordinary_minmax_bundle();
@@ -311,6 +318,7 @@ fn reference_minmax_passes_every_ordinary_cell() {
 /// swap over the tie set reddens NOTHING (operand `a` wins under both comparisons),
 /// which is exactly why the tie file cannot separate max from min. The prop<->ieee
 /// axis is deliberately NOT tested here — those agree on non-NaN and are #329's.
+// harness-internal: checks the minmax corpus data discriminates a max<->min swap (corpus teeth, no clause assertion)
 #[test]
 fn a_max_min_family_swap_reddens_every_cell() {
     fn swap_family(op: &str) -> &str {
