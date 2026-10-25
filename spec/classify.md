@@ -2103,7 +2103,13 @@ separating a registered namespace from that namespace's capability-set token.
   nothing for that dtype. Both namespace documents registered today (`cuda`, `vulkan`) declare 16,
   so no key derived before this clause moves. *Informative:* the cap is a property of the target's
   load/store instruction width, which is why it lives with the namespace and not in the key; a
-  consumer that matches tokens byte-exact (§6.8-0002) never reads it. *Test:*
+  consumer that matches tokens byte-exact (§6.8-0002) never reads it. *Informative, so the next
+  reader does not "fix" it:* declaring the cap for `cuda` and `vulkan` did **not** bump either
+  namespace's vocabulary version. That version gates on token bytes (§6.8-0009) and each namespace
+  document bumps it only for a byte-altering change; a cap declaration alters no token byte, and a
+  bump would have forced the maintainer's manifest to move and invalidated every consumer's cached
+  tokens for nothing. A later declaration of a different cap changes derived `vec` fields, not
+  tokens of the namespace. *Test:*
   `test_classify_vec_cap_per_target`.
 
 ### 6.9 Foundational independence and opaque carry
