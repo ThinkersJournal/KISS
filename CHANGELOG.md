@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.80 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/call-for-outside-readers.md` (a community-post draft asking for foreign readers, what they need, what to do, how to respond publicly) and the `Outside reader report` issue template; ROADMAP R3.11 records the `build_and_run.bat` MSVC 14.29 pin. Nothing is sent to anyone. Numbered 0.4.80 because #669 proposes 0.4.79.
+
 ## 0.4.79 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - R3.11 KISS#6, single-source the splitmix corpus generator. The CUDA-side copy lives once in `cuda/splitmix64.cuh`; `fmax_ieee.cu` and `generated_relu_add_diff.cu` include it, and `differential.rs` exposes the three constants. `tests/splitmix_single_source.rs` pins the header to the Rust constants and fails if a `.cu` re-declares the generator (mutation-checked). The `edge_f32` list is still hand-copied. No spec or wire change.
