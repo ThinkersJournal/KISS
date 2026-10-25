@@ -232,6 +232,30 @@
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "binary_two_operands_i32",
+      "note": "binary_two_operands with dtype i32 (same width as f32, so v4 holds): a dtype-only pair",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "binary_two_operands_ix64",
+      "note": "binary_two_operands with a max touched offset at or above 2^31: an index-width-only pair",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
+      "name": "binary_two_operands_warp",
+      "note": "binary_two_operands with an iteration element count that selects warp: a schedule-only pair",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0001",
       "name": "relu_add_generated_r1",
       "note": "the freeze-gate relu_add cell (#60): rank-1 flat grid-stride, three v4 operands",
       "target": "cuda:sm89",
