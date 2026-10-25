@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.75 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: board 279 pair 2 options notes, `docs/options-r5-9-roundtrip-guarantee.md` (R5.9, can the emit/consume round-trip guarantee be structural) and `docs/options-r5-2-artifact-format-registry.md` (R5.2, who owns the `artifact_format_tag` registry), each with 2-3 options, what it touches and a recommendation; no normative text. Numbered 0.4.75 because #664 proposes 0.4.74.
+
 ## 0.4.74 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - R3.11 KISS#158, test gating only; no spec, corpus or wire change. `harness/msvc.rs`'s `mod tests` (`compiles_a_trivial_c_kernel_to_a_dll`, `the_override_compiler_is_the_one_that_runs`) is now `#[cfg(all(test, windows))]`. `find_msvc()` cannot find MSVC off Windows, so on every other leg the first test ran, declined through `runtime_gate_some!`, and reported `ok` having asserted nothing; the second returned early. They now do not exist there (visible to `--list` and the gate-only reporting, KISS-CONFORM-6.1-0009a). Verified: both pass on Windows; `cargo check --lib --tests --target aarch64-apple-darwin` builds with no unused-import warning. Not run: a Linux `cargo test`. Other tests of the same shape may exist: the issue names no detector, and none is built here. Numbered 0.4.74 because #663 (0.4.73) merged.
