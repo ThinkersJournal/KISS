@@ -29,8 +29,13 @@ low/high padding. I have not surveyed the op list for it, so I cannot say whethe
 
 **4. Needs measurement.**
 D.5: the ULP ceilings (4 for the elementary transcendentals, 8 for `lgamma`, correctly-rounded-or-2 for
-`sqrt`) are "reference values pending confirmation against real per-target math libraries". Only a run
-against those libraries answers it. D.6: an opt-in byte-exact float reduction profile (pinned
+`sqrt`) are "reference values pending confirmation against real per-target math libraries". `PRIOR-ART.md`
+§5.2 already compares them with the published OpenCL and Vulkan bounds and reports that several ceilings
+(`atan`, `atan2`, `erf`, `sqrt`, `sin`/`cos`, `exp`) would reject a device those specifications permit,
+and that Vulkan's `sin`/`cos` (absolute error) and `exp` (argument-dependent ULP) cannot be stated as a
+scalar ULP ceiling at all. I have not re-checked that table against the current `ops.md` or the library
+sources. So this item is a **model question** (is a per-atom scalar ULP ceiling the right shape?) before
+it is a constants question. D.6: an opt-in byte-exact float reduction profile (pinned
 low-to-high order plus an accumulator dtype) is a feature, not a pin.
 
 ## Options
@@ -47,8 +52,8 @@ under freeze pressure instead of now.
 ## Recommendation
 
 **A**, with the (d) survey as a small follow-up I can do without a build. For D.5 I would not pin the
-ceilings on the strength of reasoning alone: measure them against the per-target libraries first, then
-pin what was seen. D.6 stays open until a consumer asks for it.
+current ceilings: settle first whether accuracy is a scalar ULP ceiling or a small vocabulary (constant
+ULP, argument-dependent ULP, absolute error over a range, unspecified), then measure and pin. D.6 stays open until a consumer asks for it.
 
 ## What freezes, and what to decide
 
