@@ -938,8 +938,9 @@ its declared role hints; it is never a caller-chosen label and never an op famil
   cell carries no reduce field and no scanned-axis hint is a derivation input, so it
   takes rule **(c)** like any other non-reduction cell); **(c)** otherwise — provided the innermost active
   axis is **forward-unit-stride** per §6.5-0013, else `v1` — the token `vL` for the
-  largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ 16` (the
-  vector-access byte cap), `L` divides the innermost active axis extent, and
+  largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes) ≤ C`, where `C` is the
+  **vector-access byte cap of the key's target** (§6.8-0018; **16 bytes** unless the target's
+  namespace declares otherwise), `L` divides the innermost active axis extent, and
   `alignment mod (L · dtype storage bytes) = 0` — an **exact-modulo** alignment
   gate that tests whether the base address is genuinely `L · bytes`-aligned, **not** a
   `floor(alignment / dtype storage bytes)`-to-a-power-of-two shortcut (which over-selects,
@@ -2090,6 +2091,21 @@ separating a registered namespace from that namespace's capability-set token.
   claim a reader is entitled to see made rather than deduced.
   *Test:* `test_namespace_vocabulary_manifest_sufficiency_named`.
 
+- **KISS-CLASSIFY-6.8-0018** — **The vector-access byte cap is the target's, declared by its
+  namespace.** The cap `C` of §6.5-0009(c) MUST be the vector-access byte cap that the namespace
+  of the key's `target_capability` declares in its vocabulary document (§6.8-0004), stated in
+  **bytes** as a positive integer. A namespace that declares none, and a namespace that has no
+  vocabulary document (a `reserved` registry entry, §6.8-0003), MUST be treated as declaring
+  **16**. A declaration is made once per namespace, not per capability-set, and MUST NOT be
+  inferred from the capability-set: two tokens of one namespace derive under the same `C`. The cap
+  changes the derived `vec` field only through the largest-`L` rule of §6.5-0009(c); the `vec`
+  token set stays `{v1, v2, v4, v8}`, so a cap larger than `8 · (dtype storage bytes)` changes
+  nothing for that dtype. Both namespace documents registered today (`cuda`, `vulkan`) declare 16,
+  so no key derived before this clause moves. *Informative:* the cap is a property of the target's
+  load/store instruction width, which is why it lives with the namespace and not in the key; a
+  consumer that matches tokens byte-exact (§6.8-0002) never reads it. *Test:*
+  `test_classify_vec_cap_per_target`.
+
 ### 6.9 Foundational independence and opaque carry
 
 - **KISS-CLASSIFY-6.9-0001** — KISS-Classify MUST NOT depend on KISS-Ops or on any
@@ -2405,6 +2421,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.8-0015 | `test_namespace_vocabulary_omits_matches_absent_pins` |
 | KISS-CLASSIFY-6.8-0016 | `test_namespace_vocabulary_threshold_pair_straddles_its_boundary` |
 | KISS-CLASSIFY-6.8-0017 | `test_namespace_vocabulary_manifest_sufficiency_named` |
+| KISS-CLASSIFY-6.8-0018 | `test_classify_vec_cap_per_target` |
 | KISS-CLASSIFY-6.9-0001 | `test_classify_no_upstream_dependency` |
 | KISS-CLASSIFY-6.9-0002 | `test_classify_structure_key_opaque_carry` |
 | KISS-CLASSIFY-6.9-0003 | `test_classify_zero_dependency` |

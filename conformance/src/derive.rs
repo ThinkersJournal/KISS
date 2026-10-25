@@ -11,6 +11,7 @@
 //! operand slots are role hints, never inferred from extents, position or dtype.
 
 use crate::structure_key::*;
+use std::num::NonZeroU32;
 
 /// One operand of a cell as the caller presents it (call order; see [`derive_structure_key`]).
 #[derive(Debug, Clone)]
@@ -39,6 +40,9 @@ pub struct DerivationCell {
     pub math_fidelity: MathFidelity,
     /// The caller's dense-contraction role hints (§6.6-0012); `Some` makes the cell class `ctr`.
     pub contraction: Option<ContractionRoles>,
+    /// The vector-access byte cap the cell's target declares (§6.5-0009(c), §6.8-0018); `None` = the
+    /// target declares nothing, treated as [`DEFAULT_VEC_ACCESS_CAP_BYTES`].
+    pub vec_cap_bytes: Option<NonZeroU32>,
 }
 
 /// One axis of one operand, as a role hint names it: `operand` indexes `DerivationCell::operands` in CALL
@@ -235,7 +239,7 @@ fn reduce_spec(
 }
 
 /// One operand's sub-key (§6.6-0007): layout/vec/div from its OWN axes, the mask in the frame.
-fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool) -> OperandSubKey {
+fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool, vec_cap: u32) -> OperandSubKey {
     let layout = derive_layout_tag(&o.extents, &o.strides);
     let any_own_broadcast = o.extents.iter().zip(&o.strides).any(|(&e, &s)| e > 1 && s == 0);
     let rank = o.extents.len();
@@ -243,7 +247,7 @@ fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool) -> OperandSu
     let vec = if layout == Contig::Broadcast || reduced_innermost || rank == 0 {
         VecWidth::V1 // §6.5-0009 (a), (b); a rank-0 operand has no run to vectorize
     } else {
-        derive_vec_width(o.strides[rank - 1], o.extents[rank - 1], bytes, o.alignment, any_own_broadcast)
+        derive_vec_width_capped(o.strides[rank - 1], o.extents[rank - 1], bytes, o.alignment, any_own_broadcast, vec_cap)
     };
     OperandSubKey {
         contig: layout,
@@ -343,7 +347,10 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
         Reduce::All | Reduce::Trailing => true,
         Reduce::Subset(m) => frame_rank > 0 && m & (1 << (frame_rank - 1)) != 0,
     };
-    let operands: Vec<OperandSubKey> = ordered.iter().map(|o| sub_key(o, &frame, reduced_innermost)).collect();
+    let operands: Vec<OperandSubKey> = ordered
+        .iter()
+        .map(|o| sub_key(o, &frame, reduced_innermost, cell.vec_cap_bytes.map_or(DEFAULT_VEC_ACCESS_CAP_BYTES, NonZeroU32::get)))
+        .collect();
 
     let ext_refs: Vec<&[i64]> = ordered.iter().map(|o| o.extents.as_slice()).collect();
     let pairs: Vec<(&[i64], &[i64])> =

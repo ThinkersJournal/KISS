@@ -99,6 +99,32 @@ pub fn derive_vec_width(
     alignment: u32,
     any_axis_broadcast: bool,
 ) -> VecWidth {
+    derive_vec_width_capped(
+        inner_stride,
+        inner_extent,
+        dtype_storage_bytes,
+        alignment,
+        any_axis_broadcast,
+        DEFAULT_VEC_ACCESS_CAP_BYTES,
+    )
+}
+
+/// The vector-access byte cap a target is treated as declaring when its namespace document declares
+/// none (§6.5-0009(c), §6.8-0018): 16 bytes.
+pub const DEFAULT_VEC_ACCESS_CAP_BYTES: u32 = 16;
+
+/// [`derive_vec_width`] with the target's declared vector-access byte cap (§6.5-0009(c), §6.8-0018)
+/// in place of the fixed 16: the largest `L ∈ {8, 4, 2, 1}` with `L · bytes ≤ cap_bytes`. The token set
+/// stays `{v1, v2, v4, v8}` whatever the cap.
+#[must_use]
+pub fn derive_vec_width_capped(
+    inner_stride: i64,
+    inner_extent: i64,
+    dtype_storage_bytes: Option<u32>,
+    alignment: u32,
+    any_axis_broadcast: bool,
+    cap_bytes: u32,
+) -> VecWidth {
     // Sub-byte dtype: storage under one byte never vectorizes (§6.5-0009(c)).
     let Some(dsz) = dtype_storage_bytes else {
         return VecWidth::V1;
@@ -125,7 +151,7 @@ pub fn derive_vec_width(
     for (l, w) in [(8u64, VecWidth::V8), (4, VecWidth::V4), (2, VecWidth::V2)] {
         let vbytes = l * dsz;
         // byte cap, exact-modulo alignment gate, extent divisibility.
-        if vbytes <= 16 && align % vbytes == 0 && ext % l == 0 {
+        if vbytes <= u64::from(cap_bytes) && align % vbytes == 0 && ext % l == 0 {
             return w;
         }
     }

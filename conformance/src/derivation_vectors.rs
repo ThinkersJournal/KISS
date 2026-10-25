@@ -47,6 +47,7 @@ fn cell(target: &'static str, operands: Vec<CellOperand>) -> DerivationCell {
         accumulator: None,
         math_fidelity: MathFidelity::Stable,
         contraction: None,
+        vec_cap_bytes: None,
     }
 }
 
@@ -620,6 +621,38 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
     ctr_batch_decline_cases(out);
 }
 
+/// §6.5-0009(c) / §6.8-0018: the vector-access byte cap is the target's declared cap, not a fixed 16.
+/// `rocm` is reserved and declares nothing today (so it derives with 16); these two vectors SUPPLY the
+/// declaration a maintainer would make, and show the same cell deriving a different width.
+fn vec_cap_cases(out: &mut Vec<DerivationVector>) {
+    let base = |cap: Option<u32>| {
+        let mut c = cell(
+            "rocm:gfx942",
+            vec![op(Input, "f32", &[64, 128], &[128, 1], 256), op(Output, "f32", &[64, 128], &[128, 1], 256)],
+        );
+        c.vec_cap_bytes = cap.and_then(std::num::NonZeroU32::new);
+        c
+    };
+    out.push(v(
+        "vec_cap_undeclared_is_16_bytes",
+        "KISS-CLASSIFY-6.8-0018",
+        "f32 [64,128] on a target declaring no cap: 16 bytes, v4 (the control for the next two)",
+        base(None),
+    ));
+    out.push(v(
+        "vec_cap_32_bytes_widens_f32_to_v8",
+        "KISS-CLASSIFY-6.8-0018",
+        "same cell, target declares a 32-byte cap: 8*4 = 32 <= 32, v8 (differs from the 16-byte control in vec only)",
+        base(Some(32)),
+    ));
+    out.push(v(
+        "vec_cap_8_bytes_narrows_f32_to_v2",
+        "KISS-CLASSIFY-6.8-0018",
+        "same cell, target declares an 8-byte cap: 2*4 = 8 <= 8, v2",
+        base(Some(8)),
+    ));
+}
+
 /// The vectors, in a stable order (names are the join key for consumers).
 pub fn vectors() -> Vec<DerivationVector> {
     let mut out = Vec::new();
@@ -632,6 +665,7 @@ pub fn vectors() -> Vec<DerivationVector> {
     quantized_and_precision_cases(&mut out);
     ctr_cases(&mut out);
     decline_cases(&mut out);
+    vec_cap_cases(&mut out);
     out
 }
 
@@ -719,7 +753,7 @@ pub fn emit_json() -> String {
         };
         let gold = d.spec_golden.map_or("null".to_string(), js);
         s.push_str(&format!(
-            "    {{\"name\":{},\"clause\":{},\"note\":{},\"target\":{},\"operands\":[{}],\"index_operand\":{},\"reduced_axes\":{},\"accumulator\":{},\"math_fidelity\":{},\"contraction_declared\":{},\"contraction\":{},\"expect\":{},\"value\":{},\"spec_golden\":{}}}{}\n",
+            "    {{\"name\":{},\"clause\":{},\"note\":{},\"target\":{},\"operands\":[{}],\"index_operand\":{},\"reduced_axes\":{},\"accumulator\":{},\"math_fidelity\":{},\"contraction_declared\":{},\"contraction\":{},\"expect\":{},\"value\":{},\"spec_golden\":{}{}}}{}\n",
             js(d.name),
             js(d.clause),
             js(d.note),
@@ -734,6 +768,7 @@ pub fn emit_json() -> String {
             js(kind),
             js(&val),
             gold,
+            c.vec_cap_bytes.map_or(String::new(), |n| format!(",\"target_vec_access_cap_bytes\":{n}")),
             if i + 1 == vs.len() { "" } else { "," }
         ));
     }

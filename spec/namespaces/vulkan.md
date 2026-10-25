@@ -461,3 +461,17 @@ transcribes `shaderInt8`. Each name tracked its Vulkan source. Version 2 trades
 that correspondence for one prefix convention across both KISS vocabularies.
 That was a deliberate maintainer decision, not a correction — do not revert it
 on the grounds that `SINT8` says "s".
+
+## Vector-access cap (KISS-CLASSIFY-6.8-0018)
+
+This namespace declares a **vector-access byte cap of 16 bytes**. KISS-CLASSIFY-6.5-0009(c) derives
+an operand's `vec` field with the largest `L ∈ {8, 4, 2, 1}` such that `L · (dtype storage bytes)`
+does not exceed the cap of the key's target, and 6.8-0018 takes that cap from the namespace's
+vocabulary document. 16 is the value 6.5-0009(c) fixed for every target before 6.8-0018, so
+declaring it moves no key.
+
+The declaration is not a vocabulary change: it alters no `vulkan:` token's bytes, so under the
+versioning rule above it does not bump the vocabulary version. It applies to every capability-set of
+the namespace alike (6.8-0018 forbids deriving it from the capability-set). A later maintainer
+declaration of a different cap is a change to derived keys (the `vec` field of any operand it
+widens or narrows) and MUST be treated as byte-altering for keys, whatever it does to tokens.

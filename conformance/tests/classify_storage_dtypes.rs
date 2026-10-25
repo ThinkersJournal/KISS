@@ -26,6 +26,7 @@ fn cell(operands: Vec<CellOperand>) -> DerivationCell {
         accumulator: None,
         math_fidelity: MathFidelity::Stable,
         contraction: None,
+        vec_cap_bytes: None,
     }
 }
 
