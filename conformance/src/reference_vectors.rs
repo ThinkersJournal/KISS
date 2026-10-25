@@ -275,6 +275,33 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None),
             token: "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
+        // KISS-CONFORM-6.14 discriminating pairs (KISS#240): each differs from
+        // `binary_two_operands` in exactly ONE token field (tools/kiss_pairs.py decides it).
+        PositiveVector {
+            name: "binary_two_operands_i32",
+            clause: "KISS-CLASSIFY-6.7-0001",
+            note: "binary_two_operands with dtype i32 (same width as f32, so v4 holds): a dtype-only pair",
+            key: key("ew2", "i32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None),
+            token: "sk6|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        },
+        PositiveVector {
+            name: "binary_two_operands_ix64",
+            clause: "KISS-CLASSIFY-6.7-0001",
+            note: "binary_two_operands with a max touched offset at or above 2^31: an index-width-only pair",
+            key: {
+                let mut k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None);
+                k.index_width = "ix64".to_string();
+                k
+            },
+            token: "sk6|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        },
+        PositiveVector {
+            name: "binary_two_operands_warp",
+            clause: "KISS-CLASSIFY-6.7-0001",
+            note: "binary_two_operands with an iteration element count that selects warp: a schedule-only pair",
+            key: key("ew2", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None, None),
+            token: "sk6|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        },
         PositiveVector {
             name: "relu_add_generated_r1",
             clause: "KISS-CLASSIFY-6.7-0001",

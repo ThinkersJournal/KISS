@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.72 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- KISS#240 / #239 item 3, vectors only, no normative text: three positive vectors that each differ from `binary_two_operands` in ONE token field, retiring three of the four `unauthored` rows of `UNDISCRIMINATED.tsv`: `binary_two_operands_i32` (dtype; i32 is the same width as f32, so `v4` holds), `binary_two_operands_ix64` (index_width) and `binary_two_operands_warp` (schedule). `structure_key_vectors.json` regenerated (28 to 31 positive vectors); pinned dtype coverage 4 to 5 in the dtype position and 7 to 8 anywhere. **Reduce stays `unauthored`, with a sharper reason**: the output operand's keepdim mask records the reduced axes (6.6-0009), so reduce may not vary independently of operands; either a legal pair is found or the row becomes `undiscriminated` with that proof. The three vectors are classify-legal by construction but have no second deriver yet. Numbered 0.4.72 because #661 (0.4.71) merged.
+
 ## 0.4.71 — 2026-10-24 (number proposed; the PM allocates at gate time)
 
 - Tool and ledger only, no normative text: `tools/kiss_pairs.py`, the mechanical pair checker behind KISS-CONFORM-6.14 (KISS#240, #239 item 3). Over `structure_key_vectors.json` (28 positive vectors) it finds, per token field, the vector pairs that differ in that field alone: cell_class 2, target 3, rank 1, operands 6, contraction 10. **Five fields have none**: schema (single-valued by construction, `undiscriminated`), and dtype, index_width (all 28 are `ix32`), schedule and reduce, recorded as `unauthored` debt in `conformance/UNDISCRIMINATED.tsv`. The check fails a field with no pair and no ledger row, and a row that outlives its gap, so the debt can be named once and cannot grow; authoring the four pairs retires it. Controls `tools/test_kiss_pairs.py`, wired into `traceability.yml`. The four 6.14 clauses stay `untested` in `UNBACKED.tsv` (the floor is unmoved): this tool covers one vector file and token fields only. Numbered 0.4.71 because #660 (0.4.70) merged.
