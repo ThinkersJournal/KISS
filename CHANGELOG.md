@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.78 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: board 279 pair 5 options note, `docs/options-r5-18-contract-6-8-0012-wording.md` (R5.18, the stale "deferred non-contraction coordinate" wording in KISS-CONTRACT-6.8-0012). No normative text.
+
 ## 0.4.77 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: board 279 pair 4 options notes, `docs/options-r5-10-sk4-deferred-scope.md` (R5.10) and `docs/options-r5-16-positioning-governance.md` (R5.16); also corrects the R5.7 note on the D.5 ULP ceilings (it cites `PRIOR-ART.md` 5.2 and makes the model question first). No normative text.
