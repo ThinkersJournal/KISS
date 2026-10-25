@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.77 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: board 279 pair 4 options notes, `docs/options-r5-10-sk4-deferred-scope.md` (R5.10) and `docs/options-r5-16-positioning-governance.md` (R5.16); also corrects the R5.7 note on the D.5 ULP ceilings (it cites `PRIOR-ART.md` 5.2 and makes the model question first). No normative text.
+
 ## 0.4.76 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: board 279 pair 3 options notes, `docs/options-r5-7-ops-open-pins.md` (R5.7, which KISS-Ops Appendix D pins to close now) and `docs/options-r5-8-certification-sla.md` (R5.8 SLA item, what free steward certification promises); no normative text.
