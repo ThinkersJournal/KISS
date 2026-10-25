@@ -563,7 +563,7 @@ envelope; all multi-byte integers little-endian):
   `<= 16777216` (`MAX_CONTRACT_PAYLOAD_LEN = 2^24`), and a reader MUST reject a declared
   payload length above that maximum with a typed decline, and without allocating on the
   unchecked length, whether or not that many bytes are supplied. *Informative:* 2^24 is a
-  proposed value: no producer measurement exists, because Fuel's and Baracuda's seams produce
+  **placeholder, revisable before any freeze** (CireSnave decision 302): no producer measurement exists, because Fuel's and Baracuda's seams produce
   no response payload today (their handshake envelope is a fixed 56 bytes), so it is headroom
   over any plausible single-kernel contract document and not a measured bound. *Test:*
   `test_announce_contract_payload_cap`.
