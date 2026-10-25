@@ -763,7 +763,22 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   (for example a named block-quantization variant, a block-shape or block-axes descriptor, a
   packing or bit order, a zero-point descriptor, or an activation/weight scale pairing) are
   **not covered** by this clause: they stay registry-private, uninterpreted, and out of the
-  key. *Informative:* **key equality is not quantization equality.** Apart from
+  key. Because those facts are not covered, a producer MUST assign **distinct `encoding` codes**
+  to layouts that differ in any of them: two operands whose layouts differ in a fact this clause
+  does not cover (for example a nested scale, a zero-point operand, the nibble order, or the
+  block shape) MUST NOT share one `encoding` code, so that a consumer can tell the layouts apart
+  by `encoding` alone, without interpreting a fact Classify does not. Classify does not
+  interpret `encoding`, so this obligation falls on the producer and the registry that issues
+  the code, and the Classify harness cannot test it (it checks the projection table only).
+  *Informative:* the facts an implementation reported it needs and that fall outside the ten
+  fields are, by group: a **scale of the scale** (its dtype, block size, and an offset dtype or
+  none; reported for double-quantized NF4); a **zero-point** (placement, dtype, granularity;
+  reported for AWQ/GPTQ int4); **nibble order** with the packing axis and any permutation
+  (reported for AWQ int4 interleave and bnb NF4); and the **block shape** (elements and bytes
+  per block, so an inline scale layout is derivable; reported for GGUF Q4_0/Q8_0 and k-quants).
+  These were reported by Fuel from its loaders and a committed NF4 fixture on 2026-10-25; this
+  clause has not checked them against the external registry, which is not in this repository.
+  A registry entry for such a layout would usefully carry them. *Informative:* **key equality is not quantization equality.** Apart from
   `dequant_form`, the `structure_key` does not distinguish anything this sidecar carries, so
   two operands whose keys are byte-equal (§6.8-0002) MAY differ in scale dtype, granularity,
   placement, block structure and packing; a consumer that needs those facts MUST compare the
