@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.86 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/PATENT-SWEEP.md` second pass (PM follow-up on #672). All independent claims of the 8 patents read; a CPC/similar-documents walk found six more; one `needs-review` (US8458680B2, Google, a runtime that picks a processor type and resolves a precompiled kernel; an implementer-level question, not the documents). The record states what is still not done. Not legal advice.
+
 ## 0.4.84 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Spec (Classify, **normative**, CireSnave board 291 option B: "For the width, make it per-target."): the vector-access byte cap of KISS-CLASSIFY-6.5-0009(c) is no longer a fixed 16 but the cap the key's target namespace declares (new KISS-CLASSIFY-6.8-0018; bytes; a namespace declaring none, or with no vocabulary document, is 16). `cuda.md` and `vulkan.md` declare 16, so **no existing key moves**; the `vec` token set stays `{v1,v2,v4,v8}`. Derivation vectors 3 added (`vec_cap_undeclared_is_16_bytes`, `_32_bytes_widens_f32_to_v8`, `_8_bytes_narrows_f32_to_v2`; the last two carry an optional `target_vec_access_cap_bytes` key, absent from every other vector). `derive_vec_width_capped` and `DerivationCell::vec_cap_bytes` are new; `derive_vec_width` is unchanged. **No namespace vocabulary version bump:** the declaration alters no token byte, and both namespace documents' own rule bumps only for byte-altering changes (flagged to the PM).
