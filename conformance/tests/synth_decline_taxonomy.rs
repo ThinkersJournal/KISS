@@ -347,7 +347,7 @@ fn test_synth_decline_code_enum() {
         let tail: [u8; 4] = b[b.len() - 4..].try_into().unwrap();
         assert_eq!(tail, code.to_le_bytes(), "decline_code {name} is written little-endian");
         assert_ne!(tail, code.to_be_bytes(), "a big-endian decline_code write is a WRONG impl for {name}");
-        assert_eq!(b.len(), 4 + 13 + 4, "decline_code occupies 4 bytes (u32), not 2 (u16), for {name}");
+        assert_eq!(b.len(), 4 + 14 + 4, "decline_code occupies 4 bytes (u32), not 2 (u16), for {name}");
     }
 }
 

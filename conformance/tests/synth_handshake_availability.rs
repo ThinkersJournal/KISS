@@ -43,6 +43,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
+    "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
@@ -91,9 +92,9 @@ fn test_synth_request_no_new_shape() {
     assert_ne!(&pinned[0..4], &CDEC.to_le_bytes());
 
     // (2) NO new field: the frame is exactly the CYRQ tag + identity, nothing added.
-    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 32 /*hash*/;
+    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 32 /*hash*/ + 1 /*correlation_len*/;
     assert_eq!(pinned.len(), 4 + pinned_identity, "pinned request = CYRQ tag + identity, no build/JIT flag or capability blob");
-    let unpinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/; // no hash
+    let unpinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 1 /*correlation_len*/; // no hash
     assert_eq!(unpinned.len(), 4 + unpinned_identity, "unpinned request adds nothing either");
 
     // (3) exact bytes: an independently hand-assembled CYRQ golden (byte-for-byte

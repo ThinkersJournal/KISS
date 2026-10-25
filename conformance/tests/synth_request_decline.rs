@@ -28,6 +28,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
+    "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
@@ -153,8 +154,8 @@ fn decode_declined_identity(bytes: &[u8]) -> Result<(Identity, usize), &'static 
 fn test_synth_request_is_identity_only() {
     let req = QueryRequest { identity: identity_present() };
     let b = req.encode();
-    // frame = tag(4) + key_len(4) + key(3) + op_len(4) + op(3) + revision_present(1) + hash(32) = 51.
-    assert_eq!(b.len(), 4 + 4 + 3 + 4 + 3 + 1 + 32, "request = CYRQ tag + identity, nothing else");
+    // frame = tag(4) + key_len(4) + key(3) + op_len(4) + op(3) + revision_present(1) + hash(32) + correlation_len(1) = 52.
+    assert_eq!(b.len(), 4 + 4 + 3 + 4 + 3 + 1 + 32 + 1, "request = CYRQ tag + identity, nothing else");
     assert_eq!(&b[0..4], &[0x43, 0x59, 0x52, 0x51], "CYRQ tag");
     // decode round-trips to exactly the requested identity (the whole request).
     assert_eq!(decode_query_request(&b), Ok(req.clone()));
@@ -175,18 +176,18 @@ fn test_synth_request_no_capability_fields() {
     let pinned = QueryRequest { identity: identity_present() }.encode();
     let golden_pinned = format!("43 59 52 51 {IDENTITY_PRESENT_GOLDEN}");
     assert_golden("KISS-SYNTH-6.1-0001a", "cyrq_no_capabilities", &pinned, &golden_pinned);
-    assert_eq!(pinned.len(), 51, "no room for any capability/ABI/dispatch field");
+    assert_eq!(pinned.len(), 52, "no room for any capability/ABI/dispatch field");
 
-    // Unpinned form: the frame stops right after the revision_present byte — there
+    // Unpinned form: the frame stops right after the correlation_len byte — there
     // is no capability blob and no hash.
     let unpinned = QueryRequest { identity: identity_unpinned() }.encode();
     assert_golden(
         "KISS-SYNTH-6.1-0001a",
         "cyrq_no_capabilities_unpinned",
         &unpinned,
-        "43 59 52 51 03 00 00 00 AA BB CC 03 00 00 00 61 64 64 00",
+        "43 59 52 51 03 00 00 00 AA BB CC 03 00 00 00 61 64 64 00 00",
     );
-    assert_eq!(unpinned.len(), 19, "unpinned request = tag + key_len + key + flag, no more");
+    assert_eq!(unpinned.len(), 20, "unpinned request = tag + key_len + key + op + flag + correlation_len, no more");
 }
 
 /// KISS-SYNTH-6.1-0002 — a provision request REUSES the KISS-Announce
@@ -341,8 +342,9 @@ fn test_synth_request_full_identity() {
 fn test_synth_request_key_alone_not_pinned() {
     let b = QueryRequest { identity: identity_unpinned() }.encode();
     // no revision_hash region: frame ends right after the revision_present byte.
-    assert_eq!(b.len(), 19, "no 32-byte hash region follows an unpinned request");
-    assert_eq!(*b.last().unwrap(), 0x00, "revision_present == 0");
+    assert_eq!(b.len(), 20, "no 32-byte hash region follows an unpinned request");
+    assert_eq!(b[b.len() - 2], 0x00, "revision_present == 0");
+    assert_eq!(*b.last().unwrap(), 0x00, "correlation_len == 0");
     let ident = decode_query_request(&b).unwrap().identity;
     assert_eq!(ident.revision_hash, None, "key alone does not pin a build");
     assert_ne!(
@@ -373,9 +375,9 @@ fn test_synth_decline_framing() {
     let golden = format!("43 44 45 43 {IDENTITY_PRESENT_GOLDEN} 01 00 00 00");
     assert_golden("KISS-SYNTH-6.6-0004", "cdec_decline", &b, &golden);
     assert_eq!(&b[0..4], &[0x43, 0x44, 0x45, 0x43], "CDEC tag at offset 0");
-    // tag(4) + identity(4+3+4+3+1+32=47) + decline_code(4) = 55 bytes.
-    assert_eq!(b.len(), 55, "decline_code is u32-LE (4 bytes), not u16");
-    assert_eq!(&b[51..55], &[0x01, 0x00, 0x00, 0x00], "little-endian u32 decline_code trails the identity");
+    // tag(4) + identity(4+3+4+3+1+32+1=48) + decline_code(4) = 56 bytes.
+    assert_eq!(b.len(), 56, "decline_code is u32-LE (4 bytes), not u16");
+    assert_eq!(&b[52..56], &[0x01, 0x00, 0x00, 0x00], "little-endian u32 decline_code trails the identity");
 }
 
 /// KISS-SYNTH-6.6-0004a — when a `MALFORMED_REQUEST` decline is emitted for a
@@ -397,13 +399,14 @@ fn test_synth_malformed_echoes_empty_identity() {
         "KISS-SYNTH-6.6-0004a",
         "cdec_empty_identity",
         &b,
-        "43 44 45 43 00 00 00 00 00 00 00 00 00 03 00 00 00",
+        "43 44 45 43 00 00 00 00 00 00 00 00 00 00 03 00 00 00",
     );
-    assert_eq!(b.len(), 17, "empty identity = key_len(0) + op_len(0) + flag(0), no hash bytes");
+    assert_eq!(b.len(), 18, "empty identity = key_len(0) + op_len(0) + flag(0) + correlation_len(0), no hash bytes");
     assert_eq!(&b[4..8], &[0x00, 0x00, 0x00, 0x00], "canonical u32 key-length == 0");
     assert_eq!(&b[8..12], &[0x00, 0x00, 0x00, 0x00], "canonical u32 op_identity length == 0");
     assert_eq!(b[12], 0x00, "revision_present == 0 (no hash follows)");
-    assert_eq!(&b[13..17], &[0x03, 0x00, 0x00, 0x00], "MALFORMED_REQUEST decline_code, u32-LE");
+    assert_eq!(b[13], 0x00, "correlation_len == 0");
+    assert_eq!(&b[14..18], &[0x03, 0x00, 0x00, 0x00], "MALFORMED_REQUEST decline_code, u32-LE");
 }
 
 /// KISS-SYNTH-6.6-0004b — a reader MUST ACCEPT a zero-length echoed `structure_key`
@@ -440,7 +443,7 @@ fn test_synth_reader_accepts_empty_identity() {
         .expect("§6.6-0004b: the decline path MUST accept the canonical empty identity");
     assert!(ident.structure_key.is_empty(), "zero-length structure_key accepted");
     assert_eq!(ident.revision_hash, None, "revision_present == 0 => no hash");
-    assert_eq!(off, 9, "identity block is exactly key_len(4) + flag(1) — no hash bytes consumed");
+    assert_eq!(off, 10, "identity block is exactly key_len(4) + op_len(4) + flag(1) + correlation_len(1) — no hash bytes consumed");
     // and the u32-LE decline_code trails the accepted identity.
     let code = u32::from_le_bytes(ident_bytes[off..off + 4].try_into().unwrap());
     assert_eq!(code, decline_code::MALFORMED_REQUEST, "MALFORMED_REQUEST follows the empty identity");

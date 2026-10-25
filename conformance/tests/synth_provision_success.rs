@@ -25,6 +25,7 @@ const IDENTITY_GOLDEN: &str = concat!(
     "01 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
+    "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 fn identity() -> Identity {
@@ -260,7 +261,7 @@ fn test_synth_prsp_echo_requires_revision() {
     // A frame built by hand with revision_present = 0 in the echo.
     let mut b = Vec::new();
     b.extend_from_slice(&PRSP.to_le_bytes());
-    b.extend_from_slice(&[3, 0, 0, 0, 0xAA, 0xBB, 0xCC, 3, 0, 0, 0, b'a', b'd', b'd', 0]);
+    b.extend_from_slice(&[3, 0, 0, 0, 0xAA, 0xBB, 0xCC, 3, 0, 0, 0, b'a', b'd', b'd', 0, 0]);
     b.extend_from_slice(b"CUBN");
     b.extend_from_slice(&0u64.to_le_bytes());
     b.extend_from_slice(&0u32.to_le_bytes());
