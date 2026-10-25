@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.74 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- R3.11 KISS#158, test gating only; no spec, corpus or wire change. `harness/msvc.rs`'s `mod tests` (`compiles_a_trivial_c_kernel_to_a_dll`, `the_override_compiler_is_the_one_that_runs`) is now `#[cfg(all(test, windows))]`. `find_msvc()` cannot find MSVC off Windows, so on every other leg the first test ran, declined through `runtime_gate_some!`, and reported `ok` having asserted nothing; the second returned early. They now do not exist there (visible to `--list` and the gate-only reporting, KISS-CONFORM-6.1-0009a). Verified: both pass on Windows; `cargo check --lib --tests --target aarch64-apple-darwin` builds with no unused-import warning. Not run: a Linux `cargo test`. Other tests of the same shape may exist: the issue names no detector, and none is built here. Numbered 0.4.74 because #663 (0.4.73) merged.
+
 ## 0.4.73 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: two options notes for CireSnave's board 279 (pair 1 of 5): `docs/options-r5-1-message-boundary.md` (R5.1, no message boundary on a stream) and `docs/options-r5-3-trust-boundary.md` (R5.3, trust-boundary and integrity statements), each with 2-3 options, the clauses they touch and a recommendation; no normative text. ROADMAP R3.7 records CireSnave's acceptance of the 6.14 wording (board 278, 2026-10-25). HANDOFF refreshed (R3.10 done, issue sweep, board 279). Numbered 0.4.73 because #662 (0.4.72) merged.
