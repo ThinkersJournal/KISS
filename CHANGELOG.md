@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.73 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: two options notes for CireSnave's board 279 (pair 1 of 5): `docs/options-r5-1-message-boundary.md` (R5.1, no message boundary on a stream) and `docs/options-r5-3-trust-boundary.md` (R5.3, trust-boundary and integrity statements), each with 2-3 options, the clauses they touch and a recommendation; no normative text. ROADMAP R3.7 records CireSnave's acceptance of the 6.14 wording (board 278, 2026-10-25). HANDOFF refreshed (R3.10 done, issue sweep, board 279). Numbered 0.4.73 because #662 (0.4.72) merged.
+
 ## 0.4.72 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - KISS#240 / #239 item 3, vectors only, no normative text: three positive vectors that each differ from `binary_two_operands` in ONE token field, retiring three of the four `unauthored` rows of `UNDISCRIMINATED.tsv`: `binary_two_operands_i32` (dtype; i32 is the same width as f32, so `v4` holds), `binary_two_operands_ix64` (index_width) and `binary_two_operands_warp` (schedule). `structure_key_vectors.json` regenerated (28 to 31 positive vectors); pinned dtype coverage 4 to 5 in the dtype position and 7 to 8 anywhere. **Reduce stays `unauthored`, with a sharper reason**: the output operand's keepdim mask records the reduced axes (6.6-0009), so reduce may not vary independently of operands; either a legal pair is found or the row becomes `undiscriminated` with that proof. The three vectors are classify-legal by construction but have no second deriver yet. Numbered 0.4.72 because #661 (0.4.71) merged.

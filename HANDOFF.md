@@ -1,4 +1,4 @@
-<!-- Written 2026-10-24 against origin/main ffa70a1 (conformance 0.4.67, #657 merged); this PR (#658) proposes 0.4.68. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-25 against origin/main 9336a5b (conformance 0.4.72); this PR proposes 0.4.73. A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -47,4 +47,4 @@ harness 459, lint 44, untested **391** (387 + the four 6.14 arrivals). Re-measur
 
 1. `git fetch`; `list_peers`/`check_messages`. `gh pr view 658`: on merge do the cleanup above; if the gate says the base moved, rebase (procedure 2, 4).
 2. **Build the pair checker for KISS#240 / #239 item 3** on the merged 6.14 text: mechanically check that two vectors differ in field k alone and have differing required outputs; a coordinate with no pair is recorded (6.14-0002), a missing pair fails the build (6.14-0004). Clause wording of 6.14-0001 exclusions and 6.14-0003 (no corpus as evidence) is still for CireSnave to read; do not edit it without the PM.
-3. Remaining unread ROADMAP rows: R3.10, R3.11, R3.12. **#458** (a `UNBACKED.tsv` category for a test that binds the document) has three unchosen remedies: ask the PM before building. R3.5a needs a region-format design read. R5.6 (re-triage 8 stale `#144` ledger notes) and R5.14/R5.15 are `[go]` and startable.
+3. R3.10 done (#659); R3.12 #147 half done (#660, bare `e4m3` comment sites remain); unread: R3.11. **Board 279 (CireSnave: "all nine, two at a time"): options notes in `docs/options-r5-*.md`; pair 1 (R5.1, R5.3) is written, send pair 2 (R5.9, R5.2) only after the PM says pair 1 is answered; then R5.7+R5.8, R5.10+R5.16, R5.18.** **Issue sweep weekly (next 2026-11-01); every open issue carries a 2026-10-25 status comment.** **#458** (a `UNBACKED.tsv` category for a test that binds the document) has three unchosen remedies: ask the PM before building. R3.5a needs a region-format design read. R5.6 (re-triage 8 stale `#144` ledger notes) and R5.14/R5.15 are `[go]` and startable.
