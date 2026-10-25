@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.82 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/PATENT-SWEEP.md`, the first patent sweep for the 0.4.x drafts (CireSnave board 286). A partial first pass: 11 ideas, 11 queries, 8 patents read, all `clear` on claim 1, none `needs-review`; ideas 1, 2 and 7 produced no relevant hit and are listed for a deeper search before any freeze. Not legal advice.
+
 ## 0.4.81 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Spec (Classify, **normative**, PM ruling C on the D7 sidecar extra-fields ask): KISS-CLASSIFY-6.3-0012 gains one MUST, that layouts differing in a fact the clause does not cover MUST get distinct `encoding` codes, plus an informative paragraph listing the four groups Fuel reported (scale of the scale, zero-point, nibble order/pack axis/permutation, block shape). No field, no table row, no `structure_key` byte changes. The MUST falls on the producer/registry and the Classify harness cannot test it; the informative list is unchecked against the external registry, which is not in this repository.
