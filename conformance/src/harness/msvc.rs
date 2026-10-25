@@ -141,7 +141,11 @@ pub fn compile_c_to_dll(msvc: &Msvc, src: &Path, out_dir: &Path) -> Result<PathB
     Ok(dll)
 }
 
-#[cfg(test)]
+// KISS#158: both tests need an MSVC toolchain, which `find_msvc()` can only find on Windows, so on any
+// other leg they would run, decline through the runtime gate and report `ok` having asserted nothing (a
+// permanent false green). Gated by `cfg` they do not exist there, which `--list` and the gate-only
+// reporting (KISS-CONFORM-6.1-0009a) can see.
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
     use std::io::Write;
