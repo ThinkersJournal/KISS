@@ -187,6 +187,9 @@ what is *inside* them — those are KISS-Classify and KISS-Contract respectively
 - **Implementation** — any software producing or parsing KISS-Announce wire
   artifacts.
 - **Handshake envelope** — the fixed-size 56-byte POD structure defined in §6.1.
+- **Message extent** — the number of bytes a message occupies, counted from its first byte, computed from that
+  message's own leading tag and length fields and from nothing outside it (§6.2-0014). Where the bytes
+  that hold a message begin or end is not part of the message and is not defined here (umbrella §10.3).
 - **Profile** — an integer `>= 1` denoting a mutually-versioned seam feature-set;
   the unit of version negotiation (§7.1). The value `0` denotes absence/padding and
   is never a live profile.
@@ -334,9 +337,9 @@ envelope; all multi-byte integers little-endian):
   `envelope_version` (offset 4) from the fixed prefix (§6.1-0014) before applying any
   version-specific length or field validation. *Test:*
   `test_announce_reads_prefix_before_length`.
-- **KISS-ANNOUNCE-6.2-0001** — A reader MUST reject, with a typed decline, any input
-  whose length is not exactly the length mandated by its `envelope_version` (56 bytes
-  for version 1). *Test:* `reject_wrong_length`.
+- **KISS-ANNOUNCE-6.2-0001** — A reader MUST reject, with a typed decline, any envelope
+  input that does not contain a complete message of the extent (§3) mandated by its
+  `envelope_version` (56 bytes for version 1). *Test:* `reject_wrong_length`.
 - **KISS-ANNOUNCE-6.2-0002** — A reader MUST reject, with a typed decline, any
   envelope whose `magic` is not `0x4D414553`. *Test:* `reject_bad_magic`.
 - **KISS-ANNOUNCE-6.2-0003** — A reader MUST reject, with a typed decline, any
@@ -361,13 +364,45 @@ envelope; all multi-byte integers little-endian):
   envelope in which a `profiles` entry at index `< profiles_len` equals `0`. *Test:*
   `reject_zero_live_profile`.
 - **KISS-ANNOUNCE-6.2-0007** — On any rejection, a reader MUST return a typed decline
-  and MUST NOT panic, abort, crash, hang, or read outside the input buffer. *Test:*
+  and MUST NOT panic, abort, crash, hang, or read outside the bytes supplied to it or
+  beyond the message extent (§6.2-0017). *Test:*
   `test_announce_rejection_is_typed_decline`.
 - **KISS-ANNOUNCE-6.2-0008** — A reader MUST NOT tolerate, silently ignore, or
   attempt to repair a malformed envelope (this hard-reject discipline is distinct
   from the soft-skip / ignore-unknown discipline of text and telemetry channels and
   from the ignore-unknown rule for the `capabilities` bitset in §7.2-0007). *Test:*
   `test_announce_reader_never_repairs`.
+
+- **KISS-ANNOUNCE-6.2-0014** — **A message's extent is determined by the message alone.** The
+  five messages of this standard are told apart by their leading 4 bytes — the handshake
+  envelope's `magic` (`SEAM`, §6.1), `SAVL` (§6.3-0011), `CYRQ` (§6.4-0001), `CRSP` (§6.4-0004) and
+  `CDEC` (§6.4-0007) — and each message's extent MUST be computed from its own bytes only: the
+  handshake envelope's is the length mandated by its `envelope_version` (56 for version 1;
+  `magic` and `envelope_version` are read first, §6.2-0010); an availability list's is the end of
+  the last of its `record_count` records (§6.3-0005); a `CYRQ`'s is the end of its identity block
+  (§6.4-0001); a `CRSP`'s is the end of its payload (§6.4-0004); a `CDEC`'s is the end of its
+  `decline_code` (§6.4-0007). A reader MUST NOT take a message's extent from anything outside the
+  message. **Stated limitation:** the optional correlation block of §6.4-0013, when a frame carries
+  it, follows the body, and whether it is present is not determinable from the message's own bytes
+  (a frame without it is valid and ends at its body), so a frame carrying it is not self-delimiting
+  by this clause and its extent here excludes it; a decision is owed before any freeze, alongside
+  the frame-version decision of §6.3-0013 (ROADMAP R1.10). *Test:*
+  `test_announce_message_extent_from_own_bytes`.
+- **KISS-ANNOUNCE-6.2-0015** — A message whose extent exceeds the bytes supplied — a declared
+  length or count that runs past the end, or too few bytes to determine the extent at all — is
+  **truncated**, and a reader MUST reject it with a typed decline (and without allocating on an
+  unchecked length) whatever carried or delivered the bytes. A reader MUST NOT treat a truncated
+  message as an incomplete one to be completed by bytes it does not have. *Test:*
+  `test_announce_truncated_message_rejected`.
+- **KISS-ANNOUNCE-6.2-0016** — A leading tag (the first 4 bytes) that is none of the five of
+  §6.2-0014 MUST be rejected with a typed decline; a reader MUST NOT search the bytes that follow
+  for a later tag (the no-repair discipline of §6.2-0008). *Test:*
+  `test_announce_unknown_leading_tag`.
+- **KISS-ANNOUNCE-6.2-0017** — Bytes after a message's extent are **not part of the message**. A
+  reader MUST NOT read, interpret, or reject on them: its verdict and the extent it reports MUST be
+  the same whatever follows. An implementation whose entry point accepts only a buffer already
+  cut to the extent, so that it can never be handed such bytes, satisfies this clause. *Test:*
+  `test_announce_bytes_after_extent_unread`.
 
 ### 6.3 Kernel availability (identity only)
 
@@ -409,13 +444,15 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.3-0009** — A producer MUST write a per-record `structure_key`
   byte-length in the inclusive range `[1, 4096]` (`MAX_STRUCTURE_KEY_LEN = 4096`;
   empty keys are not permitted), and a reader MUST reject any record whose declared
-  length is `0` or `> 4096`, or whose declared length exceeds the remaining input,
-  with a typed decline and without allocating on the unchecked length. *Test:*
+  length is `0` or `> 4096`, or whose declared length exceeds the bytes the message
+  has left to supply (a truncated message, §6.2-0015), with a typed decline and without
+  allocating on the unchecked length. *Test:*
   `test_announce_structure_key_length_bounds`.
 - **KISS-ANNOUNCE-6.3-0010** — A producer MUST write a `record_count`
   `<= 1048576` (`MAX_AVAILABILITY_RECORDS = 2^20`), and a reader MUST reject a
-  `record_count` exceeding that maximum, or exceeding what the remaining input can
-  contain, with a typed decline and without pre-allocating on the unchecked count.
+  `record_count` exceeding that maximum, or exceeding what the bytes supplied can
+  contain (a truncated message, §6.2-0015), with a typed decline and without
+  pre-allocating on the unchecked count.
   *Test:* `test_announce_record_count_bounds`.
 - **KISS-ANNOUNCE-6.3-0006** — A consumer MUST treat an availability record as a
   cache **hit** only when `structure_key`, `op_identity` and `revision_hash` all match its
@@ -448,7 +485,8 @@ envelope; all multi-byte integers little-endian):
   either (a) a contract **response** carrying the KISS-Contract document, or (b) a
   typed decline response. *Test:* `test_announce_query_response_is_contract_or_decline`.
 - **KISS-ANNOUNCE-6.4-0006** — A provider handling a contract-query request MUST NOT
-  panic, abort, crash, hang, or read outside the request buffer. *Test:*
+  panic, abort, crash, hang, or read outside the bytes supplied to it or beyond the
+  message extent (§6.2-0017). *Test:*
   `test_announce_query_never_panics`.
 - **KISS-ANNOUNCE-6.4-0003** — When `revision_present == 1`, a provider that returns a
   contract MUST return the contract whose `(structure_key, op_identity, revision_hash)`
@@ -520,6 +558,15 @@ envelope; all multi-byte integers little-endian):
   `correlation_present` value other than `0` or `1` with a `MALFORMED_REQUEST` typed
   decline (§6.4-0009), never a panic. *Test:*
   `test_announce_correlation_id_echoed_when_present`.
+
+- **KISS-ANNOUNCE-6.4-0014** — A producer MUST write a `CRSP` payload byte-length
+  `<= 16777216` (`MAX_CONTRACT_PAYLOAD_LEN = 2^24`), and a reader MUST reject a declared
+  payload length above that maximum with a typed decline, and without allocating on the
+  unchecked length, whether or not that many bytes are supplied. *Informative:* 2^24 is a
+  proposed value: no producer measurement exists, because Fuel's and Baracuda's seams produce
+  no response payload today (their handshake envelope is a fixed 56 bytes), so it is headroom
+  over any plausible single-kernel contract document and not a measured bound. *Test:*
+  `test_announce_contract_payload_cap`.
 
 ### 6.5 Zero-dependency budget
 
@@ -729,6 +776,10 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.2-0013 | `reject_zero_live_profile` |
 | KISS-ANNOUNCE-6.2-0007 | `test_announce_rejection_is_typed_decline` |
 | KISS-ANNOUNCE-6.2-0008 | `test_announce_reader_never_repairs` |
+| KISS-ANNOUNCE-6.2-0014 | `test_announce_message_extent_from_own_bytes` |
+| KISS-ANNOUNCE-6.2-0015 | `test_announce_truncated_message_rejected` |
+| KISS-ANNOUNCE-6.2-0016 | `test_announce_unknown_leading_tag` |
+| KISS-ANNOUNCE-6.2-0017 | `test_announce_bytes_after_extent_unread` |
 | KISS-ANNOUNCE-6.3-0001 | `test_announce_availability_is_identity_pair` |
 | KISS-ANNOUNCE-6.3-0002 | `test_announce_availability_carries_no_capability` |
 | KISS-ANNOUNCE-6.3-0003 | `test_announce_revision_hash_is_32_bytes` |
@@ -755,6 +806,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.4-0005 | `test_announce_query_bit_implies_endpoint` |
 | KISS-ANNOUNCE-6.4-0008 | `test_announce_no_query_bit_declines` |
 | KISS-ANNOUNCE-6.4-0013 | `test_announce_correlation_id_echoed_when_present` |
+| KISS-ANNOUNCE-6.4-0014 | `test_announce_contract_payload_cap` |
 | KISS-ANNOUNCE-6.5-0001 | `test_announce_zero_dependency_no_driver_load` |
 | KISS-ANNOUNCE-6.5-0002 | `test_announce_impl_std_only` |
 | KISS-ANNOUNCE-7.1-0001 | `test_announce_negotiate_selects_highest_mutual` |

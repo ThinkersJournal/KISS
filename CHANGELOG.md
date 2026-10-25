@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.90 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Spec (Announce, **normative, additive**; CireSnave board 294, R5.1 option A without any transport binding): defines **message extent** (§3) as the number of bytes a message occupies, computed from its own leading tag and length fields only. New 6.2-0014 (extent from the message alone, for all five messages), 6.2-0015 (a message cut short is truncated and rejected whatever carried it), 6.2-0016 (an unknown leading tag is a typed decline, no resynchronisation), 6.2-0017 (bytes after the extent are not read), and 6.4-0014 (contract-response payload length capped at 2^24; **a proposed value, no producer measurement exists**). The vague wording in 6.2-0001, 6.2-0007, 6.3-0009, 6.3-0010 and 6.4-0006 now uses the defined term. **No byte of any message changes** and no transport is named (umbrella §10.3). Reference: `announce::message_extent`, `MAX_CONTRACT_PAYLOAD_LEN`, decline `PayloadLenOutOfRange`. **Stated limitation recorded in 6.2-0014:** the optional correlation block of 6.4-0013 is not determinable from a frame's own bytes, so a frame carrying it is not self-delimiting; a decision is owed before any freeze. Numbered 0.4.90 because #675 proposes 0.4.89.
+
 ## 0.4.88 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/interface-project-plan.md`, the one-page plan for the interface project (board 295; name left as `<name>`; A/B/C open). Numbered 0.4.88 because #675 proposes 0.4.87.
