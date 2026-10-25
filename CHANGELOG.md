@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.76 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: board 279 pair 3 options notes, `docs/options-r5-7-ops-open-pins.md` (R5.7, which KISS-Ops Appendix D pins to close now) and `docs/options-r5-8-certification-sla.md` (R5.8 SLA item, what free steward certification promises); no normative text.
+
 ## 0.4.75 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: board 279 pair 2 options notes, `docs/options-r5-9-roundtrip-guarantee.md` (R5.9, can the emit/consume round-trip guarantee be structural) and `docs/options-r5-2-artifact-format-registry.md` (R5.2, who owns the `artifact_format_tag` registry), each with 2-3 options, what it touches and a recommendation; no normative text. Numbered 0.4.75 because #664 proposes 0.4.74.
