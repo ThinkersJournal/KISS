@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.84 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Spec (Classify, **normative**, CireSnave board 291 option B: "For the width, make it per-target."): the vector-access byte cap of KISS-CLASSIFY-6.5-0009(c) is no longer a fixed 16 but the cap the key's target namespace declares (new KISS-CLASSIFY-6.8-0018; bytes; a namespace declaring none, or with no vocabulary document, is 16). `cuda.md` and `vulkan.md` declare 16, so **no existing key moves**; the `vec` token set stays `{v1,v2,v4,v8}`. Derivation vectors 3 added (`vec_cap_undeclared_is_16_bytes`, `_32_bytes_widens_f32_to_v8`, `_8_bytes_narrows_f32_to_v2`; the last two carry an optional `target_vec_access_cap_bytes` key, absent from every other vector). `derive_vec_width_capped` and `DerivationCell::vec_cap_bytes` are new; `derive_vec_width` is unchanged. **No namespace vocabulary version bump:** the declaration alters no token byte, and both namespace documents' own rule bumps only for byte-altering changes (flagged to the PM).
+
 ## 0.4.82 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/PATENT-SWEEP.md`, the first patent sweep for the 0.4.x drafts (CireSnave board 286). A partial first pass: 11 ideas, 11 queries, 8 patents read, all `clear` on claim 1, none `needs-review`; ideas 1, 2 and 7 produced no relevant hit and are listed for a deeper search before any freeze. Not legal advice.
