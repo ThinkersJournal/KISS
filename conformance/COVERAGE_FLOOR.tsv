@@ -597,7 +597,7 @@
 # differential `test_consume_taxonomy_structure_based_differential` (ROADMAP R3.14), the ledger row is `decredited`, and the old test is renamed
 # `test_consume_taxonomy_doc_lint_four_categories`. A DE-CREDITING, not a regression: the gap did not change, only our knowledge of it. Lint unmoved.
 # RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
-harness	465
+harness	470
 lint	44
-untested	391
+untested	392
 proven	20

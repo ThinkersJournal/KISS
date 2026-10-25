@@ -727,6 +727,25 @@ correct comparator. See umbrella §3 for the full statement.
   artifact's binary format/target family, matched byte-for-byte and otherwise opaque, and
   MUST NOT be the reserved all-zero value `00 00 00 00`. *Test:*
   `test_synth_artifact_format_tag`.
+- **KISS-SYNTH-6.4-0001e** — **Every length a provider supplies is capped.** A consumer MUST
+  reject, with a typed decline, a provision-success frame whose declared `artifact` byte-length
+  exceeds `268435456` (`MAX_ARTIFACT_LEN = 2^28`) or whose declared `contract` byte-length exceeds
+  `16777216` (`MAX_CONTRACT_PAYLOAD_LEN = 2^24`, KISS-ANNOUNCE-6.4-0014), and MUST do so before
+  reading, copying or allocating anything keyed on the length, **whether or not that many bytes were
+  supplied**: the response direction carries executable code from the less-trusted party and binds
+  the consumer as the request direction binds the provider (§2.4). Both caps are **placeholders,
+  revisable before any freeze**; no measurement exists. *Informative:* the caps of the other
+  attacker-controlled lengths are `structure_key` and `op_identity` `4096` (KISS-ANNOUNCE-6.3-0009,
+  -0013), availability `record_count` `2^20` (-0010), the contract-response payload `2^24`
+  (KISS-ANNOUNCE-6.4-0014), the contract document body `2^24` (KISS-CONTRACT-6.11-0003a); the
+  envelope and `artifact_format_tag` are fixed-size. *Test:* `test_synth_length_caps`.
+- **KISS-SYNTH-6.4-0001f** — **A provided artifact is untrusted code.** A consumer MUST treat a
+  provided artifact as untrusted executable code unless the provider is in the consumer's own trust
+  domain, and MUST NOT load or launch it on the strength of the contract, the `revision_hash`, or the
+  contract checksum alone; where the provider is not in the consumer's trust domain, the
+  authentication and integrity of the channel that delivered the artifact are the deployment's
+  responsibility (umbrella §10.3) and KISS supplies neither. A provider linked into the consumer's
+  own process is in its trust domain. *Test:* `test_synth_provided_artifact_is_untrusted`.
 - **KISS-SYNTH-6.4-0002** — The artifact's `revision_hash` MUST identify which build the
   artifact is: an opaque, provider-assigned identifier compared only for byte-for-byte
   equality. *Test:* `test_synth_artifact_revision_hash_opaque`.
@@ -1105,6 +1124,8 @@ free-standing KISS-Synth clause.
 | KISS-SYNTH-6.4-0001b | `test_synth_provision_success_prsp_frame` |
 | KISS-SYNTH-6.4-0001c | `test_synth_success_distinct_from_contract_only` |
 | KISS-SYNTH-6.4-0001d | `test_synth_artifact_format_tag` |
+| KISS-SYNTH-6.4-0001e | `test_synth_length_caps` |
+| KISS-SYNTH-6.4-0001f | `test_synth_provided_artifact_is_untrusted` |
 | KISS-SYNTH-6.4-0002 | `test_synth_artifact_revision_hash_opaque` |
 | KISS-SYNTH-6.4-0002a | `test_synth_artifact_revision_hash_no_algo` |
 | KISS-SYNTH-6.4-0003 | `test_synth_no_verify_precondition` |

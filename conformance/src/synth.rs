@@ -40,7 +40,15 @@ pub enum SynthDecline {
     RevisionNotPresent,
     /// The `artifact_format_tag` was the reserved all-zero value (§6.4-0001d).
     ZeroArtifactFormatTag,
+    /// A declared `artifact` or `contract` byte-length exceeded its cap (§6.4-0001e); checked before any
+    /// byte is read or allocated, whether or not that many bytes were supplied.
+    LengthOutOfRange { region: &'static str, got: u64 },
 }
+
+/// The largest `artifact` byte-length a provision success may declare (§6.4-0001e): 2^28 = 256 MiB. **A
+/// placeholder, revisable before any freeze** (no measurement exists); the largest realistic artifact (a
+/// PTX or cubin module) is orders of magnitude smaller.
+pub const MAX_ARTIFACT_LEN: u64 = 1 << 28;
 
 /// A provision success: the pair `{artifact, contract}` under its echoed identity (§6.2-0001).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -113,6 +121,10 @@ pub fn decode_provision_success(bytes: &[u8]) -> Result<ProvisionSuccess, SynthD
     }
     let artifact_len = u64::from_le_bytes(bytes[off..off + 8].try_into().unwrap());
     off += 8;
+    // §6.4-0001e: the cap is checked before anything keyed on the length, supplied bytes or not
+    if artifact_len > MAX_ARTIFACT_LEN {
+        return Err(SynthDecline::LengthOutOfRange { region: "artifact", got: artifact_len });
+    }
     // Compare in u64 against what is actually left, so a hostile length can neither
     // overflow an offset nor drive an allocation.
     if artifact_len > (bytes.len() - off) as u64 {
@@ -124,7 +136,11 @@ pub fn decode_provision_success(bytes: &[u8]) -> Result<ProvisionSuccess, SynthD
     if bytes.len() < off + 4 {
         return Err(SynthDecline::Truncated { region: "contract_len" });
     }
-    let contract_len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap()) as usize;
+    let contract_len_raw = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+    if contract_len_raw > crate::announce::MAX_CONTRACT_PAYLOAD_LEN {
+        return Err(SynthDecline::LengthOutOfRange { region: "contract", got: u64::from(contract_len_raw) });
+    }
+    let contract_len = contract_len_raw as usize;
     off += 4;
     if contract_len > bytes.len() - off {
         return Err(SynthDecline::Truncated { region: "contract" });
