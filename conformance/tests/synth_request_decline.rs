@@ -32,12 +32,12 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 /// The same cell, named WITHOUT pinning a build (revision_present == 0).
 fn identity_unpinned() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None, correlation: None }
 }
 
 /// The SYNTH provision decline_code a provider emits for a request-path
@@ -116,7 +116,27 @@ fn decode_declined_identity(bytes: &[u8]) -> Result<(Identity, usize), &'static 
     } else {
         None
     };
-    Ok((Identity { structure_key, op_identity, revision_hash }, off))
+    // §6.4-0013: the correlation field is always present, a length byte (0 or 8) then that many bytes
+    if bytes.len() < off + 1 {
+        return Err("truncated correlation_len");
+    }
+    let clen = bytes[off] as usize;
+    off += 1;
+    if clen != 0 && clen != 8 {
+        return Err("bad correlation_len");
+    }
+    if bytes.len() < off + clen {
+        return Err("truncated correlation_id");
+    }
+    let correlation = if clen == 8 {
+        let mut id = [0u8; 8];
+        id.copy_from_slice(&bytes[off..off + 8]);
+        Some(id)
+    } else {
+        None
+    };
+    off += clen;
+    Ok((Identity { structure_key, op_identity, revision_hash, correlation }, off))
 }
 
 // ---- §6.1 Provision request -------------------------------------------------
@@ -202,7 +222,7 @@ fn test_synth_request_structure_key_opaque() {
     // key = the 4 bytes of a CYRQ tag, a NUL, and 0xFF — all opaque payload.
     let key = vec![0x43, 0x59, 0x52, 0x51, 0x00, 0xFF];
     let req = QueryRequest {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: None },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: None, correlation: None },
     };
     let b = req.encode();
     // length prefix = 6 (the full opaque token), then the 6 key bytes verbatim.
@@ -222,7 +242,7 @@ fn test_synth_request_structure_key_opaque() {
 fn test_synth_request_structure_key_not_reencoded() {
     let key: Vec<u8> = (0u16..=255).map(|x| x as u8).collect(); // all 256 byte values
     let req = QueryRequest {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some([0x22; 32]) },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some([0x22; 32]), correlation: None },
     };
     let b = req.encode();
     assert_eq!(&b[4..8], &(key.len() as u32).to_le_bytes(), "length preserved, not re-encoded");
@@ -369,7 +389,7 @@ fn test_synth_decline_framing() {
 #[test]
 fn test_synth_malformed_echoes_empty_identity() {
     let resp = DeclineResponse {
-        identity: Identity { op_identity: vec![], structure_key: vec![], revision_hash: None },
+        identity: Identity { op_identity: vec![], structure_key: vec![], revision_hash: None, correlation: None },
         decline_code: decline_code::MALFORMED_REQUEST, // 0x00000003
     };
     let b = resp.encode();
@@ -398,7 +418,7 @@ fn test_synth_malformed_echoes_empty_identity() {
 fn test_synth_reader_accepts_empty_identity() {
     // The canonical empty-identity MALFORMED_REQUEST decline (per §6.6-0004a).
     let cdec = DeclineResponse {
-        identity: Identity { op_identity: vec![], structure_key: vec![], revision_hash: None },
+        identity: Identity { op_identity: vec![], structure_key: vec![], revision_hash: None, correlation: None },
         decline_code: decline_code::MALFORMED_REQUEST,
     }
     .encode();

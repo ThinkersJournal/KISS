@@ -63,6 +63,8 @@ pub enum AnnounceDecline {
     /// A contract response's declared payload byte-length exceeded `MAX_CONTRACT_PAYLOAD_LEN`
     /// (§6.4-0004, §6.2-0014).
     PayloadLenOutOfRange { got: u32 },
+    /// The always-present correlation field's length byte was neither `0` nor `8` (§6.4-0013).
+    BadCorrelationLen { got: u8 },
 }
 
 // ---- §6.3 Availability list + §6.4 contract-query frames ---------------------
@@ -229,7 +231,16 @@ pub struct Identity {
     pub structure_key: Vec<u8>,
     pub op_identity: Vec<u8>,
     pub revision_hash: Option<[u8; 32]>,
+    /// The always-present correlation field (§6.4-0013): `None` is spelled as the single byte `00`,
+    /// `Some(id)` as `08` then the 8 id bytes.
+    pub correlation: Option<CorrelationId>,
 }
+
+/// A request-correlation id (§6.4-0013): exactly 8 bytes.
+pub type CorrelationId = [u8; 8];
+
+/// The length byte of a present correlation id (§6.4-0013).
+pub const CORRELATION_ID_LEN: u8 = 8;
 
 impl Identity {
     pub(crate) fn encode_into(&self, b: &mut Vec<u8>) {
@@ -240,6 +251,14 @@ impl Identity {
         b.push(if self.revision_hash.is_some() { 1 } else { 0 });
         if let Some(h) = &self.revision_hash {
             b.extend_from_slice(h);
+        }
+        // §6.4-0013: the correlation field is always present, a length byte then that many bytes
+        match &self.correlation {
+            None => b.push(0),
+            Some(id) => {
+                b.push(CORRELATION_ID_LEN);
+                b.extend_from_slice(id);
+            }
         }
     }
 
@@ -283,7 +302,24 @@ impl Identity {
         } else {
             None
         };
-        Ok((Identity { structure_key, op_identity, revision_hash }, off))
+        let (correlation, off) = read_correlation(bytes, off)?;
+        Ok((Identity { structure_key, op_identity, revision_hash, correlation }, off))
+    }
+}
+
+/// Read the always-present correlation field (§6.4-0013) at `off`: a length byte that MUST be `0` or `8`,
+/// then that many bytes. Any other length, or too few bytes, is a typed decline.
+pub(crate) fn read_correlation(bytes: &[u8], off: usize) -> Result<(Option<CorrelationId>, usize), AnnounceDecline> {
+    let len = *bytes.get(off).ok_or(AnnounceDecline::Truncated { region: "correlation_len" })?;
+    match len {
+        0 => Ok((None, off + 1)),
+        CORRELATION_ID_LEN => {
+            let end = skip_fixed(bytes, off + 1, 8, "correlation_id")?;
+            let mut id = [0u8; 8];
+            id.copy_from_slice(&bytes[off + 1..end]);
+            Ok((Some(id), end))
+        }
+        got => Err(AnnounceDecline::BadCorrelationLen { got }),
     }
 }
 
@@ -471,7 +507,7 @@ pub fn reference_availability_list() -> AvailabilityList {
 
 /// §6.4-0011 reference identity block, echoed by CYRQ/CRSP/CDEC: key AA BB CC, op `add`, revision present.
 pub fn reference_identity() -> Identity {
-    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: Some([0x11; 32]) }
+    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 /// §6.4-0001 reference contract-query request.
@@ -624,9 +660,10 @@ fn identity_extent(bytes: &[u8], off: usize) -> Result<usize, AnnounceDecline> {
     let off = skip_len_prefixed(bytes, off, MAX_STRUCTURE_KEY_LEN, "structure_key")?;
     let off = skip_len_prefixed(bytes, off, MAX_OP_IDENTITY_LEN, "op_identity")?;
     let flag = *bytes.get(off).ok_or(AnnounceDecline::Truncated { region: "revision_present" })?;
-    match flag {
-        0 => Ok(off + 1),
-        1 => skip_fixed(bytes, off + 1, 32, "revision_hash"),
-        got => Err(AnnounceDecline::BadRevisionPresent { got }),
-    }
+    let off = match flag {
+        0 => off + 1,
+        1 => skip_fixed(bytes, off + 1, 32, "revision_hash")?,
+        got => return Err(AnnounceDecline::BadRevisionPresent { got }),
+    };
+    read_correlation(bytes, off).map(|(_, end)| end)
 }

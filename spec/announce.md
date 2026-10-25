@@ -382,11 +382,9 @@ envelope; all multi-byte integers little-endian):
   the last of its `record_count` records (§6.3-0005); a `CYRQ`'s is the end of its identity block
   (§6.4-0001); a `CRSP`'s is the end of its payload (§6.4-0004); a `CDEC`'s is the end of its
   `decline_code` (§6.4-0007). A reader MUST NOT take a message's extent from anything outside the
-  message. **Stated limitation:** the optional correlation block of §6.4-0013, when a frame carries
-  it, follows the body, and whether it is present is not determinable from the message's own bytes
-  (a frame without it is valid and ends at its body), so a frame carrying it is not self-delimiting
-  by this clause and its extent here excludes it; a decision is owed before any freeze, alongside
-  the frame-version decision of §6.3-0013 (ROADMAP R1.10). *Test:*
+  message. (The correlation field of §6.4-0013 is always present and is the last component of the
+  identity block, so it is inside the extent of a `CYRQ`, `CRSP` and `CDEC` and each is
+  self-delimiting.) *Test:*
   `test_announce_message_extent_from_own_bytes`.
 - **KISS-ANNOUNCE-6.2-0015** — A message whose extent exceeds the bytes supplied — a declared
   length or count that runs past the end, or too few bytes to determine the extent at all — is
@@ -477,7 +475,8 @@ envelope; all multi-byte integers little-endian):
   4-byte request tag `CYRQ` (wire bytes `43 59 52 51`, u32 LE `0x51525943`); a
   little-endian u32 `structure_key` byte-length in `[1, 4096]`; the `structure_key`
   bytes; the `op_identity` length and bytes (§6.3-0013); then a 1-byte `revision_present`
-  flag (`0` or `1`); and, only when `revision_present == 1`, a 32-byte `revision_hash`. A
+  flag (`0` or `1`); only when `revision_present == 1`, a 32-byte `revision_hash`; and
+  then the correlation field (§6.4-0013). A
   reader MUST reject a `revision_present` value other than `0` or `1`, a `structure_key`
   length outside `[1, 4096]`, or an `op_identity` length outside `[1, 4096]`, with a typed
   decline. *Test:* `test_announce_query_request_shape`.
@@ -504,8 +503,8 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.4-0011** — A contract or decline **response** MUST echo the
   `(structure_key, op_identity, revision_hash)` identity it is answering for: the response
   carries a little-endian u32 `structure_key` length, the `structure_key` bytes, the
-  `op_identity` length and bytes (§6.3-0013), a 1-byte `revision_present` flag, and — when `revision_present == 1` — the 32-byte
-  `revision_hash` the provider selected. *Test:* `test_announce_response_echoes_identity`.
+  `op_identity` length and bytes (§6.3-0013), a 1-byte `revision_present` flag, when `revision_present == 1` the 32-byte
+  `revision_hash` the provider selected, and then the correlation field (§6.4-0013). *Test:* `test_announce_response_echoes_identity`.
 - **KISS-ANNOUNCE-6.4-0004** — A **contract response** MUST be framed as: the 4-byte
   response tag `CRSP` (wire bytes `43 52 53 50`, u32 LE `0x50535243`); the echoed
   identity block (§6.4-0011); a little-endian u32 payload byte-length; then that many
@@ -541,24 +540,27 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.4-0008** — A provider that does not advertise the contract-query
   capability bit MUST answer any contract-query request with a `QUERY_NOT_SUPPORTED`
   typed decline. *Test:* `test_announce_no_query_bit_declines`.
-- **KISS-ANNOUNCE-6.4-0013** — An implementation MAY carry an OPTIONAL 8-byte
-  request-correlation id on a contract-query request frame (`CYRQ`, §6.4-0001) and its
-  response frame, so a **concurrent** transport can match a response to the right
-  in-flight request. When carried, it is appended after the frame body as a 1-byte
-  `correlation_present` flag (`0` or `1`) and — only when `correlation_present == 1` —
-  an 8-byte `correlation_id`. When a request carries `correlation_present == 1`, the
-  response answering it (a `CRSP` §6.4-0004, a `CDEC` §6.4-0007, or — on the KISS-Synth
-  provision path that reuses this request verbatim, KISS-SYNTH-6.1-0002 — a `PRSP`
-  provision-success frame, KISS-SYNTH-6.4-0001b) MUST echo the identical 8
-  `correlation_id` bytes **unchanged**. The field is OPTIONAL and reserved: a
-  synchronous seam MAY omit it entirely (the frames are then exactly §6.4-0001 /
-  §6.4-0004 / §6.4-0007), and it MUST NOT be required for v1 conformance — a conforming
-  reader MUST accept a frame carrying no correlation field, and a provider MUST NOT
-  decline a request solely because it omits one. A reader MUST reject a
-  `correlation_present` value other than `0` or `1` with a `MALFORMED_REQUEST` typed
-  decline (§6.4-0009), never a panic. *Test:*
-  `test_announce_correlation_id_echoed_when_present`.
-
+- **KISS-ANNOUNCE-6.4-0013** — The **correlation field** is the last component of every
+  echoed identity block (§6.4-0011) — and therefore of a contract-query request (`CYRQ`, §6.4-0001),
+  a contract response (`CRSP`, §6.4-0004), a decline response (`CDEC`, §6.4-0007) and, on the
+  KISS-Synth provision path that reuses them, the `PRSP` provision-success frame
+  (KISS-SYNTH-6.4-0001b). It is a 1-byte `correlation_len`, which MUST be `0` or `8`, followed by
+  that many bytes (`correlation_id`). The field is **always present**: a frame that carries no
+  id spells it as the single byte `00`, never as nothing, so that every frame of this standard is
+  self-delimiting (§6.2-0014). The id lets a **concurrent** transport match a response to the right
+  in-flight request; it is OPTIONAL to carry one and MUST NOT be required for v1 conformance, and a
+  provider MUST NOT decline a request solely because its `correlation_len` is `0`. When a request
+  carries `correlation_len == 8`, the response answering it (`CRSP`, `CDEC`, or `PRSP`) MUST echo the
+  identical 8 `correlation_id` bytes **unchanged**, and a response to a request whose
+  `correlation_len` is `0` MUST carry `00`. A reader MUST reject a `correlation_len` other than `0`
+  or `8` with a `MALFORMED_REQUEST` typed decline (§6.4-0009), and a frame that ends before the
+  field, or before the `correlation_id` bytes a length of `8` promises, is truncated
+  (§6.2-0015); never a panic. *Informative (Breaking, 2026-10-25, CireSnave decision 302):* this
+  replaces an earlier optional block (`correlation_present` flag appended after the frame body, which
+  a synchronous seam could omit entirely) whose presence could not be told from the frame's own bytes;
+  every `CYRQ`, `CRSP`, `CDEC` and `PRSP` is one byte longer than before when it carries no id, so
+  those three Announce frames in `announce_vectors.json` and every speaker's encoder and reader change.
+  *Test:* `test_announce_correlation_id_echoed_when_present`.
 - **KISS-ANNOUNCE-6.4-0014** — A producer MUST write a `CRSP` payload byte-length
   `<= 16777216` (`MAX_CONTRACT_PAYLOAD_LEN = 2^24`), and a reader MUST reject a declared
   payload length above that maximum with a typed decline, and without allocating on the

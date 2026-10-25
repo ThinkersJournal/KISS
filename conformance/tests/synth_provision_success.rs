@@ -28,7 +28,7 @@ const IDENTITY_GOLDEN: &str = concat!(
 );
 
 fn identity() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 fn success() -> ProvisionSuccess {

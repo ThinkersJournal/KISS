@@ -240,10 +240,10 @@ strided cell.
    `cuda:sm89`) — a **miss**.
 3. **Provision (level 3).** The consumer sends the contract-query request (tag
    `CYRQ`): the `u32` `structure_key` length, the `structure_key` bytes, the `u32`
-   `op_identity` length and bytes (`add`), and a `revision_present = 0` flag. On the miss, the provider **builds** the kernel (JIT),
+   `op_identity` length and bytes (`add`), a `revision_present = 0` flag, and the correlation field (`00`: no id, KISS-ANNOUNCE-6.4-0013). On the miss, the provider **builds** the kernel (JIT),
    assigns it a 32-byte `revision_hash`, and answers with `{artifact, contract}` in a
    `PRSP` frame: the echoed `(structure_key, op_identity, revision_hash)` identity block (with
-   `revision_present = 1` and the freshly assigned `revision_hash`), a 4-byte
+   `revision_present = 1`, the freshly assigned `revision_hash`, and the correlation field), a 4-byte
    `artifact_format_tag`, the `u64`-framed artifact bytes, then the `u32`-framed opaque
    contract document whose Semantics is a one-node `add` DAG, whose Interface is the
    strided positional signature, and whose Guarantees declare determinism class
@@ -711,7 +711,8 @@ correct comparator. See umbrella §3 for the full statement.
 - **KISS-SYNTH-6.4-0001b** — A provision success MUST be framed as the KISS-Synth
   provision-success frame, tag `PRSP` (wire bytes `50 52 53 50`), whose fields in wire
   order left-to-right are: the 4-byte tag; the echoed `(structure_key, op_identity, revision_hash)`
-  identity block (`KISS-ANNOUNCE-6.4-0011`) with `revision_present == 1`; a 4-byte
+  identity block (`KISS-ANNOUNCE-6.4-0011`, whose last component is the correlation field,
+  `KISS-ANNOUNCE-6.4-0013`) with `revision_present == 1`; a 4-byte
   `artifact_format_tag`; a little-endian `u64` artifact byte-length; that many artifact
   bytes; a little-endian `u32` contract byte-length; then that many bytes of the
   self-delimiting KISS-Contract document. *Test:*

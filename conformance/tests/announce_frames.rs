@@ -472,7 +472,7 @@ fn test_announce_structure_key_is_opaque() {
     );
 
     // via a CYRQ identity block.
-    let req = QueryRequest { identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: None } };
+    let req = QueryRequest { identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: None, correlation: None } };
     let back = decode_query_request(&req.encode()).expect("opaque key must decode");
     assert_eq!(
         back.identity.structure_key, key,
@@ -533,7 +533,7 @@ fn test_announce_revision_hash_opaque_identity() {
 /// distinct from the per-frame goldens §6.4-0004 / §6.4-0007.
 #[test]
 fn test_announce_response_echoes_identity() {
-    let identity = Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) };
+    let identity = Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None };
 
     // CYRQ is tag(4) + identity ONLY, so the identity block == everything past the tag.
     let req = QueryRequest { identity: identity.clone() }.encode();

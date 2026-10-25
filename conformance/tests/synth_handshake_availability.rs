@@ -47,12 +47,12 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 /// The same cell, named WITHOUT pinning a build (revision_present == 0).
 fn identity_unpinned() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None, correlation: None }
 }
 
 /// The level-2 availability wire identity of one record: the per-record region of a
@@ -136,7 +136,7 @@ fn test_synth_contract_not_pushed_to_announce() {
     // the contract bytes live there, NOT in the availability record.
     let contract_bytes = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03];
     let crsp = ContractResponse {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash) },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash), correlation: None },
         payload: contract_bytes.clone(),
     }
     .encode();
