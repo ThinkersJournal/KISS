@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.88 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/interface-project-plan.md`, the one-page plan for the interface project (board 295; name left as `<name>`; A/B/C open). Numbered 0.4.88 because #675 proposes 0.4.87.
+
 ## 0.4.86 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/PATENT-SWEEP.md` second pass (PM follow-up on #672). All independent claims of the 8 patents read; a CPC/similar-documents walk found six more; one `needs-review` (US8458680B2, Google, a runtime that picks a processor type and resolves a precompiled kernel; an implementer-level question, not the documents). The record states what is still not done. Not legal advice.
