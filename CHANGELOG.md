@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.79 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- R3.11 KISS#6, single-source the splitmix corpus generator. The CUDA-side copy lives once in `cuda/splitmix64.cuh`; `fmax_ieee.cu` and `generated_relu_add_diff.cu` include it, and `differential.rs` exposes the three constants. `tests/splitmix_single_source.rs` pins the header to the Rust constants and fails if a `.cu` re-declares the generator (mutation-checked). The `edge_f32` list is still hand-copied. No spec or wire change.
+
 ## 0.4.78 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: board 279 pair 5 options note, `docs/options-r5-18-contract-6-8-0012-wording.md` (R5.18, the stale "deferred non-contraction coordinate" wording in KISS-CONTRACT-6.8-0012). No normative text.

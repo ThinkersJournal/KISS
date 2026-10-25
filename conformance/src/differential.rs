@@ -12,15 +12,21 @@
 /// harness stays dependency-free, Conform §6.5).
 pub struct SplitMix64(u64);
 
+/// The splitmix64 constants. `cuda/splitmix64.cuh` is the one CUDA-side copy;
+/// `tests/splitmix_single_source.rs` pins it against these.
+pub const SPLITMIX_GAMMA: u64 = 0x9E37_79B9_7F4A_7C15;
+pub const SPLITMIX_MIX1: u64 = 0xBF58_476D_1CE4_E5B9;
+pub const SPLITMIX_MIX2: u64 = 0x94D0_49BB_1331_11EB;
+
 impl SplitMix64 {
     pub fn new(seed: u64) -> Self {
         Self(seed)
     }
     pub fn next_u64(&mut self) -> u64 {
-        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        self.0 = self.0.wrapping_add(SPLITMIX_GAMMA);
         let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z = (z ^ (z >> 30)).wrapping_mul(SPLITMIX_MIX1);
+        z = (z ^ (z >> 27)).wrapping_mul(SPLITMIX_MIX2);
         z ^ (z >> 31)
     }
 }

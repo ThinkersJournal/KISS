@@ -35,18 +35,8 @@
 // The kernel under test — emitted verbatim by baracuda-kernelgen:
 #include "generated/baracuda_gen_relu_add_f32_co_v4.cu"
 
-// splitmix64, bit-identical to differential.rs::SplitMix64.
-struct SplitMix64 {
-    uint64_t s;
-    explicit SplitMix64(uint64_t seed) : s(seed) {}
-    uint64_t next() {
-        s += 0x9E3779B97F4A7C15ULL;
-        uint64_t z = s;
-        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-        z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-        return z ^ (z >> 31);
-    }
-};
+// splitmix64: the single CUDA-side copy, bit-identical to differential.rs::SplitMix64.
+#include "splitmix64.cuh"
 
 static float bits_to_f32(uint32_t b) { float f; memcpy(&f, &b, 4); return f; }
 static uint32_t f32_to_bits(float f) { uint32_t b; memcpy(&b, &f, 4); return b; }
