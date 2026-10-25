@@ -653,6 +653,49 @@ fn vec_cap_cases(out: &mut Vec<DerivationVector>) {
     ));
 }
 
+/// §6.1-0014..-0016: the MX element dtypes are usable storage dtypes in the key's dtype field, and never
+/// an accumulator. An elementwise cell on one derives (the accumulator coordinate is omitted when it equals
+/// the compute dtype); a contraction on one declines until the caller declares the accumulator, because
+/// `<acc>` is always spelled in a contraction field and defaults to operand 0's dtype.
+fn mx_element_cases(out: &mut Vec<DerivationVector>) {
+    for dt in ["f4e2m1", "f6e2m3", "f6e3m2"] {
+        let name: &'static str = match dt {
+            "f4e2m1" => "mx_f4e2m1_elementwise_add",
+            "f6e2m3" => "mx_f6e2m3_elementwise_add",
+            _ => "mx_f6e3m2_elementwise_add",
+        };
+        out.push(v(
+            name,
+            "KISS-CLASSIFY-6.1-0014",
+            "an elementwise add on an MX element dtype: sub-byte storage never vectorizes, so every operand is v1; no accumulator coordinate is spelled",
+            cell(
+                CUDA,
+                vec![
+                    op(Input, dt, &[64, 128], &[128, 1], 256),
+                    op(Input, dt, &[64, 128], &[128, 1], 256),
+                    op(Output, dt, &[64, 128], &[128, 1], 256),
+                ],
+            ),
+        ));
+    }
+    out.push(v(
+        "mx_f4e2m1_ctr_undeclared_accumulator_declines",
+        "KISS-CLASSIFY-6.1-0016",
+        "a contraction whose operand 0 is f4e2m1 with no declared accumulator: <acc> would default to the compute dtype, an MX element, so the deriver declines",
+        gemm("f4e2m1", &[], 8, 4096, 4096),
+    ));
+    {
+        let mut c = gemm("f4e2m1", &[], 8, 4096, 4096);
+        c.accumulator = Some("f32");
+        out.push(v(
+            "mx_f4e2m1_ctr_declared_accumulator_derives",
+            "KISS-CLASSIFY-6.1-0016",
+            "the same contraction with accumulator f32 declared: <wdt> and <out> may be the MX element, so it derives",
+            c,
+        ));
+    }
+}
+
 /// The vectors, in a stable order (names are the join key for consumers).
 pub fn vectors() -> Vec<DerivationVector> {
     let mut out = Vec::new();
@@ -666,6 +709,8 @@ pub fn vectors() -> Vec<DerivationVector> {
     ctr_cases(&mut out);
     decline_cases(&mut out);
     vec_cap_cases(&mut out);
+
+    mx_element_cases(&mut out);
     out
 }
 

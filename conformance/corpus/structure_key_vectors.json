@@ -10,9 +10,9 @@
   },
   "structure_key_schema_version": 6,
   "token_prefix": "sk6",
-  "dtype_axis_note": "recognition_set is all 24 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 21 a byte-match runs over. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
-  "recognition_count": 24,
-  "usable_count": 21,
+  "dtype_axis_note": "recognition_set is all 27 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 24 a byte-match runs over. The three MX element rows (f4e2m1, f6e2m3, f6e3m2) are appended after c128 and are usable, but typed-decline (ElementDtypeAsAccumulator) in an accumulator position. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
+  "recognition_count": 27,
+  "usable_count": 24,
   "dtype_recognition_set": [
     "f16",
     "bf16",
@@ -37,7 +37,10 @@
     "u4",
     "b1",
     "c64",
-    "c128"
+    "c128",
+    "f4e2m1",
+    "f6e2m3",
+    "f6e3m2"
   ],
   "dtype_usable_set": [
     "f16",
@@ -60,7 +63,10 @@
     "u4",
     "b1",
     "c64",
-    "c128"
+    "c128",
+    "f4e2m1",
+    "f6e2m3",
+    "f6e3m2"
   ],
   "reserved_dtypes": [
     "f8e4m3fnuz",
@@ -164,7 +170,7 @@
     }
   ],
   "mapping_guard_note": "The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.",
-  "coverage_note": "The positive vectors exercise the structure_key token GRAMMAR — field order, optional-field presence, sentinel spellings, work-class/dispatch, and decline verdicts — NOT the dtype vocabulary: they place only a few of the 21 usable dtypes in the dtype position, so a dtype-spelling divergence on a token that never appears is invisible to a byte-match against this set. Vocabulary agreement is a DIFFERENT instrument's job and IS closed there: the dtype-manifest gate — tools/test_kiss_dtypes_manifest.py, over conformance/corpus/dtype_manifest.json — asserts each dtype token's metadata, so a c128->c127 respell raises there, naming the token. Nor do the POSITIVE vectors test decline-side rules: rule (d) — rejecting the all-default redundant (acc+mp) form — is exercised only by the decline vector 'redundant_acc_mp_all_default' -> RedundantAccMpField (a deriver covers it by running the DECLINE vectors on the parse side, or by proving the redundant form unconstructible on the emit side; never by the positive byte-match). So 'the byte-match passed' means the token grammar agrees; the vocabulary is confirmed by the manifest and the decline-side rules by the decline vectors, not by this positive set. Three further blind spots, each with a DIFFERENT remedy so a reader knows what to do next: (c) the positives are a SAMPLE, not a census — a divergence that surfaces as a DIFFERENT cell (a shape this set never places) rather than a different spelling of the SAME cell is invisible, and is closed by sampling more cells, never by this set agreeing. (d) cell-class DERIVATION is upstream of the token — the cell_class code is IN each token, but whether a deriver reaches it (§6.5-0015) from a cell's operands and declared facts is not exercised by a token-level byte-match, so a party whose derivation reads a different declared fact, or a different pointwise test, emits a well-formed token for a different cell (absent here), not a mismatched spelling of this one; closed by a derivation instrument, never by this set (the reference derivation is pinned by test_classify_cell_class_derivation). [(c) and (d) share a shape — the byte-match tests spelling agreement on the cells sampled, not which cells EXIST or how ops MAP — but NOT a remedy, so they are named separately: (c) is a coverage gap, (d) is a category gap.] (e) Agreement on a PASS-THROUGH field is not evidence of independent DERIVATION of it. (Whether umbrella §5.3's implementation count should instead be per-FIELD is #208's OPEN question, owned there; this note claims only what THIS positive set cannot see.) A field a consumer carries VERBATIM (copied from a shared source, not derived from its own graph) byte-matches across every party sharing that source whether or not any DERIVED it and whether or not it is CORRECT. The lone pass-through field here is the `target` capability token's namespace-owned capability-SET SUFFIX — the part AFTER the colon (the namespace PREFIX `cuda`/`vulkan` is ThinkersJournal-registry-owned under §6.8 and IS checked; only the suffix is the maintainer's vocabulary). It is carried OPAQUELY by every consumer that compares it, and NONE derives it; one such `vulkan:` suffix once byte-matched green while it was MALFORMED against vulkan v4 — that incident is the proof this positive set cannot see the field. TWO DIFFERENT #200 instruments cover it, and they are not one: (i) the `namespace_vocabulary_versions` STAMP records which vocabulary version each embedded suffix was generated against — it proves BINDING, not CURRENCY: a stamp cannot report whether that vocabulary has SINCE moved, only which one was used, so detecting a STALE suffix needs a party comparing the stamp against the live namespace document (the §6.8-0008 manifest is that comparator, the sibling of the dtype-manifest gate above). The stamp alone is genuinely WEAKER than the arity gate; and (ii) the generation-time ARITY GATE refuses to emit a suffix whose FIELD COUNT violates the recorded arity, making a WRONG-ARITY suffix UNPUBLISHABLE — the instrument that closed the vulkan incident, which was an arity break. It counts `.`-separated fields only; it does NOT validate field CONTENT against the vocabulary, so a suffix with the right field count but a wrong field value (an unknown `ops-…` code, say) passes the gate and is caught by the namespace-vocabulary manifest (§6.8-0008), not here. The arity gate is also a TWO-LINK guarantee, not one: the generator cannot emit a token that violates the IN-CODE arity, and the in-code arity cannot drift from `spec/namespaces/<ns>.md` WHILE ITS BINDING TEST RUNS (arity is pinned in code and bound to the document by test — deliberately, to keep the emitter pure and the artifact path-independent). None of this is confirmed by this positive byte-match.",
+  "coverage_note": "The positive vectors exercise the structure_key token GRAMMAR — field order, optional-field presence, sentinel spellings, work-class/dispatch, and decline verdicts — NOT the dtype vocabulary: they place only a few of the 24 usable dtypes in the dtype position, so a dtype-spelling divergence on a token that never appears is invisible to a byte-match against this set. Vocabulary agreement is a DIFFERENT instrument's job and IS closed there: the dtype-manifest gate — tools/test_kiss_dtypes_manifest.py, over conformance/corpus/dtype_manifest.json — asserts each dtype token's metadata, so a c128->c127 respell raises there, naming the token. Nor do the POSITIVE vectors test decline-side rules: rule (d) — rejecting the all-default redundant (acc+mp) form — is exercised only by the decline vector 'redundant_acc_mp_all_default' -> RedundantAccMpField (a deriver covers it by running the DECLINE vectors on the parse side, or by proving the redundant form unconstructible on the emit side; never by the positive byte-match). So 'the byte-match passed' means the token grammar agrees; the vocabulary is confirmed by the manifest and the decline-side rules by the decline vectors, not by this positive set. Three further blind spots, each with a DIFFERENT remedy so a reader knows what to do next: (c) the positives are a SAMPLE, not a census — a divergence that surfaces as a DIFFERENT cell (a shape this set never places) rather than a different spelling of the SAME cell is invisible, and is closed by sampling more cells, never by this set agreeing. (d) cell-class DERIVATION is upstream of the token — the cell_class code is IN each token, but whether a deriver reaches it (§6.5-0015) from a cell's operands and declared facts is not exercised by a token-level byte-match, so a party whose derivation reads a different declared fact, or a different pointwise test, emits a well-formed token for a different cell (absent here), not a mismatched spelling of this one; closed by a derivation instrument, never by this set (the reference derivation is pinned by test_classify_cell_class_derivation). [(c) and (d) share a shape — the byte-match tests spelling agreement on the cells sampled, not which cells EXIST or how ops MAP — but NOT a remedy, so they are named separately: (c) is a coverage gap, (d) is a category gap.] (e) Agreement on a PASS-THROUGH field is not evidence of independent DERIVATION of it. (Whether umbrella §5.3's implementation count should instead be per-FIELD is #208's OPEN question, owned there; this note claims only what THIS positive set cannot see.) A field a consumer carries VERBATIM (copied from a shared source, not derived from its own graph) byte-matches across every party sharing that source whether or not any DERIVED it and whether or not it is CORRECT. The lone pass-through field here is the `target` capability token's namespace-owned capability-SET SUFFIX — the part AFTER the colon (the namespace PREFIX `cuda`/`vulkan` is ThinkersJournal-registry-owned under §6.8 and IS checked; only the suffix is the maintainer's vocabulary). It is carried OPAQUELY by every consumer that compares it, and NONE derives it; one such `vulkan:` suffix once byte-matched green while it was MALFORMED against vulkan v4 — that incident is the proof this positive set cannot see the field. TWO DIFFERENT #200 instruments cover it, and they are not one: (i) the `namespace_vocabulary_versions` STAMP records which vocabulary version each embedded suffix was generated against — it proves BINDING, not CURRENCY: a stamp cannot report whether that vocabulary has SINCE moved, only which one was used, so detecting a STALE suffix needs a party comparing the stamp against the live namespace document (the §6.8-0008 manifest is that comparator, the sibling of the dtype-manifest gate above). The stamp alone is genuinely WEAKER than the arity gate; and (ii) the generation-time ARITY GATE refuses to emit a suffix whose FIELD COUNT violates the recorded arity, making a WRONG-ARITY suffix UNPUBLISHABLE — the instrument that closed the vulkan incident, which was an arity break. It counts `.`-separated fields only; it does NOT validate field CONTENT against the vocabulary, so a suffix with the right field count but a wrong field value (an unknown `ops-…` code, say) passes the gate and is caught by the namespace-vocabulary manifest (§6.8-0008), not here. The arity gate is also a TWO-LINK guarantee, not one: the generator cannot emit a token that violates the IN-CODE arity, and the in-code arity cannot drift from `spec/namespaces/<ns>.md` WHILE ITS BINDING TEST RUNS (arity is pinned in code and bound to the document by test — deliberately, to keep the emitter pure and the artifact path-independent). None of this is confirmed by this positive byte-match.",
   "positive_vectors": [
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -253,6 +259,30 @@
       "target": "cuda:sm89",
       "target_namespace": "cuda",
       "token": "sk6|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0014",
+      "name": "binary_two_operands_f4e2m1",
+      "note": "binary_two_operands with MX element dtype f4e2m1 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|f4e2m1|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0014",
+      "name": "binary_two_operands_f6e2m3",
+      "note": "binary_two_operands with MX element dtype f6e2m3 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|f6e2m3|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0014",
+      "name": "binary_two_operands_f6e3m2",
+      "note": "binary_two_operands with MX element dtype f6e3m2 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk6|ew2|f6e3m2|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -464,6 +494,20 @@
       "note": "an operand sub-key with more than the six permitted parts",
       "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/dl/dl;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "BadOperandSubKey"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0016",
+      "name": "mx_element_as_contraction_accumulator",
+      "note": "the contraction `<acc>` names the MX element `f4e2m1`: usable as a weight or output dtype, never an accumulator",
+      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f4e2m1/bf16/st/qf8e8m0",
+      "decline": "ElementDtypeAsAccumulator"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.1-0016",
+      "name": "mx_element_as_non_contraction_accumulator",
+      "note": "the non-contraction (acc+mp) field names the MX element `f6e2m3` as its accumulator",
+      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f6e2m3/rm",
+      "decline": "ElementDtypeAsAccumulator"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",

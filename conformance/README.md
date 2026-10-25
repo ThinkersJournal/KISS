@@ -34,7 +34,7 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**460<!-- bound:harness --> of 966<!-- bound:clauses --> normative clauses are
+**463<!-- bound:harness --> of 969<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 216<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -181,7 +181,7 @@ default build and CI stay GPU-free.
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 40<!-- bound:synth_backed -->/131<!-- bound:synth_clauses --> and the highest Classify at 93<!-- bound:classify_backed -->/123<!-- bound:classify_clauses -->; Announce is 40<!-- bound:announce_backed -->/77<!-- bound:announce_clauses -->. Every one has a
+  Synth at 40<!-- bound:synth_backed -->/131<!-- bound:synth_clauses --> and the highest Classify at 96<!-- bound:classify_backed -->/126<!-- bound:classify_clauses -->; Announce is 40<!-- bound:announce_backed -->/77<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync

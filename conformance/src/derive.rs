@@ -98,6 +98,8 @@ pub enum DeriveDecline {
     Batch(BatchRoleDecline),
     /// The declared index slot does not name an operand.
     IndexSlotOutOfRange,
+    /// The accumulator coordinate the key would spell is an MX element dtype (§6.1-0016).
+    ElementDtypeAsAccumulator,
 }
 
 impl DeriveDecline {
@@ -106,6 +108,7 @@ impl DeriveDecline {
         match self {
             Self::ScaleDtypeAtOperand0 => "ScaleDtypeAtOperand0",
             Self::ReservedDtype => "ReservedDtype",
+            Self::ElementDtypeAsAccumulator => "ElementDtypeAsAccumulator",
             Self::UnknownDtype => "UnknownDtype",
             Self::OperandCount => "OperandCount",
             Self::BadShape => "BadShape",
@@ -129,7 +132,7 @@ pub fn dtype_storage_bytes(dtype: &str) -> Option<Option<u32>> {
         "f64" | "i64" | "u64" | "c64" => Some(8),
         "c128" => Some(16),
         "i8" | "u8" | "bool" | "f8e4m3fn" | "f8e4m3fnuz" | "f8e5m2" | "f8e5m2fnuz" | "f8e8m0" | "f8e6m2" => Some(1),
-        "i4" | "u4" | "b1" => None,
+        "i4" | "u4" | "b1" | "f4e2m1" | "f6e2m3" | "f6e3m2" => None,
         _ => return Option::None,
     })
 }
@@ -261,12 +264,17 @@ fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool, vec_cap: u32
 
 /// The non-contraction `(acc + mp)` field (§6.7-0013): emitted iff the accumulator differs from the
 /// compute dtype or `<mp>` is not the default; both slots are spelled when it is.
-fn precision_field(cell: &DerivationCell, primary: &str) -> Option<AccMp> {
+fn precision_field(cell: &DerivationCell, primary: &str) -> Result<Option<AccMp>, DeriveDecline> {
     let acc_deviates = cell.accumulator.is_some_and(|a| a != primary);
     if acc_deviates || cell.math_fidelity != ACC_MP_DEFAULT_MP {
-        Some(AccMp { acc: cell.accumulator.unwrap_or(primary).to_string(), mp: cell.math_fidelity })
+        let acc = cell.accumulator.unwrap_or(primary);
+        // §6.1-0016: an MX element is never an accumulator coordinate that gets spelled
+        if MX_ELEMENT_DTYPES.contains(&acc) {
+            return Err(DeriveDecline::ElementDtypeAsAccumulator);
+        }
+        Ok(Some(AccMp { acc: acc.to_string(), mp: cell.math_fidelity }))
     } else {
-        None
+        Ok(None)
     }
 }
 
@@ -304,6 +312,11 @@ fn contraction_field(
     let batch = derive_batch_class(frame, &roles.batch, &[ma, na, ka], &out_axes).map_err(DeriveDecline::Batch)?;
     for d in [weight.dtype, out.dtype].into_iter().chain(scale.map(|o| o.dtype)) {
         check_dtype(d)?; // wdt, out and sdt are key positions (§6.1-0001)
+    }
+    // §6.1-0016: `<acc>` is always spelled in a contraction field and is never an MX element, so an
+    // MX-element operand 0 with an undeclared accumulator (which defaults to it) declines.
+    if MX_ELEMENT_DTYPES.contains(&cell.accumulator.unwrap_or(primary)) {
+        return Err(DeriveDecline::ElementDtypeAsAccumulator);
     }
     Ok(Contraction {
         m: size_class_of(me),
@@ -372,6 +385,6 @@ pub fn derive_structure_key(cell: &DerivationCell) -> Result<StructureKey, Deriv
         operands,
         reduce,
         contraction,
-        acc_mp: if cell.contraction.is_some() { None } else { precision_field(cell, primary) },
+        acc_mp: if cell.contraction.is_some() { None } else { precision_field(cell, primary)? },
     })
 }
