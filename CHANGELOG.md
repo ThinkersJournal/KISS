@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.4.81 — 2026-10-25 (number proposed; the PM allocates at gate time)
+
+- Spec (Classify, **normative**, PM ruling C on the D7 sidecar extra-fields ask): KISS-CLASSIFY-6.3-0012 gains one MUST, that layouts differing in a fact the clause does not cover MUST get distinct `encoding` codes, plus an informative paragraph listing the four groups Fuel reported (scale of the scale, zero-point, nibble order/pack axis/permutation, block shape). No field, no table row, no `structure_key` byte changes. The MUST falls on the producer/registry and the Classify harness cannot test it; the informative list is unchecked against the external registry, which is not in this repository.
+
 ## 0.4.80 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/call-for-outside-readers.md` (a community-post draft asking for foreign readers, what they need, what to do, how to respond publicly) and the `Outside reader report` issue template; ROADMAP R3.11 records the `build_and_run.bat` MSVC 14.29 pin. Nothing is sent to anyone. Numbered 0.4.80 because #669 proposes 0.4.79.
