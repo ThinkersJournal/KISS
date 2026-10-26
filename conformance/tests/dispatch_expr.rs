@@ -21,6 +21,7 @@ fn scalars() -> LaunchScalars {
 
 #[test]
 fn test_contract_dispatch_expressions_machine_evaluable() {
+    // Backs: KISS-CONTRACT-6.6-0006
     let s = scalars();
     // scalar arithmetic + ceil_div (the pre-existing grammar) still evaluates.
     assert_eq!(eval("ceil_div(n, 256)", &s, EvalMode::Domain).unwrap(), 1);

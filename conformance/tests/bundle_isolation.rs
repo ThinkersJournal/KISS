@@ -27,6 +27,7 @@ fn member(tail: &str) -> Vec<u8> {
 /// bundle-fatal.
 #[test]
 fn test_contract_bundle_member_isolation() {
+    // Backs: KISS-CONTRACT-6.11-0011
     let a = member("op_identity = add\n");
     let mut b = member("op_identity = mul\n");
     let c = member("op_identity = exp\n");
@@ -60,6 +61,30 @@ fn test_contract_bundle_member_isolation() {
         matches!(outcomes[2], MemberOutcome::Accepted(_)),
         "well-formed sibling after the bad member must still parse — isolation, not bundle-fatal"
     );
+
+    // The clause names more malformations than a bad CRC (the weak-tie review of decision 308): a member
+    // whose `contract_version` the reader does not support is isolated the same way.
+    let unsupported = Document {
+        contract_kind: "kiss-contract".into(),
+        contract_version: "9".into(),
+        body: b"[section:1:identity]
+op_identity = mul
+".to_vec(),
+    }
+    .encode();
+    let mut stream = Vec::new();
+    stream.extend_from_slice(&a);
+    stream.extend_from_slice(&unsupported);
+    stream.extend_from_slice(&c);
+    let (outcomes, frame_err) = read_bundle(&stream);
+    assert_eq!(frame_err, None);
+    assert_eq!(outcomes.len(), 3);
+    assert!(matches!(outcomes[0], MemberOutcome::Accepted(_)));
+    assert!(
+        matches!(outcomes[1], MemberOutcome::Declined(ContractDecline::UnknownVersion { .. })),
+        "an unsupported contract_version is a typed decline isolated to its member"
+    );
+    assert!(matches!(outcomes[2], MemberOutcome::Accepted(_)), "the sibling after it still parses");
 }
 
 /// §6.11-0011 — a headingless (magic-less body) member is likewise isolated: its siblings still

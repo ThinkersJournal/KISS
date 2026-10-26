@@ -125,6 +125,7 @@ fn test_bundle_envelope_declines_malformed() {
 /// so an aligned catalog validates and any per-cell disagreement is a typed fork.
 #[test]
 fn test_contract_bundle_envelope_shared_provenance() {
+    // Backs: KISS-CONTRACT-6.9-0009
     let env = an_envelope();
 
     // Per-cell provenance riding each contained contract, using the identical
