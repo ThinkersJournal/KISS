@@ -229,7 +229,7 @@ fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
 }
 
 // Backs: KISS-OPS-6.19-0020 — rank-1 sole axis and a rank-3 full reduction encode 0xFFFF (never 0x0001/0x0007), trailing 0xFFFE, subset mask otherwise
-// Backs: KISS-OPS-6.19-0038 — an empty axis set (0x0000) is refused, never emitted
+// Backs[enforced]: KISS-OPS-6.19-0038 — an empty axis set (0x0000) is refused, never emitted
 #[test]
 fn rank_sensitivity_of_reduce_axes_matches_the_spec_examples() {
     // §6.19-0020 / Appendix E.1: the rank is NOT in the blob, so these share or split bytes by design
@@ -341,7 +341,7 @@ fn control_a_swapped_field_order_is_caught() {
     }
 }
 
-// Backs: KISS-OPS-6.19-0037 — an encoder refuses to emit an axis field >= MAX_RANK (axis 8)
+// Backs[enforced]: KISS-OPS-6.19-0037 — an encoder refuses to emit an axis field >= MAX_RANK (axis 8)
 #[test]
 fn control_a_wrong_token_or_missing_field_is_refused_not_guessed() {
     let mut a: Attrs = ov::base_attrs("gather").unwrap();

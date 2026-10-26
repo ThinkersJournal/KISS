@@ -41,6 +41,7 @@ fn test_ops_atan2_class_is_ulp() {
 
 /// KISS-OPS-6.0-0002: every atom in the exact-byte set is class exact-byte, and no
 /// transcendental atom is (condition (a): "contains no transcendental atom (§6.8)").
+// Backs[enforced]: KISS-OPS-6.0-0002
 #[test]
 fn test_ops_exact_byte_ops() {
     for op in EXACT_BYTE_ATOMS {

@@ -124,7 +124,7 @@ fn assert_structural_declines(parse: SectionParser, id: u8, name: &str, fields: 
 /// it is ENFORCED on bytes) — the Interface section carries exactly its seven fields in order;
 /// discriminate: an independent `target` field is forbidden (the target is the Identity
 /// `target_capability`, §6.3-0007 / §6.5-0003) — the "the interface names its target" mistake.
-// Backs: KISS-CONTRACT-6.5-0001 — the Interface block carries exactly its seven fields in order (missing/reordered/unknown decline) and a separate `target` field is forbidden
+// Backs[enforced]: KISS-CONTRACT-6.5-0001 — the Interface block carries exactly its seven fields in order (missing/reordered/unknown decline) and a separate `target` field is forbidden
 #[test]
 fn test_contract_interface_block_bytes() {
     let fields: [(&str, &str); 7] = [
@@ -152,8 +152,8 @@ fn test_contract_interface_block_bytes() {
 /// Capabilities section carries exactly its eight fields in order; discriminate: an Interface-only
 /// field (`count_unit`/`in_place`/`alignment_bytes`) leaking in is forbidden (§6.5-0001) — the
 /// cross-section leak a flat unscoped parser would allow.
-// Backs: KISS-CONTRACT-6.7-0001 — the Capabilities block carries exactly its eight fields in order (missing/reordered/unknown decline)
-// Backs: KISS-CONTRACT-6.5-0001 — an Interface-only field (`count_unit`) in the Capabilities section is a forbidden-field decline
+// Backs[enforced]: KISS-CONTRACT-6.7-0001 — the Capabilities block carries exactly its eight fields in order (missing/reordered/unknown decline)
+// Backs[enforced]: KISS-CONTRACT-6.5-0001 — an Interface-only field (`count_unit`) in the Capabilities section is a forbidden-field decline
 #[test]
 fn test_contract_capabilities_block_bytes() {
     let fields: [(&str, &str); 8] = [
@@ -182,7 +182,7 @@ fn test_contract_capabilities_block_bytes() {
 /// section carries exactly its five fields in order; discriminate: `audited_status` is forbidden (a
 /// derived Guarantees field, §6.8-0001/-0008) — the "audited_status is a trust field, put it in
 /// Provenance" mistake.
-// Backs: KISS-CONTRACT-6.9-0001 — the Provenance block carries exactly its five fields in order and `audited_status` is a forbidden-field decline
+// Backs[enforced]: KISS-CONTRACT-6.9-0001 — the Provenance block carries exactly its five fields in order and `audited_status` is a forbidden-field decline
 #[test]
 fn test_contract_provenance_block_bytes() {
     let fields: [(&str, &str); 5] = [

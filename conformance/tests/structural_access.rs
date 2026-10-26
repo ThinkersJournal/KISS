@@ -18,7 +18,7 @@ fn bits_eq(a: f32, b: f32) -> bool {
 
 // ---- reduce: monoid identities + empty-reduction (KISS-OPS §6.11-0002) -------
 
-// Backs: KISS-OPS-6.11-0002
+// Backs[enforced]: KISS-OPS-6.11-0002
 #[test]
 fn reduce_empty_axis_yields_monoid_identity() {
     // §6.11-0002: "a reduction over an empty axis MUST yield the monoid identity."
@@ -28,7 +28,7 @@ fn reduce_empty_axis_yields_monoid_identity() {
     assert_eq!(reduce_f32(&[], Monoid::Min), f32::INFINITY); // dtype maximum
 }
 
-// Backs: KISS-OPS-6.11-0002 — reduce folds with the sum/prod/max/min monoid (golden fold values)
+// Backs[enforced]: KISS-OPS-6.11-0002 — reduce folds with the sum/prod/max/min monoid (golden fold values)
 #[test]
 fn reduce_ordinary_values() {
     // Golden multiset {1,2,3,4}: sum=10, prod=24, max=4, min=1.
@@ -39,7 +39,7 @@ fn reduce_ordinary_values() {
     assert_eq!(reduce_f32(&xs, Monoid::Min), 1.0);
 }
 
-// Backs: KISS-OPS-6.11-0002
+// Backs[enforced]: KISS-OPS-6.11-0002
 #[test]
 fn reduce_maxmin_are_nan_propagating() {
     // §6.11-0002: max/min monoids MUST be NaN-propagating (not IEEE maxNum).
@@ -58,7 +58,8 @@ fn reduce_maxmin_preserve_signed_zero() {
     assert!(bits_eq(reduce_f32(&[-0.0], Monoid::Sum), 0.0));
 }
 
-// Backs: KISS-OPS-6.0-0002, KISS-OPS-6.0-0004
+// Backs: KISS-OPS-6.0-0004
+// Backs[enforced]: KISS-OPS-6.0-0002
 #[test]
 fn reduce_class_is_selected_per_spec() {
     // §6.0-0002: max/min reduce is exact-byte; §6.0-0004: fp sum/prod is
@@ -119,7 +120,7 @@ fn scan_exclusive_max_first_is_identity() {
 
 // ---- gather: OOB policy {skip, clamp, zero-fill} (§6.11-0004) -----------------
 
-// Backs: KISS-OPS-6.11-0004
+// Backs[enforced]: KISS-OPS-6.11-0004
 #[test]
 fn gather_in_bounds_reads_datum() {
     let d = [10.0, 20.0, 30.0];
@@ -129,6 +130,7 @@ fn gather_in_bounds_reads_datum() {
     );
 }
 
+// Backs[enforced]: KISS-OPS-6.11-0004
 #[test]
 fn gather_oob_policies() {
     // KISS-OPS-6.11-0004: {skip -> unwritten, clamp -> nearest in-range, zero-fill -> 0}.
@@ -139,7 +141,7 @@ fn gather_oob_policies() {
     assert_eq!(gather_f32(&d, &[0], OobRead::Clamp), vec![Some(10.0)]);
 }
 
-// Backs: KISS-OPS-6.11-0004 — a negative gather index is always out-of-bounds, never a from-end wrap
+// Backs[enforced]: KISS-OPS-6.11-0004 — a negative gather index is always out-of-bounds, never a from-end wrap
 #[test]
 fn gather_negative_index_never_wraps() {
     // KISS-OPS-6.11-0004: a negative index (signed dtype) is ALWAYS OOB, no from-end wrap.
@@ -150,7 +152,7 @@ fn gather_negative_index_never_wraps() {
     assert_eq!(gather_f32(&d, &[-100], OobRead::Clamp), vec![Some(10.0)]);
 }
 
-// Backs: KISS-OPS-6.0-0002
+// Backs[enforced]: KISS-OPS-6.0-0002
 #[test]
 fn gather_preserves_read_datum_bits() {
     // gather is exact-byte (§6.0-0002): a -0.0 or NaN datum is read verbatim.
@@ -216,7 +218,7 @@ fn scatter_fp_atomic_add_is_order_invariant_class() {
     assert_eq!(Combine::AtomicAdd.class_f32(), DeterminismClass::OrderInvariant);
 }
 
-// Backs: KISS-CONFORM-6.8-0004
+// Backs[enforced]: KISS-CONFORM-6.8-0004
 #[test]
 fn atomic_add_two_orderings_diverge_but_agree_order_invariantly() {
     // THE crux (Conform §6.8-0004): two visit orders of the same atomic-add multiset
@@ -251,7 +253,7 @@ fn order_invariant_still_catches_a_real_error() {
     assert!(!order_invariant_agree(f32::NAN, 1.0, 1e30, 1.0));
 }
 
-// Backs: KISS-CONFORM-6.8-0006
+// Backs[enforced]: KISS-CONFORM-6.8-0006
 #[test]
 fn class_aware_dispatch_selects_the_comparator() {
     // Conform §6.8-0006: the comparator is SELECTED by the declared class, never
@@ -304,9 +306,10 @@ fn seeded_finite_f32(rng: &mut SplitMix64) -> f32 {
     ((rng.next_u64() >> 40) as f32 - 8_388_608.0) / 65_536.0
 }
 
-// Backs: KISS-CONFORM-6.8-0004, KISS-OPS-6.11-0006
+// Backs: KISS-OPS-6.11-0006
 // (§6.11-0004 is the GATHER OOB clause — this SCATTER test does not exercise gather; its
 // backing is the forward-named gather_oob_policies. #247 dropped the loose cite.)
+// Backs[enforced]: KISS-CONFORM-6.8-0004
 #[test]
 fn differential_scatter_atomic_add_reproducible() {
     // Reproducible src + index arrays (Conform §6.5: same seed -> same inputs, so a
@@ -386,6 +389,7 @@ fn differential_catches_gather_ignoring_oob_policy() {
 /// yields the identity.
 /// Teeth: a reduce(max) built on the NaN-*suppressing* IEEE `fmax` (seeded at −∞)
 /// returns a finite value on a NaN-containing axis instead of NaN — caught here.
+// Backs[enforced]: KISS-OPS-6.11-0002
 #[test]
 fn test_ops_reduce_monoids() {
     // (a) pinned identities — also the empty-axis result (§6.11-0002).

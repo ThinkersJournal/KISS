@@ -16,7 +16,7 @@ const NAN_NEG: u32 = 0xFFC0_0001;
 
 #[test]
 fn test_conform_nan_result_compares_by_nanness() {
-    // Backs: KISS-CONFORM-6.8-0010
+    // Backs[enforced]: KISS-CONFORM-6.8-0010
     let nan_a = f32::from_bits(NAN_A);
     let nan_b = f32::from_bits(NAN_B);
     let nan_neg = f32::from_bits(NAN_NEG);

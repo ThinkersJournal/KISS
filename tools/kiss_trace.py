@@ -148,8 +148,17 @@ RE_ASSERT_VAR = re.compile(
 # with ONLY separators before the clause ID(s). So `/// Enforces KISS-X` and `// Backs: KISS-X,
 # KISS-Y` back; a bare `// KISS-X` and prose like `enforces the KISS-X rule` (a word sits
 # between the keyword and the id) do NOT. Case-insensitive; captures the whole id run.
+#
+# LEVELS (CireSnave decision 308 B, KISS#498). A clause can be tested at two levels that catch
+# different mistakes: `stated` (a test reads the SPEC TEXT and checks it says what it should) and
+# `enforced` (a test builds real bytes and parses them with the shipped reader). The citation names
+# its level in brackets: `// Backs[enforced]: KISS-X`. An UNMARKED citation means `stated`. The
+# assertion-argument form (assert_golden/assert_token) compares real emitted bytes, so it is
+# `enforced` by construction. An unknown level word (`Backs[foo]:`) is MALFORMED: reported, never
+# credited, exactly as a malformed `Proven:` marker is.
+LEVELS = ("stated", "enforced")
 RE_BACKING_KEYWORD = re.compile(
-    r'(?:Backs|Enforces)\b[:\s]*((?:' + CLAUSE_ID + r'[\s,]*(?:and\s+)?)+)', re.I)
+    r'(?:Backs|Enforces)(?:\[([A-Za-z]+)\]|\b)[:\s]*((?:' + CLAUSE_ID + r'[\s,]*(?:and\s+)?)+)', re.I)
 RE_CLAUSE_ID = re.compile(CLAUSE_ID)
 
 
@@ -168,8 +177,33 @@ def _backing_clauses(body, scope):
             if cid:
                 ids.add(cid)
     for m in RE_BACKING_KEYWORD.finditer(scope):
-        ids.update(RE_CLAUSE_ID.findall(m.group(1)))
+        if m.group(1) is not None and m.group(1).lower() not in LEVELS:
+            continue  # a malformed level earns nothing; _backing_levels reports it
+        ids.update(RE_CLAUSE_ID.findall(m.group(2)))
     return ids
+
+
+def _backing_levels(body, scope):
+    """The LEVEL(S) each backed clause is tested at (decision 308 B): ({clause_id: {level}},
+    malformed) where malformed is a sorted list of "KISS-X [word]" for a `Backs[word]:` whose word is
+    not a level. An unmarked keyword citation is `stated`; an assertion-argument backing is
+    `enforced` (it compares real emitted bytes)."""
+    levels, bad = {}, []
+    enforced = {m.group(1) for m in RE_ASSERT_BACKING.finditer(body)}
+    let_bound = {m.group(1): m.group(2) for m in RE_CLAUSE_LET.finditer(body)}
+    for m in RE_ASSERT_VAR.finditer(body):
+        if let_bound.get(m.group(1)):
+            enforced.add(let_bound[m.group(1)])
+    for cid in enforced:
+        levels.setdefault(cid, set()).add("enforced")
+    for m in RE_BACKING_KEYWORD.finditer(scope):
+        word = m.group(1).lower() if m.group(1) is not None else "stated"
+        for cid in RE_CLAUSE_ID.findall(m.group(2)):
+            if word in LEVELS:
+                levels.setdefault(cid, set()).add(word)
+            else:
+                bad.append(f"{cid} [{m.group(1)}]")
+    return levels, sorted(set(bad))
 
 
 # --- PROVEN marker (#278) --------------------------------------------------------------
@@ -530,6 +564,10 @@ def discover_tests(conf_dir, collisions=None):
                     # A fixture literal, a panic message, or a bare comment ID is a MENTION.
                     # This drives COVERAGE CREDIT — a clause is backed only by a real backing.
                     "clauses": _backing_clauses(body, scope),
+                    # decision 308 B: the level(s) each backed clause is tested at, and any
+                    # malformed `Backs[word]:` (reported fail-closed, never credited).
+                    "levels": _backing_levels(body, scope)[0],
+                    "level_malformed": _backing_levels(body, scope)[1],
                     # EVERY literal clause ID in the scope — backings AND mentions. Hygiene
                     # checks that care about a REFERENCE, not a backing, read this: the
                     # dangling-citation gate (a bare comment naming a RETIRED id is a stale
@@ -1984,6 +2022,16 @@ def main():
         for cid in info["clauses"]:
             cited[cid].add(tname)
 
+    # LEVELS (decision 308 B): which levels carry each clause, and the malformed `Backs[word]:` markers.
+    level_tests = defaultdict(lambda: defaultdict(set))   # clause_id -> level -> {test_name}
+    level_violations = []
+    for tname, info in harness.items():
+        for cid, lvls in info["levels"].items():
+            for lv in lvls:
+                level_tests[cid][lv].add(tname)
+        for item in info["level_malformed"]:
+            level_violations.append(f"{tname}: {item}")
+
     backed, unbacked, by_name, by_citation = {}, {}, {}, {}
     for c, t in clause_test.items():
         if t in harness:
@@ -2216,6 +2264,13 @@ def main():
         print("    Fix: point the §9 row at the real backing test, or DECLARE a same-standard")
         print("    share in kiss_trace.py DECLARED_SHARES with a reason.")
         print("-" * 68)
+    if level_violations:
+        any_fail = note_fail("level_marker")
+        print(f"  LEVEL MARKER (decision 308): {len(level_violations)} `Backs[word]:` citation(s) name a level")
+        print(f"  that is not one of {', '.join(LEVELS)}; rejected fail-closed (never silently credited):")
+        for v in level_violations:
+            print(f"          - {v}")
+        print("-" * 68)
     if proven_violations:
         any_fail = note_fail("proven_marker")
         print(f"  PROVEN MARKER (#278): {len(proven_violations)} `// Proven:` marker(s) do not earn")
@@ -2305,6 +2360,17 @@ def main():
     print(f"                   {len(tier_cited_by_name):>4} the §9-named test carries it (pointer and evidence agree)")
     print(f"                   {tier_cited_other:>4} a DIFFERENT test carries it — backed, but the §9 row points")
     print(f"                        elsewhere than the evidence: a §9-alignment queue (#247's residue)")
+    # LEVELS (decision 308 B): the same clauses counted by the level their citations name. A clause
+    # can carry both; a clause whose named test is `stated` and whose second test is `enforced` is
+    # the healthy two-level case the bare "a DIFFERENT test carries it" line used to read as a mistake.
+    n_stated = sum(1 for c in tier_cited if level_tests[c].get("stated"))
+    n_enforced = sum(1 for c in tier_cited if level_tests[c].get("enforced"))
+    n_both = sum(1 for c in tier_cited if level_tests[c].get("stated") and level_tests[c].get("enforced"))
+    n_other_two = sum(1 for c in tier_cited if c not in tier_cited_by_name
+                      and level_tests[c].get("stated") and level_tests[c].get("enforced"))
+    print(f"                 LEVELS (an unmarked `Backs:` is `stated`; `Backs[enforced]:` and the assertion-")
+    print(f"                 argument form are `enforced`): {n_stated:>4} carry a stated test, {n_enforced:>4} an enforced test,")
+    print(f"                 {n_both:>4} both; of the \"different test\" group, {n_other_two:>4} are two-level (a second level, not a stale pointer)")
     print(f"          {len(tier_proven):>4} PROVEN  a `// Proven:` marker records a seeded mutation of the obligation's")
     print(f"                 SUBJECT was shown to redden the test — ABOUTNESS, and PROVEN is a subset of CITED.")
     print(f"                 The marker is TESTIMONY that a demonstration exists at a ref, NOT a live re-run,")

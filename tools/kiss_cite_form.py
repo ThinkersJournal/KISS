@@ -60,7 +60,7 @@ CANONICAL = ("Backs", "Enforces", "Proven", "Supplements")
 # then JUDGE the form of what was matched. Narrowing the MATCH to things that look wrong is
 # what produced the hole.
 RE_ANY = kt.re.compile(
-    r'\b(' + '|'.join(CANONICAL) + r')([:\s]*)(' + kt.CLAUSE_ID + r')')
+    r'\b(' + '|'.join(CANONICAL) + r')(?:\[[A-Za-z]+\])?([:\s]*)(' + kt.CLAUSE_ID + r')')
 
 
 def scan(root):

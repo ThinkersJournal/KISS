@@ -266,6 +266,7 @@ fn test_contract_semantics_mandatory() {
 /// TEETH: migrate `count_unit` into the §6.7-0001 Capabilities list → the
 /// disjointness assert fails; add a bare `target` field to Interface → the exclusion
 /// assert fails; a rename/reorder within §6.5-0001 fails the ordered anchor.
+// Backs[stated]: KISS-CONTRACT-6.5-0001
 #[test]
 fn test_contract_interface_field_schema() {
     let contract = read_spec("contract.md");
@@ -306,6 +307,7 @@ fn test_contract_interface_field_schema() {
 /// TEETH: drop `determinism_class` from Capabilities → the §6.8-0001 cross-presence
 /// invariant becomes unsatisfiable; leak `in_place` into Capabilities → the
 /// disjointness assert fails; a rename/reorder fails the ordered anchor.
+// Backs[stated]: KISS-CONTRACT-6.7-0001
 #[test]
 fn test_contract_capabilities_field_schema() {
     let contract = read_spec("contract.md");

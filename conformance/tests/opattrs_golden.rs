@@ -195,7 +195,7 @@ fn e3_default_resolution_byte_equality() {
 
 // ---- Conform modality 4: negative / decline vectors (§6.7) ------------------
 
-// Backs: KISS-OPS-6.19-0006 — a reader rejects the reserved ordinal 0 in an enum slot (gather oob_policy=0) with a typed decline
+// Backs[enforced]: KISS-OPS-6.19-0006 — a reader rejects the reserved ordinal 0 in an enum slot (gather oob_policy=0) with a typed decline
 #[test]
 fn negative_reserved_zero_ordinal_declines() {
     // A gather blob carrying the reserved oob_policy ordinal 0 must be refused
@@ -213,7 +213,7 @@ fn negative_truncated_blob_declines() {
     assert_eq!(decode_gather(&[0x00, 0x01, 0x01]), Err(Decline::TruncatedBlob { need: 4, got: 3 }));
 }
 
-// Backs: KISS-OPS-6.19-0037 — a reader declines a reduce_axes subset mask with a bit at position >= MAX_RANK (0x0100, 0xFFFD) while 0x00FF and 0xFFFE stay valid
+// Backs[enforced]: KISS-OPS-6.19-0037 — a reader declines a reduce_axes subset mask with a bit at position >= MAX_RANK (0x0100, 0xFFFD) while 0x00FF and 0xFFFE stay valid
 #[test]
 fn negative_reserved_reduce_axes_band_declines() {
     assert_eq!(validate_reduce_axes(0x0100), Err(Decline::ReservedReduceAxes { value: 0x0100 }));
@@ -228,6 +228,7 @@ fn negative_reserved_reduce_axes_band_declines() {
 /// reader MUST reject it as malformed. Catches a reader that accepts 0x0000
 /// because it only guards the reserved band (0x0100..=0xFFFD) and lets the
 /// sentinel through: such a reader treats a scan-over-nothing blob as valid.
+// Backs[enforced]: KISS-OPS-6.19-0038
 #[test]
 fn test_ops_opattrs_reduce_axes_zero_unreachable() {
     assert_eq!(
@@ -252,6 +253,7 @@ fn positive_decode_roundtrip() {
 /// Catches a decoder that returns these fields unchecked (the previous one did):
 /// axis=8 or index_operand=8 would index a nonexistent axis/operand in a
 /// downstream consumer, so a reader MUST reject the blob rather than pass it on.
+// Backs[enforced]: KISS-OPS-6.19-0037
 #[test]
 fn test_ops_opattrs_max_rank_operands_pinned() {
     // the constants are the pinned concrete values (§6.19-0037).
@@ -330,6 +332,7 @@ fn test_ops_opattrs_field_order_abi() {
 /// a conforming encoder never emits, and a reader rejects a 0 ordinal with a typed
 /// decline. MUTATION: assign ordinal 0 to any declared variant -> the `!= 0` loop
 /// fails; make the reader accept a 0 ordinal -> the decline legs fail.
+// Backs[enforced]: KISS-OPS-6.19-0006
 #[test]
 fn test_ops_opattrs_enum_ordinal_reserve_zero() {
     // Every declared variant of every §6.19.2 enum carries a non-zero ordinal (0 is
@@ -432,6 +435,7 @@ fn test_ops_opattrs_optional_explicit_slot() {
 /// the whole blob has a definite length equal to the sum of its parts. MUTATION: an
 /// encoder that drops the count prefix, or an indefinite/sentinel-terminated vector,
 /// breaks the count==prefix identity and the summed-length identity.
+// Backs[enforced]: KISS-OPS-6.19-0010
 #[test]
 fn test_ops_opattrs_definite_length_prefix() {
     // the leading byte is the element COUNT, not the first element: use a vector
@@ -449,7 +453,7 @@ fn test_ops_opattrs_definite_length_prefix() {
     assert_eq!(ap.len(), 4 * (1 + 2 * 4) + 1, "definite length = 4 vectors + 1 flag = 37");
 }
 
-/// Enforces: KISS-OPS-6.19-0010 — the embedding layer frames the OpAttrs blob length-prefixed and
+/// Enforces[enforced]: KISS-OPS-6.19-0010 — the embedding layer frames the OpAttrs blob length-prefixed and
 /// MUST NOT parse inside it (KISS#384). A parsing framer and an opaque one emit identical bytes for
 /// every blob both handle, so the discriminating input is a blob the framer CANNOT parse.
 /// TEETH: blobs that are not valid OpAttrs for any op (arbitrary bytes, a future vector kind, lengths
@@ -595,7 +599,7 @@ fn test_ops_opattrs_reduce_axes_classify_reconciliation() {
     assert_eq!(classify_reduce_field(Reduce::None), "-");
 }
 
-/// Enforces: KISS-OPS-6.19-0037 — the window/permutation vector arm of the range rule:
+/// Enforces[enforced]: KISS-OPS-6.19-0037 — the window/permutation vector arm of the range rule:
 /// "a conforming encoder MUST NOT emit ... a window/permutation vector whose element
 /// count exceeds `MAX_RANK`".
 ///
@@ -620,7 +624,7 @@ fn test_ops_opattrs_window_vector_bounded_by_max_rank() {
     let _ = window_param_vector(&too_many);
 }
 
-/// Enforces: KISS-OPS-6.19-0037 — the paired positive: MAX_RANK elements exactly is ACCEPTED, so the test above pins a
+/// Enforces[enforced]: KISS-OPS-6.19-0037 — the paired positive: MAX_RANK elements exactly is ACCEPTED, so the test above pins a
 /// boundary rather than a blanket refusal. Without this, narrowing the bound to any
 /// smaller number would still satisfy the should_panic.
 #[test]

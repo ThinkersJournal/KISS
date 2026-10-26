@@ -681,11 +681,7 @@ in a test earns coverage credit only in a **backing form**: the ID as the first 
 backing assertion (`assert_golden("KISS-X", …)`, `assert_token(…)`), or after a citation
 keyword in a comment. **Every citation keyword is written `Keyword:` — capitalised, colon
 immediately after, then the ID**: `Backs:`, `Enforces:`, `Proven:`, and `Supplements:`
-(⚠️ **RESERVED, NOT YET LIVE** — the spelling is settled here so #498's dual-level keyword
-arrives into a stated convention rather than inventing a fifth habit, but `kiss_trace` does
-**not** recognise it yet, so a `Supplements:` citation earns **no credit today**. Do not use
-it until #498 lands. `kiss_cite_form.py` already polices its *form*, so the day it becomes
-live it has a reader — which is the one thing the other three did not have). One rule,
+(⚠️ **WITHDRAWN.** `Supplements:` was reserved so that #498's second level would arrive into a stated convention. Decision 308 (B) chose to put the **level in the citation** instead (next paragraph), so `Supplements:` is not used and `kiss_trace` does not recognise it; `kiss_cite_form.py` still polices its form, so a stray one is reported). One rule,
 no per-keyword exceptions. *Why the rule is stated rather than left to habit:* this sentence
 used to read "a `Backs:` / `Enforces` keyword" — **spelling one with a colon and one without,
 in the same phrase** — and the tree followed it exactly: 54 `Backs:` against 4 `Backs`, and
@@ -698,7 +694,11 @@ now enforces the single form. ⚠️ **It reports; it never credits or de-credit
 the recognizer instead would have added a check and moved coverage as a *side effect* —
 sites in the loose form silently losing their backing, `untested` moving, and the ratchet
 reporting a number whose real cause was a regex edit, indistinguishable from a regression
-or an arrival. **Detection and crediting must stay separate instruments.** Every other occurrence — a fixture literal, a `panic!`/`assert!`
+or an arrival. **Detection and crediting must stay separate instruments.**
+
+**A citation names the LEVEL it tests at (decision 308 B, #498).** A clause can be checked in two ways that catch different mistakes: a test that reads the **spec text** and checks it lists what it should (`stated`), and a test that builds real bytes or runs the shipped reader (`enforced`). Write `// Backs[enforced]: KISS-X` for the second; **an unmarked `// Backs: KISS-X` means `stated`**; the assertion-argument form (`assert_golden`, `assert_token`) compares real bytes and is `enforced` by construction. `Enforces` takes the same bracket. An unknown level word (`Backs[foo]:`) is malformed: the run fails and nothing is credited. The report counts both levels, and a clause whose §9-named test is at one level and whose second test is at the other is the healthy two-level case, not a stale pointer. ⚠️ **The default is `stated`, so the "stated" count includes implementation-level tests until the relabel sweep (ROADMAP R3.15, owner: the KISS lane);** only the clauses of the #498 group were relabelled when this landed (of the 26 clauses, every second test was implementation-level, and so was every named test except three Contract schema tests, which read the spec text).
+
+Every other occurrence — a fixture literal, a `panic!`/`assert!`
 message, a bare comment id, a lookup key — is a **mention** and earns nothing (`kiss_trace`'s
 scanner enforces this; `// Backs: KISS-X` is the one-line migration for a genuine backing written
 in a bare form). But form is only *deliberateness*; whether the test **asserts the clause's

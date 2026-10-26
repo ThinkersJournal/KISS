@@ -156,7 +156,7 @@ mod tests {
     }
 
     // Backs: KISS-OPS-6.0-0004 — a float sum/prod reduce is order-invariant/nondeterministic
-    // Backs: KISS-OPS-6.0-0002 — a max/min reduce is exact-byte
+    // Backs[enforced]: KISS-OPS-6.0-0002 — a max/min reduce is exact-byte
     #[test]
     fn op_true_class_covers_atoms_and_folds() {
         use crate::structural::Monoid;

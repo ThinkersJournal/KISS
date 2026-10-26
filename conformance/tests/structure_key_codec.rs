@@ -398,6 +398,7 @@ fn test_classify_token_codec_additive() {
 /// every well-formed key — parsing a serialized token reproduces the key, and
 /// re-serializing reproduces the token, byte-for-byte. A single-field asymmetry (a
 /// flip `f`/`r`, a present/absent batch coordinate, a reduce variant) breaks it.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0008
 #[test]
 fn test_classify_token_roundtrip() {
     let mut battery: Vec<StructureKey> = Vec::new();
@@ -484,6 +485,7 @@ fn test_classify_token_roundtrip() {
 /// KISS-CLASSIFY-6.7-0010: every hex mask — the per-operand broadcast mask and the
 /// reduce `x<hh>` keepdim mask — is LOWERCASE hex, zero-padded to EXACTLY two
 /// digits; a reader rejects uppercase or variable-width hex in both positions.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0010
 #[test]
 fn test_classify_mask_hex_lowercase() {
     // --- producer side: to_token emits `hh` (lowercase, 2 digits) in both positions ---

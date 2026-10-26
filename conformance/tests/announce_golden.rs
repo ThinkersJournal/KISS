@@ -263,6 +263,7 @@ const IDENTITY_GOLDEN: &str = concat!(
 /// TEETH: treating `revision_present` as truthy (`if flag != 0`) would ACCEPT a
 /// flag of 2 as "present"; the spec requires a typed decline for any value other
 /// than 0/1. Also catches a big-endian tag write and an out-of-range key length.
+// Backs[enforced]: KISS-ANNOUNCE-6.4-0013
 #[test]
 fn test_announce_query_request_shape() {
     assert_eq!(CYRQ, 0x5152_5943, "CYRQ u32-LE value (§2.4 table)");

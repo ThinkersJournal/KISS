@@ -498,7 +498,7 @@ fn reject_wrong_field_count() {
     assert_eq!(from_token("sk6|ew2|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0002 — a field 0 that is not `sk` plus a version (`vv4`, `skx`) declines BadVersionPrefix.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0002 — a field 0 that is not `sk` plus a version (`vv4`, `skx`) declines BadVersionPrefix.
 #[test]
 fn reject_bad_version_prefix() {
     // the "wall": a MALFORMED version field (no `sk` prefix) is BadVersionPrefix,
@@ -557,7 +557,7 @@ fn reject_bad_reduce_field() {
     assert_eq!(from_token(&t), Err(KeyDecline::BadReduceField));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0010 — an uppercase hex broadcast mask (`FF`) declines UppercaseOrWidthHex.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0010 — an uppercase hex broadcast mask (`FF`) declines UppercaseOrWidthHex.
 #[test]
 fn reject_uppercase_hex_mask() {
     // KISS-CLASSIFY-6.7-0010 — an uppercase hex mask declines UppercaseOrWidthHex (second backing).
@@ -701,6 +701,7 @@ fn test_classify_work_class_element_count() {
     assert_eq!(derive_work_class(&[&[4i64, 8], &[8i64]]), WorkClass::Warp);
 }
 
+// Backs[enforced]: KISS-CLASSIFY-6.6-0008
 #[test]
 fn test_classify_broadcast_axis_mask() {
     // KISS-CLASSIFY-6.6-0008: the broadcast-axis mask is a bitmask over iteration-frame
@@ -879,6 +880,7 @@ fn test_classify_target_token_grammar() {
 /// KISS-CLASSIFY-6.7-0002 (`test_classify_token_version_prefix`): field 0 is `sk`
 /// followed by the canonical decimal version. Catches a reader that `parse::<u32>()`s
 /// the version (accepting the non-canonical `sk04`, which parses to 4).
+// Backs[enforced]: KISS-CLASSIFY-6.7-0002
 #[test]
 fn test_classify_token_version_prefix() {
     // non-canonical leading-zero `sk04` is the WALL (BadVersionPrefix): a bare
@@ -1099,6 +1101,7 @@ fn test_classify_unclaimed_input_typed_decline() {
 /// for the divisibility bucket. Verified against Appendix A `[4,1]` -> `da`
 /// (inner axis 1 extent 1), which a column-major reader would mis-bucket `d4`
 /// (axis 0 extent 4).
+// Backs[enforced]: KISS-CLASSIFY-6.3-0011
 #[test]
 fn test_classify_axis_ordering_convention() {
     // the innermost active axis index is rank-1 (row-major / outermost-first).
@@ -1310,6 +1313,7 @@ fn test_classify_layout_tag_derivation() {
 /// `< 2^31` is `ix32`. Teeth: the `(extent-1)` off-by-one, and the exclusive 2^31
 /// boundary. Verified against Appendix A binary-add operand
 /// `256*127 + 1*255 = 32767`.
+// Backs[enforced]: KISS-CLASSIFY-6.5-0011
 #[test]
 fn test_classify_index_width_offset() {
     // Appendix A: [128,256]/[256,1] -> 256*127 + 1*255 = 32512 + 255 = 32767.
@@ -1346,6 +1350,7 @@ fn test_classify_index_width_offset() {
 /// `0 % 16 == 0`, so an impl that drops the `E >= 16` guard mis-buckets a
 /// zero-extent axis as `d16` instead of `da`. Verified against Appendix A:
 /// inner extent 256 -> d16, 8 -> d8, 5 (odd) -> da, 1 -> da.
+// Backs[enforced]: KISS-CLASSIFY-6.5-0012
 #[test]
 fn test_classify_div_bucket_derivation() {
     // the E=0 trap: guard makes it `da`, a guardless `E % 16 == 0` impl says d16.
@@ -1380,6 +1385,7 @@ fn test_classify_div_bucket_derivation() {
 /// emitter correct: per §6.6-0019's coverage note the rule is not corpus-detectable at
 /// this schema version (the corpus round-trips tokens; nothing derives `<wdt>` from
 /// operands).
+// Backs[enforced]: KISS-CLASSIFY-6.6-0019
 #[test]
 fn test_classify_weight_role_hint() {
     let ops = ["i4", "f8e8m0", "bf16"]; // [weight, weight_scale, activation]

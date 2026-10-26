@@ -70,6 +70,7 @@ fn reassoc_tol() -> f32 {
 
 /// KISS-CONFORM-6.8-0001 — the **exact-byte** comparator is a bit/byte-identical
 /// compare (memcmp) and MUST NOT be relaxed to a tolerance for an exact-byte clause.
+// Backs[enforced]: KISS-CONFORM-6.8-0001
 #[test]
 fn test_conform_exact_byte_comparator() {
     // Clause: KISS-CONFORM-6.8-0001.
@@ -99,6 +100,7 @@ fn test_conform_exact_byte_comparator() {
 /// KISS-CONFORM-6.8-0002 — the **ULP/tolerance** comparator compares within the
 /// declared per-target ULP bound and MUST NOT be a byte compare; it applies to any op
 /// whose decomposition transitively contains a transcendental atom.
+// Backs[enforced]: KISS-CONFORM-6.8-0002
 #[test]
 fn test_conform_ulp_comparator() {
     // Clause: KISS-CONFORM-6.8-0002.
@@ -145,6 +147,7 @@ fn test_conform_ulp_comparator() {
 /// KISS-CONFORM-6.8-0004 — the **order-invariant/nondeterministic** comparator MUST
 /// NOT require byte-exact reproduction, and the tolerance MUST be the one declared in
 /// the contract Guarantees, never an implementation-chosen implicit default.
+// Backs[enforced]: KISS-CONFORM-6.8-0004
 #[test]
 fn test_conform_nondeterministic_comparator() {
     // Clause: KISS-CONFORM-6.8-0004.
@@ -257,6 +260,7 @@ fn test_conform_split_comparator() {
 /// KISS-CONFORM-6.8-0006 — the comparator MUST be **selected** by the class travelling
 /// with the artifact (an op advertises its class); a test author MUST NOT override the
 /// class-selected comparator. The selection key is the OP (its advertised class).
+// Backs[enforced]: KISS-CONFORM-6.8-0006
 #[test]
 fn test_conform_comparator_selection_rule() {
     // Clause: KISS-CONFORM-6.8-0006. The dispatchers `compare_monoid_reduced_f32` /

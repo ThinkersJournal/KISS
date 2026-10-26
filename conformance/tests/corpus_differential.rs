@@ -41,7 +41,7 @@ fn reference_add_passes_every_cell() {
     run_against(&c, kiss_conformance::semantics::add).expect("reference add is conformant");
 }
 
-// Backs: KISS-CONFORM-6.8-0001 — a (-0)+(-0)->+0 result is rejected on the exact-byte compare (tcId 2), not passed by value-equality
+// Backs[enforced]: KISS-CONFORM-6.8-0001 — a (-0)+(-0)->+0 result is rejected on the exact-byte compare (tcId 2), not passed by value-equality
 #[test]
 fn a_normalize_to_plus_zero_add_is_caught() {
     let c = bundle();
@@ -192,7 +192,7 @@ fn reference_minmax_passes_every_signed_zero_tie_cell() {
 /// divergence the kiss-ref↔Baracuda step-2 recipe differential caught (fixed by
 /// Baracuda@7297f17d). It fails precisely the two mixed-sign seam cells, and
 /// ONLY a raw-bits compare can see it — the float value-compare is vacuous.
-// Backs: KISS-CONFORM-6.8-0001 — a b-biased max tie (+0 for -0) equals by float value but is rejected on raw bits at exactly the two seam cells
+// Backs[enforced]: KISS-CONFORM-6.8-0001 — a b-biased max tie (+0 for -0) equals by float value but is rejected on raw bits at exactly the two seam cells
 #[test]
 fn a_b_biased_tie_max_is_caught() {
     let c = minmax_bundle();

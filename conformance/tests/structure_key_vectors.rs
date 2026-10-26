@@ -46,7 +46,7 @@ fn test_structure_key_vectors_artifact_is_fresh() {
 /// (2) Every positive vector's key serializes to its pinned token (the Appendix-A
 /// spec-tie) and round-trips byte-identically — the same both-directions check the
 /// golden test makes, so the artifact's tokens carry the same guarantee.
-// Backs: KISS-CLASSIFY-6.7-0008 — every published positive key serializes to its pinned token and from_token(token) re-serializes byte-identically.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0008 — every published positive key serializes to its pinned token and from_token(token) re-serializes byte-identically.
 #[test]
 fn positive_vectors_serialize_and_round_trip() {
     for v in positive_vectors() {
