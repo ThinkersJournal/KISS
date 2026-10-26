@@ -352,7 +352,8 @@ the identities and the built artifact, the upstream sub-standards mean them.
   payload. Owned by KISS-Synth/Provision.
 - **artifact_format_tag** — a 4-byte tag naming the artifact's binary format/target
   family (e.g. a PTX/cubin/SPIR-V/object family), matched byte-for-byte and otherwise
-  opaque; registry-assigned. Owned by KISS-Synth/Provision.
+  opaque; its values are assigned by the table of §6.4-0001g, which this standard owns. Owned by
+  KISS-Synth/Provision.
 - **contract** — the KISS-Contract seven-section, self-delimiting document
   `{Identity, Semantics, Interface, Dispatch, Capabilities, Guarantees, Provenance}`
   that travels with every provided kernel. Owned by KISS-Contract; Synth **returns** it,
@@ -726,6 +727,22 @@ correct comparator. See umbrella §3 for the full statement.
   artifact's binary format/target family, matched byte-for-byte and otherwise opaque, and
   MUST NOT be the reserved all-zero value `00 00 00 00`. *Test:*
   `test_synth_artifact_format_tag`.
+- **KISS-SYNTH-6.4-0001g** — **KISS-Synth owns the `artifact_format_tag` values.** (CireSnave
+  decision 297, R5.2 option A.) The registered values are exactly those of the table below. A
+  provider MUST write, for the artifact format it provides, a value listed in the table, and MUST
+  NOT write one that is not; a consumer MUST NOT load an artifact whose tag it does not support,
+  and no tag outside the table is supported by a conforming consumer. A value is added only by
+  changing this table, which is a change to this standard. The tag names the artifact's binary
+  format and carries **no architecture**: the target is answered by the request's
+  `target_capability` (KISS-CLASSIFY §6.8) and, inside the artifact, by its own header. The table
+  is seeded with **one** value, the one a reference provider emits today; no other is assigned
+  until a provider emits it.
+
+  | Tag (ASCII) | Wire bytes | Names | Target family | Seeded by |
+  |---|---|---|---|---|
+  | `PTX ` (trailing space) | `50 54 58 20` | NVIDIA PTX: the textual virtual-ISA program as UTF-8 bytes, linked by the driver at load, portable across the SMs of the architecture it was built for | namespace `cuda` | Baracuda's reference provider, which emits it |
+
+  *Test:* `test_synth_artifact_format_tag_registry`.
 - **KISS-SYNTH-6.4-0002** — The artifact's `revision_hash` MUST identify which build the
   artifact is: an opaque, provider-assigned identifier compared only for byte-for-byte
   equality. *Test:* `test_synth_artifact_revision_hash_opaque`.
@@ -1104,6 +1121,7 @@ free-standing KISS-Synth clause.
 | KISS-SYNTH-6.4-0001b | `test_synth_provision_success_prsp_frame` |
 | KISS-SYNTH-6.4-0001c | `test_synth_success_distinct_from_contract_only` |
 | KISS-SYNTH-6.4-0001d | `test_synth_artifact_format_tag` |
+| KISS-SYNTH-6.4-0001g | `test_synth_artifact_format_tag_registry` |
 | KISS-SYNTH-6.4-0002 | `test_synth_artifact_revision_hash_opaque` |
 | KISS-SYNTH-6.4-0002a | `test_synth_artifact_revision_hash_no_algo` |
 | KISS-SYNTH-6.4-0003 | `test_synth_no_verify_precondition` |
@@ -1291,11 +1309,10 @@ non-normative provenance and examples only; no normative clause names any projec
 These are surfaced ambiguities that do not block the Draft but must be resolved (each as a
 numbered RFC) before any KISS-Synth freeze:
 
-- **The `artifact_format_tag` value registry.** The provision-success frame now pins a
-  4-byte `artifact_format_tag` field (§6.4-0001b / §6.4-0001d), resolving the earlier
-  "is a format/target tag needed" question in the affirmative. What remains open is the
-  registry of concrete tag values (the format/target families and their exact 4-byte
-  spellings) and whether that registry is KISS-Synth-owned or shared with KISS-Announce.
+- **The `artifact_format_tag` value registry — resolved (CireSnave decision 297, option A).**
+  KISS-Synth owns the values, in the table of §6.4-0001g, seeded with one value (`PTX `). Not
+  shared with KISS-Announce. What stays open: further values are added only when a provider
+  emits them; a "building, retry" answer (below) and paging are deliberately not added yet.
 - **Artifact-byte verification depth.** The response is `{artifact, contract}`, and the
   consumer-verify obligation is a KISS-Conform SHOULD (§6.4-0004), not a Synth wire MUST;
   how deeply a consumer verifies the artifact bytes against `revision_hash` or against the
