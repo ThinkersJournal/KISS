@@ -1693,9 +1693,11 @@ surfaces it in a kernel's guarantees section.
 - **KISS-OPS-6.17-0003** — Under the **reduced-mantissa-permitted** value, a target MAY
   compute a floating-point multiply with its inputs rounded to a **reduced mantissa**
   (a mantissa narrower than the storage dtype), provided the reduced mantissa retains **no
-  fewer than 10 explicit mantissa bits** (the pinned floor, so "reduced-mantissa" is a
-  quantified bound and not an open-ended adjective — a target MUST NOT round inputs below
-  this floor) and the result stays within the op's declared determinism class (§6.0); a
+  fewer than the kernel's declared width `n` explicit mantissa bits** (KISS-CONTRACT §6.8-0004a,
+  so "reduced-mantissa" is a quantified bound the contract states and not an open-ended
+  adjective — a target MUST NOT round inputs below its declared `n`; there is **no suite-wide
+  floor**, CireSnave decision 311 Q1 C, which retired the former pinned 10) and the result stays
+  within the op's declared determinism class (§6.0); a
   kernel's contract MUST advertise the MathFidelity value so a consumer knows whether
   bit-stable reproduction is guaranteed. **The value is a permission, never an obligation**
   (clarification, no wire change): a target is not required to round any operand, and a
@@ -1715,8 +1717,9 @@ surfaces it in a kernel's guarantees section.
   every determinism class: for an **exact-byte** or **ULP/tolerance** op, **bit-stable** is
   verified directly under the op's own comparator (each atom at full storage-precision
   rounding), and **reduced-mantissa-permitted** is verified by detecting a per-atom multiply
-  whose input mantissa is narrower than the §6.17-0003 floor (a probe that finds no narrowed
-  input at all passes: the value permits rounding, it does not require it). For an
+  whose input mantissa is narrower than the kernel's **declared width** `n` (§6.17-0003; a
+  probe that finds no narrowed input at all passes: the value permits rounding, it does not
+  require it). For an
   **order-invariant/nondeterministic** op (a float reduction, scan, or contraction),
   bit-stable MUST NOT be read as pinning the contraction order (which §6.0-0004 leaves
   unpinned); it constrains **each individual multiply and add atom** to full
@@ -1737,8 +1740,8 @@ surfaces it in a kernel's guarantees section.
   not truncation, and MUST carry into the exponent (`1.11…1` → `10.0…0`, exponent + 1); a
   reference that truncates is non-conformant. Where a target admits more than one
   reduced-mantissa width for the same primary dtype and capability, each MUST be named
-  separately (an additive refinement); the §6.17-0003 floor (no fewer than 10 mantissa
-  bits) still governs. This pin is what the KISS-Classify `<mp>` key coordinate
+  separately (an additive refinement); the kernel's declared width (§6.17-0003) still
+  governs: bfloat16-input rounding is `n = 7`, TF32 is `n = 10`. This pin is what the KISS-Classify `<mp>` key coordinate
   (KISS-CLASSIFY §6.7-0006, `st`/`rm`) resolves to per `(primary_dtype, target)`. *Test:*
   `test_ops_math_precision_input_rounding`.
 - **KISS-OPS-6.17-0007** — Input-rounding (§6.17-0006) and accumulator width do NOT by
@@ -3051,13 +3054,12 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
    storage (byte layout only). Compute precision moves to KISS-Ops as the compute-fidelity
    (MathFidelity) attribute `{bit-stable, reduced-mantissa-permitted}` (§6.17), surfaced in
    a kernel's KISS-Contract guarantees. `f32` is now pure binary32 storage with no
-   compute-precision meaning (§6.16-0002). The **reduced-mantissa floor** of 10 explicit
-   mantissa bits (§6.17-0003) and the per-op-vs-per-kernel granularity and
-   order-invariant-op testability rules (§6.17-0005) are the quantified replacement for the
-   per-operand precision the retired `f32s` dtype carried; the exact floor value (or an
-   enumerated permitted-format set) is a reference value pending confirmation against real
-   reduced-precision hardware, but the clause pins a concrete number so the attribute is not
-   an unquantified adjective.
+   compute-precision meaning (§6.16-0002). The **declared width** of explicit mantissa bits
+   (§6.17-0003, KISS-CONTRACT §6.8-0004a; the former pinned floor of 10 was retired by
+   CireSnave decision 311 Q1 C, so a bfloat16-input kernel declares 7) and the per-op-vs-per-kernel
+   granularity and order-invariant-op testability rules (§6.17-0005) are the quantified
+   replacement for the per-operand precision the retired `f32s` dtype carried; the declaration
+   is checked by the per-atom width probe, so the attribute is not an unquantified adjective.
 2. **`u32` index-only (resolved 2026-07-12).** Ratified: index-only-ness is an **operand
    role**, not a dtype class. `u32` is an ordinary unsigned-integer storage/compute dtype
    (§6.2-0007); the index role is carried on the gather/scatter operand via `index_operand`
