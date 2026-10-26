@@ -223,10 +223,10 @@ class DecompositionGraphTest(unittest.TestCase):
                                                  "storage — compute fidelity"))
         self.assertTrue(any("pure storage" in m for m in v), v)
 
-    def test_tf32_bit_count_off_the_floor_is_caught(self):
+    def test_tf32_bit_count_off_the_declared_width_is_caught(self):
         v = self.fidelity_violations(self.mutate("10 retained mantissa bits",
                                                  "11 retained mantissa bits"))
-        self.assertTrue(any("floor is 10" in m for m in v), v)
+        self.assertTrue(any("declared width as 10" in m for m in v), v)
         self.assertTrue(any("2^-11 but" in m or "is 2^-12" in m for m in v), v)
 
     def test_tf32_unit_roundoff_off_the_formula_is_caught(self):
