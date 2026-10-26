@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-28-provenance-derivability-variants.md`, the options note for R1.28 (KISS#218, #228, #234) for the board: whether to rewrite `generated_from` in the two program-written vector files now (clause 6.8-0011 is already fixed; recommend with the next regeneration), #228 (derivable capability), which KISS-CLASSIFY-6.8-0014 already requires (#340; my first version of the note missed it and is corrected), and #234 (variant-to-variant bit relation), which is **already ruled** by R1.5 (2026-10-15, implementation-private) and needs at most one informative sentence in Emit. No normative text.
+
 ## 0.6.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `HANDOFF.md` rewritten (not appended) for the next session: the clean stack #693-#699, the rulings of decisions 310 and 311 (310 Q1 re-opened, Q4 open), the owed options notes (R1.28, R1.13, #426, #424, #32, R3.6, #396), ROADMAP housekeeping, owed witnesses, the issue-clock state, and the one-linear-stack procedure the PM now requires.
