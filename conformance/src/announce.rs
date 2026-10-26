@@ -583,54 +583,61 @@ pub fn message_extent(bytes: &[u8]) -> Result<(MessageKind, usize), AnnounceDecl
     }
     let tag = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
     match tag {
-        MAGIC => {
-            // the extent is the length the envelope_version mandates, so the version byte is read first
-            if bytes.len() < 5 {
-                return Err(AnnounceDecline::Truncated { region: "envelope_version" });
-            }
-            if bytes[4] != 1 {
-                return Err(AnnounceDecline::UnsupportedVersion { got: bytes[4] });
-            }
-            if bytes.len() < ENVELOPE_LEN {
-                return Err(AnnounceDecline::Truncated { region: "envelope" });
-            }
-            Ok((MessageKind::Envelope, ENVELOPE_LEN))
-        }
-        SAVL => {
-            if bytes.len() < 12 {
-                return Err(AnnounceDecline::Truncated { region: "savl_header" });
-            }
-            let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
-            if count > MAX_AVAILABILITY_RECORDS {
-                return Err(AnnounceDecline::RecordCountOverflow { got: count });
-            }
-            let mut off = 12usize;
-            for _ in 0..count {
-                off = skip_len_prefixed(bytes, off, MAX_STRUCTURE_KEY_LEN, "structure_key")?;
-                off = skip_len_prefixed(bytes, off, MAX_OP_IDENTITY_LEN, "op_identity")?;
-                off = skip_fixed(bytes, off, 32, "revision_hash")?;
-            }
-            Ok((MessageKind::AvailabilityList, off))
-        }
+        MAGIC => envelope_extent(bytes).map(|n| (MessageKind::Envelope, n)),
+        SAVL => availability_list_extent(bytes).map(|n| (MessageKind::AvailabilityList, n)),
         CYRQ => Ok((MessageKind::QueryRequest, identity_extent(bytes, 4)?)),
-        CRSP => {
-            let off = identity_extent(bytes, 4)?;
-            if bytes.len() < off + 4 {
-                return Err(AnnounceDecline::Truncated { region: "payload_len" });
-            }
-            let len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
-            if len > MAX_CONTRACT_PAYLOAD_LEN {
-                return Err(AnnounceDecline::PayloadLenOutOfRange { got: len });
-            }
-            let end = skip_fixed(bytes, off + 4, len as usize, "contract_payload")?;
-            Ok((MessageKind::ContractResponse, end))
-        }
+        CRSP => contract_response_extent(bytes).map(|n| (MessageKind::ContractResponse, n)),
         CDEC => {
             let off = identity_extent(bytes, 4)?;
             Ok((MessageKind::DeclineResponse, skip_fixed(bytes, off, 4, "decline_code")?))
         }
         got => Err(AnnounceDecline::BadTag { region: "leading_tag", got }),
     }
+}
+
+/// The handshake envelope's extent: the length its `envelope_version` mandates, so the version byte is read first.
+fn envelope_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    if bytes.len() < 5 {
+        return Err(AnnounceDecline::Truncated { region: "envelope_version" });
+    }
+    if bytes[4] != 1 {
+        return Err(AnnounceDecline::UnsupportedVersion { got: bytes[4] });
+    }
+    if bytes.len() < ENVELOPE_LEN {
+        return Err(AnnounceDecline::Truncated { region: "envelope" });
+    }
+    Ok(ENVELOPE_LEN)
+}
+
+/// An availability list's extent: the end of the last of its `record_count` records.
+fn availability_list_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    if bytes.len() < 12 {
+        return Err(AnnounceDecline::Truncated { region: "savl_header" });
+    }
+    let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+    if count > MAX_AVAILABILITY_RECORDS {
+        return Err(AnnounceDecline::RecordCountOverflow { got: count });
+    }
+    let mut off = 12usize;
+    for _ in 0..count {
+        off = skip_len_prefixed(bytes, off, MAX_STRUCTURE_KEY_LEN, "structure_key")?;
+        off = skip_len_prefixed(bytes, off, MAX_OP_IDENTITY_LEN, "op_identity")?;
+        off = skip_fixed(bytes, off, 32, "revision_hash")?;
+    }
+    Ok(off)
+}
+
+/// A contract response's extent: the end of its payload, whose declared length is capped before any byte is read.
+fn contract_response_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    let off = identity_extent(bytes, 4)?;
+    if bytes.len() < off + 4 {
+        return Err(AnnounceDecline::Truncated { region: "payload_len" });
+    }
+    let len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+    if len > MAX_CONTRACT_PAYLOAD_LEN {
+        return Err(AnnounceDecline::PayloadLenOutOfRange { got: len });
+    }
+    skip_fixed(bytes, off + 4, len as usize, "contract_payload")
 }
 
 /// `off + n`, or a truncation decline when fewer than `n` bytes remain. Never indexes past `bytes`.

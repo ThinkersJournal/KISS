@@ -28,7 +28,8 @@ pub const SCHEMA_VERSION: u32 = 6;
 /// (§6.5-0015, [`derive_cell_class`]), never a caller-chosen label.
 pub const CELL_CLASSES: [&str; 7] = ["ctr", "ndx", "rdc", "ew1", "ew2", "ew3", "oth"];
 
-/// The closed dtype-token set — the 24 tokens of Classify §6.1 at sk4, in §6.1-table
+/// The closed dtype-token set — the 27 tokens of Classify §6.1 (24 at sk4, plus the three MX element
+/// rows appended after `c128` so no §6.19-0025 ordinal moves), in §6.1-table
 /// order (the index is the 1-based ordinal §6.19-0025's accumulator field references).
 /// Integers are uniform `i`-prefixed (`i8`/`i16`/`i4`); FP8 carries the `f8` width prefix
 /// + mandatory variant suffix (`f8e4m3fn` OCP finite/no-inf max 448; `f8e4m3fnuz` AMD
@@ -36,9 +37,10 @@ pub const CELL_CLASSES: [&str; 7] = ["ctr", "ndx", "rdc", "ew1", "ew2", "ew3", "
 /// shared-exponent scale `f8e8m0` is additive and `f8e6m2` is additive but reserved (§6.1-0013); complex is named by
 /// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
 /// §6.1-0012, made loud by the version prefix).
-pub const DTYPES: [&str; 24] = [
+pub const DTYPES: [&str; 27] = [
     "f16", "bf16", "f32", "f64", "i8", "i16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
     "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
+    "f4e2m1", "f6e2m3", "f6e3m2",
 ];
 
 /// The three **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
@@ -47,6 +49,10 @@ pub const DTYPES: [&str; 24] = [
 /// position is answered with the typed [`KeyDecline::ReservedDtype`], distinct
 /// from the unknown-token decline. Activation is a future additive schema event.
 pub const RESERVED_DTYPES: [&str; 3] = ["f8e4m3fnuz", "f8e5m2fnuz", "f8e6m2"];
+
+/// The three MX **element** dtypes (Classify §6.1-0014/-0015). Storage and operand dtypes only: usable in
+/// the `dtype` field and the `<wdt>`/`<out>`/`<sdt>` coordinates, never as an accumulator (§6.1-0016).
+pub const MX_ELEMENT_DTYPES: [&str; 3] = ["f4e2m1", "f6e2m3", "f6e3m2"];
 
 // ---- small enum codecs -------------------------------------------------------
 
@@ -329,6 +335,10 @@ pub enum KeyDecline {
     /// for §6.7-0013(d): one question, one answer. (An `x<hh>` bit set for a non-existent axis
     /// — index ≥ `rank` — is an out-of-range mask and declines with `BadReduceField`, §6.7-0009.)
     NonCanonicalReduceField,
+    /// An MX element dtype (`f4e2m1`, `f6e2m3`, `f6e3m2`) in an **accumulator** position — the
+    /// contraction `<acc>` or the non-contraction `(acc+mp)` field's accumulator (§6.1-0016). Recognized
+    /// and usable elsewhere, so distinct from [`KeyDecline::UnknownDtype`] and [`KeyDecline::ReservedDtype`].
+    ElementDtypeAsAccumulator,
 }
 
 /// The pinned closed-set bounds (§6.4). Named so a reader can reject an
@@ -561,6 +571,9 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
             return Err(KeyDecline::UnknownDtype);
         }
     }
+    if MX_ELEMENT_DTYPES.contains(&acc) {
+        return Err(KeyDecline::ElementDtypeAsAccumulator);
+    }
     let mp = MathFidelity::parse(parts[rest + 3]).ok_or(KeyDecline::BadContractionField)?;
     Ok(Contraction {
         m,
@@ -593,6 +606,9 @@ fn parse_acc_mp(field: &str, compute_dtype: &str) -> Result<AccMp, KeyDecline> {
     }
     if !DTYPES.contains(&acc) {
         return Err(KeyDecline::UnknownDtype);
+    }
+    if MX_ELEMENT_DTYPES.contains(&acc) {
+        return Err(KeyDecline::ElementDtypeAsAccumulator);
     }
     let mp = MathFidelity::parse(parts[1]).ok_or(KeyDecline::BadAccMpField)?;
     // rule (d): reject the all-default form — a canonical producer omits the field

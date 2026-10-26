@@ -67,6 +67,9 @@ fn accumulator_ordinal(token: &str) -> Result<u8, String> {
     if !float || RESERVED_DTYPES.contains(&token) {
         return Err(format!("accumulator `{token}` must be a non-reserved float dtype (§6.7-0012)"));
     }
+    if crate::structure_key::MX_ELEMENT_DTYPES.contains(&token) {
+        return Err(format!("accumulator `{token}` is an MX element dtype (§6.1-0016)"));
+    }
     Ok(i as u8 + 1)
 }
 
