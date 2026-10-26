@@ -3,6 +3,9 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.1 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Synth, additive; CireSnave decision 310, R1.24 Q2 A; Part of KISS#24; stacked on #691): new KISS-SYNTH-6.6-0001d, the consumer's mirror of the provider's never-panic obligation: every failure observed at the seam (malformed or truncated frame or contract, unsupported `artifact_format_tag`, length over its cap, refused load, failed verification) becomes a typed error and never an abort. The honest limit is in the clause: a fault inside the kernel's native code after launch cannot be caught by any seam clause, and isolation is the deployment's job (umbrella §10.6). Backed by `test_synth_consumer_seam_failure_is_typed_error` (every truncation of a valid PRSP, a corrupted tag, an over-cap length, and short junk; mutation of the cap check fails it).
 
 ## 0.6.0 — 2026-10-26 (number proposed; **Breaking**; the PM allocates at gate time)
 

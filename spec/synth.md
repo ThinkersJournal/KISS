@@ -847,6 +847,16 @@ correct comparator. See umbrella §3 for the full statement.
   typed decline) within its implementation-declared maximum latency bound; exceeding that
   bound MUST be surfaced as a `CANNOT_PROVISION` typed decline. *Test:*
   `test_synth_bounded_latency`.
+- **KISS-SYNTH-6.6-0001d** — **A consumer of a provision response MUST turn every failure it
+  observes at the seam into a typed error, and MUST NOT panic, abort, or crash.** The seam is
+  receiving, loading, binding and verifying a provided artifact: a malformed or truncated
+  frame or contract, an unsupported `artifact_format_tag` or object kind, a length over its cap
+  (§6.4-0001e), a refused load, a failed verification. This is the consumer's mirror of the
+  provider's obligation in §6.6-0001a. **The limit, stated plainly:** a fault inside the kernel's
+  own native code after it is launched (a bad memory access, a GPU fault) cannot be caught by
+  any clause at this seam, and this clause does not claim to; isolating a kernel is the
+  deployment's responsibility, since KISS provides no sandboxing (umbrella §10.6). (CireSnave
+  decision 310, R1.24 Q2 A.) *Test:* `test_synth_consumer_seam_failure_is_typed_error`.
 - **KISS-SYNTH-6.6-0002** — A provision decline MUST use the pinned KISS-Announce
   decline-code enum (`KISS-ANNOUNCE-6.4-0009`), reused verbatim as little-endian `u32`
   values:
@@ -1167,6 +1177,7 @@ free-standing KISS-Synth clause.
 | KISS-SYNTH-6.6-0001a | `test_synth_never_panics` |
 | KISS-SYNTH-6.6-0001b | `test_synth_no_oob_read` |
 | KISS-SYNTH-6.6-0001c | `test_synth_bounded_latency` |
+| KISS-SYNTH-6.6-0001d | `test_synth_consumer_seam_failure_is_typed_error` |
 | KISS-SYNTH-6.6-0002 | `test_synth_decline_code_enum` |
 | KISS-SYNTH-6.6-0002a | `test_synth_decline_core_meaning_fixed` |
 | KISS-SYNTH-6.6-0003 | `test_synth_map_unknown_structure_key` |
