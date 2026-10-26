@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.8 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-23-precision-floors-and-guarantees.md`, the options note for R1.23 (KISS#1, #4, #13, #56, #293): five questions with an example, what the specs say (`file:line`), options, a recommendation and what waits. Notes that half of #13 is already answered by `bit_stability` (Contract 6.8-0013) and records Baracuda's measured 13.9% / exactly 1 ULP divergence for #56. For the board. No normative text.
+
 ## 0.5.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-24-seam-obligations.md`, the options note for R1.24 (KISS#10, #24, #25, #26, #124, #289, #317): seven questions, each with an example, what the specs already say (`file:line`), options, a recommendation and what waits. Notes that #124 is partly answered (the opt-in trust-but-verify profile exists) and that the plain-AND capability rule proposed in #25 would zero provider-only bits. For the board. No normative text.
