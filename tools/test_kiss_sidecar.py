@@ -70,10 +70,10 @@ class SidecarDrift(unittest.TestCase):
         self.assertEqual(s.main(["--write", STEM]), 2)
 
     def test_unset_schema_string_is_counted_not_hidden(self):
-        """consume states no schema string, so it is UNSET; contract states `3`, so it is not."""
+        """consume states no schema string, so it is UNSET; contract states `4`, so it is not."""
         self.assertEqual(s.unset_count(self.doc), 1)
         _, contract = s.load("contract")
-        self.assertEqual(contract["wire_abi_schema_version"], "3")
+        self.assertEqual(contract["wire_abi_schema_version"], "4")
         self.assertEqual(s.unset_count(contract), 0)
 
     def test_absent_determinism_class_is_valid(self):
