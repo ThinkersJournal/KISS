@@ -817,6 +817,13 @@ selects the correct comparator. See umbrella §3 for the full statement.
   (determinism class or MathFidelity) anywhere the KISS-Contract schema does not home
   it; the Guarantees section of §6.6-0002 is the only home. *Test:*
   `test_emit_fidelity_not_declared_off_schema`.
+
+  > *Informative.* A relation between two schedule variants of one cell (for example, that an
+  > unrolled variant is bit-identical to the default lowering of the same cell) is
+  > **implementation-private** and is not a KISS field (ROADMAP R1.5, ruled 2026-10-15; KISS#234).
+  > Its only possible referent is the default lowering of the same cell, in the same backend, at
+  > the same version, so it is not to be read as a claim against the kernel's own semantics, which
+  > is what the Guarantees section holds. This note adds no obligation.
 - **KISS-EMIT-6.6-0006** — The artifact's ABI MUST be the ABI the accompanying
   contract's Interface + Dispatch pin; an emitter MUST NOT produce an artifact whose ABI
   diverges from the contract that describes it. *Test:*
