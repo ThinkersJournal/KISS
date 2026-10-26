@@ -1,78 +1,59 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! KISS-Conform suite for the OPTIONAL request-correlation id on the
-//! contract-query / provision request+response frames (KISS-ANNOUNCE-6.4-0013).
-//!
-//! Two witnesses of the clause: (a) a response echoes the request's correlation
-//! id unchanged when it is present; (b) an absent correlation id is valid — a
-//! synchronous seam omits it and it is never required for v1 conformance. A third
-//! test pins the never-panic typed-decline discipline on a malformed tail.
-//! Each test cites its pinning clause.
+//! KISS-Conform suite for the request-correlation FIELD on the contract-query / provision frames
+//! (KISS-ANNOUNCE-6.4-0013): always present (so a frame is self-delimiting), spelled `00` when no id is
+//! carried, echoed unchanged when one is.
 
+use kiss_conformance::announce::*;
 use kiss_conformance::correlation_id::*;
+
+const ID: CorrelationId = [0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04];
 
 #[test]
 fn test_announce_correlation_id_echoed_when_present() {
-    // KISS-ANNOUNCE-6.4-0013: when a request carries a correlation id, the
-    // response answering it MUST echo the identical 8 bytes unchanged.
-    let req_id: CorrelationId = [0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04];
-
-    let resp_id = echo(Some(req_id));
-    assert_eq!(
-        resp_id,
-        Some(req_id),
-        "response MUST echo the request correlation id unchanged"
-    );
-
-    // It survives a serialize -> parse round-trip on both request and response
-    // tails, and the response advertises the same 8 bytes.
-    let req_tail = encode_tail(Some(req_id));
-    assert_eq!(req_tail[0], 1, "correlation_present flag MUST be set");
-    assert_eq!(req_tail.len(), 9, "flag byte + 8 id bytes");
-    assert_eq!(parse_tail(&req_tail).unwrap(), Some(req_id));
-
-    let resp_tail = encode_tail(resp_id);
-    assert_eq!(
-        parse_tail(&resp_tail).unwrap(),
-        Some(req_id),
-        "the echoed response tail MUST parse back to the request's id"
-    );
-    assert_eq!(&resp_tail[1..9], &req_id, "bytes echoed unchanged");
+    // KISS-ANNOUNCE-6.4-0013: when a request carries a correlation id, the response answering it MUST echo the
+    // identical 8 bytes unchanged.
+    assert_eq!(echo(Some(ID)), Some(ID), "response MUST echo the request correlation id unchanged");
+    let field = encode_field(Some(ID));
+    assert_eq!(field[0], 8, "correlation_len MUST be 8");
+    assert_eq!(field.len(), 9, "length byte + 8 id bytes");
+    assert_eq!(parse_field(&field), Ok((Some(ID), 9)));
+    assert_eq!(&field[1..], &ID, "bytes echoed unchanged");
+    // in a real frame: a request that carries an id yields a response whose identity block carries the same one
+    let mut req = reference_cyrq();
+    req.identity.correlation = Some(ID);
+    let mut resp = reference_crsp();
+    resp.identity.correlation = echo(req.identity.correlation);
+    assert_eq!(resp.identity.correlation, Some(ID));
+    assert!(resp.encode().windows(9).any(|w| w == field.as_slice()), "the 9 field bytes appear in the response");
 }
 
-// Backs: KISS-ANNOUNCE-6.4-0013 — a reader accepts a frame with no correlation field (empty tail or correlation_present == 0), and an omitted field adds no bytes
+// Backs: KISS-ANNOUNCE-6.4-0013 — the correlation field is always present: with no id it is the single byte 00, never nothing, and a frame cut before it is truncated
 #[test]
-fn test_announce_correlation_id_absent_is_valid() {
-    // KISS-ANNOUNCE-6.4-0013: the field is OPTIONAL and reserved — a synchronous
-    // seam omits it, and it MUST NOT be required for v1 conformance.
-    assert_eq!(
-        encode_tail(None),
-        Vec::<u8>::new(),
-        "an omitted field adds no bytes (frame is byte-identical to §6.4-0001/0004/0007)"
-    );
-    assert_eq!(
-        parse_tail(&[]).unwrap(),
-        None,
-        "an empty tail is a valid absent field — a reader MUST accept it"
-    );
-    assert_eq!(
-        parse_tail(&[0]).unwrap(),
-        None,
-        "an explicit correlation_present == 0 is absent"
-    );
-    // A response to a request that carried none carries none.
+fn test_announce_correlation_field_always_present() {
+    assert_eq!(encode_field(None), vec![0u8], "no id is spelled as one zero byte, never as nothing");
+    assert_eq!(parse_field(&[0]), Ok((None, 1)));
+    // an empty slice is NOT an absent field: the field is mandatory, so a missing length byte is truncation
+    assert_eq!(parse_field(&[]), Err(AnnounceDecline::Truncated { region: "correlation_len" }));
+    // in a real frame: the identity block ends with the field
+    let cyrq = reference_cyrq().encode();
+    assert_eq!(*cyrq.last().unwrap(), 0, "a CYRQ with no id ends with the zero correlation byte");
+    assert!(message_extent(&cyrq).is_ok());
+    assert!(message_extent(&cyrq[..cyrq.len() - 1]).is_err(), "without its correlation byte the CYRQ is truncated");
+    // a response to a request that carried none carries none
     assert_eq!(echo(None), None);
 }
 
-// Backs: KISS-ANNOUNCE-6.4-0013 — a reader rejects a correlation_present value other than 0 or 1 (and a truncated id) with a typed error, never a panic
+// Backs: KISS-ANNOUNCE-6.4-0013 — a reader rejects a correlation length other than 0 or 8, and a field cut short, with a typed decline, never a panic
 #[test]
-fn test_announce_correlation_bad_present_flag_declines() {
-    // KISS-ANNOUNCE-6.4-0013: a correlation_present other than 0 or 1 is a typed
-    // MALFORMED_REQUEST error (Announce §6.4-0009), never a panic.
-    assert_eq!(
-        parse_tail(&[2, 0, 0, 0, 0, 0, 0, 0, 0]),
-        Err(CorrelationError::BadPresentFlag { got: 2 })
-    );
-    // A present flag of 1 with a truncated id is a typed error, not an
-    // out-of-bounds panic.
-    assert_eq!(parse_tail(&[1, 0xAA, 0xBB]), Err(CorrelationError::Truncated));
+fn test_announce_correlation_bad_length_declines() {
+    assert_eq!(parse_field(&[2, 0, 0]), Err(AnnounceDecline::BadCorrelationLen { got: 2 }));
+    assert_eq!(parse_field(&[9, 0, 0, 0, 0, 0, 0, 0, 0, 0]), Err(AnnounceDecline::BadCorrelationLen { got: 9 }));
+    assert_eq!(parse_field(&[8, 0xAA, 0xBB]), Err(AnnounceDecline::Truncated { region: "correlation_id" }));
+    // positive control: the same bytes with a valid length parse
+    assert!(parse_field(&[8, 1, 2, 3, 4, 5, 6, 7, 8]).is_ok());
+    // in a frame: a CYRQ whose correlation length byte is corrupted is a typed decline
+    let mut cyrq = reference_cyrq().encode();
+    let last = cyrq.len() - 1;
+    cyrq[last] = 3;
+    assert_eq!(message_extent(&cyrq), Err(AnnounceDecline::BadCorrelationLen { got: 3 }));
 }
