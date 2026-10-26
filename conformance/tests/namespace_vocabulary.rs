@@ -147,7 +147,7 @@ fn test_namespace_vocabulary_digest_input_malformed_is_not_mismatched() {
 
 #[test]
 fn test_namespace_vocabulary_envelope_shape() {
-    // Clause: KISS-CLASSIFY-6.8-0008.
+    // Backs: KISS-CLASSIFY-6.8-0008
     // both kinds, well-formed, are accepted as valid envelopes.
     assert_eq!(validate_envelope(&build_from(&enum_fields())).unwrap().kind, Kind::Enumerated);
     assert_eq!(validate_envelope(&build_from(&gen_fields())).unwrap().kind, Kind::Generated);
@@ -246,7 +246,7 @@ fn test_namespace_vocabulary_envelope_constraints() {
 
 #[test]
 fn test_namespace_vocabulary_version_is_asserted() {
-    // Clause: KISS-CLASSIFY-6.8-0009.
+    // Backs: KISS-CLASSIFY-6.8-0009
     let m = validate_envelope(&build_from(&enum_fields())).unwrap();
     // reading is not asserting: validate_envelope succeeds whatever the version is.
     assert_eq!(m.vocabulary_version, 3);
@@ -293,7 +293,7 @@ fn test_namespace_vocabulary_freshness_provenance() {
 
 #[test]
 fn test_namespace_vocabulary_declarative_production_split() {
-    // Clause: KISS-CLASSIFY-6.8-0012.
+    // Backs: KISS-CLASSIFY-6.8-0012
     // A generated manifest WITHOUT `vectors` (the production half) is still a valid ENVELOPE for
     // a parse-only consumer — parsers need only the declarative half.
     let m = validate_envelope(&build_from(&drop_key(gen_fields(), "vectors")))
@@ -310,7 +310,7 @@ fn test_namespace_vocabulary_declarative_production_split() {
 
 #[test]
 fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
-    // Clause: KISS-CLASSIFY-6.8-0013.
+    // Backs: KISS-CLASSIFY-6.8-0013
     // all four pins present → covered.
     let full = validate_envelope(&build_from(&gen_fields())).unwrap();
     assert_eq!(check_generated_vector_coverage(&full), Ok(()));
