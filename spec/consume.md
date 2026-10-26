@@ -815,6 +815,14 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   from the region's structure, and MUST instead record the region as residue (§6.3-0002) or,
   where nothing was op-bearing, decline `not-a-kernel` (§6.4-0003). *Test:*
   `test_consume_no_hallucinated_node`.
+- **KISS-CONSUME-6.5-0004** — **A kernel that declines an invocation whose derived `structure_key`
+  byte-matches its own MUST report a typed decline.** (CireSnave decision 310, R1.24 Q6 A.) A
+  byte-match is necessary and not sufficient for admission (KISS-CLASSIFY §6.6-0001), so a kernel
+  MAY decline a cell-mate it does not compute; when it does, it MUST NOT decline silently, MUST NOT
+  abort, and MUST NOT return the result of a different computation. The typed decline is what a
+  caller falls back on. The obligation is stated here and not in KISS-Classify, which owns the key
+  and not the consumer's behaviour (one obligation, one sub-standard). *Test:*
+  `test_consume_key_matched_decline_is_typed`.
 
 ### 6.6 The emit/consume round-trip (two tiers)
 
@@ -1072,6 +1080,7 @@ any normative MUST without a mapped test and on any test citing a retired or non
 | KISS-CONSUME-6.5-0001 | `test_consume_refusal_is_typed_decline` |
 | KISS-CONSUME-6.5-0002 | `test_consume_never_panic_on_adversarial_input` |
 | KISS-CONSUME-6.5-0003 | `test_consume_no_hallucinated_node` |
+| KISS-CONSUME-6.5-0004 | `test_consume_key_matched_decline_is_typed` |
 | KISS-CONSUME-6.6-0001 | `test_consume_roundtrip_tier1_structural` |
 | KISS-CONSUME-6.6-0002 | `test_consume_roundtrip_tier2_numeric_same_language_ondevice` |
 | KISS-CONSUME-6.6-0003 | `test_consume_roundtrip_no_cross_language_numeric` |
