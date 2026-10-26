@@ -116,35 +116,42 @@ pub fn decode_provision_success(bytes: &[u8]) -> Result<ProvisionSuccess, SynthD
     if artifact_format_tag == [0; 4] {
         return Err(SynthDecline::ZeroArtifactFormatTag);
     }
+    let (artifact, off) = read_artifact(bytes, off)?;
+    let contract = read_contract(bytes, off)?;
+    Ok(ProvisionSuccess { identity, artifact_format_tag, artifact, contract })
+}
+
+/// The `u64`-framed artifact at `off` (§6.4-0001b). The cap (§6.4-0001e) is checked before anything keyed on the
+/// length, supplied bytes or not; the length is then compared in `u64` against what is left, so a hostile length can
+/// neither overflow an offset nor drive an allocation. Returns the bytes and the offset after them.
+fn read_artifact(bytes: &[u8], mut off: usize) -> Result<(Vec<u8>, usize), SynthDecline> {
     if bytes.len() < off + 8 {
         return Err(SynthDecline::Truncated { region: "artifact_len" });
     }
     let artifact_len = u64::from_le_bytes(bytes[off..off + 8].try_into().unwrap());
     off += 8;
-    // §6.4-0001e: the cap is checked before anything keyed on the length, supplied bytes or not
     if artifact_len > MAX_ARTIFACT_LEN {
         return Err(SynthDecline::LengthOutOfRange { region: "artifact", got: artifact_len });
     }
-    // Compare in u64 against what is actually left, so a hostile length can neither
-    // overflow an offset nor drive an allocation.
     if artifact_len > (bytes.len() - off) as u64 {
         return Err(SynthDecline::Truncated { region: "artifact" });
     }
-    let artifact_len = artifact_len as usize;
-    let artifact = bytes[off..off + artifact_len].to_vec();
-    off += artifact_len;
+    let end = off + artifact_len as usize;
+    Ok((bytes[off..end].to_vec(), end))
+}
+
+/// The `u32`-framed contract document at `off` (§6.4-0001b), capped by the Announce payload cap (§6.4-0001e).
+fn read_contract(bytes: &[u8], mut off: usize) -> Result<Vec<u8>, SynthDecline> {
     if bytes.len() < off + 4 {
         return Err(SynthDecline::Truncated { region: "contract_len" });
     }
-    let contract_len_raw = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
-    if contract_len_raw > crate::announce::MAX_CONTRACT_PAYLOAD_LEN {
-        return Err(SynthDecline::LengthOutOfRange { region: "contract", got: u64::from(contract_len_raw) });
-    }
-    let contract_len = contract_len_raw as usize;
+    let len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
     off += 4;
-    if contract_len > bytes.len() - off {
+    if len > crate::announce::MAX_CONTRACT_PAYLOAD_LEN {
+        return Err(SynthDecline::LengthOutOfRange { region: "contract", got: u64::from(len) });
+    }
+    if len as usize > bytes.len() - off {
         return Err(SynthDecline::Truncated { region: "contract" });
     }
-    let contract = bytes[off..off + contract_len].to_vec();
-    Ok(ProvisionSuccess { identity, artifact_format_tag, artifact, contract })
+    Ok(bytes[off..off + len as usize].to_vec())
 }
