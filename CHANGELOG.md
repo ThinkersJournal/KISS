@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `HANDOFF.md` rewritten (not appended) for the next session: the clean stack #693-#699, the rulings of decisions 310 and 311 (310 Q1 re-opened, Q4 open), the owed options notes (R1.28, R1.13, #426, #424, #32, R3.6, #396), ROADMAP housekeeping, owed witnesses, the issue-clock state, and the one-linear-stack procedure the PM now requires.
+
 ## 0.6.5 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Synth, additive; CireSnave decision 310, R1.24 Q7 B; Part of KISS#317; stacked on #698): new KISS-SYNTH-6.4-0001h: in a provision response the contract's `entry_point` resolves **inside the artifact** the same frame carries, by the rule in a new **"How `entry_point` resolves"** column of the `artifact_format_tag` table (6.4-0001g); a row that states no rule is not a registered value. The PTX row: `entry_point` names an `.entry` directive in the PTX text. The per-kernel link field in the Contract (option A, Breaking) is deferred until a provider with a non-self-contained artifact exists. The same column is where a format's calling convention (R2.8) goes. Backed by `test_synth_entry_point_resolves_in_artifact`; emptying the PTX cell fails it.
