@@ -20,24 +20,22 @@
 10. Coderipper 0.10.0 advisory rule `patent-sweep-record`: keep `docs/PATENT-SWEEP.md` current (a docs PR with a version bump) when it lands.
 11. **Stacks: build ONE LINEAR stack**, each PR based on its parent branch, each ONE commit made by `git cherry-pick --no-commit` onto the parent branch (never merge main into a branch: it re-adds squashed content, the PM HOLDs it). Never force-push (the classifier denies it). Helper scripts were in the session scratchpad and are gone: CHANGELOG entry + `conformance/Cargo.toml` version are bumped together; README figures and the floor come from `kiss_readme_coverage.py` / `kiss_trace.py --ratchet`. Run ALL of: version_sync, readme_coverage, clause_position, tables, scoped_cites, ratchet.
 
-## State (2026-10-26)
+## State (2026-10-26, evening)
 
-**Merged:** #658-#689 (R5.1 extent, correlation field Breaking 0.5.0, R5.3 trust, MX rows + OCP verification, R5.9, R5.2 PTX seed, options notes R3.8/R2.8/R1.24/R1.23/R1.25, Q5 ULP referent).
+**THROTTLED** by CireSnave until ~2026-10-28T01:00Z (`C:\Projects\THROTTLE.md`): gates, fixes and security only; no new roadmap rows, no sub-agents, no avoidable builds; `CARGO_BUILD_JOBS=2`, one cargo build at a time (box memory limit, PM notice). Read that file at session start.
 
-**Clean stack in the PM's gate (merge bottom-up; each base is the parent branch):**
-#693 Q2 tolerance mapping 0.5.11 (Conform 6.8-0004a) -> #694 Q1 C declared mantissa width, **Breaking, `contract_version` 3->4** (Contract 6.8-0004a, Ops 6.17-0003/-5/-6; `math_fidelity` = `bit-stable` | `reduced-mantissa-permitted:<n>`) 0.6.0 -> #695 Synth 6.6-0001d consumer typed error 0.6.1 -> #696 Announce 7.3-0003 role-aware live caps + `announce_vectors.json` `negotiation` 0.6.2 -> #697 Conform 7.2-0005 verify outcomes/record 0.6.3 -> #698 Consume 6.5-0004 key-match typed decline 0.6.4 -> #699 Synth 6.4-0001h entry_point in artifact + tag-table column 0.6.5 -> this HANDOFF PR 0.6.6.
-Worktree `C:/Projects/kiss-clean` holds the stack tip; remove each branch/worktree after its merge. PM numbers are the PM's.
+**Merged:** #658-#701 (decisions 310/311 as far as built, Breaking `contract_version` 4 via #694, HANDOFF #700, options notes R1.28 #701).
 
-**Rulings to keep** (CireSnave via the PM): decision 311: Q1 C (width by probe, not a floor), Q2 A, Q3 A, Q4 A (Baracuda fixes `1.0`->`1.0f`; third MathFidelity value waits R1.11), Q5 A+C. Decision 310: R1.24 Q2/Q3/Q5/Q6/Q7 built; **Q1 (#10) RE-OPENED** (consumer-answered ops-list query, board offers A/B/C; C = optional feature bit needing Q3 A) and **Q4 (#26 variable-length fields) OPEN: build neither.** 6.17-0002 subnormals are part of bit-stable; `rm` is a permission; an FMA kernel cannot claim `st` until R1.11.
+**In the PM's merge loop, one linear stack, bottom-up (each base is the parent branch):** #702 R1.13 note -> #703 R1.19 -> #704 R1.22 -> #705 R1.26 -> #706 R3.6 -> #707 ROADMAP housekeeping (R1.26, R1.30 done, R2.9 for #396) -> #708 Emit informative note citing R1.5 -> #709 review of the 9 weak ties -> #710 citation levels `Backs[enforced]` (decision 308 B; adds ROADMAP R3.15) -> this HANDOFF PR. Your job on a HOLD: `git fetch`, merge the parent branch into the child (never `main` into a branch), keep each PR to ONE commit's content, rerun the lints, push without force (force-push is denied). Worktree `C:/Projects/kiss-clean` holds the tip; remove branches/worktrees after merge.
 
-## Owed (in this order)
+**Rulings to keep** (CireSnave via the PM): 311 Q1 C (declared width by value `reduced-mantissa-permitted:<n>`, no floor), Q2 A, Q3 A, Q4 A (Baracuda fixes `1.0`->`1.0f`), Q5 A+C. 310: R1.24 Q2/Q3/Q5/Q6/Q7 built (#695-#699); **Q1 (#10) RE-OPENED** (consumer-answered ops-list query; board A/B/C) and **Q4 (#26) OPEN: build neither.** 308 B: levels in the citation; `assert_golden`/`assert_token` count as enforced; unmarked = stated; the 9 weak ties reviewed (#709). 6.17-0002 subnormals are part of bit-stable; `rm` is a permission.
 
-1. Options notes (docs, plain sentences, example + options + recommendation, `file:line`): R1.28 (#218, #228, #234), R1.13 (#236, #316), singles #426 (R1.19), #424 (R1.22), #32 (R1.26), R3.6 (#400, #458, #484), then #396 (needs its own ROADMAP row: sNaN kind for the rounding atoms; I wrongly closed it once, reopened, retracted).
-2. ROADMAP housekeeping PR: add the #396 row; R1.26 (element formats landed in #675, block-scaling attribute remains); mark R1.30 done (OCP result: `e3m4` is not an OCP MX v1.0 type; #681).
-3. Witnesses owed: R1.31 (kiss-ref reference-consumer loader test for Synth 6.4-0001f; the PM's condition for untested floor +1) and R3.14 (Emit/Consume twin witnesses 6.7-0006/-0007, 6.6-0007/-0008; floor +2); a second implementation's witness for Conform 7.2-0005.
-4. Fuel to check: `negotiate()` that returns a plain AND reads provider-only FEAT bits as off (#696). Every contract reader must accept `contract_version` 4 (#694); impact grep found no `reduced-mantissa-permitted` contract shipped by Fuel/Baracuda/Unpopped.
-5. Issue clock (EXPECTATIONS 6.23): 31 open at last read, 0 overdue; run `python /c/Projects/tools/issue-age.py --repo ThinkersJournal/KISS` after every batch. Never close to beat the clock. Weekly sweep next due **2026-11-01**. Dependabot Monday 2026-10-26.
-6. `kiss_clause_position.py` and the other lints are not optional on a merged tree; the PM's gate runs them.
+## Owed (throttled: only if a gate or fix needs it)
+
+1. ROADMAP R3.15: relabel the other unmarked citations by level (owner: the KISS lane; not started). R1.31 (kiss-ref consumer-loader witness for Synth 6.4-0001f), R3.14 (Emit/Consume twin witnesses), and a second implementation's witness for Conform 7.2-0005 are owed.
+2. Options notes all delivered (R1.28, R1.13, R1.19, R1.22, R1.26, R3.6); #396 is ROADMAP R2.9 (`[rule]`). The R1.28 row text still lists the derivability witness as open although KISS-CLASSIFY-6.8-0014 already requires it: fix in the next housekeeping pass.
+3. Fuel to check: a `negotiate()` that returns the plain AND of the capability words reads provider-only FEAT bits as off (#696). Every contract reader must accept `contract_version` 4.
+4. Issue clock (EXPECTATIONS 6.23): 31 open at last read, 0 overdue, 0 outsiders; run `python /c/Projects/tools/issue-age.py --repo ThinkersJournal/KISS` after every batch. Never close to beat the clock. Weekly sweep next due **2026-11-01**. **Before every push run all single-line `python tools/...` steps of the kiss-trace job** (about 47; only `test_kiss_ratchet_step` and `test_kiss_msrv_step` fail locally, on the WSL bash launcher).
 
 ## Waiting (do not start)
 
