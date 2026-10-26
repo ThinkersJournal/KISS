@@ -444,7 +444,7 @@ def check_math_fidelity(ops, v):
     is spelled like a MathFidelity value or a strict-precision float (`f32s`), and the `f32` row
     says compute fidelity is the attribute, not a dtype property.
     §6.17-0006: the pinned input-rounding is self-consistent: the TF32 retained-bit count equals
-    the §6.17-0003 floor, the clause's `u` equals 2^-(bits+1) for that count, and the mode is RNE."""
+    the declared width the clause names for TF32, the clause's `u` equals 2^-(bits+1) for that count, and the mode is RNE."""
     region = between(ops, "### 6.16 Self-contained dtype bit layouts",
                      "\n- **KISS-OPS-6.16-0001**", where="§6.16 dtype table")
     rows = {cells[0].strip("`"): " ".join(cells[1:]) for cells in table_cells(region)
@@ -457,20 +457,21 @@ def check_math_fidelity(ops, v):
     if "pure storage" not in rows.get("f32", ""):
         v.append("§6.17-0004: the §6.16 `f32` row no longer says it is pure storage")
 
-    body3 = " ".join((clause_body(ops, "6.17-0003") or "").split())
     body6 = " ".join((clause_body(ops, "6.17-0006") or "").split())
-    floor = re.search(r"no fewer than (\d+) explicit mantissa bits", body3)
+    # CireSnave decision 311 Q1 C retired the pinned floor: a kernel declares its width, and the
+    # clause names TF32 as `n = 10`. The pinned rounding must still agree with that example width.
+    declared = re.search(r"TF32 is `n = (\d+)`", body6)
     bits = re.search(r"TF32\*\*.*?(\d+) retained mantissa bits", body6)
     u = re.search(r"u = 2⁻([⁰¹²³⁴⁵⁶⁷⁸⁹]+)", body6)
-    if not (floor and bits and u):
-        v.append(f"§6.17-0006: could not read the §6.17-0003 floor ({bool(floor)}), the TF32 "
+    if not (declared and bits and u):
+        v.append(f"§6.17-0006: could not read the TF32 declared width ({bool(declared)}), the TF32 "
                  f"retained-bit count ({bool(bits)}) or the TF32 `u` ({bool(u)})")
         return
     n_bits = int(bits.group(1))
     u_exp = int(u.group(1).translate(SUPERSCRIPT))
-    if n_bits != int(floor.group(1)):
-        v.append(f"§6.17-0006: TF32 retains {n_bits} mantissa bits but the §6.17-0003 "
-                 f"floor is {floor.group(1)}")
+    if n_bits != int(declared.group(1)):
+        v.append(f"§6.17-0006: TF32 retains {n_bits} mantissa bits but the clause names its "
+                 f"declared width as {declared.group(1)}")
     if u_exp != n_bits + 1:
         v.append(f"§6.17-0006: TF32 `u` is 2^-{u_exp} but 2^-(retained_mantissa_bits + 1) "
                  f"is 2^-{n_bits + 1}")

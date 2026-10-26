@@ -1,4 +1,4 @@
-# Options note: R1.28, provenance, derivability and variant fidelity (three questions)
+# Options note: R1.28, provenance, derivability and variant fidelity (two questions and one already ruled)
 
 **Informative. No normative text. For CireSnave's decision; the PM turns each question into a board item.**
 Read at `origin/main` `2e65634`, 2026-10-26. Paths are `file:line` at that commit. Issues: KISS#218, #228, #234
@@ -68,29 +68,22 @@ sense that both change the manifest; it does not depend on it.
 
 ---
 
-## Q3. Does KISS give a home to "this variant is bit-identical to the default lowering of the same cell"? (#234)
+## Q3. Does KISS give a home to "this variant is bit-identical to the default lowering of the same cell"? (#234) **Already ruled; not a decision.**
 
-**Example.** An implementation produces two schedules of one cell, an unrolled one and the default. It wants to say
-the unrolled one computes the same bits as the default. That is a relation between **two variants**, local to one
-backend at one version. KISS-EMIT-6.6-0005 (`spec/emit.md:816`) forbids declaring an emitted kernel's fidelity
-anywhere but Guarantees, and Guarantees holds claims against the kernel's own semantics. A variant-relative claim
-filed there would read as a stronger claim than it is.
+**Example.** An implementation produces two schedules of one cell, an unrolled one and the default, and wants to say the
+unrolled one computes the same bits as the default: a relation between two variants, local to one backend at one version.
+KISS-EMIT-6.6-0005 (`spec/emit.md:816`) forbids declaring an emitted kernel's fidelity anywhere but Guarantees, and Guarantees
+holds claims against the kernel's own semantics, so a variant-relative claim filed there would read as a stronger claim than it is.
 
-**What the specs say.** Nothing about same-language variants. The issue's search of `spec/` finds seven mentions of
-bit-identity and all of them are about one atom lowered into two **languages**. I did not repeat the search.
+**What is already decided.** ROADMAP R1.5 was **ruled B on 2026-10-15**: `VariantFidelity` is implementation-private, it stays on
+Unpopped's `Variant` and never on the wire, and there is no KISS-Emit clause ("Nothing to mint"). That is the issue's own
+alternative ("variant-to-variant relationships are out of scope entirely ... worth saying"). **I wrote the first version of this
+note without having read R1.5; the question was already answered.** The issue stays open for one reason: the ruling is in the
+roadmap and not in the spec, so an implementer who reads only `spec/emit.md` still cannot tell off-schema from unmentioned.
 
-**Options.**
-- **A. Say it is out of scope,** in one informative sentence next to 6.6-0005: a relation between two schedule
-  variants of one cell is not a KISS field; an implementation that carries one carries it off-schema, and its referent
-  is only ever the default lowering of the same cell, in the same backend, at the same version. No bytes change.
-- **B. Add a field** (in Emit or Capabilities) with that referent stated as normative. *Cost:* new bytes, a new idea
-  (a "variant") that the specs do not have, and a second implementer is needed to know the shape is right. One
-  implementation (Unpopped) carries it today.
-- **C. Do nothing.** The issue itself says an implementation cannot then tell off-schema from unmentioned.
-
-**Recommendation: A.** It answers the question the issue actually asks ("is this off-schema or merely unmentioned?")
-at the cost of one sentence, and states the locality of the referent, which the issue calls the failure mode. B can
-wait for a second implementer.
+**One small thing is left, and it is not a ruling.** Add a single informative sentence next to KISS-EMIT-6.6-0005 saying that a
+relation between two variants of one cell is implementation-private and is not a KISS field, and that its only possible referent is
+the default lowering of the same cell in the same backend at the same version. No bytes change. It needs only the PM's approval.
 
 ---
 
@@ -100,4 +93,4 @@ wait for a second implementer.
 |---|---|---|---|---|
 | 1 | #218 `generated_from` in the two vector files | B (next regeneration); A to do it now | yes (two files) | clause already fixed; `source_commit` separate |
 | 2 | #228 derivable capability | C, field first | manifest field (additive) | ask the two maintainers first |
-| 3 | #234 variant fidelity | A (out of scope, referent stated) | no | one implementer today |
+| 3 | #234 variant fidelity | none: ruled (R1.5, 2026-10-15); add one informative sentence to Emit if the PM agrees | no | not a decision |
