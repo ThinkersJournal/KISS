@@ -1388,6 +1388,16 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   body is not exactly `N` bytes or whose CRC-32 does not match. This is the self-delimiting
   extent and loud-failure integrity required by §6.1-0001 / §6.1-0002, independent of any outer
   transport frame. *Test:* `test_contract_document_inner_length_and_crc`.
+- **KISS-CONTRACT-6.11-0003a** — A reader MUST reject, with a typed decline, a document whose header
+  declares `<N>` greater than `16777216` (`MAX_DOCUMENT_BODY_LEN = 2^24`, the value of
+  KISS-ANNOUNCE-6.4-0014), even when the body really is that long and its CRC-32 is correct, and MUST
+  do so before any work or allocation keyed on `<N>`. The cap is a **placeholder, revisable before any
+  freeze**. *Test:* `test_contract_document_len_cap`.
+- **KISS-CONTRACT-6.11-0003b** — **The CRC-32 detects accidental corruption and truncation, not
+  modification.** It is computed by whoever wrote the body, so anyone who alters the body recomputes
+  it; a reader MUST NOT treat a matching `crc32` as evidence that the body is unmodified, authentic,
+  or produced by the party it names (umbrella §10.2: a checksum is not a signature). *Test:*
+  `test_contract_crc_is_not_a_signature`.
 - **KISS-CONTRACT-6.11-0004** — The body MUST consist of exactly the seven section blocks in the
   fixed order Identity(1), Semantics(2), Interface(3), Dispatch(4), Capabilities(5),
   Guarantees(6), Provenance(7); each block MUST begin with the pinned **heading line**
@@ -1704,6 +1714,8 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.11-0001 | `test_contract_text_field_encoding` |
 | KISS-CONTRACT-6.11-0002 | `test_contract_document_header_line` |
 | KISS-CONTRACT-6.11-0003 | `test_contract_document_inner_length_and_crc` |
+| KISS-CONTRACT-6.11-0003a | `test_contract_document_len_cap` |
+| KISS-CONTRACT-6.11-0003b | `test_contract_crc_is_not_a_signature` |
 | KISS-CONTRACT-6.11-0004 | `test_contract_document_section_headings` |
 | KISS-CONTRACT-6.11-0005 | `test_contract_document_field_order` |
 | KISS-CONTRACT-6.11-0006 | `test_contract_text_positional_signature` |

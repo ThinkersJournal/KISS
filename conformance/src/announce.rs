@@ -20,6 +20,9 @@ pub const MAGIC: u32 = 0x4D41_4553;
 pub const ENVELOPE_LEN: usize = 56;
 /// The maximum number of live profiles (§6.1-0007).
 pub const MAX_PROFILES: usize = 16;
+/// The FEAT-axis capability bit reserved by name for the optional artifact signing/attestation extension
+/// (§7.2-0011): no meaning is assigned, so a producer writes zero to it.
+pub const FEAT_ARTIFACT_ATTESTATION_BIT: u32 = 34;
 /// The maximum contract-response payload byte-length (§6.4-0004): 2^24 = 16 MiB. **A proposed value:**
 /// no producer measurement exists (the Fuel and Baracuda lanes produce no response payload today).
 pub const MAX_CONTRACT_PAYLOAD_LEN: u32 = 1 << 24;
