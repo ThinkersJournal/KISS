@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.12 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r3-6-tooling-and-census.md`, the options note for R3.6 (KISS#458, #400, #484) for the board (the PM can decide #484 alone): where a test that binds the document is recorded (recommend leaving it to the mutation audit, and Rust-side discovery if the count grows), whether a clause may name several tests (recommend keeping one, together with R3.8), and how the affected-set census is built (recommend a paragraph in `CONTRIBUTING.md`: key on what a party's code emits or parses, anchor on a token the clause owns, negative control on the homonym). No normative text.
+
 ## 0.6.11 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-26-block-scaling.md`, the options note for R1.26 (KISS#32) for the board. States what has landed since the issue was filed (MX element formats #675, OCP verification #681, scale dtype keyed from `sk6`), so the row is stale, and asks the four questions that remain: key the block length (recommend at the next key-schema event), a closed `{16, 32}` set, an implied group axis, and who pins packing and conversion rounding (recommend waiting for a Baracuda hardware measurement). No normative text.
