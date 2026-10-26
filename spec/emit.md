@@ -842,6 +842,8 @@ one-for-one to a KISS-Consume clause — and are, for that cross-standard-corres
 reason, kept whole rather than atomically split (the split would break the 1:1
 correspondence the sibling relies on).
 
+*Maintained, not structural (CireSnave decision 297, R5.9 option C).* That this section and KISS-Consume §6.6 say the same thing is kept true by the editor of record updating both documents together and by the cross-standard lint below; nothing in the documents themselves enforces it. The eventual structural enforcement is the interface project (`docs/interface-project-plan.md`), where both halves of the round trip are defined in code from a common definition with tests that prove the round trip.
+
 - **KISS-EMIT-6.7-0001** — **Tier 1 (structural round-trip).** Emit-then-lift (or
   lift-then-emit) MUST reproduce the **same KISS-Ops op DAG** under **structural /
   op-DAG equality** (§6.7-0007), checked over a **declared subset** of ops (the subset
@@ -917,7 +919,7 @@ correspondence the sibling relies on).
   are identical; the comparison is performed **after** resolution to the primitive floor
   and **includes** the OpAttrs bytes. An implementation MUST NOT claim tier-1 equality
   under any looser predicate. *Test:* `test_emit_op_dag_equality_defined`.
-- **KISS-EMIT-6.7-0008** — The round-trip statement of §6.7-0001 through §6.7-0005
+- **KISS-EMIT-6.7-0008** — The round-trip statement of §6.7-0001 through §6.7-0007
   **and §6.7-0009** MUST be **semantically equivalent** — same clause intent, same
   normative effect — to the corresponding round-trip clauses of KISS-Consume under the
   following enumerated **clause-correspondence table**; the only permitted difference is that the
@@ -933,6 +935,8 @@ correspondence the sibling relies on).
   | §6.7-0003 | §6.6-0003 | No cross-language numeric identity |
   | §6.7-0004 | §6.6-0004 | Tier selected by determinism enum |
   | §6.7-0005 | §6.6-0005 | DAG siblings, no dependency edge |
+  | §6.7-0006 | §6.6-0007 | Language-identity token determinant |
+  | §6.7-0007 | §6.6-0008 | Structural op-DAG equality comparator |
   | §6.7-0009 | §6.6-0006 | Whole-kernel tier aggregation |
 
   *Test:* `test_conform_emit_consume_correspondence_lint` (KISS-Conform
