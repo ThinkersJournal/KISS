@@ -106,6 +106,7 @@ pub mod hp;
 pub mod dtype;
 pub mod integer;
 pub mod json;
+pub mod key_match;
 pub mod namespace_vocabulary;
 pub mod opattrs;
 pub mod opattrs_value;
