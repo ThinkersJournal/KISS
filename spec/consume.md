@@ -887,16 +887,6 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
   whole-kernel round-trip MUST be claimed as **tier-1 (structural) only**. An implementation MUST
   NOT assert whole-kernel tier-2 bit identity for a DAG containing a non-`exact-byte` op. *Test:*
   `test_consume_roundtrip_whole_kernel_aggregation`.
-
----
-
-## 7. Capability, Profile & Extension model
-
-KISS-Consume adopts the umbrella capability/profile/extension model (umbrella §6) and adds
-nothing to the negotiation machinery; it pins only the mandatory core and the one negotiable
-feature below. Reserved bit ranges follow the umbrella u64 three-axis split (umbrella §6.2);
-KISS-Consume reserves no new axis and expresses no range as a computed fraction.
-
 - **KISS-CONSUME-6.6-0007** — For the Consume direction, "same source language" in §6.6-0002 MUST
   be determined by the **language-identity token** (§3) recorded in the lifted kernel's contract
   Provenance, and "same target device" MUST be determined by **byte-equal** KISS-Classify
@@ -911,6 +901,15 @@ KISS-Consume reserves no new axis and expresses no range as a computed fraction.
   per-node **OpAttrs byte channels** are identical; the comparison is performed **after**
   resolution to the primitive floor and **includes** the OpAttrs bytes. An implementation MUST NOT
   claim tier-1 equality under any looser predicate. *Test:* `test_consume_op_dag_equality_defined`.
+
+---
+
+## 7. Capability, Profile & Extension model
+
+KISS-Consume adopts the umbrella capability/profile/extension model (umbrella §6) and adds
+nothing to the negotiation machinery; it pins only the mandatory core and the one negotiable
+feature below. Reserved bit ranges follow the umbrella u64 three-axis split (umbrella §6.2);
+KISS-Consume reserves no new axis and expresses no range as a computed fraction.
 
 ### 7.1 Mandatory core
 
