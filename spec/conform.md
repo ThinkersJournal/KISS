@@ -976,6 +976,20 @@ enum (§6.0). See umbrella §3 for the full statement.
   in the contract Guarantees, never an implementation-chosen implicit default. *Test:*
   `test_conform_nondeterministic_comparator`.
   **Normalizes:** bit differences arising from combine order, within the tolerance declared in the contract Guarantees.
+- **KISS-CONFORM-6.8-0004a** — **The comparator's threshold MUST be derived from the declared
+  tolerance by this mapping, and from nothing else.** (CireSnave decision 311, Q2 A.) (a) A
+  declared **accuracy tier** (KISS-CONTRACT §6.8-0002) selects the ULP/tolerance comparator and
+  admits a result iff it is within **every** bound the tier declares (`max_ulp`, `max_relative`,
+  `max_absolute`). (b) A declared **accumulator band** (KISS-CONTRACT §6.8-0012) selects the
+  order-invariant comparator with the **absolute** tolerance `k(S,A) · N · eps_A · |max partial
+  sum|`, evaluated per invocation from the runtime reduction extent `N` and that invocation's
+  largest partial sum, and never relative to the result. (c) A contract that declares neither, or
+  a tier that carries no bound, yields **no threshold**: the check MUST report that no tolerance
+  was declared and MUST NOT substitute a default. *Worked vector:* an `f32` sum with an `f32`
+  accumulator, `k = 1`, `N = 1024`, `|max partial sum| = 4096`, `eps_A = 2^-24` gives the
+  absolute band `1 · 1024 · 2^-24 · 4096 = 0.25`: results `0.2` apart are admitted and results
+  `0.3` apart are not, including when the expected result is `0.0`. *Test:*
+  `test_conform_tolerance_threshold_from_declared`.
 - **KISS-CONFORM-6.8-0005** — For the complex-transcendental ops `carg`, `clog`, `csqrt`,
   `cexp`, KISS-Conform MUST apply the **split comparator**: an exact-bit comparator on the sign
   bit of every zero-valued result component combined with a ULP/tolerance comparator on the
@@ -1667,6 +1681,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0002a | `test_conform_ulp_referent_is_wide_reference` |
 | KISS-CONFORM-6.8-0003 | `test_conform_ulp_declared_tier_is_gate` |
 | KISS-CONFORM-6.8-0004 | `test_conform_nondeterministic_comparator` |
+| KISS-CONFORM-6.8-0004a | `test_conform_tolerance_threshold_from_declared` |
 | KISS-CONFORM-6.8-0005 | `test_conform_split_comparator` |
 | KISS-CONFORM-6.8-0006 | `test_conform_comparator_selection_rule` |
 | KISS-CONFORM-6.8-0007 | `test_conform_whole_kernel_downgrade` |
