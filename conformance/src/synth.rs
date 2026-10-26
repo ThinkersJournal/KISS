@@ -49,6 +49,14 @@ pub enum SynthDecline {
 /// placeholder, revisable before any freeze** (no measurement exists); the largest realistic artifact (a
 /// PTX or cubin module) is orders of magnitude smaller.
 pub const MAX_ARTIFACT_LEN: u64 = 1 << 28;
+/// The registered `artifact_format_tag` values (§6.4-0001g), in table order. One value is seeded: `PTX `.
+pub const REGISTERED_ARTIFACT_FORMAT_TAGS: [[u8; 4]; 1] = [*b"PTX "];
+
+/// Whether `tag` is a registered `artifact_format_tag` value (§6.4-0001g). The all-zero value is never registered
+/// (§6.4-0001d). Registered is not supported: a consumer still declines a registered tag it cannot load.
+pub fn is_registered_format_tag(tag: [u8; 4]) -> bool {
+    tag != [0; 4] && REGISTERED_ARTIFACT_FORMAT_TAGS.contains(&tag)
+}
 
 /// A provision success: the pair `{artifact, contract}` under its echoed identity (§6.2-0001).
 #[derive(Debug, Clone, PartialEq, Eq)]
