@@ -82,6 +82,28 @@ impl AccuracyModel {
     }
 }
 
+/// What a ULP figure was measured against (KISS-CONFORM §6.8-0002a).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UlpReferent {
+    /// An audited wide-precision reference: the only referent a ULP result may have.
+    AuditedWideReference,
+    /// Another implementation's output: a differential, never a ULP result.
+    OtherImplementation,
+}
+
+/// A claimed ULP result: a distance and what it was measured against.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UlpResult {
+    pub ulp: f64,
+    pub referent: UlpReferent,
+}
+
+/// KISS-CONFORM §6.8-0002a: a result may be recorded as a ULP result only if its referent is an
+/// audited wide-precision reference.
+pub fn ulp_result_is_recordable(r: UlpResult) -> bool {
+    r.referent == UlpReferent::AuditedWideReference
+}
+
 /// The §6.8 advisory-floor table (compute dtype ≥ 16-bit float). **INFORMATIVE ONLY** — a
 /// reasonableness reference drawn from incumbent practice, NOT a gate. [`AccuracyTier::admits`]
 /// MUST NOT consult it; it exists so a reader can see typical values, never to cap a
