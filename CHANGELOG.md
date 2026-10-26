@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-24-seam-obligations.md`, the options note for R1.24 (KISS#10, #24, #25, #26, #124, #289, #317): seven questions, each with an example, what the specs already say (`file:line`), options, a recommendation and what waits. Notes that #124 is partly answered (the opt-in trust-but-verify profile exists) and that the plain-AND capability rule proposed in #25 would zero provider-only bits. For the board. No normative text.
+
 ## 0.5.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r2-8-consumer-filed-seam-proposals.md`, the options note for R2.8 (KISS#11, #12, #18, #19, #21, #27): six questions with a concrete example, what the specs already say (`file:line`), options, a recommendation and what waits. For the board. No normative text.
