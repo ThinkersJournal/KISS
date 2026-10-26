@@ -66,7 +66,7 @@ struct Row {
     statement: String,
 }
 
-/// Parse the 5-row `| KISS-Emit | KISS-Consume | Statement |` table from emit.md.
+/// Parse the 8-row `| KISS-Emit | KISS-Consume | Statement |` table from emit.md.
 fn correspondence_rows(emit_md: &str) -> Vec<Row> {
     let header = "| KISS-Emit | KISS-Consume | Statement |";
     let h = emit_md
@@ -96,8 +96,8 @@ fn correspondence_rows(emit_md: &str) -> Vec<Row> {
 
 /// Enforces: KISS-EMIT-6.7-0008 AND KISS-CONFORM-6.11-0001 — the cross-standard document lint.
 /// The emit↔consume correspondence table in emit.md pairs each KISS-Emit §6.7
-/// round-trip clause with its KISS-Consume §6.6 counterpart. Teeth: (a) exactly 6
-/// rows covering §6.7-0001..0005 + §6.7-0009 ↔ §6.6-0001..0006 -- the emit side is
+/// round-trip clause with its KISS-Consume §6.6 counterpart. Teeth: (a) exactly 8
+/// rows covering §6.7-0001..0007 + §6.7-0009 ↔ §6.6-0001..0008 -- the emit side is
 /// NOT contiguous, and pinning the explicit set rather than a range is what makes a
 /// silently-dropped row fail; (b) every referenced clause is
 /// actually DEFINED in its own document (a renumber/removal on either side fails);
@@ -111,8 +111,8 @@ fn test_conform_emit_consume_correspondence_lint() {
     let rows = correspondence_rows(&emit);
     assert_eq!(
         rows.len(),
-        6,
-        "KISS-EMIT-6.7-0008 / KISS-CONFORM-6.11-0001: expected 6 correspondence rows, found {}",
+        8,
+        "KISS-EMIT-6.7-0008 / KISS-CONFORM-6.11-0001: expected 8 correspondence rows, found {}",
         rows.len()
     );
 
@@ -181,23 +181,23 @@ fn test_conform_emit_consume_correspondence_lint() {
     }
 
     // Explicit sets, not ranges: the emit side is NOT contiguous. §6.7-0009
-    // (whole-kernel tier aggregation) pairs with §6.6-0006, while §6.7-0006 -- the
-    // tier-2 determinants -- has no Consume twin to pair with and is deliberately
-    // absent. A range would have quietly admitted the wrong six.
-    let expect_emit: BTreeSet<String> = [1, 2, 3, 4, 5, 9]
+    // (whole-kernel tier aggregation) pairs with §6.6-0006; §6.7-0006 (the tier-2
+    // determinants) pairs with §6.6-0007 and §6.7-0007 (the tier-1 comparator) with
+    // §6.6-0008 (R5.9, decision 297). A range would have quietly admitted the wrong eight.
+    let expect_emit: BTreeSet<String> = [1, 2, 3, 4, 5, 6, 7, 9]
         .iter()
         .map(|n| format!("KISS-EMIT-6.7-{n:04}"))
         .collect();
-    let expect_consume: BTreeSet<String> = (1..=6)
+    let expect_consume: BTreeSet<String> = (1..=8)
         .map(|n| format!("KISS-CONSUME-6.6-{n:04}"))
         .collect();
     assert_eq!(
         emit_refs, expect_emit,
-        "correspondence: emit side of the table does not cover exactly §6.7-0001..0005 + §6.7-0009"
+        "correspondence: emit side of the table does not cover exactly §6.7-0001..0007 + §6.7-0009"
     );
     assert_eq!(
         consume_refs, expect_consume,
-        "correspondence: consume side of the table does not cover exactly §6.6-0001..0006"
+        "correspondence: consume side of the table does not cover exactly §6.6-0001..0008"
     );
 }
 
