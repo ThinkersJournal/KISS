@@ -115,10 +115,10 @@ fn manifest_kinds() -> BTreeMap<String, String> {
 #[test]
 fn test_classify_dtype_bit_widths() {
     let clause = clause_bit_widths();
-    assert_eq!(clause.len(), 24, "the clause enumerates all 24 dtypes");
+    assert_eq!(clause.len(), 27, "the clause enumerates all 27 dtypes");
     let d = diff("bit width", &clause, &manifest_bits());
     assert!(d.is_empty(), "{d:#?}");
-    // the reference crate's token list is the same 24
+    // the reference crate's token list is the same 27
     let crate_set: BTreeSet<&str> = DTYPES.iter().copied().collect();
     let clause_set: BTreeSet<&str> = clause.keys().map(String::as_str).collect();
     assert_eq!(crate_set, clause_set, "structure_key::DTYPES vs the clause's enumeration");
@@ -132,7 +132,7 @@ fn test_classify_dtype_bit_widths() {
 #[test]
 fn test_classify_dtype_numeric_kinds() {
     let clause = clause_kinds();
-    assert_eq!(clause.len(), 24, "the clause assigns a kind to all 24 dtypes");
+    assert_eq!(clause.len(), 27, "the clause assigns a kind to all 27 dtypes");
     let d = diff("numeric kind", &clause, &manifest_kinds());
     assert!(d.is_empty(), "{d:#?}");
     // the two statements the clause makes in prose, checked against the parse
@@ -158,7 +158,7 @@ fn test_classify_numeric_kind_set_closed() {
     assert_eq!(declared, want, "manifest `kinds` is exactly the closed set");
     let used: BTreeSet<String> = clause_kinds().into_values().collect();
     assert_eq!(used, want, "the clause introduces no sixth kind and uses all five");
-    // every dtype maps to exactly one kind: the clause parse refuses a duplicate, and covers all 24
+    // every dtype maps to exactly one kind: the clause parse refuses a duplicate, and covers all 27
     assert_eq!(clause_kinds().len(), DTYPES.len());
 }
 

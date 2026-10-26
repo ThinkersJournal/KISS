@@ -203,7 +203,7 @@ class DecompositionGraphTest(unittest.TestCase):
                                 "\n- **KISS-OPS-6.16-0001**")
         rows = [c[0] for c in self.K.table_cells(region) if c[0].startswith("`")]
         self.assertIn("`f32`", rows)
-        self.assertEqual(len(rows), 24)  # a parse that found nothing would also be "clean"
+        self.assertEqual(len(rows), 27)  # 24 sk4 dtypes + the 3 MX element rows (KISS-CLASSIFY-6.1-0014/-0015); a parse that found nothing would also be "clean"
         self.assertEqual(self.fidelity_violations(self.ops), [])
 
     def test_strict_precision_dtype_row_is_caught(self):
