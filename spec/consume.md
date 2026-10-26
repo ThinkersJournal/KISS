@@ -833,6 +833,8 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
 > be mirrored in KISS-Emit's corresponding clauses in lockstep to preserve the invariant. (Consume
 > §6.6-0006, the whole-kernel tier aggregation rule, has no §6.7-0001..0005 counterpart; its
 > mirroring is tracked separately against KISS-Emit.)
+>
+> *Maintained, not structural (CireSnave decision 297, R5.9 option C).* That this section and KISS-Emit §6.7 say the same thing is kept true by the editor of record updating both documents together and by the cross-standard lint below; nothing in the documents themselves enforces it. The eventual structural enforcement is the interface project (`docs/interface-project-plan.md`), where both halves of the round trip are defined in code from a common definition with tests that prove the round trip.
 
 - **KISS-CONSUME-6.6-0001** — **TIER 1 — structural round-trip:** emit-then-lift (or
   lift-then-emit) reproduces the SAME KISS-Ops op DAG under STRUCTURAL / op-DAG EQUALITY, checked
@@ -894,6 +896,21 @@ KISS-Consume adopts the umbrella capability/profile/extension model (umbrella §
 nothing to the negotiation machinery; it pins only the mandatory core and the one negotiable
 feature below. Reserved bit ranges follow the umbrella u64 three-axis split (umbrella §6.2);
 KISS-Consume reserves no new axis and expresses no range as a computed fraction.
+
+- **KISS-CONSUME-6.6-0007** — For the Consume direction, "same source language" in §6.6-0002 MUST
+  be determined by the **language-identity token** (§3) recorded in the lifted kernel's contract
+  Provenance, and "same target device" MUST be determined by **byte-equal** KISS-Classify
+  `target_capability`. An implementation MUST NOT claim tier-2 bit-identity across differing
+  language-identity tokens or differing `target_capability`. *Test:*
+  `test_consume_tier2_language_and_device_determinant`.
+- **KISS-CONSUME-6.6-0008** — **Structural / op-DAG equality** (the tier-1 comparator, §6.6-0001)
+  MUST be evaluated as: two KISS-Ops op DAGs are **equal** iff, after (i) resolving every
+  non-primitive node through its KISS-Ops reference decomposition to the KISS-Ops primitive floor,
+  (ii) placing nodes and edges in KISS-Ops canonical order, and (iii) normalizing the operands of
+  commutative/associative ops per the KISS-Ops canonicalization, their node sets, edge sets, and
+  per-node **OpAttrs byte channels** are identical; the comparison is performed **after**
+  resolution to the primitive floor and **includes** the OpAttrs bytes. An implementation MUST NOT
+  claim tier-1 equality under any looser predicate. *Test:* `test_consume_op_dag_equality_defined`.
 
 ### 7.1 Mandatory core
 
@@ -1062,6 +1079,8 @@ any normative MUST without a mapped test and on any test citing a retired or non
 | KISS-CONSUME-6.6-0004 | `test_consume_roundtrip_tier_selected_by_determinism_enum` |
 | KISS-CONSUME-6.6-0005 | `test_consume_emit_are_siblings_no_edge` |
 | KISS-CONSUME-6.6-0006 | `test_consume_roundtrip_whole_kernel_aggregation` |
+| KISS-CONSUME-6.6-0007 | `test_consume_tier2_language_and_device_determinant` |
+| KISS-CONSUME-6.6-0008 | `test_consume_op_dag_equality_defined` |
 | KISS-CONSUME-7.1-0001 | `test_consume_mandatory_core` |
 | KISS-CONSUME-7.2-0001 | `test_consume_declared_subset_advertised` |
 | KISS-CONSUME-8.1-0001 | `test_consume_version_bump_rule` |
@@ -1137,6 +1156,10 @@ consumer, implementation, kernel, contract, and target.
   maximal connected un-lifted component, §6.3-0008).
 - **Input structure graph** — the syntax-free data-flow representation a lifter consumes; the
   representation golden vectors are authored in (§6.1-0004).
+- **Language-identity token** — defined in KISS-Emit §3 and cited here, not restated: KISS-Consume
+  and KISS-Emit are DAG siblings (§6.6-0005), so this is a cross-reference and not a dependency. It
+  names the source language a kernel was produced in, as recorded in the kernel's contract
+  Provenance, and determines "same language" for tier 2 (§6.6-0002, §6.6-0007).
 - **Declared subset** — the set of ops an implementation claims it round-trips structurally
   (§6.6-0001, §7.2-0001).
 - **Sibling (inverse)** — KISS-Emit; the generation direction, sharing the round-trip but with no
