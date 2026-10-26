@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.11 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-26-block-scaling.md`, the options note for R1.26 (KISS#32) for the board. States what has landed since the issue was filed (MX element formats #675, OCP verification #681, scale dtype keyed from `sk6`), so the row is stale, and asks the four questions that remain: key the block length (recommend at the next key-schema event), a closed `{16, 32}` set, an implied group axis, and who pins packing and conversion rounding (recommend waiting for a Baracuda hardware measurement). No normative text.
+
 ## 0.6.10 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-22-realize-time-and-reader-obligations.md`, the options note for R1.22 (KISS#424) for the board: whether KISS regulates the tensor seam at realize time and binds its readers (A: a new sub-standard, B: record it as out of scope by ruling, recommended; C: a narrow reader-honour clause on external token bits, marked untestable until a second reader exists). Re-searched at `origin/main` with controls: none of the other format's obligations are in `spec/`; its figures are the Fuel architect's and were not re-measured. No normative text.
