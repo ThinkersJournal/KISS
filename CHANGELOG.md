@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r2-8-consumer-filed-seam-proposals.md`, the options note for R2.8 (KISS#11, #12, #18, #19, #21, #27): six questions with a concrete example, what the specs already say (`file:line`), options, a recommendation and what waits. For the board. No normative text.
+
 ## 0.5.5 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r3-8-two-level-backing.md`, the options note for R3.8 / #498 (how the traceability report should show a clause tested at two levels), for the board. Measures the "different test carries it" group at `b9e08e7f`: 35 clauses, all with an existing named test, 26 of which mention the clause. No normative text.
