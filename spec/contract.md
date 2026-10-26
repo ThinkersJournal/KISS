@@ -573,7 +573,7 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `3`, and a contract conforming to this schema version MUST carry exactly that token
+  token `4`, and a contract conforming to this schema version MUST carry exactly that token
   (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
   a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
   reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
@@ -1152,8 +1152,20 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   KISS-Ops and orthogonal to the determinism class; an implementation MUST NOT re-fork it,
   MUST NOT model it as a dtype, and MUST NOT infer it from a KISS-Classify dtype token.
   (The field was spelled `math_precision` at `contract_version` 2; the rename follows the
-  KISS-Ops attribute's rename and is a wire change, §8-0002, #477.) *Test:*
-  `test_contract_math_fidelity_imported`.
+  KISS-Ops attribute's rename and is a wire change, §8-0002, #477.) The declared spelling of the
+  second value carries its width (§6.8-0004a). *Test:* `test_contract_math_fidelity_imported`.
+- **KISS-CONTRACT-6.8-0004a** — **The declared `math_fidelity` is `bit-stable` or
+  `reduced-mantissa-permitted:<n>`**, where `n` is the **declared width**: the fewest explicit
+  input-mantissa bits the kernel guarantees to retain when it rounds a multiply's inputs
+  (KISS-OPS §6.17-0003). `n` is a decimal integer from `1` to `52` with no sign and no leading zero.
+  The width is mandatory: the bare spelling `reduced-mantissa-permitted` MUST be declined with a typed
+  decline and MUST NOT be read as any default, and no other spelling is a `math_fidelity`. There is
+  **no suite-wide floor**; the declaration is checked against the kernel by the per-atom width probe
+  of KISS-OPS §6.17-0005, so a bfloat16-input kernel declares `reduced-mantissa-permitted:7`, a
+  TF32 kernel `reduced-mantissa-permitted:10`. The KISS-Classify `<mp>` key tokens (`st`, `rm`)
+  carry no width and are unchanged. A `bit-stable` declaration is byte-identical to `contract_version`
+  3. (CireSnave decision 311, Q1 C, carried by the value, not by a new field; a field-schema change,
+  so `contract_version` is `4`, §8-0002.) *Test:* `test_contract_math_fidelity_declared_width`.
 - **KISS-CONTRACT-6.8-0011** — The `accumulation_type` MUST declare the dtype in which a
   contraction/reduction-bearing kernel accumulates (matmul, reduce-sum/prod, any op with a
   float fold), drawn from the **same closed dtype-token set** as the KISS-Classify `<acc>`
@@ -1375,7 +1387,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   the 4-byte magic `0x4B 0x49 0x53 0x43` (ASCII `KISC`), one space, the `contract_kind` token
   (exactly `kiss-contract`, §6.1-0007), one space, the `contract_version` (decimal ASCII), one
   space, `len=<N>`, one space, `crc32=<HHHHHHHH>`, then a single LF (`0x0A`) — for example
-  `KISC kiss-contract 3 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
+  `KISC kiss-contract 4 len=<N> crc32=<HHHHHHHH>\n`. A reader MUST reject, with a typed decline,
   any document not beginning with the magic `KISC` or whose header line does not match this
   pinned form. *Test:* `test_contract_document_header_line`.
 - **KISS-CONTRACT-6.11-0003** — The header line MUST declare the document's inner framing: `<N>`
@@ -1692,6 +1704,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0002 | `test_contract_precision_names_reference` |
 | KISS-CONTRACT-6.8-0003 | `test_contract_determinism_class_imported` |
 | KISS-CONTRACT-6.8-0004 | `test_contract_math_fidelity_imported` |
+| KISS-CONTRACT-6.8-0004a | `test_contract_math_fidelity_declared_width` |
 | KISS-CONTRACT-6.8-0005 | `test_contract_bit_stability_consistent` |
 | KISS-CONTRACT-6.8-0006 | `test_contract_guarantees_cost_provenance` |
 | KISS-CONTRACT-6.8-0007 | `test_contract_cost_single_home` |
@@ -1854,7 +1867,7 @@ over the fully assembled document.
 **Header line (§6.11-0002/-0003)** — begins with the 4-byte magic `KISC` (`0x4B 0x49 0x53 0x43`):
 
 ```
-KISC kiss-contract 3 len=<N> crc32=<HHHHHHHH>
+KISC kiss-contract 4 len=<N> crc32=<HHHHHHHH>
 ```
 
 **Identity block (§6.11-0004/-0005; heading id 1)** — heading line then one `key = value` line per
@@ -1864,7 +1877,7 @@ field, in field-schema order (§6.3-0001); `revision_hash` is the opaque-blob te
 ```
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 3
+contract_version = 4
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-

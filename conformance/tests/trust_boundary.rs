@@ -59,7 +59,7 @@ fn test_synth_length_caps() {
 }
 
 fn doc_with_body(body: Vec<u8>) -> Vec<u8> {
-    Document { contract_kind: "kiss-contract".into(), contract_version: "3".into(), body }.encode()
+    Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body }.encode()
 }
 
 // Backs: KISS-CONTRACT-6.11-0003a — a document header declaring a body longer than 2^24 bytes is refused even when the body really is that long and its CRC is right; a body at the cap is not refused for its length
@@ -77,7 +77,7 @@ fn test_contract_document_len_cap() {
 // Backs: KISS-CONTRACT-6.11-0003b — the CRC-32 detects accidental corruption and truncation but not modification: a body altered and re-checksummed by the party that alters it is accepted
 #[test]
 fn test_contract_crc_is_not_a_signature() {
-    let original = Document { contract_kind: "kiss-contract".into(), contract_version: "3".into(), body: b"[section:1:identity]\nop = add\n".to_vec() };
+    let original = Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body: b"[section:1:identity]\nop = add\n".to_vec() };
     let good = original.encode();
     assert!(read_document(&good).is_ok(), "positive control: {:?}", read_document(&good));
     // accidental corruption IS caught: flip a body byte, leave the header

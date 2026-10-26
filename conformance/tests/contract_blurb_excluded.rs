@@ -78,7 +78,7 @@ fn body(op: &str, blurb: Option<&str>) -> Vec<u8> {
 fn document(body: Vec<u8>) -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "3".into(),
+        contract_version: "4".into(),
         body,
     }
     .encode()
