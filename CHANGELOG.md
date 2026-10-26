@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.3 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Conform, additive; CireSnave decision 310, R1.24 Q5 A; Part of KISS#124; stacked on #696): new KISS-CONFORM-7.2-0005 extends the opt-in trust-but-verify profile: verification ends as **adopted**, **adopted-demoted** or **rejected**; only a value difference can be demoted (one demoted state, no lattice) and demotion is a local reclassification, not a claim that the provider's contract is wrong; the consumer keeps a durable record per (kernel, cell, target) with the `revision_hash` verified, and the record is invalid for any other revision. No wire bytes; consumes the oracle Conform owns. Reference: new `verify_record` module (`outcome_of`, `VerifyLedger`). Backed by `test_conform_verify_outcomes_and_record`; dropping the revision check fails it. A second implementation's witness is still owed (ROADMAP R1.31 is the same kind of row).
+
 ## 0.6.2 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Announce, additive; CireSnave decision 310, R1.24 Q3 A, "I lean toward A...role awareness", taken as ruled; Part of KISS#25; stacked on #695): new KISS-ANNOUNCE-7.3-0003 pins how the two capability words combine: `live = (local & remote & !FEAT) | (provider_word & FEAT)`. An EXT or SUB bit is live iff both sides set it; a FEAT bit is live iff the provider set it. The issue's plain `local & remote` would read a provider-only feature as off, because the consumer must write it as zero (7.3-0002). Masks by axis, not by recognition. One worked vector in the clause and as bytes in `announce_vectors.json` (`negotiation`, two role orderings, additive: `frames` is unchanged). Reference: `live_capabilities`, `negotiate_live`. Backed by `test_announce_live_capabilities_role_aware`; replacing the rule by a plain AND fails it. **Fuel to check:** a `negotiate()` that returns the plain AND reads provider-only features as off.
