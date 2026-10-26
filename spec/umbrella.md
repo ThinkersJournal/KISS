@@ -434,6 +434,12 @@ The following are gaps, not features. Each needs a clause in the named sub-stand
 5. **Define an optional signing/attestation extension (registry, umbrella §6.4).** The capability model's Axis 2 (optional features) is the natural home, and the extension registry exists precisely for this. This does not belong in the mandatory core — a linked in-process provider should not pay for it — but the *extension point* must exist, and adding one after a freeze is far more expensive than reserving it now. This is the item most worth doing before any sub-standard freezes.
 6. **Give the consumer's verification recourse a name (KISS-Conform).** A consumer that differentials a received kernel against the oracle before trusting it (Fuel's ledger-with-downgrade-to-UNAUDITED, per its comment on issue #16) is doing the only thing in this list that catches a *wrong* kernel rather than a *malformed* one. That pattern should be a named, optional profile rather than folklore.
 
+**Status (2026-10-25, CireSnave decision on R5.3 option A):** items 1 to 5 now have sub-standard clauses —
+1: KISS-SYNTH-6.4-0001e, KISS-CONTRACT-6.11-0003a, KISS-ANNOUNCE-6.4-0014 (caps, placeholders revisable
+before any freeze); 2: KISS-SYNTH-6.4-0001f; 3: KISS-ANNOUNCE-6.3-0008a; 4: KISS-CONTRACT-6.11-0003b; 5:
+KISS-ANNOUNCE-7.2-0011 (FEAT bit 34 reserved by name; the attestation payload is not yet defined). Item 6
+remains open.
+
 ### 10.6 Non-goals
 
 KISS does not intend to become a code-signing standard, a package format, or a transport. Where an existing standard owns a problem — Sigstore/in-toto for provenance, TLS/Noise for channels, OCI for distribution, the platform loader for isolation — KISS's job is to leave a **clean extension point** and name the owner, not to re-solve it. §10.5 item 5 is that extension point; the rest of this section names the owners.

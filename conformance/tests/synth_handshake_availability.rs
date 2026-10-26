@@ -43,16 +43,17 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
+    "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 /// The same cell, named WITHOUT pinning a build (revision_present == 0).
 fn identity_unpinned() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: None, correlation: None }
 }
 
 /// The level-2 availability wire identity of one record: the per-record region of a
@@ -91,9 +92,9 @@ fn test_synth_request_no_new_shape() {
     assert_ne!(&pinned[0..4], &CDEC.to_le_bytes());
 
     // (2) NO new field: the frame is exactly the CYRQ tag + identity, nothing added.
-    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 32 /*hash*/;
+    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 32 /*hash*/ + 1 /*correlation_len*/;
     assert_eq!(pinned.len(), 4 + pinned_identity, "pinned request = CYRQ tag + identity, no build/JIT flag or capability blob");
-    let unpinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/; // no hash
+    let unpinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 1 /*correlation_len*/; // no hash
     assert_eq!(unpinned.len(), 4 + unpinned_identity, "unpinned request adds nothing either");
 
     // (3) exact bytes: an independently hand-assembled CYRQ golden (byte-for-byte
@@ -136,7 +137,7 @@ fn test_synth_contract_not_pushed_to_announce() {
     // the contract bytes live there, NOT in the availability record.
     let contract_bytes = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03];
     let crsp = ContractResponse {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash) },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash), correlation: None },
         payload: contract_bytes.clone(),
     }
     .encode();
