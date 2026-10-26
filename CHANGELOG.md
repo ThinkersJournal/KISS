@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-25-region-and-recipe-identity.md`, the options note for R1.25 (KISS#28, #67, #125) for the board: whether a folded constant is part of a region (recommend a `Const(bits)` leaf), where the recipe grammar lives (recommend KISS-Ops 6.12 as the home, plus an index), and whether cost is one number or several (recommend an optional sibling with `{compute, bandwidth}`; `cost_provenance` already exists at Contract 6.8-0006). No normative text.
+
 ## 0.5.8 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-23-precision-floors-and-guarantees.md`, the options note for R1.23 (KISS#1, #4, #13, #56, #293): five questions with an example, what the specs say (`file:line`), options, a recommendation and what waits. Notes that half of #13 is already answered by `bit_stability` (Contract 6.8-0013) and records Baracuda's measured 13.9% / exactly 1 ULP divergence for #56. For the board. No normative text.
