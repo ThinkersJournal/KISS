@@ -5,7 +5,7 @@ second number.
 
 ## 0.6.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
-- Docs only: `docs/options-r1-28-provenance-derivability-variants.md`, the options note for R1.28 (KISS#218, #228, #234) for the board: whether to rewrite `generated_from` in the two program-written vector files now (clause 6.8-0011 is already fixed; recommend with the next regeneration), whether a named namespace capability must have a derivability witness (recommend a manifest field first, then a maintainer test), and whether KISS homes a variant-to-variant bit relation (recommend: out of scope, referent stated). No normative text.
+- Docs only: `docs/options-r1-28-provenance-derivability-variants.md`, the options note for R1.28 (KISS#218, #228, #234) for the board: whether to rewrite `generated_from` in the two program-written vector files now (clause 6.8-0011 is already fixed; recommend with the next regeneration), whether a named namespace capability must have a derivability witness (recommend a manifest field first, then a maintainer test), and #234 (variant-to-variant bit relation), which is **already ruled** by R1.5 (2026-10-15, implementation-private) and needs at most one informative sentence in Emit. No normative text.
 
 ## 0.6.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
