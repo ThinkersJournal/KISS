@@ -3,6 +3,9 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.11 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Conform, additive; CireSnave decision 311, Q2 A; Part of KISS#4; stacked on #689): new KISS-CONFORM-6.8-0004a pins the step between a contract's declared tolerance and a comparator's threshold: a declared tier selects the ULP/tolerance comparator and admits within every bound; a declared accumulator band selects the order-invariant comparator with the absolute tolerance `k·N·eps_A·|max partial sum|`, evaluated per invocation; a contract that declares neither yields no threshold and no default. One worked vector (band 0.25). Reference wiring: new `tolerance` module (`comparator_threshold`, `threshold_admits_f32`). Backed by `test_conform_tolerance_threshold_from_declared`.
 
 ## 0.5.10 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
