@@ -758,11 +758,22 @@ correct comparator. See umbrella §3 for the full statement.
   is seeded with **one** value, the one a reference provider emits today; no other is assigned
   until a provider emits it.
 
-  | Tag (ASCII) | Wire bytes | Names | Target family | Seeded by |
-  |---|---|---|---|---|
-  | `PTX ` (trailing space) | `50 54 58 20` | NVIDIA PTX: the textual virtual-ISA program as UTF-8 bytes, linked by the driver at load, portable across the SMs of the architecture it was built for | namespace `cuda` | Baracuda's reference provider, which emits it |
+  | Tag (ASCII) | Wire bytes | Names | Target family | How `entry_point` resolves | Seeded by |
+  |---|---|---|---|---|---|
+  | `PTX ` (trailing space) | `50 54 58 20` | NVIDIA PTX: the textual virtual-ISA program as UTF-8 bytes, linked by the driver at load, portable across the SMs of the architecture it was built for | namespace `cuda` | inside the artifact: `entry_point` names an `.entry` directive in the PTX text | Baracuda's reference provider, which emits it |
 
   *Test:* `test_synth_artifact_format_tag_registry`.
+- **KISS-SYNTH-6.4-0001h** — **In a provision response the contract's `entry_point` resolves
+  inside the artifact.** (CireSnave decision 310, R1.24 Q7 B.) The Interface `entry_point`
+  (KISS-CONTRACT §6.5) names a callable symbol; for the artifact carried in the same frame
+  (§6.4-0001b) it MUST be resolved **inside the artifact bytes**, by the rule in the **"How
+  `entry_point` resolves"** column of the table of §6.4-0001g, in the row of the frame's
+  `artifact_format_tag`. A consumer MUST NOT look for the symbol outside the artifact, and a row
+  that states no resolution rule is not a registered value. A provider whose artifact does **not**
+  carry its own symbols (several objects linked at load) has no rule here yet: a per-kernel link
+  field in the Contract is the heavier alternative and is deferred until such a provider exists. The
+  column is the place the R2.8 question of a format's calling convention is answered too. *Test:*
+  `test_synth_entry_point_resolves_in_artifact`.
 - **KISS-SYNTH-6.4-0002** — The artifact's `revision_hash` MUST identify which build the
   artifact is: an opaque, provider-assigned identifier compared only for byte-for-byte
   equality. *Test:* `test_synth_artifact_revision_hash_opaque`.
@@ -1154,6 +1165,7 @@ free-standing KISS-Synth clause.
 | KISS-SYNTH-6.4-0001e | `test_synth_length_caps` |
 | KISS-SYNTH-6.4-0001f | `test_synth_provided_artifact_is_untrusted` |
 | KISS-SYNTH-6.4-0001g | `test_synth_artifact_format_tag_registry` |
+| KISS-SYNTH-6.4-0001h | `test_synth_entry_point_resolves_in_artifact` |
 | KISS-SYNTH-6.4-0002 | `test_synth_artifact_revision_hash_opaque` |
 | KISS-SYNTH-6.4-0002a | `test_synth_artifact_revision_hash_no_algo` |
 | KISS-SYNTH-6.4-0003 | `test_synth_no_verify_precondition` |
