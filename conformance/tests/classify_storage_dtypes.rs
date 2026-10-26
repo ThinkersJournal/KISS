@@ -55,14 +55,14 @@ fn dtype_of(token: &str) -> &str {
 }
 
 // Backs: KISS-CLASSIFY-6.1-0005 — a dtype pins byte layout only: no strict-precision float token exists
-// (the closed set of 24 contains none; an `f32s`-style token declines as unknown), the dtype record carries
+// (the closed set of 27 contains none; an `f32s`-style token declines as unknown), the dtype record carries
 // no precision field, and compute precision rides the separate `<mp>` attribute, never the dtype token.
 #[test]
 fn test_classify_dtypes_are_pure_storage() {
     // the record: exactly {token, kind, storage_bits, reserved}
     let doc = parse(MANIFEST).expect("manifest parses");
     let rows = doc.get("dtypes").and_then(Json::as_arr).expect("dtypes");
-    assert_eq!(rows.len(), 24);
+    assert_eq!(rows.len(), 27);
     for r in rows {
         let Json::Obj(fields) = r else { panic!("row is not an object") };
         let mut keys: Vec<&str> = fields.iter().map(|(k, _)| k.as_str()).collect();
@@ -70,7 +70,7 @@ fn test_classify_dtypes_are_pure_storage() {
         assert_eq!(keys, ["kind", "reserved", "storage_bits", "token"], "a dtype row carries no precision field");
     }
     // the closed set has no precision-bearing spelling, and one is refused as unknown (not reserved)
-    assert_eq!(DTYPES.len(), 24);
+    assert_eq!(DTYPES.len(), 27);
     for bad in ["f32s", "f32_strict", "f32-strict", "f32st", "f32x", "tf32"] {
         assert!(!DTYPES.contains(&bad), "`{bad}` must not be a dtype token");
         assert_eq!(derive_structure_key(&add(bad)).unwrap_err(), DeriveDecline::UnknownDtype, "{bad}");

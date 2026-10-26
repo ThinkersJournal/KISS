@@ -95,9 +95,9 @@ fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
 /// the membership/length assertions — verified by scratch deletion in the PR #161 review.
 #[test]
 fn test_dual_axis_is_present_and_discriminates() {
-    assert_eq!(DTYPES.len(), 24, "recognition set must be 24 tokens");
+    assert_eq!(DTYPES.len(), 27, "recognition set must be 27 tokens");
     assert_eq!(RESERVED_DTYPES.len(), 3, "three reserved tokens");
-    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 21, "usable const = 21");
+    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 24, "usable const = 24");
 
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
         .expect("the emitted artifact must be valid JSON");
@@ -107,11 +107,11 @@ fn test_dual_axis_is_present_and_discriminates() {
     let reserved = str_array(&doc, "reserved_dtypes");
 
     // counts equal the ACTUAL array lengths — a declared count that lies about its
-    // array is caught here, not assumed equal to 24/21.
+    // array is caught here, not assumed equal to 27/24.
     assert_eq!(doc.get("recognition_count").and_then(|j| j.as_u64()), Some(recognition.len() as u64), "recognition_count must equal its array length");
     assert_eq!(doc.get("usable_count").and_then(|j| j.as_u64()), Some(usable.len() as u64), "usable_count must equal its array length");
-    assert_eq!(recognition.len(), 24);
-    assert_eq!(usable.len(), 21);
+    assert_eq!(recognition.len(), 27);
+    assert_eq!(usable.len(), 24);
     assert_eq!(reserved.len(), 3);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(6));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk6"));
@@ -260,7 +260,7 @@ fn artifact_covers_every_golden_token_literal() {
 fn decline_wire_kinds_are_injective() {
     let kinds = all_decline_wire_kinds();
     // pinned — bump deliberately when a KeyDecline variant is added.
-    assert_eq!(kinds.len(), 23, "pinned decline-variant count; bump when KeyDecline grows");
+    assert_eq!(kinds.len(), 24, "pinned decline-variant count; bump when KeyDecline grows");
     let distinct: HashSet<&&str> = kinds.iter().collect();
     assert_eq!(
         distinct.len(),
@@ -320,9 +320,9 @@ fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
 
     // direction-NEUTRAL pinned guard (see `check_pinned_coverage`): it states what it OBSERVED
     // before prescribing, so an equality miss on a DECREASE isn't reported as an improvement.
-    check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 5, format!("{in_dtype_pos:?}"));
-    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 8, format!("{anywhere:?}"));
-    // the boundary the note states: strictly fewer than the 21 usable tokens are exercised.
+    check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 8, format!("{in_dtype_pos:?}"));
+    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 11, format!("{anywhere:?}"));
+    // the boundary the note states: strictly fewer than the 24 usable tokens are exercised.
     assert!(
         in_dtype_pos.len() < usable.len(),
         "dtype-position coverage must be a strict subset of the {} usable tokens",
