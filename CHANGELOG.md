@@ -4,6 +4,11 @@
 second number.
 
 
+
+## 0.5.11 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Conform, additive; CireSnave decision 311, Q2 A; Part of KISS#4; stacked on #689): new KISS-CONFORM-6.8-0004a pins the step between a contract's declared tolerance and a comparator's threshold: a declared tier selects the ULP/tolerance comparator and admits within every bound; a declared accumulator band selects the order-invariant comparator with the absolute tolerance `k·N·eps_A·|max partial sum|`, evaluated per invocation; a contract that declares neither yields no threshold and no default. One worked vector (band 0.25). Reference wiring: new `tolerance` module (`comparator_threshold`, `threshold_admits_f32`). Backed by `test_conform_tolerance_threshold_from_declared`.
+
 ## 0.5.10 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Ops/Conform, additive; CireSnave decision 311, Q5 option A with C as its test; Part of KISS#293): a ULP result is measured against an **audited wide-precision reference**, never against another implementation. KISS-OPS-6.0-0003 now says so for an op (as 6.8-0001 already did for an atom), and new KISS-CONFORM-6.8-0002a forbids recording or claiming a ULP result from a two-implementation comparison. Backed by `test_conform_ulp_referent_is_wide_reference` over a shared-defect vector: two implementations of `exp(1)` that agree at 0 ULP and are 6 ULP from the reference. Reference crate gains `UlpReferent`, `UlpResult` and `ulp_result_is_recordable`.
