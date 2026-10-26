@@ -1491,6 +1491,20 @@ required outputs differ.
 - **KISS-CONFORM-7.2-0004** — The opt-in trust-but-verify profile MUST NOT alter the
   default-profile clause set, so a default-profile result and an opt-in-profile result remain
   distinguishable. *Test:* `test_conform_optin_profile_isolated`.
+- **KISS-CONFORM-7.2-0005** — **The opt-in profile's verification ends in one of three outcomes and
+  leaves a durable record.** (CireSnave decision 310, R1.24 Q5 A.) Verifying a received kernel for
+  a `(kernel, cell, target)` MUST end as **adopted** (it meets its declared contract),
+  **adopted-demoted** (its values differ from the contract and the consumer, having allowed
+  demotion, adopts it under a lower local classification) or **rejected** (anything else: an
+  unreadable contract, a key that does not answer the cell asked for, a class the check cannot
+  compare, or a value difference where demotion is not allowed). Only a value difference can be
+  demoted, and there is **one** demoted state; recording how far a kernel missed is not defined here.
+  Demotion is a **local reclassification by the consumer**, not a claim that the provider's contract
+  is wrong. The consumer MUST keep a **durable record** per `(kernel, cell, target)` holding the
+  outcome and the `revision_hash` it was reached at, and MUST treat the record as **invalid for any
+  other `revision_hash`**: a new revision is verified again before it is reused. The outcomes and the
+  record are part of the opt-in profile only; they add no wire bytes and consume the oracle that
+  KISS-Conform already owns (§6.12-0002). *Test:* `test_conform_verify_outcomes_and_record`.
 - **KISS-CONFORM-7.2-0002** — The IR-DAG fuzzer's seeds/corpora MUST be **versioned and shared
   with the suite** so a foreign implementer reproduces a failing case deterministically; the
   corpus MUST NOT be treated as a normative surface (a clause set), so that it cannot ossify an
@@ -1743,6 +1757,7 @@ the traceability lint.
 | KISS-CONFORM-7.2-0002 | `test_conform_fuzzer_corpus_versioned` |
 | KISS-CONFORM-7.2-0003 | `test_conform_optin_profile_defined` |
 | KISS-CONFORM-7.2-0004 | `test_conform_optin_profile_isolated` |
+| KISS-CONFORM-7.2-0005 | `test_conform_verify_outcomes_and_record` |
 | KISS-CONFORM-7.3-0001 | `test_conform_no_new_comparator_class` |
 | KISS-CONFORM-8-0001 | `test_conform_keys_on_schema_version` |
 | KISS-CONFORM-8-0002 | `test_conform_refactor_no_new_suite` |
