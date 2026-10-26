@@ -420,6 +420,13 @@ envelope; all multi-byte integers little-endian):
   assume any particular hash algorithm or recomputable input domain from the announce
   (artifact verification, if any, is defined by KISS-Synth/KISS-Contract, not here).
   *Test:* `test_announce_revision_hash_opaque_identity`.
+- **KISS-ANNOUNCE-6.3-0008a** — **`revision_hash` is not an integrity mechanism.** A consumer
+  MUST NOT rely on `revision_hash`, or on its equality with a value seen earlier, to detect that an
+  artifact's bytes were modified or substituted: a provider (or anything positioned as one) may
+  return different artifact bytes under an unchanged `revision_hash` and remain conformant, and no
+  clause requires the value to be a hash of anything (§6.3-0008). Pinning a revision (§6.4-0003)
+  expresses cache-coherence intent and carries no security guarantee (umbrella §10.2). *Test:*
+  `test_announce_revision_hash_is_not_integrity`.
 - **KISS-ANNOUNCE-6.3-0004** — A provider MUST carry `structure_key` as the opaque,
   length-delimited KISS-Classify token and MUST NOT reinterpret, truncate, or
   re-encode its bytes. *Test:* `test_announce_structure_key_is_opaque`.
@@ -638,7 +645,7 @@ Assigned bits (first draft):
   semantics.
 - **FEAT** (core sub-range [24,40)) — bit 32 `PROVISION_ON_REQUEST` (provider builds a
   kernel on miss); bit 33 `CONTRACT_QUERY` (provider answers §6.4 contract-queries);
-  bits 24–31 and 34–39 core-reserved.
+  bit 34 reserved by name as `ARTIFACT_ATTESTATION` (§7.2-0011); bits 24–31 and 35–39 core-reserved.
 - **SUB** (core sub-range [48,60)) — bit 48 `SPEAKS_ANNOUNCE`, bit 49
   `SPEAKS_CLASSIFY`, bit 50 `SPEAKS_OPS`, bit 51 `SPEAKS_GRAMMAR`, bit 52
   `SPEAKS_SYNTH`, bit 53 `SPEAKS_CONSUME`, bit 54 `SPEAKS_EMIT`, bit 55
@@ -674,6 +681,15 @@ Assigned bits (first draft):
   forward-compatibility rule applies to the `capabilities` bitset only and MUST NOT be
   applied to the envelope's reserved regions (§6.2), which are hard-rejected. *Test:*
   `test_announce_reader_ignores_unknown_capability_bits`.
+- **KISS-ANNOUNCE-7.2-0011** — FEAT bit 34 is **reserved by name** as `ARTIFACT_ATTESTATION`,
+  the extension point for optional artifact signing and attestation (umbrella §10.5 item 5).
+  This standard assigns it no meaning and defines no attestation payload, so a producer MUST write
+  zero to it (§7.2-0006) until a registered profile (§7.2-0008) defines both, and a reader MUST
+  treat a set bit as any other unrecognized bit (§7.2-0007). The extension is optional and outside
+  the mandatory core: a provider linked into the consumer's own process pays nothing for it.
+  Reserving the name now means no unrelated feature can claim bit 34 before the extension exists;
+  *what* an attestation carries and *where* is left to that profile, and KISS does not specify
+  signing (umbrella §10.6). *Test:* `test_announce_attestation_bit_reserved`.
 - **KISS-ANNOUNCE-7.2-0008** — A KISS-owned (EXT-mirror / FEAT / SUB) capability-bit
   assignment MUST originate from a merged change to the PR-gated KISS capability
   registry under ThinkersJournal; an implementation MUST NOT rely on an unregistered
@@ -787,6 +803,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.3-0003 | `test_announce_revision_hash_is_32_bytes` |
 | KISS-ANNOUNCE-6.3-0007 | `test_announce_revision_hash_compared_bytewise` |
 | KISS-ANNOUNCE-6.3-0008 | `test_announce_revision_hash_opaque_identity` |
+| KISS-ANNOUNCE-6.3-0008a | `test_announce_revision_hash_is_not_integrity` |
 | KISS-ANNOUNCE-6.3-0004 | `test_announce_structure_key_is_opaque` |
 | KISS-ANNOUNCE-6.3-0011 | `test_announce_availability_list_tag` |
 | KISS-ANNOUNCE-6.3-0012 | `test_announce_availability_list_version` |
@@ -824,6 +841,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-7.2-0006 | `test_announce_unassigned_bits_zero` |
 | KISS-ANNOUNCE-7.2-0007 | `test_announce_reader_ignores_unknown_capability_bits` |
 | KISS-ANNOUNCE-7.2-0008 | `test_announce_capability_registry_pr_gated` |
+| KISS-ANNOUNCE-7.2-0011 | `test_announce_attestation_bit_reserved` |
 | KISS-ANNOUNCE-7.3-0001 | `test_announce_both_roles_emit_envelope` |
 | KISS-ANNOUNCE-7.3-0002 | `test_announce_consumer_zeroes_provider_only_feat` |
 | KISS-ANNOUNCE-8-0001 | `test_announce_two_version_axes_independent` |
