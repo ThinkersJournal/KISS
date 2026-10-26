@@ -484,6 +484,36 @@ pub fn negotiate(local: &Envelope, remote: &Envelope) -> Result<u16, AnnounceDec
         .ok_or(AnnounceDecline::NoMutualProfile)
 }
 
+// ---- §7.3-0003 the role-aware live capability word -------------------------------------------
+
+/// The FEAT axis, bits `[24, 48)` (§7.2).
+pub const FEAT_MASK: u64 = ((1u64 << 24) - 1) << 24;
+
+/// The live capability word (§7.3-0003): `(local & remote & !FEAT) | (provider_word & FEAT)`. An EXT or
+/// SUB bit is live iff both sides set it; a FEAT bit is live iff the provider set it. `remote_is_provider`
+/// is known from the exchange, never inferred from a bit. Masks by axis, not by recognition.
+pub fn live_capabilities(local: u64, remote: u64, remote_is_provider: bool) -> u64 {
+    let provider = if remote_is_provider { remote } else { local };
+    (local & remote & !FEAT_MASK) | (provider & FEAT_MASK)
+}
+
+/// The negotiated profile (§7.1-0001) and the live capability word (§7.3-0003) of a pair.
+pub fn negotiate_live(
+    local: &Envelope,
+    remote: &Envelope,
+    remote_is_provider: bool,
+) -> Result<(u16, u64), AnnounceDecline> {
+    let profile = negotiate(local, remote)?;
+    Ok((profile, live_capabilities(local.capabilities, remote.capabilities, remote_is_provider)))
+}
+
+/// The golden negotiation pair of §7.3-0003: a consumer and a provider.
+pub fn reference_negotiation_pair() -> (Envelope, Envelope) {
+    let consumer = Envelope { envelope_version: 1, profiles: vec![1], capabilities: 0x0031_0000_0000_0001 };
+    let provider = Envelope { envelope_version: 1, profiles: vec![1, 2], capabilities: 0x0091_0003_0000_0003 };
+    (consumer, provider)
+}
+
 // ---- Golden handshake-frame reference builders + the machine-readable artifact -------------
 //
 // The §2.5 worked-example handshake frames are built ONCE, here in the library, so the golden
@@ -551,6 +581,8 @@ pub fn emit_announce_vectors_json() -> String {
     s.push_str("  \"spec_reference\": \"spec/announce.md \u{00a7}2.5 worked handshake example (informative) + the \u{00a7}6.1/\u{00a7}6.3/\u{00a7}6.4 framing clauses\",\n");
     s.push_str("  \"scope_note\": \"DIFFABLE, not COVERED: a foreign reader byte-diffs each frame's exact wire bytes (endianness, field width, padding) against its own encoder; this does NOT cover the untested KISS-Announce clauses or the reader/decline paths.\",\n");
     s.push_str("  \"population\": \"the FIVE \u{00a7}2.5 worked-example POSITIVE frames only: the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from \u{00a7}2.5 — that is the burn-down this artifact makes measurable, not part of it.\",\n");
+    s.push_str("  \"negotiation_note\": \"the `negotiation` array (after `frames`) holds the two KISS-ANNOUNCE-7.3-0003 role-aware vectors: two 56-byte envelopes, which side is the provider, the negotiated profile, and the live capability word as 8 little-endian bytes. A foreign reader computes the live word from the two envelopes and diffs it; a plain AND of the two words is the wrong answer.\",
+");
     s.push_str("  \"frames\": [\n");
     for (i, (name, clause, bytes)) in frames.iter().enumerate() {
         let comma = if i + 1 < frames.len() { "," } else { "" };
@@ -559,6 +591,24 @@ pub fn emit_announce_vectors_json() -> String {
         s.push_str(&format!("      \"clause\": \"{clause}\",\n"));
         s.push_str(&format!("      \"byte_length\": {},\n", bytes.len()));
         s.push_str(&format!("      \"bytes_hex\": \"{}\"\n", hexs(bytes)));
+        s.push_str(&format!("    }}{comma}\n"));
+    }
+    s.push_str("  ],\n");
+    let (consumer, provider) = reference_negotiation_pair();
+    let cases = [
+        ("consumer_local_provider_remote", &consumer, &provider, true),
+        ("provider_local_consumer_remote", &provider, &consumer, false),
+    ];
+    s.push_str("  \"negotiation\": [\n");
+    for (i, (name, local, remote, remote_is_provider)) in cases.iter().enumerate() {
+        let (profile, live) = negotiate_live(local, remote, *remote_is_provider).expect("the pair shares profile 1");
+        let comma = if i + 1 < cases.len() { "," } else { "" };
+        s.push_str("    {\n");
+        s.push_str(&format!("      \"name\": \"{name}\",\n      \"clause\": \"KISS-ANNOUNCE-7.3-0003\",\n"));
+        s.push_str(&format!("      \"local_hex\": \"{}\",\n", hexs(&local.encode())));
+        s.push_str(&format!("      \"remote_hex\": \"{}\",\n", hexs(&remote.encode())));
+        s.push_str(&format!("      \"remote_is_provider\": {remote_is_provider},\n      \"negotiated_profile\": {profile},\n"));
+        s.push_str(&format!("      \"live_capabilities_le_hex\": \"{}\"\n", hexs(&live.to_le_bytes())));
         s.push_str(&format!("    }}{comma}\n"));
     }
     s.push_str("  ]\n");

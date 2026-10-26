@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.2 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Announce, additive; CireSnave decision 310, R1.24 Q3 A, "I lean toward A...role awareness", taken as ruled; Part of KISS#25; stacked on #695): new KISS-ANNOUNCE-7.3-0003 pins how the two capability words combine: `live = (local & remote & !FEAT) | (provider_word & FEAT)`. An EXT or SUB bit is live iff both sides set it; a FEAT bit is live iff the provider set it. The issue's plain `local & remote` would read a provider-only feature as off, because the consumer must write it as zero (7.3-0002). Masks by axis, not by recognition. One worked vector in the clause and as bytes in `announce_vectors.json` (`negotiation`, two role orderings, additive: `frames` is unchanged). Reference: `live_capabilities`, `negotiate_live`. Backed by `test_announce_live_capabilities_role_aware`; replacing the rule by a plain AND fails it. **Fuel to check:** a `negotiate()` that returns the plain AND reads provider-only features as off.
+
 ## 0.6.1 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Synth, additive; CireSnave decision 310, R1.24 Q2 A; Part of KISS#24; stacked on #694): new KISS-SYNTH-6.6-0001d, the consumer's mirror of the provider's never-panic obligation: every failure observed at the seam (malformed or truncated frame or contract, unsupported `artifact_format_tag`, length over its cap, refused load, failed verification) becomes a typed error and never an abort. The honest limit is in the clause: a fault inside the kernel's native code after launch cannot be caught by any seam clause, and isolation is the deployment's job (umbrella §10.6). Backed by `test_synth_consumer_seam_failure_is_typed_error` (every truncation of a valid PRSP, a corrupted tag, an over-cap length, and short junk; mutation of the cap check fails it).

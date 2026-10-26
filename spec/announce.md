@@ -711,6 +711,24 @@ Assigned bits (first draft):
   (`PROVISION_ON_REQUEST`, `CONTRACT_QUERY`) MUST write those bits as zero; a consumer
   MUST NOT set a provider-only FEAT bit it does not itself offer. *Test:*
   `test_announce_consumer_zeroes_provider_only_feat`.
+- **KISS-ANNOUNCE-7.3-0003** — **The live capability word of a negotiated pair is role-aware.**
+  (CireSnave decision 310, R1.24 Q3 A.) Given the local and remote `capabilities` words and
+  which of the two is the **provider** in this exchange (known from the exchange, not inferred
+  from any bit), the live word MUST be `(local & remote & !FEAT) | (provider_word & FEAT)`,
+  where `FEAT` is the mask of bits `[24, 48)` (§7.2). That is: an EXT or SUB bit (what each side
+  *speaks or supports*) is live iff **both** sides set it, and a FEAT bit (what the provider
+  *offers*) is live iff the **provider** set it. A plain `local & remote` is **not** the rule: it
+  would read a provider-only feature (§7.3-0002) as off, because the consumer must write it as zero.
+  The rule masks by axis and not by recognition, so two implementations that recognize different
+  bits compute the same word (§7.2-0007). *Worked vector* (consumer is local, provider is remote;
+  both write profile set `{1}` or `{1, 2}`, so the negotiated profile is `1`, §7.1-0001): consumer
+  `capabilities = 0x0031_0000_0000_0001` (EXT bit 0; SUB bits 48, 52, 53);
+  provider `capabilities = 0x0091_0003_0000_0003` (EXT bits 0 and 1, FEAT bits 32 and 33, SUB bits
+  48, 52, 55); the live word is `0x0011_0003_0000_0001` (the plain AND, `0x0011_0000_0000_0001`,
+  loses both FEAT bits). With the roles exchanged (the provider local, the consumer remote) the
+  live word is the same, and a provider-only bit set by a consumer is never made live by it: only
+  the provider's word decides a FEAT bit. The corpus carries the same vectors as bytes
+  (`announce_vectors.json`, `negotiation`). *Test:* `test_announce_live_capabilities_role_aware`.
 
 ---
 
@@ -844,6 +862,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-7.2-0011 | `test_announce_attestation_bit_reserved` |
 | KISS-ANNOUNCE-7.3-0001 | `test_announce_both_roles_emit_envelope` |
 | KISS-ANNOUNCE-7.3-0002 | `test_announce_consumer_zeroes_provider_only_feat` |
+| KISS-ANNOUNCE-7.3-0003 | `test_announce_live_capabilities_role_aware` |
 | KISS-ANNOUNCE-8-0001 | `test_announce_two_version_axes_independent` |
 | KISS-ANNOUNCE-8-0002 | `test_announce_shape_change_bumps_version` |
 | KISS-ANNOUNCE-8-0003 | `test_announce_additive_capability_no_version_bump` |
