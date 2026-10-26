@@ -51,7 +51,7 @@ fn test_classify_structure_key_derivation_canonical() {
     assert!(tokens > declines);
 }
 
-// Backs: KISS-CLASSIFY-6.6-0008 — an extent-1 axis derives the same sub-key whatever stride it records.
+// Backs[enforced]: KISS-CLASSIFY-6.6-0008 — an extent-1 axis derives the same sub-key whatever stride it records.
 // Discrimination the byte-match alone cannot give: pairs of cells that a mis-reading deriver would
 // collapse (or split) must come out the way the clauses say.
 #[test]
@@ -77,8 +77,8 @@ fn test_derivation_vectors_pairs_that_must_agree_or_differ() {
 // two worked examples of the clause, and the innermost-extent-0 case a consumer held open. Each token's
 // operand sub-key is `<layout>/<mask>/<width>/<bucket>/<flag>`; the bucket is its fourth `/` part. The
 // three buckets are DIFFERENT, so a deriver that skips unit/zero axes (or reads axis 0) cannot pass.
-// Backs: KISS-CLASSIFY-6.3-0011 — the innermost axis is rank-1 even at extent 1 or 0: [4,1] buckets `da` and [1,8] buckets `d8`, so a deriver skipping unit axes fails.
-// Backs: KISS-CLASSIFY-6.5-0012 — the divisibility bucket of the innermost extent: E = 8 gives d8, E = 1 and E = 0 give `da`.
+// Backs[enforced]: KISS-CLASSIFY-6.3-0011 — the innermost axis is rank-1 even at extent 1 or 0: [4,1] buckets `da` and [1,8] buckets `d8`, so a deriver skipping unit axes fails.
+// Backs[enforced]: KISS-CLASSIFY-6.5-0012 — the divisibility bucket of the innermost extent: E = 8 gives d8, E = 1 and E = 0 give `da`.
 #[test]
 fn derivation_vectors_innermost_axis_is_rank_minus_1_including_extents_one_and_zero() {
     let tok = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
@@ -154,7 +154,7 @@ fn test_classify_batch_role_derivation_in_cells() {
     assert_eq!(decline("decline_ctr_batch_axis_zero_extent"), "BatchAxisNonPositiveExtent");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0019 — <wdt> is the dtype of the DECLARED weight operand: with call order
+// Backs[enforced]: KISS-CLASSIFY-6.6-0019 — <wdt> is the dtype of the DECLARED weight operand: with call order
 // [weight, scale, activation] a positional operand-1 read would name f8e8m0.
 // Backs: KISS-CLASSIFY-6.6-0022 — the scale dtype is keyed (e8m0 and f16 scales are different cells) and is
 // omitted, not empty, when no scale operand is designated.

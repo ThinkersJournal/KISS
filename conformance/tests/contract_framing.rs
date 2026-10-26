@@ -540,6 +540,7 @@ fn test_contract_guarantees_field_schema() {
 /// field rename/drop/reorder, breaks the ordered-list equality; the companion
 /// check confirms `audited_status` DOES live in §6.8-0001, so the disjointness is
 /// proven from both sides.
+// Backs[stated]: KISS-CONTRACT-6.9-0001
 #[test]
 fn test_contract_provenance_field_schema() {
     let contract = read_spec("contract.md");

@@ -160,7 +160,7 @@ fn minmax_signed_zero_ties_keep_operand_a_f64() {
 /// oracle, round the result back to bf16. The tie result is ±0 — exactly
 /// representable — so the ONLY thing the round-trip could lose is the sign
 /// bit; these rows prove it survives.
-// Backs: KISS-OPS-6.16-0003
+// Backs[enforced]: KISS-OPS-6.16-0003
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_bf16_roundtrip() {
     const PZ: u16 = 0x0000; // bf16 +0.0
@@ -210,7 +210,7 @@ fn relu_diverges_from_max_x_zero_at_nan() {
 
 // ---- the comparators themselves (Conform §6.8) ------------------------------
 
-// Backs: KISS-CONFORM-6.8-0001 — the exact-byte comparator is a bit-identical compare (+-0 differ)
+// Backs[enforced]: KISS-CONFORM-6.8-0001 — the exact-byte comparator is a bit-identical compare (+-0 differ)
 #[test]
 fn exact_byte_f32_distinguishes_signed_zero_and_nan() {
     assert!(compare_f32(DeterminismClass::ExactByte, -0.0, -0.0, 0).is_ok());
@@ -219,7 +219,7 @@ fn exact_byte_f32_distinguishes_signed_zero_and_nan() {
     assert!(compare_f32(DeterminismClass::ExactByte, n, n, 0).is_ok());
 }
 
-// Backs: KISS-CONFORM-6.8-0002 — the ULP comparator accepts within the declared ULP bound and rejects beyond it
+// Backs[enforced]: KISS-CONFORM-6.8-0002 — the ULP comparator accepts within the declared ULP bound and rejects beyond it
 #[test]
 fn ulp_comparator_measures_distance() {
     let x = 1.0f32;

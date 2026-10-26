@@ -6,6 +6,7 @@ use kiss_conformance::fp::*;
 /// KISS-OPS-6.16-0003 — bf16 is a 1-sign / 8-exp / 7-mantissa format (bias 127)
 /// carrying the binary32 exponent range, and any op producing a bf16 result MUST
 /// round to nearest, ties to even. Verbatim (spec/ops.md:1259-1262).
+// Backs[enforced]: KISS-OPS-6.16-0003
 #[test]
 fn test_ops_bf16_layout() {
     // --- layout: bf16 is the high 16 bits of the binary32 encoding ---------

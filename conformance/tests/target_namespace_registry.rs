@@ -193,6 +193,7 @@ fn registry_rows() -> Vec<(String, Option<String>, Option<String>, String)> {
 /// KISS-CLASSIFY-6.8-0003 — a namespace under which kernels are produced must
 /// be registered, and the registry must ship with the suite so an offline
 /// reader holds a complete copy.
+// Backs[enforced]: KISS-CLASSIFY-6.8-0003
 #[test]
 fn test_classify_target_namespace_registered() {
     let rows = registry_rows();
@@ -445,7 +446,7 @@ fn plant_tree(tag: &str, cap: &str) -> std::path::PathBuf {
     root
 }
 
-// Backs: KISS-CLASSIFY-6.5-0011
+// Backs[enforced]: KISS-CLASSIFY-6.5-0011
 #[test]
 fn test_conform_sweep_incompleteness_is_surfaced() {
     // (a) CAPABILITY (§6.5-0011): the sweep must actually reach a nested

@@ -8,6 +8,7 @@ use kiss_conformance::correlation_id::*;
 
 const ID: CorrelationId = [0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04];
 
+// Backs[enforced]: KISS-ANNOUNCE-6.4-0013
 #[test]
 fn test_announce_correlation_id_echoed_when_present() {
     // KISS-ANNOUNCE-6.4-0013: when a request carries a correlation id, the response answering it MUST echo the
@@ -27,7 +28,7 @@ fn test_announce_correlation_id_echoed_when_present() {
     assert!(resp.encode().windows(9).any(|w| w == field.as_slice()), "the 9 field bytes appear in the response");
 }
 
-// Backs: KISS-ANNOUNCE-6.4-0013 — the correlation field is always present: with no id it is the single byte 00, never nothing, and a frame cut before it is truncated
+// Backs[enforced]: KISS-ANNOUNCE-6.4-0013 — the correlation field is always present: with no id it is the single byte 00, never nothing, and a frame cut before it is truncated
 #[test]
 fn test_announce_correlation_field_always_present() {
     assert_eq!(encode_field(None), vec![0u8], "no id is spelled as one zero byte, never as nothing");
@@ -43,7 +44,7 @@ fn test_announce_correlation_field_always_present() {
     assert_eq!(echo(None), None);
 }
 
-// Backs: KISS-ANNOUNCE-6.4-0013 — a reader rejects a correlation length other than 0 or 8, and a field cut short, with a typed decline, never a panic
+// Backs[enforced]: KISS-ANNOUNCE-6.4-0013 — a reader rejects a correlation length other than 0 or 8, and a field cut short, with a typed decline, never a panic
 #[test]
 fn test_announce_correlation_bad_length_declines() {
     assert_eq!(parse_field(&[2, 0, 0]), Err(AnnounceDecline::BadCorrelationLen { got: 2 }));

@@ -27,7 +27,7 @@ fn member(tail: &str) -> Vec<u8> {
 /// bundle-fatal.
 #[test]
 fn test_contract_bundle_member_isolation() {
-    // Backs: KISS-CONTRACT-6.11-0011
+    // Backs[enforced]: KISS-CONTRACT-6.11-0011
     let a = member("op_identity = add\n");
     let mut b = member("op_identity = mul\n");
     let c = member("op_identity = exp\n");
