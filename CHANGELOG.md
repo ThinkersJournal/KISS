@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.13 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: ROADMAP housekeeping. R1.26 rewritten to what is left after #675/#681/sk6 (the block length and group axis; points to `docs/options-r1-26-block-scaling.md`); R1.30 marked **done** with the OCP result (no value differs; packing is a convention; `e3m4` is not an OCP MX v1.0 type); new row **R2.9** for KISS#396 (the NaN kind of the rounding atoms, `[rule]`; I closed #396 by mistake once, reopened it and retracted my comment).
+
 ## 0.6.12 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r3-6-tooling-and-census.md`, the options note for R3.6 (KISS#458, #400, #484) for the board (the PM can decide #484 alone): where a test that binds the document is recorded (recommend leaving it to the mutation audit, and Rust-side discovery if the count grows), whether a clause may name several tests (recommend keeping one, together with R3.8), and how the affected-set census is built (recommend a paragraph in `CONTRIBUTING.md`: key on what a party's code emits or parses, anchor on a token the clause owns, negative control on the homonym). No normative text.
