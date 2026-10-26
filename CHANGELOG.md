@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+
+## 0.5.10 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Ops/Conform, additive; CireSnave decision 311, Q5 option A with C as its test; Part of KISS#293): a ULP result is measured against an **audited wide-precision reference**, never against another implementation. KISS-OPS-6.0-0003 now says so for an op (as 6.8-0001 already did for an atom), and new KISS-CONFORM-6.8-0002a forbids recording or claiming a ULP result from a two-implementation comparison. Backed by `test_conform_ulp_referent_is_wide_reference` over a shared-defect vector: two implementations of `exp(1)` that agree at 0 ULP and are 6 ULP from the reference. Reference crate gains `UlpReferent`, `UlpResult` and `ulp_result_is_recordable`.
+
 ## 0.5.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-25-region-and-recipe-identity.md`, the options note for R1.25 (KISS#28, #67, #125) for the board: whether a folded constant is part of a region (recommend a `Const(bits)` leaf), where the recipe grammar lives (recommend KISS-Ops 6.12 as the home, plus an index), and whether cost is one number or several (recommend an optional sibling with `{compute, bandwidth}`; `cost_provenance` already exists at Contract 6.8-0006). No normative text.

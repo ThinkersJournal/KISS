@@ -951,6 +951,14 @@ enum (§6.0). See umbrella §3 for the full statement.
   atom, and KISS-Conform MUST NOT claim cross-language numeric identity for such an op. *Test:*
   `test_conform_ulp_comparator`.
   **Normalizes:** numeric difference within the op's declared ULP/tolerance bound.
+- **KISS-CONFORM-6.8-0002a** — A ULP result (a measured distance, or a pass or fail against a
+  declared ULP bound) MUST be measured against an **audited wide-precision reference** (KISS-OPS
+  §6.8-0001, §6.0-0003) and MUST be recorded with that referent. **Agreement between two
+  implementations is a differential, not a ULP result:** KISS-Conform MUST NOT record, and an
+  implementation MUST NOT claim, a ULP result from a comparison of one implementation's output
+  with another's, because two implementations that share a defect agree exactly while both
+  miss the reference. (CireSnave decision 311, Q5 A.) *Test:*
+  `test_conform_ulp_referent_is_wide_reference`.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
   tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
@@ -1656,6 +1664,7 @@ the traceability lint.
 | KISS-CONFORM-6.7-0005 | `test_conform_decline_vs_residue_taxonomy` |
 | KISS-CONFORM-6.8-0001 | `test_conform_exact_byte_comparator` |
 | KISS-CONFORM-6.8-0002 | `test_conform_ulp_comparator` |
+| KISS-CONFORM-6.8-0002a | `test_conform_ulp_referent_is_wide_reference` |
 | KISS-CONFORM-6.8-0003 | `test_conform_ulp_declared_tier_is_gate` |
 | KISS-CONFORM-6.8-0004 | `test_conform_nondeterministic_comparator` |
 | KISS-CONFORM-6.8-0005 | `test_conform_split_comparator` |

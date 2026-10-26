@@ -573,7 +573,9 @@ verbatim, everywhere).
   decomposition transitively contains a transcendental atom, and which does not also
   fall under §6.0-0004, MUST be class **ULP/tolerance**, and KISS-Conform MUST evaluate
   it with the op's declared-ULP comparator, never a byte-exact comparator across
-  languages. *Test:* `test_ops_ulp_class_ops`.
+  languages. The op's declared ULP bound is measured against an **audited wide-precision
+  reference** (as for an atom, §6.8-0001), never against another implementation's output
+  (CireSnave decision 311, Q5 A; KISS-CONFORM §6.8-0002a). *Test:* `test_ops_ulp_class_ops`.
 - **KISS-OPS-6.0-0004** — An op whose result depends on a floating-point `sum` or
   `prod` reduction or scan, a `matmul`/contraction over a float dtype, or a
   floating-point atomic combine (the `scatter` `atomic-add` combine and `scatter_add`)
