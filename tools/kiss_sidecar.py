@@ -38,8 +38,8 @@ NORMATIVE = {"MUST", "MUST NOT", "SHALL"}
 DETERMINISM_ENUM = {"exact-byte", "ULP/tolerance", "order-invariant/nondeterministic"}
 # Each sub-standard's own schema string, taken only where its §8 states a value (board 193 #462).
 # Absent stems stay UNSET: announce `envelope_version` 1 (6.0-0001), classify `STRUCTURE_KEY_VERSION`
-# 6 (6.4-0003), contract `contract_version` 3 (6.1-0008).
-SCHEMA_STRING = {"announce": "1", "classify": "6", "contract": "3"}
+# 6 (6.4-0003), contract `contract_version` 4 (6.1-0008).
+SCHEMA_STRING = {"announce": "1", "classify": "6", "contract": "4"}
 # Recorded in the field itself (Appendix E rejects unknown fields): the KISS lane is the editor of
 # record for every sub-standard until editors are ratified, so it resolves the ask by reading §8.
 NOT_STATED = "none stated (editor: KISS lane, pending ratification)"

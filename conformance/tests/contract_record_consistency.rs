@@ -30,7 +30,7 @@ impl Default for Knobs {
     fn default() -> Self {
         Knobs {
             identity_kind: "kiss-contract",
-            identity_version: "3",
+            identity_version: "4",
             identity_revision_hash: "abc",
             identity_accept_predicate: "sk6|ew2|f32",
             capabilities_accept_predicate: "sk6|ew2|f32",
@@ -97,7 +97,7 @@ fn doc(k: &Knobs) -> Vec<u8> {
     ] {
         body.extend_from_slice(&block);
     }
-    Document { contract_kind: "kiss-contract".into(), contract_version: "3".into(), body }.encode()
+    Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body }.encode()
 }
 
 fn control() -> Vec<u8> {
@@ -128,7 +128,7 @@ fn test_contract_identity_header_match() {
         Err(RecordDecline::IdentityHeaderMismatch {
             field: "contract_version",
             identity: "2".into(),
-            header: "3".into()
+            header: "4".into()
         })
     );
 
@@ -231,7 +231,7 @@ fn record_check_declines_malformed_input_without_panicking() {
     ));
     let identity_only = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "3".into(),
+        contract_version: "4".into(),
         body: appendix_c_identity_block(),
     }
     .encode();
