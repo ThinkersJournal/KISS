@@ -3,10 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-
 ## 0.5.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-25-region-and-recipe-identity.md`, the options note for R1.25 (KISS#28, #67, #125) for the board: whether a folded constant is part of a region (recommend a `Const(bits)` leaf), where the recipe grammar lives (recommend KISS-Ops 6.12 as the home, plus an index), and whether cost is one number or several (recommend an optional sibling with `{compute, bandwidth}`; `cost_provenance` already exists at Contract 6.8-0006). No normative text.
+
+## 0.5.3 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Emit/Consume, additive; CireSnave decision 297, R5.9 option C): the round-trip is declared **maintained, not structural**. Emit §6.7 and Consume §6.6 each state that their correspondence is kept true by the editor updating both documents together (and by the cross-standard lint), and point to the interface project (`docs/interface-project-plan.md`) as the eventual structural enforcement. **Two correspondence rows added:** Emit 6.7-0006 (the language-identity token and `target_capability` determinants of tier 2) now has a Consume twin, new **KISS-CONSUME-6.6-0007**, and Emit 6.7-0007 (the tier-1 comparator) has a twin, new **KISS-CONSUME-6.6-0008**; the 6.7-0008 table is 8 rows and the lint test pins the explicit sets (mutation-checked: removing the keyword from 6.6-0008 reddens it). The shared term **language-identity token** is cited from KISS-Emit §3 in a Consume §3 entry (a cross-reference, no dependency edge). **Ledger:** both new Consume clauses are `untested` (a restriction on what an implementation may claim; same standing and reason as their Emit twins), so the untested floor rises 391 to 393 deliberately. No wire byte, token or vector changes.
 
 ## 0.5.2 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
