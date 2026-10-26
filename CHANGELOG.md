@@ -7,6 +7,22 @@ second number.
 
 - Docs only: `docs/options-r1-23-precision-floors-and-guarantees.md`, the options note for R1.23 (KISS#1, #4, #13, #56, #293): five questions with an example, what the specs say (`file:line`), options, a recommendation and what waits. Notes that half of #13 is already answered by `bit_stability` (Contract 6.8-0013) and records Baracuda's measured 13.9% / exactly 1 ULP divergence for #56. For the board. No normative text.
 
+## 0.5.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-24-seam-obligations.md`, the options note for R1.24 (KISS#10, #24, #25, #26, #124, #289, #317): seven questions, each with an example, what the specs already say (`file:line`), options, a recommendation and what waits. Notes that #124 is partly answered (the opt-in trust-but-verify profile exists) and that the plain-AND capability rule proposed in #25 would zero provider-only bits. For the board. No normative text.
+
+## 0.5.6 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r2-8-consumer-filed-seam-proposals.md`, the options note for R2.8 (KISS#11, #12, #18, #19, #21, #27): six questions with a concrete example, what the specs already say (`file:line`), options, a recommendation and what waits. For the board. No normative text.
+
+## 0.5.5 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r3-8-two-level-backing.md`, the options note for R3.8 / #498 (how the traceability report should show a clause tested at two levels), for the board. Measures the "different test carries it" group at `b9e08e7f`: 35 clauses, all with an existing named test, 26 of which mention the clause. No normative text.
+
+## 0.5.4 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Synth, additive; CireSnave decision 297, R5.2 option A — overruling the note's recommendation of B): **KISS-Synth owns the `artifact_format_tag` values**, in the table of new **KISS-SYNTH-6.4-0001g**. A provider writes only listed values; a consumer does not load an artifact whose tag it does not support, and no unlisted tag is supported; a value is added by changing the table. The tag names the binary format and carries no architecture (the target is the request's `target_capability` and the artifact's own header). **Seeded with exactly one value**, Baracuda's reference provider's: `PTX ` (wire `50 54 58 20`, namespace `cuda`, emitted today); cubin is NOT seeded (one seam maps it but no provider emits it). Defaults stand: no "building, retry" answer, paging deferred; Appendix B updated. Reference: `REGISTERED_ARTIFACT_FORMAT_TAGS`, `is_registered_format_tag`; the test parses the spec table and compares it with the constant (mutation-checked).
+
 ## 0.5.3 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Emit/Consume, additive; CireSnave decision 297, R5.9 option C): the round-trip is declared **maintained, not structural**. Emit §6.7 and Consume §6.6 each state that their correspondence is kept true by the editor updating both documents together (and by the cross-standard lint), and point to the interface project (`docs/interface-project-plan.md`) as the eventual structural enforcement. **Two correspondence rows added:** Emit 6.7-0006 (the language-identity token and `target_capability` determinants of tier 2) now has a Consume twin, new **KISS-CONSUME-6.6-0007**, and Emit 6.7-0007 (the tier-1 comparator) has a twin, new **KISS-CONSUME-6.6-0008**; the 6.7-0008 table is 8 rows and the lint test pins the explicit sets (mutation-checked: removing the keyword from 6.6-0008 reddens it). The shared term **language-identity token** is cited from KISS-Emit §3 in a Consume §3 entry (a cross-reference, no dependency edge). **Ledger:** both new Consume clauses are `untested` (a restriction on what an implementation may claim; same standing and reason as their Emit twins), so the untested floor rises 391 to 393 deliberately. No wire byte, token or vector changes.
