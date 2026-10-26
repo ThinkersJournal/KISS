@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-19-rank-reducing-reduce.md`, the options note for R1.19 (KISS#426) for the board: how a rank-reducing reduction gets a conformant contract when `reduce` always keeps the axis (recommend a `squeeze` op so `reduce` + `squeeze` composes; alternatives: say it is out of scope with an exception in KISS-CONTRACT-6.4-0011, or add distinct rank-reducing reduce ops). Re-measured at `origin/main` with controls. No normative text.
+
 ## 0.6.8 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-13-write-side-layout.md`, the options note for R1.13 (KISS#316, with #236) for the board: whether a write-side layout guarantee goes in Guarantees (per output), in Interface, or waits (recommend Guarantees if #694's `contract_version` bump is still open, otherwise wait); and a statement that #236's first question was already ruled on 2026-09-05 and the issue is the tracker of the four-phase sequence. No normative text.
