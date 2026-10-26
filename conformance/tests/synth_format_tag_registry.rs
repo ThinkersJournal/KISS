@@ -50,3 +50,28 @@ fn test_synth_artifact_format_tag_registry() {
         assert!(!is_registered_format_tag(tag), "{tag:?} must not be registered");
     }
 }
+
+/// Every cell of the "How `entry_point` resolves" column, one per registered row.
+fn resolution_cells() -> Vec<String> {
+    let at = SYNTH.find("| Tag (ASCII) | Wire bytes |").expect("the 6.4-0001g table header");
+    let header: Vec<&str> = SYNTH[at..].lines().next().unwrap().trim().trim_matches('|').split('|').map(str::trim).collect();
+    let col = header.iter().position(|h| *h == "How `entry_point` resolves").expect("the resolution column");
+    SYNTH[at..]
+        .lines()
+        .skip(2)
+        .take_while(|l| l.trim_start().starts_with('|'))
+        .map(|l| l.trim().trim_matches('|').split('|').map(str::trim).nth(col).unwrap_or("").to_string())
+        .collect()
+}
+
+/// KISS-SYNTH-6.4-0001h: a registered row states how `entry_point` resolves inside its artifact.
+#[test]
+fn test_synth_entry_point_resolves_in_artifact() {
+    // Clause: KISS-SYNTH-6.4-0001h.
+    let cells = resolution_cells();
+    assert_eq!(cells.len(), spec_rows().len(), "one resolution cell per registered row");
+    for c in &cells {
+        assert!(c.starts_with("inside the artifact"), "a row's rule resolves inside the artifact: {c:?}");
+    }
+    assert!(cells[0].contains("`.entry`"), "the PTX row names the directive that carries the symbol");
+}

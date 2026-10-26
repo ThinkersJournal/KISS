@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.5 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Spec (Synth, additive; CireSnave decision 310, R1.24 Q7 B; Part of KISS#317; stacked on #698): new KISS-SYNTH-6.4-0001h: in a provision response the contract's `entry_point` resolves **inside the artifact** the same frame carries, by the rule in a new **"How `entry_point` resolves"** column of the `artifact_format_tag` table (6.4-0001g); a row that states no rule is not a registered value. The PTX row: `entry_point` names an `.entry` directive in the PTX text. The per-kernel link field in the Contract (option A, Breaking) is deferred until a provider with a non-self-contained artifact exists. The same column is where a format's calling convention (R2.8) goes. Backed by `test_synth_entry_point_resolves_in_artifact`; emptying the PTX cell fails it.
+
 ## 0.6.4 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Consume, additive; CireSnave decision 310, R1.24 Q6 A; Part of KISS#289; stacked on #697): new KISS-CONSUME-6.5-0004: a kernel that declines an invocation whose derived `structure_key` byte-matches its own MUST report a typed decline, and MUST NOT decline silently, abort, or return the result of a different computation. It restores the liveness property that dropping "if and only if" from KISS-CLASSIFY-6.6-0001 removed, without restoring the unsound "must admit". Stated in Consume, not Classify (one obligation, one sub-standard). Reference: new `key_match` module (a model of the three answers). Backed by `test_consume_key_matched_decline_is_typed`; making a match always admit fails it.
