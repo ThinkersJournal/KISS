@@ -147,6 +147,7 @@ fn test_namespace_vocabulary_digest_input_malformed_is_not_mismatched() {
 
 #[test]
 fn test_namespace_vocabulary_envelope_shape() {
+    // Clause: KISS-CLASSIFY-6.8-0008.
     // both kinds, well-formed, are accepted as valid envelopes.
     assert_eq!(validate_envelope(&build_from(&enum_fields())).unwrap().kind, Kind::Enumerated);
     assert_eq!(validate_envelope(&build_from(&gen_fields())).unwrap().kind, Kind::Generated);
@@ -174,6 +175,25 @@ fn test_namespace_vocabulary_envelope_shape() {
         validate_envelope(&build_from(&drop_key(gen_fields(), "field_spec"))),
         Err(ManifestDecline::MissingField("field_spec"))
     );
+
+    // Every field the clause lists is required, not only the one sampled above (the weak-tie review of
+    // decision 308 found the test exercised four of the clause's conditions).
+    for key in ["schema", "namespace", "vocabulary_version", "generated_from", "kind", "grammar", "coverage_note"] {
+        assert!(
+            validate_envelope(&build_from(&drop_key(enum_fields(), key))).is_err(),
+            "a manifest missing `{key}` must decline"
+        );
+    }
+    // `vocabulary_version` is an INTEGER: a fractional value is a decline, not a truncation to 3.
+    assert!(matches!(
+        validate_envelope(&build_from(&set_key(enum_fields(), "vocabulary_version", "3.9"))),
+        Err(ManifestDecline::NonIntegerVersion { .. })
+    ));
+    // `namespace` must be a registered one.
+    assert!(matches!(
+        validate_envelope(&build_from(&set_key(enum_fields(), "namespace", "\"nosuchnamespace\""))),
+        Err(ManifestDecline::UnregisteredNamespace { .. })
+    ));
 }
 
 // ---- §6.8-0008: the envelope constraints that SHAPE alone does not enforce -------------------
@@ -226,6 +246,7 @@ fn test_namespace_vocabulary_envelope_constraints() {
 
 #[test]
 fn test_namespace_vocabulary_version_is_asserted() {
+    // Clause: KISS-CLASSIFY-6.8-0009.
     let m = validate_envelope(&build_from(&enum_fields())).unwrap();
     // reading is not asserting: validate_envelope succeeds whatever the version is.
     assert_eq!(m.vocabulary_version, 3);
@@ -272,6 +293,7 @@ fn test_namespace_vocabulary_freshness_provenance() {
 
 #[test]
 fn test_namespace_vocabulary_declarative_production_split() {
+    // Clause: KISS-CLASSIFY-6.8-0012.
     // A generated manifest WITHOUT `vectors` (the production half) is still a valid ENVELOPE for
     // a parse-only consumer — parsers need only the declarative half.
     let m = validate_envelope(&build_from(&drop_key(gen_fields(), "vectors")))
@@ -288,6 +310,7 @@ fn test_namespace_vocabulary_declarative_production_split() {
 
 #[test]
 fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
+    // Clause: KISS-CLASSIFY-6.8-0013.
     // all four pins present → covered.
     let full = validate_envelope(&build_from(&gen_fields())).unwrap();
     assert_eq!(check_generated_vector_coverage(&full), Ok(()));

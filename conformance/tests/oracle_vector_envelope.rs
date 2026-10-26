@@ -20,6 +20,7 @@ fn ordinary() -> String {
 
 #[test]
 fn test_conform_oracle_vector_envelope() {
+    // Clause: KISS-CONFORM-6.5-0017.
     // --- Convention 16: every committed bundle MUST still validate under the new clause. If the
     //     clause rejected an existing file, the clause would be wrong, not the file. #333 adds a
     //     third committed bundle (ops-minmax-ordinary.json), so it joins the invariant here.

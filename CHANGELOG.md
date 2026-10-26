@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.15 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Tests (no spec text, no bytes; CireSnave decision 308, "...and yes, review the 9"; Part of KISS#498; stacked on #708): the review of the nine clauses whose named test existed but did not cite them. All nine named tests were found to **discriminate**; none was a stale pointer. All nine now cite their clause in the test body (`// Clause: ...`): KISS-CLASSIFY-6.8-0008/-0009/-0012/-0013, KISS-CONFORM-6.5-0017/6.8-0010, KISS-CONTRACT-6.6-0006/6.9-0009/6.11-0011. Two tests were **strengthened** because they exercised fewer conditions than their clause states: 6.8-0008 (every listed envelope field, an integer `vocabulary_version`, a registered `namespace`) and 6.11-0011 (an unsupported `contract_version` member is isolated like a bad CRC). 6.6-0006, 6.9-0009 and 6.11-0011 each have further citing tests (`Backs:`), so their coverage was wider than the named test showed. No clause moved tier.
+
 ## 0.6.14 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Emit, **informative only, no new MUST or SHOULD**; the PM approved this exact scope on #701; Part of KISS#234; stacked on #707): one note under KISS-EMIT-6.6-0005 saying a relation between two schedule variants of one cell is implementation-private and not a KISS field (ROADMAP R1.5, ruled 2026-10-15), with its only possible referent being the default lowering of the same cell, same backend, same version. Lets an implementer tell off-schema from unmentioned.
