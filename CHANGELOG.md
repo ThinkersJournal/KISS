@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.7 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-23-precision-floors-and-guarantees.md`, the options note for R1.23 (KISS#1, #4, #13, #56, #293): five questions with an example, what the specs say (`file:line`), options, a recommendation and what waits. Notes that half of #13 is already answered by `bit_stability` (Contract 6.8-0013) and records Baracuda's measured 13.9% / exactly 1 ULP divergence for #56. For the board. No normative text.
+
 ## 0.4.89 — 2026-10-25 (number proposed; the PM allocates at gate time)
 
 - Spec (Classify, **normative**, CireSnave board 290: "Making Unpoppped's IR a true union of the languages takes precendence over design decisions to keep things out I may have made in the past."): (Numbered 0.4.87: 0.4.85 was proposed by this change and skipped on purpose because 0.4.86 (#673) merged first.) three MX **element** dtype rows join the closed set, additive and usable: `f4e2m1` (FP4, 4 bits), `f6e2m3` and `f6e3m2` (FP6, 6 bits), appended after `c128` so no §6.19-0025 ordinal moves (27 recognized, 24 usable, 3 reserved). New clauses 6.1-0014 (f4e2m1 format, nibble packing as `i4`), 6.1-0015 (f6 formats, four-per-three-bytes LSB-first packing), 6.1-0016 (storage/operand dtypes only: never an accumulator, new typed decline `ElementDtypeAsAccumulator`). **Unverified:** the format constants were supplied from memory by the Unpopped lane, not read from the OCP MX v1.0 PDF, and the FP6 packing is Unpopped's convention, unchecked against CUTLASS/Mojo/Triton; both stated in the clauses. No existing token moves, no schema-version bump (6.7-0007). Corpus: `dtype_manifest.json` +3 rows, `structure_key_vectors.json` +3 positive and +2 decline vectors, `structure_key_derivation_vectors.json` +5 vectors.
