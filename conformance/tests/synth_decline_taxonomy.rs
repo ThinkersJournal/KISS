@@ -181,7 +181,7 @@ fn declared_decline_consts(src: &str) -> BTreeSet<String> {
 
 /// A reference identity: key `AA BB CC`, revision pinned to 32×`0x11`.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 // ---- §6.6 The never-panic obligation ----------------------------------------
@@ -338,7 +338,7 @@ fn test_synth_decline_code_enum() {
     for &(code, name) in &core_decline_codes() {
         // one-byte key + no revision => identity block is key_len(4)+key(1)+flag(1) = 6.
         let resp = DeclineResponse {
-            identity: Identity { op_identity: b"add".to_vec(), structure_key: vec![0x41], revision_hash: None },
+            identity: Identity { op_identity: b"add".to_vec(), structure_key: vec![0x41], revision_hash: None, correlation: None },
             decline_code: code,
         };
         let b = resp.encode();
@@ -347,7 +347,7 @@ fn test_synth_decline_code_enum() {
         let tail: [u8; 4] = b[b.len() - 4..].try_into().unwrap();
         assert_eq!(tail, code.to_le_bytes(), "decline_code {name} is written little-endian");
         assert_ne!(tail, code.to_be_bytes(), "a big-endian decline_code write is a WRONG impl for {name}");
-        assert_eq!(b.len(), 4 + 13 + 4, "decline_code occupies 4 bytes (u32), not 2 (u16), for {name}");
+        assert_eq!(b.len(), 4 + 14 + 4, "decline_code occupies 4 bytes (u32), not 2 (u16), for {name}");
     }
 }
 
