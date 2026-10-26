@@ -187,6 +187,10 @@ pub fn render_block(id: u8, name: &str, fields: &[(&str, Value)]) -> Vec<u8> {
     s.into_bytes()
 }
 
+/// The largest document body a header may declare (§6.11-0003a): 2^24 = 16 MiB, the same value as the
+/// Announce contract-response payload cap (KISS-ANNOUNCE-6.4-0014). A placeholder, revisable before any freeze.
+pub const MAX_DOCUMENT_BODY_LEN: u64 = 1 << 24;
+
 /// A whole contract document = pinned header line + body (the section blocks).
 #[derive(Debug, Clone)]
 pub struct Document {
@@ -391,7 +395,8 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
     // §6.1-0004: validate the declared length against the ACTUAL buffer BEFORE
     // any work keyed on it. A huge declared_len against a short buffer declines
     // here — it is never handed to `Vec::with_capacity`.
-    if declared_len != body.len() as u64 {
+    // §6.11-0003a: a declared length above the cap is refused whatever the buffer holds.
+    if declared_len > MAX_DOCUMENT_BODY_LEN || declared_len != body.len() as u64 {
         return Err(ContractDecline::BadLength { declared: declared_len, actual: body.len() });
     }
     // §6.11-0003: integrity. CRC is computed over the actual (now length-checked)

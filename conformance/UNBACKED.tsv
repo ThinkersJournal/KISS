@@ -542,3 +542,4 @@ KISS-SYNTH-8-0004	test_synth_freeze_gate_two_impls	attested	spec declares this a
 KISS-SYNTH-8-0005	test_synth_freeze_gate_foreign_reader	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-8-0006	test_synth_freeze_gate_conform_suite_passes	attested	spec declares this a checklist gate; AUDIT-signed, evidence external to this repo
 KISS-SYNTH-8-0007	test_synth_retire_by_floor	untested	Obligation on a provision provider; conformance/ has the Announce CYRQ/CDEC codec but no provider, so no in-repo subject answers a provision request. Recorded as a reason, not backed.
+KISS-SYNTH-6.4-0001f	test_synth_provided_artifact_is_untrusted	untested
