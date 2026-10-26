@@ -1,4 +1,4 @@
-# Options note: R1.28, provenance, derivability and variant fidelity (two questions and one already ruled)
+# Options note: R1.28, provenance, derivability and variant fidelity (one question and two already settled)
 
 **Informative. No normative text. For CireSnave's decision; the PM turns each question into a board item.**
 Read at `origin/main` `2e65634`, 2026-10-26. Paths are `file:line` at that commit. Issues: KISS#218, #228, #234
@@ -40,33 +40,30 @@ drop it (a literal that no tool updates is the same kind of false provenance), b
 
 ---
 
-## Q2. Must a named namespace capability be one that some device can produce? (#228)
+## Q2. Must a named namespace capability be one that some device can produce? (#228) **Already done; not a decision.**
 
-**Example, from the issue.** Vulkane's namespace document named a set of packed component types. The deriver had no
-case for them, so a real device would have emitted `x1000491000` (the catch-all spelling) and every check stayed green:
-the name was well formed, listed in the manifest, and unreachable. It was caught in review, not by a test.
+**Example, from the issue.** Vulkane's namespace document named a set of packed component types. The deriver had no case for them,
+so a real device would have emitted `x1000491000` (the catch-all spelling) and every check stayed green: the name was well formed,
+listed in the manifest, and unreachable. It was caught in review, not by a test.
 
-**What the specs say.** The manifest envelope is pinned and its content is the maintainer's
-(KISS-CLASSIFY-6.8-0008, `spec/classify.md:1779`: "KISS pins this envelope only"). Nothing requires a listed entry to
-be producible. A generated manifest is a round trip from the vocabulary crate, so it agrees with itself whether or not
-the deriver can emit the entry. `cuda`, the first manifest, has nothing holding it to the standard either.
+**What the specs say.** **KISS-CLASSIFY-6.8-0014 (`spec/classify.md:1885`, merged in #340) already requires it:** every entry of a
+vocabulary manifest carries a **derivability witness**, a non-empty list of references to the source constructs that produce the entry;
+the manifest names the gate that evaluates the witnesses, and that gate must be demonstrable as failing for the reason the clause
+names. The reference reader implements the envelope half (`check_derivability_witnesses` in `conformance/src/namespace_vocabulary.rs`,
+test `test_namespace_vocabulary_derivability_witness`). The split is the issue's own hybrid: KISS checks that a witness is present, in
+an evaluable form, and that a gate is named; whether the witness really produces the entry is the maintainer's to discharge, because KISS
+has no device and no access to a namespace's vocabulary content (KISS-CLASSIFY-6.8-0004).
 
-**Options.**
-- **A. A required field per entry** naming the witness: the query or property that makes a device produce the token.
-  "Listed but unreachable" becomes impossible to write down. Envelope-level, so content stays the maintainer's.
-  *Cost:* every manifest author adds a field, and the field is a claim, so something must still check it.
-- **B. A required maintainer-side test,** cited the way clause backings are: the namespace asserts every entry it names is
-  producible by its own deriver, and KISS requires the citation to exist. *Cost:* KISS checks the **existence** of a
-  citation, not that the test discriminates.
-- **C. Both:** the field names the witness, the test exercises it. The hybrid the issue prefers.
-- **D. Nothing now;** wait until a second namespace deriver exists.
+**I wrote the first version of this section saying nothing requires it. That was wrong:** I searched for the manifest envelope clause
+(6.8-0008) and stopped there, so the claim "nothing requires a listed entry to be producible" is retracted and replaced by this section.
+The ROADMAP R1.28 row still lists the witness as open ("a derivability witness per (token, class), blocked on the `generated_from`
+fix"); it should be read against 6.8-0014, and the row corrected in the next housekeeping pass.
 
-**Recommendation: C, in two steps: A first.** A field is cheap and makes the gap unrepresentable. B is what proves the
-witness is true, but it asks the namespace maintainers for tests, so ask them (Baracuda for `cuda`, Vulkane for
-`vulkan`) before it is required. Do it now, while there are two manifests and not more. It waits on Q1 only in the
-sense that both change the manifest; it does not depend on it.
+**What is left, and it is not a ruling.** The clause says an existing manifest complies **at its next `vocabulary_version` revision**
+and must not be re-issued solely for it, so the maintainers' manifests (Baracuda for `cuda`, Vulkane for `vulkan`) carry witnesses when they
+next revise. The issue can close when each registered manifest carries them; I did not check whether either does, because the manifests are
+not in this repository.
 
----
 
 ## Q3. Does KISS give a home to "this variant is bit-identical to the default lowering of the same cell"? (#234) **Already ruled; not a decision.**
 
@@ -92,5 +89,5 @@ the default lowering of the same cell in the same backend at the same version. N
 | Q | Issue | Recommend | Bytes change? | Note |
 |---|---|---|---|---|
 | 1 | #218 `generated_from` in the two vector files | B (next regeneration); A to do it now | yes (two files) | clause already fixed; `source_commit` separate |
-| 2 | #228 derivable capability | C, field first | manifest field (additive) | ask the two maintainers first |
+| 2 | #228 derivable capability | none: done (6.8-0014, #340); closes when each manifest carries witnesses | no | not a decision |
 | 3 | #234 variant fidelity | none: ruled (R1.5, 2026-10-15); add one informative sentence to Emit if the PM agrees | no | not a decision |
