@@ -586,14 +586,12 @@ where it fixes storage bytes.
   use the OCP Microscaling (MX) E8M0 scale encoding: an **unsigned** 8-bit all-exponent
   scale (0 sign, 8 exp, 0 mantissa) with exponent bias 127, whose value for a stored byte
   `e` in `0x00..=0xFE` is `2^(e − 127)`, whose single NaN encoding is `0xFF`, and which
-  defines **no infinity** and **no zero** encoding (the absence of a zero encoding is
-  inferred from E8M0 being a pure power-of-two exponent-only scale factor with no mantissa;
-  not directly stated in either cited source). A scale carries **no sign bit**, so the width
-  self-check is `exp + mantissa` (8+0 = 8). *Provenance of the special-value detail:* Rouhani
-  et al., "Microscaling Data Formats for Deep Learning", arXiv 2310.10537 §2.2, and the OCP
-  Microscaling Formats (MX) Specification v1.0; the special-value detail restated here is
-  **secondary-sourced**, pending verification against the primary OCP specification PDF,
-  which has not yet been read. `f8e8m0` is a **scale type** — the per-block shared scale of an
+  defines **no infinity** and **no zero** encoding. A scale carries **no sign bit**, so the width
+  self-check is `exp + mantissa` (8+0 = 8). *Provenance:* **verified-against-OCP** (2026-10-26):
+  OCP MX v1.0 section 5.4.1 and Table 7 (Sep 2023) state exponent bias 127, supported
+  exponent range −127 to 127, `Infinities: N/A`, `NaN: 11111111`, `Zeros: N/A`; no difference
+  from this clause was found. (Rouhani et al., arXiv 2310.10537 §2.2 is the secondary source this
+  clause was first written from.) `f8e8m0` is a **scale type** — the per-block shared scale of an
   MX-encoded value operand, carried as a **sibling operand**, never an element value dtype;
   the MX **block** structure (block size, scale placement) is an encoding-axis concern
   **outside** §6.1.
@@ -619,10 +617,12 @@ where it fixes storage bytes.
   is code `8`. Elements MUST be stored two per byte exactly as `i4`/`u4` (§6.1-0008): the low
   nibble holds the even logical index and the high nibble the odd one. `f4e2m1` is an element
   value dtype; the per-block scale of an MX-encoded operand is the sibling `f8e8m0` operand
-  (§6.1-0013) and is **not** part of this row. *Provenance:* the format constants are those of the
-  OCP MX v1.0 FP4 element type; they were supplied by the Unpopped lane **from memory, not read
-  from the primary OCP specification PDF** in this revision, and the decode table restated here is
-  **unverified against it** (the same standing as §6.1-0013's scale detail). *Test:*
+  (§6.1-0013) and is **not** part of this row. *Provenance:* the format constants are
+  **verified-against-OCP** (2026-10-26): OCP MX v1.0 section 5.3 (the value rule)
+  and OCP MX v1.0 section 5.3.3 Table 5 (Sep 2023) state E2M1, exponent bias 1, `Infinities: N/A`, `NaN: N/A`, zero `S 00 0`, max
+  normal `±6.0`, min normal `±1.0`, max and min subnormal `±0.5`; no difference from this clause was
+  found. The nibble order is a **convention** (inherited from `i4`/`u4`, §6.1-0008), not an OCP
+  requirement: the OCP document fixes no packing of elements into bytes. *Test:*
   `test_classify_mx_f4e2m1_format`.
 - **KISS-CLASSIFY-6.1-0015** — The MX **element** dtypes `f6e2m3` and `f6e3m2` (additive; OCP MX
   v1.0, FP6) MUST use: `f6e2m3` — sign 1, exponent 2, mantissa 3, bias 1, maximum finite
@@ -633,10 +633,17 @@ where it fixes storage bytes.
   first**: bit `k` of the packed stream is bit `k mod 8` of byte `⌊k/8⌋`, logical element `i`
   occupies stream bits `6i .. 6i+5` with stream bit `6i` its least-significant bit, a buffer of
   `n` elements is `⌈6n/8⌉` bytes, and unused trailing bits MUST be zero (the same LSB-first rule as
-  `b1`, §6.1-0009). *Provenance and a pin:* the OCP specification leaves the 6-bit packing open; the
-  layout above is the **Unpopped lane's storage convention** adopted as the pin here, and it has
-  **not been checked against** any CUTLASS, Mojo, Triton or hardware layout, which may differ. The
-  format constants are, as for §6.1-0014, **unverified against the primary OCP PDF**. *Test:*
+  `b1`, §6.1-0009). *Provenance:* the format constants are **verified-against-OCP**
+  (2026-10-26): OCP MX v1.0 section 5.3.2 Table 4 (Sep 2023) states E2M3 with bias 1, max
+  normal `±7.5`, min normal `±1.0`, max subnormal `±0.875`, min subnormal `±0.125`, and E3M2 with
+  bias 3, max normal `±28.0`, min normal `±0.25`, max subnormal `±0.1875`, min subnormal `±0.0625`,
+  both with `Infinities: N/A` and `NaN: N/A`; no difference from this clause was found. **The
+  packing is a convention, not an OCP requirement:** the OCP document fixes no packing of 6-bit
+  elements into bytes, so the layout above is the **Unpopped lane's storage convention** adopted as
+  the pin here, and it has **not been checked against** any CUTLASS, Mojo, Triton or hardware
+  layout, which may differ. *Informative:* OCP requires conversion into FP6 and FP4 to support
+  round-to-nearest-even and saturation to the maximum magnitude (OCP MX v1.0 sections 5.3.2 and 5.3.3); that conversion
+  is owned by KISS-Ops / KISS-Emit, as for FP8 (§6.1-0010), not by this clause. *Test:*
   `test_classify_mx_f6_formats`.
 - **KISS-CLASSIFY-6.1-0016** — The MX element dtypes (`f4e2m1`, `f6e2m3`, `f6e3m2`) are **storage
   and operand dtypes only**: they MUST NOT appear as an **accumulator** — in the contraction

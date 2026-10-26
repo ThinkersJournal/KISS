@@ -25,10 +25,11 @@ const IDENTITY_GOLDEN: &str = concat!(
     "01 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
+    "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 fn identity() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]) }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 fn success() -> ProvisionSuccess {
@@ -73,7 +74,11 @@ fn test_synth_provision_success_prsp_frame() {
     let len_off = 4 + parse_len(IDENTITY_GOLDEN) + 4;
     let mut hostile = bytes.clone();
     hostile[len_off..len_off + 8].copy_from_slice(&u64::MAX.to_le_bytes());
-    assert_eq!(decode_provision_success(&hostile), Err(SynthDecline::Truncated { region: "artifact" }));
+    // KISS-SYNTH-6.4-0001e: a length above the cap is refused for its size before the missing bytes are noticed
+    assert_eq!(
+        decode_provision_success(&hostile),
+        Err(SynthDecline::LengthOutOfRange { region: "artifact", got: u64::MAX })
+    );
 }
 
 fn parse_len(hex: &str) -> usize {
@@ -260,7 +265,7 @@ fn test_synth_prsp_echo_requires_revision() {
     // A frame built by hand with revision_present = 0 in the echo.
     let mut b = Vec::new();
     b.extend_from_slice(&PRSP.to_le_bytes());
-    b.extend_from_slice(&[3, 0, 0, 0, 0xAA, 0xBB, 0xCC, 3, 0, 0, 0, b'a', b'd', b'd', 0]);
+    b.extend_from_slice(&[3, 0, 0, 0, 0xAA, 0xBB, 0xCC, 3, 0, 0, 0, b'a', b'd', b'd', 0, 0]);
     b.extend_from_slice(b"CUBN");
     b.extend_from_slice(&0u64.to_le_bytes());
     b.extend_from_slice(&0u32.to_le_bytes());

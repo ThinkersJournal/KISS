@@ -254,6 +254,7 @@ const IDENTITY_GOLDEN: &str = concat!(
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
+    "00 ",                                   // correlation_len = 0 (§6.4-0013): always present, no id
 );
 
 /// Enforces: KISS-ANNOUNCE-6.4-0001 — the contract-query request framing (`CYRQ`
@@ -270,6 +271,13 @@ fn test_announce_query_request_shape() {
     let golden = format!("{} {}", "43 59 52 51", IDENTITY_GOLDEN); // CYRQ tag + identity
     assert_golden("KISS-ANNOUNCE-6.4-0001", "cyrq_request", &b, &golden);
     assert_eq!(decode_query_request(&b), Ok(req));
+
+    // §6.4-0013: with a correlation id the field is `08` then the 8 bytes, at the end of the identity block
+    let mut with_id = QueryRequest { identity: reference_identity() };
+    with_id.identity.correlation = Some([1, 2, 3, 4, 5, 6, 7, 8]);
+    let golden_id = format!("{} {}08 01 02 03 04 05 06 07 08", "43 59 52 51", IDENTITY_GOLDEN.trim_end_matches("00 "));
+    assert_golden("KISS-ANNOUNCE-6.4-0013", "cyrq_request_correlated", &with_id.encode(), &golden_id);
+    assert_eq!(decode_query_request(&with_id.encode()), Ok(with_id));
 
     // revision_present == 2 is NOT truthy-accepted -> typed decline.
     // Raw request: CYRQ, key_len=1, key=[0x7A], op_identity len 1 = "x", revision_present=2.
@@ -406,8 +414,8 @@ fn test_announce_decline_response_framing() {
     );
     assert_golden("KISS-ANNOUNCE-6.4-0007", "cdec_response", &b, &golden);
     // Width is load-bearing: the code occupies the final 4 bytes, not 2.
-    assert_eq!(b.len(), 55, "CDEC frame = tag(4) + identity(47) + decline_code(4)");
-    assert_eq!(&b[51..55], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
+    assert_eq!(b.len(), 56, "CDEC frame = tag(4) + identity(48) + decline_code(4)");
+    assert_eq!(&b[52..56], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
 }
 
 // Backs: KISS-ANNOUNCE-6.1-0004 — the encoded envelope begins with the SEAM magic in wire order (53 45 41 4D)
