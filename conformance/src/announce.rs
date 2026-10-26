@@ -20,6 +20,12 @@ pub const MAGIC: u32 = 0x4D41_4553;
 pub const ENVELOPE_LEN: usize = 56;
 /// The maximum number of live profiles (§6.1-0007).
 pub const MAX_PROFILES: usize = 16;
+/// The FEAT-axis capability bit reserved by name for the optional artifact signing/attestation extension
+/// (§7.2-0011): no meaning is assigned, so a producer writes zero to it.
+pub const FEAT_ARTIFACT_ATTESTATION_BIT: u32 = 34;
+/// The maximum contract-response payload byte-length (§6.4-0004): 2^24 = 16 MiB. **A proposed value:**
+/// no producer measurement exists (the Fuel and Baracuda lanes produce no response payload today).
+pub const MAX_CONTRACT_PAYLOAD_LEN: u32 = 1 << 24;
 
 /// A decoded handshake envelope.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +63,11 @@ pub enum AnnounceDecline {
     OpIdentityLenOutOfRange { got: u32 },
     /// A `revision_present` flag was neither `0` nor `1` (§6.4-0001).
     BadRevisionPresent { got: u8 },
+    /// A contract response's declared payload byte-length exceeded `MAX_CONTRACT_PAYLOAD_LEN`
+    /// (§6.4-0004, §6.2-0014).
+    PayloadLenOutOfRange { got: u32 },
+    /// The always-present correlation field's length byte was neither `0` nor `8` (§6.4-0013).
+    BadCorrelationLen { got: u8 },
 }
 
 // ---- §6.3 Availability list + §6.4 contract-query frames ---------------------
@@ -223,7 +234,16 @@ pub struct Identity {
     pub structure_key: Vec<u8>,
     pub op_identity: Vec<u8>,
     pub revision_hash: Option<[u8; 32]>,
+    /// The always-present correlation field (§6.4-0013): `None` is spelled as the single byte `00`,
+    /// `Some(id)` as `08` then the 8 id bytes.
+    pub correlation: Option<CorrelationId>,
 }
+
+/// A request-correlation id (§6.4-0013): exactly 8 bytes.
+pub type CorrelationId = [u8; 8];
+
+/// The length byte of a present correlation id (§6.4-0013).
+pub const CORRELATION_ID_LEN: u8 = 8;
 
 impl Identity {
     pub(crate) fn encode_into(&self, b: &mut Vec<u8>) {
@@ -234,6 +254,14 @@ impl Identity {
         b.push(if self.revision_hash.is_some() { 1 } else { 0 });
         if let Some(h) = &self.revision_hash {
             b.extend_from_slice(h);
+        }
+        // §6.4-0013: the correlation field is always present, a length byte then that many bytes
+        match &self.correlation {
+            None => b.push(0),
+            Some(id) => {
+                b.push(CORRELATION_ID_LEN);
+                b.extend_from_slice(id);
+            }
         }
     }
 
@@ -277,7 +305,24 @@ impl Identity {
         } else {
             None
         };
-        Ok((Identity { structure_key, op_identity, revision_hash }, off))
+        let (correlation, off) = read_correlation(bytes, off)?;
+        Ok((Identity { structure_key, op_identity, revision_hash, correlation }, off))
+    }
+}
+
+/// Read the always-present correlation field (§6.4-0013) at `off`: a length byte that MUST be `0` or `8`,
+/// then that many bytes. Any other length, or too few bytes, is a typed decline.
+pub(crate) fn read_correlation(bytes: &[u8], off: usize) -> Result<(Option<CorrelationId>, usize), AnnounceDecline> {
+    let len = *bytes.get(off).ok_or(AnnounceDecline::Truncated { region: "correlation_len" })?;
+    match len {
+        0 => Ok((None, off + 1)),
+        CORRELATION_ID_LEN => {
+            let end = skip_fixed(bytes, off + 1, 8, "correlation_id")?;
+            let mut id = [0u8; 8];
+            id.copy_from_slice(&bytes[off + 1..end]);
+            Ok((Some(id), end))
+        }
+        got => Err(AnnounceDecline::BadCorrelationLen { got }),
     }
 }
 
@@ -465,7 +510,7 @@ pub fn reference_availability_list() -> AvailabilityList {
 
 /// §6.4-0011 reference identity block, echoed by CYRQ/CRSP/CDEC: key AA BB CC, op `add`, revision present.
 pub fn reference_identity() -> Identity {
-    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: Some([0x11; 32]) }
+    Identity { structure_key: vec![0xAA, 0xBB, 0xCC], op_identity: b"add".to_vec(), revision_hash: Some([0x11; 32]), correlation: None }
 }
 
 /// §6.4-0001 reference contract-query request.
@@ -519,4 +564,116 @@ pub fn emit_announce_vectors_json() -> String {
     s.push_str("  ]\n");
     s.push_str("}\n");
     s
+}
+/// Which of the five Announce messages a leading tag names (§6.2-0014).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageKind {
+    Envelope,
+    AvailabilityList,
+    QueryRequest,
+    ContractResponse,
+    DeclineResponse,
+}
+
+/// The **message extent** (§3, §6.2-0014): the number of bytes the message at the start of `bytes` occupies,
+/// computed from that message's own leading tag and length fields and from nothing else. Fewer bytes
+/// supplied than the extent (or too few to determine it) is a truncated message and a typed decline,
+/// whatever delivered the bytes (§6.2-0015); a leading tag that names none of the five messages is a typed
+/// decline with no resynchronisation (§6.2-0016); bytes after the extent are not read (§6.2-0017).
+pub fn message_extent(bytes: &[u8]) -> Result<(MessageKind, usize), AnnounceDecline> {
+    if bytes.len() < 4 {
+        return Err(AnnounceDecline::Truncated { region: "leading_tag" });
+    }
+    let tag = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+    match tag {
+        MAGIC => envelope_extent(bytes).map(|n| (MessageKind::Envelope, n)),
+        SAVL => availability_list_extent(bytes).map(|n| (MessageKind::AvailabilityList, n)),
+        CYRQ => Ok((MessageKind::QueryRequest, identity_extent(bytes, 4)?)),
+        CRSP => contract_response_extent(bytes).map(|n| (MessageKind::ContractResponse, n)),
+        CDEC => {
+            let off = identity_extent(bytes, 4)?;
+            Ok((MessageKind::DeclineResponse, skip_fixed(bytes, off, 4, "decline_code")?))
+        }
+        got => Err(AnnounceDecline::BadTag { region: "leading_tag", got }),
+    }
+}
+
+/// The handshake envelope's extent: the length its `envelope_version` mandates, so the version byte is read first.
+fn envelope_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    if bytes.len() < 5 {
+        return Err(AnnounceDecline::Truncated { region: "envelope_version" });
+    }
+    if bytes[4] != 1 {
+        return Err(AnnounceDecline::UnsupportedVersion { got: bytes[4] });
+    }
+    if bytes.len() < ENVELOPE_LEN {
+        return Err(AnnounceDecline::Truncated { region: "envelope" });
+    }
+    Ok(ENVELOPE_LEN)
+}
+
+/// An availability list's extent: the end of the last of its `record_count` records.
+fn availability_list_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    if bytes.len() < 12 {
+        return Err(AnnounceDecline::Truncated { region: "savl_header" });
+    }
+    let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+    if count > MAX_AVAILABILITY_RECORDS {
+        return Err(AnnounceDecline::RecordCountOverflow { got: count });
+    }
+    let mut off = 12usize;
+    for _ in 0..count {
+        off = skip_len_prefixed(bytes, off, MAX_STRUCTURE_KEY_LEN, "structure_key")?;
+        off = skip_len_prefixed(bytes, off, MAX_OP_IDENTITY_LEN, "op_identity")?;
+        off = skip_fixed(bytes, off, 32, "revision_hash")?;
+    }
+    Ok(off)
+}
+
+/// A contract response's extent: the end of its payload, whose declared length is capped before any byte is read.
+fn contract_response_extent(bytes: &[u8]) -> Result<usize, AnnounceDecline> {
+    let off = identity_extent(bytes, 4)?;
+    if bytes.len() < off + 4 {
+        return Err(AnnounceDecline::Truncated { region: "payload_len" });
+    }
+    let len = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+    if len > MAX_CONTRACT_PAYLOAD_LEN {
+        return Err(AnnounceDecline::PayloadLenOutOfRange { got: len });
+    }
+    skip_fixed(bytes, off + 4, len as usize, "contract_payload")
+}
+
+/// `off + n`, or a truncation decline when fewer than `n` bytes remain. Never indexes past `bytes`.
+fn skip_fixed(bytes: &[u8], off: usize, n: usize, region: &'static str) -> Result<usize, AnnounceDecline> {
+    match off.checked_add(n) {
+        Some(end) if end <= bytes.len() => Ok(end),
+        _ => Err(AnnounceDecline::Truncated { region }),
+    }
+}
+
+/// Skip a u32-LE-length-prefixed block whose length must lie in `[1, max]`.
+fn skip_len_prefixed(bytes: &[u8], off: usize, max: u32, region: &'static str) -> Result<usize, AnnounceDecline> {
+    let body = skip_fixed(bytes, off, 4, region)?;
+    let len = u32::from_le_bytes(bytes[off..body].try_into().unwrap());
+    if len < 1 || len > max {
+        return Err(if max == MAX_STRUCTURE_KEY_LEN && region == "structure_key" {
+            AnnounceDecline::StructureKeyLenOutOfRange { got: len }
+        } else {
+            AnnounceDecline::OpIdentityLenOutOfRange { got: len }
+        });
+    }
+    skip_fixed(bytes, body, len as usize, region)
+}
+
+/// The end offset of the echoed identity block (§6.4-0011) that starts at `off`.
+fn identity_extent(bytes: &[u8], off: usize) -> Result<usize, AnnounceDecline> {
+    let off = skip_len_prefixed(bytes, off, MAX_STRUCTURE_KEY_LEN, "structure_key")?;
+    let off = skip_len_prefixed(bytes, off, MAX_OP_IDENTITY_LEN, "op_identity")?;
+    let flag = *bytes.get(off).ok_or(AnnounceDecline::Truncated { region: "revision_present" })?;
+    let off = match flag {
+        0 => off + 1,
+        1 => skip_fixed(bytes, off + 1, 32, "revision_hash")?,
+        got => return Err(AnnounceDecline::BadRevisionPresent { got }),
+    };
+    read_correlation(bytes, off).map(|(_, end)| end)
 }
