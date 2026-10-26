@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.5.5 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r3-8-two-level-backing.md`, the options note for R3.8 / #498 (how the traceability report should show a clause tested at two levels), for the board. Measures the "different test carries it" group at `b9e08e7f`: 35 clauses, all with an existing named test, 26 of which mention the clause. No normative text.
+
 ## 0.5.4 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Spec (Synth, additive; CireSnave decision 297, R5.2 option A — overruling the note's recommendation of B): **KISS-Synth owns the `artifact_format_tag` values**, in the table of new **KISS-SYNTH-6.4-0001g**. A provider writes only listed values; a consumer does not load an artifact whose tag it does not support, and no unlisted tag is supported; a value is added by changing the table. The tag names the binary format and carries no architecture (the target is the request's `target_capability` and the artifact's own header). **Seeded with exactly one value**, Baracuda's reference provider's: `PTX ` (wire `50 54 58 20`, namespace `cuda`, emitted today); cubin is NOT seeded (one seam maps it but no provider emits it). Defaults stand: no "building, retry" answer, paging deferred; Appendix B updated. Reference: `REGISTERED_ARTIFACT_FORMAT_TAGS`, `is_registered_format_tag`; the test parses the spec table and compares it with the constant (mutation-checked).
