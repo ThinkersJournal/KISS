@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+
+## 0.5.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-25-region-and-recipe-identity.md`, the options note for R1.25 (KISS#28, #67, #125) for the board: whether a folded constant is part of a region (recommend a `Const(bits)` leaf), where the recipe grammar lives (recommend KISS-Ops 6.12 as the home, plus an index), and whether cost is one number or several (recommend an optional sibling with `{compute, bandwidth}`; `cost_provenance` already exists at Contract 6.8-0006). No normative text.
+
 ## 0.5.0 — 2026-10-25 (number proposed; **Breaking**; the PM allocates at gate time)
 
 - **Breaking** (Announce wire; CireSnave decision 302, option B; stacked on #677): the correlation block of KISS-ANNOUNCE-6.4-0013 is now a **fixed-position, always-present length field**, the last component of every echoed identity block: `correlation_len` (`0` or `8`) then that many bytes. Where a synchronous seam could omit the old optional block entirely, every frame now carries at least the byte `00`, so `CYRQ`, `CRSP`, `CDEC` (and Synth's `PRSP`) are self-delimiting and the stated limitation in 6.2-0014 is removed. **Bytes change for those frames:** each is one byte longer when it carries no id; `announce_vectors.json` regenerated (exactly the three frames `cyrq_request`, `crsp_response`, `cdec_response` +1 byte; envelope and list unchanged). Reference: `Identity::correlation`, `AnnounceDecline::BadCorrelationLen`, `correlation_id::{encode_field, parse_field}` (the old `encode_tail`/`parse_tail` are gone). **Implementations checked (origin/main of each, `git grep` for CYRQ/CRSP/CDEC/PRSP/SAVL in .rs/.toml/.json): Fuel, Baracuda and Unpopped have no code for these frames (Fuel documents them in `docs/outreach/kiss-conformance-and-divergences.md` only); each speaks the 56-byte envelope, which is unchanged, so no implementation impact found.** Also adds ROADMAP R1.30 (verify the MX constants against the OCP PDF, decision 301). Numbered 0.5.0 (a breaking change pre-1.0 moves the second number).
