@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.10 — 2026-10-26 (number proposed; the PM allocates at gate time)
+
+- Docs only: `docs/options-r1-22-realize-time-and-reader-obligations.md`, the options note for R1.22 (KISS#424) for the board: whether KISS regulates the tensor seam at realize time and binds its readers (A: a new sub-standard, B: record it as out of scope by ruling, recommended; C: a narrow reader-honour clause on external token bits, marked untestable until a second reader exists). Re-searched at `origin/main` with controls: none of the other format's obligations are in `spec/`; its figures are the Fuel architect's and were not re-measured. No normative text.
+
 ## 0.6.9 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `docs/options-r1-19-rank-reducing-reduce.md`, the options note for R1.19 (KISS#426) for the board: how a rank-reducing reduction gets a conformant contract when `reduce` always keeps the axis (recommend a `squeeze` op so `reduce` + `squeeze` composes; alternatives: say it is out of scope with an exception in KISS-CONTRACT-6.4-0011, or add distinct rank-reducing reduce ops). Re-measured at `origin/main` with controls. No normative text.
