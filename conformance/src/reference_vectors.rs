@@ -26,26 +26,12 @@ use crate::structure_key::*;
 
 /// Schema identity of the emitted artifact (mirrors `kiss-dtype-manifest-v1`).
 pub const VECTORS_SCHEMA: &str = "kiss-structure-key-vectors-v1";
-/// The merged spec/codec commit these vectors are generated from — falsifiable
-/// provenance (§6.7 Appendix A at sk4, #131 `SCHEMA_VERSION` 3→4). An artifact that
-/// names its source tree is checkable against that tree; one that does not is a
-/// claim about an unspecified state.
-/// **KNOWN DEFECT - #218, fix scheduled with the coordinated artifact cut.**
-/// This literal is maintained by hand, so nothing moves it when the generator's
-/// inputs move: it survived the decline set going 10 -> 15 -> 17 and the vulkan v4
-/// respell unchanged. The doc comment above calls it "falsifiable provenance", and
-/// that is the claim being falsified here - a stamp proves BINDING, not CURRENCY. It
-/// records which tree was bound and structurally cannot report that the tree has
-/// since moved. The fix derives the value at generation time under a NEW field name
-/// (the old one deprecated, never redefined in place); it changes published bytes,
-/// so it ships with the coordinated cut. DO NOT COPY THIS PATTERN.
-pub const SOURCE_COMMIT: &str = "19c3ad7";
 
 /// The **vocabulary version** each embedded `<namespace>:` token was generated
 /// against (§6.8-0004: a namespace's capability-set vocabulary is owned by that
 /// namespace's maintainer, not by KISS).
 ///
-/// Why this exists (#200). The artifact pinned `SOURCE_COMMIT` for the KISS spec
+/// Why this exists (#200). The artifact once pinned a hand-kept `source_commit` for the KISS spec
 /// and recorded NOTHING about the maintainer-owned vocabularies its tokens are
 /// spelled in. So a vocabulary could bump and the artifact go silently wrong with
 /// no event marking the transition — and it did: `vulkan.md` reached version 4
@@ -932,13 +918,9 @@ pub fn emit_reference_vectors_json() -> String {
     let mut s = String::new();
     s.push_str("{\n");
     s.push_str(&format!("  \"schema\": {},\n", json_str(VECTORS_SCHEMA)));
-    // **KNOWN DEFECT - #218, fix scheduled with the coordinated artifact cut.**
-    // `generated_from` must name the GENERATOR that emitted these bytes - this
-    // module - not the document that specifies them. Provenance names the producer;
-    // agreement with an annex is a separate relation, and neither settles the other.
-    // Changes published bytes, so it moves with `source_commit` above, not before it.
-    s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
-    s.push_str(&format!("  \"source_commit\": {},\n", json_str(SOURCE_COMMIT)));
+    // `generated_from` names the program that emitted these bytes (#218, ruling 2026-10-28):
+    // provenance names the producer; agreement with the annex is a separate relation.
+    s.push_str("  \"generated_from\": \"conformance/src/reference_vectors.rs (cargo run --bin emit_structure_key_vectors)\",\n");
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.7\",\n");
     // Per-namespace vocabulary provenance (#200). Emitted for exactly the
     // namespaces the vectors actually embed, DERIVED from the vectors rather than

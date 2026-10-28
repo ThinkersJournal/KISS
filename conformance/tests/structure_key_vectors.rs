@@ -115,7 +115,7 @@ fn test_dual_axis_is_present_and_discriminates() {
     assert_eq!(reserved.len(), 3);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(6));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk6"));
-    // NOT asserted here: `source_commit`. `doc` is the emitter's own output and the
+    // `source_commit` was dropped (#218, 0.6.19); this records why it was never asserted. `doc` is the emitter's own output and the
     // emitter writes SOURCE_COMMIT into that field, so comparing the two compares a
     // value to itself and cannot fail — verified by mutating the constant to a bogus
     // value, after which this test still passed. The committed-vs-fresh byte equality
@@ -660,7 +660,6 @@ fn test_reference_artifact_normative_surface_is_declared() {
     // (c) PROVENANCE AND COMMENTARY — never a conformance surface; freely addable.
     const PROVENANCE: &[&str] = &[
         "generated_from",
-        "source_commit",
         "clause",
         "coverage_note",
         "dtype_axis_note",
