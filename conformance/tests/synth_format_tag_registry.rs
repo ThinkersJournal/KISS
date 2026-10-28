@@ -64,6 +64,32 @@ fn resolution_cells() -> Vec<String> {
         .collect()
 }
 
+/// Every cell of the "ABI model" column, one per registered row.
+fn abi_cells() -> Vec<String> {
+    let at = SYNTH.find("| Tag (ASCII) | Wire bytes |").expect("the 6.4-0001g table header");
+    let header: Vec<&str> = SYNTH[at..].lines().next().unwrap().trim().trim_matches('|').split('|').map(str::trim).collect();
+    let col = header.iter().position(|h| *h == "ABI model").expect("the ABI model column");
+    SYNTH[at..]
+        .lines()
+        .skip(2)
+        .take_while(|l| l.trim_start().starts_with('|'))
+        .map(|l| l.trim().trim_matches('|').split('|').map(str::trim).nth(col).unwrap_or("").to_string())
+        .collect()
+}
+
+// Backs: KISS-SYNTH-6.4-0001g — every registered row states an ABI model drawn from the named set, and the only name used is pointer-abi (a row without one is not registered)
+#[test]
+fn test_synth_artifact_format_tag_abi_model() {
+    let cells = abi_cells();
+    assert_eq!(cells.len(), spec_rows().len(), "one ABI-model cell per registered row");
+    for c in &cells {
+        let name = c.trim_matches('`');
+        assert!(!name.is_empty(), "a row that states no ABI model is not registered");
+        assert!(["pointer-abi", "descriptor-set", "buffer-index", "host-closure"].contains(&name), "ABI model outside the named set: {c:?}");
+    }
+    assert_eq!(cells[0].trim_matches('`'), "pointer-abi", "the PTX row binds the Interface list as typed pointers and scalars");
+}
+
 /// KISS-SYNTH-6.4-0001h: a registered row states how `entry_point` resolves inside its artifact.
 #[test]
 fn test_synth_entry_point_resolves_in_artifact() {
