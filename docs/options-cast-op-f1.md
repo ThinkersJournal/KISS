@@ -49,6 +49,32 @@ relay says emitters must decline rather than approximate where it matters.
 What agrees with KISS already: the saturation, RNE and maxima. What is new: NaN to +0, the typed reject of `Wrap`, and the
 extra rounding modes.
 
+## What Unpopped #144 actually does (read at branch `u1/remainder`, `cast_ref.rs` and `types.rs`; the f4/f6 PR is not out yet)
+
+Read after the PM pointed me at it (EvansLaboratories/Unpopped#144, "Cast rows for F16 and Bf16", 0.29.1 proposed). It covers
+`{f16, bf16, f32, f64, i8, i16, i32, i64, u8, u16, u32}`, **not** the MX types, so the MX-specific points above remain the
+relay's alone.
+
+- **Rounding modes: four in total, not "RNE plus four".** `RoundMode` is `NearestEven`, `TowardZero`, `TowardNegInf`,
+  `TowardPosInf` (PTX `.rn .rz .rm .rp`). The relay's "plus 4" may count modes that arrive with the MX PR; that is unconfirmed.
+- **Float to float:** round per mode from the exact value; with `Saturation::ClampFinite` any overflow, infinities included,
+  goes to the largest finite value; **NaN stays NaN** (it keeps its sign and becomes the format's quiet NaN). Without
+  ClampFinite an overflow follows the rounding direction (nearest-even goes to infinity; a directed mode pointing away from the
+  overflow side stops at the largest finite value). **This answers open value 2 for IEEE-style formats in Unpopped's favour of
+  "follows the direction, saturate only on request".**
+- **Float to integer:** round per mode, **NaN to 0**, clamp to the destination range, always saturating (its type check requires
+  `Saturation::Clamp`). **This is the answer I leaned to for open value 3.**
+- **Integer to float:** round per mode (exact when the integer fits). **Integer to integer:** `Wrap` truncates two's-complement,
+  `Clamp` saturates.
+- **Bitcast** is a separate scalar expression (`ScalarExpr::Bitcast`).
+- **Two things KISS cannot take as written:** the defined set includes `f32s`, which KISS retired as a dtype (Ops App. D.1,
+  6.16-0002), so a KISS cast would drop it; and the reference computes through `f64` with hardware-checked `f32`/`f64` paths,
+  which is a statement about Unpopped's oracle, not a KISS rule.
+
+So for the non-MX rows the open values have an implemented answer to adopt or refuse: NaN stays NaN float-to-float and goes to
+0 float-to-integer; overflow follows the rounding direction unless ClampFinite is asked for; float-to-integer always
+saturates. The MX NaN-to-+0 rule is a different case (the format has no NaN) and is still the relay's only.
+
 ## Options
 
 **A. A `cast` op with three explicit attributes, defaults equal to today's pinned rules.** OpAttrs
@@ -72,15 +98,14 @@ OpAttrs; cannot express a round-toward-zero conversion that Unpopped already bui
 chosen (rows 2 to 4 should be pinned even under B), and the ABI cost of adding fields later to a per-op layout is higher than
 adding them now (App. D.11: field order is ABI). Decide the four open values first, because they set the defaults:
 
-1. NaN into a format with no NaN: **+0** (the U1 proposal), a typed decline, or a canonical value of the format.
-2. Overflow into an IEEE-style float narrower than the source: saturate (consistent with fp8/MX) or infinity (consistent with
-   IEEE).
-3. Float to integer when out of range: saturate, wrap, or typed decline (I would pick saturate, with NaN to 0).
-4. Which rounding modes beyond RNE, and whether they are an enum in the `scatter_combine` style (frozen ordinals, `0` reserved).
+1. NaN into a format with no NaN: **+0** (the U1 proposal), a typed decline, or a canonical value of the format. (Still only the relay's; #144 has no such format.)
+2. Overflow into an IEEE-style float narrower than the source: follows the rounding direction unless saturation is requested (what #144 implements), or always saturate (consistent with fp8/MX), or infinity always (consistent with IEEE).
+3. Float to integer when out of range: saturate with NaN to 0 (what #144 implements and what I would pick), wrap, or typed decline.
+4. Which rounding modes: #144 has RNE, toward-zero, toward-negative-infinity, toward-positive-infinity; whether KISS adds more, and whether they are an enum in the `scatter_combine` style (frozen ordinals, `0` reserved).
 
 ## What I have not done
 
-I have not read the U1 worker's code or PR (none exists yet), checked any hardware's NaN behaviour, or counted how many existing
+I have read #144 (f16/bf16 and the integers) but not the f4/f6 PR (not out yet), and I have not checked any hardware's NaN behaviour, or counted how many existing
 kernels (Baracuda's `.cu` files in `conformance/cuda/`, Fuel's) depend on a conversion rule. The list of unpinned cases is from
 reading `spec/ops.md` only, so a rule pinned in another sub-standard would not appear here.
 
