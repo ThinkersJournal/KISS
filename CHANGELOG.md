@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.21 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on #714)
+
+- Informative text only (no clause, no bytes; ROADMAP R5.8 SLA item; board 279 pair 3): umbrella §8.3 gains one informative sentence recording CireSnave's ruling of 2026-10-28, relayed by the PM, verbatim "#2: Promise nothing but we will get to it as quickly as possible." Timing option A (as resources permit; no date, no published queue rule) and interim status (i) (the registry lists verified implementations only; no "self-certified, pending" row), per the PM's reading "unless he objects". The other R5.8 rows are unchanged.
+
 ## 0.6.20 — 2026-10-28 (number proposed; the PM allocates at gate time)
 
 - Docs only (no spec text, no bytes; ROADMAP R5.7, board 304; CireSnave 2026-10-28 via the PM: "I don't want KISS to be unable to describe something Unpopped can build."): `docs/union-coverage-unpopped.md`, a union-coverage table at `bafbe07` of 31 Unpopped IR/Schedule families and kernel-language features against Ops/Contract/Synth/Classify, each marked EXPRESSED / BY COMPOSITION / NEEDS / NO WAY with the clause ids. Answers the PM's three flags: `MAX_OPERANDS = 8` is a hard key limit (Classify 6.4-0002), so a 9-operand causal conv1d needs a limit change or a composition; `matmul` with no OpAttrs says transposed and batched through strides and role hints but not mixed dtype or accumulator dtype (it lacks the `reduce` precision fields, and an integer accumulator is forbidden by 6.17-0008); padding needs separate low/high. Finding F1: the shape oracle and Conform name `cast`, `transpose`, `unsqueeze`, `concat`, but no op catalog entry or OpAttrs schema exists for them. Unpopped's IR facts are only those its lane sent (marked [U]); its lane is asked to check every row.

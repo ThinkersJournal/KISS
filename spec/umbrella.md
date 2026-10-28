@@ -343,7 +343,7 @@ The default path is **self-certification**: an implementor runs the unmodified s
 
 ### 8.3 The steward-maintained free-certification registry
 
-ThinkersJournal maintains a **registry of verified implementations**. An implementor may request certification; the steward runs the unmodified suite (as resources permit, free of charge) and, on a pass, lists the implementation on a "steward-certified implementations" list. The registry is the authoritative record of verified implementations.
+ThinkersJournal maintains a **registry of verified implementations**. An implementor may request certification; the steward runs the unmodified suite (as resources permit, free of charge) and, on a pass, lists the implementation on a "steward-certified implementations" list. The registry is the authoritative record of verified implementations. *Informative (CireSnave 2026-10-28):* the steward promises no date and keeps no published queue rule; it handles requests as quickly as it can get to them. A self-certified result that has not yet been verified (§8.2) has no interim entry: the registry lists verified implementations only.
 
 ### 8.4 No claim-policing
 
