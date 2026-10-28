@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(cell.provenance, "oracle");
     }
 
-    // Backs: KISS-CONFORM-6.5-0017 — a vector `class` outside the three-member determinism enum (`split`) is rejected, never admitted as a fourth class value
+    // Backs[enforced]: KISS-CONFORM-6.5-0017 — a vector `class` outside the three-member determinism enum (`split`) is rejected, never admitted as a fourth class value
     #[test]
     fn rejects_split_as_a_class() {
         let bad = SAMPLE.replace("\"exact-byte\"", "\"split\"");

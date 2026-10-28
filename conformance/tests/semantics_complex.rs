@@ -78,7 +78,7 @@ fn naive_cpow(z: C32, w: C32) -> C32 {
     naive_cexp(naive_cmul(w, naive_clog(z)))
 }
 
-/// Enforces: KISS-OPS-6.18-0003 — `cmake`, `cre`, `cim` are raw-lane moves between a complex
+/// Enforces[enforced]: KISS-OPS-6.18-0003 — `cmake`, `cre`, `cim` are raw-lane moves between a complex
 /// value and its two real lanes (real lane at offset 0, imaginary at offset 1), preserving the
 /// signed zero and the NaN payload of each lane.
 /// TEETH: lanes of -0.0, a payload NaN (0x7FC12345), a signaling-pattern NaN (0x7F800001) and an
@@ -108,7 +108,7 @@ fn test_ops_complex_component_bridge() {
     assert_ne!(cre(cmake(1.0, 2.0)), cim(cmake(1.0, 2.0)), "the lanes are distinct");
 }
 
-/// Enforces: KISS-OPS-6.18-0005 — `cmul` is `(ac − bd) + (ad + bc)i` for finite operands, and
+/// Enforces[enforced]: KISS-OPS-6.18-0005 — `cmul` is `(ac − bd) + (ad + bc)i` for finite operands, and
 /// applies the Annex G infinity recovery if and only if BOTH result components are NaN AND an
 /// operand has an infinite lane; with only one NaN component recovery MUST NOT be applied.
 /// TEETH: a finite product; the recovery cases return a complex infinity with Annex G signs where
@@ -147,7 +147,7 @@ fn test_ops_cmul_annexg() {
     assert!(r[0].is_nan() && r[1].is_nan(), "a NaN operand without an infinite lane stays NaN");
 }
 
-/// Enforces: KISS-OPS-6.18-0007 — `cabs(z)` is `hypot(cre z, cim z)`, non-negative, and `+∞`
+/// Enforces[enforced]: KISS-OPS-6.18-0007 — `cabs(z)` is `hypot(cre z, cim z)`, non-negative, and `+∞`
 /// whenever either lane is infinite even if the other lane is NaN.
 /// TEETH: (3,4) is 5 and the sign of the lanes is irrelevant; (±∞, NaN) and (NaN, ±∞) are +∞ where
 /// the naive `sqrt(a²+b²)` is NaN; a NaN lane without an infinity gives NaN.
@@ -164,7 +164,7 @@ fn test_ops_cabs_annexg() {
     assert_eq!(hypot(0.0, -0.0).to_bits(), 0.0f32.to_bits(), "cabs of a zero is +0");
 }
 
-/// Enforces: KISS-OPS-6.18-0008 — `carg(z)` is `atan2(cim z, cre z)`, the principal argument in
+/// Enforces[enforced]: KISS-OPS-6.18-0008 — `carg(z)` is `atan2(cim z, cre z)`, the principal argument in
 /// `[−π, +π]`; the signed zero of each lane selects the quadrant.
 /// TEETH: the IEEE `atan2` zero table, bit-exact: the sign of a zero result and the ±π endpoint
 /// follow the sign of the imaginary zero. A `carg` that took `atan(b/a)`, or ignored the sign of
@@ -186,7 +186,7 @@ fn test_ops_carg_principal() {
     assert!(carg([NAN, 1.0]).is_nan() && carg([1.0, NAN]).is_nan());
 }
 
-/// Enforces: KISS-OPS-6.18-0009 — `cexp` is `exp(a)·(cos b + i·sin b)` for finite arguments, and
+/// Enforces[enforced]: KISS-OPS-6.18-0009 — `cexp` is `exp(a)·(cos b + i·sin b)` for finite arguments, and
 /// for an infinite or NaN lane the enumerated Annex G rows govern over the naive decomposition.
 /// TEETH: each governing row of the clause, one assertion per row, with zero signs and infinity
 /// signs bit-exact where the clause fixes them and class-only where it writes `±`. The naive chain
@@ -231,7 +231,7 @@ fn test_ops_cexp_annexg() {
     assert_c(cexp([NAN, NAN]), [NAN, NAN], "cexp(NaN + iNaN)");
 }
 
-/// Enforces: KISS-OPS-6.18-0010 — `clog` is `cmake(log(cabs z), carg z)`, the principal logarithm:
+/// Enforces[enforced]: KISS-OPS-6.18-0010 — `clog` is `cmake(log(cabs z), carg z)`, the principal logarithm:
 /// the imaginary part lies in the closed `[−π, +π]` with the sign of a zero imaginary lane
 /// selecting the endpoint, and the enumerated Annex G rows govern on an infinite or NaN lane and
 /// at the origin.
@@ -269,7 +269,7 @@ fn test_ops_clog_principal_branch() {
     assert_eq!(r[1], FRAC_PI_2);
 }
 
-/// Enforces: KISS-OPS-6.18-0011 — `csqrt` is the principal square root (non-negative real part,
+/// Enforces[enforced]: KISS-OPS-6.18-0011 — `csqrt` is the principal square root (non-negative real part,
 /// cut on the negative real axis), the imaginary sign taken from the imaginary lane so
 /// `csqrt(−4 ± i0) = 0 ± 2i`, and the enumerated Annex G rows govern on an infinite or NaN lane.
 /// TEETH: the signed-zero pair bit-exact; one assertion per governing row; the naive chain is shown
@@ -304,7 +304,7 @@ fn test_ops_csqrt_principal_branch() {
     assert_c(csqrt([NAN, NAN]), [NAN, NAN], "csqrt(NaN + iNaN)");
 }
 
-/// Enforces: KISS-OPS-6.18-0012 — `cpow(z, w)` is the principal `cexp(cmul(w, clog z))`, evaluated
+/// Enforces[enforced]: KISS-OPS-6.18-0012 — `cpow(z, w)` is the principal `cexp(cmul(w, clog z))`, evaluated
 /// through the GOVERNED `clog`, `cmul` and `cexp`; `cpow(z, 0) = 1 + 0i` for every `z`;
 /// `cpow(0 + i0, w)` is `0 + i0` for `Re w > 0`, a complex infinity for `Re w < 0`, and NaN
 /// components for `Re w = 0`, `w ≠ 0`.
@@ -336,7 +336,7 @@ fn test_ops_cpow_principal() {
     assert_close(r[1], 3.0f64.sqrt(), 1e-5, "(-8)^(1/3) imaginary");
 }
 
-/// Enforces: KISS-OPS-6.18-0013 — on any input with an infinite or NaN lane, the Annex G rows and
+/// Enforces[enforced]: KISS-OPS-6.18-0013 — on any input with an infinite or NaN lane, the Annex G rows and
 /// recovery GOVERN over the naive real decomposition: a complex op MUST NOT return what the naive
 /// decomposition would where the governing rule pins a different value.
 /// TEETH: one input per op where naive and governed DISAGREE, the governed value being the one the

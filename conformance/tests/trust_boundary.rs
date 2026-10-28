@@ -25,7 +25,7 @@ fn length_offsets(bytes: &[u8], s: &ProvisionSuccess) -> (usize, usize) {
     (artifact_len_off, contract_len_off)
 }
 
-// Backs: KISS-SYNTH-6.4-0001e — a declared artifact or contract length above its cap is a typed decline before any byte is read or allocated, whether or not that many bytes follow; a length at the cap is not refused for its size
+// Backs[enforced]: KISS-SYNTH-6.4-0001e — a declared artifact or contract length above its cap is a typed decline before any byte is read or allocated, whether or not that many bytes follow; a length at the cap is not refused for its size
 #[test]
 fn test_synth_length_caps() {
     let s = success();
@@ -62,7 +62,7 @@ fn doc_with_body(body: Vec<u8>) -> Vec<u8> {
     Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body }.encode()
 }
 
-// Backs: KISS-CONTRACT-6.11-0003a — a document header declaring a body longer than 2^24 bytes is refused even when the body really is that long and its CRC is right; a body at the cap is not refused for its length
+// Backs[enforced]: KISS-CONTRACT-6.11-0003a — a document header declaring a body longer than 2^24 bytes is refused even when the body really is that long and its CRC is right; a body at the cap is not refused for its length
 #[test]
 fn test_contract_document_len_cap() {
     let over = doc_with_body(vec![b'x'; MAX_DOCUMENT_BODY_LEN as usize + 1]);
@@ -74,7 +74,7 @@ fn test_contract_document_len_cap() {
     );
 }
 
-// Backs: KISS-CONTRACT-6.11-0003b — the CRC-32 detects accidental corruption and truncation but not modification: a body altered and re-checksummed by the party that alters it is accepted
+// Backs[enforced]: KISS-CONTRACT-6.11-0003b — the CRC-32 detects accidental corruption and truncation but not modification: a body altered and re-checksummed by the party that alters it is accepted
 #[test]
 fn test_contract_crc_is_not_a_signature() {
     let original = Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body: b"[section:1:identity]\nop = add\n".to_vec() };
@@ -91,7 +91,7 @@ fn test_contract_crc_is_not_a_signature() {
     assert!(read_document(&forged).is_ok(), "an altered, re-checksummed body passes: the CRC is not a defence against modification");
 }
 
-// Backs: KISS-ANNOUNCE-6.3-0008a — revision_hash is not an integrity mechanism: two frames with different artifact bytes under one revision_hash are both well-formed and carry the same identity
+// Backs[enforced]: KISS-ANNOUNCE-6.3-0008a — revision_hash is not an integrity mechanism: two frames with different artifact bytes under one revision_hash are both well-formed and carry the same identity
 #[test]
 fn test_announce_revision_hash_is_not_integrity() {
     let a = success();
@@ -103,7 +103,7 @@ fn test_announce_revision_hash_is_not_integrity() {
     assert_ne!(da.artifact, db.artifact, "different artifact bytes: nothing in the frame detects the substitution");
 }
 
-// Backs: KISS-ANNOUNCE-7.2-0011 — FEAT bit 34 is reserved by name for the attestation extension: it lies in the FEAT core range, collides with no assigned bit, is zero in the reference envelope, and a reader that sees it set ignores it
+// Backs[enforced]: KISS-ANNOUNCE-7.2-0011 — FEAT bit 34 is reserved by name for the attestation extension: it lies in the FEAT core range, collides with no assigned bit, is zero in the reference envelope, and a reader that sees it set ignores it
 #[test]
 fn test_announce_attestation_bit_reserved() {
     let bit = FEAT_ARTIFACT_ATTESTATION_BIT;

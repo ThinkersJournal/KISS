@@ -258,7 +258,7 @@ fn sk4_mixed_precision_fp8_disambiguated() {
 /// KISS-CLASSIFY-6.7-0009 (sk4): the grown contraction field declines malformed
 /// precision groups with a typed decline — a dtype outside the closed set, a bad
 /// `<mp>` code, and a wrong part-count (5 or 8 parts) are all rejected.
-// Backs: KISS-CLASSIFY-6.7-0006 — an unknown dtype, a bad or b-prefixed <mp>, a wrong part-count and a bad batch class in the precision group each decline.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0006 — an unknown dtype, a bad or b-prefixed <mp>, a wrong part-count and a bad batch class in the precision group each decline.
 #[test]
 fn sk4_contraction_precision_group_declines() {
     // valid sk4 gem stem for mutation.
@@ -338,7 +338,7 @@ fn sk4_noncontraction_acc_mp_deviating_precision_only() {
 /// == compute dtype AND mp == default `st`), the field is omitted **entirely** — no
 /// trailing `|`, and specifically NOT the reduce field's `-` convention (rule e).
 /// A non-deviating cell is byte-identical to the pre-sk4 codec modulo dtype renames.
-// Backs: KISS-CLASSIFY-6.7-0013 — a non-deviating (acc, mp) is omitted entirely, giving a nine-field token with no trailing field.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0013 — a non-deviating (acc, mp) is omitted entirely, giving a nine-field token with no trailing field.
 #[test]
 fn sk4_noncontraction_acc_mp_omitted_when_default() {
     let k = key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None);
@@ -352,7 +352,7 @@ fn sk4_noncontraction_acc_mp_omitted_when_default() {
 /// dtype AND mp == default `st`) is a forbidden redundant emission and MUST be
 /// rejected — a canonical producer omits the field entirely (rule c), so its
 /// presence at default is invalid. Distinct from the malformed-field decline.
-// Backs: KISS-CLASSIFY-6.7-0013 — a present (acc, mp) field with both slots at default declines RedundantAccMpField while a deviating one parses.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0013 — a present (acc, mp) field with both slots at default declines RedundantAccMpField while a deviating one parses.
 #[test]
 fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
     // f32 compute, f32 accumulator, default `st` — all-default → RedundantAccMpField.
@@ -370,8 +370,8 @@ fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
 /// malformed spellings with typed declines — an accumulator outside the closed §6.1
 /// set, a reserved accumulator, a bad `<mp>` code, and a wrong part-count (1 or 3
 /// parts, incl. a contraction-shaped payload wrongly placed on a non-gem cell).
-// Backs: KISS-CLASSIFY-6.7-0013 — the (acc + mp) field must be exactly <acc>/<mp> with a closed-set accumulator and an st/rm code.
-// Backs: KISS-CLASSIFY-6.7-0009 — each malformed (acc + mp) spelling declines with a typed decline, not a panic.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0013 — the (acc + mp) field must be exactly <acc>/<mp> with a closed-set accumulator and an st/rm code.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0009 — each malformed (acc + mp) spelling declines with a typed decline, not a panic.
 #[test]
 fn sk4_noncontraction_acc_mp_declines() {
     let stem = "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall";
@@ -494,7 +494,7 @@ const A_GOLDEN: &str = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/
 // Proven: KISS-CLASSIFY-6.7-0009 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_wrong_field_count() {
-    // Backs: KISS-CLASSIFY-6.7-0009 — a wrong field count declines WrongFieldCount, never a panic.
+    // Backs[enforced]: KISS-CLASSIFY-6.7-0009 — a wrong field count declines WrongFieldCount, never a panic.
     assert_eq!(from_token("sk6|ew2|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
@@ -549,7 +549,7 @@ fn test_classify_no_sk3_decoder_arm() {
     assert!(from_token(&sk3).is_err(), "reference build must not accept a persisted sk3 token");
 }
 
-// Backs: KISS-CLASSIFY-6.7-0005 — a field-8 spelling outside the four reduce values declines BadReduceField.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0005 — a field-8 spelling outside the four reduce values declines BadReduceField.
 #[test]
 fn reject_bad_reduce_field() {
     // KISS-CLASSIFY-6.7-0005 — a field-8 spelling outside the four reduce values declines BadReduceField (second backing).
@@ -566,7 +566,7 @@ fn reject_uppercase_hex_mask() {
     assert_eq!(from_token(&t), Err(KeyDecline::UppercaseOrWidthHex));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0004 — an operand sub-key with an unknown contig code declines BadOperandSubKey.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0004 — an operand sub-key with an unknown contig code declines BadOperandSubKey.
 #[test]
 fn reject_bad_operand_subkey() {
     // KISS-CLASSIFY-6.7-0004 — a malformed operand sub-key declines BadOperandSubKey (second backing).
@@ -574,7 +574,7 @@ fn reject_bad_operand_subkey() {
     assert_eq!(from_token(&t), Err(KeyDecline::BadOperandSubKey));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0003 — a work-class code outside warp/block/grid in field 5 declines BadWorkClass.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0003 — a work-class code outside warp/block/grid in field 5 declines BadWorkClass.
 #[test]
 fn reject_bad_work_class() {
     // KISS-CLASSIFY-6.7-0003 — an unknown work-class code in field 5 declines BadWorkClass (second backing).
@@ -582,7 +582,7 @@ fn reject_bad_work_class() {
     assert_eq!(from_token(&t), Err(KeyDecline::BadWorkClass));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0003 — a non-decimal rank (`rX`) in field 6 declines BadRank.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0003 — a non-decimal rank (`rX`) in field 6 declines BadRank.
 #[test]
 fn reject_bad_rank() {
     // KISS-CLASSIFY-6.7-0003 — a non-decimal rank in field 6 declines BadRank (second backing).
@@ -593,7 +593,7 @@ fn reject_bad_rank() {
 // Proven: KISS-CLASSIFY-6.5-0006 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_unknown_cell_class() {
-    // Backs: KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownCellClass.
+    // Backs[enforced]: KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownCellClass.
     // A.2 decline vector: `sk6|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
     let t = A_GOLDEN.replacen("|ew2|", "|zzz|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownCellClass));
@@ -602,7 +602,7 @@ fn reject_unknown_cell_class() {
 // Proven: KISS-CLASSIFY-6.1-0001 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_unknown_dtype() {
-    // Backs: KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype.
+    // Backs[enforced]: KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype.
     // A.2 decline vector: `sk6|ew2|f99|…` — dtype outside the closed §6.1 set.
     let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
@@ -637,7 +637,7 @@ fn accepts_every_closed_cell_class_and_dtype() {
 // Proven: KISS-CLASSIFY-6.5-0007 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn test_classify_work_class_element_count() {
-    // Backs: KISS-CLASSIFY-6.5-0007 — derive_work_class returns warp/block/grid per the <=32 / <=1024 element-count boundaries.
+    // Backs[enforced]: KISS-CLASSIFY-6.5-0007 — derive_work_class returns warp/block/grid per the <=32 / <=1024 element-count boundaries.
     // §6.5-0010 + §6.6-0013 (backs the clause; KISS #82 finding 2 ruling, 2026-07-23):
     // the work-class total element count is the FRAME-MAX — the product over the
     // iteration-frame axes of each axis's max extent across operands — NOT the output
@@ -796,7 +796,7 @@ fn test_classify_broadcast_axis_mask() {
     );
 }
 
-// Backs: KISS-CLASSIFY-6.1-0001 — a reserved dtype in any dtype position declines ReservedDtype, distinct from the UnknownDtype of the retired bare spelling.
+// Backs[enforced]: KISS-CLASSIFY-6.1-0001 — a reserved dtype in any dtype position declines ReservedDtype, distinct from the UnknownDtype of the retired bare spelling.
 #[test]
 fn reserved_fnuz_dtypes_typed_decline() {
     // KISS-CLASSIFY-6.1-0001 — the reserved fnuz dtypes decline ReservedDtype, distinct from unknown (second backing).
@@ -817,7 +817,7 @@ fn reserved_fnuz_dtypes_typed_decline() {
     assert_eq!(from_token(gem), Err(KeyDecline::ReservedDtype));
 }
 
-// Backs: KISS-CLASSIFY-6.7-0005 — a producer emits `rall` / `rlast` for the all-axes and trailing cases, never an x<hh> bitmask.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0005 — a producer emits `rall` / `rlast` for the all-axes and trailing cases, never an x<hh> bitmask.
 #[test]
 fn producer_emits_rall_not_equivalent_mask() {
     // §6.7-0005: the all-axes and trailing cases MUST serialize as rall / rlast,
@@ -971,8 +971,8 @@ fn test_classify_reduce_field_cell_class_gated() {
 /// below becomes `Ok` (a sentinel-overloading token would round-trip silently). The five
 /// declining tokens are the exact literals published as decline vectors in
 /// `structure_key_vectors.json`, so this test and the artifact move together.
-// Backs: KISS-CLASSIFY-6.7-0005 — an x<hh> with a shorter canonical spelling (x03, x02, x00, rank-1 x01, rank-0 rall) declines NonCanonicalReduceField.
-// Backs: KISS-CLASSIFY-6.7-0009 — an out-of-range mask bit (x04 at rank 2, rank-0 rlast) declines BadReduceField, distinct from the non-canonical decline.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0005 — an x<hh> with a shorter canonical spelling (x03, x02, x00, rank-1 x01, rank-0 rall) declines NonCanonicalReduceField.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0009 — an out-of-range mask bit (x04 at rank 2, rank-0 rlast) declines BadReduceField, distinct from the non-canonical decline.
 #[test]
 fn test_classify_noncanonical_reduce_mask_declines() {
     // all-axes at rank 2 (bits 0,1) — MUST be rall, never x03.
@@ -1465,7 +1465,7 @@ fn test_classify_emit_only_profile_emit_direction() {
     assert!(t.ends_with("|rall") && !t.contains("|x"), "emitted {t}");
 }
 
-// Backs: KISS-CLASSIFY-6.5-0015 — the cell class is DERIVED by the ordered rules, from
+// Backs[enforced]: KISS-CLASSIFY-6.5-0015 — the cell class is DERIVED by the ordered rules, from
 // descriptor facts and the three declared facts only; no op name or family is an input.
 // Teeth: every rule's boundary is pinned on both sides (the ordered precedence, the
 // 1..=3 arity window, the written-operand extent test, the in-place counted-once rule),
@@ -1530,7 +1530,7 @@ fn test_classify_cell_class_derivation() {
     }
 }
 
-// Backs: KISS-CLASSIFY-6.3-0009a — from sk5 an operand's `dequant_form` is keyed, as the
+// Backs[enforced]: KISS-CLASSIFY-6.3-0009a — from sk5 an operand's `dequant_form` is keyed, as the
 // optional last sub-key component; linear and codebook are distinct cells, an operand
 // without a `quant` record carries no component (byte-identical to the five-part form).
 #[test]
@@ -1563,7 +1563,7 @@ fn test_classify_dequant_form_keyed() {
     assert_eq!(from_token(&lin.replacen("/dl;", "/zz;", 1)), Err(KeyDecline::BadDequantForm));
 }
 
-// Backs: KISS-CLASSIFY-6.6-0022 — sk6 (board 193 R1.2 A, #222 candidate 1): a quantized `ctr`
+// Backs[enforced]: KISS-CLASSIFY-6.6-0022 — sk6 (board 193 R1.2 A, #222 candidate 1): a quantized `ctr`
 // cell keys the dtype of its caller-designated scale operand as the contraction field's
 // optional trailing `q<dtype>` component, so an `f8e8m0` scale and an `f16` scale are two
 // cells; with no scale operand designated the component is absent; a non-`ctr` cell never
@@ -1612,7 +1612,7 @@ fn test_classify_quantized_scale_dtype_keyed() {
     assert!(from_token(ew).is_err(), "a scale component outside a ctr contraction field MUST decline");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0023 — R1.8 / KISS#543 (option A, ruled via the PM 2026-10-16): the batch
+// Backs[enforced]: KISS-CLASSIFY-6.6-0023 — R1.8 / KISS#543 (option A, ruled via the PM 2026-10-16): the batch
 // axes of a `ctr` cell are a caller role hint, never inferred from rank, position or extent; the
 // cell is batched iff the hint is non-empty (a declared axis of extent 1 is batched); the `b<class>`
 // class is that of the PRODUCT of the batch extents; a malformed hint is a typed decline.

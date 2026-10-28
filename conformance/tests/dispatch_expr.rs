@@ -38,7 +38,7 @@ fn test_contract_dispatch_expressions_machine_evaluable() {
     assert_eq!(eval("off0 + strides0[0]", &neg, EvalMode::Structural).unwrap(), -4);
 }
 
-// Backs: KISS-CONTRACT-6.6-0006 — an expression naming a launch-scalar symbol this contract does not declare declines (UnknownSymbol) while the same expression is accepted where declared
+// Backs[enforced]: KISS-CONTRACT-6.6-0006 — an expression naming a launch-scalar symbol this contract does not declare declines (UnknownSymbol) while the same expression is accepted where declared
 #[test]
 fn dispatch_symbols_are_the_contracts_own_vocabulary() {
     // KISS-CONTRACT-6.5-0004a / 6.6-0006: the vocabulary is the symbols THIS contract's Interface
@@ -60,7 +60,7 @@ fn dispatch_symbols_are_the_contracts_own_vocabulary() {
     assert_eq!(eval("n", &packed, EvalMode::Domain), Ok(24));
 }
 
-// Backs: KISS-CONTRACT-6.6-0006 — subscripting a scalar, a bare rank-length array symbol, and an out-of-bounds subscript each decline with a typed decline
+// Backs[enforced]: KISS-CONTRACT-6.6-0006 — subscripting a scalar, a bare rank-length array symbol, and an out-of-bounds subscript each decline with a typed decline
 #[test]
 fn dispatch_subscript_declines() {
     let s = scalars();
@@ -99,7 +99,7 @@ fn dispatch_subscript_declines() {
     ));
 }
 
-/// Backs: KISS-CONTRACT-6.6-0009 — the DIVISION SEMANTICS of the §6.6-0006 Dispatch expression
+/// Backs[enforced]: KISS-CONTRACT-6.6-0009 — the DIVISION SEMANTICS of the §6.6-0006 Dispatch expression
 /// grammar. ⚠️ The CLAUSE is -0009; -0006 defines the grammar these operators live in and is
 /// backed separately. Citing -0006 here would have credited a clause that was already backed
 /// while leaving the one this test was written for resting on the §9 matrix row alone.

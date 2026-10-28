@@ -103,7 +103,7 @@ fn test_classify_zero_dependency() {
     assert!(n >= 30, "round-tripped {n} tokens");
 }
 
-// Backs: KISS-CLASSIFY-6.9-0002 — a structure_key token is carried across the announce seam as an opaque,
+// Backs[enforced]: KISS-CLASSIFY-6.9-0002 — a structure_key token is carried across the announce seam as an opaque,
 // length-delimited byte string (the carrier never parses it) and, returned byte-for-byte, is still parseable
 // per §6.7: every derivation-vector token survives an availability-list encode/decode unchanged.
 #[test]
