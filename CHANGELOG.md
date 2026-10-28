@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.24 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q6)
+
+- Spec text, no bytes (ROADMAP R2.8 Q5, KISS#21; CireSnave 2026-10-28, board 309 Q5 = A): the rule that is already true per field is stated once. KISS-CONTRACT-6.1-0006 gains arm (d), a value outside a closed value set of a field that affects correctness or admissibility is a typed decline, and a reader MAY ignore an unknown value only of a field its own clause marks advisory; KISS-CONSUME-6.5-0001 lists the same case among the refusals that MUST be typed declines. Records existing behaviour (unknown determinism class already declines as `unknown-determinism-class`; unknown field, version and dtype token already decline). No vector, no byte. The `UNBACKED.tsv` note for 6.1-0006 records which arm the test does not reach.
+
 ## 0.6.23 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q3)
 
 - Spec text, no bytes (ROADMAP R2.8 Q6, KISS#27; CireSnave 2026-10-28, board 309 Q6 = A): KISS-CONTRACT-6.8-0002 now carries an explicit exception, a kernel with no finite bound on a backend declares no tier for it (its `precision_class` is `unbounded` per KISS-OPS-6.8-0008 and its `audited_status` is `unaudited` per 6.8-0010), which closes the inconsistency where "MUST declare at least one of max_ulp, max_relative, max_absolute" read as forcing a provider to invent a bound; and it adds the SHOULD: a provider unsure which bound a kernel meets SHOULD understate (declare the looser bound it can establish, or no tier) and SHOULD NOT declare a tighter bound than it has established. The reference reader already accepts a tier carrying none of the three quantities (`DeclaredAccuracyTier::is_bounded`), so no code or vector changes. 6.8-0002 stays `untestable` in `UNBACKED.tsv` (#44).
