@@ -335,7 +335,7 @@ A sub-standard advances a maturity stage when its stage-transition criteria (§5
 
 ### 8.1 Conformance is factual
 
-An implementation **conforms** to a sub-standard at a given wire/ABI schema version if and only if it passes the **unmodified** KISS-Conform suite for that sub-standard at that version. Conformance is a factual, testable property, not a matter of assertion or endorsement. There is no partial credit for a claimed subset beyond what the suite verifies: the claim's own clauses pass and out-of-claim inputs decline cleanly.
+An implementation **conforms** to a sub-standard at a given wire/ABI schema version if and only if it passes the **unmodified** KISS-Conform suite for that sub-standard at that version. Conformance is a factual, testable property, not a matter of assertion or endorsement. There is no partial credit for a claimed subset beyond what the suite verifies: the claim's own clauses pass and out-of-claim inputs decline cleanly. *Informative (CireSnave 2026-10-28, board 309 Q3 option A):* the suite defines no in-process profile. An implementation that exchanges no bytes, such as a provider linked into its consumer's own process, conforms by producing, on the KISS vectors, the same observable results as a byte reader would; the code shape that carries each message in process belongs to the interface project (decision 297), not to this standard.
 
 ### 8.2 Self-certification with published results
 

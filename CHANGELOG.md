@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.22 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on #715)
+
+- Informative text only (no clause, no bytes; ROADMAP R2.8 Q3, KISS#18; CireSnave 2026-10-28, board 309 Q3 = A): umbrella §8.1 gains one informative sentence. The suite defines no in-process profile; an implementation that exchanges no bytes conforms by producing, on the KISS vectors, the same observable results as a byte reader would, and the in-process code shape belongs to the interface project (decision 297). Fuel's route to claim conformance with its linked codegen is therefore the vectors, not an adapter.
+
 ## 0.6.21 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on #714)
 
 - Informative text only (no clause, no bytes; ROADMAP R5.8 SLA item; board 279 pair 3): umbrella §8.3 gains one informative sentence recording CireSnave's ruling of 2026-10-28, relayed by the PM, verbatim "#2: Promise nothing but we will get to it as quickly as possible." Timing option A (as resources permit; no date, no published queue rule) and interim status (i) (the registry lists verified implementations only; no "self-certified, pending" row), per the PM's reading "unless he objects". The other R5.8 rows are unchanged. **Also (docs, R5.7):** `docs/union-coverage-unpopped.md` folds in the Unpopped lane's row check of the table (its messages of 2026-10-28, `c9ab05b`): rows 1-19, 24 and 26-32 confirmed, Unpopped's corrections added, and six constructs it found missing added as Part 3 (cast with rounding and saturation, `fma`, per-op numerics qualifiers, exact integer arithmetic, packed lane values, the MX dtypes); 37 rows in all. This lands here because #714 merged before the fold-in commit.
