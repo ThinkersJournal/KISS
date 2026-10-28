@@ -799,7 +799,9 @@ determinism/fidelity class so KISS-Conform selects the correct comparator. See u
 ### 6.5 Typed decline, never panic
 
 - **KISS-CONSUME-6.5-0001** — Every refusal — `not-a-kernel`, `wrong-op-class`, a malformed or
-  empty input, an unsupported referenced version, or an internal recognition failure — MUST be a
+  empty input, an unsupported referenced version, a value outside a closed value set of a
+  field that affects correctness or admissibility (only a field marked advisory may have an
+  unknown value ignored), or an internal recognition failure — MUST be a
   **typed decline** (a distinguished error value/enumerant or out-of-band error return) and MUST
   NOT be a panic, abort, crash, hang, or out-of-bounds read. *Test:*
   `test_consume_refusal_is_typed_decline`.

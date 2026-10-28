@@ -564,8 +564,12 @@ outer length-prefix (§6.1-0005).
   the Semantics `human_annotation`, §6.4-0001) MAY be absent, and its absence is **not** a
   decline — (b) carries a field whose declared type does not match this schema, or
   (c) carries a field this schema does not define at the document's declared
-  `contract_version` (an unknown or extra field). The reader MUST NOT silently drop,
-  reserve, or ignore an unknown field; forward compatibility is obtained only by a
+  `contract_version` (an unknown or extra field), or (d) carries, in a field whose value set
+  this schema closes and whose value affects correctness or admissibility (a determinism
+  class, a precision class, a dtype or layout token, a capability or status enum), a value
+  outside that set. A reader MAY ignore an unknown value only of a field that its own clause
+  marks advisory. The reader MUST NOT silently drop,
+  reserve, or ignore an unknown field or such an unknown value; forward compatibility is obtained only by a
   `contract_version` bump (§8), never by tolerating unknown fields. *Test:*
   `test_contract_strict_schema`.
 - **KISS-CONTRACT-6.1-0007** — The only recognized `contract_kind` at this schema version
