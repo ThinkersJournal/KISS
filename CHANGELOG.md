@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.26 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q4)
+
+- Docs only (no spec text, no bytes; ROADMAP R2.8 Q2, KISS#12; CireSnave 2026-10-28, board 309 Q2 = A: add nothing, and check whether the standard requires a provider claiming a backend to cover the basic ops): `docs/options-board309-q2-baseline-coverage.md`. The check found no such clause: KISS-OPS-7.1-0001 and 7.2-0002 bind evaluators and op-subset claims, KISS-SYNTH-7.1-0001 lets a provider answer every request with a decline, and the umbrella's claimable subsets are per sub-standard, not per cell. The note proposes an optional, claimable floor-complete-provider profile (experimental capability bit plus Conform vectors) as the recommended rule, with status quo and a mandatory baseline as the alternatives. Informative; the decision is CireSnave's.
+
 ## 0.6.25 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q5)
 
 - Spec text and one test arm, no wire bytes (ROADMAP R2.8 Q4, KISS#19; CireSnave 2026-10-28, board 309 Q4 = C, "NOW (not when a second tag is seeded)"): the KISS-SYNTH-6.4-0001g tag table gains an `ABI model` column (the `PTX ` row is `pointer-abi`, the Interface list bound as typed pointers and scalars in order) and the rule that a row stating no ABI model is not a registered value; the named set is `pointer-abi`, `descriptor-set`, `buffer-index`, `host-closure`, of which only `pointer-abi` is defined because only it is used. An informative table lists every artifact format KISS recognises or needs with its target-family registry status (read from `conformance/registry/namespaces.json`: `cuda` and `vulkan` registered, `rocm` and `metal` reserved, no Intel or CPU entry) and a likely ABI model; PTX is NVIDIA-only, and the AMD, Intel, Metal and host rows are marked UNVERIFIED because none was read. The table stays one registered row (`test_synth_artifact_format_tag_registry` still pins that); `test_synth_artifact_format_tag_abi_model` reads the new column.
