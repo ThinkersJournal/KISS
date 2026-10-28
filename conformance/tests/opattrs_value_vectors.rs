@@ -196,10 +196,10 @@ fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
     assert_eq!(compared + skipped, POPULATION, "population is pinned");
 }
 
-// Backs: KISS-OPS-6.19-0027 — the gather clamp blob is exactly the bytes `00 02 01 02` (axis, oob_policy, index_operand, index_dtype in order)
-// Backs: KISS-OPS-6.19-0028 — the scatter atomic-add blob is exactly `00 02 01 01 03` (axis, combine, fixed-skip oob_policy, index_operand, index_dtype)
-// Backs: KISS-OPS-6.19-0030 — the reduce_var blob is exactly `FF FF 01 00` (reduce_axes u16, fixed keepdim, bessel_correction)
-// Backs: KISS-OPS-6.19-0032 — the non-square avg_pool blob is the exact 37 bytes (four window vectors then count_include_pad)
+// Backs[enforced]: KISS-OPS-6.19-0027 — the gather clamp blob is exactly the bytes `00 02 01 02` (axis, oob_policy, index_operand, index_dtype in order)
+// Backs[enforced]: KISS-OPS-6.19-0028 — the scatter atomic-add blob is exactly `00 02 01 01 03` (axis, combine, fixed-skip oob_policy, index_operand, index_dtype)
+// Backs[enforced]: KISS-OPS-6.19-0030 — the reduce_var blob is exactly `FF FF 01 00` (reduce_axes u16, fixed keepdim, bessel_correction)
+// Backs[enforced]: KISS-OPS-6.19-0032 — the non-square avg_pool blob is the exact 37 bytes (four window vectors then count_include_pad)
 #[test]
 fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
     let enc = |op: &str, a: Attrs| encode(op, &a).expect("encodes");
@@ -228,7 +228,7 @@ fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
     );
 }
 
-// Backs: KISS-OPS-6.19-0020 — rank-1 sole axis and a rank-3 full reduction encode 0xFFFF (never 0x0001/0x0007), trailing 0xFFFE, subset mask otherwise
+// Backs[enforced]: KISS-OPS-6.19-0020 — rank-1 sole axis and a rank-3 full reduction encode 0xFFFF (never 0x0001/0x0007), trailing 0xFFFE, subset mask otherwise
 // Backs[enforced]: KISS-OPS-6.19-0038 — an empty axis set (0x0000) is refused, never emitted
 #[test]
 fn rank_sensitivity_of_reduce_axes_matches_the_spec_examples() {
@@ -270,8 +270,8 @@ fn every_variation_that_differs_is_recorded_distinct_and_none_is_vacuous() {
     }
 }
 
-// Backs: KISS-OPS-6.19-0025 — the reduce blob is exactly 6 bytes `01 FF FF 01 00 01`, math_fidelity ordinal 1|2 never 0, a non-float accumulator is refused
-// Backs: KISS-OPS-6.19-0026 — every prefix_scan blob is the 6-byte monoid/reduce_axes/exclusivity/accumulator/math_fidelity form with the fidelity byte 1 or 2
+// Backs[enforced]: KISS-OPS-6.19-0025 — the reduce blob is exactly 6 bytes `01 FF FF 01 00 01`, math_fidelity ordinal 1|2 never 0, a non-float accumulator is refused
+// Backs[enforced]: KISS-OPS-6.19-0026 — every prefix_scan blob is the 6-byte monoid/reduce_axes/exclusivity/accumulator/math_fidelity form with the fidelity byte 1 or 2
 #[test]
 fn reduce_and_prefix_scan_are_minted_at_six_bytes_with_the_pinned_ordinals() {
     // board 201 ("Accept Fuel's table.") pinned `math_fidelity`; nothing is withheld any more.

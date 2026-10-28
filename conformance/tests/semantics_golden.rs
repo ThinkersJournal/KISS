@@ -16,7 +16,7 @@ fn bits_eq(a: f32, b: f32) -> bool {
 
 // ---- the load-bearing distinction: NaN-propagating vs NaN-suppressing --------
 
-/// Enforces: KISS-OPS-6.15-0001 — max_prop/min_prop (NaN-propagating) and
+/// Enforces[enforced]: KISS-OPS-6.15-0001 — max_prop/min_prop (NaN-propagating) and
 /// fmax_ieee/fmin_ieee (NaN-suppressing) are four distinct ops. Catches an
 /// `fmax_ieee` built from `max_prop`: it returns NaN for fmax_ieee(NaN, 5.0)
 /// where the clause pins 5.0.
@@ -35,7 +35,7 @@ fn max_propagates_nan_but_fmax_suppresses_it() {
     assert_eq!(fmax_ieee(3.0, 5.0), 5.0);
 }
 
-// Backs: KISS-OPS-6.15-0001 — min_prop keeps a NaN operand while fmin_ieee returns the non-NaN operand (distinct ops)
+// Backs[enforced]: KISS-OPS-6.15-0001 — min_prop keeps a NaN operand while fmin_ieee returns the non-NaN operand (distinct ops)
 #[test]
 fn min_propagates_nan_but_fmin_suppresses_it() {
     let nan = f32::NAN;
@@ -46,7 +46,7 @@ fn min_propagates_nan_but_fmin_suppresses_it() {
     assert_eq!(min_prop(3.0, 5.0), 3.0);
 }
 
-// Backs: KISS-OPS-6.2-0009 — the non-primitive max_prop's NaN behavior is its decomposition's: operand a itself, payload preserved
+// Backs[enforced]: KISS-OPS-6.2-0009 — the non-primitive max_prop's NaN behavior is its decomposition's: operand a itself, payload preserved
 #[test]
 fn max_prop_returns_the_nan_operand_bit_for_bit() {
     // the §6.15 decomposition returns operand `a` itself when it is NaN, so the
@@ -55,7 +55,7 @@ fn max_prop_returns_the_nan_operand_bit_for_bit() {
     assert_eq!(max_prop(nan, 5.0).to_bits(), nan.to_bits());
 }
 
-// Backs: KISS-OPS-6.15-0001 — on a +-0 tie fmax_ieee returns operand a, not a b-biased result
+// Backs[enforced]: KISS-OPS-6.15-0001 — on a +-0 tie fmax_ieee returns operand a, not a b-biased result
 #[test]
 fn signed_zero_follows_cmp_ge_operand_order() {
     // fmax_ieee(-0, +0): both numbers, cmp_ge(-0,+0) is true (equal) -> returns a.
@@ -112,7 +112,7 @@ fn signed_zero_follows_cmp_ge_operand_order() {
 /// minmax ops. Catches a `>`-spelled tie (`a > b ? a : b` — b on ties), the
 /// exact cross-implementation divergence that motivated the set, and any
 /// tie-normalizing lowering (e.g. `+0.0` on every tie).
-// Backs: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f32)
+// Backs[enforced]: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f32)
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_f32() {
     let ops: [(&str, fn(f32, f32) -> f32); 4] = [
@@ -134,7 +134,7 @@ fn minmax_signed_zero_ties_keep_operand_a_f32() {
 }
 
 /// The 16 f64 rows — the same decompositions at the f64 compute dtype.
-// Backs: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f64)
+// Backs[enforced]: KISS-OPS-6.15-0001 — on a +-0 tie all four minmax ops return operand a bit-for-bit (f64)
 #[test]
 fn minmax_signed_zero_ties_keep_operand_a_f64() {
     let ops: [(&str, fn(f64, f64) -> f64); 4] = [
@@ -186,7 +186,7 @@ fn minmax_signed_zero_ties_keep_operand_a_bf16_roundtrip() {
 
 // ---- relu is NOT max(x, 0) ---------------------------------------------------
 
-// Backs: KISS-OPS-6.15-0002 — relu is NaN-propagating and -0.0-preserving
+// Backs[enforced]: KISS-OPS-6.15-0002 — relu is NaN-propagating and -0.0-preserving
 #[test]
 fn relu_propagates_nan_and_preserves_negative_zero() {
     assert!(relu(f32::NAN).is_nan(), "relu propagates NaN");
@@ -196,7 +196,7 @@ fn relu_propagates_nan_and_preserves_negative_zero() {
     assert!(bits_eq(relu(0.0), 0.0));
 }
 
-/// Enforces: KISS-OPS-6.15-0002 — `relu` is NaN-propagating and -0.0-preserving,
+/// Enforces[enforced]: KISS-OPS-6.15-0002 — `relu` is NaN-propagating and -0.0-preserving,
 /// and MUST NOT be implemented as `max(x, 0)`. Catches exactly that wrong
 /// lowering: `naive_max_x_zero` scrubs a NaN input to 0 where `relu` keeps it.
 #[test]
@@ -232,9 +232,9 @@ fn ulp_comparator_measures_distance() {
 
 // ---- broadened primitive floor: sign-bit, sign/step, rounding, comparisons --
 
-// Backs: KISS-OPS-6.4-0003 — neg flips the sign bit, neg(-0.0) is +0.0
-// Backs: KISS-OPS-6.4-0004 — abs clears the sign bit, abs(-0.0) is +0.0
-// Backs: KISS-OPS-6.9-0002 — copysign takes the sign bit of b, including a signed zero
+// Backs[enforced]: KISS-OPS-6.4-0003 — neg flips the sign bit, neg(-0.0) is +0.0
+// Backs[enforced]: KISS-OPS-6.4-0004 — abs clears the sign bit, abs(-0.0) is +0.0
+// Backs[enforced]: KISS-OPS-6.9-0002 — copysign takes the sign bit of b, including a signed zero
 #[test]
 fn sign_bit_atoms_signed_zero() {
     assert!(bits_eq(neg(0.0), -0.0));
@@ -247,7 +247,7 @@ fn sign_bit_atoms_signed_zero() {
     assert!(bits_eq(copysign(3.0, -0.0), -3.0)); // sign of a signed zero carries
 }
 
-// Backs: KISS-OPS-6.2-0009 — sign(NaN)=0 and step(NaN)=0 are the pinned results of the decompositions
+// Backs[enforced]: KISS-OPS-6.2-0009 — sign(NaN)=0 and step(NaN)=0 are the pinned results of the decompositions
 #[test]
 fn sign_and_step_at_nan_and_zero() {
     assert_eq!(sign(2.0), 1.0);
@@ -261,7 +261,7 @@ fn sign_and_step_at_nan_and_zero() {
     assert_eq!(step(f32::NAN), 0.0);
 }
 
-/// Enforces: KISS-OPS-6.7-0001 — floor→−∞, ceil→+∞, trunc→zero, and round_even
+/// Enforces[enforced]: KISS-OPS-6.7-0001 — floor→−∞, ceil→+∞, trunc→zero, and round_even
 /// to nearest ties-to-even. Catches `round_even` lowered to C `roundf` / Rust
 /// `f32::round` (ties away from zero): those give round_even(2.5)==3.0 where the
 /// clause pins 2.0.
@@ -278,7 +278,7 @@ fn round_even_is_bankers_rounding() {
     assert_eq!(trunc(-1.7), -1.0);
 }
 
-/// Enforces: KISS-OPS-6.6-0002 — cmp_eq/lt/le/gt/ge each yield 0 (false) when
+/// Enforces[enforced]: KISS-OPS-6.6-0002 — cmp_eq/lt/le/gt/ge each yield 0 (false) when
 /// either operand is NaN. Catches `cmp_ge` lowered as `!(a < b)` (the standard
 /// trick on an lt-only ISA): that returns true for cmp_ge(NaN, NaN) where the
 /// clause pins false.
@@ -294,7 +294,7 @@ fn comparisons_are_ieee_ordered() {
     assert!(isnan(f32::NAN) && !isnan(0.0));
 }
 
-/// Enforces: KISS-OPS-6.15-0003 — `rem_floor` (sign of divisor) and `rem_trunc`
+/// Enforces[enforced]: KISS-OPS-6.15-0003 — `rem_floor` (sign of divisor) and `rem_trunc`
 /// (sign of dividend) are distinct ops. Catches an implementation that merges
 /// them or substitutes one for the other: they diverge on any operand pair whose
 /// quotient is negative and non-integer.
@@ -309,7 +309,7 @@ fn test_ops_rem_floor_vs_trunc() {
     assert_eq!(rem_floor(6.0, 3.0), 0.0);
 }
 
-/// Enforces: KISS-OPS-6.13-0007 — `hypot` yields +∞ whenever either operand is
+/// Enforces[enforced]: KISS-OPS-6.13-0007 — `hypot` yields +∞ whenever either operand is
 /// infinite, even if the other is NaN, overriding the naive `sqrt(a²+b²)`.
 /// Catches exactly that naive lowering: it returns NaN for `(±∞, NaN)`.
 #[test]
@@ -346,7 +346,7 @@ fn transcendental_agrees_within_declared_ulp() {
     }
 }
 
-/// Enforces: KISS-OPS-6.5-0003 — `select`'s `cond` test is the IEEE compare
+/// Enforces[enforced]: KISS-OPS-6.5-0003 — `select`'s `cond` test is the IEEE compare
 /// `cond != 0`: `-0.0` compares equal to zero (FALSE, choose `b`) and any NaN
 /// (quiet or signaling) is non-zero (TRUE, choose `a`). Catches a `cond` test
 /// lowered as an integer bit-nonzero check (`cond.to_bits() != 0`), which treats
@@ -368,7 +368,7 @@ fn test_ops_select_cond_zero_nan() {
     assert!(bits_eq(select(-3.0, 10.0, 20.0), 10.0));
 }
 
-/// Enforces: KISS-OPS-6.18-0004 — `cadd`/`csub`/`cneg`/`cconj` are componentwise,
+/// Enforces[enforced]: KISS-OPS-6.18-0004 — `cadd`/`csub`/`cneg`/`cconj` are componentwise,
 /// preserving IEEE signed zero per lane; `cconj` flips the SIGN BIT of the
 /// imaginary lane so `+0.0 -> -0.0` (and `-0.0 -> +0.0`), a bit flip, not `0 - b`.
 /// Catches `cconj`/`cneg` built from `sub(0.0, b)`: `0.0 - (+0.0)` and
@@ -395,7 +395,7 @@ fn test_ops_complex_add_sub_neg_conj() {
     assert!(c_bits_eq(cneg([0.0, 0.0]), [-0.0, -0.0]));
 }
 
-/// Enforces: KISS-OPS-6.18-0006 — `cdiv` applies the Annex G recovery with pinned
+/// Enforces[enforced]: KISS-OPS-6.18-0006 — `cdiv` applies the Annex G recovery with pinned
 /// component signs and MUST NOT route the zero-denominator / infinite-denominator
 /// cases through the real `div` atom. A nonzero finite `(a,b)` over a complex
 /// ZERO denominator yields `copysign(∞,a) + i·copysign(∞,b)`, NOT `0/0 = NaN`;
@@ -432,7 +432,7 @@ fn test_ops_cdiv_annexg() {
     ));
 }
 
-/// Enforces: KISS-OPS-6.13-0005 — `pow` over its full domain: `pow(0,0)=1`;
+/// Enforces[enforced]: KISS-OPS-6.13-0005 — `pow` over its full domain: `pow(0,0)=1`;
 /// signed-zero bases with the IEEE odd/even-integer sign rule; and negative bases
 /// with an integer exponent giving `|a|^b` (even) or `-(|a|^b)` (odd) rather than
 /// NaN. Catches a `pow` that is only the `a>0` reference `exp(b*log(a))`
@@ -497,7 +497,7 @@ fn test_ops_pow_full_domain() {
     assert!(pow_via_exp_log(1.0, inf).is_nan());
 }
 
-/// Enforces: KISS-OPS-6.13-0003 — a Refine-marked exp-of-large-argument op MUST
+/// Enforces[enforced]: KISS-OPS-6.13-0003 — a Refine-marked exp-of-large-argument op MUST
 /// deviate from the literal reference decomposition where that reference would
 /// overflow while the true function is finite, yet agree with the reference's
 /// pinned meaning within the declared ULP elsewhere. Catches a kernel that emits
@@ -525,13 +525,13 @@ fn test_ops_decomposition_accuracy_refinement() {
     }
 }
 
-/// Enforces: KISS-OPS-6.18-0017 — the split comparator for carg/clog/csqrt/cexp.
+/// Enforces[enforced]: KISS-OPS-6.18-0017 — the split comparator for carg/clog/csqrt/cexp.
 /// A plain ULP comparator cannot see a wrong sign of zero (ulp_distance(-0,+0)==1),
 /// so it PASSES a +0.0 result where -0.0 is pinned; the split comparator CATCHES
 /// it exact-bit. Teeth: this is the divergence between the two comparators.
 /// It exercises the IMAGINARY zero only (the real-zero sign is `test_conform_split_comparator`'s).
-/// Backs: KISS-OPS-6.18-0017 [zero-sign-im, pi-endpoint, magnitude-ulp]
-/// Backs: KISS-CONFORM-6.8-0005 [zero-sign-im]
+/// Backs[enforced]: KISS-OPS-6.18-0017 [zero-sign-im, pi-endpoint, magnitude-ulp]
+/// Backs[enforced]: KISS-CONFORM-6.8-0005 [zero-sign-im]
 #[test]
 fn test_ops_complex_branch_sign_exact() {
     // A carg-style result with a signed-zero imaginary component: -0.0 is pinned,
@@ -572,7 +572,7 @@ fn test_ops_complex_branch_sign_exact() {
 // clause it binds so `kiss_trace.py --update-ledger` drops exactly these ids.
 // ============================================================================
 
-/// Enforces: KISS-OPS-6.4-0004 — `abs` clears the sign bit as a RAW-BIT operation:
+/// Enforces[enforced]: KISS-OPS-6.4-0004 — `abs` clears the sign bit as a RAW-BIT operation:
 /// `abs(-0.0)` is `+0.0`, and a NaN's payload survives with only the sign cleared.
 /// Catches the branch mutation `abs := if x < 0.0 { -x } else { x }`: `-0.0 < 0.0`
 /// is false (IEEE `-0.0 == 0.0`), so that form returns `-0.0` (bits 0x8000_0000)
@@ -594,7 +594,7 @@ fn test_ops_abs_raw_bit() {
     assert_ne!(abs(-0.0).to_bits(), branch_abs.to_bits());
 }
 
-/// Enforces: KISS-OPS-6.4-0003 — `neg` flips the sign bit as a RAW-BIT operation:
+/// Enforces[enforced]: KISS-OPS-6.4-0003 — `neg` flips the sign bit as a RAW-BIT operation:
 /// `neg(-0.0)` is `+0.0`, `neg(+0.0)` is `-0.0`, and a NaN's payload survives with only
 /// the sign flipped. The sibling of `test_ops_abs_raw_bit`, which this mirrors.
 ///
@@ -647,7 +647,7 @@ fn test_ops_neg_raw_bit() {
     );
 }
 
-/// Enforces: KISS-OPS-6.5-0002 — `select` moves the chosen arm as a RAW-BIT copy, so
+/// Enforces[enforced]: KISS-OPS-6.5-0002 — `select` moves the chosen arm as a RAW-BIT copy, so
 /// a chosen `-0.0` stays `-0.0` and a chosen signaling NaN keeps its payload and its
 /// signaling bit. Catches any arithmetic-carrying select (e.g. `cond*a+(1-cond)*b`):
 /// `1.0*(-0.0)+0.0*b` canonicalizes to `+0.0` and `1.0*sNaN` quiets the NaN.
@@ -664,7 +664,7 @@ fn test_ops_select_raw_bit() {
     assert_ne!(select(1.0, -0.0, 5.0).to_bits(), arith.to_bits());
 }
 
-/// Enforces: KISS-OPS-6.9-0002 — `copysign(a, b)` is the magnitude of `a` with the
+/// Enforces[enforced]: KISS-OPS-6.9-0002 — `copysign(a, b)` is the magnitude of `a` with the
 /// RAW sign bit of `b`, so the signed zero of `b` and the sign of a NaN `b` carry
 /// into the result. Catches the branch mutation `copysign := if b < 0.0 { -|a| }
 /// else { |a| }`: for `b = -0.0`, `b < 0.0` is false -> it returns `+1.0` where the
@@ -684,7 +684,7 @@ fn test_ops_copysign_raw_bit() {
     assert_ne!(copysign(1.0, -0.0).to_bits(), branch.to_bits());
 }
 
-/// Enforces: KISS-OPS-6.6-0004 — comparisons honor IEEE signed-zero equality:
+/// Enforces[enforced]: KISS-OPS-6.6-0004 — comparisons honor IEEE signed-zero equality:
 /// `cmp_eq(-0.0,+0.0)`, `cmp_le(-0.0,+0.0)`, and `cmp_ge(-0.0,+0.0)` are all true.
 /// Catches a raw-bit comparator (`a.to_bits() == b.to_bits()`): -0.0 (0x8000_0000)
 /// and +0.0 (0x0000_0000) differ in bits, so it reports NOT-equal where IEEE pins equal.
@@ -702,7 +702,7 @@ fn test_ops_compare_signed_zero() {
         "cmp_eq diverges from the forbidden bit-compare on signed zero");
 }
 
-/// Enforces: KISS-OPS-6.6-0003 — `cmp_ne` is true whenever an operand is NaN, and
+/// Enforces[enforced]: KISS-OPS-6.6-0003 — `cmp_ne` is true whenever an operand is NaN, and
 /// `cmp_ne(x, x)` serves as the `isnan` predicate. Catches `cmp_ne := a.to_bits()
 /// != b.to_bits()`: two same-payload NaNs share bits, so that form reports
 /// `cmp_ne(NaN, NaN) == false` where the clause pins true (breaking the isnan floor).
@@ -727,7 +727,7 @@ fn test_ops_cmp_ne_nan_true() {
     assert!(cmp_ne(l, r) != bit_compare_ne, "cmp_ne diverges from the forbidden bit-compare on NaN,NaN");
 }
 
-/// Enforces: KISS-OPS-6.7-0002 — every rounding atom propagates a NaN operand and
+/// Enforces[enforced]: KISS-OPS-6.7-0002 — every rounding atom propagates a NaN operand and
 /// preserves the sign of a zero (`trunc(-0.0)=-0.0`, likewise floor/ceil/round_even).
 /// Catches an integer-cast rounder `(x as i64) as f32`: it maps `-0.0` to `+0.0`
 /// and NaN to `0`, dropping both the sign of zero and the NaN.
@@ -750,7 +750,7 @@ fn test_ops_rounding_nan_signed_zero() {
     assert_ne!(trunc(-0.0).to_bits(), cast_round(-0.0).to_bits());
 }
 
-/// Enforces: KISS-OPS-6.5-0004 — `select` MUST NOT be rewritten to a mask-multiply
+/// Enforces[enforced]: KISS-OPS-6.5-0004 — `select` MUST NOT be rewritten to a mask-multiply
 /// `cond*a + (1-cond)*b`, which perturbs signed zero. For cond=1, a=-0.0, b=+0.0 the
 /// raw-bit `select` yields -0.0 while the mask form yields +0.0. The forbidden form
 /// is computed inline as a foil (like naive_max_x_zero / cdiv_via_real_div) and the
@@ -769,7 +769,7 @@ fn test_ops_select_no_mask_multiply() {
     );
 }
 
-/// Enforces: KISS-OPS-6.2-0009 — a non-primitive op's edge behavior comes from its
+/// Enforces[enforced]: KISS-OPS-6.2-0009 — a non-primitive op's edge behavior comes from its
 /// §6.13 reference decomposition, NOT the default §6.2-0003 atom NaN-propagation:
 /// `sign(NaN)=0` and `step(NaN)=0` because `cmp_gt`/`cmp_lt(NaN,_)` are both false in
 /// the select-decomposition. Catches a naive `sign := x/|x|`, which propagates NaN
@@ -793,7 +793,7 @@ fn test_ops_nonprimitive_semantics_from_decomposition() {
     assert!(sign(nan) != naive_sign, "sign's decomposition overrides default propagation");
 }
 
-/// Enforces: KISS-OPS-6.5-0001 — `select` takes operands `(cond, a, b)` and yields
+/// Enforces[enforced]: KISS-OPS-6.5-0001 — `select` takes operands `(cond, a, b)` and yields
 /// `a` when `cond != 0` and `b` when `cond == 0`. Catches an operand-order swap
 /// (returning `b` on `cond != 0`) and a flipped truth sense: with distinct a, b the
 /// wrong arm is observable.
@@ -805,7 +805,7 @@ fn test_ops_select_order() {
     assert_eq!(select(0.0, 10.0, 20.0), 20.0, "cond == 0 selects b");
 }
 
-/// Enforces: KISS-OPS-6.6-0001 — each comparison computes its §6.6 table predicate.
+/// Enforces[enforced]: KISS-OPS-6.6-0001 — each comparison computes its §6.6 table predicate.
 /// Catches an off-by-one strictness drift on the boundary-equal case: `cmp_lt := <=`
 /// flips `cmp_lt(1,1)` to true; `cmp_gt := >=` flips `cmp_gt(1,1)` to true; `cmp_ge
 /// := >` flips `cmp_ge(1,1)` to false; `cmp_le := <` flips `cmp_le(1,1)` to false.
@@ -822,7 +822,7 @@ fn test_ops_compare_predicates() {
     assert!(cmp_ne(1.0, 2.0) && !cmp_ne(1.0, 1.0));
 }
 
-/// Enforces: KISS-OPS-6.2-0004 — signed zero is preserved except at the two pinned
+/// Enforces[enforced]: KISS-OPS-6.2-0004 — signed zero is preserved except at the two pinned
 /// clears (`neg`/`abs` of -0.0): `add(-0.0,-0.0)` stays -0.0, `mul(-0.0,1.0)` stays
 /// -0.0, `sub(0.0,0.0)` is +0.0. Catches a flush-to-zero (FTZ/DAZ) arithmetic that
 /// emits +0.0 for `add(-0.0,-0.0)`. The comparison MUST be raw bits (`0.0 == -0.0`).
@@ -837,7 +837,7 @@ fn test_ops_signed_zero_preserved() {
     assert_eq!(abs(-0.0).to_bits(), 0x0000_0000, "abs(-0.0) = +0.0 (pinned clear)");
 }
 
-/// Enforces: KISS-OPS-6.2-0003 — default primitive-floor atoms propagate a NaN
+/// Enforces[enforced]: KISS-OPS-6.2-0003 — default primitive-floor atoms propagate a NaN
 /// operand, IN CONTRAST to the §6.15 NaN-suppressing `fmax_ieee`. Catches a
 /// `-ffinite-math-only` / fast-math atom that assumes no-NaN and drops the NaN
 /// operand. Lowest-drift of the set but still fails a real finite-math build.

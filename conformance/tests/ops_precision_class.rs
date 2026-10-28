@@ -29,7 +29,7 @@ fn test_ops_precision_class_token_set() {
     assert!(PrecisionClass::BoundedTolerance < PrecisionClass::Unbounded);
 }
 
-/// Enforces: KISS-OPS-6.8-0008 — the full 4x3 derivation table, the loosest-tier rule across
+/// Enforces[enforced]: KISS-OPS-6.8-0008 — the full 4x3 derivation table, the loosest-tier rule across
 /// targets, and the no-tier case. Every cell is asserted so a rule ignoring either axis differs
 /// from this table in at least one cell.
 #[test]

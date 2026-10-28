@@ -59,7 +59,7 @@ fn positive_vectors_serialize_and_round_trip() {
 }
 
 /// (3) Every decline vector's malformed input yields the pinned typed decline.
-// Backs: KISS-CLASSIFY-6.7-0009 — every published malformed token is rejected with its pinned typed KeyDecline.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0009 — every published malformed token is rejected with its pinned typed KeyDecline.
 #[test]
 fn decline_vectors_answer_the_pinned_decline() {
     for d in decline_vectors() {

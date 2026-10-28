@@ -36,7 +36,7 @@ fn envelope_golden_bytes() {
     assert_golden("KISS-ANNOUNCE-6.1-0002", "reference_envelope", &b, GOLDEN);
 }
 
-/// Enforces: KISS-ANNOUNCE-6.1-0004 — the pinned magic constant + its wire byte order.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.1-0004 — the pinned magic constant + its wire byte order.
 #[test]
 fn magic_is_seam_wire_order() {
     // §6.1-0004: magic == 0x4D414553, on-wire bytes 53 45 41 4D ("SEAM")
@@ -44,7 +44,7 @@ fn magic_is_seam_wire_order() {
     assert_eq!(&reference().encode()[0..4], &[0x53, 0x45, 0x41, 0x4D]);
 }
 
-/// Enforces: KISS-ANNOUNCE-6.1-0003 — the pinned field offsets of the §6.1 layout table.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.1-0003 — the pinned field offsets of the §6.1 layout table.
 #[test]
 fn field_offsets_match_table() {
     // §6.1-0003 / §6.1-0011: spot-check pinned offsets on the reference envelope.
@@ -55,7 +55,7 @@ fn field_offsets_match_table() {
     assert_eq!(u64::from_le_bytes(b[48..56].try_into().unwrap()), 0x0000_0003_0000_003F);
 }
 
-/// Enforces: KISS-ANNOUNCE-6.1-0012 — every field little-endian: a decode/encode round-trip.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.1-0012 — every field little-endian: a decode/encode round-trip.
 #[test]
 fn decode_roundtrips_the_reference() {
     let e = reference();
@@ -64,13 +64,13 @@ fn decode_roundtrips_the_reference() {
 
 // ---- Conform modality 4: hard-reject decline vectors (§6.2) ------------------
 
-/// Enforces: KISS-ANNOUNCE-6.2-0001 — reject an input whose length != the version's mandate.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0001 — reject an input whose length != the version's mandate.
 #[test]
 fn reject_wrong_length() {
     assert_eq!(decode(&[0u8; 55]), Err(AnnounceDecline::WrongLength { got: 55 }));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0002 — reject a bad magic.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0002 — reject a bad magic.
 #[test]
 fn reject_bad_magic() {
     let mut b = reference().encode();
@@ -81,7 +81,7 @@ fn reject_bad_magic() {
     }
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0003 — reject an unsupported envelope_version.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0003 — reject an unsupported envelope_version.
 #[test]
 fn reject_unknown_version() {
     let mut b = reference().encode();
@@ -89,7 +89,7 @@ fn reject_unknown_version() {
     assert_eq!(decode(&b), Err(AnnounceDecline::UnsupportedVersion { got: 2 }));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0004 — reject a nonzero reserved0.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0004 — reject a nonzero reserved0.
 #[test]
 fn reject_nonzero_reserved0() {
     let mut b = reference().encode();
@@ -97,7 +97,7 @@ fn reject_nonzero_reserved0() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ReservedNonZero { region: "reserved0" }));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0011 — reject a nonzero reserved1.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0011 — reject a nonzero reserved1.
 #[test]
 fn reject_nonzero_reserved1() {
     let mut b = reference().encode();
@@ -105,7 +105,7 @@ fn reject_nonzero_reserved1() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ReservedNonZero { region: "reserved1" }));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0005 — reject profiles_len > the cap.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0005 — reject profiles_len > the cap.
 #[test]
 fn reject_profiles_len_overflow() {
     let mut b = reference().encode();
@@ -113,7 +113,7 @@ fn reject_profiles_len_overflow() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ProfilesLenOverflow { got: 17 }));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0012 — reject a nonzero trailing profile.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0012 — reject a nonzero trailing profile.
 #[test]
 fn reject_trailing_profile_nonzero() {
     let mut b = reference().encode();
@@ -121,7 +121,7 @@ fn reject_trailing_profile_nonzero() {
     assert_eq!(decode(&b), Err(AnnounceDecline::TrailingProfileNonZero));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0013 — reject a zero live profile entry.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0013 — reject a zero live profile entry.
 #[test]
 fn reject_zero_live_profile() {
     // profiles_len = 2 but profiles[1] = 0 (a live entry must be >= 1, §6.1-0015)
@@ -131,7 +131,7 @@ fn reject_zero_live_profile() {
     assert_eq!(decode(&b), Err(AnnounceDecline::ZeroLiveProfile));
 }
 
-/// Enforces: KISS-ANNOUNCE-6.2-0006 — reject non-strictly-ascending profiles.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.2-0006 — reject non-strictly-ascending profiles.
 #[test]
 fn reject_non_ascending_profiles() {
     // profiles_len = 2, {1, 1} — not strictly ascending (§6.1-0009)
@@ -177,7 +177,7 @@ const AVAIL_GOLDEN: &str = concat!(
     "22 22 22 22 22 22 22 22 ",
 );
 
-/// Enforces: KISS-ANNOUNCE-6.3-0011 — an availability list begins with the 4-byte
+/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0011 — an availability list begins with the 4-byte
 /// tag `SAVL` (wire bytes 53 41 56 4C) at offset 0.
 /// TEETH: a big-endian tag write (the `htonl` reflex) would emit 4C 56 41 53.
 #[test]
@@ -187,7 +187,7 @@ fn test_announce_availability_list_tag() {
     assert_eq!(&b[0..4], &[0x53, 0x41, 0x56, 0x4C], "SAVL wire bytes at offset 0");
 }
 
-/// Enforces: KISS-ANNOUNCE-6.3-0012 — after the tag, a 1-byte `list_version` (== 1)
+/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0012 — after the tag, a 1-byte `list_version` (== 1)
 /// then 3 MBZ bytes; and a reader declines a nonzero MBZ byte or a version != 1.
 /// TEETH (producer): an impl that packs `record_count` immediately after the tag
 /// would put 02 at offset 4 (record_count == 2) instead of the version byte 01,
@@ -301,7 +301,7 @@ fn test_announce_query_request_shape() {
     );
 }
 
-/// Enforces: KISS-ANNOUNCE-6.3-0013 — an `op_identity` length of 0 or > 4096 is a typed
+/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0013 — an `op_identity` length of 0 or > 4096 is a typed
 /// decline, in a request and in an availability record; a request that carries no
 /// `op_identity` (the v1 shape: key, then `revision_present`) is NOT silently accepted.
 /// TEETH: a reader that lets a zero length through accepts an op-less lookup; a reader that
@@ -345,7 +345,7 @@ fn test_announce_op_identity_length_bounds() {
     );
 }
 
-/// Enforces: KISS-ANNOUNCE-6.4-0006 — a contract-query reader never panics or reads
+/// Enforces[enforced]: KISS-ANNOUNCE-6.4-0006 — a contract-query reader never panics or reads
 /// out of bounds on a truncated request.
 /// TEETH: an impl that does `bytes[off..off+32].try_into().unwrap()` on a request
 /// cut off mid-`revision_hash` panics; the conforming reader returns a typed
@@ -426,7 +426,7 @@ fn hex_of_golden_is_stable() {
     assert!(hex(&reference().encode()).starts_with("53 45 41 4D 01"));
 }
 
-/// Enforces: KISS-ANNOUNCE-7.1-0001 — negotiate returns max(L ∩ R), not the first mutual.
+/// Enforces[enforced]: KISS-ANNOUNCE-7.1-0001 — negotiate returns max(L ∩ R), not the first mutual.
 #[test]
 fn test_announce_negotiate_selects_highest_mutual() {
     // L = {2, 5, 9}, R = {1, 5, 9}  ->  L ∩ R = {5, 9}  ->  max = 9.
@@ -438,7 +438,7 @@ fn test_announce_negotiate_selects_highest_mutual() {
     assert_eq!(negotiate(&remote, &local), Ok(9));
 }
 
-/// Enforces: KISS-ANNOUNCE-7.1-0002 — disjoint live-profile sets yield a typed decline, no panic.
+/// Enforces[enforced]: KISS-ANNOUNCE-7.1-0002 — disjoint live-profile sets yield a typed decline, no panic.
 #[test]
 fn test_announce_negotiate_empty_intersection_declines() {
     // L = {1, 3}, R = {2, 4}  ->  L ∩ R = {}  ->  typed NoMutualProfile decline.
@@ -447,7 +447,7 @@ fn test_announce_negotiate_empty_intersection_declines() {
     assert_eq!(negotiate(&local, &remote), Err(AnnounceDecline::NoMutualProfile));
 }
 
-/// Enforces: KISS-ANNOUNCE-7.2-0007 — an unrecognized capability bit is ignored (not rejected),
+/// Enforces[enforced]: KISS-ANNOUNCE-7.2-0007 — an unrecognized capability bit is ignored (not rejected),
 /// while recognized bits still round-trip. Regression lock over decode()'s pass-through.
 #[test]
 fn test_announce_reader_ignores_unknown_capability_bits() {

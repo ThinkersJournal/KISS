@@ -16,7 +16,7 @@ fn messages() -> Vec<(MessageKind, Vec<u8>)> {
     ]
 }
 
-// Backs: KISS-ANNOUNCE-6.2-0014 — the extent of each of the five messages is determined from the message's
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0014 — the extent of each of the five messages is determined from the message's
 // own bytes and equals the length of what the reference encoder wrote, whatever follows it.
 #[test]
 fn test_announce_message_extent_from_own_bytes() {
@@ -34,7 +34,7 @@ fn test_announce_message_extent_from_own_bytes() {
     assert_eq!(kinds.len(), 5);
 }
 
-// Backs: KISS-ANNOUNCE-6.2-0015 — a message cut at ANY length shorter than its extent is a typed decline
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0015 — a message cut at ANY length shorter than its extent is a typed decline
 // (never a panic or an out-of-bounds read), whatever delivered the prefix.
 #[test]
 fn test_announce_truncated_message_rejected() {
@@ -54,7 +54,7 @@ fn test_announce_truncated_message_rejected() {
     assert!(matches!(message_extent(&savl), Err(AnnounceDecline::Truncated { .. })));
 }
 
-// Backs: KISS-ANNOUNCE-6.2-0016 — a leading tag that names none of the five messages is a typed decline,
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0016 — a leading tag that names none of the five messages is a typed decline,
 // and the reader does not look for a later tag.
 #[test]
 fn test_announce_unknown_leading_tag() {
@@ -69,7 +69,7 @@ fn test_announce_unknown_leading_tag() {
     assert!(message_extent(&reference_cyrq().encode()).is_ok());
 }
 
-// Backs: KISS-ANNOUNCE-6.2-0017 — bytes after the extent are not read: corrupting them changes neither the
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0017 — bytes after the extent are not read: corrupting them changes neither the
 // extent nor the verdict.
 #[test]
 fn test_announce_bytes_after_extent_unread() {
@@ -82,7 +82,7 @@ fn test_announce_bytes_after_extent_unread() {
     }
 }
 
-// Backs: KISS-ANNOUNCE-6.4-0014 — a contract response declaring a payload longer than 2^24 bytes is a typed
+// Backs[enforced]: KISS-ANNOUNCE-6.4-0014 — a contract response declaring a payload longer than 2^24 bytes is a typed
 // decline without the payload being present, and exactly 2^24 is not declined for its length.
 #[test]
 fn test_announce_contract_payload_cap() {

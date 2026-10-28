@@ -17,7 +17,7 @@ fn guarantees(tier: DeclaredAccuracyTier, bs: BitStability) -> Guarantees {
     }
 }
 
-/// Enforces: KISS-CONTRACT-6.7-0005 — the Appendix C `strict` is the derived label of its own
+/// Enforces[enforced]: KISS-CONTRACT-6.7-0005 — the Appendix C `strict` is the derived label of its own
 /// Guarantees, a contradicting label or one outside the closed set is refused, and the spec text
 /// points at the Ops clauses that define the set.
 #[test]

@@ -100,7 +100,7 @@ fn test_bundle_envelope_is_optional() {
 }
 
 /// §6.9-0009: a malformed envelope is a typed decline, never a silent repair.
-// Backs: KISS-CONTRACT-6.9-0009
+// Backs[enforced]: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_bundle_envelope_declines_malformed() {
     let mut e = an_envelope();

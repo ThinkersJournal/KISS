@@ -57,7 +57,7 @@ fn audited_guarantees() -> Guarantees {
 // KISS-CONTRACT-6.8-0008 — derived from the Guarantees, never an authored constant.
 // ---------------------------------------------------------------------------
 
-/// Enforces: KISS-CONTRACT-6.8-0008 — `audited_status` is a FUNCTION of the
+/// Enforces[enforced]: KISS-CONTRACT-6.8-0008 — `audited_status` is a FUNCTION of the
 /// Guarantees fields it is derived from, not a value an implementation may author
 /// independently of them.
 ///
@@ -106,7 +106,7 @@ fn test_contract_audited_status_derived() {
 // KISS-CONTRACT-6.8-0009 — the `audited` arm, INCLUDING the nondeterministic case.
 // ---------------------------------------------------------------------------
 
-/// Enforces: KISS-CONTRACT-6.8-0009 — the rule yields `audited` for a kernel whose
+/// Enforces[enforced]: KISS-CONTRACT-6.8-0009 — the rule yields `audited` for a kernel whose
 /// Guarantees declare a bounded precision against a named `reference_function`
 /// **under its determinism class**, expressly including an
 /// `order-invariant/nondeterministic` kernel whose nondeterminism is declared
@@ -174,7 +174,7 @@ fn test_contract_audited_derivation_rule() {
 // KISS-CONTRACT-6.8-0010 — the `unaudited` arm, and totality.
 // ---------------------------------------------------------------------------
 
-/// Enforces: KISS-CONTRACT-6.8-0010 — the rule yields `unaudited` for a kernel
+/// Enforces[enforced]: KISS-CONTRACT-6.8-0010 — the rule yields `unaudited` for a kernel
 /// whose Guarantees do NOT declare a bounded precision against a named
 /// `reference_function`, and yields no value outside `{audited, unaudited}`.
 ///
@@ -231,7 +231,7 @@ fn test_contract_unaudited_derivation_rule() {
 // KISS-CONFORM-6.13-0021 — the SUITE verifies the derivation.
 // ---------------------------------------------------------------------------
 
-/// Enforces: KISS-CONFORM-6.13-0021 — KISS-Conform verifies the `audited_status`
+/// Enforces[enforced]: KISS-CONFORM-6.13-0021 — KISS-Conform verifies the `audited_status`
 /// derivation, i.e. a contract's DECLARED value must equal the value derived from
 /// its own Guarantees.
 ///

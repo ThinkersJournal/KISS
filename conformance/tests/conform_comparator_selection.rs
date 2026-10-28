@@ -218,7 +218,7 @@ fn test_conform_split_comparator_not_fourth_class() {
 /// KISS-CONFORM-6.8-0005 — the complex-transcendental **split comparator**: exact-bit
 /// on the sign of every zero-valued component, ULP/tolerance on the magnitude. It is a
 /// hybrid of the three canonical classes and MUST NOT be a fourth enum member.
-// Backs: KISS-CONFORM-6.8-0005 [zero-sign-re, magnitude-ulp]
+// Backs[enforced]: KISS-CONFORM-6.8-0005 [zero-sign-re, magnitude-ulp]
 #[test]
 fn test_conform_split_comparator() {
     // Clause: KISS-CONFORM-6.8-0005. `compare_c32_transcendental` is a FREE FUNCTION,
@@ -308,7 +308,7 @@ fn test_conform_comparator_selection_rule() {
 /// a pure Max/Min fold is a MOVE, so its NaN is compared EXACT-BYTE (payload included). This is
 /// the first real application of §6.16-0011, and it convicted `order_invariant_agree`'s old
 /// unconditional both-NaN match — live on the §5.3 foreign-kernel differential (harness/differ).
-// Backs: KISS-CONFORM-6.8-0010 — an arithmetic fold's NaN (Sum/AtomicAdd) is compared by NaN-ness and quietness with payload waived; a Max (moved) fold's NaN is exact-byte
+// Backs[enforced]: KISS-CONFORM-6.8-0010 — an arithmetic fold's NaN (Sum/AtomicAdd) is compared by NaN-ness and quietness with payload waived; a Max (moved) fold's NaN is exact-byte
 #[test]
 fn test_conform_reduction_nan_quietness_by_fold_class() {
     let qnan = f32::from_bits(0x7FC0_0000); // quiet

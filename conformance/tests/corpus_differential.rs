@@ -268,7 +268,7 @@ fn compare_under_precedence(cell: &Cell, actual: &[u8]) -> Result<(), String> {
 /// "all tests pass" would NOT distinguish from the unwired (present-but-inert) state.
 /// A COMPUTED-NaN bf16 cell (expected quiet) is compared against an sNaN actual: the
 /// integrated path must red. Its MOVED sibling (a select) still bit-compares.
-// Backs: KISS-CONFORM-6.8-0010 — a computed-NaN cell passes a quiet NaN of any payload and fails an sNaN actual on quietness
+// Backs[enforced]: KISS-CONFORM-6.8-0010 — a computed-NaN cell passes a quiet NaN of any payload and fails an sNaN actual on quietness
 #[test]
 fn a_conformance_run_can_now_fail_on_a_quietness_violation() {
     use kiss_conformance::nan_provenance::NanProvenance;
@@ -372,7 +372,7 @@ fn a_max_min_family_swap_reddens_every_cell() {
 /// `7FC1`. Values are kiss-ref's CUDA-measured (sm_89) expectations.
 #[test]
 fn test_ops_bf16_minmax_moves_not_rounds() {
-    // Backs: KISS-OPS-6.16-0009 — reverse backing form. The clause is also forward-bound by the §9
+    // Backs[enforced]: KISS-OPS-6.16-0009 — reverse backing form. The clause is also forward-bound by the §9
     // traceability row; this makes the test→clause link explicit for the backing-form scanner
     // (convention 15: a MENTION in a doc comment/assert message is not a backing).
     let cases: &[(&str, u16, u16, u16)] = &[
@@ -408,7 +408,7 @@ fn test_ops_bf16_minmax_moves_not_rounds() {
 /// f16/f32/f64 are settled directly by §6.2-0001/IEEE and are not -0010's subject.
 #[test]
 fn test_ops_narrow_float_arith_quiets_snan() {
-    // Backs: KISS-OPS-6.16-0010 — reverse backing form (convention 15: a mention in a comment or
+    // Backs[enforced]: KISS-OPS-6.16-0010 — reverse backing form (convention 15: a mention in a comment or
     // assert message is not a backing).
     use kiss_conformance::fp::{e4m3_to_f32, e5m2_to_f32, f32_to_e4m3, f32_to_e5m2};
     use kiss_conformance::nan_provenance::{compare_nan_output, is_nan, NanProvenance::Computed};
@@ -483,7 +483,7 @@ fn test_ops_narrow_float_arith_quiets_snan() {
 /// value (it is not). Doubles as a check that the select's ordering matches semantics::{max,min}_*.
 #[test]
 fn test_bf16_minmax_select_is_behaviour_preserving_for_non_nan() {
-    // Backs: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "the result is the
+    // Backs[enforced]: KISS-OPS-6.16-0009 — the ORDINARY-finite arm. The clause's "the result is the
     // operand's bits, with at most a sign-bit edit" covers a non-NaN winner too: the chosen operand
     // is already an exact bf16 value, so there is nothing to round. This demonstrates that arm
     // (select == round-trip ⇒ the round was a no-op), which the NaN born-red does not cover.
@@ -562,7 +562,7 @@ fn bf16_is_snan(x: u16) -> bool {
     (x & 0x7F80) == 0x7F80 && (x & 0x007F) != 0 && (x & 0x0040) == 0
 }
 
-/// Backs: KISS-OPS-6.16-0009 — the clause reaches `neg`/`abs`/`copysign`, not only minmax.
+/// Backs[enforced]: KISS-OPS-6.16-0009 — the clause reaches `neg`/`abs`/`copysign`, not only minmax.
 ///
 /// Two assertions per case, and the SECOND is the one with teeth. Asserting only that the
 /// raw-bit path preserves the bits would be near-tautological — `x ^ 0x8000` preserves a
@@ -622,7 +622,7 @@ fn test_ops_bf16_move_ops_preserve_snan_bits() {
     }
 }
 
-/// Backs: KISS-OPS-6.16-0009 — the ORDINARY arm, mirroring the minmax behaviour-preservation
+/// Backs[enforced]: KISS-OPS-6.16-0009 — the ORDINARY arm, mirroring the minmax behaviour-preservation
 /// test. For every NON-NaN bf16 the raw-bit move and the promote→round path AGREE, which is
 /// what makes the clause a scope clarification rather than a behaviour change: it bites
 /// exactly on the NaN payload, and nowhere else. Without this, "the two paths differ" would

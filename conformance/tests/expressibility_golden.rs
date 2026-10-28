@@ -86,7 +86,7 @@ fn test_conform_expressible_signature_set_schema() {
 /// reversed) canonicalizes to the SAME bytes as `add(Bind0,Bind1)` — they are
 /// the same signature. `sub` is positional, so the two authored orders MUST
 /// be DISTINCT signatures.
-// Backs: KISS-GRAMMAR-6.4-0010
+// Backs[enforced]: KISS-GRAMMAR-6.4-0010
 #[test]
 fn commutative_add_canonicalizes_positional_sub_does_not() {
     let add_01 = binary_sig("add", [0, 1]);
@@ -148,7 +148,7 @@ const NESTED_ADD_MUL_BYTES_HEX: &str =
 /// always byte-lex-less than any Op node's, whose first byte is `0x01`, so
 /// the canonical order is always `[Bind2, mul]` regardless of which was
 /// authored first).
-// Backs: KISS-GRAMMAR-6.4-0010 — a commutative root orders its (Op-subtree, Bind-leaf) operands by unsigned-byte-lex of their canonical subtree serializations regardless of authored order
+// Backs[enforced]: KISS-GRAMMAR-6.4-0010 — a commutative root orders its (Op-subtree, Bind-leaf) operands by unsigned-byte-lex of their canonical subtree serializations regardless of authored order
 #[test]
 fn nested_op_interior_consumers_and_opattrs_with_commutative_sibling_reordering() {
     let authored_mul_first = nested_add_mul_sig([2, 3]);

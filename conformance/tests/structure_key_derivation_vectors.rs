@@ -15,7 +15,7 @@ fn test_derivation_vectors_artifact_is_fresh() {
 "), emit_json(), "stale derivation-vectors artifact");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0011 — the same cell derives the same bytes; and the A.1 goldens, derived
+// Backs[enforced]: KISS-CLASSIFY-6.6-0011 — the same cell derives the same bytes; and the A.1 goldens, derived
 // here from RAW operands, equal the tokens hand-derived in the spec text (the independent anchor).
 #[test]
 fn test_classify_structure_key_derivation_canonical() {
@@ -91,7 +91,7 @@ fn derivation_vectors_innermost_axis_is_rank_minus_1_including_extents_one_and_z
     assert_eq!(bucket(&tok("innermost_axis_extent_zero_is_axis_rank_minus_1")), "da", "[8,0]: axis 1, E = 0, not d8");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0014 — operands derive in CANONICAL order (inputs and in-place operands in
+// Backs[enforced]: KISS-CLASSIFY-6.6-0014 — operands derive in CANONICAL order (inputs and in-place operands in
 // call order, then outputs), whatever order the caller listed them; an in-place operand is one input,
 // counted once, and is not repeated among the outputs.
 #[test]
@@ -112,7 +112,7 @@ fn test_classify_operand_canonical_order() {
 }
 
 
-// Backs: KISS-CLASSIFY-6.6-0016 — the M/N/K size classes and the K-divisibility bucket come from the
+// Backs[enforced]: KISS-CLASSIFY-6.6-0016 — the M/N/K size classes and the K-divisibility bucket come from the
 // CALLER-DECLARED axes: the same operands with M and N swapped give a different key, and K's bucket comes
 // from the K axis, not from the output's innermost axis. Also backs the §2.8(d) worked example.
 #[test]
@@ -128,7 +128,7 @@ fn test_classify_contraction_axis_roles() {
     assert_eq!(ctr(&tok("ctr_k_divisibility_from_k_axis")), "ctll/d4/f16/f16/f16/st", "K = 4100 -> d4; N = 4096 would be d16");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0023 — the batch coordinate is a declaration: absent when none is declared,
+// Backs[enforced]: KISS-CLASSIFY-6.6-0023 — the batch coordinate is a declaration: absent when none is declared,
 // present for a declared axis of extent 1, classed by the PRODUCT of the declared extents, rank-independent.
 #[test]
 fn test_classify_batch_role_derivation_in_cells() {
@@ -156,7 +156,7 @@ fn test_classify_batch_role_derivation_in_cells() {
 
 // Backs[enforced]: KISS-CLASSIFY-6.6-0019 — <wdt> is the dtype of the DECLARED weight operand: with call order
 // [weight, scale, activation] a positional operand-1 read would name f8e8m0.
-// Backs: KISS-CLASSIFY-6.6-0022 — the scale dtype is keyed (e8m0 and f16 scales are different cells) and is
+// Backs[enforced]: KISS-CLASSIFY-6.6-0022 — the scale dtype is keyed (e8m0 and f16 scales are different cells) and is
 // omitted, not empty, when no scale operand is designated.
 #[test]
 fn test_classify_weight_and_scale_roles_in_cells() {
@@ -185,7 +185,7 @@ fn test_classify_weight_and_scale_roles_in_cells() {
     assert_eq!(decline("decline_ctr_reserved_weight_dtype"), "ReservedDtype");
 }
 
-// Backs: KISS-CLASSIFY-6.6-0012 — the role hints are INPUTS, the cell class is not: the same operands derive
+// Backs[enforced]: KISS-CLASSIFY-6.6-0012 — the role hints are INPUTS, the cell class is not: the same operands derive
 // `ctr` iff the caller declares the contraction roles (never from shape), and every hint moves the key.
 // The index-slot and reduced-axis hints are exercised in classify_storage_dtypes.rs and the A.1 reductions.
 #[test]

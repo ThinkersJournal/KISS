@@ -30,7 +30,7 @@ fn red_key(dtype: &str, reduce: Reduce, acc_mp: Option<AccMp>) -> StructureKey {
     }
 }
 
-// Backs: KISS-CLASSIFY-6.6-0005 — `structure_key.dtype` is operand-0's dtype, where operand-0 is fixed
+// Backs[enforced]: KISS-CLASSIFY-6.6-0005 — `structure_key.dtype` is operand-0's dtype, where operand-0 is fixed
 // by the canonical ordering; it is NOT the output's, the last operand's, or any other position's.
 #[test]
 fn test_classify_structure_key_primary_dtype() {
@@ -50,7 +50,7 @@ fn test_classify_structure_key_primary_dtype() {
     }
 }
 
-// Backs: KISS-CLASSIFY-6.7-0012 — a non-contraction reduction whose accumulator dtype differs from its
+// Backs[enforced]: KISS-CLASSIFY-6.7-0012 — a non-contraction reduction whose accumulator dtype differs from its
 // compute dtype MUST carry an accumulator coordinate from the closed §6.1 set; absent means "equals
 // the compute dtype". (Realized at sk4 by §6.7-0013's `<acc>/<mp>` field.)
 #[test]
