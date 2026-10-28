@@ -29,7 +29,7 @@ fn e2_reduce_sum_f32_accumulator_reduced_mantissa() {
     assert_golden("KISS-OPS-6.19-0025", "reduce_sum_f32_acc_rm", &b, "01 FF FF 01 03 02");
 }
 
-// Backs: KISS-OPS-6.19-0025 — math_fidelity encodes as ordinal 1=bit-stable / 2=reduced-mantissa and the fidelity byte of a reduce blob is never the reserved 0
+// Backs[enforced]: KISS-OPS-6.19-0025 — math_fidelity encodes as ordinal 1=bit-stable / 2=reduced-mantissa and the fidelity byte of a reduce blob is never the reserved 0
 #[test]
 fn math_fidelity_ordinals_are_pinned_and_reserved_zero_is_never_emitted() {
     // §6.19.2: {1=bit-stable, 2=reduced-mantissa-permitted}, 0 reserved.
@@ -160,7 +160,7 @@ fn e1_sub_vocabulary_ordinals() {
     assert_eq!(ColumnOrdering::TapMajor.ordinal(), 0x02);
 }
 
-// Backs: KISS-OPS-6.19-0020 — rank-aware precedence: full set and rank-1 sole axis are 0xFFFF (never 0x0007), trailing 0xFFFE, subset mask otherwise; scan trailing 0xFFFE else single-bit
+// Backs[enforced]: KISS-OPS-6.19-0020 — rank-aware precedence: full set and rank-1 sole axis are 0xFFFF (never 0x0007), trailing 0xFFFE, subset mask otherwise; scan trailing 0xFFFE else single-bit
 #[test]
 fn e1_reduce_axes_multiplex() {
     // E.1: all-axes / trailing(rank>1) / subset{axis0} / subset{axis0,axis2}
@@ -240,7 +240,7 @@ fn test_ops_opattrs_reduce_axes_zero_unreachable() {
     assert!(validate_reduce_axes(0xFFFF).is_ok()); // all-axes sentinel
 }
 
-// Backs: KISS-OPS-6.19-0004 — a reader replays the gather schema positionally (axis, oob_policy, index_operand, index_dtype) from `00 02 01 02`
+// Backs[enforced]: KISS-OPS-6.19-0004 — a reader replays the gather schema positionally (axis, oob_policy, index_operand, index_dtype) from `00 02 01 02`
 #[test]
 fn positive_decode_roundtrip() {
     let (axis, oob, idx_op, idt) = decode_gather(&[0x00, 0x02, 0x01, 0x02]).unwrap();

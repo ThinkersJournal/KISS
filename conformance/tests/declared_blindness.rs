@@ -25,7 +25,7 @@
 
 use kiss_conformance::structure_key::*;
 
-/// Backs: KISS-CONFORM-6.8-0013 — each declared blindness is exhibited by a distinct pair
+/// Backs[enforced]: KISS-CONFORM-6.8-0013 — each declared blindness is exhibited by a distinct pair
 /// mapping to one value, and paired with a discrimination control.
 ///
 /// The clause is ALSO forward-backed: §9's matrix names this function, so the credit does not

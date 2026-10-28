@@ -592,7 +592,7 @@ mod structural_tests {
         assert_eq!(reduce_f32(&[-0.0], Monoid::Max).to_bits(), (-0.0f32).to_bits());
     }
 
-    // Backs: KISS-OPS-6.11-0003 — prefix_scan is length-preserving, one output per input position
+    // Backs[enforced]: KISS-OPS-6.11-0003 — prefix_scan is length-preserving, one output per input position
     #[test]
     fn exclusive_scan_starts_at_identity_and_is_length_preserving() {
         // KISS-OPS-6.11-0003: length-preserving; exclusive out[0] = identity.
@@ -615,7 +615,7 @@ mod structural_tests {
         assert_eq!(gather_f32(&d, &[5], OobRead::Clamp), vec![Some(30.0)]); // clamp to len-1
     }
 
-    // Backs: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
+    // Backs[enforced]: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
     #[test]
     fn scatter_assign_highest_source_index_wins() {
         // KISS-OPS-6.11-0006: last-writer-in-iteration-order tie-break.
@@ -624,7 +624,7 @@ mod structural_tests {
         assert_eq!(dest[0], 3.0);
     }
 
-    // Backs: KISS-OPS-6.11-0005 — an out-of-bounds scatter write is skipped, destination unchanged
+    // Backs[enforced]: KISS-OPS-6.11-0005 — an out-of-bounds scatter write is skipped, destination unchanged
     #[test]
     fn scatter_oob_write_is_skipped() {
         // KISS-OPS-6.11-0005: OOB writes skipped, dest unchanged there.
@@ -633,7 +633,7 @@ mod structural_tests {
         assert_eq!(dest, [7.0, 8.0]);
     }
 
-    // Backs: KISS-OPS-6.11-0010 — fp atomic-max scattering a NaN yields NaN
+    // Backs[enforced]: KISS-OPS-6.11-0010 — fp atomic-max scattering a NaN yields NaN
     #[test]
     fn scatter_atomic_max_propagates_nan() {
         // KISS-OPS-6.11-0010: fp atomic-max/min are NaN-propagating.
@@ -642,7 +642,7 @@ mod structural_tests {
         assert!(dest[0].is_nan());
     }
 
-    // Backs: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
+    // Backs[enforced]: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
     // Backs[enforced]: KISS-CONFORM-6.8-0004
     #[test]
     fn order_invariant_accepts_reassociation_but_exact_byte_rejects() {
@@ -704,7 +704,7 @@ mod structural_tests {
         assert!(compare_monoid_reduced_f32(Monoid::Max, 1.0, 2.0, 0.0, 0.0).is_err());
     }
 
-    // Backs: KISS-OPS-6.11-0003 — length-preserving: an empty input scans to an empty output
+    // Backs[enforced]: KISS-OPS-6.11-0003 — length-preserving: an empty input scans to an empty output
     #[test]
     fn empty_prefix_scan_is_empty() {
         // KISS-OPS-6.11-0003: prefix_scan is length-preserving, so an empty input yields an
@@ -739,7 +739,7 @@ mod structural_tests {
         assert!(reassoc_bound_f32(3, 3.0) > 0.0);
     }
 
-    // Backs: KISS-OPS-6.11-0006
+    // Backs[enforced]: KISS-OPS-6.11-0006
     #[test]
     fn scatter_atomic_minmax_signed_zero_agrees_under_canon() {
         // Two valid visit orders of an atomic-max/min can differ only in the sign of a

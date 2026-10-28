@@ -48,7 +48,7 @@ fn reduce_maxmin_are_nan_propagating() {
     assert!(reduce_f32(&xs, Monoid::Min).is_nan());
 }
 
-// Backs: KISS-OPS-6.2-0004
+// Backs[enforced]: KISS-OPS-6.2-0004
 #[test]
 fn reduce_maxmin_preserve_signed_zero() {
     // §6.2-0004 via the max_prop/min_prop decomposition: -0.0 not normalized.
@@ -75,7 +75,7 @@ fn reduce_class_is_selected_per_spec() {
 // Proven: KISS-OPS-6.11-0003 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scan_is_length_preserving() {
-    // Backs: KISS-OPS-6.11-0003 — one output element per input position, distinct from reduce.
+    // Backs[enforced]: KISS-OPS-6.11-0003 — one output element per input position, distinct from reduce.
     let xs = [5.0, 6.0, 7.0];
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Inclusive).len(), 3);
     assert_eq!(prefix_scan_f32(&xs, Monoid::Sum, ScanKind::Exclusive).len(), 3);
@@ -83,7 +83,7 @@ fn scan_is_length_preserving() {
     assert_eq!(prefix_scan_f32(&[], Monoid::Sum, ScanKind::Inclusive), Vec::<f32>::new());
 }
 
-// Backs: KISS-OPS-6.11-0003 — prefix_scan computes an inclusive or exclusive running monoid fold
+// Backs[enforced]: KISS-OPS-6.11-0003 — prefix_scan computes an inclusive or exclusive running monoid fold
 #[test]
 fn scan_inclusive_vs_exclusive_golden() {
     // cumsum = prefix_scan(sum, inclusive) (§6.13 table).
@@ -108,7 +108,7 @@ fn scan_inclusive_vs_exclusive_golden() {
     );
 }
 
-// Backs: KISS-OPS-6.11-0003 — exclusive running max fold: out[0] is the identity, then the prefix max
+// Backs[enforced]: KISS-OPS-6.11-0003 — exclusive running max fold: out[0] is the identity, then the prefix max
 #[test]
 fn scan_exclusive_max_first_is_identity() {
     // exclusive max: out[0] = -inf (Max identity), then the running max of the prefix.
@@ -164,7 +164,7 @@ fn gather_preserves_read_datum_bits() {
 
 // ---- scatter: combine algebra + OOB skip (§6.11-0005/-0006/-0010) ------------
 
-// Backs: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
+// Backs[enforced]: KISS-OPS-6.11-0006 — assign: the write from the highest source index wins a same-destination tie
 #[test]
 fn scatter_assign_last_writer_in_iteration_order_wins() {
     // KISS-OPS-6.11-0006: pinned tie-break — the highest source (row-major) index wins.
@@ -176,7 +176,7 @@ fn scatter_assign_last_writer_in_iteration_order_wins() {
 // Proven: KISS-OPS-6.11-0005 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scatter_oob_writes_are_skipped() {
-    // Backs: KISS-OPS-6.11-0005 — OOB write skipped; a negative index is OOB (cf. KISS-OPS-6.11-0004, the OOB-policy clause — referenced, not backed here).
+    // Backs[enforced]: KISS-OPS-6.11-0005 — OOB write skipped; a negative index is OOB (cf. KISS-OPS-6.11-0004, the OOB-policy clause — referenced, not backed here).
     let mut dest = [1.0, 2.0, 3.0];
     scatter_f32(&mut dest, &[-1, 5, 1], &[10.0, 20.0, 30.0], Combine::Assign);
     assert_eq!(dest, [1.0, 30.0, 3.0]); // only the in-bounds idx 1 wrote
@@ -185,7 +185,7 @@ fn scatter_oob_writes_are_skipped() {
 // Proven: KISS-OPS-6.11-0010 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn scatter_atomic_max_min_nan_propagating() {
-    // Backs: KISS-OPS-6.11-0010 — fp atomic-max/min NaN-propagating — NaN scattered OR already
+    // Backs[enforced]: KISS-OPS-6.11-0010 — fp atomic-max/min NaN-propagating — NaN scattered OR already
     // present yields NaN.
     let mut a = [1.0];
     scatter_f32(&mut a, &[0], &[f32::NAN], Combine::AtomicMax);
@@ -306,7 +306,7 @@ fn seeded_finite_f32(rng: &mut SplitMix64) -> f32 {
     ((rng.next_u64() >> 40) as f32 - 8_388_608.0) / 65_536.0
 }
 
-// Backs: KISS-OPS-6.11-0006
+// Backs[enforced]: KISS-OPS-6.11-0006
 // (§6.11-0004 is the GATHER OOB clause — this SCATTER test does not exercise gather; its
 // backing is the forward-named gather_oob_policies. #247 dropped the loose cite.)
 // Backs[enforced]: KISS-CONFORM-6.8-0004

@@ -35,7 +35,7 @@ fn cell(cap: Option<u32>) -> DerivationCell {
     }
 }
 
-// Backs: KISS-CLASSIFY-6.8-0018 — the cap is a per-target byte count: the same cell derives v4 at 16 bytes,
+// Backs[enforced]: KISS-CLASSIFY-6.8-0018 — the cap is a per-target byte count: the same cell derives v4 at 16 bytes,
 // v8 at 32 and v2 at 8, an undeclared cap derives exactly as 16, and the token set never grows.
 #[test]
 fn test_classify_vec_cap_per_target() {
@@ -61,7 +61,7 @@ fn test_classify_vec_cap_per_target() {
     assert_eq!(derive_vec_width_capped(1, 256, Some(8), 256, false, 32), VecWidth::V4);
 }
 
-// Backs: KISS-CLASSIFY-6.8-0018 — no key derived before the clause moves: `derive_vec_width` (no cap
+// Backs[enforced]: KISS-CLASSIFY-6.8-0018 — no key derived before the clause moves: `derive_vec_width` (no cap
 // argument) equals the 16-byte capped derivation over every dtype width, extent and alignment swept.
 #[test]
 fn test_classify_vec_cap_default_moves_no_key() {

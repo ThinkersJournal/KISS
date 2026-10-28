@@ -63,7 +63,7 @@ fn gen_fields() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
-/// Enforces: KISS-CLASSIFY-6.8-0013 — the `digest_input` CONTENT obligation: "the SAME
+/// Enforces[enforced]: KISS-CLASSIFY-6.8-0013 — the `digest_input` CONTENT obligation: "the SAME
 /// byte string measured against the threshold, so a producer may disagree about WHETHER
 /// to digest but never about WHAT is digested".
 ///
@@ -107,7 +107,7 @@ fn test_namespace_vocabulary_digest_input_is_the_same_byte_string() {
     );
 }
 
-/// Enforces: KISS-CLASSIFY-6.8-0013 — a MALFORMED digest_input vector and a MISMATCHED one
+/// Enforces[enforced]: KISS-CLASSIFY-6.8-0013 — a MALFORMED digest_input vector and a MISMATCHED one
 /// are different conditions and must not share a decline code.
 ///
 /// ⚠️ A review flagged the two `DigestInputNotIdentical` arms as redundant and prescribed
@@ -198,7 +198,7 @@ fn test_namespace_vocabulary_envelope_shape() {
 
 // ---- §6.8-0008: the envelope constraints that SHAPE alone does not enforce -------------------
 
-// Backs: KISS-CLASSIFY-6.8-0008, KISS-CLASSIFY-6.8-0009, KISS-CLASSIFY-6.8-0012
+// Backs[enforced]: KISS-CLASSIFY-6.8-0008, KISS-CLASSIFY-6.8-0009, KISS-CLASSIFY-6.8-0012
 // Backs[enforced]: KISS-CLASSIFY-6.8-0003
 #[test]
 fn test_namespace_vocabulary_envelope_constraints() {
@@ -376,7 +376,7 @@ fn test_namespace_vocabulary_generated_vectors_cover_canonicalization() {
 
 // ---- §6.8-0014: the derivability witness ----------------------------------------------------
 
-/// Backs: KISS-CLASSIFY-6.8-0014 — every entry carries a derivability witness, so a
+/// Backs[enforced]: KISS-CLASSIFY-6.8-0014 — every entry carries a derivability witness, so a
 /// capability NAMED but UNREACHABLE is unrepresentable rather than merely discouraged.
 ///
 /// KISS checks the ENVELOPE only: witness present, a non-empty LIST, references resolvable,
@@ -471,7 +471,7 @@ fn test_namespace_vocabulary_derivability_witness() {
 
 // ---- §6.8-0015: an exemption is DECLARED, not narrated --------------------------------------
 
-/// Backs: KISS-CLASSIFY-6.8-0015 — the `omits` list must name "exactly the required pins it
+/// Backs[enforced]: KISS-CLASSIFY-6.8-0015 — the `omits` list must name "exactly the required pins it
 /// does not supply", and a reader must decline any manifest whose declared set differs from
 /// the absent set "in either direction".
 ///
@@ -536,7 +536,7 @@ fn test_namespace_vocabulary_omits_matches_absent_pins() {
 
 // ---- §6.8-0016: a threshold vector carries the boundary it pins -----------------------------
 
-/// Backs: KISS-CLASSIFY-6.8-0016 — a `threshold` vector carries `threshold_of` and `bytes`,
+/// Backs[enforced]: KISS-CLASSIFY-6.8-0016 — a `threshold` vector carries `threshold_of` and `bytes`,
 /// and for every `threshold_of` the vectors must include an N / N+1 pair whose two `output`
 /// values DIFFER.
 ///

@@ -303,7 +303,7 @@ fn test_contract_kind_recognized_token() {
 ///
 /// TEETH: a reader that numeric-parses the version would accept `04` or `4.0`
 /// (both equal to 4 numerically); byte-exact comparison declines them.
-// Backs: KISS-CONTRACT-6.1-0008 — pins the accepted `contract_version` to the exact
+// Backs[enforced]: KISS-CONTRACT-6.1-0008 — pins the accepted `contract_version` to the exact
 // byte-token `4`: exactly `4` is read, `04`/`4.0`/`40`/`3`/`+4` decline byte-exact
 // (never integer-parsed), and a whitespace-padded ` 4` is a FRAMING decline.
 // Proven: KISS-CONTRACT-6.1-0008 (subject: impl; ref: PROVEN_BATCH1.md)

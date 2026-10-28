@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.18 — 2026-10-28 (number proposed; the PM allocates at gate time)
+
+- Tooling comments and ledger text only (no spec text, no bytes, no tier moves; Part of KISS#498, ROADMAP R3.15, decision 308 B): 197 unmarked `// Backs:`/`// Enforces:` citations in 40 files are relabelled `[enforced]` where the test builds real bytes or runs the shipped reader/oracle and asserts on its behaviour (a classification pass, spot-checked on `announce_frames.rs`, `semantics_golden.rs`, `emit_membership.rs`). LEVELS at this branch: 75 clauses carry a stated test, 205 an enforced test, 22 both (was 211 / 79 / 32 at 0.6.17). Not relabelled: the doc-lint tests (`emit_*`, `mint_*` corpus-content checks, registry/class-table checks) stay `stated`, and 39 judgement calls the classifier flagged unsure stay unmarked (the default) for a human read. R1.31 recorded as held (PM ruling 2026-10-28, option b): `KISS-SYNTH-6.4-0001f` stays `untested`, floor 392, no loader to be written in kiss-ref; ROADMAP R1.31 and the COVERAGE_FLOOR note say so.
+
 ## 0.6.17 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `HANDOFF.md` rewritten (not appended) at the throttle boundary: THROTTLED until ~2026-10-28T01:00Z (gates, fixes and security only), the remaining linear stack #702-#710 and how to handle a HOLD on it, the rulings of decisions 308/310/311, and what is owed (ROADMAP R3.15 relabel sweep, R1.31, R3.14, the stale R1.28 row text, the Fuel `negotiate()` check, the weekly sweep due 2026-11-01).

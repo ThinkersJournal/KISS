@@ -597,8 +597,8 @@
 # differential `test_consume_taxonomy_structure_based_differential` (ROADMAP R3.14), the ledger row is `decredited`, and the old test is renamed
 # `test_consume_taxonomy_doc_lint_four_categories`. A DE-CREDITING, not a regression: the gap did not change, only our knowledge of it. Lint unmoved.
 # RE-DERIVED from the tool: `--ratchet --base-ref origin/main`.
-# OWED (PM condition on #679): the untested floor is 392 only because KISS-SYNTH-6.4-0001f has no witness yet; ROADMAP R1.31 owes a test in kiss-ref's reference
-# consumer loader. When it lands, remove the UNBACKED.tsv row and set untested back to 391.
+# HELD (PM ruling 2026-10-28, ROADMAP R1.31 option b): the untested floor is 392 because KISS-SYNTH-6.4-0001f has no witness and kiss-ref has no consumer loader to host one.
+# If a consumer lane supplies a loader witness, remove the UNBACKED.tsv row and set untested back to 391.
 # OWED (R5.9, decision 297): untested is 2 above the R1.31 figure only because KISS-CONSUME-6.6-0007 and -0008 are the Consume twins of KISS-EMIT-6.7-0006 and -0007,
 # ledgered `untested` for the same reason (restrictions on what an implementation may CLAIM; conformance/ has no emitter or lifter making a claim). They fall with the
 # emitter/lifter witnesses (ROADMAP R3.14); lower the floor by 2 then.
