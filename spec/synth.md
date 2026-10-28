@@ -756,13 +756,38 @@ correct comparator. See umbrella §3 for the full statement.
   format and carries **no architecture**: the target is answered by the request's
   `target_capability` (KISS-CLASSIFY §6.8) and, inside the artifact, by its own header. The table
   is seeded with **one** value, the one a reference provider emits today; no other is assigned
-  until a provider emits it.
+  until a provider emits it. **The `ABI model` column states how a launch binds the Interface
+  section's positional list** (KISS-CONTRACT §6.5-0001, -0002) **for that artifact format**, and is
+  drawn from the names `pointer-abi`, `descriptor-set`, `buffer-index` and `host-closure`
+  (CireSnave 2026-10-28, board 309 Q4 option C). `pointer-abi` means the Interface list is bound as
+  typed pointers and scalars, in Interface order, with no other binding structure; it is the only
+  name any registered row uses, so it is the only one this version defines. A row that uses another
+  name defines it in the same change that adds the row, and **a row that states no ABI model is not a
+  registered value** (the same rule as the `entry_point` column, §6.4-0001h).
 
-  | Tag (ASCII) | Wire bytes | Names | Target family | How `entry_point` resolves | Seeded by |
-  |---|---|---|---|---|---|
-  | `PTX ` (trailing space) | `50 54 58 20` | NVIDIA PTX: the textual virtual-ISA program as UTF-8 bytes, linked by the driver at load, portable across the SMs of the architecture it was built for | namespace `cuda` | inside the artifact: `entry_point` names an `.entry` directive in the PTX text | Baracuda's reference provider, which emits it |
+  | Tag (ASCII) | Wire bytes | Names | Target family | How `entry_point` resolves | ABI model | Seeded by |
+  |---|---|---|---|---|---|---|
+  | `PTX ` (trailing space) | `50 54 58 20` | NVIDIA PTX: the textual virtual-ISA program as UTF-8 bytes, linked by the driver at load, portable across the SMs of the architecture it was built for | namespace `cuda` | inside the artifact: `entry_point` names an `.entry` directive in the PTX text | `pointer-abi` | Baracuda's reference provider, which emits it |
 
   *Test:* `test_synth_artifact_format_tag_registry`.
+
+  > *Informative, NOT registered, and UNVERIFIED unless a source is named (CireSnave 2026-10-28, board 309 Q4: list
+  > every artifact format KISS recognises or needs, one row each).* No row below has a tag value, because a value is
+  > assigned only when a provider emits the format. `PTX` is **NVIDIA-only**; the other vendors use other formats.
+  > The ABI-model names other than `pointer-abi` are the issue's proposals (KISS#19) and are not defined here.
+  >
+  > | Format | Target family (registry status) | Likely ABI model | Basis |
+  > |---|---|---|---|
+  > | NVIDIA PTX | `cuda` (registered) | `pointer-abi` | **Registered above;** emitted by Baracuda. |
+  > | NVIDIA cubin (device ELF) | `cuda` (registered) | `pointer-abi`, UNVERIFIED | The conformance tests name it as "mapped by one seam but emitted by no provider"; not read beyond that. |
+  > | SPIR-V for Vulkan compute | `vulkan` (registered) | `descriptor-set`, per the issue's example | KISS#19 and the R2.8 options note say a Vulkan kernel is launched with descriptor sets, not typed pointers; **not checked against a Vulkane artifact.** |
+  > | AMD code object (HSACO, an ELF) | `rocm` (**reserved**, no vocabulary) | UNVERIFIED | Not read. AMD does not use PTX; this is my understanding of the format name only. |
+  > | Intel: SPIR-V for Level Zero or OpenCL, or a native device binary | none (**no namespace reserved**) | UNVERIFIED | Not read. Intel does not use PTX; a namespace would have to be reserved before a provider could announce under it. |
+  > | Apple Metal library | `metal` (**reserved**, no vocabulary) | `buffer-index`, per the issue's value list | Named by KISS#19 only; not read. |
+  > | Host (CPU) code | none (**no namespace reserved**) | `host-closure`, per the issue's value list | Named by KISS#19 only; no CPU provider or namespace exists in the registry. |
+  >
+  > Registry status is read from `conformance/registry/namespaces.json`: `cuda` and `vulkan` are registered, `rocm` and `metal`
+  > are reserved, and there is no AMD-HSACO, Intel or CPU namespace entry beyond those names.
 - **KISS-SYNTH-6.4-0001h** — **In a provision response the contract's `entry_point` resolves
   inside the artifact.** (CireSnave decision 310, R1.24 Q7 B.) The Interface `entry_point`
   (KISS-CONTRACT §6.5) names a callable symbol; for the artifact carried in the same frame

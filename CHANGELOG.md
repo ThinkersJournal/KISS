@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.25 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q5)
+
+- Spec text and one test arm, no wire bytes (ROADMAP R2.8 Q4, KISS#19; CireSnave 2026-10-28, board 309 Q4 = C, "NOW (not when a second tag is seeded)"): the KISS-SYNTH-6.4-0001g tag table gains an `ABI model` column (the `PTX ` row is `pointer-abi`, the Interface list bound as typed pointers and scalars in order) and the rule that a row stating no ABI model is not a registered value; the named set is `pointer-abi`, `descriptor-set`, `buffer-index`, `host-closure`, of which only `pointer-abi` is defined because only it is used. An informative table lists every artifact format KISS recognises or needs with its target-family registry status (read from `conformance/registry/namespaces.json`: `cuda` and `vulkan` registered, `rocm` and `metal` reserved, no Intel or CPU entry) and a likely ABI model; PTX is NVIDIA-only, and the AMD, Intel, Metal and host rows are marked UNVERIFIED because none was read. The table stays one registered row (`test_synth_artifact_format_tag_registry` still pins that); `test_synth_artifact_format_tag_abi_model` reads the new column.
+
 ## 0.6.24 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q6)
 
 - Spec text, no bytes (ROADMAP R2.8 Q5, KISS#21; CireSnave 2026-10-28, board 309 Q5 = A): the rule that is already true per field is stated once. KISS-CONTRACT-6.1-0006 gains arm (d), a value outside a closed value set of a field that affects correctness or admissibility is a typed decline, and a reader MAY ignore an unknown value only of a field its own clause marks advisory; KISS-CONSUME-6.5-0001 lists the same case among the refusals that MUST be typed declines. Records existing behaviour (unknown determinism class already declines as `unknown-determinism-class`; unknown field, version and dtype token already decline). No vector, no byte. The `UNBACKED.tsv` note for 6.1-0006 records which arm the test does not reach.
