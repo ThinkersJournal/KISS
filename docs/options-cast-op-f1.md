@@ -55,8 +55,13 @@ Read after the PM pointed me at it (EvansLaboratories/Unpopped#144, "Cast rows f
 `{f16, bf16, f32, f64, i8, i16, i32, i64, u8, u16, u32}`, **not** the MX types, so the MX-specific points above remain the
 relay's alone.
 
+**MX cast, as the U1 lane described its local draft to me** (branch `u1/mx-cast`, no PR yet, so unread by me): `ClampFinite`
+required (`Wrap` and plain `Clamp` are typed rejects); saturate to the max finite (e2m1 6, e2m3 7.5, e3m2 28), infinities
+saturate; **NaN to +0**; sign of zero kept; an IR rule only, hardware convert-instruction NaN behaviour **unverified**.
+
 - **Rounding modes: four in total, not "RNE plus four".** `RoundMode` is `NearestEven`, `TowardZero`, `TowardNegInf`,
-  `TowardPosInf` (PTX `.rn .rz .rm .rp`). The relay's "plus 4" may count modes that arrive with the MX PR; that is unconfirmed.
+  `TowardPosInf` (PTX `.rn .rz .rm .rp`). The Unpopped U1 lane confirmed to me directly (2026-10-28) that the PM relay was off by
+  one and the MX cast adds no mode.
 - **Float to float:** round per mode from the exact value; with `Saturation::ClampFinite` any overflow, infinities included,
   goes to the largest finite value; **NaN stays NaN** (it keeps its sign and becomes the format's quiet NaN). Without
   ClampFinite an overflow follows the rounding direction (nearest-even goes to infinity; a directed mode pointing away from the
