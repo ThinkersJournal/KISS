@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.23 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q3)
+
+- Spec text, no bytes (ROADMAP R2.8 Q6, KISS#27; CireSnave 2026-10-28, board 309 Q6 = A): KISS-CONTRACT-6.8-0002 now carries an explicit exception, a kernel with no finite bound on a backend declares no tier for it (its `precision_class` is `unbounded` per KISS-OPS-6.8-0008 and its `audited_status` is `unaudited` per 6.8-0010), which closes the inconsistency where "MUST declare at least one of max_ulp, max_relative, max_absolute" read as forcing a provider to invent a bound; and it adds the SHOULD: a provider unsure which bound a kernel meets SHOULD understate (declare the looser bound it can establish, or no tier) and SHOULD NOT declare a tighter bound than it has established. The reference reader already accepts a tier carrying none of the three quantities (`DeclaredAccuracyTier::is_bounded`), so no code or vector changes. 6.8-0002 stays `untestable` in `UNBACKED.tsv` (#44).
+
 ## 0.6.22 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on #715)
 
 - Informative text only (no clause, no bytes; ROADMAP R2.8 Q3, KISS#18; CireSnave 2026-10-28, board 309 Q3 = A): umbrella §8.1 gains one informative sentence. The suite defines no in-process profile; an implementation that exchanges no bytes conforms by producing, on the KISS vectors, the same observable results as a byte reader would, and the in-process code shape belongs to the interface project (decision 297). Fuel's route to claim conformance with its linked codegen is therefore the vectors, not an adapter.

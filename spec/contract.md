@@ -1137,7 +1137,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   `reference_function` MUST be the NAMED KISS-Ops function the kernel's precision is measured
   against, and the `per_backend_ulp_tiers` MUST declare, per target backend, the kernel's
   **accuracy tier** — a tagged quantity carrying at least one of `{max_ulp, max_relative,
-  max_absolute}` against that reference. The declared per-target tier is the **sole** accuracy
+  max_absolute}` against that reference, **except that a kernel with no finite bound on a backend declares no tier for it**: its
+  `precision_class` is then `unbounded` (KISS-OPS §6.8-0008, tier kind `none`) and its `audited_status` is
+  `unaudited` (§6.8-0010). A provider that is unsure which bound a kernel meets SHOULD understate it: declare the looser
+  bound it can establish, or no tier, and SHOULD NOT declare a tighter bound than it has established, because an
+  overstated tier binds a consumer to a kernel that is wrong for it while an understated one costs only a missed
+  opportunity. The declared per-target tier is the **sole** accuracy
   gate (KISS-OPS §6.8-0001): an implementation MUST NOT declare a precision bound without naming
   its reference, but KISS-Contract MUST NOT constrain a declared tier against a fixed KISS-Ops
   ceiling — the §6.8 table is an *informative advisory floor*, not a normative cap, so a
