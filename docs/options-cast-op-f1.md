@@ -55,9 +55,10 @@ Read after the PM pointed me at it (EvansLaboratories/Unpopped#144, "Cast rows f
 `{f16, bf16, f32, f64, i8, i16, i32, i64, u8, u16, u32}`, **not** the MX types, so the MX-specific points above remain the
 relay's alone.
 
-**MX cast, as the U1 lane described its local draft to me** (branch `u1/mx-cast`, no PR yet, so unread by me): `ClampFinite`
+**MX cast, as the U1 lane described its local draft to me** (now Unpopped#146, stacked on #144; I have not read it, the numbers here are u1's message): `ClampFinite`
 required (`Wrap` and plain `Clamp` are typed rejects); saturate to the max finite (e2m1 6, e2m3 7.5, e3m2 28), infinities
-saturate; **NaN to +0**; sign of zero kept; an IR rule only, hardware convert-instruction NaN behaviour **unverified**.
+saturate; **NaN to +0**; sign of zero kept; an IR rule only, hardware convert-instruction NaN behaviour **unverified**. Per u1, an MX value is **intermediate-only** under a
+Cast: an MX type as a plan root or output dtype is a typed plan decline because Unpopped has no MX buffer layout yet.
 
 - **Rounding modes: four in total, not "RNE plus four".** `RoundMode` is `NearestEven`, `TowardZero`, `TowardNegInf`,
   `TowardPosInf` (PTX `.rn .rz .rm .rp`). The Unpopped U1 lane confirmed to me directly (2026-10-28) that the PM relay was off by
