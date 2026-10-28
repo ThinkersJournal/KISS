@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.19 — 2026-10-28 (number proposed; the PM allocates at gate time; 0.6.18 is #712)
+
+- Corpus bytes, provenance members only (CireSnave 2026-10-28, board 315 item 5, option A, verbatim "5: A"; KISS#218; ROADMAP R1.28): `structure_key_vectors.json` and `structure_key_derivation_vectors.json` now say `generated_from` = the emitting program (`conformance/src/reference_vectors.rs (cargo run --bin emit_structure_key_vectors)` and `conformance/src/derivation_vectors.rs (cargo run --bin emit_structure_key_derivation_vectors)`), not `spec/classify.md`; and `source_commit` (the never-updated literal `19c3ad7`) and the `SOURCE_COMMIT` constant are dropped from `structure_key_vectors.json` and its emitter. Both members are part (c) PROVENANCE under KISS-CONFORM-6.3-0010, so no vector, scoping member or `structure_key_schema_version` moves and a consumer may not rely on either. Regenerated with the two `emit_*` binaries; the delta is exactly those three lines. Vendors (Fuel, Unpopped) regenerate their copy and update the one pin (`source_commit`) in their byte-match test.
+
 ## 0.6.17 — 2026-10-26 (number proposed; the PM allocates at gate time)
 
 - Docs only: `HANDOFF.md` rewritten (not appended) at the throttle boundary: THROTTLED until ~2026-10-28T01:00Z (gates, fixes and security only), the remaining linear stack #702-#710 and how to handle a HOLD on it, the rulings of decisions 308/310/311, and what is owed (ROADMAP R3.15 relabel sweep, R1.31, R3.14, the stale R1.28 row text, the Fuel `negotiate()` check, the weekly sweep due 2026-11-01).

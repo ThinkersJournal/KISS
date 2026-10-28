@@ -781,7 +781,7 @@ pub fn emit_json() -> String {
     let mut s = String::new();
     s.push_str("{\n");
     s.push_str(&format!("  \"schema\": {},\n", js(SCHEMA)));
-    s.push_str("  \"generated_from\": \"spec/classify.md\",\n");
+    s.push_str("  \"generated_from\": \"conformance/src/derivation_vectors.rs (cargo run --bin emit_structure_key_derivation_vectors)\",\n");
     s.push_str("  \"clause\": \"KISS-CLASSIFY-6.6-0011\",\n");
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
     s.push_str("  \"scope_note\": \"Every cell class, ctr included. A dense-contraction cell carries its caller-declared role hints in `contraction` (M/N/K as operand axes {operand, axis}, batch axes as iteration-frame axes, weight and scale as call-order operand slots); contraction_declared is true iff `contraction` is non-null. `expected` is reference output; only vectors carrying `spec_golden` reproduce an Appendix A.1 token whose bytes were hand-derived in the spec text. A second deriver cross-checks the rest.\",\n");
