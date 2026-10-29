@@ -2369,7 +2369,7 @@ promoted to this normative OpAttrs encoding for that channel only.
   `reduce` node. *Test:* `test_ops_opattrs_noncarrier_axis_resolution`.
 - **KISS-OPS-6.19-0037** — For the OpAttrs channel of this op-set version the pinned
   constants that bound the `axis`, `index_operand`, subset-mask, and vector-length fields
-  MUST take the concrete values `MAX_RANK = 8` and `MAX_OPERANDS = 8`. These are the same
+  MUST take the concrete values `MAX_RANK = 8` and `MAX_OPERANDS = 16` (raised from `8` with the Classify constant at `sk7`; the OpAttrs bytes are unchanged, only the upper bound of `index_operand` widens from `7` to `15`). These are the same
   shared-anchor constants referenced by name from the data vocabulary (§2.8); their values
   are inlined here (exactly as §6.16 inlines the dtype bit layouts) so this document is
   self-contained and every range MUST of §6.19 is verifiable from KISS-Ops plus the
