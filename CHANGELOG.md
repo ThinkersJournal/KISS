@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.30 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `HANDOFF.md` rewritten as current state (2026-10-29): #724/#725 held for the sk7 batch, board-309 Q1 wire work unbuilt, R1.31 held, R3.15 done (#727).
+
 ## 0.6.29 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
 
 - Tooling comments only (no spec text, no bytes, no tier moves; Part of KISS#498, ROADMAP R3.15, decision 308 B): 44 more unmarked `// Backs:`/`// Enforces:` citations in 24 files are relabelled `Backs[enforced]:`/`Enforces[enforced]:` because the citing test builds bytes or runs the shipped reader, encoder, decoder, comparator or reference op rather than reading spec text. Judged per test; the other 38 of the 82 unmarked sites stay `stated`: the 29 Emit document lints and the Synth/Classify tests that read spec tables, plus a weak-assertion test, a source-text scan, and two helper-fn citations. LEVELS re-derived: stated 75 to 38, enforced 205 to 226, both 22 to 6.
