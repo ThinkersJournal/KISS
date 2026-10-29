@@ -33,7 +33,7 @@ pub fn parse(args: &[String], flags: &[&str]) -> Parsed {
 /// Process entry helper: handle version/help/bad arguments (printing and exiting), and return the
 /// declared flags that were given. `flags` pairs each flag with its one-line description.
 pub fn basics(bin: &str, summary: &str, flags: &[(&str, &str)]) -> Vec<String> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<String> = std::env::args_os().skip(1).map(|a| a.to_string_lossy().into_owned()).collect();
     let names: Vec<&str> = flags.iter().map(|(f, _)| *f).collect();
     let usage = || {
         let mut u = format!("{bin} {}\n{summary}\n\nUSAGE: {bin} [OPTIONS]\n\nOPTIONS:\n", env!("CARGO_PKG_VERSION"));
@@ -68,6 +68,7 @@ mod tests {
         a.iter().map(|s| s.to_string()).collect()
     }
 
+    // harness-internal: tests the generator binaries' own argument parser (OPS-011 cli-basics); no spec clause covers a tool's command line
     #[test]
     fn version_help_bad_and_declared_flags() {
         assert_eq!(parse(&v(&[]), &[]), Parsed::Run(vec![]));
