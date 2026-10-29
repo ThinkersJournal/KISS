@@ -73,6 +73,17 @@ fn accumulator_ordinal(token: &str) -> Result<u8, String> {
     Ok(i as u8 + 1)
 }
 
+/// `target_dtype` of a `cast` (§6.19-0042): the 1-based §6.1 ordinal of any non-reserved dtype; there is no
+/// compute-dtype diagonal, so `0x00` is never produced.
+fn target_dtype_ordinal(token: &str) -> Result<u8, String> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    let i = DTYPES.iter().position(|d| *d == token).ok_or_else(|| format!("`{token}` is not a §6.1 dtype"))?;
+    if RESERVED_DTYPES.contains(&token) {
+        return Err(format!("target_dtype `{token}` is reserved (§6.1-0001)"));
+    }
+    Ok(i as u8 + 1)
+}
+
 fn section_6_19_2() -> &'static str {
     let start = OPS_SPEC.find("#### 6.19.2").expect("spec/ops.md must carry `#### 6.19.2`");
     let rest = &OPS_SPEC[start + 1..];
@@ -118,6 +129,8 @@ fn vocab_of(field: &str) -> Option<&'static str> {
         "exclusivity" => "scan_exclusivity",
         "output_column_ordering" => "column_ordering",
         "math_fidelity" => "math_fidelity",
+        "rounding" => "cast_rounding",
+        "saturation" => "cast_saturation",
         _ => return None,
     })
 }
@@ -194,6 +207,12 @@ fn encode_field(f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, St
         return match v {
             Value::Token(t) => Ok(vec![accumulator_ordinal(t)?]),
             other => Err(format!("accumulator takes a dtype token, got {other:?}")),
+        };
+    }
+    if f.name == "target_dtype" {
+        return match v {
+            Value::Token(t) => Ok(vec![target_dtype_ordinal(t)?]),
+            other => Err(format!("target_dtype takes a dtype token, got {other:?}")),
         };
     }
     match (f.width, v) {
@@ -311,6 +330,8 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
             Value::Flag(default_byte(f).unwrap_or(1) != 0)
         } else if f.name == "accumulator" {
             Value::Token(COMPUTE_DTYPE_TOKEN.into())
+        } else if f.name == "target_dtype" {
+            Value::Token("bf16".into())
         } else if let Some(name) = vocab_of(&f.name) {
             let first = vocab.get(name)?.first()?.0;
             let ord = default_byte(f).filter(|_| !is_mandatory(f)).unwrap_or(first);
@@ -342,6 +363,10 @@ pub fn alternatives(f: &SchemaField, base: &Value) -> Vec<Value> {
             .collect(),
         (_, Value::Flag(b)) => vec![Value::Flag(!b)],
         (_, Value::Token(_)) if f.name == "accumulator" => ["f16", "bf16", "f32", "f64"]
+            .into_iter()
+            .map(|d| Value::Token(d.into()))
+            .collect(),
+        (_, Value::Token(_)) if f.name == "target_dtype" => ["f16", "f32", "i32", "f8e4m3fn", "f4e2m1"]
             .into_iter()
             .map(|d| Value::Token(d.into()))
             .collect(),

@@ -279,6 +279,8 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `gather` | access-primitive | data-dependent indexed read; OOB `{skip,clamp,zero-fill}` |
 | `scatter` | access-primitive | data-dependent indexed write; combine `{assign,atomic-add,atomic-max,atomic-min}` |
 | `sort_network` | access-primitive | stable per-row permutation; exposes permuted values and original-index vector |
+| `concat` | access-primitive | join operands end to end along one axis; pure data movement, bits preserved |
+| `cast` | conversion | convert each element to a destination dtype; rounding and saturation stated (§6.21) |
 
 **Non-primitive ops (each resolves to the floor via §6.13):**
 
@@ -335,7 +337,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, and `scatter_add`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, and `concat`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -739,8 +741,8 @@ verbatim, everywhere).
   `round_even`; the transcendental atoms `exp`, `log`, `sin`, `cos`, `sqrt`, `erf`,
   `atan`, `lgamma`; the binary-math atoms `atan2`, `copysign`, `nextafter`; the integer
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
-  `clz`, `ctz`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
-  `gather`, `scatter`, `sort_network`. *Test:* `test_ops_primitive_floor_set`.
+  `clz`, `ctz`; the conversion atom `cast`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
+  `gather`, `scatter`, `sort_network`, `concat`. *Test:* `test_ops_primitive_floor_set`.
 - **KISS-OPS-6.3-0002** — Every conforming consumer of KISS-Ops MUST understand (be able
   to evaluate the pinned semantics of) every op in the primitive floor; the floor is the
   mandatory core (umbrella §6.1) and a consumer that cannot evaluate a floor op does not
@@ -1200,6 +1202,17 @@ section-intro paragraph is an informative pointer to it):
   index-lane **output**, and thereby closes the §6.19 wire freeze-blocker for the sort
   index-output dtype without a wire field. A device that prefers `u32` internally MUST
   convert at the boundary it already owns. *Test:* `test_ops_sort_index_output_i64`.
+- **KISS-OPS-6.11-0020** — `concat` MUST join `n` input operands, `2 <= n` and `n + 1 <= MAX_OPERANDS`
+  (the output takes an operand slot, §6.19-0037), along one OpAttrs `axis` (§6.19-0042, range `0..rank-1`).
+  The inputs MUST share a dtype and a rank, and their extents MUST be equal on every axis but `axis`; the
+  output has that dtype and the same extents, with the `axis` extent equal to the sum of the inputs'.
+  Writing `p_k` for the sum of the `axis` extents of inputs `0..k-1`, the output element at a coordinate `c`
+  with `p_k <= c[axis] < p_k + e_k` is input `k`'s element at the coordinate that equals `c` except for
+  `c[axis] - p_k` on `axis`. It is **pure data movement**: every element's bits, a NaN's payload and sign
+  and a signed zero included, are preserved exactly (§6.8-0010(a), §6.16-0009), nothing is rounded or
+  promoted, and no input is broadcast. An input with a zero `axis` extent contributes no elements; an
+  operand-shape disagreement or a dtype disagreement is a typed decline. *Test:*
+  `test_ops_concat_semantics`.
 
 ### 6.12 Scalar-source leaves
 
@@ -1536,7 +1549,7 @@ shared naming convention spelled identically in both foundational vocabularies.
 - **KISS-OPS-6.16-0003** — `bf16` MUST be encoded as a 1-sign / 8-exp / 7-mantissa format
   (bias 127) with the binary32 exponent range and a truncated mantissa; it is **not** an
   IEEE 754-2019 format, and any op producing a `bf16` result MUST round to nearest, ties
-  to even. *Test:* `test_ops_bf16_layout`.
+  to even, except a `cast` whose `rounding` attribute names another mode (§6.21-0002). *Test:* `test_ops_bf16_layout`.
 - **KISS-OPS-6.16-0004** — `f8e4m3fn` MUST be encoded per OCP OFP8 as 1-sign / 4-exp /
   3-mantissa (bias 7) with maximum finite magnitude ±448, **no** infinity encoding, and a
   single NaN encoding; conversion into `f8e4m3fn` MUST saturate to the maximum finite
@@ -2038,7 +2051,7 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0003** — The set of **carrier** ops (ops with a non-empty OpAttrs
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
-  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add}`; every
+  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2135,6 +2148,8 @@ inlined normatively in §6.19-0037.
 | `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
 | `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
 | `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
+| `cast_rounding` | enum, `u8` | `0`=RESERVED, `1`=nearest-even, `2`=toward-zero, `3`=toward-negative-infinity, `4`=toward-positive-infinity |
+| `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
 | `boolean-flag` | bool, `u8` | `0`=false, `1`=true (both meaningful; `0` NOT reserved) |
 | `reduce_axes` | multiplexed category+bitmask, `u16` LE | `0x0000`=none/not-a-reduction; `0x0001..0x00FF`=per-axis subset keepdim mask (bit `k`⇔axis `k`, ≥1 bit set); `0x0100..0xFFFD`=RESERVED (never emitted); `0xFFFE`=trailing-axis (innermost) only; `0xFFFF`=all-axes. Category selected by the rank-aware total precedence of §6.19-0020 (all-axes beats trailing beats subset; `0xFFFF` covers the rank-1 sole-axis case and every all-axes case) |
 | `window-param-vector` | ordered length-prefixed vector | `u8` element-count prefix (`0..MAX_RANK`), then count × `u32` LE elements, in ascending operand spatial-axis order (element `i` ⇔ spatial axis `i`, outermost spatial axis first; never sorted) |
@@ -2254,6 +2269,8 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `index_select` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED skip by decomposition, carries no free `oob` field) |
 | `embedding` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED zero-fill by decomposition) |
 | `scatter_add` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (combine FIXED atomic-add, oob FIXED skip by decomposition) |
+| `cast` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.21-0001) — `rounding`:`cast_rounding` enum `u8`:`1` (nearest-even) — `saturation`:`cast_saturation` enum `u8`:mandatory (no default: the legal value depends on the destination, §6.21-0003) |
+| `concat` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0020) |
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
@@ -2327,6 +2344,20 @@ by the embedding layer) selects the schema and the reader replays it positionall
   those values are fixed by their §6.13 decompositions (`index_select`→skip,
   `embedding`→zero-fill, `scatter_add`→atomic-add + skip). *Test:*
   `e2_index_select_u32`.
+
+- **KISS-OPS-6.19-0041** — The `cast_rounding` OpAttrs field MUST be encoded as the frozen `u8`
+  ordinal `{1=nearest-even, 2=toward-zero, 3=toward-negative-infinity, 4=toward-positive-infinity}`
+  with `0` reserved, and the `cast_saturation` field as the frozen `u8` ordinal `{1=none, 2=clamp}`
+  with `0` reserved; both denote the §6.21 conversion attributes and appear only in the `cast`
+  schema. *Test:* `test_ops_opattrs_cast_enums`.
+- **KISS-OPS-6.19-0042** — The `cast` OpAttrs blob MUST be exactly `target_dtype` (`u8`, the 1-based
+  §6.1-table dtype ordinal of the destination, encoded as for `accumulator` in §6.19-0025, and
+  never `0x00` because a `cast` has no compute-dtype diagonal to default to) then `rounding`
+  (`cast_rounding` enum `u8`, default `1`) then `saturation` (`cast_saturation` enum `u8`, no
+  default); the `concat` OpAttrs blob MUST be exactly `axis` (`u8`, range `0..MAX_RANK-1`). Both
+  are emitted explicitly (§6.19-0005); a reader MUST decline a `cast` blob whose `target_dtype` is
+  `0x00` or names no §6.1 dtype, or whose enum field is `0` or outside its set. *Test:*
+  `test_ops_opattrs_cast_concat_schema`.
 
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
@@ -2452,6 +2483,7 @@ index-lane **output dtype** — is resolved **producer-side with no wire field**
   and its unconditional presence, not which version counter advances.)* *Test:*
   `test_ops_index_outputs_root_list`.
 
+
 ### 6.20 Op shape rules — the shape-side oracle
 
 Every op's output shape is a function of its operands' shapes together with its
@@ -2461,7 +2493,7 @@ value oracle); this subsection pins the **shape** behaviour as its companion, in
 small closed vocabulary that is evaluable against concrete operand shapes and
 serializable under the §6.19 canonical discipline. Most ops derive their output
 shape from their operands directly (elementwise, `matmul`, `concat`, axis-based
-`reduce` with `keepdim`, `transpose`, `unsqueeze`, `cast`) and carry no shape attr;
+`reduce` with `keepdim`, `cast`) and carry no shape attr;
 the only *irreducible* free cases are a **broadcast target** (another operand's
 whole shape) and a **slice/iota offset** (arithmetic on an operand's extent), so
 the shared surface is two constructors.
@@ -2584,6 +2616,55 @@ the shared surface is two constructors.
   activating the §6.20-0005 tag `0x0B`). A core encoder MUST NOT emit `0x0B`, and a producer
   MUST NOT emit it at all until that registry entry is in force. *Test:*
   `test_shape_expr_dims_extension`.
+- **KISS-OPS-6.20-0011** — A `cast` output shape MUST be `SameAs(operand 0)`. A `concat` output shape
+  MUST be the shape of its operand 0 with the `axis` extent (§6.11-0020) replaced by the sum of the
+  operands' `axis` extents; like the `matmul` shape of §6.20-0008 it is a semantic rule of the op, not a
+  core `ShapeExpr`, because the core vocabulary has no constructor that replaces one axis (`WithDim` is an
+  experimental extension, §6.20-0009). There is **no** `transpose`, `permute` or `unsqueeze` op in this
+  version, and none is named by the shape oracle: a transposed or axis-inserted operand is a view, stated
+  as the operand's strides (a stride of `0` broadcasts, §6.11-0001) and the Classify role hints
+  (KISS-CLASSIFY-6.6-0016), and a kernel that must materialize one does so with `element_map` over the
+  strided read. An implementation MUST NOT mint such an op token. *Test:*
+  `test_shape_rule_cast_concat_no_view_ops`.
+
+### 6.21 The conversion atom (`cast`)
+
+Conversion to a destination dtype was, before this section, a property of the destination alone
+(§6.16-0003 to §6.16-0005, the MX element rows): an op producing a result of dtype T rounded as T's
+clause says, and a conversion with nothing else in it, requested on purpose, had no name. `cast` is
+that name. It is a primitive-floor atom (§6.3-0001) because a conversion into a narrow float cannot be
+written over the other atoms without a double rounding.
+
+- **KISS-OPS-6.21-0001** — `cast` MUST take exactly one input operand and produce an output of the same
+  shape, element for element, whose dtype is the OpAttrs `target_dtype` (§6.19-0042); the destination MAY
+  be any §6.1 dtype that is not reserved, the MX element types included. A `cast` whose destination
+  equals its source dtype is the identity and MUST preserve every bit. A conversion that is not defined
+  by this clause or §6.21-0002 to §6.21-0004 (a complex source or destination, for example) MUST be a
+  typed decline. *Test:* `test_ops_cast_atom_shape_and_dtype`.
+- **KISS-OPS-6.21-0002** — `cast` MUST round the **exact** source value once, in the direction its
+  `rounding` attribute names: `1` to nearest with ties to even, `2` toward zero, `3` toward negative
+  infinity, `4` toward positive infinity. A conversion through an intermediate dtype (an `f32` staging
+  of an `f64` source, say) that can round twice is non-conforming. The destinations whose own clause pins
+  nearest-even and no other mode (`f8e4m3fn`, `f8e5m2` and the three MX element types, §6.16) accept only
+  `rounding = 1`, and any other value is a typed decline. A conversion that is exact (an integer into a
+  float that holds it, a value into a wider float) is unchanged by the mode. *Test:*
+  `test_ops_cast_rounding_modes`.
+- **KISS-OPS-6.21-0003** — `cast` MUST apply its `saturation` attribute to a value the destination cannot
+  hold. With `saturation = 2` (**clamp**): a float destination takes the largest finite magnitude of the
+  value's sign, an infinity source included, and an integer destination takes the nearest bound of its
+  range. With `saturation = 1` (**none**): a float destination takes the result its rounding direction
+  gives (infinity, or the largest finite value where the direction points away from the overflow) and an
+  integer destination takes the value modulo 2^width, two's complement. A destination whose own clause
+  pins saturation (`f8e4m3fn` and `f8e5m2`, §6.16-0004 and §6.16-0005, and the three MX element types)
+  MUST be requested with `saturation = 2`, and `none` for one is a typed decline. A NaN source
+  into a float destination that has a NaN stays a NaN, with its sign kept. *Test:*
+  `test_ops_cast_saturation`.
+- **KISS-OPS-6.21-0004** — This version pins **no** result for the cases of Appendix D item 12 (a NaN
+  into a destination with no NaN, a NaN into an integer, an out-of-range float into an integer under
+  `saturation = 1`, and a reinterpreting `bitcast`, which has no op here). A producer MUST NOT emit a
+  `cast` that depends on one of them as if it were pinned, and a consumer MUST NOT assume a value for
+  one; the recommended values recorded there are not normative. *Test:*
+  `test_ops_cast_unpinned_cases_not_relied_on`.
 
 ---
 
@@ -2781,6 +2862,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0017 | `test_ops_scatter_updates_broadcast` |
 | KISS-OPS-6.11-0018 | `test_ops_structural_empty_axis` |
 | KISS-OPS-6.11-0019 | `test_ops_sort_index_output_i64` |
+| KISS-OPS-6.11-0020 | `test_ops_concat_semantics` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -2880,6 +2962,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0038 | `test_ops_opattrs_reduce_axes_zero_unreachable` |
 | KISS-OPS-6.19-0039 | `test_ops_index_ref_wire_form` |
 | KISS-OPS-6.19-0040 | `test_ops_index_outputs_root_list` |
+| KISS-OPS-6.19-0041 | `test_ops_opattrs_cast_enums` |
+| KISS-OPS-6.19-0042 | `test_ops_opattrs_cast_concat_schema` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
@@ -2890,6 +2974,11 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.20-0008 | `test_shape_expr_out_differs_from_operands` |
 | KISS-OPS-6.20-0009 | `test_shape_expr_withdim_extension` |
 | KISS-OPS-6.20-0010 | `test_shape_expr_dims_extension` |
+| KISS-OPS-6.20-0011 | `test_shape_rule_cast_concat_no_view_ops` |
+| KISS-OPS-6.21-0001 | `test_ops_cast_atom_shape_and_dtype` |
+| KISS-OPS-6.21-0002 | `test_ops_cast_rounding_modes` |
+| KISS-OPS-6.21-0003 | `test_ops_cast_saturation` |
+| KISS-OPS-6.21-0004 | `test_ops_cast_unpinned_cases_not_relied_on` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |
@@ -3167,6 +3256,19 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     (i) **single-axis `norm_axis`** — modeled as one `u8`; confirm `softmax`/`log_softmax`
     never normalize over multiple axes this version (which would need a `reduce_axes`-style
     `u16`).
+12. **`cast`: the values this version leaves open (added 2026-10-29, F1, options note
+    `docs/options-cast-op-f1.md`).** §6.21 adds the conversion atom and pins the attributes, the
+    enum encodings, single rounding and the cases a destination clause already fixes. It pins **no**
+    result for: (a) **NaN into a destination with no NaN** (the MX element types) — Unpopped's draft
+    gives +0, the alternatives are a typed decline or a canonical value; (b) **NaN into an integer** —
+    Unpopped's cast gives 0; (c) **an out-of-range float into an integer** — Unpopped's cast always
+    clamps, which here is `saturation = 2`, leaving `saturation = 1` (wrap) undefined for a float
+    source; (d) **overflow into an IEEE-style float** — Unpopped's cast follows the rounding direction
+    unless clamp is asked for, which is what `saturation = 1` says in §6.21-0003; (e) **`bitcast`**
+    (reinterpret the bits as a dtype of the same width), which Unpopped carries as a scalar expression
+    and KISS has no op for; (f) whether `cast` into `bf16` with a non-nearest mode, which §6.21-0002
+    allows by amending §6.16-0003, is wanted. The values in (a) to (d) are **recommended, not
+    normative**. Decision: CireSnave, via the sk7 batch.
 
 ---
 

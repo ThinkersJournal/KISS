@@ -12,7 +12,7 @@
 use kiss_conformance::opattrs_schema::{self, FieldWidth};
 
 /// The number of carrier ops §6.19.3's table declares. PRE-REGISTERED.
-const EXPECTED_OPS: usize = 17;
+const EXPECTED_OPS: usize = 19;
 
 /// ⚠️ THE TABLE MUST PARSE TO THE PRE-REGISTERED POPULATION.
 ///
@@ -20,7 +20,7 @@ const EXPECTED_OPS: usize = 17;
 /// under-specified extraction in this repo produced exactly that — a well-formed count that was
 /// simply short. Pinning the expected total makes a narrowing REDDEN instead of reading as a
 /// clean run over less text.
-// harness-internal: pins the population of the suite's own spec-table parser (17 pre-registered rows); counts rows, does not check the carrier-op names
+// harness-internal: pins the population of the suite's own spec-table parser (19 pre-registered rows); counts rows, does not check the carrier-op names
 #[test]
 fn test_opattrs_table_parses_to_the_preregistered_population() {
     let schemas = opattrs_schema::parse_table();

@@ -47,6 +47,11 @@ ordinal_enum!(/// §6.19.2 `math_fidelity` (schema field of `reduce`/`prefix_sca
     /// structure_key spelling, which is a different channel.
     MathFidelityOrd { BitStable = 1, ReducedMantissa = 2 });
 
+ordinal_enum!(/// §6.19-0041 (schema field `rounding` of `cast`, §6.21-0002)
+    CastRounding { NearestEven = 1, TowardZero = 2, TowardNegInf = 3, TowardPosInf = 4 });
+ordinal_enum!(/// §6.19-0041 (schema field `saturation` of `cast`, §6.21-0003)
+    CastSaturation { None = 1, Clamp = 2 });
+
 /// `accumulator` byte meaning "the compute dtype" (the §6.17-0005 diagonal, §6.19-0025).
 pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
 
@@ -188,6 +193,16 @@ pub fn encode_index_select(axis: u8, index_operand: u8, index_dtype: IndexDtype)
     vec![axis, index_operand, index_dtype.ordinal()]
 }
 
+/// `cast`: target_dtype (the 1-based §6.1 dtype ordinal), rounding, saturation (§6.19-0042).
+pub fn encode_cast(target_dtype: u8, rounding: CastRounding, saturation: CastSaturation) -> Vec<u8> {
+    vec![target_dtype, rounding.ordinal(), saturation.ordinal()]
+}
+
+/// `concat`: axis (§6.19-0042).
+pub fn encode_concat(axis: u8) -> Vec<u8> {
+    vec![axis]
+}
+
 /// `avg_pool`: window_size, stride, dilation, padding, count_include_pad (§6.19-0032).
 pub fn encode_avg_pool(
     window: &[u32],
@@ -293,6 +308,47 @@ pub fn decode_gather(blob: &[u8]) -> Result<(u8, OobPolicy, u8, IndexDtype), Dec
         return Err(Decline::FieldOutOfRange { field: "index_operand", value: blob[2], max: MAX_OPERANDS });
     }
     Ok((blob[0], oob, blob[2], idt))
+}
+
+/// Validate a decoded `cast` blob (`[target_dtype, rounding, saturation]`, §6.19-0042): a `target_dtype`
+/// of `0x00` (a cast has no compute-dtype diagonal), one past the §6.1 table, or naming a reserved dtype,
+/// and an enum field that is `0` or outside its set, are typed declines, never a panic.
+pub fn decode_cast(blob: &[u8]) -> Result<(u8, CastRounding, CastSaturation), Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if blob.len() != 3 {
+        return Err(Decline::TruncatedBlob { need: 3, got: blob.len() });
+    }
+    if blob[0] == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "target_dtype" });
+    }
+    let named = DTYPES.get(blob[0] as usize - 1);
+    if named.map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "target_dtype", value: blob[0], max: DTYPES.len() as u8 });
+    }
+    let rounding = match blob[1] {
+        1 => CastRounding::NearestEven,
+        2 => CastRounding::TowardZero,
+        3 => CastRounding::TowardNegInf,
+        4 => CastRounding::TowardPosInf,
+        _ => return Err(Decline::ReservedZeroOrdinal { field: "rounding" }),
+    };
+    let saturation = match blob[2] {
+        1 => CastSaturation::None,
+        2 => CastSaturation::Clamp,
+        _ => return Err(Decline::ReservedZeroOrdinal { field: "saturation" }),
+    };
+    Ok((blob[0], rounding, saturation))
+}
+
+/// Validate a decoded `concat` blob (`[axis]`, range `0..MAX_RANK-1`, §6.19-0042).
+pub fn decode_concat(blob: &[u8]) -> Result<u8, Decline> {
+    if blob.len() != 1 {
+        return Err(Decline::TruncatedBlob { need: 1, got: blob.len() });
+    }
+    if blob[0] >= MAX_RANK {
+        return Err(Decline::FieldOutOfRange { field: "axis", value: blob[0], max: MAX_RANK });
+    }
+    Ok(blob[0])
 }
 
 /// Validate a `reduce_axes` u16 on a carrier OpAttrs blob (§6.19-0020, §6.19-0038).

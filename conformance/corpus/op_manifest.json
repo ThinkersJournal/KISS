@@ -23,6 +23,7 @@
     "cabs",
     "cadd",
     "carg",
+    "cast",
     "cbrt",
     "cconj",
     "cdiv",
@@ -40,6 +41,7 @@
     "cmp_ne",
     "cmul",
     "cneg",
+    "concat",
     "copysign",
     "cos",
     "cosh",
@@ -141,6 +143,6 @@
   ],
   "coverage": {
     "declared": 1,
-    "total": 122
+    "total": 124
   }
 }
