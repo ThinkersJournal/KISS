@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.27 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q2)
+
+- Docs only (no spec text, no bytes; ROADMAP R2.8 Q1, KISS#11; CireSnave 2026-10-28, board 309 Q1 = B, with his question "why does the spec forbid a consumer stating a kernel by its recipe"): `docs/options-r2-8-consumer-filed-seam-proposals.md` now records all six board-309 rulings and answers that question. The answer: identity-only requests were a design choice to keep `structure_key` the single source of cell identity (Classify 6.6-0001/-0002) and the op identity a bare root name (Consume 6.2-0006), not a view that a consumer must not ask; the cost is that (cell, bare root op name) does not establish what a fused kernel computes (Classify 6.6-0002, 6.6-0020), which is why carrying the recipe repairs a hole rather than widening one. Lists the five design items the wire work must settle (encoding, checking the answer against the recipe, size and trust bounds, the experimental capability bit, the request shape). The wire work itself is not started.
+
 ## 0.6.26 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q4)
 
 - Docs only (no spec text, no bytes; ROADMAP R2.8 Q2, KISS#12; CireSnave 2026-10-28, board 309 Q2 = A: add nothing, and check whether the standard requires a provider claiming a backend to cover the basic ops): `docs/options-board309-q2-baseline-coverage.md`. The check found no such clause: KISS-OPS-7.1-0001 and 7.2-0002 bind evaluators and op-subset claims, KISS-SYNTH-7.1-0001 lets a provider answer every request with a decline, and the umbrella's claimable subsets are per sub-standard, not per cell. The note proposes an optional, claimable floor-complete-provider profile (experimental capability bit plus Conform vectors) as the recommended rule, with status quo and a mandatory baseline as the alternatives. Informative; the decision is CireSnave's.

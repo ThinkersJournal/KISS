@@ -5,6 +5,12 @@ Read at `origin/main` `b9e08e7f`, 2026-10-26. Paths are `file:line` at that comm
 #21, #27, all filed by Fuel or Baracuda while aligning their code to the specs. Roadmap row: R2.8. Nothing here
 freezes; every option below is additive unless it says otherwise.
 
+**RULED (CireSnave, 2026-10-28, board 309, relayed by the PM):** Q1 = B, Q2 = A (plus a check, answered in
+`options-board309-q2-baseline-coverage.md`), Q3 = A, Q4 = C **now** (not "when a second tag is seeded"), Q5 = A, Q6 = A.
+Built in the board-309 stack: Q3 umbrella 8.1, Q6 Contract 6.8-0002, Q5 Contract 6.1-0006 and Consume 6.5-0001,
+Q4 Synth 6.4-0001g. **Q1 is the one not yet built**: this note now carries the reason and the open design items
+below, and the wire work waits for a design pass.
+
 Two things changed since the issues were filed and they matter below: you ruled (decision 297) that the new
 interface project holds both halves of each interface in code, generated from one definition; and KISS-Synth now
 owns the table of `artifact_format_tag` values.
@@ -37,6 +43,41 @@ implementation's real build-on-miss path is not a conforming provision request.
 does, the bit keeps every identity-only provider unaffected, and the experimental range lets us change our mind
 before it becomes core. **What waits:** the op-graph encoding to carry (reuse the Grammar tag form, which already
 exists, rather than invent one).
+
+### Why the spec forbids stating a kernel by its recipe (the honest reason; added after the ruling)
+
+He asked why the specification does not let a consumer state a kernel by its recipe. The answer is **a design choice, not a
+prohibition on asking**, and it has a cost I understated above.
+
+**The reason it was chosen.** KISS gives a kernel two identity halves. The *cell* (`structure_key`) says what shape of work
+the kernel admits, and Classify keeps it deliberately blind to the computation (KISS-CLASSIFY-6.6-0002: a key MUST NOT encode
+the op's semantic identity; 6.6-0001: a byte-match is necessary, not sufficient). The *op identity* says what is computed,
+and Consume pins it to the **bare op name of the lifted DAG root** and forbids copying the DAG into it (KISS-CONSUME-6.2-0006).
+Provision then asks for a kernel by those two halves only (KISS-SYNTH-6.1-0001, -0001a, -0002: the existing `CYRQ` frame, no
+new shape). Keeping the recipe out of the request was meant to keep the key the single source of cell identity and to avoid a
+second place where "what is this kernel" is decided. It was not a view that a consumer must not be allowed to ask.
+
+**The cost, which is the reason to change it.** For a *fused* or multi-node kernel, (cell, bare root op name) does not
+establish what is computed: Classify says so in terms (6.6-0002, 6.6-0020: `relu(a + b)` and `a + b` share a key, and two
+different computations can share a root name). So today a request for a fused kernel cannot even say which fusion it wants,
+and Fuel's real build-on-miss path (it sends the op graph, per the issue) is outside the standard. Carrying the recipe repairs
+that hole instead of widening one.
+
+**What a recipe-carrying request must still settle (open design items, not decided):**
+- *The encoding.* Reuse the Grammar canonical subtree serialization (KISS-GRAMMAR 6.4-0010) that Conform already uses for
+  signatures; do not invent one. Open: whether the recipe replaces the bare-name `op_identity` or travels beside it.
+- *The identity of the answer.* The returned contract's Semantics DAG (Contract 6.4) must be checkable against the recipe the
+  consumer sent; otherwise the consumer cannot tell a provider built what it asked for. This is the same check Consume's
+  round-trip tiers already name (Consume 6.6-0001, -0002), now at the provision seam.
+- *The trust and resource boundary.* A provider that compiles a consumer-supplied graph is running consumer-chosen work;
+  the length caps of Synth 6.4-0001e and the trust-boundary clauses (Announce, R5.3) need an explicit bound on recipe size and
+  depth, and a typed decline for an over-cap or unresolvable recipe (reusing `unknown-op` / `multi-output` etc. of Consume 6.4).
+- *The capability bit.* A bit in the experimental range (`spec/announce.md` gives 40-43; 32 is `PROVISION_ON_REQUEST`, 33
+  `CONTRACT_QUERY`), advertised only by a provider that accepts a recipe, so an identity-only provider never sees one and a
+  recipe sent to a provider without the bit is a typed decline (Synth 7.1-0004b: unknown bits are not hard-gated).
+- *The request shape.* 6.1-0002a forbids a new request shape. Either the recipe rides in a new optional frame body behind the
+  bit (my recommendation, since an extended `CYRQ` would change the bytes every existing provider parses) or 6.1-0002a gets an
+  explicit exception. This is a wire decision and needs vectors in `announce_vectors.json` and a Fuel/Baracuda round trip.
 
 ---
 
