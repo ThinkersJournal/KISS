@@ -225,7 +225,7 @@ fn test_announce_availability_list_version() {
     }
 }
 
-/// Enforces: KISS-ANNOUNCE-6.3-0005 — the availability-list framing: tag, version
+/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0005 — the availability-list framing: tag, version
 /// block, u32-LE `record_count`, then per record {u32-LE `structure_key` length,
 /// key bytes, 32-byte `revision_hash`}.
 /// TEETH: a big-endian `record_count` or `key_len` (the `htonl` reflex) would emit
@@ -257,7 +257,7 @@ const IDENTITY_GOLDEN: &str = concat!(
     "00 ",                                   // correlation_len = 0 (§6.4-0013): always present, no id
 );
 
-/// Enforces: KISS-ANNOUNCE-6.4-0001 — the contract-query request framing (`CYRQ`
+/// Enforces[enforced]: KISS-ANNOUNCE-6.4-0001 — the contract-query request framing (`CYRQ`
 /// tag, u32-LE key length in [1,4096], key bytes, 1-byte `revision_present` that
 /// is exactly 0 or 1, then the 32-byte `revision_hash` iff present).
 /// TEETH: treating `revision_present` as truthy (`if flag != 0`) would ACCEPT a
@@ -372,7 +372,7 @@ fn test_announce_query_never_panics() {
     }
 }
 
-/// Enforces: KISS-ANNOUNCE-6.4-0004 — the contract-response framing: `CRSP` tag,
+/// Enforces[enforced]: KISS-ANNOUNCE-6.4-0004 — the contract-response framing: `CRSP` tag,
 /// echoed identity block, u32-LE payload byte-length, then the payload.
 /// TEETH: a big-endian tag write emits 50 53 52 43 instead of 43 52 53 50; a
 /// big-endian payload length is also caught by the pinned golden.
@@ -394,7 +394,7 @@ fn test_announce_contract_response_framing() {
     assert_eq!(&b[0..4], &[0x43, 0x52, 0x53, 0x50], "CRSP wire bytes at offset 0");
 }
 
-/// Enforces: KISS-ANNOUNCE-6.4-0007 — the decline-response framing: `CDEC` tag,
+/// Enforces[enforced]: KISS-ANNOUNCE-6.4-0007 — the decline-response framing: `CDEC` tag,
 /// echoed identity block, then a little-endian u32 `decline_code`.
 /// TEETH: emitting `decline_code` as a u16 drops the frame by 2 bytes and truncates
 /// the field; the golden pins a 4-byte little-endian code. A big-endian tag write
@@ -419,7 +419,7 @@ fn test_announce_decline_response_framing() {
     assert_eq!(&b[52..56], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
 }
 
-// Backs: KISS-ANNOUNCE-6.1-0004 — the encoded envelope begins with the SEAM magic in wire order (53 45 41 4D)
+// Backs[enforced]: KISS-ANNOUNCE-6.1-0004 — the encoded envelope begins with the SEAM magic in wire order (53 45 41 4D)
 #[test]
 fn hex_of_golden_is_stable() {
     // documents the exact wire bytes in the test output on demand

@@ -42,7 +42,7 @@ fn an_envelope() -> BundleEnvelope {
 
 /// §6.9-0009: `revision_base` is the versioning triple + `generator_commit`, all
 /// four present; a missing element is malformed.
-// Backs: KISS-CONTRACT-6.9-0009
+// Backs[enforced]: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_revision_base_is_triple_plus_commit() {
     let rb = a_revision_base();
@@ -62,7 +62,7 @@ fn test_revision_base_is_triple_plus_commit() {
 
 /// §6.9-0009: `derivation_lineage` is the closed three-token set; an unknown
 /// token is rejected and every tag round-trips its pinned ASCII spelling.
-// Backs: KISS-CONTRACT-6.9-0009
+// Backs[enforced]: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_derivation_lineage_closed_set() {
     assert_eq!(DerivationLineage::closed_set().len(), 3);
@@ -78,7 +78,7 @@ fn test_derivation_lineage_closed_set() {
 }
 
 /// §6.9-0009: a well-formed bundle envelope validates.
-// Backs: KISS-CONTRACT-6.9-0009
+// Backs[enforced]: KISS-CONTRACT-6.9-0009
 #[test]
 fn test_bundle_envelope_validates() {
     assert_eq!(an_envelope().validate(), Ok(()));
@@ -156,7 +156,7 @@ fn test_contract_bundle_envelope_shared_provenance() {
 /// The shared types are *literally* the same across levels: a per-cell
 /// provenance's fields drop into the bundle envelope unchanged (type-identity of
 /// `RevisionBase` / `DerivationLineage`), which is the mechanical no-fork witness.
-// Backs: KISS-CONTRACT-6.9-0009 — the bundle-level revision_base and derivation_lineage are the identical shared types as the per-cell provenance (no bundle-local definition)
+// Backs[enforced]: KISS-CONTRACT-6.9-0009 — the bundle-level revision_base and derivation_lineage are the identical shared types as the per-cell provenance (no bundle-local definition)
 #[test]
 fn test_shared_types_are_type_identical() {
     let per_cell = CellProvenance {

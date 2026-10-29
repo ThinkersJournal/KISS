@@ -58,7 +58,7 @@ fn unpack(bytes: &[u8], bits: u32, n: usize) -> Vec<u32> {
         .collect()
 }
 
-// Backs: KISS-CLASSIFY-6.1-0014 — f4e2m1 is sign 1, exp 2, mantissa 1, bias 1 with no infinity or NaN: the
+// Backs[enforced]: KISS-CLASSIFY-6.1-0014 — f4e2m1 is sign 1, exp 2, mantissa 1, bias 1 with no infinity or NaN: the
 // eight non-negative codes are 0, .5, 1, 1.5, 2, 3, 4, 6 and code 8 is -0, and elements pack two per byte
 // with the low nibble holding the even index exactly as i4/u4.
 #[test]
@@ -80,7 +80,7 @@ fn test_classify_mx_f4e2m1_format() {
     assert_ne!(pack(&[0x1, 0x2], 4), vec![0x12]);
 }
 
-// Backs: KISS-CLASSIFY-6.1-0015 — f6e2m3 (bias 1, max 7.5) and f6e3m2 (bias 3, max 28) have no infinity or
+// Backs[enforced]: KISS-CLASSIFY-6.1-0015 — f6e2m3 (bias 1, max 7.5) and f6e3m2 (bias 3, max 28) have no infinity or
 // NaN, and pack four elements per three bytes LSB-first with ceil(6n/8) bytes and zero trailing bits.
 #[test]
 fn test_classify_mx_f6_formats() {

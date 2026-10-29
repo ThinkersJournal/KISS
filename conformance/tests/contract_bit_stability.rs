@@ -4,7 +4,7 @@
 use kiss_conformance::contract::BitStability;
 use kiss_conformance::DeterminismClass;
 
-/// Enforces: KISS-CONTRACT-6.8-0013 — the value set is exactly `{portable, same-hardware,
+/// Enforces[enforced]: KISS-CONTRACT-6.8-0013 — the value set is exactly `{portable, same-hardware,
 /// none}`; `exact-byte` and `ULP/tolerance` may declare any value; `order-invariant/
 /// nondeterministic` is capped at `same-hardware`/`none` (never `portable`) but MAY declare
 /// `same-hardware` (the former forced-`false` coupling is withdrawn).
