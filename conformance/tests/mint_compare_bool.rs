@@ -33,7 +33,7 @@ fn pred(op: &str, lt: bool, eq: bool, gt: bool) -> bool {
 
 fn load() -> corpus::Corpus {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-compare-bool.json");
-    let text = std::fs::read_to_string(path).expect("bundle committed; run `cargo run --bin kiss_mint`");
+    let text = std::fs::read_to_string(path).expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 6 * (12 + 5 + 5) + 2 * 7 * 3 + 7);
     // Every cell declares its expected dtype as `bool` (the loader does not keep it; read the text).

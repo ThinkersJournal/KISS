@@ -912,6 +912,15 @@ fn write_bundle(rel_path: &str, doc: &str) {
 }
 
 fn main() {
+    let flags = kiss_conformance::cli::basics(
+        "kiss_mint",
+        "Mints the frozen oracle-vector corpus under conformance/corpus/.",
+        &[("--write", "write the eleven bundles (nothing is written without it)")],
+    );
+    if flags.is_empty() {
+        eprintln!("kiss_mint: nothing written; pass --write to mint the corpus (see --help)");
+        return;
+    }
     write_bundle("/corpus/ops-arith.json", &arith_doc());
     write_bundle("/corpus/ops-transcendental-nan.json", &transcendental_nan_doc());
     write_bundle("/corpus/ops-narrow-move-nan.json", &narrow_move_nan_doc());

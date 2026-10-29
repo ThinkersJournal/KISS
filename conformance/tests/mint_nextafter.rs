@@ -51,7 +51,7 @@ fn model64(a: u64, b: u64) -> u64 {
 #[test]
 fn nextafter_value_cells_match_the_monotone_key_model() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-nextafter.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 40, "14 shapes + 6 edge pairs, each at f32 and f64");
     let (mut cross_zero, mut equal_returns_b, mut f32_not_f64_step) = (0, 0, 0);

@@ -10,5 +10,6 @@
 //!
 //! The committed artifact is byte-identical to this output; `tests/opattrs_value_vectors.rs` checks it.
 fn main() {
+    kiss_conformance::cli::basics("emit_opattrs_value_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::opattrs_value::emit_opattrs_value_vectors_json());
 }

@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.31 — 2026-10-29 (number proposed; the PM allocates at gate time; based on main)
+
+- Tooling only (no spec text, no corpus bytes; CodeRipper OPS-011 `cli-basics`, ROADMAP R3.16): the seven `emit_*_vectors` binaries and `kiss_mint` share `kiss_conformance::cli::basics`. `--version`/`-V` and `--help`/`-h` print and exit 0 with no side effects; an undeclared argument is a usage error, exit 2 (the emitters used to ignore it and exit 0). **`kiss_mint` no longer writes the corpus on a bare run** (it used to rewrite all eleven bundles on every start, even `--version`): it writes only under `--write`. Regenerate with `cargo run -p kiss-conformance --bin kiss_mint -- --write`; `PROVENANCE.md` and the `mint_*` tests' hint messages say so.
+
 ## 0.6.30 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): `HANDOFF.md` rewritten as current state (2026-10-29): #724/#725 held for the sk7 batch, board-309 Q1 wire work unbuilt, R1.31 held, R3.15 done (#727).

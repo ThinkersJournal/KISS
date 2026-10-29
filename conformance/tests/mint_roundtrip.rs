@@ -7,7 +7,7 @@ use kiss_conformance::corpus;
 #[test]
 fn frozen_arith_bundle_loads_and_has_signed_zero_cell() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-arith.json"))
-        .expect("frozen bundle must be committed; run `cargo run --bin kiss_mint`");
+        .expect("frozen bundle must be committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses");
     assert!(c.vectors.iter().all(|v| v.op == "add"));
     // (-0) + (+0) = +0 under RNE — a cell that a normalize-to-+0 bug would still pass,

@@ -11,5 +11,6 @@
 //! for `contract_vectors.json`).
 
 fn main() {
+    kiss_conformance::cli::basics("emit_announce_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::announce::emit_announce_vectors_json());
 }

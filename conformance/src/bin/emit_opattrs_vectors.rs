@@ -13,5 +13,6 @@
 //! The committed artifact is byte-identical to this output — the #161 freshness pattern, checked
 //! by `tests/opattrs_schema_spec.rs`.
 fn main() {
+    kiss_conformance::cli::basics("emit_opattrs_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::opattrs_schema::emit_opattrs_vectors_json());
 }

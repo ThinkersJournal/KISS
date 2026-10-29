@@ -17,5 +17,6 @@
 //! together.
 
 fn main() {
+    kiss_conformance::cli::basics("emit_grammar_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::grammar::emit_grammar_vectors_json());
 }
