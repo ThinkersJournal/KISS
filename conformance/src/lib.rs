@@ -80,6 +80,7 @@ macro_rules! runtime_gate {
 pub mod accuracy;
 pub mod announce;
 pub mod bundle_envelope;
+pub mod cli;
 pub mod correlation_id;
 pub mod bundle_isolation;
 pub mod antifork;

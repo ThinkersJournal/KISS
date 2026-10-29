@@ -115,7 +115,7 @@ fn check_cell(v: &corpus::Cell, pop: &mut Pop) {
 #[test]
 fn minmax_nan_bundle_matches_the_decomposition_and_redden_when_the_arms_are_swapped() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-minmax-nan.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 2 * (2 * 6 + 2 * 5), "2 dtypes x (2 prop ops x 6 + 2 ieee ops x 5)");
 

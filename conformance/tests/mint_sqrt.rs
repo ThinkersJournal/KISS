@@ -60,7 +60,7 @@ fn model(x: f32) -> f32 {
 #[test]
 fn sqrt_first_arm_cells_match_the_integer_model() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-sqrt-rounding.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 24);
     let (mut exact_squares, mut irrational, mut subnormals) = (0, 0, 0);

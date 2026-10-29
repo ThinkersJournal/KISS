@@ -68,7 +68,7 @@ fn model(op: &str, x: f32) -> f32 {
 #[test]
 fn rounding_bundle_matches_an_independent_model_and_discriminates() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-rounding.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 4 * 18, "4 ops x 18 inputs");
 

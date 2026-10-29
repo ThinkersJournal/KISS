@@ -92,7 +92,7 @@ fn narrow_select_nan_bundle_round_trips_and_discriminates() {
         env!("CARGO_MANIFEST_DIR"),
         "/corpus/ops-narrow-select-nan.json"
     ))
-    .expect("bundle committed; run `cargo run --bin kiss_mint`");
+    .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert!(!c.vectors.is_empty());
 

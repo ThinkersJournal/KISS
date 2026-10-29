@@ -5,7 +5,7 @@ next regeneration silently undoes it, and the corpus JSON is sha256-pinned.
 
 | File | Generator | Version | Regenerate with | Verified |
 |---|---|---|---|---|
-| `ops-int-wrap.json` (KISS-OPS-6.2-0002, 440 exact-byte cells) | `conformance/src/bin/kiss_mint.rs` (`int_wrap_doc`) | `kiss_mint 0.1.0` (the file's own `generator` field) | `cargo run -p kiss-conformance --bin kiss_mint` (run from the repository root or `conformance/`) | at `origin/main` `294a9f2`: regenerated, `git status` clean (byte-identical); sha256 `d2215a92e3e172d0ad29bf46b6a6e9fba037b330c21200e553209c62f1153884` |
+| `ops-int-wrap.json` (KISS-OPS-6.2-0002, 440 exact-byte cells) | `conformance/src/bin/kiss_mint.rs` (`int_wrap_doc`) | `kiss_mint 0.1.0` (the file's own `generator` field) | `cargo run -p kiss-conformance --bin kiss_mint -- --write` (run from the repository root or `conformance/`) | at `origin/main` `294a9f2`: regenerated, `git status` clean (byte-identical); sha256 `d2215a92e3e172d0ad29bf46b6a6e9fba037b330c21200e553209c62f1153884` |
 
 `kiss_mint` writes **all eleven** of its bundles in one run: `ops-arith`, `ops-transcendental-nan`,
 `ops-narrow-move-nan`, `ops-narrow-select-nan`, `ops-rounding`, `ops-int-wrap`, `ops-compare-bool`,
