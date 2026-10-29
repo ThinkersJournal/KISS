@@ -318,7 +318,7 @@ fn test_classify_operand_sub_key_fields() {
     // arity is five, or six with the optional `dequant_form` component (sk5): a 4-field
     // sub-key, a 6-field one whose sixth part is not `dl`/`dc`, and a 7-field one are
     // typed declines.
-    let base = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
+    let base = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.6-0007: base token invalid");
     assert_eq!(
         from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16", 1)),
@@ -499,7 +499,7 @@ fn test_classify_secondary_dtype_unkeyed() {
 /// decline.
 #[test]
 fn test_classify_target_token_charset() {
-    let base = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
+    let base = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.8-0005: baseline token invalid");
 
     // legal targets still parse: `.` (e.g. spirv1.6) and uppercase letters (ASCII,

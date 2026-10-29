@@ -248,27 +248,27 @@ fn positive_decode_roundtrip() {
 }
 
 /// KISS-OPS-6.19-0037 (`test_ops_opattrs_max_rank_operands_pinned`): the OpAttrs
-/// channel pins MAX_RANK = 8 and MAX_OPERANDS = 8, and §6.19-0027 bounds a
+/// channel pins MAX_RANK = 8 and MAX_OPERANDS = 16, and §6.19-0027 bounds a
 /// gather's `axis` to `0..MAX_RANK-1` and `index_operand` to `0..MAX_OPERANDS-1`.
 /// Catches a decoder that returns these fields unchecked (the previous one did):
-/// axis=8 or index_operand=8 would index a nonexistent axis/operand in a
+/// axis=8 or index_operand=16 would index a nonexistent axis/operand in a
 /// downstream consumer, so a reader MUST reject the blob rather than pass it on.
 // Backs[enforced]: KISS-OPS-6.19-0037
 #[test]
 fn test_ops_opattrs_max_rank_operands_pinned() {
     // the constants are the pinned concrete values (§6.19-0037).
     assert_eq!(MAX_RANK, 8);
-    assert_eq!(MAX_OPERANDS, 8);
+    assert_eq!(MAX_OPERANDS, 16);
     // the last in-range values are accepted ...
-    assert!(decode_gather(&[7, 0x01, 7, 0x01]).is_ok());
+    assert!(decode_gather(&[7, 0x01, 15, 0x01]).is_ok());
     // ... and the first out-of-range value of each bounded field is rejected.
     assert_eq!(
         decode_gather(&[8, 0x01, 0, 0x01]),
         Err(Decline::FieldOutOfRange { field: "axis", value: 8, max: 8 })
     );
     assert_eq!(
-        decode_gather(&[0, 0x01, 8, 0x01]),
-        Err(Decline::FieldOutOfRange { field: "index_operand", value: 8, max: 8 })
+        decode_gather(&[0, 0x01, 16, 0x01]),
+        Err(Decline::FieldOutOfRange { field: "index_operand", value: 16, max: 16 })
     );
     // arm (4), KISS#419: a window/permutation vector longer than MAX_RANK is a typed decline from the
     // reader. The bound is MAX_RANK itself: 8 elements decode, 9 decline with the count named, and the

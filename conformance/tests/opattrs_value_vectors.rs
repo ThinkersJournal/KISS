@@ -322,7 +322,7 @@ fn the_fixed_keepdim_exception_is_still_what_the_clause_says() {
     let at = spec.find("KISS-OPS-6.19-0030").expect("clause");
     let clause = &spec[at..at + 700];
     assert!(clause.contains("`keepdim` (bool `u8`, fixed"), "6.19-0030 no longer says keepdim is fixed");
-    assert!(spec.contains("`MAX_RANK = 8` and `MAX_OPERANDS = 8`") || spec.contains("MAX_RANK = 8"), "pinned constants moved");
+    assert!(spec.contains("`MAX_RANK = 8` and `MAX_OPERANDS = 16`"), "pinned constants moved");
 }
 
 // ---- controls: the cross-check must be able to go red -----------------------------------------

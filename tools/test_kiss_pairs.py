@@ -13,7 +13,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kiss_pairs as kp  # noqa: E402
 
-BASE = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-"
+BASE = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-"
 F = "vec.json"
 
 

@@ -27,7 +27,7 @@ fn test_conform_verify_outcomes_and_record() {
     assert_eq!(outcome_of(&mixed, true), VerifyOutcome::Rejected);
 
     // The record is per (kernel, cell, target) and valid only at the verified revision.
-    let key = RecordKey { kernel: "add".into(), cell: "sk6|ew2|f32".into(), target: "cuda:sm89".into() };
+    let key = RecordKey { kernel: "add".into(), cell: "sk7|ew2|f32".into(), target: "cuda:sm89".into() };
     let other_target = RecordKey { target: "cuda:sm80".into(), ..key.clone() };
     let (r1, r2) = ([1u8; 32], [2u8; 32]);
     let mut ledger = VerifyLedger::default();

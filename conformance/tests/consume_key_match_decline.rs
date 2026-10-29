@@ -8,7 +8,7 @@ use kiss_conformance::key_match::{answer, DeclineReason, KeyMatchAnswer};
 #[test]
 fn test_consume_key_matched_decline_is_typed() {
     // Clause: KISS-CONSUME-6.5-0004.
-    let key = b"sk6|ew2|f32|cuda:sm89";
+    let key = b"sk7|ew2|f32|cuda:sm89";
     // The kernel computes what was asked: admitted.
     assert_eq!(answer(key, key, true), KeyMatchAnswer::Admitted);
     // A cell-mate: same key, a different computation. A typed decline, not Admitted and not a mismatch.

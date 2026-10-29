@@ -115,8 +115,8 @@ fn test_classify_mx_f6_formats() {
     assert_ne!(pack(&[1, 2, 3, 4], 6)[0], 0x04);
 }
 
-const EW: &str = "sk6|ew2|DT|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f;co/00/v1/d16/f|-";
-const CTR: &str = "sk6|ctr|f16|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/WDT/ACC/bf16/st";
+const EW: &str = "sk7|ew2|DT|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f;co/00/v1/d16/f|-";
+const CTR: &str = "sk7|ctr|f16|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/WDT/ACC/bf16/st";
 
 // Backs[enforced]: KISS-CLASSIFY-6.1-0016 — an MX element is a usable dtype (field 2, <wdt>) but a typed-decline
 // ElementDtypeAsAccumulator in either accumulator position and from the deriver; the three tokens are in the

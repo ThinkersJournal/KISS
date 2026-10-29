@@ -32,8 +32,8 @@ impl Default for Knobs {
             identity_kind: "kiss-contract",
             identity_version: "4",
             identity_revision_hash: "abc",
-            identity_accept_predicate: "sk6|ew2|f32",
-            capabilities_accept_predicate: "sk6|ew2|f32",
+            identity_accept_predicate: "sk7|ew2|f32",
+            capabilities_accept_predicate: "sk7|ew2|f32",
             provenance_revision_hash: "abc",
             guarantees_cost_provenance: "measured",
             provenance_cost_provenance: "measured",
@@ -150,12 +150,12 @@ fn test_contract_identity_header_match() {
 /// difference in case or a trailing space is a difference (byte-for-byte, no normalization).
 #[test]
 fn test_contract_capabilities_accept_matches_identity() {
-    for other in ["sk6|ew2|f33", "SK6|ew2|f32", "sk6|ew2|f32 "] {
+    for other in ["sk7|ew2|f33", "SK7|ew2|f32", "sk7|ew2|f32 "] {
         let d = doc(&Knobs { capabilities_accept_predicate: other, ..Knobs::default() });
         assert_eq!(
             check_record_consistency(&d),
             Err(RecordDecline::AcceptPredicateMismatch {
-                identity: "sk6|ew2|f32".into(),
+                identity: "sk7|ew2|f32".into(),
                 capabilities: other.into()
             }),
             "capabilities copy `{other}`"
@@ -163,8 +163,8 @@ fn test_contract_capabilities_accept_matches_identity() {
     }
     // Both copies changed together stay consistent: the check is equality, not a fixed value.
     let both = doc(&Knobs {
-        identity_accept_predicate: "sk6|ew2|f16",
-        capabilities_accept_predicate: "sk6|ew2|f16",
+        identity_accept_predicate: "sk7|ew2|f16",
+        capabilities_accept_predicate: "sk7|ew2|f16",
         ..Knobs::default()
     });
     assert_eq!(check_record_consistency(&both), Ok(()));

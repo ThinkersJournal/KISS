@@ -20,7 +20,7 @@
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 
 /// The closed cell-class set at this schema version — exactly the seven codes of
 /// Classify §6.5-0006. A token whose class field is outside this set is rejected (a
@@ -278,8 +278,8 @@ pub enum KeyDecline {
     /// "re-derive" signpost: distinct from `BadVersionPrefix` on the §6.1-0001
     /// reserved-vs-unknown model, so a consumer can tell "real token, wrong schema —
     /// re-derive it" from "this isn't a token". A build MAY ship a bounded decoder
-    /// arm for the previous version through the `sk6` series (§6.7-0014); this reference
-    /// build ships none and so declines every non-`sk6` version here.
+    /// arm for the previous version through the `sk7` series (§6.7-0014); this reference
+    /// build ships none and so declines every non-`sk7` version here.
     UnsupportedSchemaVersion { got: u32 },
     BadRank,
     BadWorkClass,
@@ -343,7 +343,7 @@ pub enum KeyDecline {
 
 /// The pinned closed-set bounds (§6.4). Named so a reader can reject an
 /// over-large key without allocating on the unchecked length.
-pub const MAX_OPERANDS: usize = 8;
+pub const MAX_OPERANDS: usize = 16;
 pub const MAX_STRUCTURE_KEY_LEN: usize = 4096;
 /// The pinned rank bound (§6.4-0001): `rank` is the inclusive range `0..=MAX_RANK`.
 pub const MAX_RANK: u32 = 8;

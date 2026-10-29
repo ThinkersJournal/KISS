@@ -1889,7 +1889,7 @@ contract_kind = kiss-contract
 contract_version = 4
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
+accept_predicate = sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
 op_identity = add
 target_capability = cuda:sm89
 ```
@@ -1939,7 +1939,7 @@ carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
-accept_predicate = sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
+accept_predicate = sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
 supported_dtype_set = [f32]
 awkward_layout_strategy = decline
 in_place_eligible_variants = []
