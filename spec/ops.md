@@ -2095,9 +2095,12 @@ cross-op axis rules in §6.19.5.
   co-versioned with the Classify `structure_key` schema version (`STRUCTURE_KEY_VERSION`)
   whose §6.7-0005 token codec it mirrors, and the pinned `MAX_RANK` / `MAX_OPERANDS`
   constants (§6.19-0037) MUST be co-versioned with their Classify shared-anchor values.
-  Any non-additive change (reordering a field, re-widening, reusing an ordinal, changing
-  the `reduce_axes` multiplexing, or changing a pinned constant) MUST be a new canonical
-  byte form under a bumped version, never a silent in-place change. *Test:*
+  Any non-additive change (reordering a field, re-widening, reusing an ordinal,
+  or changing the `reduce_axes` multiplexing) MUST be a new canonical byte form under a bumped
+  version, never a silent in-place change. A change to a pinned constant (§6.19-0037) moves
+  with the Classify value it is co-versioned with; where it only widens or narrows the range of
+  a field and alters no emitted byte (`MAX_OPERANDS` 8 to 16 at `sk7`), the OpAttrs byte form is
+  unchanged and there is no separate OpAttrs version integer to bump. *Test:*
   `test_ops_opattrs_version_binding`.
 - **KISS-OPS-6.19-0012** — KISS-Grammar and KISS-Contract MUST embed the encoded OpAttrs
   blob as **opaque** KISS-Ops-owned bytes and MUST byte-compare it without parsing inside
@@ -2374,7 +2377,7 @@ promoted to this normative OpAttrs encoding for that channel only.
   are inlined here (exactly as §6.16 inlines the dtype bit layouts) so this document is
   self-contained and every range MUST of §6.19 is verifiable from KISS-Ops plus the
   umbrella alone, and they are **co-versioned with Classify** (a change to either value in
-  the shared anchor co-bumps the OpAttrs version, §6.19-0011). `MAX_RANK = 8` satisfies the
+  the shared anchor moves this value with it, §6.19-0011). `MAX_RANK = 8` satisfies the
   KISS-Ops-local invariant `MAX_RANK <= 8` that the `reduce_axes` low-byte `u8` per-axis
   subset mask (§6.19-0020) requires. A conforming encoder MUST NOT emit an `axis` field
   `>= MAX_RANK`, an `index_operand` field `>= MAX_OPERANDS`, a subset mask with a bit set
