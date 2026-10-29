@@ -8,7 +8,7 @@
 //! the cross-check can go red. The `reduce`/`prefix_scan` divergence is recorded, not hidden.
 
 use kiss_conformance::opattrs::{
-    self, ColumnOrdering, IndexDtype, MathFidelityOrd, Monoid, OobPolicy, ScanExclusivity, ScatterCombine,
+    self, CastRounding, CastSaturation, ColumnOrdering, IndexDtype, MathFidelityOrd, Monoid, OobPolicy, ScanExclusivity, ScatterCombine,
     SortDirection,
 };
 use kiss_conformance::opattrs_schema::parse_table;
@@ -17,7 +17,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 167;
+const POPULATION: usize = 180;
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -162,6 +162,28 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
             let o = if tok(v, "output_column_ordering") == "channel-major" { ColumnOrdering::ChannelMajor } else { ColumnOrdering::TapMajor };
             opattrs::encode_im2col(&vecu32(v, "window_size"), &vecu32(v, "stride"), &vecu32(v, "dilation"), &vecu32(v, "padding"), o)
         }
+        "cast" => {
+            // independent of the generic encoder's table lookup: the ordinals this suite exercises, spelled out
+            let target = match tok(v, "target_dtype") {
+                "f16" => 1,
+                "bf16" => 2,
+                "f32" => 3,
+                "i32" => 9,
+                "f8e4m3fn" => 14,
+                "f4e2m1" => 25,
+                t => panic!("target_dtype {t} not in the hand table"),
+            };
+            let r = match tok(v, "rounding") {
+                "nearest-even" => CastRounding::NearestEven,
+                "toward-zero" => CastRounding::TowardZero,
+                "toward-negative-infinity" => CastRounding::TowardNegInf,
+                "toward-positive-infinity" => CastRounding::TowardPosInf,
+                t => panic!("rounding {t}"),
+            };
+            let sat = if tok(v, "saturation") == "none" { CastSaturation::None } else { CastSaturation::Clamp };
+            opattrs::encode_cast(target, r, sat)
+        }
+        "concat" => opattrs::encode_concat(byte(v, "axis")),
         _ => return None,
     })
 }
@@ -248,8 +270,8 @@ fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     let eqs = equivalences();
     assert_eq!(
         eqs.len(),
-        9,
-        "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan"
+        10,
+        "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan, cast"
     );
     for e in &eqs {
         assert!(!e.omitted.is_empty(), "{}: an equivalence that omits nothing proves nothing", e.op);
