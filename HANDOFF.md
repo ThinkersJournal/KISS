@@ -1,4 +1,4 @@
-<!-- Written 2026-10-26 against origin/main 2e65634 (conformance 0.5.10) plus the clean stack #693-#699; this PR proposes 0.6.6. A HANDOFF is current state, never a log:
+<!-- Written 2026-10-29 against origin/main b748de06 (conformance 0.6.29). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -20,23 +20,26 @@
 10. Coderipper 0.10.0 advisory rule `patent-sweep-record`: keep `docs/PATENT-SWEEP.md` current (a docs PR with a version bump) when it lands.
 11. **Stacks: build ONE LINEAR stack**, each PR based on its parent branch, each ONE commit made by `git cherry-pick --no-commit` onto the parent branch (never merge main into a branch: it re-adds squashed content, the PM HOLDs it). Never force-push (the classifier denies it). Helper scripts were in the session scratchpad and are gone: CHANGELOG entry + `conformance/Cargo.toml` version are bumped together; README figures and the floor come from `kiss_readme_coverage.py` / `kiss_trace.py --ratchet`. Run ALL of: version_sync, readme_coverage, clause_position, tables, scoped_cites, ratchet.
 
-## State (2026-10-26, evening)
+## State (2026-10-29)
 
-**THROTTLED** by CireSnave until ~2026-10-28T01:00Z (`C:\Projects\THROTTLE.md`): gates, fixes and security only; no new roadmap rows, no sub-agents, no avoidable builds; `CARGO_BUILD_JOBS=2`, one cargo build at a time (box memory limit, PM notice). Read that file at session start.
+**Throttle:** read `C:/Projects/THROTTLE.md` at session start (FULL SPEED since 2026-10-28T04:30Z at last read). `CARGO_BUILD_JOBS=2`, one cargo build at a time.
 
-**Merged:** #658-#701 (decisions 310/311 as far as built, Breaking `contract_version` 4 via #694, HANDOFF #700, options notes R1.28 #701).
+**Merged this week:** board-309 stack #714, #716-#722; #723 cast options note; #727 (R3.15 sweep: 44 citations `Backs[enforced]`, LEVELS stated 38 / enforced 226 / both 6; the other 38 unmarked sites stay `stated` by design: Emit lints, spec-table readers).
 
-**In the PM's merge loop, one linear stack, bottom-up (each base is the parent branch):** #702 R1.13 note -> #703 R1.19 -> #704 R1.22 -> #705 R1.26 -> #706 R3.6 -> #707 ROADMAP housekeeping (R1.26, R1.30 done, R2.9 for #396) -> #708 Emit informative note citing R1.5 -> #709 review of the 9 weak ties -> #710 citation levels `Backs[enforced]` (decision 308 B; adds ROADMAP R3.15) -> this HANDOFF PR. Your job on a HOLD: `git fetch`, merge the parent branch into the child (never `main` into a branch), keep each PR to ONE commit's content, rerun the lints, push without force (force-push is denied). Worktree `C:/Projects/kiss-clean` holds the tip; remove branches/worktrees after merge.
+**HELD for the sk7 batch (PM says when closed; do not merge alone):**
+- **#724** draft, branch `c-maxop` (worktree `C:/Projects/kiss-maxop`), based on old main 3c04110, 0.7.0 proposed: `MAX_OPERANDS` 8->16, `structure_key` sk6->sk7 (CireSnave 2026-10-29: "Raise the limit"). Vector list: `docs/sk7-vector-changes.md`.
+- **#725** draft, branch `c-f1ops` (worktree `C:/Projects/kiss-f1`), stacked on #724, 0.7.1 proposed, BREAKING spec: adds `cast` (Ops 6.21) and `concat`, removes `transpose`/`unsqueeze` (PM option B). Open cast values for CireSnave: Ops Appendix D item 12. To do when restacking on main (no force-push: replay the commit on a fresh branch): add the ROADMAP F1 sentence "2026-10-29 (PM, option B): cast and concat added ... open values Ops App. D item 12" (anchor is on main via #723); renumber versions at gate time.
+- The batch also wants padding low/high and matmul attrs: WAIT for CireSnave on 304 R5.7; draft spec text only if cheap, no vectors (not started).
 
-**Rulings to keep** (CireSnave via the PM): 311 Q1 C (declared width by value `reduced-mantissa-permitted:<n>`, no floor), Q2 A, Q3 A, Q4 A (Baracuda fixes `1.0`->`1.0f`), Q5 A+C. 310: R1.24 Q2/Q3/Q5/Q6/Q7 built (#695-#699); **Q1 (#10) RE-OPENED** (consumer-answered ops-list query; board A/B/C) and **Q4 (#26) OPEN: build neither.** 308 B: levels in the citation; `assert_golden`/`assert_token` count as enforced; unmarked = stated; the 9 weak ties reviewed (#709). 6.17-0002 subnormals are part of bit-stable; `rm` is a permission.
+**Rulings to keep:** R1.31 (kiss-ref consumer loader) stays HELD (PM 2026-10-28: no loader in kiss-ref, the consumer lane builds; floor stays 392). 311 Q1 C, Q2 A, Q3 A, Q4 A, Q5 A+C. 310 Q1 (#10) re-opened, Q4 (#26) open: build neither. 308 B levels; 6.17-0002 subnormals are bit-stable; `rm` is a permission.
 
-## Owed (throttled: only if a gate or fix needs it)
+## Owed
 
-1. ROADMAP R3.15: relabel the other unmarked citations by level (owner: the KISS lane; not started). R1.31 (kiss-ref consumer-loader witness for Synth 6.4-0001f), R3.14 (Emit/Consume twin witnesses), and a second implementation's witness for Conform 7.2-0005 are owed.
-2. Options notes all delivered (R1.28, R1.13, R1.19, R1.22, R1.26, R3.6); #396 is ROADMAP R2.9 (`[rule]`). The R1.28 row text still lists the derivability witness as open although KISS-CLASSIFY-6.8-0014 already requires it: fix in the next housekeeping pass.
-3. Fuel to check: a `negotiate()` that returns the plain AND of the capability words reads provider-only FEAT bits as off (#696). Every contract reader must accept `contract_version` 4.
-4. Issue clock (EXPECTATIONS 6.23): 31 open at last read, 0 overdue, 0 outsiders; run `python /c/Projects/tools/issue-age.py --repo ThinkersJournal/KISS` after every batch. Never close to beat the clock. Weekly sweep next due **2026-11-01**. **Before every push run all single-line `python tools/...` steps of the kiss-trace job** (about 47; only `test_kiss_ratchet_step` and `test_kiss_msrv_step` fail locally, on the WSL bash launcher).
+1. Board 309 Q1 wire work (provision-by-definition, experimental capability bit 40-43, recipe encoding): unbuilt.
+2. R3.14 (Emit/Consume twin witnesses), a second implementation's witness for Conform 7.2-0005, the R1.28 row text fix (the derivability witness is already required by KISS-CLASSIFY-6.8-0014).
+3. Tell Unpopped lane 1 (cwd `C:/Projects/Unpopped`; IDs rotate, `list_peers`) when #725 nears the gate: cast/concat added, transpose/unsqueeze removed, #724 vectors may change before the batch closes.
+4. Issue clock (EXPECTATIONS 6.23): `python /c/Projects/tools/issue-age.py --repo ThinkersJournal/KISS`; weekly sweep next due **2026-11-01**. Before every push run version_sync, readme_coverage, clause_position, `kiss_trace.py --ratchet --base-ref origin/main` and the single-line `python tools/...` kiss-trace steps (the WSL suites fail locally).
 
 ## Waiting (do not start)
 
-All `[rule]` rows wait on CireSnave via the PM. Unpopped/Baracuda/Fuel regeneration is their lanes. R4 and second-deriver runs are `[ext]`. R1.10 needs a scheduled freeze; R1.11 is `[rule]`. Interface-project plan name and A/B/C (board 295), outside-readers call publication, and the patent sweep leftovers (idea 10, CPC/assignee search, US8458680B2 question to Fuel/Baracuda/Unpopped) wait on CireSnave or the lanes.
+All `[rule]` rows wait on CireSnave via the PM. Unpopped/Baracuda/Fuel regeneration is their lanes. R4 and second-deriver runs are `[ext]`. R1.10 needs a scheduled freeze; R1.11 is `[rule]`. Board 295 interface-project plan, outside-readers call publication, and the patent sweep leftovers wait on CireSnave or the lanes.
