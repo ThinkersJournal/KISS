@@ -54,7 +54,7 @@ fn saturate(v: i128, bits: u32, signed: bool) -> i128 {
     v.clamp(lo, hi)
 }
 
-// Backs: KISS-OPS-6.2-0002 — integer add/sub/mul wrap modulo 2^bitwidth (never saturate) at the
+// Backs[enforced]: KISS-OPS-6.2-0002 — integer add/sub/mul wrap modulo 2^bitwidth (never saturate) at the
 // boundary patterns of every 8/16/32/64-bit signed and unsigned lane.
 #[test]
 fn test_ops_int_wrapping() {

@@ -110,7 +110,7 @@ fn check_cell(v: &corpus::Cell, pop: &mut Pop) {
     }
 }
 
-// Backs: KISS-OPS-6.16-0009 — a selection that MOVES a NaN operand preserves its bits; the propagating
+// Backs[enforced]: KISS-OPS-6.16-0009 — a selection that MOVES a NaN operand preserves its bits; the propagating
 // and IEEE arms are distinguishable on f32/f64 (#329's acceptance: swap them and the corpus reddens).
 #[test]
 fn minmax_nan_bundle_matches_the_decomposition_and_redden_when_the_arms_are_swapped() {

@@ -58,7 +58,7 @@ fn reduce_maxmin_preserve_signed_zero() {
     assert!(bits_eq(reduce_f32(&[-0.0], Monoid::Sum), 0.0));
 }
 
-// Backs: KISS-OPS-6.0-0004
+// Backs[enforced]: KISS-OPS-6.0-0004
 // Backs[enforced]: KISS-OPS-6.0-0002
 #[test]
 fn reduce_class_is_selected_per_spec() {
@@ -199,7 +199,7 @@ fn scatter_atomic_max_min_nan_propagating() {
     assert_eq!(c[0], 5.0);
 }
 
-// Backs: KISS-OPS-6.11-0006 — assign, atomic-max and atomic-min combines are deterministic (exact-byte class)
+// Backs[enforced]: KISS-OPS-6.11-0006 — assign, atomic-max and atomic-min combines are deterministic (exact-byte class)
 #[test]
 fn scatter_deterministic_combines_are_exact_byte() {
     // KISS-OPS-6.11-0006: assign / atomic-max / atomic-min are deterministic (exact-byte).
@@ -210,7 +210,7 @@ fn scatter_deterministic_combines_are_exact_byte() {
 
 // ---- the ONE nondeterministic op: fp scatter atomic-add (§6.11-0006) ---------
 
-// Backs: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
+// Backs[enforced]: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
 #[test]
 fn scatter_fp_atomic_add_is_order_invariant_class() {
     // §6.11-0006 / §6.0-0004: the fp atomic-add combine is the one nondeterministic

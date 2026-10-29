@@ -63,7 +63,7 @@ fn model(op: &str, x: f32) -> f32 {
     }
 }
 
-// Backs: KISS-OPS-6.7-0001 — each rounding atom rounds in its named direction (the four ops, the
+// Backs[enforced]: KISS-OPS-6.7-0001 — each rounding atom rounds in its named direction (the four ops, the
 // tie, zero-sign and integral boundaries); the NaN half of 6.7-0002 is deliberately not pinned (#396).
 #[test]
 fn rounding_bundle_matches_an_independent_model_and_discriminates() {

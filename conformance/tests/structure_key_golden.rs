@@ -164,7 +164,7 @@ fn a1_dense_contraction_cuda() {
     assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
 }
 
-// Backs: KISS-CLASSIFY-6.7-0003 — a dotted vulkan target_capability string is emitted verbatim as field 3 of the token.
+// Backs[enforced]: KISS-CLASSIFY-6.7-0003 — a dotted vulkan target_capability string is emitted verbatim as field 3 of the token.
 #[test]
 fn a1_dense_contraction_vulkan_target() {
     let c = Contraction {
@@ -610,7 +610,7 @@ fn reject_unknown_dtype() {
 
 #[test]
 fn accepts_every_closed_cell_class_and_dtype() {
-    // Backs: KISS-CLASSIFY-6.1-0001 (acceptance half only) — every closed-set dtype token is
+    // Backs[enforced]: KISS-CLASSIFY-6.1-0001 (acceptance half only) — every closed-set dtype token is
     // accepted and each reserved one declines ReservedDtype. Does NOT cover the set's CONTENTS:
     // this loops `DTYPES` while `from_token` checks `DTYPES.contains(..)` — a self-comparison
     // (the #191 tautology shape), so it cannot detect the closed vocabulary changing. `kiss_tables`

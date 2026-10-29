@@ -666,7 +666,7 @@ mod structural_tests {
         assert!(compare_order_invariant(&a, &b, tol, 0.0).is_ok());
     }
 
-    // Backs: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
+    // Backs[enforced]: KISS-OPS-6.0-0004, KISS-OPS-6.11-0006
     // Backs[enforced]: KISS-OPS-6.0-0002
     #[test]
     fn class_dispatch_matches_spec() {

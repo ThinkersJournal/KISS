@@ -35,7 +35,7 @@ fn rule(y: f32, x: f32) -> Option<u32> {
     Some(ys | mag)
 }
 
-// Backs: KISS-OPS-6.9-0001 — atan2 is the four-quadrant arctangent; the sign of a zero operand
+// Backs[enforced]: KISS-OPS-6.9-0001 — atan2 is the four-quadrant arctangent; the sign of a zero operand
 // selects the quadrant (the 28 cells cover each quadrant, the +-0 matrix and the +-inf matrix).
 #[test]
 fn test_ops_atan2_quadrants() {

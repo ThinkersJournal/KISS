@@ -111,7 +111,7 @@ fn test_contract_document_header_line() {
     assert!(crc_hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
 }
 
-/// Enforces: KISS-CONTRACT-6.11-0005 — within a section block the field lines
+/// Enforces[enforced]: KISS-CONTRACT-6.11-0005 — within a section block the field lines
 /// appear in the exact field-schema order (§6.3-0001 for Identity). The emitted
 /// Identity block is compared byte-for-byte to the Appendix C golden. TEETH: a
 /// HashMap-backed emitter whose field order is nondeterministic (any permutation
@@ -127,7 +127,7 @@ fn test_contract_document_field_order() {
     );
 }
 
-/// Enforces: KISS-CONTRACT-6.11-0007 — the `op_dag` array in KISS-Grammar
+/// Enforces[enforced]: KISS-CONTRACT-6.11-0007 — the `op_dag` array in KISS-Grammar
 /// canonical node order: every child strictly earlier than its parent, each
 /// node's `child_edges` referencing strictly-earlier indices, the **root last**.
 /// The one-node `add` DAG is compared to the Appendix C Semantics golden; a

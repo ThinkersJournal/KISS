@@ -12,7 +12,7 @@
 
 use kiss_conformance::structure_key::MathFidelity;
 
-// Backs: KISS-CLASSIFY-6.7-0006 — the structure_key `<mp>` code set is exactly {st, rm} (st = bit-stable, rm = reduced-mantissa-permitted), and nothing else parses
+// Backs[enforced]: KISS-CLASSIFY-6.7-0006 — the structure_key `<mp>` code set is exactly {st, rm} (st = bit-stable, rm = reduced-mantissa-permitted), and nothing else parses
 #[test]
 fn test_math_fidelity_wire_codes_survive_the_414_rename() {
     // bit-stable -> "st", reduced-mantissa-permitted -> "rm": the two-member attribute's codes.
