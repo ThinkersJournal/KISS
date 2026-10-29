@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.29 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
+
+- Tooling comments only (no spec text, no bytes, no tier moves; Part of KISS#498, ROADMAP R3.15, decision 308 B): 44 more unmarked `// Backs:`/`// Enforces:` citations in 24 files are relabelled `Backs[enforced]:`/`Enforces[enforced]:` because the citing test builds bytes or runs the shipped reader, encoder, decoder, comparator or reference op rather than reading spec text. Judged per test; the other 38 of the 82 unmarked sites stay `stated`: the 29 Emit document lints and the Synth/Classify tests that read spec tables, plus a weak-assertion test, a source-text scan, and two helper-fn citations. LEVELS re-derived: stated 75 to 38, enforced 205 to 226, both 22 to 6.
+
 ## 0.6.28 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q1)
 
 - Docs only (no spec text, no bytes; union-table finding F1, ROADMAP R5.7; the PM's relay of the Unpopped U1 worker's Cast-to-MX proposal, 2026-10-28): `docs/options-cast-op-f1.md`, an options note on whether KISS adds a `cast` op. Lists what conversion rules are already pinned per destination dtype (bf16, the two fp8 formats, the three MX types) and six that are not (no op; NaN into a no-NaN format; overflow into IEEE-style floats; float to integer; non-RNE rounding; bitcast); sets the U1 proposal beside them (the MX part marked unread and unverified; the f16/bf16/integer part read from Unpopped#144's `cast_ref.rs`: four rounding modes, overflow follows the direction unless ClampFinite, NaN stays NaN float-to-float and goes to 0 float-to-integer, float-to-integer always saturates); gives three options and recommends a `cast` op with `{target_dtype, rounding, saturation}` after four open values are decided.

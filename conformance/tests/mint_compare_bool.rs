@@ -41,7 +41,7 @@ fn load() -> corpus::Corpus {
     c
 }
 
-// Backs: KISS-OPS-6.2-0005 - a comparison yields a one-byte bool mask, strictly 0 or 1, for f32/i32/u32
+// Backs[enforced]: KISS-OPS-6.2-0005 - a comparison yields a one-byte bool mask, strictly 0 or 1, for f32/i32/u32
 // operands, whatever the compute dtype.
 #[test]
 fn test_ops_compare_result_zero_one() {
@@ -81,7 +81,7 @@ fn test_ops_compare_result_zero_one() {
     assert!(unsigned_flip >= 6, "u32 cells on which a signed reading differs must be present");
 }
 
-// Backs: KISS-OPS-6.2-0006 - a bool consumer reads any non-zero byte as true, and its result is
+// Backs[enforced]: KISS-OPS-6.2-0006 - a bool consumer reads any non-zero byte as true, and its result is
 // normalized to strictly 0 or 1.
 #[test]
 fn test_ops_bool_normalization() {

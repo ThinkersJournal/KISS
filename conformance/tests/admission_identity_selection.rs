@@ -54,7 +54,7 @@ fn shape_key(cell_class: &str) -> StructureKey {
     }
 }
 
-/// Backs: KISS-CLASSIFY-6.6-0002 — `cell_class` is a coarse category, never an op name.
+/// Backs[enforced]: KISS-CLASSIFY-6.6-0002 — `cell_class` is a coarse category, never an op name.
 #[test]
 fn test_classify_structure_key_is_not_op_identity() {
     let ops = all_ops();
@@ -87,7 +87,7 @@ fn test_classify_structure_key_is_not_op_identity() {
     );
 }
 
-/// Backs: KISS-CLASSIFY-6.6-0020 — cell-mates are not mutually substitutable.
+/// Backs[enforced]: KISS-CLASSIFY-6.6-0020 — cell-mates are not mutually substitutable.
 #[test]
 fn test_classify_cell_mates_are_not_substitutable() {
     let ops = all_ops();

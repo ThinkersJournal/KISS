@@ -7,7 +7,7 @@ use kiss_conformance::contract::BitStability;
 
 const SCOPES: [BitStability; 3] = [BitStability::Portable, BitStability::SameHardware, BitStability::None];
 
-/// Enforces: KISS-OPS-6.8-0007 — the set is exactly the five spellings, ordered tightest to
+/// Enforces[enforced]: KISS-OPS-6.8-0007 — the set is exactly the five spellings, ordered tightest to
 /// loosest, round-trips, and refuses `bit-reproducible` (folded into `strict`).
 #[test]
 fn test_ops_precision_class_token_set() {
@@ -66,7 +66,7 @@ fn test_ops_precision_class_derivation() {
     assert_eq!(derive_precision_class([], BitStability::Portable), Unbounded);
 }
 
-/// Enforces: KISS-OPS-6.8-0009 — the class<->tier correspondence: both tier-0 classes map to tier 0,
+/// Enforces[enforced]: KISS-OPS-6.8-0009 — the class<->tier correspondence: both tier-0 classes map to tier 0,
 /// the looser classes to strictly looser tier kinds, and no looser class maps to a tighter tier.
 #[test]
 fn test_ops_precision_class_tier_correspondence() {

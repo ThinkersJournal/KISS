@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(check_advertisement(ExactByte, OrderInvariant), Ok(ExactByte));
     }
 
-    // Backs: KISS-OPS-6.0-0008 — selection is keyed on the comparison op-family while the comparison atom's own class stays exact-byte
+    // Backs[enforced]: KISS-OPS-6.0-0008 — selection is keyed on the comparison op-family while the comparison atom's own class stays exact-byte
     #[test]
     fn is_selection_producer_keys_on_comparison_family() {
         // §6.0-0008: "selection" is keyed on the comparison op-family (semantics), not a
