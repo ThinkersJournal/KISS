@@ -7,6 +7,10 @@ second number.
 
 - Docs only (no spec text, no bytes): ROADMAP R5.19, the `lint:kiss_sidecar` ledger-category row split out of R5.6 (PM). It records why `kiss_sidecar.py` credits no clause today (no `--emit-coverage`) and why crediting 6.2-0004 / 6.1-0007 would overstate (each is half enforced).
 
+## 0.6.42 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R3.18 writes up the gap the G5 options note found (Grammar has no definition of a scalar-bearing node; blocked by R1.25) as the prerequisite row for any G5 vector code (PM ruling 2026-10-30).
+
 ## 0.6.41 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): `docs/options-r3-10-g5-extract-vector.md`, the options note for Appendix A.1 vector G5 (ROADMAP R3.10; PM ruling: a design note first, not code). Four options (wire-level G5 without a scalar vocabulary / wait for R1.25 / least-path derivation in the codec plus an independent check / demote G5 to prose); recommends the first. States what was not checked (the op catalog, the consumers' extract emission, the decoder's path handling).
