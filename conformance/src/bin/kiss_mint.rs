@@ -928,23 +928,24 @@ fn write_bundle(rel_path: &str, doc: &str) {
 // carried, because a cell has one scalar input per role and a fold needs a vector; that needs a
 // composite cell shape the corpus does not have. Selection moves (`max_prop`/`min_prop`) at f32/f64
 // are in `ops-minmax-nan.json`.
-fn move_wide_doc() -> String {
-    struct D {
-        name: &'static str,
-        nans: [(&'static str, u64); 3],
-        neg_zero_sign: u64,
-        one: u64,
-        bytes: usize,
-    }
-    let dtypes = [
-        D {
+struct MoveWideFmt {
+    name: &'static str,
+    nans: [(&'static str, u64); 3],
+    neg_zero_sign: u64,
+    one: u64,
+    bytes: usize,
+}
+
+fn move_wide_formats() -> [MoveWideFmt; 2] {
+    [
+        MoveWideFmt {
             name: "f32",
             nans: [("snan", 0x7F80_0001), ("qnan-rich", 0x7FD5_5555), ("neg-qnan-rich", 0xFFD5_5555)],
             neg_zero_sign: 0x8000_0000,
             one: u64::from(1.0f32.to_bits()),
             bytes: 4,
         },
-        D {
+        MoveWideFmt {
             name: "f64",
             nans: [
                 ("snan", 0x7FF0_0000_0000_0001),
@@ -955,7 +956,11 @@ fn move_wide_doc() -> String {
             one: 1.0f64.to_bits(),
             bytes: 8,
         },
-    ];
+    ]
+}
+
+fn move_wide_doc() -> String {
+    let dtypes = move_wide_formats();
     let be = |v: u64, n: usize| v.to_be_bytes()[8 - n..].to_vec();
     let mut cells = Vec::new();
     let mut tc = 1u32;
