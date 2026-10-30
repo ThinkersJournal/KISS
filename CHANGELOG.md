@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.36 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R1.14 marked done (#618) and R3.10 marked half done, with what was and was not checked (Grammar G2/G3/G5 rendering unchecked).
+
 ## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): `docs/kiss-ref-v4-delta.md` sizes the kiss-ref move from `sk5`/contract v3 to `sk6`/v4 (one vendored file differs, three dtypes, 3-5 lane-hours, best done at the sk7 batch close); ROADMAP R3.17.
