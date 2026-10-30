@@ -959,6 +959,18 @@ enum (§6.0). See umbrella §3 for the full statement.
   with another's, because two implementations that share a defect agree exactly while both
   miss the reference. (CireSnave decision 311, Q5 A.) *Test:*
   `test_conform_ulp_referent_is_wide_reference`.
+- **KISS-CONFORM-6.8-0002b** — The **ULP distance** between two non-NaN values of a binary
+  floating-point dtype of width `w` bits (`f16`, `bf16`, `f32`, `f64`; KISS-OPS §6.16-0002/-0003)
+  MUST be the absolute difference of their **sign-magnitude total-order keys**, as an unsigned
+  integer: for a bit pattern `b`, `key(b) = b | 2^(w-1)` when the sign bit of `b` is clear, and
+  `key(b) = (~b) mod 2^w` when it is set. The key is monotone in the numeric order, so
+  representable neighbours differ by exactly `1`, **including across zero**: `-0.0` and `+0.0`
+  are `1` apart (not `0`), the smallest negative and positive subnormals are `3` apart, and a
+  subnormal-to-normal step is `1`; the largest finite value and `+inf` are `1` apart (an
+  infinity is an ordinary key, a NaN has none and is compared by §6.8-0010 instead). A
+  comparator that subtracts the raw sign-magnitude bit patterns is wrong whenever the operands
+  differ in sign (it reports `2^(w-1)` between `+0.0` and `-0.0`) and MUST be rejected. *Test:*
+  `test_conform_ulp_distance_function`.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
   tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
@@ -1693,6 +1705,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0001 | `test_conform_exact_byte_comparator` |
 | KISS-CONFORM-6.8-0002 | `test_conform_ulp_comparator` |
 | KISS-CONFORM-6.8-0002a | `test_conform_ulp_referent_is_wide_reference` |
+| KISS-CONFORM-6.8-0002b | `test_conform_ulp_distance_function` |
 | KISS-CONFORM-6.8-0003 | `test_conform_ulp_declared_tier_is_gate` |
 | KISS-CONFORM-6.8-0004 | `test_conform_nondeterministic_comparator` |
 | KISS-CONFORM-6.8-0004a | `test_conform_tolerance_threshold_from_declared` |
