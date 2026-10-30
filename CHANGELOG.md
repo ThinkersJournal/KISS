@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.41 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/options-r3-10-g5-extract-vector.md`, the options note for Appendix A.1 vector G5 (ROADMAP R3.10; PM ruling: a design note first, not code). Four options (wire-level G5 without a scalar vocabulary / wait for R1.25 / least-path derivation in the codec plus an independent check / demote G5 to prose); recommends the first. States what was not checked (the op catalog, the consumers' extract emission, the decoder's path handling).
+
 ## 0.6.40 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Spec, informative text only; no normative clause changes; not Breaking for a conformance consumer** (ROADMAP R3.10; PM ruling A): Appendix A.1 vector G3 (tag equality) said one authoring omits `axis` and relies on "its KISS-Ops default of `0`". KISS-OPS-6.19-0027 gives `gather` **no `axis` default** (`axis` and `index_dtype` are mandatory); the field that has a default is `oob_policy` (`skip`). **Corrected prose:** three authorings with `axis = 1`, `index_operand = 1`, `index_dtype = u32` differing in `oob_policy` (stated `skip` / omitted, resolving to `skip` / stated `clamp`); the `skip` tag's 37 bytes are now in the appendix. **Corpus (additive):** `grammar_vectors.json` gains `tag_vectors` with G3 (`rendered_vectors` is now G1, G3, G4; `unrendered_vectors` G2, G5); the `vectors` array and its bytes are unchanged, consumers re-vendor once at the sk7 close. Reference: `grammar::g3_tag_authorings`; test `test_grammar_g3_tag_vectors_match_appendix_a1` (fails when the `clamp` authoring is made to emit `skip`). The codec takes resolved values, so the omitted authoring equals the stated one by construction and default resolution (KISS-Ops-owned) is not exercised; the artifact says so. No errata rule was found in the repo (`git grep -i errata` is empty), so this entry is the record.
