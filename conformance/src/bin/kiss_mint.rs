@@ -11,6 +11,7 @@
 //!   corpus/ops-atan2-quadrants.json   — KISS-OPS-6.9-0001: f32 atan2 four-quadrant + signed-zero + inf cells, class ULP (never exact-byte, §6.8-0005)
 //!   corpus/ops-sqrt-rounding.json     — KISS-OPS-6.8-0003: f32 sqrt, class ULP bound 0 (the correctly-rounded arm; hard cases, exact squares, subnormals, +-0, +inf)
 //!   corpus/ops-nextafter.json         — KISS-OPS-6.9-0003 (value arm): f32/f64 nextafter on the dtype's own lattice, exact-byte (zero crossing, signed zeros, subnormal/normal boundary, max finite <-> inf)
+//!   corpus/ops-ulp-edge.json          — KISS-CONFORM-6.8-0002b: `ulp_distance(a, b)` edge cells at f16/bf16/f32/f64 (+-0, subnormals, inf, extremes); NO consumer obligation
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -911,11 +912,86 @@ fn write_bundle(rel_path: &str, doc: &str) {
     eprintln!("wrote {path}");
 }
 
+// ---- ULP-distance edge bundle (KISS-CONFORM-6.8-0002b; KISS#20 item 3) ----------------------
+//
+// WHY: 6.8-0002b pins the ULP-distance FUNCTION (sign-magnitude total-order key difference). A
+// consumer that implements it from prose gets the cross-sign and zero cases wrong (Fuel shipped
+// raw-pattern subtraction twice: +0.0 vs -0.0 came out 2^31 apart), and a happy-path probe set
+// never visits them. This bundle is the edge set, as exact-byte cells: `ulp_distance(a, b)`
+// expecting a `u64` (8 bytes, big-endian), at f16, bf16, f32 and f64.
+//
+// NO CONSUMER OBLIGATION. Nothing in the spec requires a consumer to run this file; it is
+// offered, and the spec says so (6.8-0002b's note, and the CHANGELOG). Whether a SHOULD follows is
+// a decision for after consumers have adopted it.
+//
+// EMITTED: both zero signs, a subnormal pair straddling zero, subnormal<->zero, subnormal<->normal,
+// the largest finite value<->inf (each sign), +inf<->-inf, +-1.0, a one-step neighbour of 1.0, the
+// extremes, and two argument-order swaps (symmetry). NOT EMITTED: NaN. A NaN has no total-order key
+// (6.8-0002b), so no distance exists to expect; a computed NaN is compared by 6.8-0010 instead.
+// The expected value is `ulp_key` (the reference implementation of the clause); the independent
+// check is `conformance/tests/mint_ulp_edge.rs`, which recomputes every cell from a signed-integer
+// model that shares no code with `ulp_key`.
+struct UlpFmt {
+    dtype: &'static str,
+    width: u32,
+    exp_bits: u32,
+    man_bits: u32,
+}
+
+const ULP_FORMATS: [UlpFmt; 4] = [
+    UlpFmt { dtype: "f16", width: 16, exp_bits: 5, man_bits: 10 },
+    UlpFmt { dtype: "bf16", width: 16, exp_bits: 8, man_bits: 7 },
+    UlpFmt { dtype: "f32", width: 32, exp_bits: 8, man_bits: 23 },
+    UlpFmt { dtype: "f64", width: 64, exp_bits: 11, man_bits: 52 },
+];
+
+/// The edge pairs `(tag, a_bits, b_bits)` of one format, built from its field widths.
+fn ulp_edge_pairs(f: &UlpFmt) -> Vec<(&'static str, u64, u64)> {
+    let sign = 1u64 << (f.width - 1);
+    let man_mask = (1u64 << f.man_bits) - 1;
+    let inf = ((1u64 << f.exp_bits) - 1) << f.man_bits;
+    let max_fin = inf - 1;
+    let min_norm = 1u64 << f.man_bits;
+    let one = ((1u64 << (f.exp_bits - 1)) - 1) << f.man_bits;
+    vec![
+        ("zero-signs", sign, 0),
+        ("zero-same", 0, 0),
+        ("subnormal-straddles-zero", sign | 1, 1),
+        ("subnormal-to-zero", 1, 0),
+        ("subnormal-to-normal", man_mask, min_norm),
+        ("max-finite-to-inf", max_fin, inf),
+        ("max-finite-to-inf-negative", sign | max_fin, sign | inf),
+        ("inf-to-inf-opposite", sign | inf, inf),
+        ("cross-zero-one", sign | one, one),
+        ("adjacent-to-one", one, one + 1),
+        ("extremes", sign | max_fin, max_fin),
+        ("zero-to-max-finite", 0, max_fin),
+        ("symmetry-zero-signs", 0, sign),
+        ("symmetry-cross-zero-one", one, sign | one),
+    ]
+}
+
+fn ulp_edge_doc() -> String {
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for f in &ULP_FORMATS {
+        let nbytes = (f.width / 8) as usize;
+        for (tag, a, b) in ulp_edge_pairs(f) {
+            let d = kiss_conformance::ulp_key(f.width, a).abs_diff(kiss_conformance::ulp_key(f.width, b));
+            let (ab, bb) = (&a.to_be_bytes()[8 - nbytes..], &b.to_be_bytes()[8 - nbytes..]);
+            let tags = format!("\"{tag}\",\"6.8-0002b\"");
+            cells.push(typed_cell(tc, "ulp_distance", f.dtype, &[ab, bb], "u64", &d.to_be_bytes(), &tags));
+            tc += 1;
+        }
+    }
+    bundle_doc("CONFORM", "KISS-CONFORM-6.8-0002b", &cells)
+}
+
 fn main() {
     let flags = kiss_conformance::cli::basics(
         "kiss_mint",
         "Mints the frozen oracle-vector corpus under conformance/corpus/.",
-        &[("--write", "write the eleven bundles (nothing is written without it)")],
+        &[("--write", "write the twelve bundles (nothing is written without it)")],
     );
     if flags.is_empty() {
         eprintln!("kiss_mint: nothing written; pass --write to mint the corpus (see --help)");
@@ -932,4 +1008,5 @@ fn main() {
     write_bundle("/corpus/ops-sqrt-rounding.json", &sqrt_doc());
     write_bundle("/corpus/ops-nextafter.json", &nextafter_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
+    write_bundle("/corpus/ops-ulp-edge.json", &ulp_edge_doc());
 }

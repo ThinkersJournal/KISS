@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.44 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Corpus, additive; NO consumer obligation; not Breaking for a conformance consumer** (Part of KISS#20 item 3, ROADMAP R1.29; PM ruling C): new `conformance/corpus/ops-ulp-edge.json`, minted by `kiss_mint --write` (now twelve bundles; the other eleven regenerate with no diff): 56 `ulp_distance(a, b)` cells (14 edge pairs at each of `f16`, `bf16`, `f32`, `f64`) expecting a `u64`, the cells minted through `ulp_key` and checked by `conformance/tests/mint_ulp_edge.rs` against an independent signed-integer model (the check fails when `ulp_key` is replaced by the raw pattern: `a=0x8000 b=0x0`, left 32768, right 1). NaN is not in the file (no key). **Nothing in the spec requires a consumer to run the file**; an informative note after KISS-CONFORM-6.8-0002b says so. Whether a SHOULD follows waits until Fuel, Baracuda and Unpopped have adopted it; #20 stays open until Fuel confirms it consumes it. Consumers re-vendor the corpus once at the sk7 close.
+
 ## 0.6.41 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): `docs/options-r3-10-g5-extract-vector.md`, the options note for Appendix A.1 vector G5 (ROADMAP R3.10; PM ruling: a design note first, not code). Four options (wire-level G5 without a scalar vocabulary / wait for R1.25 / least-path derivation in the codec plus an independent check / demote G5 to prose); recommends the first. States what was not checked (the op catalog, the consumers' extract emission, the decoder's path handling).
