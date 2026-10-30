@@ -665,6 +665,30 @@ pub fn golden_regions() -> Vec<(&'static str, &'static str, Region)> {
     ]
 }
 
+/// The three authorings of Appendix A.1 vector G3, as `(label, oob_policy stated, tag bytes)`:
+/// a `gather` tag with `axis = 1`, `index_operand = 1`, `index_dtype = u32` (all three mandatory,
+/// KISS-OPS-6.19-0027) and the defaulted field `oob_policy` either stated as `skip`, omitted (it
+/// resolves to its KISS-Ops default `skip`, §6.19-0005), or stated as `clamp`.
+///
+/// ⚠️ THE CODEC CANNOT EXERCISE DEFAULT RESOLUTION. `opattrs::encode_gather` takes resolved values,
+/// so the "omitted" authoring is the caller's resolution to `skip` and its bytes equal the stated
+/// one by construction. What the vector pins is the tag canonical form (§6.8-0012) of the resolved
+/// value, and that a different `oob_policy` yields different bytes. Default resolution is
+/// KISS-Ops-owned and is not rendered here; the artifact says so.
+pub fn g3_tag_authorings() -> Vec<(&'static str, bool, Vec<u8>)> {
+    use crate::opattrs::{encode_gather, IndexDtype, OobPolicy};
+    let roles = [
+        RoleEntry::default_entry(),
+        RoleEntry { role: "index".into(), dtype: "u32".into() },
+    ];
+    let tag = |oob| encode_tag("gather", &encode_gather(1, oob, 1, IndexDtype::U32), &roles, 2);
+    vec![
+        ("oob_policy_skip_stated", true, tag(OobPolicy::Skip)),
+        ("oob_policy_omitted_resolves_to_skip", false, tag(OobPolicy::Skip)),
+        ("oob_policy_clamp_stated", true, tag(OobPolicy::Clamp)),
+    ]
+}
+
 // ---- artifact-rendering helpers (module level, not nested in the generator) ----------------
 
 /// Contiguous LOWERCASE hex — the artifact's wire-form spelling.
@@ -723,6 +747,37 @@ fn render_vector(id: &str, desc: &str, region: &Region) -> String {
     v
 }
 
+/// Appendix A.1 vector G3 as one `tag_vectors` entry: the tag canonical serialization (§6.8-0012)
+/// of three authorings, plus the relations the vector asserts among them.
+fn render_g3() -> String {
+    let jstr = crate::json::escape_string;
+    let a = g3_tag_authorings();
+    let mut v = String::from("    {\n");
+    v.push_str("      \"id\": \"G3\",\n");
+    v.push_str("      \"description\": \"tag-equality / default-attribute: a gather tag with oob_policy stated as skip, omitted (resolves to the KISS-Ops default skip), and stated as clamp\",\n");
+    v.push_str("      \"clause\": \"KISS-GRAMMAR-6.8-0012\",\n");
+    v.push_str("      \"resolution_note\": \"default resolution is KISS-Ops-owned (KISS-OPS-6.19-0005); this generator takes resolved values, so the omitted authoring equals the stated one by construction and the vector pins the tag canonical form and that a different oob_policy differs\",\n");
+    v.push_str("      \"authorings\": [\n");
+    let rows: Vec<String> = a
+        .iter()
+        .map(|(label, stated, bytes)| {
+            format!(
+                "        {{\"label\": {}, \"oob_policy_stated\": {}, \"tag_bytes\": {}, \"tag_hex\": {}}}",
+                jstr(label),
+                stated,
+                bytes.len(),
+                jstr(&compact_hex(bytes))
+            )
+        })
+        .collect();
+    v.push_str(&rows.join(",\n"));
+    v.push_str("\n      ],\n");
+    v.push_str("      \"equal\": [[\"oob_policy_skip_stated\", \"oob_policy_omitted_resolves_to_skip\"]],\n");
+    v.push_str("      \"differ\": [[\"oob_policy_skip_stated\", \"oob_policy_clamp_stated\"]]\n");
+    v.push_str("    }");
+    v
+}
+
 /// Emit `conformance/corpus/grammar_vectors.json` — the machine-readable golden REGION vector
 /// set, generated from this codec.
 ///
@@ -752,10 +807,13 @@ pub fn emit_grammar_vectors_json() -> String {
     s.push_str(",\n");
     // ⚠️ DERIVED, and `unrendered` is the DIFFERENCE rather than a second hand-typed list.
     let declared = declared_appendix_vectors();
-    let rendered: Vec<String> = golden_regions().iter().map(|(id, _, _)| id.to_string()).collect();
+    let region_ids: Vec<String> = golden_regions().iter().map(|(id, _, _)| id.to_string()).collect();
+    let rendered_all: Vec<String> =
+        region_ids.iter().cloned().chain(std::iter::once("G3".to_string())).collect();
+    let rendered: Vec<String> = declared.iter().filter(|d| rendered_all.contains(d)).cloned().collect();
     // A rendered id the appendix does not declare is a RAISE, not a silent extra row: it means the
     // codec is emitting a vector the spec does not name, which no count would reveal.
-    for r in &rendered {
+    for r in &rendered_all {
         assert!(
             declared.contains(r),
             "golden_regions() renders `{r}`, which spec/grammar.md Appendix A does not declare — \
@@ -790,6 +848,10 @@ pub fn emit_grammar_vectors_json() -> String {
         .collect();
     s.push_str(&rendered.join(",\n"));
     s.push('\n');
+    s.push_str("  ],\n");
+    s.push_str("  \"tag_vectors\": [\n");
+    s.push_str(&render_g3());
+    s.push('\n');
     s.push_str("  ]\n");
     s.push_str("}\n");
     s
@@ -798,20 +860,20 @@ pub fn emit_grammar_vectors_json() -> String {
 /// The artifact's stated population. ⚠️ PARTIAL AND STATED, NOT LEFT TO BE DISCOVERED --
 /// the 16(d) principle, and the same discipline the `structure_key_vectors` coverage note uses.
 const COVERAGE_NOTE: &str = "This artifact carries the region WIRE FORM of the Appendix A.1 \
-golden vectors this codec can build: G1 and G4. It is generated from conformance/src/grammar.rs, \
+golden vectors this codec can build: G1 and G4, plus the tag canonical serialization of G3 (`tag_vectors`). It is generated from conformance/src/grammar.rs, \
 and conformance/tests/grammar_vectors.rs asserts (a) the committed file is byte-identical to a \
 fresh generation, so a stale artifact fails CI, and (b) the rendered bytes agree with the \
 hand-maintained hex in spec/grammar.md Appendix A.1 -- which is the binding that did not exist \
 before: the goldens were a Rust `const` with no tie to the spec, so the two could diverge \
 silently. WHAT THIS DOES NOT CARRY, each with a different reason so a reader knows what to do \
-next: (i) G2, G3 and G5 are DECLARED in Appendix A.1 and have no builder in this crate, so they \
-are named in `unrendered_vectors` rather than omitted quietly -- rendering them needs the gather, \
-default-attribute and extract shapes built, not a wider corpus. (ii) The op vocabulary is NOT \
+next: (i) G2 and G5 are DECLARED in Appendix A.1 and have no builder in this crate, so they \
+are named in `unrendered_vectors` rather than omitted quietly -- rendering them needs the gather \
+region (gated on the OpAttrs byte freeze) and the extract shape built, not a wider corpus. (ii) The op vocabulary is NOT \
 exercised: G1 and G4 place `add`, `mul` and (via G2, absent) `gather`, so a divergence on any \
 other KISS-Ops op name is invisible to a byte-match against this set -- op-name agreement is a \
 different instrument's job. (iii) The declared KISS-Classify op-CATEGORY set has 24 members and \
 no region vector here places any of them; a kernel class absent from every corpus in the suite \
 is invisible to this artifact exactly as it is to the others, which is a coverage question owned \
 upstream and not closed by generating this file. So 'the byte-match passed' means the region wire \
-FORM agrees for the two shapes rendered -- not that the op vocabulary agrees, and not that the \
+FORM agrees for the two region shapes rendered -- not that the op vocabulary agrees, and not that the \
 corpus spans the domain.";
