@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.43 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R5.19, the `lint:kiss_sidecar` ledger-category row split out of R5.6 (PM). It records why `kiss_sidecar.py` credits no clause today (no `--emit-coverage`) and why crediting 6.2-0004 / 6.1-0007 would overstate (each is half enforced).
+
 ## 0.6.42 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): ROADMAP R3.18 writes up the gap the G5 options note found (Grammar has no definition of a scalar-bearing node; blocked by R1.25) as the prerequisite row for any G5 vector code (PM ruling 2026-10-30).
