@@ -59,7 +59,7 @@ ROOT = os.path.dirname(HERE)
 DOCS = ["spec/umbrella.md", "spec/announce.md", "spec/classify.md", "spec/ops.md",
         "spec/grammar.md", "spec/contract.md", "spec/synth.md", "spec/consume.md",
         "spec/emit.md", "spec/conform.md", "spec/namespaces/cuda.md",
-        "spec/namespaces/vulkan.md", "CONTRIBUTING.md"]
+        "spec/namespaces/vulkan.md", "spec/namespaces/sycl.md", "CONTRIBUTING.md"]
 
 SUBS = ["umbrella", "announce", "classify", "ops", "grammar", "contract", "synth",
         "consume", "emit", "conform"]

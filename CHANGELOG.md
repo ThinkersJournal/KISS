@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.47 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Namespace, additive; not Breaking:** registers `sycl` (status `registered`, maintainer bonefish) in `conformance/registry/namespaces.json` and adds the maintainer-owned annex `spec/namespaces/sycl.md` (grammar `sycl:spir64` | `sycl:intel-gpu-<arch>`, 36 tokens, `-` admitted by KISS-CLASSIFY-6.8-0005). Informative about status: nothing produces `sycl:` tokens yet; the 6.8-0014 witness proves reachability of a token only and no admitted-set claim is made (`sycl:spir64` beside a device token is unmeasured). KISS pins only the grammar and the match rule (6.8-0004); the token set is Bonefish's (`bonefish-sycl-emit` `TOKENS`). `ArchSku` is the Unpopped lane's call. No clause, test or corpus change.
+
 ## 0.6.46 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** `HANDOFF.md` rewritten for the KISS lane (state after #738-#743: the corpus bundles `ops-ulp-edge.json` and `ops-move-wide-nan.json`, R3.18, R5.19, the Unpopped seams ruling, the target-token ruling, the 2026-11-01 issue sweep). No spec, corpus or code change.
