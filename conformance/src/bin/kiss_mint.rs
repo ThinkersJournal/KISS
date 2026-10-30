@@ -11,6 +11,7 @@
 //!   corpus/ops-atan2-quadrants.json   — KISS-OPS-6.9-0001: f32 atan2 four-quadrant + signed-zero + inf cells, class ULP (never exact-byte, §6.8-0005)
 //!   corpus/ops-sqrt-rounding.json     — KISS-OPS-6.8-0003: f32 sqrt, class ULP bound 0 (the correctly-rounded arm; hard cases, exact squares, subnormals, +-0, +inf)
 //!   corpus/ops-nextafter.json         — KISS-OPS-6.9-0003 (value arm): f32/f64 nextafter on the dtype's own lattice, exact-byte (zero crossing, signed zeros, subnormal/normal boundary, max finite <-> inf)
+//!   corpus/ops-move-wide-nan.json     — informative, NO consumer obligation: f32/f64 neg/abs/copysign NaN-MOVE cells (the wide counterpart of ops-narrow-move-nan)
 //!   corpus/ops-narrow-move-nan.json    — §6.16-0009/-0011: narrow-float sign-edit MOVE cells —
 //!                                        a moved NaN's bits (payload + post-edit sign) survive
 //!                                        EXACTLY (no decline member; the vector is the enforcement).
@@ -911,11 +912,85 @@ fn write_bundle(rel_path: &str, doc: &str) {
     eprintln!("wrote {path}");
 }
 
+// ---- f32/f64 sign-edit MOVE bundle (informative; KISS-OPS-6.16-0009 / KISS-CONFORM-6.8-0010(a)) ----
+//
+// WHY: `ops-narrow-move-nan.json` carries the move cells for the NARROW floats only, and 6.16-0009 is
+// written about them. A moved NaN is exact-byte for every float dtype (6.8-0010(a)), and the same
+// hazard exists wider: a path that promotes an `f32` through a wider register can quiet a moved
+// signaling NaN. This bundle carries the same `neg`/`abs`/`copysign` family at `f32` and `f64`, so
+// the move side of the move/compute boundary is visible next to the compute side already in
+// `ops-transcendental-nan.json` (`exp`/`log`/`sin` of a signaling NaN -> a QUIET NaN, 6.16-0010).
+//
+// NO CONSUMER OBLIGATION. Offered, not required: nothing in the spec requires a consumer to run it.
+// POPULATION / LIMITS (stated): single-op cells only. The multi-stage half of the boundary (6.16-0011:
+// a reduction with a `post`, a row-reduction with an epilogue, traced to the observable OUTPUT) is NOT
+// carried, because a cell has one scalar input per role and a fold needs a vector; that needs a
+// composite cell shape the corpus does not have. Selection moves (`max_prop`/`min_prop`) at f32/f64
+// are in `ops-minmax-nan.json`.
+fn move_wide_doc() -> String {
+    struct D {
+        name: &'static str,
+        nans: [(&'static str, u64); 3],
+        neg_zero_sign: u64,
+        one: u64,
+        bytes: usize,
+    }
+    let dtypes = [
+        D {
+            name: "f32",
+            nans: [("snan", 0x7F80_0001), ("qnan-rich", 0x7FD5_5555), ("neg-qnan-rich", 0xFFD5_5555)],
+            neg_zero_sign: 0x8000_0000,
+            one: u64::from(1.0f32.to_bits()),
+            bytes: 4,
+        },
+        D {
+            name: "f64",
+            nans: [
+                ("snan", 0x7FF0_0000_0000_0001),
+                ("qnan-rich", 0x7FFA_AAAA_AAAA_AAAA),
+                ("neg-qnan-rich", 0xFFFA_AAAA_AAAA_AAAA),
+            ],
+            neg_zero_sign: 0x8000_0000_0000_0000,
+            one: 1.0f64.to_bits(),
+            bytes: 8,
+        },
+    ];
+    let be = |v: u64, n: usize| v.to_be_bytes()[8 - n..].to_vec();
+    let mut cells = Vec::new();
+    let mut tc = 1u32;
+    for d in &dtypes {
+        for (pname, val) in d.nans {
+            let a = be(val, d.bytes);
+            let tags = format!("\"moved-nan\",\"sign-edit\",\"{pname}\",\"6.16-0009\"");
+            cells.push(move_cell(tc, "neg", d.name, &a, None, &tags));
+            tc += 1;
+            cells.push(move_cell(tc, "abs", d.name, &a, None, &tags));
+            tc += 1;
+        }
+        // copysign: the signaling NaN's magnitude with a negative sign source (sign bit only).
+        let nan0 = be(d.nans[0].1, d.bytes);
+        let neg_sign = be(d.neg_zero_sign, d.bytes);
+        cells.push(move_cell(
+            tc,
+            "copysign",
+            d.name,
+            &nan0,
+            Some(&neg_sign),
+            "\"moved-nan\",\"sign-edit\",\"copysign-neg\",\"6.16-0009\"",
+        ));
+        tc += 1;
+        // Finite negative control: a finite passes a quieting path too, so the set does not red on everything.
+        cells.push(move_cell(tc, "neg", d.name, &be(d.one, d.bytes), None, "\"finite-control\",\"sign-edit\",\"6.16-0009\""));
+        tc += 1;
+    }
+    bundle_doc("OPS", "KISS-OPS-6.16-0009", &cells)
+}
+
 fn main() {
     let flags = kiss_conformance::cli::basics(
         "kiss_mint",
         "Mints the frozen oracle-vector corpus under conformance/corpus/.",
-        &[("--write", "write the eleven bundles (nothing is written without it)")],
+        &[("--write", "write the twelve bundles (nothing is written without it)")],
     );
     if flags.is_empty() {
         eprintln!("kiss_mint: nothing written; pass --write to mint the corpus (see --help)");
@@ -932,4 +1007,5 @@ fn main() {
     write_bundle("/corpus/ops-sqrt-rounding.json", &sqrt_doc());
     write_bundle("/corpus/ops-nextafter.json", &nextafter_doc());
     write_bundle("/corpus/ops-minmax-nan.json", &minmax_nan_doc());
+    write_bundle("/corpus/ops-move-wide-nan.json", &move_wide_doc());
 }
