@@ -51,7 +51,7 @@ The remaining 508<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **390<!-- bound:untested_rows --> genuinely untested**, 44 enforced by a
 document lint, 33 `blocked`, 14 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 845<!-- bound:test_fns --> test fns, **231<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 846<!-- bound:test_fns --> test fns, **232<!-- bound:uncited_tests --> cite
 no backing clause**: each is either named by a §9 row or tagged `// harness-internal: <reason>`
 (KISS-CONFORM-6.1-0003), and the 185 that were neither were cited or tagged one by one (KISS#136). The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
