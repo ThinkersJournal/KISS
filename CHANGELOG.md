@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/kiss-ref-v4-delta.md` sizes the kiss-ref move from `sk5`/contract v3 to `sk6`/v4 (one vendored file differs, three dtypes, 3-5 lane-hours, best done at the sk7 batch close); ROADMAP R3.17.
+
 ## 0.6.34 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Ledger notes only (no spec text, no bytes, no status change, floor unmoved; ROADMAP R5.6): the eight `UNBACKED.tsv` rows that said `#144 no sidecar` now say what exists (the nine sidecars, `kiss_sidecar.py --check` in CI) and what is still missing.
