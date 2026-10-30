@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Spec** (additive; Part of KISS#20, ROADMAP R1.29): new `KISS-CONFORM-6.8-0002b` pins the ULP-distance function: the absolute difference of sign-magnitude total-order keys (`b | 2^(w-1)` when the sign is clear, `!b mod 2^w` when set), so `-0.0`/`+0.0` are 1 apart and a comparator that subtracts raw patterns (2^(w-1) across zero) is rejected. Reference: `ulp_key(width, bits)`; test `test_conform_ulp_distance_function` (goldens at f16/bf16/f32/f64; fails with 2^31 when the key is replaced by raw bits). The edge-case probe corpus half of #20 stays owed. harness 483 -> 484; no byte moves.
+
 ## 0.6.34 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Ledger notes only (no spec text, no bytes, no status change, floor unmoved; ROADMAP R5.6): the eight `UNBACKED.tsv` rows that said `#144 no sidecar` now say what exists (the nine sidecars, `kiss_sidecar.py --check` in CI) and what is still missing.

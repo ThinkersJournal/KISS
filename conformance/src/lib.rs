@@ -192,6 +192,18 @@ fn total_order_f32(x: f32) -> u32 {
     }
 }
 
+/// The sign-magnitude total-order key of a `width`-bit binary float pattern (Conform §6.8-0002b):
+/// `b | 2^(w-1)` when the sign bit is clear, `(!b) mod 2^w` when it is set.
+pub fn ulp_key(width: u32, bits: u64) -> u64 {
+    let sign = 1u64 << (width - 1);
+    let mask = if width == 64 { u64::MAX } else { (1u64 << width) - 1 };
+    if bits & sign == 0 {
+        bits | sign
+    } else {
+        !bits & mask
+    }
+}
+
 /// The ULP distance between two finite f32 values (Conform §6.8, ULP-tolerance).
 pub fn ulp_distance_f32(a: f32, b: f32) -> u64 {
     (total_order_f32(a) as u64).abs_diff(total_order_f32(b) as u64)
