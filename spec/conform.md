@@ -971,6 +971,11 @@ enum (§6.0). See umbrella §3 for the full statement.
   comparator that subtracts the raw sign-magnitude bit patterns is wrong whenever the operands
   differ in sign (it reports `2^(w-1)` between `+0.0` and `-0.0`) and MUST be rejected. *Test:*
   `test_conform_ulp_distance_function`.
+  *Edge-case corpus (informative; imposes no obligation on any consumer):* `conformance/corpus/ops-ulp-edge.json`
+  offers `ulp_distance(a, b)` cells at `f16`, `bf16`, `f32` and `f64` covering both zero signs, a subnormal pair
+  straddling zero, subnormal-to-zero and subnormal-to-normal steps, the largest finite value against each
+  infinity, `+inf` against `-inf`, `+-1.0`, and the extremes. A NaN has no key and is not in the file. A
+  consumer MAY use it to check its own ULP comparator; nothing in this suite requires it to.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
   tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
