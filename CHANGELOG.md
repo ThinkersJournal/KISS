@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.33 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R1.28 row no longer lists the derivability witness as open; KISS-CLASSIFY-6.8-0014 already requires it.
+
 ## 0.6.32 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): new `SECURITY.md` with the portfolio "Supported versions" text (CireSnave 2026-10-29: the latest line is fixed, an older line only when the backport is small, no support period promised) and which spec versions `kiss-ref` validates (the vendored corpus: KISS 0.2.14 plus bundles to 0.2.26; the current line is not yet covered; the spec itself is a pre-freeze draft with no support promise).
