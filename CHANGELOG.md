@@ -3,9 +3,16 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+## 0.6.37 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Spec** (additive; Part of KISS#20, ROADMAP R1.29): new `KISS-CONFORM-6.8-0002b` pins the ULP-distance function: the absolute difference of sign-magnitude total-order keys (`b | 2^(w-1)` when the sign is clear, `!b mod 2^w` when set), so `-0.0`/`+0.0` are 1 apart and a comparator that subtracts raw patterns (2^(w-1) across zero) is rejected. Reference: `ulp_key(width, bits)`; test `test_conform_ulp_distance_function` (goldens at f16/bf16/f32/f64; fails with 2^31 when the key is replaced by raw bits). The edge-case probe corpus half of #20 stays owed. harness 483 -> 484; no byte moves. **Not Breaking for a conformance consumer:** additive clause, no wire, byte, vocabulary or existing-clause change, so no `contract_version`/`list_version`/`sk` bump; a consumer whose ULP comparator already differences total-order keys is unaffected, and one that subtracts raw patterns was already wrong across zero and is now rejected by name (a new obligation on that consumer, not a change to anything it implements correctly).no byte moves.
+## 0.6.36 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R1.14 marked done (#618) and R3.10 marked half done, with what was and was not checked (Grammar G2/G3/G5 rendering unchecked).
+
+## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/kiss-ref-v4-delta.md` sizes the kiss-ref move from `sk5`/contract v3 to `sk6`/v4 (one vendored file differs, three dtypes, 3-5 lane-hours, best done at the sk7 batch close); ROADMAP R3.17.
 
 ## 0.6.34 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
