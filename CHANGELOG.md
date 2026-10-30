@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.34 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Ledger notes only (no spec text, no bytes, no status change, floor unmoved; ROADMAP R5.6): the eight `UNBACKED.tsv` rows that said `#144 no sidecar` now say what exists (the nine sidecars, `kiss_sidecar.py --check` in CI) and what is still missing.
+
 ## 0.6.33 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): ROADMAP R1.28 row no longer lists the derivability witness as open; KISS-CLASSIFY-6.8-0014 already requires it.
