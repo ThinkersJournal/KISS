@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.39 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `HANDOFF.md` rewritten as current state (2026-10-30): #731-#736 merged, #724/#725 held, the R3.10 G3/G5 question open.
+
 ## 0.6.38 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): ROADMAP R3.10 states what was checked about Grammar G2/G3/G5 (declared, unrendered; G2 gated on the OpAttrs freeze).
