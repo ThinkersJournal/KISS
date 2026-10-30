@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.46 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `HANDOFF.md` rewritten for the KISS lane (state after #738-#743: the corpus bundles `ops-ulp-edge.json` and `ops-move-wide-nan.json`, R3.18, R5.19, the Unpopped seams ruling, the target-token ruling, the 2026-11-01 issue sweep). No spec, corpus or code change.
+
 ## 0.6.45 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Corpus, additive, informative; NO consumer obligation; not Breaking** (PM ruling on the Unpopped normative-seams Q1, move/compute boundary; stays derived per implementation, no new MUST): new `conformance/corpus/ops-move-wide-nan.json`, minted by `kiss_mint --write` (the other bundles regenerate with no diff): 16 exact-byte cells, `neg`/`abs`/`copysign` on a signaling NaN, a rich-payload quiet NaN and a negative quiet NaN, plus one finite control, at `f32` and `f64`. It is the wide counterpart of `ops-narrow-move-nan.json` (which carries only the narrow floats), so the MOVE side of the boundary sits beside the compute side already in `ops-transcendental-nan.json` (a signaling NaN through `exp`/`log`/`sin` yields a quiet NaN, 6.16-0010). Checked by `conformance/tests/mint_move_wide.rs` against a typed-integer sign-edit model and for discrimination (the signaling-NaN cells differ from a quieted result by the quiet bit); mutation: a `neg` that also sets the f32 quiet bit fails it at tc 1 (left 4290772993, right 4286578689). **Not carried, and why:** KISS-OPS-6.16-0011 (a reduction with a `post`, a row-reduction with an epilogue, traced to the observable output) needs a composite cell shape; a cell has one scalar input per role and a fold needs a vector. 6.16-0009's own text is about the narrow floats; the wide cells rest on 6.8-0010(a) (a moved NaN is exact-byte), which is a reading, not a clause on f32/f64 sign edits. Nothing in the spec requires a consumer to run the file. Consumers re-vendor the corpus once at the sk7 close.
