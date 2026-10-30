@@ -1433,16 +1433,28 @@ because its full bytes include the KISS-Ops-owned OpAttrs sub-block, its OpAttrs
 reproduced verbatim from the cited KISS-Ops version's OpAttrs vector (and are valid only once
 that upstream encoding is frozen, §8-0008).
 
-*Vector G3 — the tag-equality (default-attribute) vector.* Two authorings of a `gather` tag
-— one stating `axis = 0` explicitly, one omitting `axis` and relying on its KISS-Ops default
-of `0` — MUST canonicalize (§6.1-0007: defaults made explicit) to the **same** tag bytes and
-MUST compare equal; a third authoring with `axis = 1` MUST differ. Default resolution is
-owned upstream: the KISS-Ops OpAttrs wire encoding emits the defaulted `axis = 0` explicitly
-(§6.2-0006, §8-0008; KISS-OPS §6.19-0005), so both authorings produce **identical** OpAttrs bytes and KISS-Grammar
-compares the opaque blob byte-exactly without interpreting the sub-vocabulary. The tags are
-compared in the dedicated **tag canonical serialization** of §6.8-0012 (op_name + OpAttrs
-blob + canonical operand-role tuple, carrying no region framing). Drives
-`test_grammar_canonical_tag_normal_form` and `test_grammar_tag_canonical_serialization`.
+*Vector G3 — the tag-equality (default-attribute) vector.* Three authorings of a `gather` tag
+with `axis = 1`, `index_operand = 1` and `index_dtype = u32` (`axis` and `index_dtype` are
+mandatory and have no default, KISS-OPS §6.19-0027) differ only in `oob_policy`, the field that
+does have a KISS-Ops default (`skip`, ordinal `1`): one states `oob_policy = skip`, one **omits**
+`oob_policy` and relies on its default, one states `oob_policy = clamp`. The first two MUST
+canonicalize (§6.1-0007: defaults made explicit) to the **same** tag bytes and MUST compare
+equal; the third MUST differ. Default resolution is owned upstream: the KISS-Ops OpAttrs wire
+encoding emits the defaulted `oob_policy = skip` explicitly (§6.2-0006, §8-0008; KISS-OPS
+§6.19-0005), so both authorings produce **identical** OpAttrs bytes and KISS-Grammar compares
+the opaque blob byte-exactly without interpreting the sub-vocabulary. The tags are compared in
+the dedicated **tag canonical serialization** of §6.8-0012 (op_name + OpAttrs blob + canonical
+operand-role tuple, carrying no region framing). The `skip` tag's exact bytes (the `clamp` tag
+differs in the one byte `02` for `01` at the `oob_policy` position):
+
+```
+06 00 67 61 74 68 65 72                      op_name = "gather"
+04 00 01 01 01 01                            OpAttrs len 4: axis 1, oob_policy skip, index_operand 1, index_dtype u32
+02 00 04 00 64 61 74 61 01 00 2A 05 00 69 6E 64 65 78 03 00 75 33 32
+                                             operand-role tuple k = 2: (data, *), (index, u32)
+```
+
+Drives `test_grammar_canonical_tag_normal_form` and `test_grammar_tag_canonical_serialization`.
 
 *Vector G4 — the repeated-bind / structural-dedup vector (`out = a + a`, `n_inputs = 1`).*
 Authored against `ops_version = "1"`, `classify_version = "1"`. Its root `add`
