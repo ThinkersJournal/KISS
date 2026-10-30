@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.41 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/options-r3-10-g5-extract-vector.md`, the options note for Appendix A.1 vector G5 (ROADMAP R3.10; PM ruling: a design note first, not code). Four options (wire-level G5 without a scalar vocabulary / wait for R1.25 / least-path derivation in the codec plus an independent check / demote G5 to prose); recommends the first. States what was not checked (the op catalog, the consumers' extract emission, the decoder's path handling).
+
 ## 0.6.38 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - Docs only (no spec text, no bytes): ROADMAP R3.10 states what was checked about Grammar G2/G3/G5 (declared, unrendered; G2 gated on the OpAttrs freeze).
