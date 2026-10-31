@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.54 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.27, first item):** `KISS-CONFORM-6.5-0016` (an enumeration that cannot complete is an error, never a silently empty or truncated result) was cited by `test_conform_sweep_incompleteness_is_surfaced` and defined nowhere in `spec/`; its text was allocated in `rfcs/derive-and-discriminate-2026-08-08.md`. It is now defined in `spec/conform.md`, verbatim, apart from the cross-reference to 0011, marked `ALLOCATION LANDED` in the RFC. That test's `Backs[enforced]` line named `KISS-CLASSIFY-6.5-0011` (the index-width clause) by mistake and now names 0016. `KISS-CONFORM-6.5-0011` (negative controls for the harness) stays allocated in the RFC, undefined: no test of it exists. Binds the suite's instruments, not a seam consumer; no corpus or wire change. Harness-tested 486 to 487, clauses 994 to 995.
+
 ## 0.6.53 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clauses (ROADMAP R1.37, CireSnave board 345 "B"):** `KISS-OPS-6.13-0010` pins the pooled window view's output extent per axis, `⌊(n + 2p − D) / s⌋ + 1` with `D = d·(k − 1) + 1` (0 when no window fits; a zero `window_size`, `stride` or `dilation` is not expressible), and `KISS-OPS-6.13-0011` requires every output window to have at least one in-bounds tap: a condition over the window attributes and the operand extent, exact for all shapes (the attribute-only bound `2·p ≤ k` is not, at dilation above 1). A violating shape is not expressible: a producer MUST NOT write it, a reader MUST decline it. No OpAttrs byte moves. Tests `test_ops_window_output_extent` and `test_ops_window_overlap_declined` hold the closed form (`conformance/src/window.rs`) against a brute-force scan over 12 x 6 x 4 x 4 x 12 axis shapes, with the `n=1, k=2, d=2, s=1, p=1` negative control declined at window 0. README figures re-derived (clauses 994, harness 486, test fns 848).

@@ -825,6 +825,17 @@ enum (§6.0). See umbrella §3 for the full statement.
   wide truth; a suite that toleranced a narrow-A cell against the widest-A reference (or
   against §6.5-0007's transcendental oracle) MUST be rejected. *Test:*
   `test_conform_reduction_cell_oracle_reference`.
+- **KISS-CONFORM-6.5-0016** — Where KISS-Conform relies on the result of a **discovery,
+  enumeration, or sweep** step — over source files, vectors, registry entries, or artifacts — that
+  step MUST distinguish a **genuine negative** ("looked, and found nothing") from a **failure to
+  look** ("could not enumerate, wholly or in part"). An enumeration that cannot complete MUST
+  surface that fact to its consumer as an error or an explicit incompleteness signal, and MUST NOT
+  return a **silently empty or silently truncated** result. A consumer MUST NOT treat a result of
+  unknown completeness as authoritative. Where the sweep's purpose is to mechanize a claim that
+  would otherwise be hand-maintained, a truncated sweep MUST be treated as a **failure** of that
+  check, not as its satisfaction. **This clause is the attribution half of the RFC's Pattern B; the capability half
+  (RFC §6.5-0011) is allocated and not yet defined.** *Test:*
+  `test_conform_sweep_incompleteness_is_surfaced`.
 - **KISS-CONFORM-6.5-0017** — The frozen oracle-vector corpus (§6.5-0008/0009) is carried in a
   machine-readable bundle whose `schema` is `kiss-oracle-vectors-v1.json`. Such a bundle MUST carry
   `schema`, `schema_version` (an **integer** — a gate that truncates a fractional value is not a
@@ -1694,6 +1705,7 @@ the traceability lint.
 | KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
 | KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
 | KISS-CONFORM-6.5-0010 | `test_conform_reduction_cell_oracle_reference` |
+| KISS-CONFORM-6.5-0016 | `test_conform_sweep_incompleteness_is_surfaced` |
 | KISS-CONFORM-6.5-0017 | `test_conform_oracle_vector_envelope` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
