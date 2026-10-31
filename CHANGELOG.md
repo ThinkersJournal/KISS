@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.2 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.15, KISS#412):** `KISS-CONTRACT-6.4-0011` forbade one verdict for a surfaced shape gap and required none, so a two-valued check (Fuel's `shape_consistent`, and this reference's own, which returned `true` for a gap whatever the declared shape) satisfied it. It now states the verdict: **undetermined**, neither inconsistent nor verified, with three outcomes the interface must be able to express. Reference: `ShapeVerdict` and `shape_verdict` added; `shape_consistent` now means *verified* (a gap is `false`). `test_contract_output_shape_consistency` now asserts the verdict over four different declared shapes against a gap (the declared shape is never read on that arm); mutated to return Consistent for a gap, it fails. Binds a consumer's shape check; no corpus or wire change. R1.15's other half (KISS#411, how the seven §6.12 leaves are represented) is NOT done as a clause: the choice changes the serialized `op_dag` bytes and waits on a ruling. Options note `docs/options-r1-15-scalar-source-leaf-representation.md` (recommendation: leaf tokens as `Op` nodes, no new node kind).
+
 ## 0.7.1 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** ROADMAP R1.27 no longer lists a top-level key-set pin for `structure_key_vectors.json` as open: `test_reference_artifact_normative_surface_is_declared` (KISS-CONFORM-6.3-0010) already classifies all 21 top-level members and fails on an unclassified or phantom one. No clause, corpus or code change.
