@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.3 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.16, KISS#413):** options note `docs/options-r1-16-reassociation-band.md` for the three defects of `KISS-CONTRACT-6.8-0012`'s reassociation band: name the §6.17-0009 reference as the schedule of `|max partial sum|` (no choice needed); the zero band is nearly unreachable once that is named, so state it as exact equality (D1) or add a floor term (D2); calibrate `k` by a recorded method (K1) or change the scale term to the sum of absolute values (K3). No clause, corpus or code change.
+
 ## 0.7.1 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** ROADMAP R1.27 no longer lists a top-level key-set pin for `structure_key_vectors.json` as open: `test_reference_artifact_normative_surface_is_declared` (KISS-CONFORM-6.3-0010) already classifies all 21 top-level members and fails on an unclassified or phantom one. No clause, corpus or code change.
