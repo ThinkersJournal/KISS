@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.49 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `docs/options-r1-32-34-seam-mechanisms.md`, the options note with a recommendation for ROADMAP R1.32 (move/compute classification), R1.33 (backend dtype-compute declaration) and R1.34 (contract vector width). Findings: the ops catalog's family column is not the move/compute class (`neg`/`abs` are filed `arithmetic`); a per-dtype Announce bitset does not fit the 16 core FEAT bits; a width already exists as the derived per-operand `vL` (Classify 6.5-0009) plus the contract's `count_unit`, with no clause relating the two. No clause, corpus or code change; every option that binds a consumer or moves wire bytes waits for CireSnave.
+
 ## 0.6.48 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only (ROADMAP R1.32-R1.34):** three design-first rows from CireSnave's board-338 ruling: (1) specify which base operations only move bits and which compute, (2) a mechanism for a backend to declare the dtypes it can compute on, (3) a mechanism for a kernel contract to state its vector width. Each row is an options note with a recommendation first; no consumer MUST without his word; KISS states no list of backend capabilities and no width value. Q4 and Q5 of the Unpopped seams note are still his and get no row. No spec, corpus or code change.
