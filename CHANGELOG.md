@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.52 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `docs/options-r1-36-37-accuracy-and-window.md`, the options notes with recommendations for ROADMAP R1.36 (guaranteed-accuracy declaration: a provider-level record keyed by op, MathFidelity mode and dtype, with a floor rule against kernel Guarantees) and R1.37 (window overlap). Finding for R1.37, by brute force over small shapes (scratch script, assumed output extent, which `spec/ops.md` does not state): `2*pad <= window_size` leaves no empty window at dilation 1 but 12 counterexamples at dilation above 1, so the exact rule needs the operand extent. No clause, corpus or code change.
+
 ## 0.6.51 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only (ROADMAP R1.36, R1.37):** the two rows from CireSnave's board-338 Q4 and Q5 rulings: (Q4) a declaration format for guaranteed accuracy per op and precision mode, by backend and per kernel through a backend (KISS defines the format, never the numbers); (Q5) the window-overlap rule, a pool/`im2col` window must overlap at least one real input element, violating shapes not expressible. Each is options-first; no consumer MUST without his word. No clause, corpus or code change.
