@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.53 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clauses (ROADMAP R1.37, CireSnave board 345 "B"):** `KISS-OPS-6.13-0010` pins the pooled window view's output extent per axis, `⌊(n + 2p − D) / s⌋ + 1` with `D = d·(k − 1) + 1` (0 when no window fits; a zero `window_size`, `stride` or `dilation` is not expressible), and `KISS-OPS-6.13-0011` requires every output window to have at least one in-bounds tap: a condition over the window attributes and the operand extent, exact for all shapes (the attribute-only bound `2·p ≤ k` is not, at dilation above 1). A violating shape is not expressible: a producer MUST NOT write it, a reader MUST decline it. No OpAttrs byte moves. Tests `test_ops_window_output_extent` and `test_ops_window_overlap_declined` hold the closed form (`conformance/src/window.rs`) against a brute-force scan over 12 x 6 x 4 x 4 x 12 axis shapes, with the `n=1, k=2, d=2, s=1, p=1` negative control declined at window 0. README figures re-derived (clauses 994, harness 486, test fns 848).
+
 ## 0.6.52 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** `docs/options-r1-36-37-accuracy-and-window.md`, the options notes with recommendations for ROADMAP R1.36 (guaranteed-accuracy declaration: a provider-level record keyed by op, MathFidelity mode and dtype, with a floor rule against kernel Guarantees) and R1.37 (window overlap). Finding for R1.37, by brute force over small shapes (scratch script, assumed output extent, which `spec/ops.md` does not state): `2*pad <= window_size` leaves no empty window at dilation 1 but 12 counterexamples at dilation above 1, so the exact rule needs the operand extent. No clause, corpus or code change.

@@ -1410,6 +1410,26 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   attributes, evaluated by the §6.11 structural oracle; KISS-Ops MUST NOT require a
   structured op's body to be a §6.13-0006 scalar-expression tree. *Test:*
   `test_ops_structured_decomposition_reference`.
+- **KISS-OPS-6.13-0010** — The §6.13-0004 window view MUST be defined per spatial axis
+  by the operand extent `n` (`n ≥ 0`) and that axis's `window_size` `k`, `stride` `s`,
+  `dilation` `d` and `padding` `p` (§6.19-0023; `k`, `s`, `d` ≥ 1 and `p` ≥ 0 — a zero
+  `window_size`, `stride` or `dilation` is not expressible) as follows: the dilated extent is
+  `D = d·(k − 1) + 1`; the output extent is `⌊(n + 2p − D) / s⌋ + 1` when `n + 2p ≥ D` and
+  `0` when it is not (no window fits); output window `o` (`0 ≤ o < output extent`) has tap
+  `j` (`0 ≤ j < k`) at operand position `o·s − p + j·d`; and a tap is in bounds exactly when
+  that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. *Test:*
+  `test_ops_window_output_extent`.
+- **KISS-OPS-6.13-0011** — On every spatial axis of an `avg_pool`, `max_pool` or `im2col`
+  window view, every output window MUST have at least one in-bounds tap (§6.13-0010), so
+  that every window over all axes overlaps at least one real operand element. The condition
+  is over the window attributes **and** the operand extent: the attribute-only bound
+  `2·p ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p = 1` has
+  one window whose taps lie at −1 and 1, and no real tap). A shape that violates it is not
+  expressible: a producer MUST NOT write it and a reader MUST decline it, so the empty
+  reduction it would otherwise name (a `max_pool` with no tap, an `avg_pool` with
+  `count_include_pad` false and a zero valid-tap count) is never reached. The rule
+  constrains values and not encodings: no OpAttrs byte moves. *Test:*
+  `test_ops_window_overlap_declined`.
 - **KISS-OPS-6.13-0007** — `hypot(a, b)` MUST yield `+∞` whenever either operand is
   infinite, **even if the other operand is NaN** (the IEEE 754 `hypot` infinity rule),
   overriding the naive `sqrt(add(sqr(a), sqr(b)))` — which would yield NaN for `(±∞, NaN)` —
@@ -2790,6 +2810,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
 | KISS-OPS-6.13-0008 | `test_ops_norm_axis_all_four` |
 | KISS-OPS-6.13-0009 | `test_ops_structured_decomposition_reference` |
+| KISS-OPS-6.13-0010 | `test_ops_window_output_extent` |
+| KISS-OPS-6.13-0011 | `test_ops_window_overlap_declined` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |
