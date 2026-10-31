@@ -3,7 +3,7 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.6.56 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+## 0.7.1 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** ROADMAP R1.27 no longer lists a top-level key-set pin for `structure_key_vectors.json` as open: `test_reference_artifact_normative_surface_is_declared` (KISS-CONFORM-6.3-0010) already classifies all 21 top-level members and fails on an unclassified or phantom one. No clause, corpus or code change.
 
