@@ -532,6 +532,8 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
 > `const_lit` C-ism is the cautionary proof that incidental impl choices leak."* §2.7 frames the
 > conformance-relevant property as structural **dissimilarity**, never compiler identity.
 
+**ALLOCATION LANDED:** KISS-CONFORM-6.5-0016 (0.6.54; text adopted verbatim apart from the cross-reference to 0011).
+
 - **KISS-CONFORM-6.5-0016** — Where KISS-Conform relies on the result of a **discovery,
   enumeration, or sweep** step — over source files, vectors, registry entries, or artifacts — that
   step MUST distinguish a **genuine negative** ("looked, and found nothing") from a **failure to
