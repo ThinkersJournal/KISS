@@ -3,7 +3,7 @@
   "generated_from": "conformance/src/announce.rs::emit_announce_vectors_json (the reference codec)",
   "spec_reference": "spec/announce.md §2.5 worked handshake example (informative) + the §6.1/§6.3/§6.4 framing clauses",
   "scope_note": "DIFFABLE, not COVERED: a foreign reader byte-diffs each frame's exact wire bytes (endianness, field width, padding) against its own encoder; this does NOT cover the untested KISS-Announce clauses or the reader/decline paths.",
-  "population": "the FIVE §2.5 worked-example POSITIVE frames only: the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from §2.5 — that is the burn-down this artifact makes measurable, not part of it.",
+  "population": "the EIGHT POSITIVE frames only: the five §2.5 worked-example frames (the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames) and the three §6.6 device-query frames DVRQ/DVRS/DVDC. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from §2.5 — that is the burn-down this artifact makes measurable, not part of it.",
   "negotiation_note": "the `negotiation` array (after `frames`) holds the two KISS-ANNOUNCE-7.3-0003 role-aware vectors: two 56-byte envelopes, which side is the provider, the negotiated profile, and the live capability word as 8 little-endian bytes. A foreign reader computes the live word from the two envelopes and diffs it; a plain AND of the two words is the wrong answer.",
   "frames": [
     {
@@ -35,6 +35,24 @@
       "clause": "KISS-ANNOUNCE-6.4-0007",
       "byte_length": 56,
       "bytes_hex": "43 44 45 43 03 00 00 00 AA BB CC 03 00 00 00 61 64 64 01 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 00 06 00 00 00"
+    },
+    {
+      "name": "dvrq_request",
+      "clause": "KISS-ANNOUNCE-6.6-0003",
+      "byte_length": 5,
+      "bytes_hex": "44 56 52 51 00"
+    },
+    {
+      "name": "dvrs_response",
+      "clause": "KISS-ANNOUNCE-6.6-0004",
+      "byte_length": 88,
+      "bytes_hex": "44 56 52 53 01 00 00 00 04 00 00 00 67 70 75 30 09 63 75 64 61 3A 73 6D 38 39 04 04 62 66 31 36 03 66 31 36 03 66 33 32 02 69 38 03 04 62 66 31 36 03 66 31 36 03 66 33 32 02 00 00 00 03 65 78 70 01 03 66 33 32 01 00 00 00 03 65 78 70 02 03 66 33 32 04 00 00 00 00"
+    },
+    {
+      "name": "dvdc_response",
+      "clause": "KISS-ANNOUNCE-6.6-0005",
+      "byte_length": 9,
+      "bytes_hex": "44 56 44 43 04 00 00 00 00"
     }
   ],
   "negotiation": [

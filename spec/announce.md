@@ -374,14 +374,15 @@ envelope; all multi-byte integers little-endian):
   `test_announce_reader_never_repairs`.
 
 - **KISS-ANNOUNCE-6.2-0014** — **A message's extent is determined by the message alone.** The
-  five messages of this standard are told apart by their leading 4 bytes — the handshake
-  envelope's `magic` (`SEAM`, §6.1), `SAVL` (§6.3-0011), `CYRQ` (§6.4-0001), `CRSP` (§6.4-0004) and
-  `CDEC` (§6.4-0007) — and each message's extent MUST be computed from its own bytes only: the
+  eight messages of this standard are told apart by their leading 4 bytes — the handshake
+  envelope's `magic` (`SEAM`, §6.1), `SAVL` (§6.3-0011), `CYRQ` (§6.4-0001), `CRSP` (§6.4-0004),
+  `CDEC` (§6.4-0007), `DVRQ` (§6.6-0003), `DVRS` (§6.6-0004) and `DVDC` (§6.6-0005) — and each message's extent MUST be computed from its own bytes only: the
   handshake envelope's is the length mandated by its `envelope_version` (56 for version 1;
   `magic` and `envelope_version` are read first, §6.2-0010); an availability list's is the end of
   the last of its `record_count` records (§6.3-0005); a `CYRQ`'s is the end of its identity block
   (§6.4-0001); a `CRSP`'s is the end of its payload (§6.4-0004); a `CDEC`'s is the end of its
-  `decline_code` (§6.4-0007). A reader MUST NOT take a message's extent from anything outside the
+  `decline_code` (§6.4-0007); a `DVRQ`'s and a `DVDC`'s is the end of their correlation field and a
+  `DVRS`'s is the end of its correlation field after its `device_count` records (§6.6-0004). A reader MUST NOT take a message's extent from anything outside the
   message. (The correlation field of §6.4-0013 is always present and is the last component of the
   identity block, so it is inside the extent of a `CYRQ`, `CRSP` and `CDEC` and each is
   self-delimiting.) *Test:*
@@ -392,7 +393,7 @@ envelope; all multi-byte integers little-endian):
   unchecked length) whatever carried or delivered the bytes. A reader MUST NOT treat a truncated
   message as an incomplete one to be completed by bytes it does not have. *Test:*
   `test_announce_truncated_message_rejected`.
-- **KISS-ANNOUNCE-6.2-0016** — A leading tag (the first 4 bytes) that is none of the five of
+- **KISS-ANNOUNCE-6.2-0016** — A leading tag (the first 4 bytes) that is none of the eight of
   §6.2-0014 MUST be rejected with a typed decline; a reader MUST NOT search the bytes that follow
   for a later tag (the no-repair discipline of §6.2-0008). *Test:*
   `test_announce_unknown_leading_tag`.
@@ -589,6 +590,21 @@ envelope; all multi-byte integers little-endian):
   uniformly; the reference implementation holds no exemption. *Test:*
   `test_announce_impl_std_only`.
 
+### 6.6 Device-query protocol
+
+*Informative.* A backend is a kernel runner; the **device** behind it is what limits what can be computed, and the kernels declare which dtypes they run on. So the facts a consumer needs about dtype support and accuracy belong to the **device record** a provider returns when it enumerates its devices, not to a blanket per-backend list (CireSnave, board 355, 2026-10-31, verbatim: "355: D"). KISS pins the **shape and the meaning** of the record and never a device's contents. This section makes this standard read the Classify dtype vocabulary (§6.6-0007) and the Ops `MathFidelity` ordinals (§6.6-0008), which the rest of KISS-Announce carries opaquely.
+
+- **KISS-ANNOUNCE-6.6-0001** — A provider that enumerates devices and advertises the device-query capability bit (§7.2, FEAT bit 35 `DEVICE_QUERY`) MUST implement a conforming device-query endpoint answering per §6.6-0002. *Test:* `test_announce_device_query_bit_implies_endpoint`.
+- **KISS-ANNOUNCE-6.6-0002** — A provider MUST answer a device-query request (`DVRQ`, §6.6-0003) with either a device response (`DVRS`, §6.6-0004) or a decline (`DVDC`, §6.6-0005). A provider that does not advertise bit 35 MUST answer a `DVRQ` with a `DVDC` carrying `QUERY_NOT_SUPPORTED` (§6.4-0009). A provider that has no device MUST answer with a `DVRS` of `device_count == 0`, which is a genuine negative and not a decline. *Test:* `test_announce_device_query_no_bit_declines`.
+- **KISS-ANNOUNCE-6.6-0003** — A device-query **request** MUST be framed as the 4-byte tag `DVRQ` (wire bytes `44 56 52 51`, u32 LE `0x51525644`) followed by the correlation field (§6.4-0013). *Test:* `test_announce_device_request_framing`.
+- **KISS-ANNOUNCE-6.6-0004** — A **device response** MUST be framed as the 4-byte tag `DVRS` (wire bytes `44 56 52 53`, u32 LE `0x53525644`); a little-endian u32 `device_count`; that many device records (§6.6-0006); then the correlation field. A producer MUST write a `device_count <= 4096` (`MAX_DEVICES`), and a reader MUST reject a larger count, or one the bytes supplied cannot contain, with a typed decline and without pre-allocating on the unchecked count. *Test:* `test_announce_device_response_framing`.
+- **KISS-ANNOUNCE-6.6-0005** — A **device decline** MUST be framed as the 4-byte tag `DVDC` (wire bytes `44 56 44 43`, u32 LE `0x43445644`); a little-endian u32 `decline_code` drawn from §6.4-0009; then the correlation field. A reader that does not recognize the code MUST treat it as a generic decline (§6.4-0010). *Test:* `test_announce_device_decline_framing`.
+- **KISS-ANNOUNCE-6.6-0006** — A **device record** MUST be: a little-endian u32 `device_id` byte-length in `[1, 4096]` and that many opaque bytes (a provider MUST NOT expect a reader to interpret them; they identify the device within this provider only); the `target` **token**; the `store_dtypes` set; the `compute_dtypes` set; a little-endian u32 `accuracy_count` `<= 65536` (`MAX_ACCURACY_RECORDS`) and that many accuracy records (§6.6-0008). A **token** is a u8 length in `[1, 255]` and that many printable-ASCII bytes without a space; a **dtype set** is a u8 count `<= 64` and that many tokens. The `target` token MUST be of the form `<namespace>:<capability>` (KISS-CLASSIFY-6.8-0003) and names the Classify target the device builds for. A reader MUST reject a `device_id` length of `0` or `> 4096`, a token length of `0`, a set count `> 64`, an `accuracy_count > 65536` or a length or count that runs past the bytes supplied, with a typed decline and without allocating on the unchecked value. *Test:* `test_announce_device_record_bounds`.
+- **KISS-ANNOUNCE-6.6-0007** — `store_dtypes` is the set of dtypes the device can **hold and move**; `compute_dtypes` is the set it can **compute on** (the distinction of ROADMAP R1.32: a device may store a dtype it cannot compute on). Each token of either set MUST be a spelling of the Classify closed dtype table (KISS-CLASSIFY §6.1) and MUST NOT be a reserved spelling (a reserved spelling is declined by Classify, so a device cannot offer it); each set MUST be strictly ascending bytewise (so one set has one spelling); and `compute_dtypes` MUST be a subset of `store_dtypes`. A reader MUST reject with a typed decline a record that breaks any of these, and a record that claims accuracy (§6.6-0008) for a dtype outside its `compute_dtypes`. KISS cannot know what a physical device does; what it pins is that a record which contradicts itself, or names a spelling that is not a dtype, is not accepted. *Test:* `test_announce_device_record_claims_are_consistent`.
+- **KISS-ANNOUNCE-6.6-0008** — An **accuracy record** is: the op token (KISS-OPS), a u8 `math_fidelity` that MUST be `1` (`bit-stable`) or `2` (`reduced-mantissa-permitted`), the OpAttrs `MathFidelity` ordinals, the dtype token, and a little-endian u32 `max_ulp`, where `0xFFFFFFFF` means the device declares **no bound** for the key and every other value (including `0`, an exact result) is the largest ULP distance from the key's reference function the device guarantees. The key `(op, math_fidelity, dtype)` MUST be unique and the records MUST be strictly ascending by that key (op bytes, then `math_fidelity`, then dtype bytes); a reader MUST reject a `math_fidelity` outside `{1, 2}` or records that are not strictly ascending with a typed decline. A device that lists no record for a key makes no claim for it. KISS pins this shape and its meaning, never a device's numbers; other bound kinds (relative, absolute) are carried by the kernel's Contract Guarantees and are not part of this record. *Test:* `test_announce_device_accuracy_record`.
+- **KISS-ANNOUNCE-6.6-0009** — The dtypes a kernel can run on a device are the **intersection** of the kernel's declared dtype set (KISS-Contract Capabilities) and the device's `compute_dtypes`. A consumer MUST NOT dispatch a kernel on a device for a dtype outside that intersection and MUST decline the pairing, whichever side lacks it. There is no backend-wide dtype list: two devices of one backend MAY answer differently, and a consumer MUST use the answer of the device it dispatches to. *Test:* `test_announce_effective_support_is_intersection`.
+- **KISS-ANNOUNCE-6.6-0010** — For a key `(op, math_fidelity, dtype)` on which a device declares a bound, a kernel run on that device MUST NOT declare a looser `max_ulp` under the same key; a consumer MUST decline that pairing. A kernel MAY declare a tighter bound, and a kernel that declares none runs at the device's bound. A kernel that is looser by design belongs under the `reduced-mantissa-permitted` key, because the mode is part of the key. The bound in force is the tighter of the two. *Test:* `test_announce_kernel_accuracy_not_looser_than_device_floor`.
+
 ---
 
 ## 7. Capability, Profile & Extension model
@@ -645,7 +661,7 @@ Assigned bits (first draft):
   semantics.
 - **FEAT** (core sub-range [24,40)) — bit 32 `PROVISION_ON_REQUEST` (provider builds a
   kernel on miss); bit 33 `CONTRACT_QUERY` (provider answers §6.4 contract-queries);
-  bit 34 reserved by name as `ARTIFACT_ATTESTATION` (§7.2-0011); bits 24–31 and 35–39 core-reserved.
+  bit 34 reserved by name as `ARTIFACT_ATTESTATION` (§7.2-0011); bit 35 `DEVICE_QUERY` (provider answers §6.6 device-queries); bits 24–31 and 36–39 core-reserved.
 - **SUB** (core sub-range [48,60)) — bit 48 `SPEAKS_ANNOUNCE`, bit 49
   `SPEAKS_CLASSIFY`, bit 50 `SPEAKS_OPS`, bit 51 `SPEAKS_GRAMMAR`, bit 52
   `SPEAKS_SYNTH`, bit 53 `SPEAKS_CONSUME`, bit 54 `SPEAKS_EMIT`, bit 55
@@ -690,6 +706,7 @@ Assigned bits (first draft):
   Reserving the name now means no unrelated feature can claim bit 34 before the extension exists;
   *what* an attestation carries and *where* is left to that profile, and KISS does not specify
   signing (umbrella §10.6). *Test:* `test_announce_attestation_bit_reserved`.
+- **KISS-ANNOUNCE-7.2-0012** — An implementation MUST interpret bit 35 as `DEVICE_QUERY`: the provider answers §6.6 device-query requests. *Test:* `test_announce_device_query_bit_assignment`.
 - **KISS-ANNOUNCE-7.2-0008** — A KISS-owned (EXT-mirror / FEAT / SUB) capability-bit
   assignment MUST originate from a merged change to the PR-gated KISS capability
   registry under ThinkersJournal; an implementation MUST NOT rely on an unregistered
@@ -846,6 +863,16 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.4-0014 | `test_announce_contract_payload_cap` |
 | KISS-ANNOUNCE-6.5-0001 | `test_announce_zero_dependency_no_driver_load` |
 | KISS-ANNOUNCE-6.5-0002 | `test_announce_impl_std_only` |
+| KISS-ANNOUNCE-6.6-0001 | `test_announce_device_query_bit_implies_endpoint` |
+| KISS-ANNOUNCE-6.6-0002 | `test_announce_device_query_no_bit_declines` |
+| KISS-ANNOUNCE-6.6-0003 | `test_announce_device_request_framing` |
+| KISS-ANNOUNCE-6.6-0004 | `test_announce_device_response_framing` |
+| KISS-ANNOUNCE-6.6-0005 | `test_announce_device_decline_framing` |
+| KISS-ANNOUNCE-6.6-0006 | `test_announce_device_record_bounds` |
+| KISS-ANNOUNCE-6.6-0007 | `test_announce_device_record_claims_are_consistent` |
+| KISS-ANNOUNCE-6.6-0008 | `test_announce_device_accuracy_record` |
+| KISS-ANNOUNCE-6.6-0009 | `test_announce_effective_support_is_intersection` |
+| KISS-ANNOUNCE-6.6-0010 | `test_announce_kernel_accuracy_not_looser_than_device_floor` |
 | KISS-ANNOUNCE-7.1-0001 | `test_announce_negotiate_selects_highest_mutual` |
 | KISS-ANNOUNCE-7.1-0002 | `test_announce_negotiate_empty_intersection_declines` |
 | KISS-ANNOUNCE-7.1-0003 | `test_announce_producer_never_exceeds_profile_cap` |
@@ -860,6 +887,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-7.2-0007 | `test_announce_reader_ignores_unknown_capability_bits` |
 | KISS-ANNOUNCE-7.2-0008 | `test_announce_capability_registry_pr_gated` |
 | KISS-ANNOUNCE-7.2-0011 | `test_announce_attestation_bit_reserved` |
+| KISS-ANNOUNCE-7.2-0012 | `test_announce_device_query_bit_assignment` |
 | KISS-ANNOUNCE-7.3-0001 | `test_announce_both_roles_emit_envelope` |
 | KISS-ANNOUNCE-7.3-0002 | `test_announce_consumer_zeroes_provider_only_feat` |
 | KISS-ANNOUNCE-7.3-0003 | `test_announce_live_capabilities_role_aware` |
