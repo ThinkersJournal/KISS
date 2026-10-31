@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.55 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** HANDOFF rewritten for the R1.32-R1.37 work, the sycl namespace, `KISS-OPS-6.13-0010/-0011` and `KISS-CONFORM-6.5-0016`; board 355 (R1.33/R1.36 carrier) recorded as unruled. No clause, corpus or code change.
+
 ## 0.6.54 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clause (ROADMAP R1.27, first item):** `KISS-CONFORM-6.5-0016` (an enumeration that cannot complete is an error, never a silently empty or truncated result) was cited by `test_conform_sweep_incompleteness_is_surfaced` and defined nowhere in `spec/`; its text was allocated in `rfcs/derive-and-discriminate-2026-08-08.md`. It is now defined in `spec/conform.md`, verbatim, apart from the cross-reference to 0011, marked `ALLOCATION LANDED` in the RFC. That test's `Backs[enforced]` line named `KISS-CLASSIFY-6.5-0011` (the index-width clause) by mistake and now names 0016. `KISS-CONFORM-6.5-0011` (negative controls for the harness) stays allocated in the RFC, undefined: no test of it exists. Binds the suite's instruments, not a seam consumer; no corpus or wire change. Harness-tested 486 to 487, clauses 994 to 995.
