@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.51 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.36, R1.37):** the two rows from CireSnave's board-338 Q4 and Q5 rulings: (Q4) a declaration format for guaranteed accuracy per op and precision mode, by backend and per kernel through a backend (KISS defines the format, never the numbers); (Q5) the window-overlap rule, a pool/`im2col` window must overlap at least one real input element, violating shapes not expressible. Each is options-first; no consumer MUST without his word. No clause, corpus or code change.
+
 ## 0.6.50 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only (ROADMAP R1.35):** a row for the finding from the R1.32 options note: the op-family tag is normative (KISS-OPS-6.1-0003) but is not the move/compute class, and the class of `neg`/`abs` depends on the dtype kind (float sign edit versus integer wrapping arithmetic). The R1.32 options note is refined to class per (op, dtype kind). No clause, corpus or code change.
