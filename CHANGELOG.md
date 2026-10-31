@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.48 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.32-R1.34):** three design-first rows from CireSnave's board-338 ruling: (1) specify which base operations only move bits and which compute, (2) a mechanism for a backend to declare the dtypes it can compute on, (3) a mechanism for a kernel contract to state its vector width. Each row is an options note with a recommendation first; no consumer MUST without his word; KISS states no list of backend capabilities and no width value. Q4 and Q5 of the Unpopped seams note are still his and get no row. No spec, corpus or code change.
+
 ## 0.6.47 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
 
 - **Namespace, additive; not Breaking:** registers `sycl` (status `registered`, maintainer bonefish) in `conformance/registry/namespaces.json` and adds the maintainer-owned annex `spec/namespaces/sycl.md` (grammar `sycl:spir64` | `sycl:intel-gpu-<arch>`, 36 tokens, `-` admitted by KISS-CLASSIFY-6.8-0005). Informative about status: nothing produces `sycl:` tokens yet; the 6.8-0014 witness proves reachability of a token only and no admitted-set claim is made (`sycl:spir64` beside a device token is unmeasured). KISS pins only the grammar and the match rule (6.8-0004); the token set is Bonefish's (`bonefish-sycl-emit` `TOKENS`). `ArchSku` is the Unpopped lane's call. No clause, test or corpus change.
