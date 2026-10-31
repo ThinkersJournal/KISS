@@ -848,8 +848,12 @@ cell class, or changing which structural fact a class requires, is a contract-sc
   primitive form the oracle for the kernel's *values*, and this clause makes the op's shape
   rule the oracle for the kernel's *output shape* — closing the return-contract shape check
   that had no evaluator before. Where the shape rule resolves to a **surfaced gap** (a
-  symbolic / data-dependent output, KISS-OPS §6.20-0004), a consumer MUST NOT treat the gap
-  as an inconsistency. An implementation MUST NOT accept a contract whose Interface output
+  symbolic / data-dependent output, KISS-OPS §6.20-0004), the check's verdict is
+  **undetermined**: a consumer MUST NOT treat the gap as an inconsistency, and MUST NOT
+  report the declared shape as verified (the declared shape is not consulted on that arm, so
+  every declared shape would pass). The check therefore has three outcomes — consistent,
+  inconsistent, undetermined — and an interface that exposes its result MUST be able to
+  express all three; a two-valued return is not conforming. An implementation MUST NOT accept a contract whose Interface output
   shape is inconsistent with its Semantics op's shape rule. *Test:*
   `test_contract_output_shape_consistency`.
 

@@ -343,9 +343,16 @@ fn test_contract_output_shape_consistency() {
     // reduce — the exact class of error no KISS clause caught before this tie.
     assert!(!shape_consistent(&[8, 4096], &computed));
 
-    // A Gap (symbolic/data-dependent output) is not a hard inconsistency: it is a
-    // surfaced gap, so a consumer cannot assert a mismatch it cannot compute.
-    assert!(shape_consistent(&[8], &ShapeValue::Gap));
+    // A Gap (symbolic/data-dependent output) is UNDETERMINED: not an inconsistency
+    // (nothing to compare), and not verified. The declared shape is never read on this
+    // arm, so ANY declared shape must give the same verdict, and none may read as verified.
+    for declared in [&[8][..], &[8, 4096], &[999, 1, 7], &[]] {
+        assert_eq!(shape_verdict(declared, &ShapeValue::Gap), ShapeVerdict::Undetermined);
+        assert!(!shape_consistent(declared, &ShapeValue::Gap));
+    }
+    // The three outcomes are distinct values.
+    assert_eq!(shape_verdict(&[8], &computed), ShapeVerdict::Consistent);
+    assert_eq!(shape_verdict(&[8, 4096], &computed), ShapeVerdict::Inconsistent);
 }
 
 // ---- §6.20-0008 the output-shape ≠ operand-shape class (gather, contraction) --
