@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.6.50 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.35):** a row for the finding from the R1.32 options note: the op-family tag is normative (KISS-OPS-6.1-0003) but is not the move/compute class, and the class of `neg`/`abs` depends on the dtype kind (float sign edit versus integer wrapping arithmetic). The R1.32 options note is refined to class per (op, dtype kind). No clause, corpus or code change.
+
 ## 0.6.49 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** `docs/options-r1-32-34-seam-mechanisms.md`, the options note with a recommendation for ROADMAP R1.32 (move/compute classification), R1.33 (backend dtype-compute declaration) and R1.34 (contract vector width). Findings: the ops catalog's family column is not the move/compute class (`neg`/`abs` are filed `arithmetic`); a per-dtype Announce bitset does not fit the 16 core FEAT bits; a width already exists as the derived per-operand `vL` (Classify 6.5-0009) plus the contract's `count_unit`, with no clause relating the two. No clause, corpus or code change; every option that binds a consumer or moves wire bytes waits for CireSnave.
