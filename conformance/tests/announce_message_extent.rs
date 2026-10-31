@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-ANNOUNCE §6.2-0014..-0017 (message extent) and §6.4-0014 (contract payload cap).
 //!
-//! The extent of each of the five messages is computed from its own bytes, so the tests never frame a
+//! The extent of each of the eight messages is computed from its own bytes, so the tests never frame a
 //! message by anything outside it: they cut, extend and corrupt the message itself.
 
 use kiss_conformance::announce::*;
@@ -13,10 +13,13 @@ fn messages() -> Vec<(MessageKind, Vec<u8>)> {
         (MessageKind::QueryRequest, reference_cyrq().encode()),
         (MessageKind::ContractResponse, reference_crsp().encode()),
         (MessageKind::DeclineResponse, reference_cdec().encode()),
+        (MessageKind::DeviceRequest, kiss_conformance::device_query::reference_dvrq().encode()),
+        (MessageKind::DeviceResponse, kiss_conformance::device_query::reference_dvrs().encode()),
+        (MessageKind::DeviceDecline, kiss_conformance::device_query::reference_dvdc().encode()),
     ]
 }
 
-// Backs[enforced]: KISS-ANNOUNCE-6.2-0014 — the extent of each of the five messages is determined from the message's
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0014 — the extent of each of the eight messages is determined from the message's
 // own bytes and equals the length of what the reference encoder wrote, whatever follows it.
 #[test]
 fn test_announce_message_extent_from_own_bytes() {
@@ -29,9 +32,9 @@ fn test_announce_message_extent_from_own_bytes() {
             assert_eq!(message_extent(&longer), Ok((kind, bytes.len())), "{kind:?} + {} bytes", tail.len());
         }
     }
-    // five distinct leading tags: the control that kinds are told apart by the message, not by position
+    // eight distinct leading tags: the control that kinds are told apart by the message, not by position
     let kinds: Vec<_> = messages().iter().map(|(k, _)| *k).collect();
-    assert_eq!(kinds.len(), 5);
+    assert_eq!(kinds.len(), 8);
 }
 
 // Backs[enforced]: KISS-ANNOUNCE-6.2-0015 — a message cut at ANY length shorter than its extent is a typed decline
@@ -54,7 +57,7 @@ fn test_announce_truncated_message_rejected() {
     assert!(matches!(message_extent(&savl), Err(AnnounceDecline::Truncated { .. })));
 }
 
-// Backs[enforced]: KISS-ANNOUNCE-6.2-0016 — a leading tag that names none of the five messages is a typed decline,
+// Backs[enforced]: KISS-ANNOUNCE-6.2-0016 — a leading tag that names none of the eight messages is a typed decline,
 // and the reader does not look for a later tag.
 #[test]
 fn test_announce_unknown_leading_tag() {

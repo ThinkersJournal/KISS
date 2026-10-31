@@ -90,6 +90,7 @@ pub mod corpus;
 pub mod decline;
 pub mod decomp_grammar;
 pub mod derivation_vectors;
+pub mod device_query;
 pub mod derive;
 pub mod nan_provenance;
 pub mod determinism;

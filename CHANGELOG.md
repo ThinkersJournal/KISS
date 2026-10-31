@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.0 — 2026-10-31 (number proposed; **Breaking** pre-1.0, so the second number moves; the PM allocates at gate time; based on main)
+
+- **New wire messages and clauses (ROADMAP R1.33, R1.36; CireSnave board 355 "D"):** KISS-Announce section 6.6 adds the device-query protocol: `DVRQ` request, `DVRS` response, `DVDC` decline, FEAT bit 35 `DEVICE_QUERY`, and the normalised per-device record (opaque `device_id`, `target`, `store_dtypes`, `compute_dtypes`, accuracy records keyed `(op, math_fidelity, dtype)` with a `max_ulp`). Kernels keep declaring their dtype sets; effective support is the intersection (KISS-ANNOUNCE-6.6-0009) and a kernel looser than its device's bound under the same key is declined (6.6-0010). A reader declines a record that contradicts itself (accuracy for a dtype the device does not compute on, compute outside store, a spelling outside the Classify table, a non-canonical set). KISS-ANNOUNCE-7.2-0012 assigns bit 35; 6.2-0014 and 6.2-0016 now count eight messages. **Byte-altering:** three new frames, one new capability bit, and `announce_vectors.json` gains three golden frames (eight total); an existing speaker that does not advertise bit 35 is unaffected on the wire. `conformance/src/device_query.rs` is the reference codec; `docs/device-capability-survey-2026-10-31.md` is the per-backend documentation check (CUDA, Vulkan, OpenCL, SYCL, HIP verified in part; Metal and CPU UNVERIFIED). README figures re-derived (clauses 1006, harness 498, test fns 859, Announce 59 of 96); harness floor 487 to 498.
+
 ## 0.6.55 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs only:** HANDOFF rewritten for the R1.32-R1.37 work, the sycl namespace, `KISS-OPS-6.13-0010/-0011` and `KISS-CONFORM-6.5-0016`; board 355 (R1.33/R1.36 carrier) recorded as unruled. No clause, corpus or code change.
