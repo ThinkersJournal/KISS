@@ -709,10 +709,8 @@ selects the correct comparator. See umbrella §3 for the full statement.
   spelling decision keyed by operator and dtype, not the operator alone: `+` may be
   driver-may-spell at `f32` and emitter-must-supply at `c64`/`c128` on the same target.
   Any further axis the audit finds divergent (a packed vector width, say) joins the key
-  rather than leaving the decision exempt. Known negative entering the audit
-  (informative; KISS#229, reported by Unpopped): `+ - * /` at `c64`/`c128` on a C-family
-  target, where the carrier is a struct and MSVC rejects both `_Complex` (C2440) and
-  operators on structs (C2088). This clause MUST NOT be read as asserting universality —
+  rather than leaving the decision exempt. A known negative entering the audit is
+  recorded in Appendix A.5. This clause MUST NOT be read as asserting universality —
   it conditions the placement on the §6.5 proof. *Test:*
   `test_emit_infix_operators_gated_on_audit`.
 - **KISS-EMIT-6.3-0005** — **Control-flow / loop scaffolding** derived mechanically from
@@ -1320,6 +1318,10 @@ RFC directory; they gate no clause above except where a clause explicitly defers
 3. **The pre-freeze neutrality audit has not been performed** — until it is, the
    driver/emitter boundary for the **surface-bearing** driver-side spellings (at this
    schema version, the infix `+ - * /` operators of §6.3-0004) is provisional (§6.5).
+   **Known negative entering the audit** (KISS#229, reported by Unpopped): `+ - * /` at
+   `c64`/`c128` on a C-family target, where the carrier is a struct and MSVC rejects both
+   `_Complex` (C2440) and operators on structs (C2088) — the same target and operator
+   that render at `f32`, which is why the audit's unit is the (operator, dtype) pair.
    The structural driver-side decisions are audit-exempt (§6.2-0005, §6.3-0006) and are
    not affected by this open question.
 4. **Artifact verification is under-specified** — the emit result is `{artifact,
