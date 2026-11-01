@@ -483,6 +483,8 @@ Clause ordinals verified free against `spec/conform.md` at `origin/main` (§6.1 
 > make them neighbours would churn an open PR that already cites §6.5-0016 by ordinal; the
 > cross-references carry the same intent without that cost.
 
+**ALLOCATION LANDED:** KISS-CONFORM-6.5-0011 (0.7.8; text adopted verbatim).
+
 - **KISS-CONFORM-6.5-0011** — The oracle-differential harness of §6.5-0001 MUST be accompanied by
   **executable negative controls** proving it discriminates: for each determinism-class comparator
   (§6.8) the harness employs, the suite MUST include at least one **deliberately incorrect

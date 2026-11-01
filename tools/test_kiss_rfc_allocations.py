@@ -126,7 +126,7 @@ class RfcAllocationTest(unittest.TestCase):
         self.assertIn(anchor, orig, "seed anchor missing — refusing to report a result")
         seeded = orig.replace(
             anchor,
-            "- **KISS-CONFORM-6.5-0011** — a SEEDED clause on an ordinal the RFC holds.\n"
+            "- **KISS-CONFORM-6.5-0012** — a SEEDED clause on an ordinal the RFC holds.\n"
             "  *Test:* `test_conform_seeded_collision`.\n" + anchor, 1)
         self.assertNotEqual(seeded, orig, "seed did not apply")
 
