@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.5 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.27, KISS#260, architect ruling A):** `KISS-CONFORM-6.13-0002` obliged proof that "the two" `SeamHello` reference seeds are byte-identical while KISS-Announce schedules them to converge to one, so the clause became unsatisfiable (or a self-comparison) on convergence. It is re-anchored on the property: at least two implementations meeting the freeze gate's dissimilarity bar (umbrella §5.3, defined there, not restated) reproduce the envelope byte-identically via golden hex; the two seeds are the current instances, and their frozen bytes in `conformance/SEAM-SEED-ATTESTATION.md` are the reference after convergence. The other limbs (Appendix-B checklist, foreign reader, negative vectors) are untouched. Honest consequence: discharging it needs a second implementation meeting the bar, which is the existing foreign-reader blocker; the clause stays `blocked` and the UNBACKED note says so. No corpus or wire change.
+
 ## 0.7.4 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clause wording (ROADMAP R1.27, KISS#194):** `KISS-CONTRACT-6.8-0005` said the `audited_status` derivation "reads" `bit_stability`, a dependency §6.8-0009's rule never had (it keys on a named `reference_function` and a declared bound). Settled as loose drafting: the derivation MUST NOT set the field and takes no input from it. The reference `derive_audited_status` already behaved so; `test_contract_audited_derivation_rule` now asserts it (the derived value is the same across all three `bit_stability` values, on both arms), and mutated to read the field it fails. Binds a contract-reading implementation's derivation only; no corpus or wire change.
