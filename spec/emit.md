@@ -158,7 +158,7 @@ outside the standard.
   ordinary arithmetic atoms — this is the **one** driver-side decision that *does*
   render a target-language surface, and it is placed on the driver side **only**
   subject to the pre-freeze neutrality audit (§2.5) that *proves* universality per
-  target, never assumes it.
+  target and per operand dtype, never assumes it.
 
 The first four bullets are **structural**: they determine the shape of the
 computation, not the concrete tokens rendered into the target language. Because they
@@ -215,8 +215,8 @@ operand binding, index arithmetic, control-flow scaffolding) render no surface a
 **outside** the audit's scope: they are neutral by construction, so there is nothing
 for the audit to prove about them. Until the audit proves the infix operators per
 target, the driver/emitter boundary for arithmetic operators is **provisional**: any
-operator the audit cannot prove identical across every target it claims drops to the
-emitter side. The audit is a **blocking pre-freeze gate** — KISS-Emit cannot advance
+operator (at a dtype) the audit cannot prove identical across every target it claims
+drops to the emitter side. The audit is a **blocking pre-freeze gate** — KISS-Emit cannot advance
 Draft → Frozen until it is performed and recorded (§8). Its two named jobs are (a)
 hunt every `const_lit` sibling on the driver side and (b) test every "this operator is
 universal" assumption, moving each unproven operator to the emitter side. Scope creep
@@ -702,10 +702,18 @@ selects the correct comparator. See umbrella §3 for the full statement.
 - **KISS-EMIT-6.3-0004** — The strictly-universal infix arithmetic operator spellings
   (`+`, `-`, `*`, `/`) for the ordinary arithmetic atoms — the one driver-side decision
   that DOES render a target-language surface — MAY be a driver-may-spell decision
-  **only** after the neutrality audit (§6.5) has **proven** that operator identical
-  across every target the emitter claims; absent that proof, the operator MUST be
-  treated as emitter-must-supply (§6.2-0003). This clause MUST NOT be read as asserting
-  universality — it conditions the placement on the §6.5 proof. *Test:*
+  **only** for an **(operator, operand dtype) pair**, and only after the neutrality
+  audit (§6.5) has **proven** that operator's spelling at that dtype identical across
+  every target the emitter claims on which the pair applies; absent that proof, that pair
+  MUST be treated as emitter-must-supply (§6.2-0003). The audited unit is therefore the
+  spelling decision keyed by operator and dtype, not the operator alone: `+` may be
+  driver-may-spell at `f32` and emitter-must-supply at `c64`/`c128` on the same target.
+  Any further axis the audit finds divergent (a packed vector width, say) joins the key
+  rather than leaving the decision exempt. Known negative entering the audit
+  (informative; KISS#229, reported by Unpopped): `+ - * /` at `c64`/`c128` on a C-family
+  target, where the carrier is a struct and MSVC rejects both `_Complex` (C2440) and
+  operators on structs (C2088). This clause MUST NOT be read as asserting universality —
+  it conditions the placement on the §6.5 proof. *Test:*
   `test_emit_infix_operators_gated_on_audit`.
 - **KISS-EMIT-6.3-0005** — **Control-flow / loop scaffolding** derived mechanically from
   the Dispatch launch model (the count-unit → grid derivation and workgroup sizing) MUST
@@ -751,9 +759,10 @@ selects the correct comparator. See umbrella §3 for the full statement.
   `f8e5m2`, and the components of the complex dtypes `c64` / `c128`), MUST be an emitter-
   must-supply decision; the neutral driver MUST NOT spell a dtype's target-language
   surface. *Test:* `test_emit_type_spelling_emitter_supplied`.
-- **KISS-EMIT-6.4-0005** — Any operator or construct the neutrality audit (§6.5) did
-  **not** prove universal across the emitter's claimed targets MUST be an emitter-must-
-  supply decision; an implementation MUST NOT retain such an operator on the driver-may-
+- **KISS-EMIT-6.4-0005** — Any operator or construct (for an infix operator, any
+  operator at a dtype) the neutrality audit (§6.5) did **not** prove universal across
+  the emitter's claimed targets MUST be an emitter-must-supply decision; an
+  implementation MUST NOT retain such an operator, at such a dtype, on the driver-may-
   spell side. *Test:* `test_emit_unproven_operator_is_emitter_supplied`.
 - **KISS-EMIT-6.4-0006** — **Spellable is not computable.** That a dtype's
   target-language surface is emitter-must-supply (§6.4-0004) says the target is
@@ -774,15 +783,23 @@ selects the correct comparator. See umbrella §3 for the full statement.
 - **KISS-EMIT-6.5-0001** — Before KISS-Emit advances Draft → Frozen (§8), a
   **neutrality audit** MUST be performed and **recorded** that, for **every** driver-
   side decision that has a **target-language surface** (§3) — at this schema version,
-  the infix operator spellings of §6.3-0004 — **proves** that surface identical across
-  every target the emitter claims; the recorded audit manifest MUST be a freeze
+  the infix operator spellings of §6.3-0004, per **(operator, dtype) pair** — **proves**
+  that surface identical across every target the emitter claims on which the pair
+  applies. For each pair and each claimed target the manifest MUST record exactly one of
+  **identical**, **not identical**, or **not applicable**; *not applicable* means the pair
+  cannot arise on that target (the dtype is not compute-capable there, §6.4-0006), MUST
+  be recorded explicitly with its reason and never by omission, and is distinct from
+  *not identical* (it arises and diverges). A pair is proven only if it is identical on
+  every target where it applies and applies on at least one; a claimed target with no
+  record for a pair fails the audit. The recorded audit manifest MUST be a freeze
   precondition, and a freeze attempted without a completed recorded audit MUST fail the
   gate. Structural decisions (§6.2-0005) are outside the audit's scope. *Test:*
   `test_emit_neutrality_audit_manifest_is_freeze_precondition`.
 - **KISS-EMIT-6.5-0002** — The recorded neutrality audit MUST show every surface-bearing
   driver-side operator or construct it could not prove target-independent moved to the
-  emitter-must-supply side (§6.4-0005); the driver/emitter boundary for the §6.3-0004
-  infix operators is **provisional** until the audit records them as proven. *Test:*
+  emitter-must-supply side (§6.4-0005), per (operator, dtype) pair for the infix
+  operators; the driver/emitter boundary for the §6.3-0004 infix operators is
+  **provisional** until the audit records each pair as proven. *Test:*
   `test_emit_audit_moves_unproven_spelling`.
 - **KISS-EMIT-6.5-0003** — The recorded neutrality audit MUST show every constant-
   spelling (`const_lit`) sibling on the driver-may-spell side found and reclassified as
