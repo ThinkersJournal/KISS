@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.9 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs:** `HANDOFF.md` rewritten for the 0.7.8 state (R1.27 done; WAIT lines for board 361/358, the sk7 batch, and the 2026-11-08 `OPS-6.3-0002` ratification; the full conformance `cargo test` named as a push gate). No spec, corpus or wire change.
+
 ## 0.7.8 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clause defined + test (ROADMAP R1.27):** `KISS-CONFORM-6.5-0011`, the capability half of the RFC's Pattern B, was cited by two shipped tools and `rfcs/` and defined nowhere in `spec/`; it is now defined (RFC text verbatim; the RFC allocation is marked landed) and `KISS-CONFORM-6.5-0016`'s "allocated and not yet defined" sentence points at it. New test `test_conform_harness_negative_controls` (cross-platform, CPU): for each of the three comparators (exact-byte, ULP-tolerance, order-invariant) an independently written correct candidate is accepted everywhere and a deliberately incorrect one (zero-sign normalising add; a large-argument `exp` off by declared-bound+1 ULP; a sum dropping its last element) diverges on **exactly** the inputs violating the pinned behaviour, a control showing it does not diverge elsewhere; a fourth comparator class breaks the build until a control exists. Mutation-checked: exact-byte compare by float equality, ULP bound +2, and order-invariant tolerance x1e6 each turn it red. Scope stated: the comparator layer, not the Windows-gated foreign-C legs. Floor harness 498->499, clauses 1007, test fns 862. No corpus or wire change.
