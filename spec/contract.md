@@ -1230,7 +1230,9 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   MUST be consistent with the `determinism_class` as §6.8-0013 states (an earlier form of
   this clause forced `order-invariant/nondeterministic` to carry `false`; that coupling is
   withdrawn and replaced by §6.8-0013). The `audited_status`
-  derivation (§6.8-0009 / §6.8-0010) reads this field and MUST NOT set it. *Test:*
+  derivation (§6.8-0009 / §6.8-0010) MUST NOT set this field and takes **no input from
+  it**: the rule keys on a named `reference_function` and a declared bound only, so two
+  Guarantees that differ only in `bit_stability` derive the same `audited_status`. *Test:*
   `test_contract_bit_stability_consistent`.
 - **KISS-CONTRACT-6.8-0006** — The `cost_provenance` MUST be `declared` or `measured`, stating
   the provenance of the Capabilities cost model (§6.7-0006); an implementation MUST NOT omit it
