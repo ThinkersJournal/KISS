@@ -1196,7 +1196,10 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   Guarantees (§6.8-0002 / §6.8-0004) as a **ULP-of-A band** of the form
   `k(S,A) · N · eps_A · |max partial sum|` — where `eps_A` is the accumulator dtype's unit
   roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell calibrated
-  constant — and MUST bound reassociation error against the per-cell reference of KISS-OPS
+  constant, and `|max partial sum|` is the maximum absolute **running partial of the
+  KISS-OPS §6.17-0009 per-cell reference evaluation itself** (ascending index, each input
+  rounded to `S`, each accumulate rounded to `A`) over the invocation's inputs — not of the
+  candidate's own schedule, and not a supremum over legal schedules — and MUST bound reassociation error against the per-cell reference of KISS-OPS
   §6.17-0009, NOT as a fixed constant and NOT as a bound against wide-precision truth across
   accumulator widths. The reduction extent `N` is **runtime**: the `structure_key` is
   **extent-free** (KISS-CLASSIFY §6.6-0003), so `N` MUST NOT enter the key. The key carries
@@ -1204,13 +1207,22 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   `<acc>` of KISS-CLASSIFY §6.7-0006, or the deferred non-contraction coordinate of
   §6.7-0012), while the numeric FORMULA lives here in the Contract Guarantees and is
   evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
-  constant declared here. An implementation MUST NOT key `N`, and MUST NOT declare this
+  constant declared here, and an implementation MUST be able to produce, for each declared
+  `k(S,A)`, its **calibration record**: the method by which it was calibrated, the corpus
+  it was measured over, and the margin applied (a margin of at least 1 over the worst
+  measured ratio of deviation to `N · eps_A · |max partial sum|`). This clause pins that the
+  record exists, never a value of `k`; the record is not a contract field and adds no
+  bytes. An implementation MUST NOT key `N`, and MUST NOT declare this
   tolerance as a fixed constant or as a bound against cross-accumulator wide truth. A
   comparator applying this tolerance MUST use it as an **absolute** band — it scales with
   `|max partial sum|`, NOT with `|result|` — and MUST NOT convert it to a metric taken in
   ULP-of-`S` relative to the result: under catastrophic cancellation `|result| → 0` while
   the reassociation error stays bounded by the `|max partial sum|` term, so a
-  result-relative metric would spuriously explode and reject a conformant kernel. *Test:*
+  result-relative metric would spuriously explode and reject a conformant kernel. Where
+  `|max partial sum|` is 0 the band is exactly 0 and the comparator MUST require **exact
+  equality**; a nonzero deviation there is a failure. That is not vacuous: for a sum in IEEE
+  arithmetic without flush-to-zero, every ascending partial being 0 forces every input to be
+  0, so every schedule also yields 0. *Test:*
   `test_contract_accumulator_tolerance_band`.
 - **KISS-CONTRACT-6.8-0005** — The `bit_stability` field MUST state the kernel's
   **reproducibility scope** — exactly one value of the closed set `{portable, same-hardware,
