@@ -1297,9 +1297,15 @@ atomic clause with its own append-only ID and dedicated test.
   *Test:*
   `test_conform_announce_golden_vectors`.
 - **KISS-CONFORM-6.13-0002** — KISS-Conform MUST provide the KISS-Announce **freeze-gate** test
-  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove the two `SeamHello`
-  **reference seeds** (KISS-ANNOUNCE §0 *Reference seed crate(s)*; provenance in §A.2) are
-  **byte-identical via golden hex** (not struct equality), MUST run a foreign reader
+  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove, **via golden hex**
+  (not struct equality), that the `SeamHello` envelope is **independently reproduced
+  byte-identically**: at least two implementations meeting the freeze gate's
+  dissimilarity bar (umbrella §5.3; defined there, not here) produce the same bytes. The
+  two `SeamHello` **reference seeds** (KISS-ANNOUNCE §0 *Reference seed crate(s)*;
+  provenance in §A.2) are the current instances of that property and not the requirement
+  itself, so their convergence to one crate does not retire the obligation; their golden
+  hex and provenance stay frozen as the reference to reproduce against
+  (`conformance/SEAM-SEED-ATTESTATION.md`). The clause MUST run a foreign reader
   (written outside the reference language) over the envelope, and MUST supply negative vectors
   for the unknown-bit **reserved-and-ignore** and the empty-profile **hard-fail-never-panic**
   obligations. *Test:* `test_conform_announce_freeze_gate`.
