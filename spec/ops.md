@@ -374,6 +374,12 @@ reader holding only KISS-Ops plus the umbrella.
   derives a `structure_key` cell class from its own structure, but that class is a
   separate, data-vocabulary-owned classification and is not the KISS-Ops op-family named
   by this term. Distinct from the op name.
+- **Consumer of op-semantics** — a party that claims conformance to KISS-Ops as an
+  evaluator of op semantics (umbrella §3.6, surface *op-semantics*, direction *evaluate*).
+  Membership is by **claim** (PM provisional, awaiting architect ratification); a party
+  that merely evaluates an op, or parses a wire encoding, is not thereby a member. A
+  consumer that does not natively recognize a non-primitive op still conforms by resolving
+  it via its reference decomposition (§6.14-0004).
 - **Primitive op / primitive floor** — an op that has no in-standard decomposition; the
   primitive floor is the mandatory-core set of such ops at which every decomposition
   chain terminates.
@@ -741,10 +747,14 @@ verbatim, everywhere).
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
   `clz`, `ctz`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
   `gather`, `scatter`, `sort_network`. *Test:* `test_ops_primitive_floor_set`.
-- **KISS-OPS-6.3-0002** — Every conforming consumer of KISS-Ops MUST understand (be able
-  to evaluate the pinned semantics of) every op in the primitive floor; the floor is the
-  mandatory core (umbrella §6.1) and a consumer that cannot evaluate a floor op does not
-  conform. *Test:* `test_ops_floor_is_mandatory_core`.
+- **KISS-OPS-6.3-0002** — A party that **claims conformance to KISS-Ops as a consumer of
+  op-semantics (evaluate)** (umbrella §3.6; §3 *Consumer of op-semantics*) MUST evaluate
+  the pinned semantics of every op in the primitive floor; the floor is the mandatory core
+  (umbrella §6.1) and such a party that cannot evaluate a floor op does not conform. A
+  party that only parses a KISS-Ops wire encoding, or that evaluates some ops and makes no
+  such claim, is outside this obligation. *Membership basis (PM provisional, awaiting
+  architect ratification, 2026-11-01):* membership is by **claim**, not by act or by
+  capability. *Test:* `test_ops_floor_is_mandatory_core`.
 - **KISS-OPS-6.3-0003** — A primitive-floor op MUST NOT carry an in-standard reference
   decomposition. *Test:* `test_ops_floor_ops_have_no_decomposition`.
 - **KISS-OPS-6.3-0004** — Every decomposition chain of every non-primitive op (§6.13)
