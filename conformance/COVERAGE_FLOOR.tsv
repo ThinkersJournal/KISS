@@ -602,7 +602,7 @@
 # OWED (R5.9, decision 297): untested is 2 above the R1.31 figure only because KISS-CONSUME-6.6-0007 and -0008 are the Consume twins of KISS-EMIT-6.7-0006 and -0007,
 # ledgered `untested` for the same reason (restrictions on what an implementation may CLAIM; conformance/ has no emitter or lifter making a claim). They fall with the
 # emitter/lifter witnesses (ROADMAP R3.14); lower the floor by 2 then.
-harness	498
+harness	499
 lint	44
 untested	393
 proven	20
