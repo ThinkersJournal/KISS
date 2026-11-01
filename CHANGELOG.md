@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.4 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause wording (ROADMAP R1.27, KISS#194):** `KISS-CONTRACT-6.8-0005` said the `audited_status` derivation "reads" `bit_stability`, a dependency §6.8-0009's rule never had (it keys on a named `reference_function` and a declared bound). Settled as loose drafting: the derivation MUST NOT set the field and takes no input from it. The reference `derive_audited_status` already behaved so; `test_contract_audited_derivation_rule` now asserts it (the derived value is the same across all three `bit_stability` values, on both arms), and mutated to read the field it fails. Binds a contract-reading implementation's derivation only; no corpus or wire change.
+
 ## 0.7.3 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clause (ROADMAP R1.16, KISS#413; PM picks 2026-10-31: K1, D1, defect-2 fix):** `KISS-CONTRACT-6.8-0012` now (1) names the schedule: `|max partial sum|` is the maximum absolute running partial of the §6.17-0009 reference evaluation itself, not the candidate's schedule and not a supremum; (2) requires a calibration record (method, corpus, margin of at least 1) for each declared `k(S,A)`, pinning that it exists and never a value, and not a contract field; (3) states that a zero band is exact equality. New `conformance/tests/accumulator_zero_band.rs` runs the zero-band argument (zero ascending partials imply zero inputs, incl. subnormals) for f32 and f64 sums over every sequence of length 4 or less from a 16-value pool, with a flush-to-zero control where the claim is false; born red against the wrong claim (2770 counterexamples, first a lone subnormal). The clause stays `untested` (UNBACKED note now PARTIAL; the test does not cite it). Comparator semantics only; no corpus or wire change. Options note `docs/options-r1-16-reassociation-band.md` records the choices; K3 stays the fallback if kiss-ref's data show K1 cannot be calibrated stably.
