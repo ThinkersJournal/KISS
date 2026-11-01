@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.6 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause re-scope (ROADMAP R1.27, KISS#500, KISS#512 §3.6):** `KISS-OPS-6.3-0002` bound "every conforming consumer" to the 43-op floor while ops.md never defined the term. It now binds a party that **claims conformance to KISS-Ops as a consumer of op-semantics (evaluate)**, per umbrella §3.6; ops.md §3 gains a *Consumer of op-semantics* entry; a pure wire parser or a partial evaluator making no such claim is outside it, and non-recognized non-primitive ops are still resolved by decomposition (§6.14-0004). **Membership basis is by claim: PM provisional, awaiting architect ratification**, so a reversal is a visible spec amendment. The umbrella §3.6 "until then" sentence is updated. Test status unchanged (`untested`, UNBACKED). No corpus or wire change.
+
 ## 0.7.5 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
 
 - **Clause (ROADMAP R1.27, KISS#260, architect ruling A):** `KISS-CONFORM-6.13-0002` obliged proof that "the two" `SeamHello` reference seeds are byte-identical while KISS-Announce schedules them to converge to one, so the clause became unsatisfiable (or a self-comparison) on convergence. It is re-anchored on the property: at least two implementations meeting the freeze gate's dissimilarity bar (umbrella §5.3, defined there, not restated) reproduce the envelope byte-identically via golden hex; the two seeds are the current instances, and their frozen bytes in `conformance/SEAM-SEED-ATTESTATION.md` are the reference after convergence. The other limbs (Appendix-B checklist, foreign reader, negative vectors) are untouched. Honest consequence: discharging it needs a second implementation meeting the bar, which is the existing foreign-reader blocker; the clause stays `blocked` and the UNBACKED note says so. No corpus or wire change.
