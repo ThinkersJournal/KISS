@@ -19,6 +19,12 @@ Floor harness 499, lint 44, untested 393, clauses 1007. **R1.27 is DONE.** Merge
 
 ## WAIT (do not start; each names its trigger)
 
+WAIT: ops-6.3-0002-claim-basis-ratify | check: gh pr view 762 --json state,mergedAt | wake: 2026-11-08T12:00:00Z
+WAIT: board-361-r1.15-411-leaf-repr | check: gh issue view 411 --json state | wake: 2026-11-10T12:00:00Z
+WAIT: board-358-dimexpr-clamp-6.13-0010 | check: gh issue view 358 --json state | wake: 2026-11-10T12:00:00Z
+WAIT: sk7-batch-724-725 | check: gh pr view 724 --json state,mergedAt | wake: 2026-11-05T12:00:00Z
+WAIT: kiss-ref-k1-calibration | check: gh issue view 293 --json state | wake: 2026-11-10T12:00:00Z
+
 - **WAIT 2026-11-08: tell the PM** the `KISS-OPS-6.3-0002` CLAIM membership basis (PM provisional, ratified by nobody yet) is due; the PM puts it on CireSnave's board if no architect ratifies.
 - **WAIT board 361** (CireSnave, via PM): R1.15 #411 leaf representation of the seven §6.12 scalar-source leaves in op_dag; options note `docs/options-r1-15-scalar-source-leaf-representation.md`, rec B (leaf tokens as `Op` nodes). No clause until his word.
 - **WAIT board 358** (CireSnave, via PM): DimExpr clamp for the `6.13-0010` window extent; PM rec B = precondition + decline. Unpopped#214 ships without the dimension-expression piece (Unpopped `xmaci51f` informed).
