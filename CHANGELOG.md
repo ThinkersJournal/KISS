@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.10 — 2026-11-03 (PM-allocated)
+
+- **Docs:** `HANDOFF.md` WAIT lines rewritten in `lane-restart` format (`WAIT: <event> | check: <cmd> | wake: <UTC>`) so `lane-restart waits` parses and arms them. No spec or wire change.
+
 ## 0.7.9 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
 
 - **Docs:** `HANDOFF.md` rewritten for the 0.7.8 state (R1.27 done; WAIT lines for board 361/358, the sk7 batch, and the 2026-11-08 `OPS-6.3-0002` ratification; the full conformance `cargo test` named as a push gate). No spec, corpus or wire change.
