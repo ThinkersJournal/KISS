@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.11 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
+
+- Corpus bytes, provenance member only (CireSnave 2026-11-04 via the PM, board 377 "Fix now"; KISS#218; ROADMAP R1.28): `dtype_manifest.json` and `op_manifest.json` now say `generated_from` = the tool that emits them (`tools/kiss_dtypes.py`, `tools/kiss_ops.py`, each with its `--emit-manifest` command) instead of the spec file they read, completing what 0.6.19 did for the two structure-key vector files. `generated_from` is part (c) PROVENANCE under KISS-CONFORM-6.3-0010: no entry, count or schema member moves, and a consumer may not rely on the value. Regenerated with the two tools; the delta is exactly that one line in each file. Vendors (Fuel, Baracuda, Unpopped, Vulkane, kiss-ref) re-vendor the two files and update any hash pin. ROADMAP R1.28 drops its stale `[wait: #218 byte move]` (the byte move landed in 0.6.19, #713).
+
 ## 0.7.10 — 2026-11-03 (PM-allocated)
 
 - **Docs:** `HANDOFF.md` WAIT lines rewritten in `lane-restart` format (`WAIT: <event> | check: <cmd> | wake: <UTC>`) so `lane-restart waits` parses and arms them. No spec or wire change.
