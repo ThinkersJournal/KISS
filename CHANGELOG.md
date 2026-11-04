@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.13 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (no spec text, no bytes; ROADMAP R1.13 and R1.19, KISS#316 and #426; CireSnave boards 378 and 380, 2026-11-04 via the PM: widest expressibility):** `docs/options-r1-13-output-layout-guarantee.md` (Fuel `layout_guarantee` measured against KISS and Unpopped's layout types; seven forms; recommend a closed-sum field in Guarantees with an extension rule) and `docs/options-r1-19-axis-dropping-reductions.md` (a cited survey of keepdims across NumPy, PyTorch, ONNX, Triton, TVM, XLA, MLIR, with five rows marked unverified; recommend `squeeze`/`unsqueeze` primitives plus a non-primitive `reduce_drop`).
+
 ## 0.7.11 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
 
 - Corpus bytes, provenance member only (CireSnave 2026-11-04 via the PM, board 377 "Fix now"; KISS#218; ROADMAP R1.28): `dtype_manifest.json` and `op_manifest.json` now say `generated_from` = the tool that emits them (`tools/kiss_dtypes.py`, `tools/kiss_ops.py`, each with its `--emit-manifest` command) instead of the spec file they read, completing what 0.6.19 did for the two structure-key vector files. `generated_from` is part (c) PROVENANCE under KISS-CONFORM-6.3-0010: no entry, count or schema member moves, and a consumer may not rely on the value. Regenerated with the two tools; the delta is exactly that one line in each file. Vendors (Fuel, Baracuda, Unpopped, Vulkane, kiss-ref) re-vendor the two files and update any hash pin. ROADMAP R1.28 drops its stale `[wait: #218 byte move]` (the byte move landed in 0.6.19, #713).
