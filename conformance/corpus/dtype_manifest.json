@@ -1,6 +1,6 @@
 {
   "schema": "kiss-dtype-manifest-v1",
-  "generated_from": "spec/classify.md",
+  "generated_from": "tools/kiss_dtypes.py (python tools/kiss_dtypes.py --emit-manifest; reads the spec/classify.md section 6.1 table)",
   "clause": "KISS-CLASSIFY-6.1-0001",
   "structure_key_schema_version": 6,
   "token_prefix": "sk6",

@@ -400,7 +400,7 @@ def build_manifest(spec_dir):
     total = len(set(all_ops) | set(atoms))
     return {
         "schema": "kiss-op-manifest-v1",
-        "generated_from": "spec/ops.md",
+        "generated_from": "tools/kiss_ops.py (python tools/kiss_ops.py --emit-manifest; reads spec/ops.md)",
         "all_ops": all_ops,
         "transcendental_atoms": atoms,
         "declared_coverage_set": declared,
