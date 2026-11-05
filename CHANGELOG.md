@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.7.13 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (no spec text, no bytes; ROADMAP R1.13 and R1.19, KISS#316 and #426; CireSnave boards 378 and 380, 2026-11-04 via the PM: widest expressibility):** `docs/options-r1-13-output-layout-guarantee.md` (Fuel `layout_guarantee` measured against KISS and Unpopped's layout types; seven forms; recommend a closed-sum field in Guarantees with an extension rule) and `docs/options-r1-19-axis-dropping-reductions.md` (a cited survey of keepdims across NumPy, PyTorch, ONNX, Triton, TVM, XLA, MLIR, with five rows marked unverified; recommend `squeeze`/`unsqueeze` primitives plus a non-primitive `reduce_drop`).
+
 ## 0.7.12 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main, 0.7.11 is #772)
 
 - **Docs only (no spec text, no bytes; ROADMAP R1.22, KISS#424; CireSnave board 379 "1", 2026-11-04 via the PM):** `docs/design-r1-22-bind-time-obligations.md`, the design for a bind-time obligation class, explicit reader obligations and the instrument (a `bind` reference plus a `bind_vectors.json` family as Modality 4 with an input environment). Maps FDX's four realize-time checks to KISS obligations; draft clause text only, staged as design note, then clauses, then instrument.
