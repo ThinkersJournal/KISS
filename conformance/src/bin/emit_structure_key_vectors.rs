@@ -11,5 +11,6 @@
 //! gate, but as a cargo test — the broader, both-legs CI surface).
 
 fn main() {
+    kiss_conformance::cli::basics("emit_structure_key_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::reference_vectors::emit_reference_vectors_json());
 }

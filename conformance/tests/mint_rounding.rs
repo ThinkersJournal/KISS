@@ -63,12 +63,12 @@ fn model(op: &str, x: f32) -> f32 {
     }
 }
 
-// Backs: KISS-OPS-6.7-0001 — each rounding atom rounds in its named direction (the four ops, the
+// Backs[enforced]: KISS-OPS-6.7-0001 — each rounding atom rounds in its named direction (the four ops, the
 // tie, zero-sign and integral boundaries); the NaN half of 6.7-0002 is deliberately not pinned (#396).
 #[test]
 fn rounding_bundle_matches_an_independent_model_and_discriminates() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-rounding.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 4 * 18, "4 ops x 18 inputs");
 

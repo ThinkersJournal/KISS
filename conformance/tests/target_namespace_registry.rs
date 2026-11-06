@@ -446,10 +446,10 @@ fn plant_tree(tag: &str, cap: &str) -> std::path::PathBuf {
     root
 }
 
-// Backs[enforced]: KISS-CLASSIFY-6.5-0011
+// Backs[enforced]: KISS-CONFORM-6.5-0016
 #[test]
 fn test_conform_sweep_incompleteness_is_surfaced() {
-    // (a) CAPABILITY (§6.5-0011): the sweep must actually reach a nested
+    // (a) CAPABILITY (the RFC's Pattern B capability half, rfcs/derive-and-discriminate-2026-08-08.md §7.2): the sweep must actually reach a nested
     //     subdirectory and find a planted literal. Without this the attribute
     //     test below would be vacuous — an instrument that finds nothing anywhere
     //     trivially "surfaces" nothing.
@@ -462,7 +462,7 @@ fn test_conform_sweep_incompleteness_is_surfaced() {
     );
     let _ = std::fs::remove_dir_all(&root);
 
-    // (b) ATTRIBUTION (§6.5-0016): a root that cannot be enumerated MUST be an
+    // (b) ATTRIBUTION (KISS-CONFORM-6.5-0016): a root that cannot be enumerated MUST be an
     //     error, NOT an empty success. This is the whole distinction the clause
     //     pins — "looked and found nothing" vs "could not look".
     let missing = std::env::temp_dir().join("kiss_sweep_does_not_exist_9f3a1c");

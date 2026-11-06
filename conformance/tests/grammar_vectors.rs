@@ -145,7 +145,7 @@ fn test_grammar_vectors_match_appendix_a1() {
 }
 
 /// (3) PARTIAL, STATED not discovered — the artifact declares all five Appendix A.1 vectors, names
-/// the two it renders and the three it does not, and its coverage note says what a passing
+/// the three it renders and the two it does not, and its coverage note says what a passing
 /// byte-match does and does not establish.
 ///
 /// ⚠️ WITHOUT THIS, A PARTIAL ARTIFACT IS INDISTINGUISHABLE FROM A COMPLETE ONE. That is the whole
@@ -161,9 +161,9 @@ fn test_grammar_vectors_state_their_own_population() {
             "Appendix A.1 declares {declared}; the artifact must name it as rendered or unrendered"
         );
     }
-    assert!(json.contains("\"rendered_vectors\": [\"G1\", \"G4\"]"), "rendered set must be stated");
+    assert!(json.contains("\"rendered_vectors\": [\"G1\", \"G3\", \"G4\"]"), "rendered set must be stated");
     assert!(
-        json.contains("\"unrendered_vectors\": [\"G2\", \"G3\", \"G5\"]"),
+        json.contains("\"unrendered_vectors\": [\"G2\", \"G5\"]"),
         "the UNRENDERED vectors must be named — a quiet omission is the defect this closes"
     );
     // The note must say what the byte-match does NOT establish, not merely what it covers.
@@ -270,4 +270,47 @@ fn test_grammar_rendered_vectors_are_all_declared() {
             "golden_regions() renders `{id}`, which Appendix A does not declare"
         );
     }
+}
+
+/// The G3 tag vector: the codec's tag bytes equal the hex Appendix A.1 transcribes for the `skip`
+/// tag, the artifact states the equal/differ relations among its three authorings, and the `clamp`
+/// tag differs from the `skip` tag in exactly the one `oob_policy` byte.
+///
+/// ⚠️ THE "OMITTED" AUTHORING EQUALS THE STATED ONE BY CONSTRUCTION (the codec takes resolved
+/// values; default resolution is KISS-Ops-owned), so equality of those two proves nothing about
+/// default resolution and this test does not claim it. What can fail here: the tag canonical form
+/// moving, the appendix and the codec drifting, or `oob_policy` ceasing to be identity-bearing.
+// harness-internal: agreement between the suite's G3 tag artifact, its codec and the hand-transcribed informative Appendix A.1 hex, no clause asserted
+#[test]
+fn test_grammar_g3_tag_vectors_match_appendix_a1() {
+    let md = read_spec();
+    let spec_hex = appendix_hex(&md, "*Vector G3");
+    assert!(spec_hex.len() >= 37 * 2, "G3 appendix extraction produced {} hex chars", spec_hex.len());
+
+    let doc = kiss_conformance::json::parse(&grammar::emit_grammar_vectors_json()).expect("valid JSON");
+    let g3 = doc
+        .get("tag_vectors")
+        .and_then(|v| v.as_arr())
+        .and_then(|a| a.iter().find(|v| v.get("id").and_then(|j| j.as_str()) == Some("G3")))
+        .expect("the artifact carries a G3 tag vector");
+    let hex_of = |label: &str| -> String {
+        g3.get("authorings")
+            .and_then(|a| a.as_arr())
+            .and_then(|a| a.iter().find(|v| v.get("label").and_then(|j| j.as_str()) == Some(label)))
+            .and_then(|v| v.get("tag_hex"))
+            .and_then(|j| j.as_str())
+            .unwrap_or_else(|| panic!("no authoring {label}"))
+            .to_string()
+    };
+    let skip = hex_of("oob_policy_skip_stated");
+    let omitted = hex_of("oob_policy_omitted_resolves_to_skip");
+    let clamp = hex_of("oob_policy_clamp_stated");
+
+    assert_eq!(spec_hex, skip, "Appendix A.1 G3 and the tag codec DISAGREE: a decision, not a reconcile");
+    assert_eq!(skip, omitted, "stated skip and omitted (resolved to skip) MUST be byte-equal");
+    assert_ne!(skip, clamp, "oob_policy MUST be identity-bearing: clamp differs from skip");
+    let diff: Vec<usize> = (0..skip.len() / 2).filter(|i| skip[2 * i..2 * i + 2] != clamp[2 * i..2 * i + 2]).collect();
+    assert_eq!(diff.len(), 1, "skip and clamp differ in exactly the oob_policy byte, got {diff:?}");
+    assert_eq!(&skip[2 * diff[0]..2 * diff[0] + 2], "01");
+    assert_eq!(&clamp[2 * diff[0]..2 * diff[0] + 2], "02");
 }

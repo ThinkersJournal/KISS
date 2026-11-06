@@ -494,14 +494,31 @@ pub fn matmul_shape(lhs: &[i64], rhs: &[i64]) -> Vec<i64> {
 
 // ---- KISS-CONTRACT-6.4-0011 Interface output shape ⟷ op shape rule -----------
 
-/// The Interface (§6.5) `declared` output shape is **consistent** iff it equals
-/// the op's shape rule `computed` over the operand shapes. A surfaced [`ShapeValue::Gap`]
-/// (symbolic/data-dependent output) is never a hard inconsistency — a consumer
-/// cannot assert a mismatch it cannot compute. This is the shape-side companion to
-/// the §6.4-0006 value oracle.
-pub fn shape_consistent(declared: &[i64], computed: &ShapeValue) -> bool {
+/// The three outcomes of the §6.4-0011 check. A surfaced [`ShapeValue::Gap`] is
+/// [`ShapeVerdict::Undetermined`]: neither an inconsistency nor a verification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShapeVerdict {
+    /// `declared` equals the op's shape rule over the operand shapes.
+    Consistent,
+    /// `declared` differs from a computable shape rule: a typed decline.
+    Inconsistent,
+    /// The shape rule resolved to a surfaced gap; `declared` was not consulted.
+    Undetermined,
+}
+
+/// The Interface (§6.5) `declared` output shape against the op's shape rule `computed`
+/// over the operand shapes (the shape-side companion to the §6.4-0006 value oracle).
+pub fn shape_verdict(declared: &[i64], computed: &ShapeValue) -> ShapeVerdict {
     match computed {
-        ShapeValue::Concrete(c) => declared == c.as_slice(),
-        ShapeValue::Gap => true,
+        ShapeValue::Concrete(c) if declared == c.as_slice() => ShapeVerdict::Consistent,
+        ShapeValue::Concrete(_) => ShapeVerdict::Inconsistent,
+        ShapeValue::Gap => ShapeVerdict::Undetermined,
     }
+}
+
+/// True only when the declared shape is **verified**: a surfaced gap is `false` here, not
+/// `true` (it is undetermined, §6.4-0011). Use [`shape_verdict`] to tell a gap from a
+/// mismatch.
+pub fn shape_consistent(declared: &[i64], computed: &ShapeValue) -> bool {
+    shape_verdict(declared, computed) == ShapeVerdict::Consistent
 }

@@ -277,7 +277,7 @@ fn test_ops_narrow_int_promote_truncate_composition() {
     assert_ne!(0x1_0001u32, t16 as u32);
 }
 
-// Backs: KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
+// Backs[enforced]: KISS-OPS-6.16-0006 — dtype tokens for the pinned ordinary integer set. The set
 // now includes the 16-bit tokens `s16`/`u16` and 64-bit unsigned `u64` (the
 // former open question is resolved the other way: they are IN, made
 // compute-operable by the §6.16 bit layouts + §6.2-0002 wrapping arithmetic).

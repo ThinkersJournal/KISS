@@ -374,6 +374,12 @@ reader holding only KISS-Ops plus the umbrella.
   derives a `structure_key` cell class from its own structure, but that class is a
   separate, data-vocabulary-owned classification and is not the KISS-Ops op-family named
   by this term. Distinct from the op name.
+- **Consumer of op-semantics** — a party that claims conformance to KISS-Ops as an
+  evaluator of op semantics (umbrella §3.6, surface *op-semantics*, direction *evaluate*).
+  Membership is by **claim** (PM provisional, awaiting architect ratification); a party
+  that merely evaluates an op, or parses a wire encoding, is not thereby a member. A
+  consumer that does not natively recognize a non-primitive op still conforms by resolving
+  it via its reference decomposition (§6.14-0004).
 - **Primitive op / primitive floor** — an op that has no in-standard decomposition; the
   primitive floor is the mandatory-core set of such ops at which every decomposition
   chain terminates.
@@ -741,10 +747,14 @@ verbatim, everywhere).
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
   `clz`, `ctz`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
   `gather`, `scatter`, `sort_network`. *Test:* `test_ops_primitive_floor_set`.
-- **KISS-OPS-6.3-0002** — Every conforming consumer of KISS-Ops MUST understand (be able
-  to evaluate the pinned semantics of) every op in the primitive floor; the floor is the
-  mandatory core (umbrella §6.1) and a consumer that cannot evaluate a floor op does not
-  conform. *Test:* `test_ops_floor_is_mandatory_core`.
+- **KISS-OPS-6.3-0002** — A party that **claims conformance to KISS-Ops as a consumer of
+  op-semantics (evaluate)** (umbrella §3.6; §3 *Consumer of op-semantics*) MUST evaluate
+  the pinned semantics of every op in the primitive floor; the floor is the mandatory core
+  (umbrella §6.1) and such a party that cannot evaluate a floor op does not conform. A
+  party that only parses a KISS-Ops wire encoding, or that evaluates some ops and makes no
+  such claim, is outside this obligation. *Membership basis (PM provisional, awaiting
+  architect ratification, 2026-11-01):* membership is by **claim**, not by act or by
+  capability. *Test:* `test_ops_floor_is_mandatory_core`.
 - **KISS-OPS-6.3-0003** — A primitive-floor op MUST NOT carry an in-standard reference
   decomposition. *Test:* `test_ops_floor_ops_have_no_decomposition`.
 - **KISS-OPS-6.3-0004** — Every decomposition chain of every non-primitive op (§6.13)
@@ -1410,6 +1420,26 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   attributes, evaluated by the §6.11 structural oracle; KISS-Ops MUST NOT require a
   structured op's body to be a §6.13-0006 scalar-expression tree. *Test:*
   `test_ops_structured_decomposition_reference`.
+- **KISS-OPS-6.13-0010** — The §6.13-0004 window view MUST be defined per spatial axis
+  by the operand extent `n` (`n ≥ 0`) and that axis's `window_size` `k`, `stride` `s`,
+  `dilation` `d` and `padding` `p` (§6.19-0023; `k`, `s`, `d` ≥ 1 and `p` ≥ 0 — a zero
+  `window_size`, `stride` or `dilation` is not expressible) as follows: the dilated extent is
+  `D = d·(k − 1) + 1`; the output extent is `⌊(n + 2p − D) / s⌋ + 1` when `n + 2p ≥ D` and
+  `0` when it is not (no window fits); output window `o` (`0 ≤ o < output extent`) has tap
+  `j` (`0 ≤ j < k`) at operand position `o·s − p + j·d`; and a tap is in bounds exactly when
+  that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. *Test:*
+  `test_ops_window_output_extent`.
+- **KISS-OPS-6.13-0011** — On every spatial axis of an `avg_pool`, `max_pool` or `im2col`
+  window view, every output window MUST have at least one in-bounds tap (§6.13-0010), so
+  that every window over all axes overlaps at least one real operand element. The condition
+  is over the window attributes **and** the operand extent: the attribute-only bound
+  `2·p ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p = 1` has
+  one window whose taps lie at −1 and 1, and no real tap). A shape that violates it is not
+  expressible: a producer MUST NOT write it and a reader MUST decline it, so the empty
+  reduction it would otherwise name (a `max_pool` with no tap, an `avg_pool` with
+  `count_include_pad` false and a zero valid-tap count) is never reached. The rule
+  constrains values and not encodings: no OpAttrs byte moves. *Test:*
+  `test_ops_window_overlap_declined`.
 - **KISS-OPS-6.13-0007** — `hypot(a, b)` MUST yield `+∞` whenever either operand is
   infinite, **even if the other operand is NaN** (the IEEE 754 `hypot` infinity rule),
   overriding the naive `sqrt(add(sqr(a), sqr(b)))` — which would yield NaN for `(±∞, NaN)` —
@@ -2793,6 +2823,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
 | KISS-OPS-6.13-0008 | `test_ops_norm_axis_all_four` |
 | KISS-OPS-6.13-0009 | `test_ops_structured_decomposition_reference` |
+| KISS-OPS-6.13-0010 | `test_ops_window_output_extent` |
+| KISS-OPS-6.13-0011 | `test_ops_window_overlap_declined` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |

@@ -67,7 +67,7 @@ fn dependencies(manifest: &str) -> Vec<String> {
     out
 }
 
-// Backs: KISS-CLASSIFY-6.9-0001 — the Classify modules depend on no KISS-Ops (or other sub-standard) module:
+// Backs[enforced]: KISS-CLASSIFY-6.9-0001 — the Classify modules depend on no KISS-Ops (or other sub-standard) module:
 // every crate-internal import is within the Classify tier, so they build and test without any Ops artifact.
 #[test]
 fn test_classify_no_upstream_dependency() {
@@ -83,7 +83,7 @@ fn test_classify_no_upstream_dependency() {
     assert!(dependencies(CARGO).is_empty(), "the harness crate declares external dependencies: {:?}", dependencies(CARGO));
 }
 
-// Backs: KISS-CLASSIFY-6.9-0003 — producing, serializing and parsing the vocabulary needs only the standard
+// Backs[enforced]: KISS-CLASSIFY-6.9-0003 — producing, serializing and parsing the vocabulary needs only the standard
 // library: no driver/backend loader in the Classify modules and no external crate dependency.
 #[test]
 fn test_classify_zero_dependency() {

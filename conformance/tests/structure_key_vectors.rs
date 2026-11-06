@@ -496,7 +496,7 @@ fn reference_vectors_state_a_vocabulary_version_for_every_namespace() {
     }
 }
 
-/// Backs: KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
+/// Backs[enforced]: KISS-CONFORM-6.3-0006 — injectivity of the declines the ARTIFACT PUBLISHES.
 ///
 /// `decline_wire_kinds_are_injective` asserts pairwise distinctness over
 /// `all_decline_wire_kinds()` — the `KeyDecline` enum's wire strings. That is a
@@ -851,7 +851,7 @@ fn ops_members(t: &str) -> Option<(Vec<char>, Vec<&str>)> {
     Some((ops.chars().collect(), fields))
 }
 
-/// Backs: KISS-CLASSIFY-6.8-0002 — the published match vectors are not merely PRESENT,
+/// Backs[enforced]: KISS-CLASSIFY-6.8-0002 — the published match vectors are not merely PRESENT,
 /// they CATCH every forbidden matching logic the clause names.
 ///
 /// ⚠️ A vector set that is only present is a paraphrase with extra steps. This test

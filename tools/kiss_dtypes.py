@@ -187,7 +187,7 @@ def build_manifest(spec_dir):
     version, prefix = schema_version(text)
     return {
         "schema": "kiss-dtype-manifest-v1",
-        "generated_from": "spec/classify.md",
+        "generated_from": "tools/kiss_dtypes.py (python tools/kiss_dtypes.py --emit-manifest; reads the spec/classify.md section 6.1 table)",
         "clause": "KISS-CLASSIFY-6.1-0001",
         # Clause D (§3.4): a dtype sub-token has no meaning detached from the
         # structure_key schema version that produced it, and MUST NOT be persisted or

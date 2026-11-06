@@ -10,5 +10,6 @@
 //! byte-for-byte, so a stale artifact fails CI.
 
 fn main() {
+    kiss_conformance::cli::basics("emit_structure_key_derivation_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::derivation_vectors::emit_json());
 }

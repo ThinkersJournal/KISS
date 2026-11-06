@@ -900,9 +900,10 @@ pub fn verify_precision_class(g: &Guarantees, declared: &str) -> Result<(), Prec
 /// — so "nondeterministic therefore unaudited" is the wrong rule, not a
 /// conservative one.
 ///
-/// `bit_stability` is owned by §6.8-0005, which states that this derivation
-/// **reads** that field and MUST NOT **set** it. Taking `&Guarantees` makes the
-/// prohibition structural; nothing here needs to assert it.
+/// `bit_stability` is owned by §6.8-0005, which states that this derivation takes
+/// no input from that field and MUST NOT **set** it. Taking `&Guarantees` makes the
+/// no-write half structural; the no-input half is asserted in
+/// `test_contract_audited_derivation_rule`.
 pub fn derive_audited_status(g: &Guarantees) -> AuditedStatus {
     if g.declares_bounded_precision() {
         AuditedStatus::Audited

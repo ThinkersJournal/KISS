@@ -35,12 +35,12 @@ fn rule(y: f32, x: f32) -> Option<u32> {
     Some(ys | mag)
 }
 
-// Backs: KISS-OPS-6.9-0001 — atan2 is the four-quadrant arctangent; the sign of a zero operand
+// Backs[enforced]: KISS-OPS-6.9-0001 — atan2 is the four-quadrant arctangent; the sign of a zero operand
 // selects the quadrant (the 28 cells cover each quadrant, the +-0 matrix and the +-inf matrix).
 #[test]
 fn test_ops_atan2_quadrants() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-atan2-quadrants.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 28);
     let (mut special, mut ordinary, mut x_neg_ordinary, mut neg_zero_x) = (0, 0, 0, 0);

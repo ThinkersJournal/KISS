@@ -11,5 +11,6 @@
 //! `emit_structure_key_vectors` does for `structure_key_vectors.json`).
 
 fn main() {
+    kiss_conformance::cli::basics("emit_contract_vectors", "Prints the committed vector artifact to stdout (no files are written).", &[]);
     print!("{}", kiss_conformance::contract::emit_contract_vectors_json());
 }

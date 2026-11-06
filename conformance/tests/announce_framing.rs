@@ -77,7 +77,7 @@ fn test_announce_vectors_state_their_population() {
     let json = announce::emit_announce_vectors_json();
     assert!(json.contains("\"population\""), "must carry a population field");
     assert!(
-        json.contains("FIVE") && json.contains("NOT rendered here"),
+        json.contains("EIGHT") && json.contains("NOT rendered here"),
         "population must state the 5 covered frames AND the boundary (decline vectors / other frame types)"
     );
     assert!(

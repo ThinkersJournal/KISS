@@ -33,7 +33,7 @@ fn pred(op: &str, lt: bool, eq: bool, gt: bool) -> bool {
 
 fn load() -> corpus::Corpus {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-compare-bool.json");
-    let text = std::fs::read_to_string(path).expect("bundle committed; run `cargo run --bin kiss_mint`");
+    let text = std::fs::read_to_string(path).expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert_eq!(c.vectors.len(), 6 * (12 + 5 + 5) + 2 * 7 * 3 + 7);
     // Every cell declares its expected dtype as `bool` (the loader does not keep it; read the text).
@@ -41,7 +41,7 @@ fn load() -> corpus::Corpus {
     c
 }
 
-// Backs: KISS-OPS-6.2-0005 - a comparison yields a one-byte bool mask, strictly 0 or 1, for f32/i32/u32
+// Backs[enforced]: KISS-OPS-6.2-0005 - a comparison yields a one-byte bool mask, strictly 0 or 1, for f32/i32/u32
 // operands, whatever the compute dtype.
 #[test]
 fn test_ops_compare_result_zero_one() {
@@ -81,7 +81,7 @@ fn test_ops_compare_result_zero_one() {
     assert!(unsigned_flip >= 6, "u32 cells on which a signed reading differs must be present");
 }
 
-// Backs: KISS-OPS-6.2-0006 - a bool consumer reads any non-zero byte as true, and its result is
+// Backs[enforced]: KISS-OPS-6.2-0006 - a bool consumer reads any non-zero byte as true, and its result is
 // normalized to strictly 0 or 1.
 #[test]
 fn test_ops_bool_normalization() {
