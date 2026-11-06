@@ -175,12 +175,12 @@ class DecompositionGraphTest(unittest.TestCase):
 
     def test_carrier_clauses_control_is_parsed_and_clean(self):
         region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
-        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 17)
+        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 19)
         self.assertEqual(self.carrier_violations(self.ops), [])
 
     def test_carrier_clause_dropping_a_carrier_is_caught(self):
-        v = self.carrier_violations(self.mutate("index_select, embedding, scatter_add}",
-                                                "index_select, embedding}"))
+        v = self.carrier_violations(self.mutate("index_select, embedding, scatter_add, cast, concat}",
+                                                "index_select, embedding, cast, concat}"))
         self.assertTrue(any("scatter_add" in m for m in v), v)
 
     def test_noncarrier_with_a_schema_row_is_caught(self):
