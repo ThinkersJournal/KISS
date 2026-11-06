@@ -68,6 +68,32 @@ pub enum AnnounceDecline {
     PayloadLenOutOfRange { got: u32 },
     /// The always-present correlation field's length byte was neither `0` nor `8` (§6.4-0013).
     BadCorrelationLen { got: u8 },
+    /// A device response's `device_count` exceeded `MAX_DEVICES` (§6.6-0004).
+    DeviceCountOverflow { got: u32 },
+    /// A `device_id` byte-length fell outside `[1, 4096]` (§6.6-0006).
+    DeviceIdLenOutOfRange { got: u32 },
+    /// A token's length byte was 0 (§6.6-0006).
+    TokenLenOutOfRange { region: &'static str, got: u8 },
+    /// A dtype set's count exceeded 64 (§6.6-0006).
+    SetCountOverflow { region: &'static str, got: u8 },
+    /// An accuracy count exceeded `MAX_ACCURACY_RECORDS` (§6.6-0008).
+    AccuracyCountOverflow { got: u32 },
+    /// A `math_fidelity` byte was neither 1 nor 2 (§6.6-0008).
+    BadMathFidelity { got: u8 },
+    /// A token held a byte that is not printable ASCII, or a target was not `<ns>:<cap>` (§6.6-0006).
+    TokenMalformed { region: &'static str },
+    /// A dtype token is not in the Classify closed table (§6.6-0007).
+    DtypeUnknown { region: &'static str },
+    /// A dtype token is a reserved spelling, which Classify declines (§6.6-0007).
+    DtypeReserved { region: &'static str },
+    /// A dtype set was not strictly ascending bytewise (§6.6-0007).
+    SetNotCanonical { region: &'static str },
+    /// The device computes on a dtype it does not store (§6.6-0007).
+    ComputeNotInStore { dtype: String },
+    /// An accuracy record names a dtype the device does not compute on (§6.6-0007).
+    AccuracyDtypeNotComputable { dtype: String },
+    /// Accuracy records were not strictly ascending by `(op, math_fidelity, dtype)` (§6.6-0008).
+    AccuracyNotCanonical,
 }
 
 // ---- §6.3 Availability list + §6.4 contract-query frames ---------------------
@@ -567,12 +593,15 @@ pub fn emit_announce_vectors_json() -> String {
     fn hexs(bytes: &[u8]) -> String {
         bytes.iter().map(|b| format!("{b:02X}")).collect::<Vec<_>>().join(" ")
     }
-    let frames: [(&str, &str, Vec<u8>); 5] = [
+    let frames: [(&str, &str, Vec<u8>); 8] = [
         ("reference_envelope", "KISS-ANNOUNCE-6.1-0002", reference_envelope().encode()),
         ("availability_list", "KISS-ANNOUNCE-6.3-0005", reference_availability_list().encode()),
         ("cyrq_request", "KISS-ANNOUNCE-6.4-0001", reference_cyrq().encode()),
         ("crsp_response", "KISS-ANNOUNCE-6.4-0004", reference_crsp().encode()),
         ("cdec_response", "KISS-ANNOUNCE-6.4-0007", reference_cdec().encode()),
+        ("dvrq_request", "KISS-ANNOUNCE-6.6-0003", crate::device_query::reference_dvrq().encode()),
+        ("dvrs_response", "KISS-ANNOUNCE-6.6-0004", crate::device_query::reference_dvrs().encode()),
+        ("dvdc_response", "KISS-ANNOUNCE-6.6-0005", crate::device_query::reference_dvdc().encode()),
     ];
     let mut s = String::new();
     s.push_str("{\n");
@@ -580,7 +609,7 @@ pub fn emit_announce_vectors_json() -> String {
     s.push_str("  \"generated_from\": \"conformance/src/announce.rs::emit_announce_vectors_json (the reference codec)\",\n");
     s.push_str("  \"spec_reference\": \"spec/announce.md \u{00a7}2.5 worked handshake example (informative) + the \u{00a7}6.1/\u{00a7}6.3/\u{00a7}6.4 framing clauses\",\n");
     s.push_str("  \"scope_note\": \"DIFFABLE, not COVERED: a foreign reader byte-diffs each frame's exact wire bytes (endianness, field width, padding) against its own encoder; this does NOT cover the untested KISS-Announce clauses or the reader/decline paths.\",\n");
-    s.push_str("  \"population\": \"the FIVE \u{00a7}2.5 worked-example POSITIVE frames only: the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from \u{00a7}2.5 — that is the burn-down this artifact makes measurable, not part of it.\",\n");
+    s.push_str("  \"population\": \"the EIGHT POSITIVE frames only: the five \u{00a7}2.5 worked-example frames (the 56-byte envelope, the availability list, and the CYRQ/CRSP/CDEC request-response frames) and the three \u{00a7}6.6 device-query frames DVRQ/DVRS/DVDC. NOT rendered here: malformed/decline vectors (announce_golden.rs exercises the reader's typed declines in Rust), envelopes with >1 profile or other capability sets, and any frame type absent from \u{00a7}2.5 — that is the burn-down this artifact makes measurable, not part of it.\",\n");
     s.push_str("  \"negotiation_note\": \"the `negotiation` array (after `frames`) holds the two KISS-ANNOUNCE-7.3-0003 role-aware vectors: two 56-byte envelopes, which side is the provider, the negotiated profile, and the live capability word as 8 little-endian bytes. A foreign reader computes the live word from the two envelopes and diffs it; a plain AND of the two words is the wrong answer.\",
 ");
     s.push_str("  \"frames\": [\n");
@@ -615,7 +644,7 @@ pub fn emit_announce_vectors_json() -> String {
     s.push_str("}\n");
     s
 }
-/// Which of the five Announce messages a leading tag names (§6.2-0014).
+/// Which of the eight Announce messages a leading tag names (§6.2-0014).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageKind {
     Envelope,
@@ -623,6 +652,9 @@ pub enum MessageKind {
     QueryRequest,
     ContractResponse,
     DeclineResponse,
+    DeviceRequest,
+    DeviceResponse,
+    DeviceDecline,
 }
 
 /// The **message extent** (§3, §6.2-0014): the number of bytes the message at the start of `bytes` occupies,
@@ -644,6 +676,9 @@ pub fn message_extent(bytes: &[u8]) -> Result<(MessageKind, usize), AnnounceDecl
             let off = identity_extent(bytes, 4)?;
             Ok((MessageKind::DeclineResponse, skip_fixed(bytes, off, 4, "decline_code")?))
         }
+        crate::device_query::DVRQ => crate::device_query::request_extent(bytes).map(|n| (MessageKind::DeviceRequest, n)),
+        crate::device_query::DVRS => crate::device_query::response_extent(bytes).map(|n| (MessageKind::DeviceResponse, n)),
+        crate::device_query::DVDC => crate::device_query::decline_extent(bytes).map(|n| (MessageKind::DeviceDecline, n)),
         got => Err(AnnounceDecline::BadTag { region: "leading_tag", got }),
     }
 }

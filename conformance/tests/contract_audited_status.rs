@@ -156,14 +156,25 @@ fn test_contract_audited_derivation_rule() {
         );
     }
 
-    // NOT ASSERTED, deliberately: `bit_stability`.
-    //
-    // §6.8-0009's prohibition is on SETTING that field, and §6.8-0005 says in
-    // terms that the derivation "reads this field and MUST NOT set it". Reading
-    // is permitted. An earlier version of this test asserted the opposite — that
-    // the derivation must not READ it — which would have failed any
-    // implementation following the clause. Caught in review.
-    //
+    // `bit_stability`: §6.8-0005 says the derivation MUST NOT set it and takes no
+    // input from it (KISS#194 settled the earlier "reads this field" wording as loose
+    // drafting: the rule never used it). Two Guarantees differing only in
+    // `bit_stability` must derive the same value, on both arms.
+    for stability in [BitStability::Portable, BitStability::SameHardware, BitStability::None] {
+        let audited = Guarantees { bit_stability: stability, ..audited_guarantees() };
+        assert_eq!(derive_audited_status(&audited), AuditedStatus::Audited);
+        let unaudited = Guarantees {
+            bit_stability: stability,
+            reference_function: None,
+            ..audited_guarantees()
+        };
+        assert_eq!(
+            derive_audited_status(&unaudited),
+            AuditedStatus::Unaudited,
+            "the derivation changed with bit_stability = {stability:?}"
+        );
+    }
+
     // The must-not-set half needs no assertion: `derive_audited_status` takes
     // `&Guarantees` and returns a value, so it cannot write the field at all. A
     // compile-time impossibility is a stronger guarantee than a runtime check,

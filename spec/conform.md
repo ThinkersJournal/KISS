@@ -825,6 +825,28 @@ enum (§6.0). See umbrella §3 for the full statement.
   wide truth; a suite that toleranced a narrow-A cell against the widest-A reference (or
   against §6.5-0007's transcendental oracle) MUST be rejected. *Test:*
   `test_conform_reduction_cell_oracle_reference`.
+- **KISS-CONFORM-6.5-0011** — The oracle-differential harness of §6.5-0001 MUST be accompanied by
+  **executable negative controls** proving it discriminates: for each determinism-class comparator
+  (§6.8) the harness employs, the suite MUST include at least one **deliberately incorrect
+  candidate implementation** that the harness detects as divergent, and at least one
+  **independently written correct candidate** that the harness accepts without divergence. A
+  negative control MUST target a behaviour the standard pins normatively, and MUST diverge **only**
+  on the inputs where that pinned behaviour is violated — a control that diverges on unrelated
+  inputs demonstrates noise, not discrimination. A harness that has never been shown to reject a
+  wrong implementation supplies no evidence of conformance, and MUST NOT be presented as satisfying
+  §6.5-0001. **See §6.5-0016, the attribution half of Pattern B; satisfying this clause does not
+  satisfy that one.** *Test:* `test_conform_harness_negative_controls`.
+- **KISS-CONFORM-6.5-0016** — Where KISS-Conform relies on the result of a **discovery,
+  enumeration, or sweep** step — over source files, vectors, registry entries, or artifacts — that
+  step MUST distinguish a **genuine negative** ("looked, and found nothing") from a **failure to
+  look** ("could not enumerate, wholly or in part"). An enumeration that cannot complete MUST
+  surface that fact to its consumer as an error or an explicit incompleteness signal, and MUST NOT
+  return a **silently empty or silently truncated** result. A consumer MUST NOT treat a result of
+  unknown completeness as authoritative. Where the sweep's purpose is to mechanize a claim that
+  would otherwise be hand-maintained, a truncated sweep MUST be treated as a **failure** of that
+  check, not as its satisfaction. **This clause is the attribution half of the RFC's Pattern B; the capability half
+  is §6.5-0011, and satisfying this clause does not satisfy that one.** *Test:*
+  `test_conform_sweep_incompleteness_is_surfaced`.
 - **KISS-CONFORM-6.5-0017** — The frozen oracle-vector corpus (§6.5-0008/0009) is carried in a
   machine-readable bundle whose `schema` is `kiss-oracle-vectors-v1.json`. Such a bundle MUST carry
   `schema`, `schema_version` (an **integer** — a gate that truncates a fractional value is not a
@@ -959,6 +981,23 @@ enum (§6.0). See umbrella §3 for the full statement.
   with another's, because two implementations that share a defect agree exactly while both
   miss the reference. (CireSnave decision 311, Q5 A.) *Test:*
   `test_conform_ulp_referent_is_wide_reference`.
+- **KISS-CONFORM-6.8-0002b** — The **ULP distance** between two non-NaN values of a binary
+  floating-point dtype of width `w` bits (`f16`, `bf16`, `f32`, `f64`; KISS-OPS §6.16-0002/-0003)
+  MUST be the absolute difference of their **sign-magnitude total-order keys**, as an unsigned
+  integer: for a bit pattern `b`, `key(b) = b | 2^(w-1)` when the sign bit of `b` is clear, and
+  `key(b) = (~b) mod 2^w` when it is set. The key is monotone in the numeric order, so
+  representable neighbours differ by exactly `1`, **including across zero**: `-0.0` and `+0.0`
+  are `1` apart (not `0`), the smallest negative and positive subnormals are `3` apart, and a
+  subnormal-to-normal step is `1`; the largest finite value and `+inf` are `1` apart (an
+  infinity is an ordinary key, a NaN has none and is compared by §6.8-0010 instead). A
+  comparator that subtracts the raw sign-magnitude bit patterns is wrong whenever the operands
+  differ in sign (it reports `2^(w-1)` between `+0.0` and `-0.0`) and MUST be rejected. *Test:*
+  `test_conform_ulp_distance_function`.
+  *Edge-case corpus (informative; imposes no obligation on any consumer):* `conformance/corpus/ops-ulp-edge.json`
+  offers `ulp_distance(a, b)` cells at `f16`, `bf16`, `f32` and `f64` covering both zero signs, a subnormal pair
+  straddling zero, subnormal-to-zero and subnormal-to-normal steps, the largest finite value against each
+  infinity, `+inf` against `-inf`, `+-1.0`, and the extremes. A NaN has no key and is not in the file. A
+  consumer MAY use it to check its own ULP comparator; nothing in this suite requires it to.
 - **KISS-CONFORM-6.8-0003** — KISS-Conform MUST evaluate a transcendental atom under the
   **per-target accuracy tier its kernel's contract declares** for that target, and that declared
   tier is the **sole** conformance gate for the atom (KISS-OPS §6.8-0001); the tier's form is the
@@ -1269,9 +1308,15 @@ atomic clause with its own append-only ID and dedicated test.
   *Test:*
   `test_conform_announce_golden_vectors`.
 - **KISS-CONFORM-6.13-0002** — KISS-Conform MUST provide the KISS-Announce **freeze-gate** test
-  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove the two `SeamHello`
-  **reference seeds** (KISS-ANNOUNCE §0 *Reference seed crate(s)*; provenance in §A.2) are
-  **byte-identical via golden hex** (not struct equality), MUST run a foreign reader
+  (the Appendix-B checklist, AUDIT-signed, KISS-ANNOUNCE §8), MUST prove, **via golden hex**
+  (not struct equality), that the `SeamHello` envelope is **independently reproduced
+  byte-identically**: at least two implementations meeting the freeze gate's
+  dissimilarity bar (umbrella §5.3; defined there, not here) produce the same bytes. The
+  two `SeamHello` **reference seeds** (KISS-ANNOUNCE §0 *Reference seed crate(s)*;
+  provenance in §A.2) are the current instances of that property and not the requirement
+  itself, so their convergence to one crate does not retire the obligation; their golden
+  hex and provenance stay frozen as the reference to reproduce against
+  (`conformance/SEAM-SEED-ATTESTATION.md`). The clause MUST run a foreign reader
   (written outside the reference language) over the envelope, and MUST supply negative vectors
   for the unknown-bit **reserved-and-ignore** and the empty-profile **hard-fail-never-panic**
   obligations. *Test:* `test_conform_announce_freeze_gate`.
@@ -1677,6 +1722,8 @@ the traceability lint.
 | KISS-CONFORM-6.5-0008 | `test_conform_oracle_vector_coverage_complete` |
 | KISS-CONFORM-6.5-0009 | `test_conform_oracle_vector_stores_wide_precision_value` |
 | KISS-CONFORM-6.5-0010 | `test_conform_reduction_cell_oracle_reference` |
+| KISS-CONFORM-6.5-0011 | `test_conform_harness_negative_controls` |
+| KISS-CONFORM-6.5-0016 | `test_conform_sweep_incompleteness_is_surfaced` |
 | KISS-CONFORM-6.5-0017 | `test_conform_oracle_vector_envelope` |
 | KISS-CONFORM-6.6-0001 | `test_conform_fuzzer_generates_valid_dags` |
 | KISS-CONFORM-6.6-0002 | `test_conform_fuzzer_every_backend` |
@@ -1693,6 +1740,7 @@ the traceability lint.
 | KISS-CONFORM-6.8-0001 | `test_conform_exact_byte_comparator` |
 | KISS-CONFORM-6.8-0002 | `test_conform_ulp_comparator` |
 | KISS-CONFORM-6.8-0002a | `test_conform_ulp_referent_is_wide_reference` |
+| KISS-CONFORM-6.8-0002b | `test_conform_ulp_distance_function` |
 | KISS-CONFORM-6.8-0003 | `test_conform_ulp_declared_tier_is_gate` |
 | KISS-CONFORM-6.8-0004 | `test_conform_nondeterministic_comparator` |
 | KISS-CONFORM-6.8-0004a | `test_conform_tolerance_threshold_from_declared` |

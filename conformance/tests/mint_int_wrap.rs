@@ -54,12 +54,12 @@ fn saturate(v: i128, bits: u32, signed: bool) -> i128 {
     v.clamp(lo, hi)
 }
 
-// Backs: KISS-OPS-6.2-0002 — integer add/sub/mul wrap modulo 2^bitwidth (never saturate) at the
+// Backs[enforced]: KISS-OPS-6.2-0002 — integer add/sub/mul wrap modulo 2^bitwidth (never saturate) at the
 // boundary patterns of every 8/16/32/64-bit signed and unsigned lane.
 #[test]
 fn test_ops_int_wrapping() {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/ops-int-wrap.json"))
-        .expect("bundle committed; run `cargo run --bin kiss_mint`");
+        .expect("bundle committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     // 8 dtypes x (add 15 + mul 15 + sub 25) cells.
     assert_eq!(c.vectors.len(), 8 * (15 + 15 + 25));

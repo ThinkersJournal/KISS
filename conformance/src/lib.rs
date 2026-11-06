@@ -81,6 +81,7 @@ pub mod accuracy;
 pub mod announce;
 pub mod bundle_envelope;
 pub mod cast;
+pub mod cli;
 pub mod correlation_id;
 pub mod bundle_isolation;
 pub mod antifork;
@@ -90,6 +91,7 @@ pub mod corpus;
 pub mod decline;
 pub mod decomp_grammar;
 pub mod derivation_vectors;
+pub mod device_query;
 pub mod derive;
 pub mod nan_provenance;
 pub mod determinism;
@@ -121,6 +123,7 @@ pub mod structure_key;
 pub mod synth;
 pub mod tolerance;
 pub mod verify_record;
+pub mod window;
 
 /// A determinism/fidelity class (KISS-Ops §6.0-0001) that selects a comparator
 /// (KISS-Conform §6.8). Only `ExactByte` is exercised in this slice; the POD
@@ -189,6 +192,18 @@ fn total_order_f32(x: f32) -> u32 {
         b | 0x8000_0000 // positives (incl +0) sort above the negatives
     } else {
         !b // negatives: flip so more-negative sorts lower
+    }
+}
+
+/// The sign-magnitude total-order key of a `width`-bit binary float pattern (Conform §6.8-0002b):
+/// `b | 2^(w-1)` when the sign bit is clear, `(!b) mod 2^w` when it is set.
+pub fn ulp_key(width: u32, bits: u64) -> u64 {
+    let sign = 1u64 << (width - 1);
+    let mask = if width == 64 { u64::MAX } else { (1u64 << width) - 1 };
+    if bits & sign == 0 {
+        bits | sign
+    } else {
+        !bits & mask
     }
 }
 

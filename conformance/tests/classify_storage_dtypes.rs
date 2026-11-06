@@ -54,7 +54,7 @@ fn dtype_of(token: &str) -> &str {
     token.split('|').nth(2).expect("dtype component")
 }
 
-// Backs: KISS-CLASSIFY-6.1-0005 — a dtype pins byte layout only: no strict-precision float token exists
+// Backs[enforced]: KISS-CLASSIFY-6.1-0005 — a dtype pins byte layout only: no strict-precision float token exists
 // (the closed set of 27 contains none; an `f32s`-style token declines as unknown), the dtype record carries
 // no precision field, and compute precision rides the separate `<mp>` attribute, never the dtype token.
 #[test]
@@ -83,7 +83,7 @@ fn test_classify_dtypes_are_pure_storage() {
     assert_eq!(dtype_of(&reduced), "f32", "the dtype token is the same storage dtype either way");
 }
 
-// Backs: KISS-CLASSIFY-6.1-0006 — u32 is an unsigned 32-bit ordinary storage dtype: 4-byte container, kind
+// Backs[enforced]: KISS-CLASSIFY-6.1-0006 — u32 is an unsigned 32-bit ordinary storage dtype: 4-byte container, kind
 // `uint` like u8/u16/u64, derivable as the compute dtype of elementwise and reduction cells, as a data
 // operand beside an index operand of another dtype, and as an index operand.
 #[test]

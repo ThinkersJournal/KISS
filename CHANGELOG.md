@@ -3,13 +3,179 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.7.1 — 2026-10-28 (number proposed; the PM allocates at gate time; BREAKING spec, HELD for the sk7 batch; stacked on #724)
+## 0.8.1 — 2026-11-05 (number proposed; the PM allocates at gate time; BREAKING spec, HELD for the sk7 batch; stacked on #724 (0.8.0))
 
 - **BREAKING (spec, pre-1.0 so the second number moves): the F1 ops, option B** (union-coverage finding F1, ROADMAP R5.7, board 304; the PM's approval 2026-10-29: add `cast` and `concat`, remove `transpose` and `unsqueeze`, "one way to say one thing"). **HELD with the `sk7` batch.** Ops: `cast` is a new primitive-floor conversion atom (new §6.21, clauses 0001-0004: one operand, same shape, destination from OpAttrs; one rounding of the exact value in one of four directions; a saturation attribute `none`/`clamp`; fp8 and MX destinations accept nearest-even and clamp only; the cases Appendix D item 12 leaves open are not pinned) and `concat` is a new structural access atom (6.11-0020: pure data movement, bits preserved). The floor grows by two (6.3-0001, §2.7 catalog). OpAttrs: carriers `cast` (`target_dtype`, `rounding`, `saturation`) and `concat` (`axis`); two new frozen enums `cast_rounding` and `cast_saturation` (6.19-0041, 6.19-0042); the carrier set is now 19. Shape rules: `cast` is `SameAs(0)`, `concat` sums the axis extent (6.20-0011). **Removed:** `transpose` and `unsqueeze` are no longer named by the shape oracle (6.20 preamble); 6.20-0011 states that no such op exists and that a transposed or axis-inserted operand is a stride and role-hint view (a consumer or producer that minted either op token must stop). 6.16-0003 gains the exception for a `cast` that names another rounding mode. Appendix D item 12 records the open values for CireSnave (NaN into a no-NaN format, NaN into an integer, out-of-range float into an integer, overflow into an IEEE float, `bitcast`, `cast` into `bf16` with a non-nearest mode); the recommendations there are Unpopped's implemented behaviour (#144) and are not normative. Code: `cast.rs` (reference rounding, saturation and declines), `concat_f32`, `encode_cast`/`decode_cast`/`encode_concat`/`decode_concat`, generic OpAttrs encoder fields; corpus: `op_manifest.json`, `opattrs_value_vectors.json` (167 to 180 vectors), `opattrs_vectors.json`. New tests in `tests/cast_atom.rs` and `tests/structural_access.rs`; harness 483 to 490, untested 393 to 394 (6.21-0004 is a negative rule, recorded). No `structure_key` field moves; the OpAttrs bytes of existing ops are unchanged.
 
-## 0.7.0 — 2026-10-28 (number proposed; the PM allocates at gate time; BREAKING wire, HELD, batch with the other sk7 changes; based on main)
+## 0.8.0 — 2026-11-05 (number proposed; the PM allocates at gate time; BREAKING wire, HELD, batch with the other sk7 changes; based on main)
 
 - **BREAKING (wire, pre-1.0 so the second number moves): the `structure_key` bump `sk6` to `sk7` for one change, `MAX_OPERANDS` 8 to 16** (CireSnave 2026-10-29: "Raise the limit", via the PM [TASK]; asked for by the Unpopped lane for a 9-operand causal conv1d, union-coverage table Flag 1). **HELD: do not merge or publish alone; the PM batches `sk7` with the other key-affecting changes (padding low/high, matmul attrs, the cast options) and says when the batch is closed.** Classify 6.4-0002 (`MAX_OPERANDS` MUST equal 16; test renamed `test_classify_max_operands_is_16`), 6.4-0003 (`STRUCTURE_KEY_VERSION` 7, prefix `sk7`), 6.7-0002, 6.7-0014 (the `sk6` retirement policy: no `sk6` decoder in the reference, a bounded `sk6` arm MAY be kept through `sk7`) and every Appendix token move; Ops 6.19-0037 co-versions the OpAttrs `MAX_OPERANDS` to 16 (no OpAttrs byte changes; `index_operand` now ranges `0..15`). Code: `SCHEMA_VERSION = 7`, `MAX_OPERANDS = 16` in `structure_key.rs`, `opattrs.rs`, `opattrs_value.rs`. Corpus regenerated (`structure_key_vectors.json`, `structure_key_derivation_vectors.json`, `contract_vectors.json` golden bytes and crc, `dtype_manifest.json`); every token changes only in its prefix. New vectors: positives at 9 and 16 operands (a reader capped at 8 or at 15 fails), declines at 17 operands and a persisted `sk6` token. Per-vector list: `docs/sk7-vector-changes.md`. **Consumers:** re-vendor, emit `sk7`, accept 9 to 16 operands, decline 17; anything persisting an `sk6` token re-derives (the change moves no field, but do not assume it). `envelope_version`, `contract_version` and `list_version` are unmoved.
+
+## 0.7.13 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (no spec text, no bytes; ROADMAP R1.13 and R1.19, KISS#316 and #426; CireSnave boards 378 and 380, 2026-11-04 via the PM: widest expressibility):** `docs/options-r1-13-output-layout-guarantee.md` (Fuel `layout_guarantee` measured against KISS and Unpopped's layout types; seven forms; recommend a closed-sum field in Guarantees with an extension rule) and `docs/options-r1-19-axis-dropping-reductions.md` (a cited survey of keepdims across NumPy, PyTorch, ONNX, Triton, TVM, XLA, MLIR, with five rows marked unverified; recommend `squeeze`/`unsqueeze` primitives plus a non-primitive `reduce_drop`).
+
+## 0.7.12 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main, 0.7.11 is #772)
+
+- **Docs only (no spec text, no bytes; ROADMAP R1.22, KISS#424; CireSnave board 379 "1", 2026-11-04 via the PM):** `docs/design-r1-22-bind-time-obligations.md`, the design for a bind-time obligation class, explicit reader obligations and the instrument (a `bind` reference plus a `bind_vectors.json` family as Modality 4 with an input environment). Maps FDX's four realize-time checks to KISS obligations; draft clause text only, staged as design note, then clauses, then instrument.
+
+## 0.7.11 — 2026-11-04 (number proposed; the PM allocates at gate time; based on main)
+
+- Corpus bytes, provenance member only (CireSnave 2026-11-04 via the PM, board 377 "Fix now"; KISS#218; ROADMAP R1.28): `dtype_manifest.json` and `op_manifest.json` now say `generated_from` = the tool that emits them (`tools/kiss_dtypes.py`, `tools/kiss_ops.py`, each with its `--emit-manifest` command) instead of the spec file they read, completing what 0.6.19 did for the two structure-key vector files. `generated_from` is part (c) PROVENANCE under KISS-CONFORM-6.3-0010: no entry, count or schema member moves, and a consumer may not rely on the value. Regenerated with the two tools; the delta is exactly that one line in each file. Vendors (Fuel, Baracuda, Unpopped, Vulkane, kiss-ref) re-vendor the two files and update any hash pin. ROADMAP R1.28 drops its stale `[wait: #218 byte move]` (the byte move landed in 0.6.19, #713).
+
+## 0.7.10 — 2026-11-03 (PM-allocated)
+
+- **Docs:** `HANDOFF.md` WAIT lines rewritten in `lane-restart` format (`WAIT: <event> | check: <cmd> | wake: <UTC>`) so `lane-restart waits` parses and arms them. No spec or wire change.
+
+## 0.7.9 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs:** `HANDOFF.md` rewritten for the 0.7.8 state (R1.27 done; WAIT lines for board 361/358, the sk7 batch, and the 2026-11-08 `OPS-6.3-0002` ratification; the full conformance `cargo test` named as a push gate). No spec, corpus or wire change.
+
+## 0.7.8 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause defined + test (ROADMAP R1.27):** `KISS-CONFORM-6.5-0011`, the capability half of the RFC's Pattern B, was cited by two shipped tools and `rfcs/` and defined nowhere in `spec/`; it is now defined (RFC text verbatim; the RFC allocation is marked landed) and `KISS-CONFORM-6.5-0016`'s "allocated and not yet defined" sentence points at it. New test `test_conform_harness_negative_controls` (cross-platform, CPU): for each of the three comparators (exact-byte, ULP-tolerance, order-invariant) an independently written correct candidate is accepted everywhere and a deliberately incorrect one (zero-sign normalising add; a large-argument `exp` off by declared-bound+1 ULP; a sum dropping its last element) diverges on **exactly** the inputs violating the pinned behaviour, a control showing it does not diverge elsewhere; a fourth comparator class breaks the build until a control exists. Mutation-checked: exact-byte compare by float equality, ULP bound +2, and order-invariant tolerance x1e6 each turn it red. Scope stated: the comparator layer, not the Windows-gated foreign-C legs. Floor harness 498->499, clauses 1007, test fns 862. No corpus or wire change.
+
+## 0.7.7 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause re-quantification (ROADMAP R1.27, KISS#229):** `KISS-EMIT-6.3-0004` quantified the §6.5 neutrality audit over the *operator*, but the counterexample is dtype-shaped (`+` renders for `f32` and not for `c64`/`c128` on the same C-family target, where the carrier is a struct), so the audit could only record something false or something over-broad. The audited unit is now the **(operator, operand dtype) pair**: a pair is driver-may-spell only after the audit proves it identical on every claimed target where it applies, else emitter-must-supply. Per the editor's analysis and kiss-ref's cosign on #229: a further divergent axis joins the key rather than leaving the decision exempt (no enumerated tuple), and `KISS-EMIT-6.5-0001` requires the manifest to record **identical / not identical / not applicable** per pair and claimed target, *not applicable* explicit and distinct from *not identical* (never by omission). The `c64`/`c128` × C-family case is recorded as a known negative entering the audit. `6.4-0005`, `6.5-0002`, §2.3 and §2.5 are aligned. `test_emit_infix_operators_gated_on_audit` and `test_emit_neutrality_audit_manifest_is_freeze_precondition` gain assertions on the new text (both fail on the 0.7.6 wording). No corpus or wire change; the audit itself is still unperformed.
+
+## 0.7.6 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause re-scope (ROADMAP R1.27, KISS#500, KISS#512 §3.6):** `KISS-OPS-6.3-0002` bound "every conforming consumer" to the 43-op floor while ops.md never defined the term. It now binds a party that **claims conformance to KISS-Ops as a consumer of op-semantics (evaluate)**, per umbrella §3.6; ops.md §3 gains a *Consumer of op-semantics* entry; a pure wire parser or a partial evaluator making no such claim is outside it, and non-recognized non-primitive ops are still resolved by decomposition (§6.14-0004). **Membership basis is by claim: PM provisional, awaiting architect ratification**, so a reversal is a visible spec amendment. The umbrella §3.6 "until then" sentence is updated. Test status unchanged (`untested`, UNBACKED). No corpus or wire change.
+
+## 0.7.5 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.27, KISS#260, architect ruling A):** `KISS-CONFORM-6.13-0002` obliged proof that "the two" `SeamHello` reference seeds are byte-identical while KISS-Announce schedules them to converge to one, so the clause became unsatisfiable (or a self-comparison) on convergence. It is re-anchored on the property: at least two implementations meeting the freeze gate's dissimilarity bar (umbrella §5.3, defined there, not restated) reproduce the envelope byte-identically via golden hex; the two seeds are the current instances, and their frozen bytes in `conformance/SEAM-SEED-ATTESTATION.md` are the reference after convergence. The other limbs (Appendix-B checklist, foreign reader, negative vectors) are untouched. Honest consequence: discharging it needs a second implementation meeting the bar, which is the existing foreign-reader blocker; the clause stays `blocked` and the UNBACKED note says so. No corpus or wire change.
+
+## 0.7.4 — 2026-11-01 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause wording (ROADMAP R1.27, KISS#194):** `KISS-CONTRACT-6.8-0005` said the `audited_status` derivation "reads" `bit_stability`, a dependency §6.8-0009's rule never had (it keys on a named `reference_function` and a declared bound). Settled as loose drafting: the derivation MUST NOT set the field and takes no input from it. The reference `derive_audited_status` already behaved so; `test_contract_audited_derivation_rule` now asserts it (the derived value is the same across all three `bit_stability` values, on both arms), and mutated to read the field it fails. Binds a contract-reading implementation's derivation only; no corpus or wire change.
+
+## 0.7.3 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.16, KISS#413; PM picks 2026-10-31: K1, D1, defect-2 fix):** `KISS-CONTRACT-6.8-0012` now (1) names the schedule: `|max partial sum|` is the maximum absolute running partial of the §6.17-0009 reference evaluation itself, not the candidate's schedule and not a supremum; (2) requires a calibration record (method, corpus, margin of at least 1) for each declared `k(S,A)`, pinning that it exists and never a value, and not a contract field; (3) states that a zero band is exact equality. New `conformance/tests/accumulator_zero_band.rs` runs the zero-band argument (zero ascending partials imply zero inputs, incl. subnormals) for f32 and f64 sums over every sequence of length 4 or less from a 16-value pool, with a flush-to-zero control where the claim is false; born red against the wrong claim (2770 counterexamples, first a lone subnormal). The clause stays `untested` (UNBACKED note now PARTIAL; the test does not cite it). Comparator semantics only; no corpus or wire change. Options note `docs/options-r1-16-reassociation-band.md` records the choices; K3 stays the fallback if kiss-ref's data show K1 cannot be calibrated stably.
+
+## 0.7.2 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.15, KISS#412):** `KISS-CONTRACT-6.4-0011` forbade one verdict for a surfaced shape gap and required none, so a two-valued check (Fuel's `shape_consistent`, and this reference's own, which returned `true` for a gap whatever the declared shape) satisfied it. It now states the verdict: **undetermined**, neither inconsistent nor verified, with three outcomes the interface must be able to express. Reference: `ShapeVerdict` and `shape_verdict` added; `shape_consistent` now means *verified* (a gap is `false`). `test_contract_output_shape_consistency` now asserts the verdict over four different declared shapes against a gap (the declared shape is never read on that arm); mutated to return Consistent for a gap, it fails. Binds a consumer's shape check; no corpus or wire change. R1.15's other half (KISS#411, how the seven §6.12 leaves are represented) is NOT done as a clause: the choice changes the serialized `op_dag` bytes and waits on a ruling. Options note `docs/options-r1-15-scalar-source-leaf-representation.md` (recommendation: leaf tokens as `Op` nodes, no new node kind).
+
+## 0.7.1 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** ROADMAP R1.27 no longer lists a top-level key-set pin for `structure_key_vectors.json` as open: `test_reference_artifact_normative_surface_is_declared` (KISS-CONFORM-6.3-0010) already classifies all 21 top-level members and fails on an unclassified or phantom one. No clause, corpus or code change.
+
+## 0.7.0 — 2026-10-31 (number proposed; **Breaking** pre-1.0, so the second number moves; the PM allocates at gate time; based on main)
+
+- **New wire messages and clauses (ROADMAP R1.33, R1.36; CireSnave board 355 "D"):** KISS-Announce section 6.6 adds the device-query protocol: `DVRQ` request, `DVRS` response, `DVDC` decline, FEAT bit 35 `DEVICE_QUERY`, and the normalised per-device record (opaque `device_id`, `target`, `store_dtypes`, `compute_dtypes`, accuracy records keyed `(op, math_fidelity, dtype)` with a `max_ulp`). Kernels keep declaring their dtype sets; effective support is the intersection (KISS-ANNOUNCE-6.6-0009) and a kernel looser than its device's bound under the same key is declined (6.6-0010). A reader declines a record that contradicts itself (accuracy for a dtype the device does not compute on, compute outside store, a spelling outside the Classify table, a non-canonical set). KISS-ANNOUNCE-7.2-0012 assigns bit 35; 6.2-0014 and 6.2-0016 now count eight messages. **Byte-altering:** three new frames, one new capability bit, and `announce_vectors.json` gains three golden frames (eight total); an existing speaker that does not advertise bit 35 is unaffected on the wire. `conformance/src/device_query.rs` is the reference codec; `docs/device-capability-survey-2026-10-31.md` is the per-backend documentation check (CUDA, Vulkan, OpenCL, SYCL, HIP verified in part; Metal and CPU UNVERIFIED). README figures re-derived (clauses 1006, harness 498, test fns 859, Announce 59 of 96); harness floor 487 to 498.
+
+## 0.6.55 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** HANDOFF rewritten for the R1.32-R1.37 work, the sycl namespace, `KISS-OPS-6.13-0010/-0011` and `KISS-CONFORM-6.5-0016`; board 355 (R1.33/R1.36 carrier) recorded as unruled. No clause, corpus or code change.
+
+## 0.6.54 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clause (ROADMAP R1.27, first item):** `KISS-CONFORM-6.5-0016` (an enumeration that cannot complete is an error, never a silently empty or truncated result) was cited by `test_conform_sweep_incompleteness_is_surfaced` and defined nowhere in `spec/`; its text was allocated in `rfcs/derive-and-discriminate-2026-08-08.md`. It is now defined in `spec/conform.md`, verbatim, apart from the cross-reference to 0011, marked `ALLOCATION LANDED` in the RFC. That test's `Backs[enforced]` line named `KISS-CLASSIFY-6.5-0011` (the index-width clause) by mistake and now names 0016. `KISS-CONFORM-6.5-0011` (negative controls for the harness) stays allocated in the RFC, undefined: no test of it exists. Binds the suite's instruments, not a seam consumer; no corpus or wire change. Harness-tested 486 to 487, clauses 994 to 995.
+
+## 0.6.53 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Clauses (ROADMAP R1.37, CireSnave board 345 "B"):** `KISS-OPS-6.13-0010` pins the pooled window view's output extent per axis, `⌊(n + 2p − D) / s⌋ + 1` with `D = d·(k − 1) + 1` (0 when no window fits; a zero `window_size`, `stride` or `dilation` is not expressible), and `KISS-OPS-6.13-0011` requires every output window to have at least one in-bounds tap: a condition over the window attributes and the operand extent, exact for all shapes (the attribute-only bound `2·p ≤ k` is not, at dilation above 1). A violating shape is not expressible: a producer MUST NOT write it, a reader MUST decline it. No OpAttrs byte moves. Tests `test_ops_window_output_extent` and `test_ops_window_overlap_declined` hold the closed form (`conformance/src/window.rs`) against a brute-force scan over 12 x 6 x 4 x 4 x 12 axis shapes, with the `n=1, k=2, d=2, s=1, p=1` negative control declined at window 0. README figures re-derived (clauses 994, harness 486, test fns 848).
+
+## 0.6.52 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `docs/options-r1-36-37-accuracy-and-window.md`, the options notes with recommendations for ROADMAP R1.36 (guaranteed-accuracy declaration: a provider-level record keyed by op, MathFidelity mode and dtype, with a floor rule against kernel Guarantees) and R1.37 (window overlap). Finding for R1.37, by brute force over small shapes (scratch script, assumed output extent, which `spec/ops.md` does not state): `2*pad <= window_size` leaves no empty window at dilation 1 but 12 counterexamples at dilation above 1, so the exact rule needs the operand extent. No clause, corpus or code change.
+
+## 0.6.51 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.36, R1.37):** the two rows from CireSnave's board-338 Q4 and Q5 rulings: (Q4) a declaration format for guaranteed accuracy per op and precision mode, by backend and per kernel through a backend (KISS defines the format, never the numbers); (Q5) the window-overlap rule, a pool/`im2col` window must overlap at least one real input element, violating shapes not expressible. Each is options-first; no consumer MUST without his word. No clause, corpus or code change.
+
+## 0.6.50 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.35):** a row for the finding from the R1.32 options note: the op-family tag is normative (KISS-OPS-6.1-0003) but is not the move/compute class, and the class of `neg`/`abs` depends on the dtype kind (float sign edit versus integer wrapping arithmetic). The R1.32 options note is refined to class per (op, dtype kind). No clause, corpus or code change.
+
+## 0.6.49 — 2026-10-31 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `docs/options-r1-32-34-seam-mechanisms.md`, the options note with a recommendation for ROADMAP R1.32 (move/compute classification), R1.33 (backend dtype-compute declaration) and R1.34 (contract vector width). Findings: the ops catalog's family column is not the move/compute class (`neg`/`abs` are filed `arithmetic`); a per-dtype Announce bitset does not fit the 16 core FEAT bits; a width already exists as the derived per-operand `vL` (Classify 6.5-0009) plus the contract's `count_unit`, with no clause relating the two. No clause, corpus or code change; every option that binds a consumer or moves wire bytes waits for CireSnave.
+
+## 0.6.48 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only (ROADMAP R1.32-R1.34):** three design-first rows from CireSnave's board-338 ruling: (1) specify which base operations only move bits and which compute, (2) a mechanism for a backend to declare the dtypes it can compute on, (3) a mechanism for a kernel contract to state its vector width. Each row is an options note with a recommendation first; no consumer MUST without his word; KISS states no list of backend capabilities and no width value. Q4 and Q5 of the Unpopped seams note are still his and get no row. No spec, corpus or code change.
+
+## 0.6.47 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Namespace, additive; not Breaking:** registers `sycl` (status `registered`, maintainer bonefish) in `conformance/registry/namespaces.json` and adds the maintainer-owned annex `spec/namespaces/sycl.md` (grammar `sycl:spir64` | `sycl:intel-gpu-<arch>`, 36 tokens, `-` admitted by KISS-CLASSIFY-6.8-0005). Informative about status: nothing produces `sycl:` tokens yet; the 6.8-0014 witness proves reachability of a token only and no admitted-set claim is made (`sycl:spir64` beside a device token is unmeasured). KISS pins only the grammar and the match rule (6.8-0004); the token set is Bonefish's (`bonefish-sycl-emit` `TOKENS`). `ArchSku` is the Unpopped lane's call. No clause, test or corpus change.
+
+## 0.6.46 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Docs only:** `HANDOFF.md` rewritten for the KISS lane (state after #738-#743: the corpus bundles `ops-ulp-edge.json` and `ops-move-wide-nan.json`, R3.18, R5.19, the Unpopped seams ruling, the target-token ruling, the 2026-11-01 issue sweep). No spec, corpus or code change.
+
+## 0.6.45 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Corpus, additive, informative; NO consumer obligation; not Breaking** (PM ruling on the Unpopped normative-seams Q1, move/compute boundary; stays derived per implementation, no new MUST): new `conformance/corpus/ops-move-wide-nan.json`, minted by `kiss_mint --write` (the other bundles regenerate with no diff): 16 exact-byte cells, `neg`/`abs`/`copysign` on a signaling NaN, a rich-payload quiet NaN and a negative quiet NaN, plus one finite control, at `f32` and `f64`. It is the wide counterpart of `ops-narrow-move-nan.json` (which carries only the narrow floats), so the MOVE side of the boundary sits beside the compute side already in `ops-transcendental-nan.json` (a signaling NaN through `exp`/`log`/`sin` yields a quiet NaN, 6.16-0010). Checked by `conformance/tests/mint_move_wide.rs` against a typed-integer sign-edit model and for discrimination (the signaling-NaN cells differ from a quieted result by the quiet bit); mutation: a `neg` that also sets the f32 quiet bit fails it at tc 1 (left 4290772993, right 4286578689). **Not carried, and why:** KISS-OPS-6.16-0011 (a reduction with a `post`, a row-reduction with an epilogue, traced to the observable output) needs a composite cell shape; a cell has one scalar input per role and a fold needs a vector. 6.16-0009's own text is about the narrow floats; the wide cells rest on 6.8-0010(a) (a moved NaN is exact-byte), which is a reading, not a clause on f32/f64 sign edits. Nothing in the spec requires a consumer to run the file. Consumers re-vendor the corpus once at the sk7 close.
+## 0.6.44 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Corpus, additive; NO consumer obligation; not Breaking for a conformance consumer** (Part of KISS#20 item 3, ROADMAP R1.29; PM ruling C): new `conformance/corpus/ops-ulp-edge.json`, minted by `kiss_mint --write` (now twelve bundles; the other eleven regenerate with no diff): 56 `ulp_distance(a, b)` cells (14 edge pairs at each of `f16`, `bf16`, `f32`, `f64`) expecting a `u64`, the cells minted through `ulp_key` and checked by `conformance/tests/mint_ulp_edge.rs` against an independent signed-integer model (the check fails when `ulp_key` is replaced by the raw pattern: `a=0x8000 b=0x0`, left 32768, right 1). NaN is not in the file (no key). **Nothing in the spec requires a consumer to run the file**; an informative note after KISS-CONFORM-6.8-0002b says so. Whether a SHOULD follows waits until Fuel, Baracuda and Unpopped have adopted it; #20 stays open until Fuel confirms it consumes it. Consumers re-vendor the corpus once at the sk7 close.
+
+## 0.6.43 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R5.19, the `lint:kiss_sidecar` ledger-category row split out of R5.6 (PM). It records why `kiss_sidecar.py` credits no clause today (no `--emit-coverage`) and why crediting 6.2-0004 / 6.1-0007 would overstate (each is half enforced).
+
+## 0.6.42 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R3.18 writes up the gap the G5 options note found (Grammar has no definition of a scalar-bearing node; blocked by R1.25) as the prerequisite row for any G5 vector code (PM ruling 2026-10-30).
+
+## 0.6.41 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/options-r3-10-g5-extract-vector.md`, the options note for Appendix A.1 vector G5 (ROADMAP R3.10; PM ruling: a design note first, not code). Four options (wire-level G5 without a scalar vocabulary / wait for R1.25 / least-path derivation in the codec plus an independent check / demote G5 to prose); recommends the first. States what was not checked (the op catalog, the consumers' extract emission, the decoder's path handling).
+
+## 0.6.40 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Spec, informative text only; no normative clause changes; not Breaking for a conformance consumer** (ROADMAP R3.10; PM ruling A): Appendix A.1 vector G3 (tag equality) said one authoring omits `axis` and relies on "its KISS-Ops default of `0`". KISS-OPS-6.19-0027 gives `gather` **no `axis` default** (`axis` and `index_dtype` are mandatory); the field that has a default is `oob_policy` (`skip`). **Corrected prose:** three authorings with `axis = 1`, `index_operand = 1`, `index_dtype = u32` differing in `oob_policy` (stated `skip` / omitted, resolving to `skip` / stated `clamp`); the `skip` tag's 37 bytes are now in the appendix. **Corpus (additive):** `grammar_vectors.json` gains `tag_vectors` with G3 (`rendered_vectors` is now G1, G3, G4; `unrendered_vectors` G2, G5); the `vectors` array and its bytes are unchanged, consumers re-vendor once at the sk7 close. Reference: `grammar::g3_tag_authorings`; test `test_grammar_g3_tag_vectors_match_appendix_a1` (fails when the `clamp` authoring is made to emit `skip`). The codec takes resolved values, so the omitted authoring equals the stated one by construction and default resolution (KISS-Ops-owned) is not exercised; the artifact says so. No errata rule was found in the repo (`git grep -i errata` is empty), so this entry is the record.
+
+## 0.6.39 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `HANDOFF.md` rewritten as current state (2026-10-30): #731-#736 merged, #724/#725 held, the R3.10 G3/G5 question open.
+
+## 0.6.38 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R3.10 states what was checked about Grammar G2/G3/G5 (declared, unrendered; G2 gated on the OpAttrs freeze).
+
+## 0.6.37 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- **Spec** (additive; Part of KISS#20, ROADMAP R1.29): new `KISS-CONFORM-6.8-0002b` pins the ULP-distance function: the absolute difference of sign-magnitude total-order keys (`b | 2^(w-1)` when the sign is clear, `!b mod 2^w` when set), so `-0.0`/`+0.0` are 1 apart and a comparator that subtracts raw patterns (2^(w-1) across zero) is rejected. Reference: `ulp_key(width, bits)`; test `test_conform_ulp_distance_function` (goldens at f16/bf16/f32/f64; fails with 2^31 when the key is replaced by raw bits). The edge-case probe corpus half of #20 stays owed. harness 483 -> 484; no byte moves. **Not Breaking for a conformance consumer:** additive clause, no wire, byte, vocabulary or existing-clause change, so no `contract_version`/`list_version`/`sk` bump; a consumer whose ULP comparator already differences total-order keys is unaffected, and one that subtracts raw patterns was already wrong across zero and is now rejected by name (a new obligation on that consumer, not a change to anything it implements correctly).no byte moves.
+## 0.6.36 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R1.14 marked done (#618) and R3.10 marked half done, with what was and was not checked (Grammar G2/G3/G5 rendering unchecked).
+
+## 0.6.35 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `docs/kiss-ref-v4-delta.md` sizes the kiss-ref move from `sk5`/contract v3 to `sk6`/v4 (one vendored file differs, three dtypes, 3-5 lane-hours, best done at the sk7 batch close); ROADMAP R3.17.
+
+## 0.6.34 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Ledger notes only (no spec text, no bytes, no status change, floor unmoved; ROADMAP R5.6): the eight `UNBACKED.tsv` rows that said `#144 no sidecar` now say what exists (the nine sidecars, `kiss_sidecar.py --check` in CI) and what is still missing.
+
+## 0.6.33 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): ROADMAP R1.28 row no longer lists the derivability witness as open; KISS-CLASSIFY-6.8-0014 already requires it.
+
+## 0.6.32 — 2026-10-30 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): new `SECURITY.md` with the portfolio "Supported versions" text (CireSnave 2026-10-29: the latest line is fixed, an older line only when the backport is small, no support period promised) and which spec versions `kiss-ref` validates (the vendored corpus: KISS 0.2.14 plus bundles to 0.2.26; the current line is not yet covered; the spec itself is a pre-freeze draft with no support promise).
+
+## 0.6.31 — 2026-10-29 (number proposed; the PM allocates at gate time; based on main)
+
+- Tooling only (no spec text, no corpus bytes; CodeRipper OPS-011 `cli-basics`, ROADMAP R3.16): the seven `emit_*_vectors` binaries and `kiss_mint` share `kiss_conformance::cli::basics`. `--version`/`-V` and `--help`/`-h` print and exit 0 with no side effects; an undeclared argument is a usage error, exit 2 (the emitters used to ignore it and exit 0). **`kiss_mint` no longer writes the corpus on a bare run** (it used to rewrite all eleven bundles on every start, even `--version`): it writes only under `--write`. Regenerate with `cargo run -p kiss-conformance --bin kiss_mint -- --write`; `PROVENANCE.md` and the `mint_*` tests' hint messages say so.
+
+## 0.6.30 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
+
+- Docs only (no spec text, no bytes): `HANDOFF.md` rewritten as current state (2026-10-29): #724/#725 held for the sk7 batch, board-309 Q1 wire work unbuilt, R1.31 held, R3.15 done (#727).
+
+## 0.6.29 — 2026-10-28 (number proposed; the PM allocates at gate time; based on main)
+
+- Tooling comments only (no spec text, no bytes, no tier moves; Part of KISS#498, ROADMAP R3.15, decision 308 B): 44 more unmarked `// Backs:`/`// Enforces:` citations in 24 files are relabelled `Backs[enforced]:`/`Enforces[enforced]:` because the citing test builds bytes or runs the shipped reader, encoder, decoder, comparator or reference op rather than reading spec text. Judged per test; the other 38 of the 82 unmarked sites stay `stated`: the 29 Emit document lints and the Synth/Classify tests that read spec tables, plus a weak-assertion test, a source-text scan, and two helper-fn citations. LEVELS re-derived: stated 75 to 38, enforced 205 to 226, both 22 to 6.
+
+## 0.6.28 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q1)
+
+- Docs only (no spec text, no bytes; union-table finding F1, ROADMAP R5.7; the PM's relay of the Unpopped U1 worker's Cast-to-MX proposal, 2026-10-28): `docs/options-cast-op-f1.md`, an options note on whether KISS adds a `cast` op. Lists what conversion rules are already pinned per destination dtype (bf16, the two fp8 formats, the three MX types) and six that are not (no op; NaN into a no-NaN format; overflow into IEEE-style floats; float to integer; non-RNE rounding; bitcast); sets the U1 proposal beside them (the MX part marked unread and unverified; the f16/bf16/integer part read from Unpopped#144's `cast_ref.rs`: four rounding modes, overflow follows the direction unless ClampFinite, NaN stays NaN float-to-float and goes to 0 float-to-integer, float-to-integer always saturates); gives three options and recommends a `cast` op with `{target_dtype, rounding, saturation}` after four open values are decided.
 
 ## 0.6.27 — 2026-10-28 (number proposed; the PM allocates at gate time; stacked on Q2)
 

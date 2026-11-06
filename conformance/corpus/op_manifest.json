@@ -1,6 +1,6 @@
 {
   "schema": "kiss-op-manifest-v1",
-  "generated_from": "spec/ops.md",
+  "generated_from": "tools/kiss_ops.py (python tools/kiss_ops.py --emit-manifest; reads spec/ops.md)",
   "all_ops": [
     "abs",
     "acos",

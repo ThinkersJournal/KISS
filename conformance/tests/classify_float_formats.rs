@@ -83,7 +83,7 @@ fn classify_f32(x: f32) -> V {
     }
 }
 
-// Backs: KISS-CLASSIFY-6.1-0011 — f8e5m2 is sign 1 / exp 5 / mantissa 2 / bias 15, IEEE-style infinity and
+// Backs[enforced]: KISS-CLASSIFY-6.1-0011 — f8e5m2 is sign 1 / exp 5 / mantissa 2 / bias 15, IEEE-style infinity and
 // NaN, maximum finite 57344; f8e5m2fnuz is bias 16, has no -0 and no infinity, and is byte-incompatible.
 #[test]
 fn test_classify_e5m2_format() {
@@ -110,7 +110,7 @@ fn test_classify_e5m2_format() {
     assert_eq!(e5m2fnuz(0x7F), V::Finite(57344.0), "top exponent is an ordinary finite code");
 }
 
-// Backs: KISS-CLASSIFY-6.2-0002 — each float format's special values are identified by pinned bit patterns:
+// Backs[enforced]: KISS-CLASSIFY-6.2-0002 — each float format's special values are identified by pinned bit patterns:
 // +-0 (except fnuz), subnormals, infinities (f16/bf16/f32/f64/f8e5m2 only), quiet and signaling NaN where
 // both exist, and the single NaN of the FP8 variants; f8e8m0 follows its own restatement (-0013).
 #[test]
@@ -194,7 +194,7 @@ fn control_the_decode_distinguishes_formats_and_catches_a_wrong_bias() {
     assert_ne!(classify_f32(wrong(0x7C)), e5m2(0x7C));
 }
 
-// Backs: KISS-CLASSIFY-6.0-0002 — the special-value bit patterns are pinned format constants reproduced
+// Backs[enforced]: KISS-CLASSIFY-6.0-0002 — the special-value bit patterns are pinned format constants reproduced
 // byte-for-byte (exact-byte class). This is the §6.0 statement of the obligations carried by the two tests
 // above; it runs both, so a drift in either reddens this clause too.
 #[test]

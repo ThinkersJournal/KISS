@@ -66,7 +66,7 @@ fn transcendental_nan_bundle_round_trips_computed_and_quiet() {
         env!("CARGO_MANIFEST_DIR"),
         "/corpus/ops-transcendental-nan.json"
     ))
-    .expect("bundle must be committed; run `cargo run --bin kiss_mint`");
+    .expect("bundle must be committed; run `cargo run --bin kiss_mint -- --write`");
     let c = corpus::load(&text).expect("bundle parses through load_cell");
     assert!(!c.vectors.is_empty(), "bundle is non-empty");
 

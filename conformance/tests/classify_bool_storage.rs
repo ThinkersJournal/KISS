@@ -23,7 +23,7 @@ fn hex_byte(s: &str) -> u8 {
     u8::from_str_radix(s.trim(), 16).expect("one hex byte")
 }
 
-// Backs: KISS-CLASSIFY-6.1-0007 — bool is exactly one byte, its width equals u8's, and the truth encoding
+// Backs[enforced]: KISS-CLASSIFY-6.1-0007 — bool is exactly one byte, its width equals u8's, and the truth encoding
 // is `0x00` false / any non-zero true with canonical true `0x01`: every logical cell of the bool corpus
 // (operands include 0x02, 0x7F, 0x80, 0xFF) has the expected byte the encoding dictates.
 #[test]

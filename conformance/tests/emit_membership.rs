@@ -501,6 +501,12 @@ fn test_emit_infix_operators_gated_on_audit() {
         b.contains("emitter-must-supply"),
         "§6.3-0004: absent the §6.5 proof the clause does not default to emitter-must-supply"
     );
+    // KISS#229: the audited unit is the (operator, dtype) pair, not the operator alone —
+    // an operator-only quantifier cannot record `+` proven at f32 and unproven at c64.
+    assert!(
+        b.contains("operand dtype") && b.contains("pair"),
+        "§6.3-0004: the clause does not quantify the audit over (operator, dtype) pairs"
+    );
 
     let row = *a2_trace(&emit)
         .get("6.3-0004")
@@ -703,6 +709,16 @@ fn test_emit_neutrality_audit_manifest_is_freeze_precondition() {
     assert!(
         b.contains("fail") && b.contains("gate"),
         "§6.5-0001: the clause does not require a freeze without the recorded audit to fail the gate"
+    );
+    // KISS#229: per-pair manifest states; `not applicable` stays distinct from
+    // `not identical` so a target cannot read clean by never lowering the awkward dtype.
+    assert!(
+        b.contains("pair")
+            && b.contains("**identical**")
+            && b.contains("**not identical**")
+            && b.contains("**not applicable**")
+            && b.contains("never by omission"),
+        "§6.5-0001: the manifest does not record identical / not identical / not applicable per (operator, dtype) pair, explicitly"
     );
 }
 
