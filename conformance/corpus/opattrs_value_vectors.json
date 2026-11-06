@@ -3,7 +3,7 @@
   "generated_from": "spec/ops.md §6.19.2 (ordinals) + §6.19.3 (schema, resolved defaults)",
   "derivation": "a GENERIC schema-driven encoder over the parsed spec tables (conformance/src/opattrs_value.rs); cross-checked against the hand encoders in opattrs.rs by tests/opattrs_value_vectors.rs. Same author and same reading of the spec as those encoders: a TARGET for a second party, not independent evidence (E6).",
   "reduce_axes_note": "`rank` is carried in the vector only; it is NOT in the blob (§6.19-0020). Two vectors with different (axes, rank) can share a blob by design (rank-1 sole axis and rank-2 full both encode FF FF).",
-  "number_of_vectors": 167,
+  "number_of_vectors": 180,
   "not_emitted": [
 
   ],
@@ -174,7 +174,20 @@
     {"tcId": 164, "kind": "encode", "op": "scatter_add", "attrs": {"axis":0,"index_operand":0,"index_dtype":"u32"}, "blob": "00 00 01", "tag": "vary:index_operand", "clauses": ["KISS-OPS-6.19-0034"]},
     {"tcId": 165, "kind": "encode", "op": "scatter_add", "attrs": {"axis":0,"index_operand":7,"index_dtype":"u32"}, "blob": "00 07 01", "tag": "vary:index_operand", "clauses": ["KISS-OPS-6.19-0034"]},
     {"tcId": 166, "kind": "encode", "op": "scatter_add", "attrs": {"axis":0,"index_operand":1,"index_dtype":"i32"}, "blob": "00 01 02", "tag": "vary:index_dtype", "clauses": ["KISS-OPS-6.19-0034"]},
-    {"tcId": 167, "kind": "encode", "op": "scatter_add", "attrs": {"axis":0,"index_operand":1,"index_dtype":"i64"}, "blob": "00 01 03", "tag": "vary:index_dtype", "clauses": ["KISS-OPS-6.19-0034"]}
+    {"tcId": 167, "kind": "encode", "op": "scatter_add", "attrs": {"axis":0,"index_operand":1,"index_dtype":"i64"}, "blob": "00 01 03", "tag": "vary:index_dtype", "clauses": ["KISS-OPS-6.19-0034"]},
+    {"tcId": 168, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"nearest-even","saturation":"none"}, "blob": "02 01 01", "tag": "base", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 169, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"f16","rounding":"nearest-even","saturation":"none"}, "blob": "01 01 01", "tag": "vary:target_dtype", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 170, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"f32","rounding":"nearest-even","saturation":"none"}, "blob": "03 01 01", "tag": "vary:target_dtype", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 171, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"i32","rounding":"nearest-even","saturation":"none"}, "blob": "09 01 01", "tag": "vary:target_dtype", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 172, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"f8e4m3fn","rounding":"nearest-even","saturation":"none"}, "blob": "0E 01 01", "tag": "vary:target_dtype", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 173, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"f4e2m1","rounding":"nearest-even","saturation":"none"}, "blob": "19 01 01", "tag": "vary:target_dtype", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 174, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"toward-zero","saturation":"none"}, "blob": "02 02 01", "tag": "vary:rounding", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 175, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"toward-negative-infinity","saturation":"none"}, "blob": "02 03 01", "tag": "vary:rounding", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 176, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"toward-positive-infinity","saturation":"none"}, "blob": "02 04 01", "tag": "vary:rounding", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 177, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"nearest-even","saturation":"clamp"}, "blob": "02 01 02", "tag": "vary:saturation", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 178, "kind": "encode", "op": "concat", "attrs": {"axis":0}, "blob": "00", "tag": "base", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 179, "kind": "encode", "op": "concat", "attrs": {"axis":1}, "blob": "01", "tag": "vary:axis", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 180, "kind": "encode", "op": "concat", "attrs": {"axis":7}, "blob": "07", "tag": "vary:axis", "clauses": ["KISS-OPS-6.19-0042"]}
   ],
   "equivalences": [
     {"op": "reduce", "explicit": {"monoid":"sum","reduce_axes":{"axes":[0,1],"rank":2},"keepdim":true,"accumulator":"compute-dtype","math_fidelity":"bit-stable"}, "omitted": ["keepdim","accumulator","math_fidelity"], "same_blob": "01 FF FF 01 00 01"},
@@ -185,7 +198,8 @@
     {"op": "reduce_var", "explicit": {"reduce_axes":{"axes":[0,1],"rank":2},"keepdim":true,"bessel_correction":false}, "omitted": ["keepdim","bessel_correction"], "same_blob": "FF FF 01 00"},
     {"op": "reduce_std", "explicit": {"reduce_axes":{"axes":[0,1],"rank":2},"keepdim":true,"bessel_correction":false}, "omitted": ["keepdim","bessel_correction"], "same_blob": "FF FF 01 00"},
     {"op": "avg_pool", "explicit": {"window_size":[3,3],"stride":[1,1],"dilation":[1,1],"padding":[0,0],"count_include_pad":true}, "omitted": ["count_include_pad"], "same_blob": "02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01"},
-    {"op": "im2col", "explicit": {"window_size":[3,3],"stride":[1,1],"dilation":[1,1],"padding":[0,0],"output_column_ordering":"channel-major"}, "omitted": ["output_column_ordering"], "same_blob": "02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01"}
+    {"op": "im2col", "explicit": {"window_size":[3,3],"stride":[1,1],"dilation":[1,1],"padding":[0,0],"output_column_ordering":"channel-major"}, "omitted": ["output_column_ordering"], "same_blob": "02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01"},
+    {"op": "cast", "explicit": {"target_dtype":"bf16","rounding":"nearest-even","saturation":"none"}, "omitted": ["rounding"], "same_blob": "02 01 01"}
   ],
   "distinct": [
     {"op": "reduce", "a": 1, "b": 2},
@@ -326,6 +340,17 @@
     {"op": "scatter_add", "a": 161, "b": 164},
     {"op": "scatter_add", "a": 161, "b": 165},
     {"op": "scatter_add", "a": 161, "b": 166},
-    {"op": "scatter_add", "a": 161, "b": 167}
+    {"op": "scatter_add", "a": 161, "b": 167},
+    {"op": "cast", "a": 168, "b": 169},
+    {"op": "cast", "a": 168, "b": 170},
+    {"op": "cast", "a": 168, "b": 171},
+    {"op": "cast", "a": 168, "b": 172},
+    {"op": "cast", "a": 168, "b": 173},
+    {"op": "cast", "a": 168, "b": 174},
+    {"op": "cast", "a": 168, "b": 175},
+    {"op": "cast", "a": 168, "b": 176},
+    {"op": "cast", "a": 168, "b": 177},
+    {"op": "concat", "a": 178, "b": 179},
+    {"op": "concat", "a": 178, "b": 180}
   ]
 }

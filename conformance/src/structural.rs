@@ -837,3 +837,44 @@ pub fn sort_network(row: &[f32], direction: SortDirection) -> (Vec<f32>, Vec<usi
     let values = order.iter().map(|&i| row[i]).collect();
     (values, order)
 }
+
+// ---- concat (KISS-Ops §6.11-0020) ---------------------------------------------
+
+/// `concat`: join row-major `parts` end to end along `axis` (§6.11-0020). Each part is `(data, extents)`.
+/// A rank, extent or arity disagreement is a typed decline (`Err`), never a panic; the result is the joined
+/// data and shape. Pure data movement: the bits of every element are copied, so a NaN payload and a signed
+/// zero survive, and nothing is broadcast.
+pub fn concat_f32(parts: &[(&[f32], &[usize])], axis: usize) -> Result<(Vec<f32>, Vec<usize>), String> {
+    if parts.len() < 2 {
+        return Err(format!("concat takes at least two inputs, got {}", parts.len()));
+    }
+    let rank = parts[0].1.len();
+    if axis >= rank {
+        return Err(format!("axis {axis} is not below rank {rank}"));
+    }
+    for (data, ext) in parts {
+        if ext.len() != rank {
+            return Err(format!("rank {} disagrees with rank {rank}", ext.len()));
+        }
+        if data.len() != ext.iter().product::<usize>() {
+            return Err("data length disagrees with its extents".to_string());
+        }
+        for a in 0..rank {
+            if a != axis && ext[a] != parts[0].1[a] {
+                return Err(format!("extent of axis {a} disagrees: {} vs {}", ext[a], parts[0].1[a]));
+            }
+        }
+    }
+    let outer: usize = parts[0].1[..axis].iter().product();
+    let inner: usize = parts[0].1[axis + 1..].iter().product();
+    let mut shape = parts[0].1.to_vec();
+    shape[axis] = parts.iter().map(|(_, e)| e[axis]).sum();
+    let mut out = Vec::with_capacity(shape.iter().product());
+    for o in 0..outer {
+        for (data, ext) in parts {
+            let block = ext[axis] * inner;
+            out.extend_from_slice(&data[o * block..(o + 1) * block]);
+        }
+    }
+    Ok((out, shape))
+}

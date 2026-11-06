@@ -565,3 +565,37 @@ fn test_ops_sort_network_total_order() {
         "an `a < b` comparator must not reproduce the §6.11-0007 total order"
     );
 }
+
+// ---- concat (KISS-OPS §6.11-0020) --------------------------------------------
+
+// Backs[enforced]: KISS-OPS-6.11-0020
+#[test]
+fn test_ops_concat_semantics() {
+    // rank 2, axis 1: rows interleave block by block ([1 2 3] ++ [10 20] per row)
+    let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // [2,3]
+    let b = [10.0, 20.0, 30.0, 40.0]; // [2,2]
+    let (out, shape) = concat_f32(&[(&a, &[2, 3]), (&b, &[2, 2])], 1).unwrap();
+    assert_eq!(shape, vec![2, 5]);
+    assert_eq!(out, vec![1.0, 2.0, 3.0, 10.0, 20.0, 4.0, 5.0, 6.0, 30.0, 40.0]);
+    // axis 0 is plain appending
+    let (out0, shape0) = concat_f32(&[(&a, &[2, 3]), (&a, &[2, 3])], 0).unwrap();
+    assert_eq!(shape0, vec![4, 3]);
+    assert_eq!(&out0[..6], &a);
+    assert_eq!(&out0[6..], &a);
+    // pure data movement: a signaling-NaN payload and a negative zero survive bit for bit
+    let snan = f32::from_bits(0x7F80_0001);
+    let p = [snan, -0.0];
+    let q = [f32::from_bits(0xFFC1_2345), 0.0];
+    let (o, _) = concat_f32(&[(&p, &[1, 2]), (&q, &[1, 2])], 0).unwrap();
+    let want = [p[0], p[1], q[0], q[1]];
+    assert!(o.iter().zip(want.iter()).all(|(x, y)| x.to_bits() == y.to_bits()), "bits changed");
+    // a zero-extent input contributes nothing
+    let empty: [f32; 0] = [];
+    let (o2, s2) = concat_f32(&[(&a, &[2, 3]), (&empty, &[2, 0])], 1).unwrap();
+    assert_eq!((o2.as_slice(), s2), (&a[..], vec![2, 3]));
+    // typed declines: one input, a disagreeing off-axis extent, a disagreeing rank, an axis past the rank
+    assert!(concat_f32(&[(&a, &[2, 3])], 0).is_err());
+    assert!(concat_f32(&[(&a, &[2, 3]), (&b, &[2, 2])], 0).is_err());
+    assert!(concat_f32(&[(&a, &[2, 3]), (&a, &[6])], 0).is_err());
+    assert!(concat_f32(&[(&a, &[2, 3]), (&a, &[2, 3])], 2).is_err());
+}
