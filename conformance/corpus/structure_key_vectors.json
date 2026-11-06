@@ -7,8 +7,8 @@
     "cuda": 1,
     "vulkan": 5
   },
-  "structure_key_schema_version": 6,
-  "token_prefix": "sk6",
+  "structure_key_schema_version": 7,
+  "token_prefix": "sk7",
   "dtype_axis_note": "recognition_set is all 27 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 24 a byte-match runs over. The three MX element rows (f4e2m1, f6e2m3, f6e3m2) are appended after c128 and are usable, but typed-decline (ElementDtypeAsAccumulator) in an accumulator position. The two are different obligations (KISS-CLASSIFY-6.1-0001).",
   "recognition_count": 27,
   "usable_count": 24,
@@ -87,8 +87,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm89",
       "expect_match": true,
-      "left_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -98,8 +98,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm8",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|cuda:sm8|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|cuda:sm8|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -109,8 +109,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm890",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|cuda:sm890|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|cuda:sm890|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -120,8 +120,8 @@
       "left": "cuda:sm89",
       "right": "cuda:sm90",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -131,8 +131,8 @@
       "left": "cuda:sm89",
       "right": "cuda:SM89",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|cuda:SM89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|cuda:SM89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -142,8 +142,8 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "expect_match": true,
-      "left_token": "sk6|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -153,8 +153,8 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|vulkan:sg64.ops-bar.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.8-0002",
@@ -164,8 +164,8 @@
       "left": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "right": "vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none",
       "expect_match": false,
-      "left_token": "sk6|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
-      "right_token": "sk6|ew2|f32|vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "left_token": "sk7|ew2|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "right_token": "sk7|ew2|f32|vulkan:sg64.ops-ab.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     }
   ],
   "mapping_guard_note": "The `decline` kind strings are KISS's vocabulary. KISS enforces their exhaustiveness at generation time (a new KeyDecline variant is a build error) — that protects only the KISS side. A consumer mapping these onto its own decline enum MUST guard the mapping itself; a variant added on either side silently staleness the table.",
@@ -177,7 +177,7 @@
       "note": "elementwise binary, three contiguous v4 operands, no reduce",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0004",
@@ -185,7 +185,7 @@
       "note": "middle operand broadcasts on axis 0 (br/01/v1)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0003",
@@ -193,7 +193,7 @@
       "note": "unary f16, two v8 operands",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-"
+      "token": "sk7|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -201,7 +201,7 @@
       "note": "reduction over the trailing axis serializes rlast",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -209,7 +209,7 @@
       "note": "reduction over all axes serializes rall",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
@@ -217,7 +217,7 @@
       "note": "rank-1 all-axes reduction",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
@@ -225,7 +225,7 @@
       "note": "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -233,7 +233,7 @@
       "note": "binary with two operands (no third)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -241,7 +241,7 @@
       "note": "binary_two_operands with dtype i32 (same width as f32, so v4 holds): a dtype-only pair",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -249,7 +249,7 @@
       "note": "binary_two_operands with a max touched offset at or above 2^31: an index-width-only pair",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -257,7 +257,7 @@
       "note": "binary_two_operands with an iteration element count that selects warp: a schedule-only pair",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0014",
@@ -265,7 +265,7 @@
       "note": "binary_two_operands with MX element dtype f4e2m1 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f4e2m1|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
+      "token": "sk7|ew2|f4e2m1|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0014",
@@ -273,7 +273,7 @@
       "note": "binary_two_operands with MX element dtype f6e2m3 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f6e2m3|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
+      "token": "sk7|ew2|f6e2m3|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0014",
@@ -281,7 +281,7 @@
       "note": "binary_two_operands with MX element dtype f6e3m2 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f6e3m2|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
+      "token": "sk7|ew2|f6e3m2|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0001",
@@ -289,7 +289,7 @@
       "note": "the freeze-gate relu_add cell (#60): rank-1 flat grid-stride, three v4 operands",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -297,7 +297,7 @@
       "note": "dense gem, f32 weight/acc/out, bit-stable (ctll/.../st)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.8",
@@ -305,7 +305,7 @@
       "note": "same gem cell on a vulkan capability-set target",
       "target": "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none",
       "target_namespace": "vulkan",
-      "token": "sk6|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk7|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -313,7 +313,7 @@
       "note": "batched gem carries the b<class> coordinate (cmll/.../bm/...)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st"
+      "token": "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0019",
@@ -321,7 +321,7 @@
       "note": "DISCRIMINATING (§6.6-0019): quantized-GEMM operands [weight=i4, weight_scale=f8e8m0, activation=bf16]; <wdt> derives to i4 from the caller's weight-role hint (slot 0), NOT the fixed operand-1 read that names the scale f8e8m0. wdt/acc/out are distinct (i4/f32/bf16) so a positional resolution yields DIFFERENT BYTES -- do not flatten to uniform dtypes; that silently destroys the discriminator.",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -329,7 +329,7 @@
       "note": "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
+      "token": "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0006",
@@ -337,7 +337,7 @@
       "note": "TF32, reduced-mantissa mp=rm (same shape as simt_f32, distinct token)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm"
+      "token": "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0018",
@@ -345,7 +345,7 @@
       "note": "mixed-precision FP8: e4m3 x e5m2 -> f32, f32 acc",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st"
+      "token": "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0018",
@@ -353,7 +353,7 @@
       "note": "mixed-precision FP8: e4m3 x e4m3 -> f16, f32 acc (distinct token from the e5m2 cell)",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st"
+      "token": "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -361,7 +361,7 @@
       "note": "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st"
+      "token": "sk7|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -369,7 +369,7 @@
       "note": "scan cell, accumulator == compute (f32) but mp deviates (rm): |-|f32/rm",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm"
+      "token": "sk7|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -377,7 +377,7 @@
       "note": "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
@@ -385,7 +385,7 @@
       "note": "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm"
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
@@ -393,7 +393,7 @@
       "note": "three input operands + one output, pointwise by shape: ew3 (class is derived from structure, not from the op)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
@@ -401,7 +401,7 @@
       "note": "table + index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
@@ -409,7 +409,23 @@
       "note": "no declared fact and not pointwise by shape (the output does not have the frame extents): oth",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk6|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+      "token": "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.4-0002",
+      "name": "operand_count_9_above_the_sk6_limit",
+      "note": "nine operands: the first count past the sk6 limit of 8 (causal conv1d, ROADMAP P5), accepted from sk7; a reader still capped at 8 fails here",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.4-0002",
+      "name": "operand_count_16_at_max_operands",
+      "note": "sixteen operands: MAX_OPERANDS (sk7), the boundary; a reader that stops at 15 fails here",
+      "target": "cuda:sm89",
+      "target_namespace": "cuda",
+      "token": "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.3-0009a",
@@ -417,7 +433,7 @@
       "note": "int4 weight operand carrying a linear dequant: the sixth sub-key component `dl`; distinct from the codebook cell below",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.3-0009a",
@@ -425,7 +441,7 @@
       "note": "the same int4 cell with a codebook dequant: `dc` — no scale reproduces a codebook with a linear dequant, so the two MUST NOT share a key",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",
@@ -433,7 +449,7 @@
       "note": "DISCRIMINATING: the quantized int4 GEMM [weight=i4, weight_scale=f8e8m0, activation=bf16] with the scale operand designated by role hint (slot 1): trailing `qf8e8m0`",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0"
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",
@@ -441,7 +457,7 @@
       "note": "DISCRIMINATING: the same cell with an `f16` scale: trailing `qf16` — a different cell from the `f8e8m0` one (R1.2 A, #222 candidate 1); at sk5 both derived one byte-identical key",
       "target": "cuda:sm90",
       "target_namespace": "cuda",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf16"
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf16"
     }
   ],
   "decline_vectors": [
@@ -449,90 +465,106 @@
       "clause": "KISS-CLASSIFY-6.1-0001",
       "name": "unknown_dtype",
       "note": "dtype outside the closed 24-token set",
-      "token": "sk6|ew2|f99|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|ew2|f99|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnknownDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0001",
       "name": "reserved_dtype",
       "note": "reserved fnuz dtype: recognized on parse, distinct from unknown",
-      "token": "sk6|ew2|f8e4m3fnuz|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|ew2|f8e4m3fnuz|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "ReservedDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0006",
       "name": "unknown_cell_class",
       "note": "class code outside the closed seven-class set",
-      "token": "sk6|zzz|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|zzz|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnknownCellClass"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0006",
       "name": "retired_sk4_op_family_code",
-      "note": "a well-formed sk6 token still carrying a retired sk4 op-family code (`gem`): the 24-code field is gone, so it is an unknown class",
-      "token": "sk6|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "note": "a well-formed sk7 token still carrying a retired sk4 op-family code (`gem`): the 24-code field is gone, so it is an unknown class",
+      "token": "sk7|gem|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnknownCellClass"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0017",
       "name": "rdc_cell_with_empty_reduce_set",
       "note": "an `rdc` cell whose reduce field is `-`: the empty reduced set is the not-a-reduction case (§6.6-0009), so no rdc cell can carry it",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "RdcWithoutReduce"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0004",
       "name": "dequant_form_unknown_spelling",
       "note": "the optional sixth sub-key component is not `dl` / `dc`",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/xx;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/xx;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "BadDequantForm"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0004",
       "name": "operand_sub_key_seven_parts",
       "note": "an operand sub-key with more than the six permitted parts",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/dl/dl;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/dl/dl;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "BadOperandSubKey"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0016",
       "name": "mx_element_as_contraction_accumulator",
       "note": "the contraction `<acc>` names the MX element `f4e2m1`: usable as a weight or output dtype, never an accumulator",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f4e2m1/bf16/st/qf8e8m0",
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f4e2m1/bf16/st/qf8e8m0",
       "decline": "ElementDtypeAsAccumulator"
     },
     {
       "clause": "KISS-CLASSIFY-6.1-0016",
       "name": "mx_element_as_non_contraction_accumulator",
       "note": "the non-contraction (acc+mp) field names the MX element `f6e2m3` as its accumulator",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f6e2m3/rm",
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f6e2m3/rm",
       "decline": "ElementDtypeAsAccumulator"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",
       "name": "scale_dtype_unknown",
       "note": "the contraction field's trailing `q` component names a dtype outside the closed set",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qzzz",
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qzzz",
       "decline": "UnknownDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",
       "name": "scale_dtype_reserved",
       "note": "the trailing `q` component names the reserved `f8e6m2` (recognized, not usable, §6.1-0013)",
-      "token": "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e6m2",
+      "token": "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e6m2",
       "decline": "ReservedDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0022",
       "name": "scale_dtype_on_non_contraction_field",
       "note": "a trailing `q` component on a bare (acc+mp) field: the scale coordinate exists only in a `ctr` contraction field (§6.6-0010)",
-      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f32/st/qf16",
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f32/st/qf16",
       "decline": "BadAccMpField"
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.4-0002",
+      "name": "operand_count_17_over_max_operands",
+      "note": "seventeen operands: one past MAX_OPERANDS (16) is a typed decline, not a truncation; the sk6 limit was 8",
+      "token": "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "TooManyOperands",
+      "got": 17
+    },
+    {
+      "clause": "KISS-CLASSIFY-6.7-0014",
+      "name": "retired_sk6_token",
+      "note": "a persisted sk6 token: recognized other version, re-derive (sk6 capped the operand count at 8 and is not decoded at sk7)",
+      "token": "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+      "decline": "UnsupportedSchemaVersion",
+      "got": 6
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0014",
       "name": "retired_sk5_token",
-      "note": "a persisted sk5 token: recognized other version, re-derive (the sk5 shape is not decoded at sk6)",
+      "note": "a persisted sk5 token: recognized other version, re-derive (the sk5 shape is not decoded at sk7)",
       "token": "sk5|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
       "decline": "UnsupportedSchemaVersion",
       "got": 5
@@ -564,77 +596,77 @@
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "redundant_acc_mp_all_default",
       "note": "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st",
       "decline": "RedundantAccMpField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0013",
       "name": "acc_mp_bad_precision_code",
       "note": "the (acc+mp) field with an unrecognized math-precision code (zz)",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz",
       "decline": "BadAccMpField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "contraction_reserved_weight_dtype",
       "note": "a reserved fnuz dtype inside the gem precision group declines as reserved",
-      "token": "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st",
+      "token": "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st",
       "decline": "ReservedDtype"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "contraction_bad_precision_code",
       "note": "the gem precision group with an unrecognized math-precision code (zz)",
-      "token": "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz",
+      "token": "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz",
       "decline": "BadContractionField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_all_axes_r2",
       "note": "x03 at rank 2 is the all-axes set — MUST be rall, never a bitmask",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_trailing_r2",
       "note": "x02 at rank 2 is the lone innermost axis — MUST be rlast, never a bitmask",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_rank1",
       "note": "x01 at rank 1 is both all-axes and lone-trailing (they coincide) — MUST be rall (§6.6-0009 tie-break)",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0005",
       "name": "noncanonical_reduce_empty",
       "note": "x00 is the empty reduced set — that is not a reduction, spelled `-`, never a bitmask",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.7-0009",
       "name": "out_of_range_reduce_mask_r2",
       "note": "x04 at rank 2 sets bit 2, an axis that does not exist — out-of-range mask, not a sentinel overload",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04",
       "decline": "BadReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
       "name": "noncanonical_reduce_rall_rank0",
       "note": "rall at rank 0 is the full set of zero axes = the empty set — a real set spelled wrong that `-` owns, exactly x00's shape",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall",
       "decline": "NonCanonicalReduceField"
     },
     {
       "clause": "KISS-CLASSIFY-6.6-0009",
       "name": "out_of_range_reduce_rlast_rank0",
       "note": "rlast at rank 0 names a lone innermost axis that does not exist — a set that cannot exist for the rank, exactly x04@r2's out-of-range shape",
-      "token": "sk6|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast",
+      "token": "sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast",
       "decline": "BadReduceField"
     }
   ]

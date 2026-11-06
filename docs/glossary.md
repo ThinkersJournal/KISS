@@ -41,7 +41,7 @@ Sub-standards: **Ops** `spec/ops.md`, **Classify** `spec/classify.md`, **Grammar
 | **re-basing** | Declaring an advertisable op by naming an existing or newly added Ops name and decorating it; additive, no shape bump. | Grammar §3 |
 | **residue** | The recorded un-liftable remainder of a partial lift: a connected group of nodes the lifter could not map. | Consume §3 |
 | **revision_hash** | An opaque 32-byte, provider-assigned identifier of one build of a kernel. | Announce §3, Contract §3 |
-| **`sk6`** | The `structure_key` token prefix at schema version 6; the version is part of the token. | Classify §6.4-0003 |
+| **`sk7`** | The `structure_key` token prefix at schema version 7; the version is part of the token. | Classify §6.4-0003 |
 | **sidecar** | A sub-standard's machine-readable clause file; the sole authoritative source the traceability matrix is built from. | Conform §3 |
 | **specialization cell** | One layout/dtype/target class a kernel is built for; the thing a `structure_key` names. | Classify §3 |
 | **structure_key** | The admissibility predicate identifying one specialization cell, serialized as a pipe-delimited token. A cache hit needs it and the `revision_hash`. | Classify §3 |

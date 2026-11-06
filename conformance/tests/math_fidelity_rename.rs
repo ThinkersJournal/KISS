@@ -5,7 +5,7 @@
 //! would otherwise `use ..::MathPrecision` and land silently on the decoy.
 //!
 //! ⚠️ The rename is a TYPE-NAME change ONLY. The WIRE ENCODING — the structure_key `<mp>` code,
-//! `st` / `rm` — MUST NOT move: those bytes are in every `sk6|…` token and the KISS-Contract
+//! `st` / `rm` — MUST NOT move: those bytes are in every `sk7|…` token and the KISS-Contract
 //! Guarantees `math_precision` field, so re-spelling them would break the wire and churn every
 //! golden. This guard pins the codes so a future edit that "tidies" the enum values fails loudly,
 //! independently of the Appendix-A golden tokens that also carry them.

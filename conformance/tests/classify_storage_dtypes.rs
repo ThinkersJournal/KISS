@@ -49,7 +49,7 @@ fn reduce(dtype: &'static str, fidelity: MathFidelity) -> DerivationCell {
     c
 }
 
-/// The dtype component of a token (`sk6|<class>|<dtype>|...`).
+/// The dtype component of a token (`sk7|<class>|<dtype>|...`).
 fn dtype_of(token: &str) -> &str {
     token.split('|').nth(2).expect("dtype component")
 }

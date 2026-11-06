@@ -260,7 +260,7 @@ pub fn decode_window_param_vector(blob: &[u8]) -> Result<Vec<u32>, Decline> {
 /// concrete values so the range MUSTs of §6.19 are verifiable from KISS-Ops plus
 /// the umbrella alone.
 pub const MAX_RANK: u8 = 8;
-pub const MAX_OPERANDS: u8 = 8;
+pub const MAX_OPERANDS: u8 = 16;
 
 /// Validate a decoded `gather` blob (`[axis, oob, index_operand, index_dtype]`),
 /// returning a typed decline for a malformed one. Demonstrates modality 4.

@@ -25,7 +25,7 @@ const OPS_SPEC: &str = include_str!("../../spec/ops.md");
 /// `MAX_RANK` / `MAX_OPERANDS` (§6.19-0037). The test asserts the spec still says `= 8`.
 pub const MAX_RANK: u32 = 8;
 /// See [`MAX_RANK`].
-pub const MAX_OPERANDS: u32 = 8;
+pub const MAX_OPERANDS: u32 = 16;
 
 /// One attribute value, spelled as a consumer would hold it (never an ordinal).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -212,7 +212,8 @@ fn encode_field(f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, St
         }
         (FieldWidth::U8, Value::Flag(b)) if is_flag(f) => Ok(vec![u8::from(*b)]),
         (FieldWidth::U8, Value::Byte(n)) if vocab_of(&f.name).is_none() && !is_flag(f) => {
-            if u32::from(*n) >= MAX_RANK.max(MAX_OPERANDS) {
+            let bound = if f.name == "index_operand" { MAX_OPERANDS } else { MAX_RANK };
+            if u32::from(*n) >= bound {
                 return Err(format!("`{}` = {n} is out of range", f.name));
             }
             Ok(vec![*n])

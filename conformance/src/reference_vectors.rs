@@ -18,7 +18,7 @@
 //!
 //! Coverage is bound to the frozen golden test additively, NOT by refactoring it:
 //! `tests/structure_key_vectors.rs` `include_str!`s the golden source, scans out its
-//! `sk6|` token literals, and asserts this set is a superset of them — so a golden
+//! `sk7|` token literals, and asserts this set is a superset of them — so a golden
 //! cell can never be silently dropped from the artifact, and no second transcription
 //! exists to drift against the first.
 
@@ -211,56 +211,56 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             clause: "KISS-CLASSIFY-6.7-0001",
             note: "elementwise binary, three contiguous v4 operands, no reduce",
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None),
-            token: "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "elementwise_broadcast_operand",
             clause: "KISS-CLASSIFY-6.7-0004",
             note: "middle operand broadcasts on axis 0 (br/01/v1)",
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), br1(), co4()], Reduce::None, None),
-            token: "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "unary_f16_v8",
             clause: "KISS-CLASSIFY-6.7-0003",
             note: "unary f16, two v8 operands",
             key: key("ew1", "f16", "cuda:sm89", WorkClass::Grid, 2, vec![co8(), co8()], Reduce::None, None),
-            token: "sk6|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
+            token: "sk7|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
         },
         PositiveVector {
             name: "reduction_trailing_axis",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "reduction over the trailing axis serializes rlast",
             key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, None),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
         },
         PositiveVector {
             name: "reduction_all_axes",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "reduction over all axes serializes rall",
             key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
         },
         PositiveVector {
             name: "reduction_rank1_all_axes",
             clause: "KISS-CLASSIFY-6.6-0009",
             note: "rank-1 all-axes reduction",
             key: key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), red_out(0x01)], Reduce::All, None),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
         },
         PositiveVector {
             name: "reduction_subset_mask",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask",
             key: key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), red_out(0x0a)], Reduce::Subset(0x0a), None),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
         },
         PositiveVector {
             name: "binary_two_operands",
             clause: "KISS-CLASSIFY-6.7-0001",
             note: "binary with two operands (no third)",
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None),
-            token: "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         // KISS-CONFORM-6.14 discriminating pairs (KISS#240): each differs from
         // `binary_two_operands` in exactly ONE token field (tools/kiss_pairs.py decides it).
@@ -269,7 +269,7 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
             clause: "KISS-CLASSIFY-6.7-0001",
             note: "binary_two_operands with dtype i32 (same width as f32, so v4 holds): a dtype-only pair",
             key: key("ew2", "i32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None),
-            token: "sk6|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|i32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "binary_two_operands_ix64",
@@ -280,63 +280,63 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
                 k.index_width = "ix64".to_string();
                 k
             },
-            token: "sk6|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix64|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "binary_two_operands_warp",
             clause: "KISS-CLASSIFY-6.7-0001",
             note: "binary_two_operands with an iteration element count that selects warp: a schedule-only pair",
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None, None),
-            token: "sk6|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "binary_two_operands_f4e2m1",
             clause: "KISS-CLASSIFY-6.1-0014",
             note: "binary_two_operands with MX element dtype f4e2m1 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
             key: key("ew2", "f4e2m1", "cuda:sm89", WorkClass::Grid, 2, vec![co1_d16(), co1_d16()], Reduce::None, None),
-            token: "sk6|ew2|f4e2m1|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
+            token: "sk7|ew2|f4e2m1|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
         },
         PositiveVector {
             name: "binary_two_operands_f6e2m3",
             clause: "KISS-CLASSIFY-6.1-0014",
             note: "binary_two_operands with MX element dtype f6e2m3 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
             key: key("ew2", "f6e2m3", "cuda:sm89", WorkClass::Grid, 2, vec![co1_d16(), co1_d16()], Reduce::None, None),
-            token: "sk6|ew2|f6e2m3|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
+            token: "sk7|ew2|f6e2m3|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
         },
         PositiveVector {
             name: "binary_two_operands_f6e3m2",
             clause: "KISS-CLASSIFY-6.1-0014",
             note: "binary_two_operands with MX element dtype f6e3m2 (sub-byte storage never vectorizes, so vec is v1): a usable dtype in the dtype field",
             key: key("ew2", "f6e3m2", "cuda:sm89", WorkClass::Grid, 2, vec![co1_d16(), co1_d16()], Reduce::None, None),
-            token: "sk6|ew2|f6e3m2|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
+            token: "sk7|ew2|f6e3m2|cuda:sm89|ix32|grid|r2|co/00/v1/d16/f;co/00/v1/d16/f|-",
         },
         PositiveVector {
             name: "relu_add_generated_r1",
             clause: "KISS-CLASSIFY-6.7-0001",
             note: "the freeze-gate relu_add cell (#60): rank-1 flat grid-stride, three v4 operands",
             key: key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 1, vec![co4(), co4(), co4()], Reduce::None, None),
-            token: "sk6|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "dense_contraction_cuda",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "dense gem, f32 weight/acc/out, bit-stable (ctll/.../st)",
             key: key("ctr", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
-            token: "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+            token: "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "dense_contraction_vulkan_target",
             clause: "KISS-CLASSIFY-6.8",
             note: "same gem cell on a vulkan capability-set target",
             key: key("ctr", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
-            token: "sk6|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+            token: "sk7|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "gem_batched_cell",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "batched gem carries the b<class> coordinate (cmll/.../bm/...)",
             key: key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Medium, SizeClass::Large, SizeClass::Large, Some(SizeClass::Medium), "f32", "f32", "f32", MathFidelity::Stable))),
-            token: "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
+            token: "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
         },
         PositiveVector {
             name: "gem_weight_role_discriminator",
@@ -348,112 +348,126 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
                    positional resolution yields DIFFERENT BYTES -- do not flatten to \
                    uniform dtypes; that silently destroys the discriminator.",
             key: key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, derive_weight_dtype(&["i4", "f8e8m0", "bf16"], 0), "f32", "bf16", MathFidelity::Stable))),
-            token: "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
+            token: "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
         },
         PositiveVector {
             name: "simt_f32",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "SIMT f32, bit-stable mp=st (distinct from TF32 by <mp>)",
             key: key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::Stable))),
-            token: "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+            token: "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
         },
         PositiveVector {
             name: "tf32",
             clause: "KISS-CLASSIFY-6.7-0006",
             note: "TF32, reduced-mantissa mp=rm (same shape as simt_f32, distinct token)",
             key: key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f32", "f32", "f32", MathFidelity::ReducedMantissa))),
-            token: "sk6|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm",
+            token: "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm",
         },
         PositiveVector {
             name: "mixed_fp8_e4m3_x_e5m2_f32",
             clause: "KISS-CLASSIFY-6.6-0018",
             note: "mixed-precision FP8: e4m3 x e5m2 -> f32, f32 acc",
             key: key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e5m2", "f32", "f32", MathFidelity::Stable))),
-            token: "sk6|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st",
+            token: "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st",
         },
         PositiveVector {
             name: "mixed_fp8_e4m3_x_e4m3_f16",
             clause: "KISS-CLASSIFY-6.6-0018",
             note: "mixed-precision FP8: e4m3 x e4m3 -> f16, f32 acc (distinct token from the e5m2 cell)",
             key: key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "f8e4m3fn", "f32", "f16", MathFidelity::Stable))),
-            token: "sk6|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st",
+            token: "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st",
         },
         PositiveVector {
             name: "noncontraction_acc_mp_field",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "non-gem reduction whose accumulator (f32) deviates from compute (f16): |rlast|f32/st",
             key: key_acc_mp("rdc", "f16", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::Stable })),
-            token: "sk6|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
+            token: "sk7|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
         },
         PositiveVector {
             name: "noncontraction_scan_mp_only",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "scan cell, accumulator == compute (f32) but mp deviates (rm): |-|f32/rm",
             key: key_acc_mp("ew1", "f32", WorkClass::Warp, 2, vec![co4(), co4()], Reduce::None, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
-            token: "sk6|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm",
+            token: "sk7|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm",
         },
         PositiveVector {
             name: "noncontraction_acc_deviating_f64",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction with a deviating f64 accumulator, default mp: |rall|f64/st (a parses-ok fixture in the golden)",
             key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, Some(AccMp { acc: "f64".to_string(), mp: MathFidelity::Stable })),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st",
         },
         PositiveVector {
             name: "noncontraction_reduction_mp_only",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "reduction, accumulator == compute (f32) with deviating mp: |rall|f32/rm (a parses-ok fixture in the golden)",
             key: key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, Some(AccMp { acc: "f32".to_string(), mp: MathFidelity::ReducedMantissa })),
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm",
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm",
         },
         PositiveVector {
             name: "cell_class_ew3_three_inputs",
             clause: "KISS-CLASSIFY-6.5-0015",
             note: "three input operands + one output, pointwise by shape: ew3 (class is derived from structure, not from the op)",
             key: key("ew3", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4(), co4()], Reduce::None, None),
-            token: "sk6|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "cell_class_ndx_index_role_declared",
             clause: "KISS-CLASSIFY-6.5-0015",
             note: "table + index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule)",
             key: key("ndx", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None),
-            token: "sk6|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "cell_class_oth_not_pointwise",
             clause: "KISS-CLASSIFY-6.5-0015",
             note: "no declared fact and not pointwise by shape (the output does not have the frame extents): oth",
             key: key("oth", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None),
-            token: "sk6|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+            token: "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        },
+        PositiveVector {
+            name: "operand_count_9_above_the_sk6_limit",
+            clause: "KISS-CLASSIFY-6.4-0002",
+            note: "nine operands: the first count past the sk6 limit of 8 (causal conv1d, ROADMAP P5), accepted from sk7; a reader still capped at 8 fails here",
+            key: key("oth", "f32", "cuda:sm89", WorkClass::Grid, 2, (0..9).map(|_| co4()).collect(), Reduce::None, None),
+            token: "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        },
+        PositiveVector {
+            name: "operand_count_16_at_max_operands",
+            clause: "KISS-CLASSIFY-6.4-0002",
+            note: "sixteen operands: MAX_OPERANDS (sk7), the boundary; a reader that stops at 15 fails here",
+            key: key("oth", "f32", "cuda:sm89", WorkClass::Grid, 2, (0..16).map(|_| co4()).collect(), Reduce::None, None),
+            token: "sk7|oth|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
         },
         PositiveVector {
             name: "dequant_form_linear_weight",
             clause: "KISS-CLASSIFY-6.3-0009a",
             note: "int4 weight operand carrying a linear dequant: the sixth sub-key component `dl`; distinct from the codebook cell below",
             key: key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![with_dq(co4(), DequantForm::Linear), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "i4", "f32", "bf16", MathFidelity::Stable))),
-            token: "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
+            token: "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dl;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
         },
         PositiveVector {
             name: "dequant_form_codebook_weight",
             clause: "KISS-CLASSIFY-6.3-0009a",
             note: "the same int4 cell with a codebook dequant: `dc` — no scale reproduces a codebook with a linear dequant, so the two MUST NOT share a key",
             key: key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![with_dq(co4(), DequantForm::Codebook), co4(), co4()], Reduce::None, Some(ctr(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, None, "i4", "f32", "bf16", MathFidelity::Stable))),
-            token: "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
+            token: "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/dc;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st",
         },
         PositiveVector {
             name: "quantized_ctr_scale_f8e8m0",
             clause: "KISS-CLASSIFY-6.6-0022",
             note: "DISCRIMINATING: the quantized int4 GEMM [weight=i4, weight_scale=f8e8m0, activation=bf16] with the scale operand designated by role hint (slot 1): trailing `qf8e8m0`",
             key: key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr_q(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, "i4", "f32", "bf16", derive_scale_dtype(&["i4", "f8e8m0", "bf16"], Some(1)).unwrap()))),
-            token: "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0",
+            token: "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0",
         },
         PositiveVector {
             name: "quantized_ctr_scale_f16",
             clause: "KISS-CLASSIFY-6.6-0022",
             note: "DISCRIMINATING: the same cell with an `f16` scale: trailing `qf16` — a different cell from the `f8e8m0` one (R1.2 A, #222 candidate 1); at sk5 both derived one byte-identical key",
             key: key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(ctr_q(SizeClass::Tiny, SizeClass::Large, SizeClass::Large, "i4", "f32", "bf16", derive_scale_dtype(&["i4", "f16", "bf16"], Some(1)).unwrap()))),
-            token: "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf16",
+            token: "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf16",
         },
     ]
 }
@@ -588,8 +602,8 @@ pub struct DeclineVector {
     pub expected: KeyDecline,
 }
 
-const SCALED_GOLDEN: &str = "sk6|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0";
-const A_GOLDEN: &str = "sk6|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+const SCALED_GOLDEN: &str = "sk7|ctr|i4|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/i4/f32/bf16/st/qf8e8m0";
+const A_GOLDEN: &str = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
 
 /// The A.2 / recognition-surface decline vectors — the negative half of the byte-match
 /// surface. Covers the closed-set membership declines (unknown vs reserved dtype and
@@ -621,7 +635,7 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
         DeclineVector {
             name: "retired_sk4_op_family_code",
             clause: "KISS-CLASSIFY-6.5-0006",
-            note: "a well-formed sk6 token still carrying a retired sk4 op-family code (`gem`): the 24-code field is gone, so it is an unknown class",
+            note: "a well-formed sk7 token still carrying a retired sk4 op-family code (`gem`): the 24-code field is gone, so it is an unknown class",
             token: A_GOLDEN.replacen("|ew2|", "|gem|", 1),
             expected: KeyDecline::UnknownCellClass,
         },
@@ -682,59 +696,73 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             expected: KeyDecline::BadAccMpField,
         },
         DeclineVector {
+            name: "operand_count_17_over_max_operands",
+            clause: "KISS-CLASSIFY-6.4-0002",
+            note: "seventeen operands: one past MAX_OPERANDS (16) is a typed decline, not a truncation; the sk6 limit was 8",
+            token: A_GOLDEN.replacen("co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", &vec!["co/00/v4/d16/f"; 17].join(";"), 1),
+            expected: KeyDecline::TooManyOperands { got: 17 },
+        },
+        DeclineVector {
+            name: "retired_sk6_token",
+            clause: "KISS-CLASSIFY-6.7-0014",
+            note: "a persisted sk6 token: recognized other version, re-derive (sk6 capped the operand count at 8 and is not decoded at sk7)",
+            token: A_GOLDEN.replacen("sk7", "sk6", 1),
+            expected: KeyDecline::UnsupportedSchemaVersion { got: 6 },
+        },
+        DeclineVector {
             name: "retired_sk5_token",
             clause: "KISS-CLASSIFY-6.7-0014",
-            note: "a persisted sk5 token: recognized other version, re-derive (the sk5 shape is not decoded at sk6)",
-            token: A_GOLDEN.replacen("sk6", "sk5", 1),
+            note: "a persisted sk5 token: recognized other version, re-derive (the sk5 shape is not decoded at sk7)",
+            token: A_GOLDEN.replacen("sk7", "sk5", 1),
             expected: KeyDecline::UnsupportedSchemaVersion { got: 5 },
         },
         DeclineVector {
             name: "version_signpost_sk9",
             clause: "KISS-CLASSIFY-6.7-0015",
             note: "well-formed canonical OTHER version -> re-derive signpost, not a wall",
-            token: A_GOLDEN.replacen("sk6", "sk9", 1),
+            token: A_GOLDEN.replacen("sk7", "sk9", 1),
             expected: KeyDecline::UnsupportedSchemaVersion { got: 9 },
         },
         DeclineVector {
             name: "version_signpost_sk3",
             clause: "KISS-CLASSIFY-6.7-0014",
             note: "this reference build ships no sk3 decoder arm: a persisted sk3 token is the signpost, never a silent cross-vocab decode",
-            token: A_GOLDEN.replacen("sk6", "sk3", 1),
+            token: A_GOLDEN.replacen("sk7", "sk3", 1),
             expected: KeyDecline::UnsupportedSchemaVersion { got: 3 },
         },
         DeclineVector {
             name: "version_wall_leading_zero",
             clause: "KISS-CLASSIFY-6.7-0015",
             note: "non-canonical leading-zero sk04 is the malformed wall, not the signpost",
-            token: A_GOLDEN.replacen("sk6|", "sk04|", 1),
+            token: A_GOLDEN.replacen("sk7|", "sk04|", 1),
             expected: KeyDecline::BadVersionPrefix,
         },
         DeclineVector {
             name: "redundant_acc_mp_all_default",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "the all-default (acc+mp) spelling is a forbidden redundant emission (rule d)",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st".to_string(),
             expected: KeyDecline::RedundantAccMpField,
         },
         DeclineVector {
             name: "acc_mp_bad_precision_code",
             clause: "KISS-CLASSIFY-6.7-0013",
             note: "the (acc+mp) field with an unrecognized math-precision code (zz)",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/zz".to_string(),
             expected: KeyDecline::BadAccMpField,
         },
         DeclineVector {
             name: "contraction_reserved_weight_dtype",
             clause: "KISS-CLASSIFY-6.7-0009",
             note: "a reserved fnuz dtype inside the gem precision group declines as reserved",
-            token: "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st".to_string(),
+            token: "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st".to_string(),
             expected: KeyDecline::ReservedDtype,
         },
         DeclineVector {
             name: "contraction_bad_precision_code",
             clause: "KISS-CLASSIFY-6.7-0009",
             note: "the gem precision group with an unrecognized math-precision code (zz)",
-            token: "sk6|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz".to_string(),
+            token: "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/zz".to_string(),
             expected: KeyDecline::BadContractionField,
         },
         // §6.6-0009 / §6.7-0005 (#160): a reduce `x<hh>` whose reduced set has a canonical
@@ -743,28 +771,28 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             name: "noncanonical_reduce_all_axes_r2",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "x03 at rank 2 is the all-axes set — MUST be rall, never a bitmask",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03".to_string(),
             expected: KeyDecline::NonCanonicalReduceField,
         },
         DeclineVector {
             name: "noncanonical_reduce_trailing_r2",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "x02 at rank 2 is the lone innermost axis — MUST be rlast, never a bitmask",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02".to_string(),
             expected: KeyDecline::NonCanonicalReduceField,
         },
         DeclineVector {
             name: "noncanonical_reduce_rank1",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "x01 at rank 1 is both all-axes and lone-trailing (they coincide) — MUST be rall (§6.6-0009 tie-break)",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01".to_string(),
             expected: KeyDecline::NonCanonicalReduceField,
         },
         DeclineVector {
             name: "noncanonical_reduce_empty",
             clause: "KISS-CLASSIFY-6.7-0005",
             note: "x00 is the empty reduced set — that is not a reduction, spelled `-`, never a bitmask",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00".to_string(),
             expected: KeyDecline::NonCanonicalReduceField,
         },
         // §6.7-0009: a bit set for a non-existent axis (index >= rank) is a DIFFERENT producer
@@ -773,7 +801,7 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             name: "out_of_range_reduce_mask_r2",
             clause: "KISS-CLASSIFY-6.7-0009",
             note: "x04 at rank 2 sets bit 2, an axis that does not exist — out-of-range mask, not a sentinel overload",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04".to_string(),
             expected: KeyDecline::BadReduceField,
         },
         // §6.6-0009: a rank-0 (scalar) cell has no axis to reduce, so it admits only `-`. The
@@ -785,14 +813,14 @@ pub fn decline_vectors() -> Vec<DeclineVector> {
             name: "noncanonical_reduce_rall_rank0",
             clause: "KISS-CLASSIFY-6.6-0009",
             note: "rall at rank 0 is the full set of zero axes = the empty set — a real set spelled wrong that `-` owns, exactly x00's shape",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall".to_string(),
             expected: KeyDecline::NonCanonicalReduceField,
         },
         DeclineVector {
             name: "out_of_range_reduce_rlast_rank0",
             clause: "KISS-CLASSIFY-6.6-0009",
             note: "rlast at rank 0 names a lone innermost axis that does not exist — a set that cannot exist for the rank, exactly x04@r2's out-of-range shape",
-            token: "sk6|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast".to_string(),
+            token: "sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast".to_string(),
             expected: KeyDecline::BadReduceField,
         },
     ]
@@ -950,7 +978,7 @@ pub fn emit_reference_vectors_json() -> String {
         s.push_str("  },\n");
     }
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
-    s.push_str("  \"token_prefix\": \"sk6\",\n");
+    s.push_str("  \"token_prefix\": \"sk7\",\n");
     s.push_str("  \"dtype_axis_note\": \"recognition_set is all 27 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 24 a byte-match runs over. The three MX element rows (f4e2m1, f6e2m3, f6e3m2) are appended after c128 and are usable, but typed-decline (ElementDtypeAsAccumulator) in an accumulator position. The two are different obligations (KISS-CLASSIFY-6.1-0001).\",\n");
     s.push_str(&format!("  \"recognition_count\": {},\n", DTYPES.len()));
     s.push_str(&format!("  \"usable_count\": {},\n", usable.len()));
