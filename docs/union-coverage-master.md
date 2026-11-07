@@ -69,7 +69,7 @@ Rows whose verdict depends on the **kernel-body scope note** (draft due 2026-11-
 | G1 | Narrow float dtypes | EXPRESSED | Ops 6.16 table; Classify 6.1-0013 | none |
 | G2 | Packed / vector value types | NO WAY as a value type | vector width is a layout fact, Classify 6.5-0009 | **[scope]**; the open question is whether KISS must name a lane-typed value or may treat it as layout |
 | G3 | Cast with rounding and saturation | EXPRESSED, with open values | `cast` 6.21-0001..0004 (nearest-even and three directed modes, saturation `none`/`clamp`); 0.8.1 | **R5.7 row**; Appendix D item 12 values unpinned (6.21-0004); `bitcast` has no op |
-| G4 | Fma, rounding mode, ftz, approx vs exact | `fma` **NEEDS**; approximate form EXPRESSED within declared-ULP tiers; FTZ/DAZ is a decision already taken (not advertisable); directed rounding on arithmetic NO WAY | 6.17-0002 (bit-stable forbids contraction), 6.17-0003, 6.17-0004 (per-op refinement) | **R5.7 row**; see Part 2 |
+| G4 | Fma, rounding mode, ftz, approx vs exact | `fma` **NEEDS**; approximate form EXPRESSED within declared-ULP tiers; FTZ/DAZ is a decision already taken (not advertisable, 6.17-0002) **but Unpopped builds it** (`Numerics{round, ftz, approx}` [U], Unpopped#314), so against its IR it is a NEEDS that needs a ruling to reverse; directed rounding on arithmetic NO WAY today | 6.17-0002 (bit-stable forbids contraction), 6.17-0003, 6.17-0004 (per-op refinement) | **R5.7 row**; see Part 2 |
 | G5 | NaN/Inf-preserving semantics control | EXPRESSED (NaN-propagating `max`/`min`, IEEE arithmetic); a "no-NaN" fast-math assumption is **NO WAY** unless MathFidelity gains a value | 6.11-0002, 6.11-0010, 6.17-0002 | a decision, not an oversight; needs a ruling to reverse |
 | H1 | Inline asm, extern libraries, escape hatch | EXPRESSED | a hand-written kernel degrades to a declared op-identity tag plus a conformance claim: `declared-op-tag` (contract.md lines 186 and 330) | no semantics inside the tag |
 | H2 | Automatic differentiation | NO WAY | no backward op; the `rfc/backward-op-category` branch is unmerged | an op category decision, not a field |
@@ -178,8 +178,7 @@ Count: `MAX_OPERANDS` is 16 since 0.8.0 (Classify 6.4-0002, Ops 6.19-0037); a 9-
 operand (Classify 6.6-0022); **2:4 sparsity metadata** (an index/bitmask operand that selects which elements of the compressed operand are kept)
 has no operand role. Options: **A.** a `sparsity_meta` operand role with a named layout (`2:4`) in Classify (a key field, so a schema event);
 **B.** describe the sparse operand as dense plus a mask (`select` over a metadata gather): correct reference, no fusion identity, and it loses the
-fact that the kernel never reads the pruned half; **C.** defer until Unpopped designs it (it has no sparse MMA today [U]). Recommendation: **C**.
-There is no Unpopped construct yet to be unable to describe; a role that nobody builds is a freeze cost for nothing. *Bytes:* A is a `structure_key` field.
+fact that the kernel never reads the pruned half; **C.** defer. **Corrected 2026-11-07 after the Unpopped lane's verified cells (Unpopped#314):** Unpopped already has `MmaAtom` `sparse_24` and `block_scale` extra operands, so this is a construct Unpopped builds and KISS cannot name; **C is withdrawn**. Recommendation: **A**, a sparsity-metadata operand role (and its selector) with a named `2:4` layout. *Bytes:* A is a `structure_key` field, so a schema event for the 0.9.0 batch if CireSnave rules it in.
 
 ## Part 3. Mapping from the previous view
 
