@@ -247,6 +247,19 @@ pub enum Decline {
     BadSource(SourceDecline),
     /// A `Source` is the region root (§6.4-0013).
     SourceRoot,
+    /// An extract record does not target a param leaf with a matching slot (§6.4-0014).
+    BadExtract(ExtractFault),
+}
+
+/// Why an extract record is not legal (§6.4-0014).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExtractFault {
+    /// The path does not resolve to a node of the region.
+    PathUnresolved,
+    /// The target is not a param leaf (the `Source` node tagged `param`).
+    NotParamLeaf,
+    /// The target is a param leaf whose `index` differs from the record's `param_slot`.
+    SlotMismatch { leaf_index: u32 },
 }
 
 // ---------------------------------------------------------------------------
@@ -370,6 +383,53 @@ fn canonical_operands<'a>(op_name: &str, operands: &'a [Node]) -> Vec<&'a Node> 
     v
 }
 
+/// Resolve an extract path over the canonical operand order (§6.4-0007) and check §6.4-0014.
+fn check_extract(root: &Node, e: &Extract) -> Result<(), ExtractFault> {
+    let mut cur = root;
+    for &step in &e.path {
+        match cur {
+            Node::Op { op_name, operands, .. } => {
+                cur = canonical_operands(op_name, operands)
+                    .get(step as usize)
+                    .copied()
+                    .ok_or(ExtractFault::PathUnresolved)?;
+            }
+            _ => return Err(ExtractFault::PathUnresolved),
+        }
+    }
+    match cur {
+        Node::Source(SourceLeaf::Param(i)) if *i == e.param_slot => Ok(()),
+        Node::Source(SourceLeaf::Param(i)) => Err(ExtractFault::SlotMismatch { leaf_index: *i }),
+        _ => Err(ExtractFault::NotParamLeaf),
+    }
+}
+
+/// The canonical extract path to the param leaf with `index` (§6.4-0007): the lexicographically-least
+/// sequence of canonical operand indices from the root, so a shared leaf has one path. `None` when the
+/// region has no such leaf.
+pub fn param_leaf_path(region: &Region, index: u32) -> Option<Vec<u16>> {
+    fn walk(node: &Node, index: u32, prefix: &mut Vec<u16>, best: &mut Option<Vec<u16>>) {
+        match node {
+            Node::Source(SourceLeaf::Param(i)) if *i == index => {
+                if best.as_ref().map_or(true, |b| prefix.as_slice() < b.as_slice()) {
+                    *best = Some(prefix.clone());
+                }
+            }
+            Node::Op { op_name, operands, .. } => {
+                for (k, c) in canonical_operands(op_name, operands).into_iter().enumerate() {
+                    prefix.push(k as u16);
+                    walk(c, index, prefix, best);
+                    prefix.pop();
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut best = None;
+    walk(&region.root, index, &mut Vec::new(), &mut best);
+    best
+}
+
 fn check_sources(node: &Node) -> Result<(), Decline> {
     match node {
         Node::Source(s) => s.check().map_err(Decline::BadSource),
@@ -454,6 +514,9 @@ pub fn encode(region: &Region) -> Result<Vec<u8>, Decline> {
         return Err(Decline::SourceRoot);
     }
     check_sources(&region.root)?;
+    for e in &region.extracts {
+        check_extract(&region.root, e).map_err(Decline::BadExtract)?;
+    }
     // Expressibility (§6.4-0008): bound set must equal exactly [0, n_inputs).
     let mut bound = BTreeSet::new();
     collect_binds(&region.root, &mut bound);
@@ -542,6 +605,8 @@ pub enum DecodeDecline {
     BadSource(SourceDecline),
     /// The last (root) node is a `Source` (§6.4-0013).
     SourceRoot,
+    /// An extract record does not target a param leaf with a matching slot (§6.4-0014).
+    BadExtract(ExtractFault),
     /// An operand index that does not reference a strictly-earlier table entry
     /// (§6.4-0001, §6.8-0004).
     ForwardOperandReference { node: u32, operand: u32 },
@@ -697,6 +762,26 @@ pub fn decode(bytes: &[u8]) -> Result<ParsedRegion, DecodeDecline> {
             path.push(c.u16()?);
         }
         let param_slot = c.u32()?;
+        // §6.4-0014: the path resolves over the (canonical) operand indices to a param leaf whose
+        // index is the slot.
+        let mut cur = nodes.len().wrapping_sub(1);
+        for &step in &path {
+            cur = match nodes.get(cur) {
+                Some(ParsedNode::Op { operands, .. }) => match operands.get(step as usize) {
+                    Some(&o) => o as usize,
+                    None => return Err(DecodeDecline::BadExtract(ExtractFault::PathUnresolved)),
+                },
+                _ => return Err(DecodeDecline::BadExtract(ExtractFault::PathUnresolved)),
+            };
+        }
+        match nodes.get(cur) {
+            Some(ParsedNode::Source(SourceLeaf::Param(i))) if *i == param_slot => {}
+            Some(ParsedNode::Source(SourceLeaf::Param(i))) => {
+                return Err(DecodeDecline::BadExtract(ExtractFault::SlotMismatch { leaf_index: *i }))
+            }
+            Some(_) => return Err(DecodeDecline::BadExtract(ExtractFault::NotParamLeaf)),
+            None => return Err(DecodeDecline::BadExtract(ExtractFault::PathUnresolved)),
+        }
         extracts.push(Extract { path, param_slot });
     }
     if c.p != bytes.len() {

@@ -848,6 +848,16 @@ the full statement.
   the root and MUST NOT anchor them on an interior node, and MUST NOT form an extract path
   over a pre-canonical operand order. The path/slot wire encoding is pinned in §6.8-0006 and
   the record order in §6.8-0011. *Test:* `test_grammar_extract_channel_on_root`.
+- **KISS-GRAMMAR-6.4-0014** — The only node an extract record (§6.4-0007) may target is the
+  **param leaf**: the `Source` node tagged `param` (§6.4-0013); this names the node and says nothing
+  of a data-holding graph node, because a param leaf holds no value, only the index of a scalar
+  supplied at run time. An extract record's `path` MUST end at a param leaf, and its `param_slot`
+  MUST equal that leaf's `index`. A reader MUST decline, with a typed decline and never a panic, an
+  extract record whose path does not resolve to a node of the region, whose target is not a param
+  leaf, or whose `param_slot` differs from the target's `index`. This answers R3.18 (the
+  "scalar-bearing node" of Appendix A.1 vector G5): CireSnave, 2026-11-07, verbatim: "I'm going to
+  guess the intent for that was A...but that's my best guess." *Test:*
+  `test_grammar_extract_targets_param_leaf`.
 - **KISS-GRAMMAR-6.4-0008** — A region MUST carry an explicit **declared arity** field
   `n_inputs` (its wire encoding pinned in §6.8-0001/§6.8-0002); a region is **expressible**
   only when its bound-input set equals exactly `[0, n_inputs)`. A region that binds a strict
@@ -1301,6 +1311,7 @@ restated as a free-standing KISS-Grammar clause.
 | KISS-GRAMMAR-6.4-0011 | `test_grammar_structural_dedup_and_repeated_bind` |
 | KISS-GRAMMAR-6.4-0012 | `test_grammar_no_fabricated_op_tag` |
 | KISS-GRAMMAR-6.4-0013 | `test_grammar_source_leaf_kinds` |
+| KISS-GRAMMAR-6.4-0014 | `test_grammar_extract_targets_param_leaf` |
 | KISS-GRAMMAR-6.5-0001 | `test_grammar_add_op_by_rebasing` |
 | KISS-GRAMMAR-6.5-0002 | `test_grammar_rebasing_is_additive_no_bump` |
 | KISS-GRAMMAR-6.5-0003 | `test_grammar_independent_cadence` |
@@ -1520,7 +1531,7 @@ node is reachable from the root by more than one sequence of canonical operand i
 extract record for that scalar param uses the **lexicographically-least** such path
 (§6.4-0007), and the region's extract records are emitted in ascending `param_slot` order
 (§6.8-0011). Drives `test_grammar_extract_channel_on_root`,
-`test_grammar_wire_extract_encoding`, and `test_grammar_wire_extract_record_order`.
+`test_grammar_wire_extract_encoding`, and `test_grammar_wire_extract_record_order`. The scalar-bearing node of this vector is the **param leaf** (the `Source` node tagged `param`, §6.4-0013), and the extract record's `param_slot` equals that leaf's `index` (§6.4-0014).
 
 *Negative vectors.* A region binding a strict subset of `[0, n_inputs)` (`BindSetMismatch`,
 detectable only because `n_inputs` is declared, §6.4-0008), a region binding an index

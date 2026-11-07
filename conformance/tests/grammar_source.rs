@@ -162,3 +162,56 @@ fn test_grammar_wire_source_record_layout() {
     old[4] = 1;
     assert_eq!(decode(&old), Err(DecodeDecline::UnsupportedSchemaVersion { got: 1 }));
 }
+
+/// Enforces[enforced]: KISS-GRAMMAR-6.4-0014 — an extract record must end at a param leaf (the
+/// `Source` node tagged `param`) and its `param_slot` must equal that leaf's index; a path that
+/// resolves nowhere, a target that is not a param leaf, and a slot that differs are typed declines
+/// on both write and read. TEETH: a codec that accepts a path to a `Bind`, to an `Op`, or to a
+/// param leaf with another slot, and one that panics on an out-of-range step.
+#[test]
+fn test_grammar_extract_targets_param_leaf() {
+    let region = |extracts: Vec<Extract>| {
+        let mut r = Region::new(1, "1", "1", Node::op("mul", vec![
+            Node::Bind(0),
+            Node::Source(SourceLeaf::Param(7)),
+        ]));
+        r.extracts = extracts;
+        r
+    };
+    // mul is commutative: the Bind subtree key (0x00) orders before the Source key (0x02), so the
+    // canonical operands are [Bind, param leaf] and the leaf is at path [1].
+    let good = Extract { path: vec![1], param_slot: 7 };
+    assert_eq!(param_leaf_path(&region(vec![]), 7), Some(vec![1]));
+    assert_eq!(param_leaf_path(&region(vec![]), 8), None);
+    let bytes = encode(&region(vec![good.clone()])).unwrap();
+    assert_eq!(decode(&bytes).unwrap().extracts, vec![good]);
+
+    // write side
+    let fault = |e: Extract| encode(&region(vec![e])).unwrap_err();
+    assert_eq!(fault(Extract { path: vec![0], param_slot: 7 }), Decline::BadExtract(ExtractFault::NotParamLeaf), "a Bind");
+    assert_eq!(fault(Extract { path: vec![], param_slot: 7 }), Decline::BadExtract(ExtractFault::NotParamLeaf), "the root op");
+    assert_eq!(
+        fault(Extract { path: vec![1], param_slot: 6 }),
+        Decline::BadExtract(ExtractFault::SlotMismatch { leaf_index: 7 })
+    );
+    assert_eq!(fault(Extract { path: vec![2], param_slot: 7 }), Decline::BadExtract(ExtractFault::PathUnresolved), "step past the operands");
+    assert_eq!(fault(Extract { path: vec![1, 0], param_slot: 7 }), Decline::BadExtract(ExtractFault::PathUnresolved), "step through a leaf");
+
+    // read side: tamper with the slot of a valid record (the last 4 bytes) and the path step
+    let mut slot = bytes.clone();
+    let n = slot.len();
+    slot[n - 4] = 6;
+    assert_eq!(decode(&slot), Err(DecodeDecline::BadExtract(ExtractFault::SlotMismatch { leaf_index: 7 })));
+    let mut step = bytes.clone();
+    step[n - 6] = 0; // path step 1 -> 0: the Bind
+    assert_eq!(decode(&step), Err(DecodeDecline::BadExtract(ExtractFault::NotParamLeaf)));
+    step[n - 6] = 9;
+    assert_eq!(decode(&step), Err(DecodeDecline::BadExtract(ExtractFault::PathUnresolved)));
+
+    // a shared leaf has one canonical path: the lexicographically-least
+    let shared = Region::new(0, "1", "1", Node::op("select", vec![
+        Node::Source(SourceLeaf::Param(3)),
+        Node::Source(SourceLeaf::Param(3)),
+    ]));
+    assert_eq!(param_leaf_path(&shared, 3), Some(vec![0]));
+}

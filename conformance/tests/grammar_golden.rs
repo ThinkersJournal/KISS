@@ -128,8 +128,11 @@ fn test_grammar_wire_extract_encoding() {
     let empty = encode(&g1_region()).unwrap();
     assert_eq!(&empty[empty.len() - 2..], &[0x00, 0x00]);
 
-    // One extract: path [1] (root's operand index 1 = mul), param_slot 0.
-    let mut r = g1_region();
+    // One extract: path [1] (root's operand index 1 = the param leaf, §6.4-0014), param_slot 0.
+    let mut r = Region::new(2, "1", "1", Node::op("add", vec![
+        Node::op("mul", vec![Node::Bind(0), Node::Bind(1)]),
+        Node::Source(SourceLeaf::Param(0)),
+    ]));
     r.extracts = vec![Extract { path: vec![1], param_slot: 0 }];
     let b = encode(&r).unwrap();
     // Tail: extract_count=1 | path_len=1 | step=1 | param_slot=0(u32).
