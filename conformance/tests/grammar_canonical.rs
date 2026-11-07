@@ -68,6 +68,7 @@ fn op_name_at(wire: &[u8], name: &str) -> usize {
 fn label(n: &ParsedNode) -> String {
     match n {
         ParsedNode::Bind(i) => format!("bind{i}"),
+        ParsedNode::Source(s) => format!("source{}", s.tag()),
         ParsedNode::Op { op_name, .. } => op_name.clone(),
     }
 }

@@ -23,9 +23,10 @@ use std::collections::{BTreeSet, HashMap};
 
 /// The region wire-form magic (§6.8-0013): ASCII `KGRM`, wire bytes 4B 47 52 4D.
 pub const MAGIC: [u8; 4] = *b"KGRM";
-/// The illustrative frozen-shape schema version of the Appendix A.1 vectors
-/// (§6.8-0013): `1`, encoded as a `u16` little-endian.
-pub const SCHEMA_VERSION: u16 = 1;
+/// The frozen-shape schema version of the Appendix A.1 vectors (§6.8-0013): `2`
+/// (the `Source` node kind, §6.8-0014, moved it from `1`), encoded as a `u16`
+/// little-endian.
+pub const SCHEMA_VERSION: u16 = 2;
 
 /// The `consumers` enum wire values (§6.8-0005).
 pub const CONSUMERS_INTERIOR: u8 = 0x00;
@@ -34,6 +35,17 @@ pub const CONSUMERS_ROOT: u8 = 0x01;
 /// canonical subtree serialization.
 pub const KIND_BIND: u8 = 0x00;
 pub const KIND_OP: u8 = 0x01;
+/// The `Source` node-record kind (§6.8-0014).
+pub const KIND_SOURCE: u8 = 0x02;
+/// The `Source` tag ordinals (§6.4-0013); `0` is reserved and never emitted.
+pub const TAG_CONST: u8 = 1;
+pub const TAG_PARAM: u8 = 2;
+pub const TAG_COORD: u8 = 3;
+pub const TAG_REDUCED: u8 = 4;
+pub const TAG_EXTENT: u8 = 5;
+pub const TAG_REDUCED_COUNT: u8 = 6;
+/// The pinned `MAX_RANK` bound on a `coord`/`extent` axis (§6.4-0013).
+pub const SOURCE_MAX_RANK: u8 = 8;
 /// The dtype-role wildcard token `*` (§6.6-0006), the single byte 0x2A.
 pub const WILDCARD: &str = "*";
 /// The default operand-role entry (§6.1-0008): role `data`, dtype-role `*`.
@@ -70,6 +82,8 @@ impl RoleEntry {
 pub enum Node {
     /// `Bind(input_index)` — binds this leaf to the region's positional input.
     Bind(u32),
+    /// A scalar-source leaf other than `input(i)` (§6.4-0013).
+    Source(SourceLeaf),
     /// An advertisable-op node. `opattrs` is the narrow per-node `pattern_attrs`
     /// field: the KISS-Ops OpAttrs blob, carried uninterpreted (§6.8-0007).
     Op {
@@ -78,6 +92,102 @@ pub enum Node {
         roles: Vec<RoleEntry>,
         operands: Vec<Node>,
     },
+}
+
+/// The six non-input scalar-source leaves (KISS-OPS-6.12-0001) as `Source` payloads (§6.4-0013).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceLeaf {
+    /// `const(bits)`: the dtype token and the exact little-endian bit pattern in the dtype's
+    /// storage width (`ceil(width_bits / 8)` bytes, bits above the width zero).
+    Const { dtype: String, bits: Vec<u8> },
+    /// `param(i)`.
+    Param(u32),
+    /// `coord(axis)`.
+    Coord(u8),
+    /// `reduced(stage)`.
+    Reduced(u32),
+    /// `extent(axis)`.
+    Extent(u8),
+    /// `reduced_count`.
+    ReducedCount,
+}
+
+/// The storage width in bits of a KISS-Classify dtype token (§6.1 table; the vendored
+/// `dtype_manifest.json` is the machine copy and a test compares the two).
+pub fn dtype_storage_bits(token: &str) -> Option<u32> {
+    const TABLE: [(&str, u32); 27] = [
+        ("f16", 16), ("bf16", 16), ("f32", 32), ("f64", 64), ("i8", 8), ("i16", 16), ("u8", 8),
+        ("u16", 16), ("i32", 32), ("i64", 64), ("u32", 32), ("u64", 64), ("bool", 8),
+        ("f8e4m3fn", 8), ("f8e4m3fnuz", 8), ("f8e5m2", 8), ("f8e5m2fnuz", 8), ("f8e8m0", 8),
+        ("f8e6m2", 8), ("i4", 4), ("u4", 4), ("b1", 1), ("c64", 64), ("c128", 128),
+        ("f4e2m1", 4), ("f6e2m3", 6), ("f6e3m2", 6),
+    ];
+    TABLE.iter().find(|(t, _)| *t == token).map(|(_, b)| *b)
+}
+
+/// Whether `bits` is a legal `const` payload for `dtype` (§6.4-0013): a known dtype, exactly
+/// `ceil(width / 8)` bytes, and every bit above the width zero.
+pub fn const_bits_legal(dtype: &str, bits: &[u8]) -> Result<(), SourceDecline> {
+    let width = dtype_storage_bits(dtype).ok_or(SourceDecline::UnknownDtype)?;
+    let need = width.div_ceil(8) as usize;
+    if bits.len() != need {
+        return Err(SourceDecline::BitsLength { want: need, got: bits.len() });
+    }
+    let used_in_last = width - 8 * (need as u32 - 1);
+    if used_in_last < 8 && bits[need - 1] >> used_in_last != 0 {
+        return Err(SourceDecline::BitsAboveWidth);
+    }
+    Ok(())
+}
+
+/// Why a `Source` payload is not legal (§6.4-0013, §6.8-0014).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceDecline {
+    UnknownDtype,
+    BitsLength { want: usize, got: usize },
+    BitsAboveWidth,
+    AxisOutOfRange { axis: u8 },
+}
+
+impl SourceLeaf {
+    /// The §6.4-0013 tag ordinal.
+    pub fn tag(&self) -> u8 {
+        match self {
+            SourceLeaf::Const { .. } => TAG_CONST,
+            SourceLeaf::Param(_) => TAG_PARAM,
+            SourceLeaf::Coord(_) => TAG_COORD,
+            SourceLeaf::Reduced(_) => TAG_REDUCED,
+            SourceLeaf::Extent(_) => TAG_EXTENT,
+            SourceLeaf::ReducedCount => TAG_REDUCED_COUNT,
+        }
+    }
+
+    /// Check the payload against §6.4-0013.
+    pub fn check(&self) -> Result<(), SourceDecline> {
+        match self {
+            SourceLeaf::Const { dtype, bits } => const_bits_legal(dtype, bits),
+            SourceLeaf::Coord(a) | SourceLeaf::Extent(a) if *a >= SOURCE_MAX_RANK => {
+                Err(SourceDecline::AxisOutOfRange { axis: *a })
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// The §6.8-0014 node record, which is also the §6.4-0010 canonical subtree key.
+    pub fn record(&self) -> Vec<u8> {
+        let mut r = vec![KIND_SOURCE, self.tag()];
+        match self {
+            SourceLeaf::Const { dtype, bits } => {
+                push_token(&mut r, dtype);
+                r.push(bits.len() as u8);
+                r.extend_from_slice(bits);
+            }
+            SourceLeaf::Param(i) | SourceLeaf::Reduced(i) => r.extend_from_slice(&i.to_le_bytes()),
+            SourceLeaf::Coord(a) | SourceLeaf::Extent(a) => r.push(*a),
+            SourceLeaf::ReducedCount => {}
+        }
+        r
+    }
 }
 
 impl Node {
@@ -133,6 +243,10 @@ pub enum Decline {
     BindSetMismatch { declared: u32, unbound: u32 },
     /// A bind names an index `>= n_inputs` (§6.4-0008).
     BindIndexOutOfRange { index: u32, n_inputs: u32 },
+    /// A `Source` payload is not legal (§6.4-0013).
+    BadSource(SourceDecline),
+    /// A `Source` is the region root (§6.4-0013).
+    SourceRoot,
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +342,7 @@ pub fn subtree_key(node: &Node) -> Vec<u8> {
             out.push(KIND_BIND);
             out.extend_from_slice(&i.to_le_bytes());
         }
+        Node::Source(s) => out.extend_from_slice(&s.record()),
         Node::Op { op_name, opattrs, roles, operands } => {
             out.push(KIND_OP);
             push_token(&mut out, op_name);
@@ -255,11 +370,20 @@ fn canonical_operands<'a>(op_name: &str, operands: &'a [Node]) -> Vec<&'a Node> 
     v
 }
 
+fn check_sources(node: &Node) -> Result<(), Decline> {
+    match node {
+        Node::Source(s) => s.check().map_err(Decline::BadSource),
+        Node::Bind(_) => Ok(()),
+        Node::Op { operands, .. } => operands.iter().try_for_each(check_sources),
+    }
+}
+
 fn collect_binds(node: &Node, set: &mut BTreeSet<u32>) {
     match node {
         Node::Bind(i) => {
             set.insert(*i);
         }
+        Node::Source(_) => {}
         Node::Op { operands, .. } => {
             for c in operands {
                 collect_binds(c, set);
@@ -295,6 +419,7 @@ impl Builder {
                 r.extend_from_slice(&i.to_le_bytes());
                 r
             }
+            Node::Source(s) => s.record(),
             Node::Op { op_name, opattrs, roles, operands } => {
                 // Children first (post-order): their indices are strictly lower.
                 let ordered = canonical_operands(op_name, operands);
@@ -324,6 +449,11 @@ impl Builder {
 /// Serialize a region to the canonical region wire form (§6.8), or return a typed
 /// decline if the region is not expressible (§6.4-0008).
 pub fn encode(region: &Region) -> Result<Vec<u8>, Decline> {
+    // §6.4-0013: a Source is never the root, and every Source payload is legal.
+    if matches!(region.root, Node::Source(_)) {
+        return Err(Decline::SourceRoot);
+    }
+    check_sources(&region.root)?;
     // Expressibility (§6.4-0008): bound set must equal exactly [0, n_inputs).
     let mut bound = BTreeSet::new();
     collect_binds(&region.root, &mut bound);
@@ -377,6 +507,7 @@ pub fn encode(region: &Region) -> Result<Vec<u8>, Decline> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParsedNode {
     Bind(u32),
+    Source(SourceLeaf),
     Op {
         op_name: String,
         consumers: u8,
@@ -405,6 +536,12 @@ pub enum DecodeDecline {
     BadUtf8,
     BadKind { got: u8 },
     BadConsumers { got: u8 },
+    /// A `Source` tag that is `0` or not implemented (§6.8-0014).
+    BadSourceTag { got: u8 },
+    /// A `Source` payload that is not legal (§6.8-0014).
+    BadSource(SourceDecline),
+    /// The last (root) node is a `Source` (§6.4-0013).
+    SourceRoot,
     /// An operand index that does not reference a strictly-earlier table entry
     /// (§6.4-0001, §6.8-0004).
     ForwardOperandReference { node: u32, operand: u32 },
@@ -485,6 +622,25 @@ pub fn decode(bytes: &[u8]) -> Result<ParsedRegion, DecodeDecline> {
                 let i = c.u32()?;
                 nodes.push(ParsedNode::Bind(i));
             }
+            KIND_SOURCE => {
+                let tag = c.u8()?;
+                let leaf = match tag {
+                    TAG_CONST => {
+                        let dtype = c.token()?;
+                        let n = c.u8()? as usize;
+                        let bits = c.take(n)?;
+                        SourceLeaf::Const { dtype, bits }
+                    }
+                    TAG_PARAM => SourceLeaf::Param(c.u32()?),
+                    TAG_COORD => SourceLeaf::Coord(c.u8()?),
+                    TAG_REDUCED => SourceLeaf::Reduced(c.u32()?),
+                    TAG_EXTENT => SourceLeaf::Extent(c.u8()?),
+                    TAG_REDUCED_COUNT => SourceLeaf::ReducedCount,
+                    other => return Err(DecodeDecline::BadSourceTag { got: other }),
+                };
+                leaf.check().map_err(DecodeDecline::BadSource)?;
+                nodes.push(ParsedNode::Source(leaf));
+            }
             KIND_OP => {
                 let op_name = c.token()?;
                 let consumers = c.u8()?;
@@ -523,6 +679,9 @@ pub fn decode(bytes: &[u8]) -> Result<ParsedRegion, DecodeDecline> {
         .count();
     if root_count > 1 {
         return Err(DecodeDecline::MultipleRoots { count: root_count });
+    }
+    if matches!(nodes.last(), Some(ParsedNode::Source(_))) {
+        return Err(DecodeDecline::SourceRoot);
     }
     if let Some(ParsedNode::Op { consumers, .. }) = nodes.last() {
         if *consumers != CONSUMERS_ROOT {
@@ -662,7 +821,18 @@ pub fn golden_regions() -> Vec<(&'static str, &'static str, Region)> {
             "repeated-bind / structural dedup, out = a + a",
             g4_region(),
         ),
+        ("S1", "Source const: f32 quiet NaN with payload 0x7FC00001, out = a + c", source_region(SourceLeaf::Const { dtype: "f32".into(), bits: 0x7FC0_0001u32.to_le_bytes().to_vec() })),
+        ("S2", "Source param(3), out = a + p3", source_region(SourceLeaf::Param(3))),
+        ("S3", "Source coord(1), out = a + coord(1)", source_region(SourceLeaf::Coord(1))),
+        ("S4", "Source reduced(0), out = a + reduced(0)", source_region(SourceLeaf::Reduced(0))),
+        ("S5", "Source extent(0), out = a + extent(0)", source_region(SourceLeaf::Extent(0))),
+        ("S6", "Source reduced_count, out = a + reduced_count", source_region(SourceLeaf::ReducedCount)),
     ]
+}
+
+/// `out = a + <leaf>`: the one-op region the Appendix A.1 `Source` vectors S1..S6 pin (§6.4-0013).
+pub fn source_region(leaf: SourceLeaf) -> Region {
+    Region::new(1, "1", "1", Node::op("add", vec![Node::Bind(0), Node::Source(leaf)]))
 }
 
 /// The three authorings of Appendix A.1 vector G3, as `(label, oob_policy stated, tag bytes)`:
@@ -710,13 +880,14 @@ fn compact_hex(bytes: &[u8]) -> String {
 fn node_kind(n: &Node) -> &'static str {
     match n {
         Node::Bind(_) => "bind",
+        Node::Source(_) => "source",
         Node::Op { .. } => "op",
     }
 }
 
 fn count_nodes(n: &Node) -> usize {
     match n {
-        Node::Bind(_) => 1,
+        Node::Bind(_) | Node::Source(_) => 1,
         Node::Op { operands, .. } => 1 + operands.iter().map(count_nodes).sum::<usize>(),
     }
 }

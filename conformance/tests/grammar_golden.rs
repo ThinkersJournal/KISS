@@ -11,14 +11,14 @@ use kiss_conformance::grammar::*;
 use kiss_conformance::{assert_golden, parse_hex};
 
 const G1_GOLDEN: &str = concat!(
-    "4B 47 52 4D ", "01 00 ", "03 00 00 00 ", "01 00 31 ", "01 00 31 ", "05 00 00 00 ",
+    "4B 47 52 4D ", "02 00 ", "03 00 00 00 ", "01 00 31 ", "01 00 31 ", "05 00 00 00 ",
     "00 02 00 00 00 ", "00 00 00 00 00 ", "00 01 00 00 00 ",
     "01 03 00 6D 75 6C 00 00 00 00 00 02 00 01 00 00 00 02 00 00 00 ",
     "01 03 00 61 64 64 01 00 00 00 00 02 00 00 00 00 00 03 00 00 00 ",
     "00 00",
 );
 const G4_GOLDEN: &str = concat!(
-    "4B 47 52 4D ", "01 00 ", "01 00 00 00 ", "01 00 31 ", "01 00 31 ", "02 00 00 00 ",
+    "4B 47 52 4D ", "02 00 ", "01 00 00 00 ", "01 00 31 ", "01 00 31 ", "02 00 00 00 ",
     "00 00 00 00 00 ",
     "01 03 00 61 64 64 01 00 00 00 00 02 00 00 00 00 00 00 00 00 00 ",
     "00 00",
@@ -186,10 +186,10 @@ fn test_grammar_region_is_single_rooted_dag() {
         Err(DecodeDecline::ForwardOperandReference { node: 3, operand: 4 })
     );
 
-    // An undefined node kind byte (0x02) declines rather than being admitted.
+    // An undefined node kind byte (0x03; 0x02 is `Source`, §6.8-0014) declines rather than being admitted.
     let mut badkind = b.clone();
-    badkind[20] = 0x02; // node0's kind tag
-    assert_eq!(decode(&badkind), Err(DecodeDecline::BadKind { got: 0x02 }));
+    badkind[20] = 0x03; // node0's kind tag
+    assert_eq!(decode(&badkind), Err(DecodeDecline::BadKind { got: 0x03 }));
 }
 
 /// KISS-GRAMMAR-6.4-0003 — repeated `Bind(i)` is the node-identity guard: both
