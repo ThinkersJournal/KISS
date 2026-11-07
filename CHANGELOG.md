@@ -3,7 +3,7 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.9.0 — 2026-11-07 (number proposed; the PM allocates at gate time; BREAKING wire, DRAFT; part of the 0.9.0 batch, based on main)
+## 0.9.2 — 2026-11-07 (number proposed; the PM allocates at gate time; BREAKING wire, DRAFT; part of the 0.9.0 batch, based on main)
 
 - **BREAKING (shape-expression vocabulary, pre-1.0 so the second number moves): a `Max` operator in the `DimExpr` size expressions, the zero clamp** (board 358; CireSnave verbatim: "358: A"). `BinOp` gains `max` (6.20-0002), tag `0x0C` in the §6.20-0005 tag space, serialized exactly as `Add` (6.20-0012). `Max(e, Const(0))` keeps a computed size non-negative, so the window output extent of 6.13-0010 is `Max(Add(Div(Sub(Add(n, 2p), D), s), 1), 0)` and "no window fits" is `0` and never negative (input 2, window 8, stride 1, dilation 1, padding 0 is `-5` before the clamp, `0` after; the board text quoted `-4`, which is not what the 6.13-0010 formula gives for those values). A gap in either operand is a gap. Code: `Dim::Max`, `TAG_MAX`; tests `test_shape_expr_max_clamp` and a grid test of the window extent written in the vocabulary against the closed form; harness +1. **Readers:** accept tag `0x0C` (a core reader declined it before) and evaluate `max`; no existing blob changes. Unpopped (#214) waits on this.
 
