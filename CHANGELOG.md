@@ -5,7 +5,7 @@ second number.
 
 ## 0.8.2 — 2026-11-07 (number proposed; the PM allocates at gate time; docs only)
 
-- **Docs: `docs/union-coverage-master.md`, the KISS verdict column for Unpopped's union master list** (CireSnave 2026-11-07 via the PM). Informative, no spec or byte change. One row per Unpopped grid id (A1..H6, 46 rows plus the new C4b and F9), each EXPRESSED / BY COMPOSITION / NEEDS / NO WAY / SCHEDULE-ONLY with the clause cited; options for every NEEDS row (F3 accumulator precision, G3 cast, G4 fma, D4 combiner and tuple state, C4/C4b fill and padding, F4/F7, F9). Replaces `union-coverage-unpopped.md` as the view once the Unpopped lane confirms the row mapping.
+- **Docs: `docs/union-coverage-master.md`, the KISS verdict column for Unpopped's union master list** (CireSnave 2026-11-07 via the PM). Informative, no spec or byte change. One row per Unpopped grid id (A1..H6, 46 rows plus the new C4b and F9), each EXPRESSED / BY COMPOSITION / NEEDS / NO WAY / SCHEDULE-ONLY with the clause cited; options for every NEEDS row (F3 accumulator precision, G3 cast, G4 fma, D4 combiner and tuple state, C4/C4b fill and padding, F4/F7, F9). Replaces `union-coverage-unpopped.md` as the view once the Unpopped lane confirms the row mapping. Also in this docs PR: `docs/options-r5-7-multi-axis-norm.md` (B mask, ruled "391: B" and built in #779), `docs/design-board-380-squeeze-unsqueeze.md`, `docs/design-board-378-output-layout-forms.md`, and `docs/plan-interface-crates-kiss-formats.md` (board 295, the plan for FireLine).
 
 ## 0.8.1 — 2026-11-05 (number proposed; the PM allocates at gate time; BREAKING spec, HELD for the sk7 batch; stacked on #724 (0.8.0))
 
