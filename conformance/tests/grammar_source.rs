@@ -33,6 +33,15 @@ fn leaf_of(parsed: &ParsedRegion) -> SourceLeaf {
 /// (`0x7F800001` would read back `0x7FC00001`), reuses a tag, or skips an unknown node.
 #[test]
 fn test_grammar_source_leaf_kinds() {
+    tags_and_round_trip();
+    exact_bits();
+    narrow_widths();
+    sharing_and_root();
+    unknown_tags();
+}
+
+/// The six tag ordinals are pinned, and every leaf round-trips.
+fn tags_and_round_trip() {
     // Tag ordinals are pinned, in order.
     assert_eq!(
         [TAG_CONST, TAG_PARAM, TAG_COORD, TAG_REDUCED, TAG_EXTENT, TAG_REDUCED_COUNT],
@@ -53,7 +62,10 @@ fn test_grammar_source_leaf_kinds() {
         let back = leaf_of(&decode(&encode(&with_leaf(l.clone())).unwrap()).unwrap());
         assert_eq!(back, l, "leaf must round-trip");
     }
+}
 
+/// A `const` keeps its exact bits: a NaN payload is never quieted.
+fn exact_bits() {
     // Exact bits: a NaN is never canonicalized.
     for bits in [
         0x7FC0_0001u32, // quiet NaN with a payload
@@ -77,7 +89,10 @@ fn test_grammar_source_leaf_kinds() {
             other => panic!("expected a const, got {other:?}"),
         }
     }
+}
 
+/// Narrow dtypes: bits above the width, a wrong length, an unknown dtype and an axis past `MAX_RANK` decline.
+fn narrow_widths() {
     // A narrow dtype: f4e2m1 is one byte, bits above the 4-bit width must be zero.
     let ok = SourceLeaf::Const { dtype: "f4e2m1".into(), bits: vec![0x0F] };
     assert_eq!(encode(&with_leaf(ok)).map(|_| ()), Ok(()));
@@ -94,7 +109,10 @@ fn test_grammar_source_leaf_kinds() {
         encode(&with_leaf(SourceLeaf::Coord(8))),
         Err(Decline::BadSource(SourceDecline::AxisOutOfRange { axis: 8 }))
     );
+}
 
+/// Identical sources coalesce; a `Source` is never the root.
+fn sharing_and_root() {
     // Sharing: two identical sources are one table entry; two different ones are two.
     let shared = Region::new(
         1,
@@ -116,7 +134,10 @@ fn test_grammar_source_leaf_kinds() {
 
     // A Source is never the root.
     assert_eq!(encode(&Region::new(0, "1", "1", c32(0))), Err(Decline::SourceRoot));
+}
 
+/// An unknown tag is a typed decline on read, never skipped or aliased.
+fn unknown_tags() {
     // An unknown tag is a typed decline on read: tag 0 and tag 7.
     let good = encode(&with_leaf(SourceLeaf::ReducedCount)).unwrap();
     let at = good.windows(2).position(|w| w == [KIND_SOURCE, TAG_REDUCED_COUNT]).unwrap();
