@@ -459,7 +459,7 @@ mean them.
   KISS-Ops op name of its Semantics DAG root as `op_identity` instead (§6.3-0003). The
   Semantics op-DAG node schema is a
   **projection** of the KISS-Grammar region node grammar (`Op { op_name, pattern_attrs,
-  operand_role_tuple, operands, consumers } | Bind(input_index)`) onto the Contract-local
+  operand_role_tuple, operands, consumers } | Bind(input_index) | Source { tag, payload }`) onto the Contract-local
   fields carried per node, plus the per-node OpAttrs channel (§6.4-0009); `extract` is a
   KISS-Grammar region-level field (a root-anchored list of (path, param_slot),
   KISS-GRAMMAR-6.4-0007), **not** a node field. A KISS-Grammar advertisable region maps
@@ -809,16 +809,19 @@ cell class, or changing which structural fact a class requires, is a contract-sc
   implementation MUST NOT reshape a region's DAG structure when carrying it as
   Semantics. *Test:* `test_contract_region_maps_to_semantics`.
 - **KISS-CONTRACT-6.4-0009** — Each `op_dag` node MUST use the node schema
-  `Op{op_name, op_attrs, child_edges} | Bind(positional_index)`: an `Op` node carries a **bare
+  `Op{op_name, op_attrs, child_edges} | Bind(positional_index) | Source{tag, source_attrs}`: an `Op` node carries a **bare
   KISS-Ops op name** (`op_name` — always the bare op name, never a KISS-Grammar tag spelled
   inside `op_name`; identity-bearing attributes ride `op_attrs`), its per-node OpAttrs
   (`op_attrs`, §6.4-0003), and ordered child edges to its operand sub-DAGs (`child_edges`, in
-  operand order); a `Bind` node carries the positional operand index it binds. A node
+  operand order); a `Bind` node carries the positional operand index it binds; a `Source` node carries one of the
+  six non-input scalar-source leaves of KISS-OPS-6.12-0001 as a `tag` of the closed set of
+  KISS-GRAMMAR-6.4-0013 plus that tag's attributes, has no child edges, and is never an `Op` node
+  (so no op name is reserved for a leaf). A node
   **corresponds to** a KISS-Grammar advertisable op when its (`op_name` + identity-bearing
   `op_attrs` + operand-role tuple) reconstructs that advertisable-op tag; the tag is a
   reconstruction over these fields, not a separate spelling. This node schema is a
   **projection** of the KISS-Grammar region node grammar (`Op { op_name, pattern_attrs,
-  operand_role_tuple, operands, consumers } | Bind(input_index)`) — the Contract-local
+  operand_role_tuple, operands, consumers } | Bind(input_index) | Source { tag, payload }`) — the Contract-local
   `op_attrs` carries the Grammar `pattern_attrs` (the per-node OpAttrs channel) and
   `child_edges` carries the Grammar `operands`. The `op_dag` node does **not** carry a per-node
   `operand_role_tuple`: only the Semantics DAG **root** op's operand-role tuple is rendered — on
@@ -1485,7 +1488,13 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   §6.4-0009), `op_attrs` is a `key=value` list separated by `, ` with keys and values spelled
   as KISS-Ops spells them (empty when the op carries none), and `child_edges` is a
   `[i0, i1, …]` array of strictly-earlier child node indices in operand order — or
-  `Bind(<bind_index>)` for a `Bind` node binding that positional operand. This renders the
+  `Bind(<bind_index>)` for a `Bind` node binding that positional operand — or `Source{<tag>; <source_attrs>}` for a
+  `Source` node, where `tag` is one of `const`, `param`, `coord`, `reduced`, `extent`, `reduced_count` and
+  `source_attrs` is a `key=value` list separated by `, ` spelled `dtype=<dtype token>, bits=0x<HEX>` for
+  `const` (`HEX` the exact bit pattern, upper-case, zero-padded to `2 * ceil(width_bits / 8)` digits),
+  `index=<u32>` for `param`, `axis=<u8>` for `coord` and `extent`, `stage=<u32>` for `reduced`, and
+  empty for `reduced_count` (an empty list is elided, as for `Op`; the node is then `Source{reduced_count; }`).
+  This renders the
   §6.4-0009 node schema to text in the Grammar node order, so two dissimilar implementations
   serialize the identical bytes; an implementation MUST NOT encode a node kind or field outside
   it, MUST NOT place the root first, and MUST NOT reference a later index in `child_edges`.
