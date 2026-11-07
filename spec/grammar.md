@@ -197,6 +197,7 @@ Region = {
 
 Node = Op { op_name, pattern_attrs, operand_role_tuple, operands: [node_index …], consumers }
      | Bind(input_index)
+     | Source { tag, payload }
 ```
 
 **Scope of `pattern_attrs` here (narrow, per-node).** In the `Op { … }` record above,
@@ -780,7 +781,7 @@ the full statement.
 - **KISS-GRAMMAR-6.4-0001** — An advertisable region MUST be a **single-rooted DAG** of
   advertisable-op nodes over bind leaves, represented as a flat, ordered node table whose
   node grammar is
-  `Op { op_name, pattern_attrs, operand_role_tuple, operands, consumers } | Bind(input_index)`,
+  `Op { op_name, pattern_attrs, operand_role_tuple, operands, consumers } | Bind(input_index) | Source { tag, payload }`,
   where the per-node `pattern_attrs` field is the **narrow** field carrying only the KISS-Ops
   OpAttrs blob (§6.8-0007, §6.8-0010) — the `operand_role_tuple` and `consumers` are the
   sibling fields shown, not sub-parts of `pattern_attrs`; the broader superset sense of
@@ -790,8 +791,8 @@ the full statement.
   denotes a single shared interior node — a genuine DAG, not only a tree), and the region
   additionally carries the region-level fields `n_inputs` (§6.4-0008), `ops_version` /
   `classify_version` (§6.6-0007), and the root-anchored `extract` list (§6.4-0007). An
-  implementation MUST NOT admit a region node that is neither an `Op` node nor a `Bind`
-  leaf, and MUST NOT admit an operand index that does not reference a strictly-earlier
+  implementation MUST NOT admit a region node that is none of an `Op` node, a `Bind`
+  leaf and a `Source` leaf (§6.4-0013), and MUST NOT admit an operand index that does not reference a strictly-earlier
   table entry, at this schema version. *Test:* `test_grammar_region_is_single_rooted_dag`.
 - **KISS-GRAMMAR-6.4-0002** — A **one-node** region MUST denote a single advertisable op,
   and a **multi-node** region (a fusion) MUST carry its advertised identity on its **root**
@@ -847,6 +848,16 @@ the full statement.
   the root and MUST NOT anchor them on an interior node, and MUST NOT form an extract path
   over a pre-canonical operand order. The path/slot wire encoding is pinned in §6.8-0006 and
   the record order in §6.8-0011. *Test:* `test_grammar_extract_channel_on_root`.
+- **KISS-GRAMMAR-6.4-0014** — The only node an extract record (§6.4-0007) may target is the
+  **param leaf**: the `Source` node tagged `param` (§6.4-0013); this names the node and says nothing
+  of a data-holding graph node, because a param leaf holds no value, only the index of a scalar
+  supplied at run time. An extract record's `path` MUST end at a param leaf, and its `param_slot`
+  MUST equal that leaf's `index`. A reader MUST decline, with a typed decline and never a panic, an
+  extract record whose path does not resolve to a node of the region, whose target is not a param
+  leaf, or whose `param_slot` differs from the target's `index`. This answers R3.18 (the
+  "scalar-bearing node" of Appendix A.1 vector G5): CireSnave, 2026-11-07, verbatim: "I'm going to
+  guess the intent for that was A...but that's my best guess." *Test:*
+  `test_grammar_extract_targets_param_leaf`.
 - **KISS-GRAMMAR-6.4-0008** — A region MUST carry an explicit **declared arity** field
   `n_inputs` (its wire encoding pinned in §6.8-0001/§6.8-0002); a region is **expressible**
   only when its bound-input set equals exactly `[0, n_inputs)`. A region that binds a strict
@@ -899,6 +910,24 @@ the full statement.
   it cannot substantiate): together they close the silent-fork vector at every surface. *Test:*
   `test_grammar_no_fabricated_op_tag`.
 
+- **KISS-GRAMMAR-6.4-0013** — A `Source { tag, payload }` node MUST be the one carrier of the
+  six KISS-Ops scalar-source leaves that are not input binds (KISS-OPS-6.12-0001); `input(i)`
+  stays a `Bind` leaf. `tag` MUST be one of the closed set `{1 = const, 2 = param, 3 = coord,
+  4 = reduced, 5 = extent, 6 = reduced_count}` (`0` reserved, never emitted), and `payload` MUST be
+  exactly: `const` — a dtype token (a KISS-Classify dtype token, §6.8-0003) and the constant's
+  **exact bit pattern** in that dtype's storage width, little-endian, `ceil(width_bits / 8)` bytes,
+  every bit above the width zero; `param` — the parameter index (`u32`); `coord` — the iteration
+  axis (`u8`, `0 <= axis < MAX_RANK`); `reduced` — the stage ordinal (`u32`); `extent` — the
+  iteration axis (`u8`, `0 <= axis < MAX_RANK`); `reduced_count` — empty. A `Source` node has **no**
+  operands, MUST NOT be the root of a region (a region denotes an op, §6.4-0002), and carries no
+  `consumers` field. Two `Source` nodes with byte-identical canonical subtree serializations
+  (§6.4-0010) coalesce to one entry (§6.4-0011). **Extension rule:** a further scalar-source leaf
+  MUST be added by a KISS-Ops clause naming it **and** a new tag ordinal appended to this set;
+  an ordinal is never reused or reassigned, and a reader meeting a tag it does not implement MUST
+  decline with a typed decline (never skip the node, never read it as another tag). The `const`
+  bits MUST round-trip exactly: ±0, subnormals, ±∞ and every NaN **including its payload and its
+  quiet/signaling bit** are preserved, and an implementation MUST NOT canonicalize, quiet or
+  re-spell them (KISS-OPS-6.12-0002, KISS-OPS-6.2-0008). *Test:* `test_grammar_source_leaf_kinds`.
 ### 6.5 The growth rule — frozen shape, growing op-name set
 
 - **KISS-GRAMMAR-6.5-0001** — Adding an advertisable op MUST be done by **re-basing** onto
@@ -1090,7 +1119,8 @@ the full statement.
   implementation MUST NOT include any synthesis-channel content in the byte-exact region
   serialization. *Test:* `test_grammar_wire_excludes_synthesis_attrs`.
 - **KISS-GRAMMAR-6.8-0010** — Each node record MUST be encoded with a leading `kind` tag
-  (`u8`, §6.8-0002) whose pinned enumerant values are `0x00 = Bind` and `0x01 = Op` (the
+  (`u8`, §6.8-0002) whose pinned enumerant values are `0x00 = Bind`, `0x01 = Op` and `0x02 = Source`
+  (§6.8-0014) (the
   **same** encoding used by the §6.4-0010 canonical subtree serialization). A **Bind** node
   record MUST be, in this exact order: `kind = 0x00`, then `input_index` (`u32`). An **Op**
   node record MUST be, in this exact order: `kind = 0x01`; then `op_name` (length-prefixed
@@ -1102,6 +1132,17 @@ the full statement.
   implementation MUST emit and parse exactly this per-record field order for each kind and
   MUST NOT insert, omit, or reorder fields within a node record. *Test:*
   `test_grammar_wire_node_record_layout`.
+- **KISS-GRAMMAR-6.8-0014** — A **Source** node record MUST be encoded, in this exact order, as:
+  `kind = 0x02`; `tag` (`u8`, §6.4-0013); then the tag's payload — `const`: the dtype token
+  (length-prefixed, §6.8-0003), then `bits_len` (`u8`, equal to `ceil(width_bits / 8)` of that
+  dtype), then `bits_len` bytes little-endian; `param`: `u32`; `coord`: `u8`; `reduced`: `u32`;
+  `extent`: `u8`; `reduced_count`: no bytes. The canonical subtree serialization of a `Source`
+  (§6.4-0010) is the same bytes (`kind`, `tag`, payload). A reader MUST decline, with a typed
+  decline and never a panic, on: a `tag` that is `0` or not implemented; a `const` dtype token it
+  does not know; a `bits_len` that is not `ceil(width_bits / 8)`; a non-zero bit above the dtype
+  width; a truncated payload; a `Source` node that is the last (root) node. Adding this node kind
+  is a change to the region wire form and **moves the frozen-shape schema version stamped by
+  §6.8-0013 from `1` to `2`** (§8-0002). *Test:* `test_grammar_wire_source_record_layout`.
 - **KISS-GRAMMAR-6.8-0011** — The `extract_count` extract records (§6.8-0006) MUST be
   emitted in a canonical order: **ascending `param_slot`**; where two records share a
   `param_slot` (which an implementation MUST NOT normally produce), ties MUST break by the
@@ -1269,6 +1310,8 @@ restated as a free-standing KISS-Grammar clause.
 | KISS-GRAMMAR-6.4-0010 | `test_grammar_canonical_operand_order_key` |
 | KISS-GRAMMAR-6.4-0011 | `test_grammar_structural_dedup_and_repeated_bind` |
 | KISS-GRAMMAR-6.4-0012 | `test_grammar_no_fabricated_op_tag` |
+| KISS-GRAMMAR-6.4-0013 | `test_grammar_source_leaf_kinds` |
+| KISS-GRAMMAR-6.4-0014 | `test_grammar_extract_targets_param_leaf` |
 | KISS-GRAMMAR-6.5-0001 | `test_grammar_add_op_by_rebasing` |
 | KISS-GRAMMAR-6.5-0002 | `test_grammar_rebasing_is_additive_no_bump` |
 | KISS-GRAMMAR-6.5-0003 | `test_grammar_independent_cadence` |
@@ -1299,6 +1342,7 @@ restated as a free-standing KISS-Grammar clause.
 | KISS-GRAMMAR-6.8-0011 | `test_grammar_wire_extract_record_order` |
 | KISS-GRAMMAR-6.8-0012 | `test_grammar_tag_canonical_serialization` |
 | KISS-GRAMMAR-6.8-0013 | `test_grammar_wire_magic_and_schema_version` |
+| KISS-GRAMMAR-6.8-0014 | `test_grammar_wire_source_record_layout` |
 | KISS-GRAMMAR-7.1-0001 | `test_grammar_mandatory_core_is_frozen_shape` |
 | KISS-GRAMMAR-7.1-0002 | `test_grammar_op_name_set_is_open_via_ops` |
 | KISS-GRAMMAR-7.1-0003 | `test_grammar_typed_decline_never_panic` |
@@ -1354,7 +1398,7 @@ so a foreign reader can emit or parse it independently (§8-0005). The region-le
 order is normative in §6.8-0001; the per-node-record layout is normative in §6.8-0010; the
 magic and in-band frozen-shape schema version prefix is normative in §6.8-0013 (these bytes
 are not merely illustrative). The illustrative frozen-shape schema version stamped below is
-`1`.
+`2` (moved from `1` by the `Source` node kind, §6.8-0014).
 
 *Vector G1 — the three-input elementwise fusion of §2.3 (`out = (a * b) + c`).* Authored
 against `ops_version = "1"`, `classify_version = "1"` (illustrative version tokens; a real
@@ -1385,7 +1429,7 @@ unconstrained `(data, *)` in this illustrative vector; `extract_count = 0`):
 
 ```
 4B 47 52 4D                                  magic = "KGRM"
-01 00                                        frozen_shape_schema_version = 1
+02 00                                        frozen_shape_schema_version = 2
 03 00 00 00                                  n_inputs = 3
 01 00 31                                     ops_version = "1"
 01 00 31                                     classify_version = "1"
@@ -1465,7 +1509,7 @@ wire bytes:
 
 ```
 4B 47 52 4D                                  magic = "KGRM"
-01 00                                        frozen_shape_schema_version = 1
+02 00                                        frozen_shape_schema_version = 2
 01 00 00 00                                  n_inputs = 1
 01 00 31                                     ops_version = "1"
 01 00 31                                     classify_version = "1"
@@ -1487,7 +1531,7 @@ node is reachable from the root by more than one sequence of canonical operand i
 extract record for that scalar param uses the **lexicographically-least** such path
 (§6.4-0007), and the region's extract records are emitted in ascending `param_slot` order
 (§6.8-0011). Drives `test_grammar_extract_channel_on_root`,
-`test_grammar_wire_extract_encoding`, and `test_grammar_wire_extract_record_order`.
+`test_grammar_wire_extract_encoding`, and `test_grammar_wire_extract_record_order`. The scalar-bearing node of this vector is the **param leaf** (the `Source` node tagged `param`, §6.4-0013), and the extract record's `param_slot` equals that leaf's `index` (§6.4-0014).
 
 *Negative vectors.* A region binding a strict subset of `[0, n_inputs)` (`BindSetMismatch`,
 detectable only because `n_inputs` is declared, §6.4-0008), a region binding an index
@@ -1525,6 +1569,18 @@ field schema, a composition rule, the attribute-channel structure, or the region
 (§8-0002), and any such bump changes the in-band stamp of §6.8-0013. This is the mechanism by
 which a frozen grammar admits a still-growing op set.
 
+
+*Vector S1 — the `const` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `const` of `f32` with the quiet-NaN bit pattern `0x7FC00001`; its record is `02 01 03 00 66 33 32 04 01 00 C0 7F` (`kind`, `tag`, the token `f32`, `bits_len = 4`, the bits little-endian). The payload bit is preserved, never quieted or canonicalized. Drives `test_grammar_source_leaf_kinds`.
+
+*Vector S2 — the `param` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `param(3)`; its record is `02 02 03 00 00 00`. Drives `test_grammar_wire_source_record_layout`.
+
+*Vector S3 — the `coord` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `coord(1)`; its record is `02 03 01`.
+
+*Vector S4 — the `reduced` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `reduced(0)`; its record is `02 04 00 00 00 00`.
+
+*Vector S5 — the `extent` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `extent(0)`; its record is `02 05 00`.
+
+*Vector S6 — the `reduced_count` leaf (§6.4-0013, §6.8-0014).* the one-op region `out = a + <leaf>` (`n_inputs = 1`, `ops_version = "1"`, `classify_version = "1"`): node table index0 `Bind(0)`, index1 the `Source`, index2 `Op "add"` (root) with operands `[0, 1]` (a `Bind` key `0x00…` orders before a `Source` key `0x02…`); exact bytes in `conformance/corpus/grammar_vectors.json`. The leaf is `reduced_count`; its record is `02 06` (no payload).
 ---
 
 *End of KISS-Grammar (Draft proposal). This sub-standard is informative in §0–§5 and
