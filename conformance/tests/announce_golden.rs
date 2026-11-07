@@ -154,7 +154,7 @@ fn reference_list() -> AvailabilityList {
 // Built from labeled fields so each boundary is exact (§6.3 framing).
 const AVAIL_GOLDEN: &str = concat!(
     "53 41 56 4C ",                          // [0]  SAVL tag       (u32 LE => 53 41 56 4C)
-    "02 ",                                   // [4]  list_version = 2 (sk6; 1 is retired)
+    "03 ",                                   // [4]  list_version = 3 (the length-prefixed revision_hash; 1 and 2 are retired)
     "00 00 00 ",                             // [5]  3 MBZ bytes
     "02 00 00 00 ",                          // [8]  record_count = 2  (u32 LE)
     // -- record 0 --
@@ -162,16 +162,18 @@ const AVAIL_GOLDEN: &str = concat!(
     "AA BB CC ",                             // [16] structure_key bytes
     "03 00 00 00 ",                          // [19] op_identity len = 3 (u32 LE)
     "61 64 64 ",                             // [23] op_identity bytes = "add"
-    "11 11 11 11 11 11 11 11 ",              // [26] revision_hash = 32 * 0x11
+    "20 ",                                   // [26] revision_hash length = 32 (1 byte, 8..=64)
+    "11 11 11 11 11 11 11 11 ",              // [27] revision_hash = 32 * 0x11
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
     // -- record 1 --
-    "02 00 00 00 ",                          // [58] structure_key len = 2 (u32 LE)
-    "DE AD ",                                // [62] structure_key bytes
-    "04 00 00 00 ",                          // [64] op_identity len = 4 (u32 LE)
-    "72 65 6C 75 ",                          // [68] op_identity bytes = "relu"
-    "22 22 22 22 22 22 22 22 ",              // [72] revision_hash = 32 * 0x22
+    "02 00 00 00 ",                          // [59] structure_key len = 2 (u32 LE)
+    "DE AD ",                                // [63] structure_key bytes
+    "04 00 00 00 ",                          // [65] op_identity len = 4 (u32 LE)
+    "72 65 6C 75 ",                          // [69] op_identity bytes = "relu"
+    "20 ",                                   // [73] revision_hash length = 32
+    "22 22 22 22 22 22 22 22 ",              // [74] revision_hash = 32 * 0x22
     "22 22 22 22 22 22 22 22 ",
     "22 22 22 22 22 22 22 22 ",
     "22 22 22 22 22 22 22 22 ",
@@ -196,13 +198,13 @@ fn test_announce_availability_list_tag() {
 #[test]
 fn test_announce_availability_list_version() {
     let b = reference_list().encode();
-    assert_eq!(b[4], 2, "list_version == 2 at offset 4 (record_count's low byte is also 02: offset 8 disambiguates)");
+    assert_eq!(b[4], 3, "list_version == 3 at offset 4 (record_count's low byte is also 02: offset 8 disambiguates)");
     assert_eq!(&b[5..8], &[0, 0, 0], "3 MBZ bytes at offset 5");
     assert_eq!(&b[8..12], &[0x02, 0x00, 0x00, 0x00], "record_count sits at offset 8, u32 LE");
 
     // reader: unsupported list_version -> typed decline, including the retired 1
-    // (a v1 record has no op_identity, so reading it as v2 would desync).
-    for v in [0u8, 1, 3] {
+    // (a v1 record has no op_identity and a v2 record has a fixed 32-byte hash, so reading either as v3 would desync).
+    for v in [0u8, 1, 2, 4] {
         let mut bad = b.clone();
         bad[4] = v;
         assert_eq!(
@@ -250,6 +252,7 @@ const IDENTITY_GOLDEN: &str = concat!(
     "03 00 00 00 ",                          // op_identity len = 3 (u32 LE)
     "61 64 64 ",                             // op_identity bytes = "add"
     "01 ",                                   // revision_present = 1
+    "20 ",                                   // revision_hash length = 32 (§6.3-0003)
     "11 11 11 11 11 11 11 11 ",              // revision_hash = 32 * 0x11
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
@@ -415,8 +418,8 @@ fn test_announce_decline_response_framing() {
     );
     assert_golden("KISS-ANNOUNCE-6.4-0007", "cdec_response", &b, &golden);
     // Width is load-bearing: the code occupies the final 4 bytes, not 2.
-    assert_eq!(b.len(), 56, "CDEC frame = tag(4) + identity(48) + decline_code(4)");
-    assert_eq!(&b[52..56], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
+    assert_eq!(b.len(), 57, "CDEC frame = tag(4) + identity(49) + decline_code(4)");
+    assert_eq!(&b[53..57], &[0x06, 0x00, 0x00, 0x00], "decline_code is u32-LE, not u16");
 }
 
 // Backs[enforced]: KISS-ANNOUNCE-6.1-0004 — the encoded envelope begins with the SEAM magic in wire order (53 45 41 4D)

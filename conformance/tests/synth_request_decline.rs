@@ -24,6 +24,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
     "03 00 00 00 ",                          // op_identity len = 3 (u32 LE)
     "61 64 64 ",                             // op_identity bytes = "add"
     "01 ",                                   // revision_present = 1
+    "20 ",                                   // revision_hash length = 32 (§6.3-0003)
     "11 11 11 11 11 11 11 11 ",              // revision_hash = 32 * 0x11
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
@@ -33,7 +34,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some(vec![0x11; 32]), correlation: None }
 }
 
 /// The same cell, named WITHOUT pinning a build (revision_present == 0).
@@ -107,12 +108,20 @@ fn decode_declined_identity(bytes: &[u8]) -> Result<(Identity, usize), &'static 
         return Err("bad revision_present");
     }
     let revision_hash = if revision_present == 1 {
-        if bytes.len() < off + 32 {
+        // §6.3-0003: a length byte in [8, 64], then that many bytes
+        if bytes.len() < off + 1 {
+            return Err("truncated revision_hash_len");
+        }
+        let hlen = bytes[off] as usize;
+        off += 1;
+        if !(8..=64).contains(&hlen) {
+            return Err("revision_hash length out of range");
+        }
+        if bytes.len() < off + hlen {
             return Err("truncated revision_hash");
         }
-        let mut h = [0u8; 32];
-        h.copy_from_slice(&bytes[off..off + 32]);
-        off += 32;
+        let h = bytes[off..off + hlen].to_vec();
+        off += hlen;
         Some(h)
     } else {
         None
@@ -154,8 +163,8 @@ fn decode_declined_identity(bytes: &[u8]) -> Result<(Identity, usize), &'static 
 fn test_synth_request_is_identity_only() {
     let req = QueryRequest { identity: identity_present() };
     let b = req.encode();
-    // frame = tag(4) + key_len(4) + key(3) + op_len(4) + op(3) + revision_present(1) + hash(32) + correlation_len(1) = 52.
-    assert_eq!(b.len(), 4 + 4 + 3 + 4 + 3 + 1 + 32 + 1, "request = CYRQ tag + identity, nothing else");
+    // frame = tag(4) + key_len(4) + key(3) + op_len(4) + op(3) + revision_present(1) + hash_len(1) + hash(32) + correlation_len(1) = 53.
+    assert_eq!(b.len(), 4 + 4 + 3 + 4 + 3 + 1 + 1 + 32 + 1, "request = CYRQ tag + identity, nothing else");
     assert_eq!(&b[0..4], &[0x43, 0x59, 0x52, 0x51], "CYRQ tag");
     // decode round-trips to exactly the requested identity (the whole request).
     assert_eq!(decode_query_request(&b), Ok(req.clone()));
@@ -176,7 +185,7 @@ fn test_synth_request_no_capability_fields() {
     let pinned = QueryRequest { identity: identity_present() }.encode();
     let golden_pinned = format!("43 59 52 51 {IDENTITY_PRESENT_GOLDEN}");
     assert_golden("KISS-SYNTH-6.1-0001a", "cyrq_no_capabilities", &pinned, &golden_pinned);
-    assert_eq!(pinned.len(), 52, "no room for any capability/ABI/dispatch field");
+    assert_eq!(pinned.len(), 53, "no room for any capability/ABI/dispatch field");
 
     // Unpinned form: the frame stops right after the correlation_len byte — there
     // is no capability blob and no hash.
@@ -243,7 +252,7 @@ fn test_synth_request_structure_key_opaque() {
 fn test_synth_request_structure_key_not_reencoded() {
     let key: Vec<u8> = (0u16..=255).map(|x| x as u8).collect(); // all 256 byte values
     let req = QueryRequest {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some([0x22; 32]), correlation: None },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(vec![0x22; 32]), correlation: None },
     };
     let b = req.encode();
     assert_eq!(&b[4..8], &(key.len() as u32).to_le_bytes(), "length preserved, not re-encoded");
@@ -324,7 +333,7 @@ fn test_synth_request_full_identity() {
         .unwrap()
         .identity;
     // revision_present == 1 pins a specific build.
-    assert_eq!(pinned.revision_hash, Some([0x11; 32]), "present flag pins a build");
+    assert_eq!(pinned.revision_hash, Some(vec![0x11; 32]), "present flag pins a build");
     // revision_present == 0 names the cell without pinning.
     assert_eq!(unpinned.revision_hash, None, "absent flag names the cell, no build pinned");
     // same key, but the identities differ precisely in the pin — the pair is full.
@@ -335,7 +344,7 @@ fn test_synth_request_full_identity() {
 /// KISS-SYNTH-6.1-0005a — a provider MUST NOT treat a `structure_key` alone (with
 /// `revision_present == 0`) as pinning a specific build.
 /// TEETH: an unpinned request decodes to `revision_hash == None`, and crucially
-/// NOT to `Some([0u8; 32])`. An impl that reads a phantom all-zero hash when the
+/// NOT to `Some(vec![0u8; 32])`. An impl that reads a phantom all-zero hash when the
 /// flag is 0 would falsely pin the cell to an all-zero revision; the assertion
 /// below rejects that. The encoded frame also carries no hash bytes at all.
 #[test]
@@ -349,7 +358,7 @@ fn test_synth_request_key_alone_not_pinned() {
     assert_eq!(ident.revision_hash, None, "key alone does not pin a build");
     assert_ne!(
         ident.revision_hash,
-        Some([0u8; 32]),
+        Some(vec![0u8; 32]),
         "absence MUST NOT be misread as a pinned all-zero revision"
     );
 }
@@ -375,9 +384,9 @@ fn test_synth_decline_framing() {
     let golden = format!("43 44 45 43 {IDENTITY_PRESENT_GOLDEN} 01 00 00 00");
     assert_golden("KISS-SYNTH-6.6-0004", "cdec_decline", &b, &golden);
     assert_eq!(&b[0..4], &[0x43, 0x44, 0x45, 0x43], "CDEC tag at offset 0");
-    // tag(4) + identity(4+3+4+3+1+32+1=48) + decline_code(4) = 56 bytes.
-    assert_eq!(b.len(), 56, "decline_code is u32-LE (4 bytes), not u16");
-    assert_eq!(&b[52..56], &[0x01, 0x00, 0x00, 0x00], "little-endian u32 decline_code trails the identity");
+    // tag(4) + identity(4+3+4+3+1+1+32+1=49) + decline_code(4) = 57 bytes.
+    assert_eq!(b.len(), 57, "decline_code is u32-LE (4 bytes), not u16");
+    assert_eq!(&b[53..57], &[0x01, 0x00, 0x00, 0x00], "little-endian u32 decline_code trails the identity");
 }
 
 /// KISS-SYNTH-6.6-0004a — when a `MALFORMED_REQUEST` decline is emitted for a

@@ -46,9 +46,9 @@ pub struct RecordKey {
 }
 
 /// One durable record: the outcome and the `revision_hash` it was reached at.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerifyRecord {
-    pub revision_hash: [u8; 32],
+    pub revision_hash: Vec<u8>,
     pub outcome: VerifyOutcome,
 }
 
@@ -59,13 +59,13 @@ pub struct VerifyLedger {
 }
 
 impl VerifyLedger {
-    pub fn record(&mut self, key: RecordKey, revision_hash: [u8; 32], outcome: VerifyOutcome) {
+    pub fn record(&mut self, key: RecordKey, revision_hash: Vec<u8>, outcome: VerifyOutcome) {
         self.records.insert(key, VerifyRecord { revision_hash, outcome });
     }
 
     /// The outcome recorded for `key`, valid only for the revision that was verified. A record made at a
     /// different `revision_hash` is invalidated: this returns `None` and the kernel must be verified again.
-    pub fn outcome_at(&self, key: &RecordKey, revision_hash: [u8; 32]) -> Option<VerifyOutcome> {
+    pub fn outcome_at(&self, key: &RecordKey, revision_hash: &[u8]) -> Option<VerifyOutcome> {
         self.records.get(key).filter(|r| r.revision_hash == revision_hash).map(|r| r.outcome)
     }
 }

@@ -605,7 +605,8 @@
 # F1 ops (cast + concat, board 304 R5.7; PM-approved option B): harness 483 -> 490, untested 393 -> 394. Eight NEW clauses: KISS-OPS-6.11-0020,
 # 6.19-0041, 6.19-0042, 6.20-0011, 6.21-0001/-0002/-0003 are harness-backed by tests/cast_atom.rs and tests/structural_access.rs;
 # KISS-OPS-6.21-0004 (a negative rule on producers and consumers) arrives unbacked with a recorded reason. lint unmoved.
-harness	516
+# R1.24 Q1 (KISS-ANNOUNCE-7.2-0013, the handshake does not negotiate an op vocabulary): harness 516 -> 517, backed by tests/announce_op_vocabulary.rs. TOOL-DERIVED: `--ratchet --base-ref origin/main` reported "Set the floor to harness 517, lint 44, untested 392". The Q4 change (revision_hash length byte) rewrites KISS-ANNOUNCE-6.3-0003 and moves no floor.
+harness	517
 lint	44
 untested	392
 proven	20

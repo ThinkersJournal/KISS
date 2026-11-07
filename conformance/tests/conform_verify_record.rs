@@ -29,15 +29,15 @@ fn test_conform_verify_outcomes_and_record() {
     // The record is per (kernel, cell, target) and valid only at the verified revision.
     let key = RecordKey { kernel: "add".into(), cell: "sk7|ew2|f32".into(), target: "cuda:sm89".into() };
     let other_target = RecordKey { target: "cuda:sm80".into(), ..key.clone() };
-    let (r1, r2) = ([1u8; 32], [2u8; 32]);
+    let (r1, r2) = (vec![1u8; 32], vec![2u8; 32]);
     let mut ledger = VerifyLedger::default();
-    assert_eq!(ledger.outcome_at(&key, r1), None, "nothing recorded yet");
-    ledger.record(key.clone(), r1, VerifyOutcome::AdoptedDemoted);
-    assert_eq!(ledger.outcome_at(&key, r1), Some(VerifyOutcome::AdoptedDemoted));
-    assert_eq!(ledger.outcome_at(&other_target, r1), None, "another target has its own record");
+    assert_eq!(ledger.outcome_at(&key, &r1), None, "nothing recorded yet");
+    ledger.record(key.clone(), r1.clone(), VerifyOutcome::AdoptedDemoted);
+    assert_eq!(ledger.outcome_at(&key, &r1), Some(VerifyOutcome::AdoptedDemoted));
+    assert_eq!(ledger.outcome_at(&other_target, &r1), None, "another target has its own record");
     // A new revision invalidates the record: verify again before reuse.
-    assert_eq!(ledger.outcome_at(&key, r2), None);
-    ledger.record(key.clone(), r2, VerifyOutcome::Adopted);
-    assert_eq!(ledger.outcome_at(&key, r2), Some(VerifyOutcome::Adopted));
-    assert_eq!(ledger.outcome_at(&key, r1), None, "the old revision no longer has a record");
+    assert_eq!(ledger.outcome_at(&key, &r2), None);
+    ledger.record(key.clone(), r2.clone(), VerifyOutcome::Adopted);
+    assert_eq!(ledger.outcome_at(&key, &r2), Some(VerifyOutcome::Adopted));
+    assert_eq!(ledger.outcome_at(&key, &r1), None, "the old revision no longer has a record");
 }

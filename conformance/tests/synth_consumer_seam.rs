@@ -13,7 +13,7 @@ fn valid() -> Vec<u8> {
         identity: Identity {
             op_identity: b"add".to_vec(),
             structure_key: vec![0xAA, 0xBB, 0xCC],
-            revision_hash: Some([0x11; 32]),
+            revision_hash: Some(vec![0x11; 32]),
             correlation: None,
         },
         artifact_format_tag: *b"PTX ",
