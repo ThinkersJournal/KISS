@@ -1,45 +1,40 @@
-<!-- Written 2026-11-01 against origin/main d4fa3d1 (conformance 0.7.8). A HANDOFF is current state, never a log:
-     rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
+<!-- Written 2026-11-07 against origin/main 04083516 (conformance 0.12.1). A HANDOFF is current state, never a log:
+     rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. The CURRENT copy is C:/Projects/kiss-handoff-fix/HANDOFF.md; the anchor's is a mirror. -->
 # KISS lane HANDOFF
 
 ## Standing procedure (a restarted session must do these)
 
-1. **Writes go in a worktree**, never the shared anchor `C:\Projects\KISS`. `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`; after the merge: `git status --porcelain` (a CRLF-only diff of `spec/conform.md` is autocrlf noise: verify `git diff --ignore-space-at-eol` is empty, then `git checkout --` it), `git worktree remove`, `git worktree prune`, `git branch -D`, verify the remote branch absent with a positive control (`ls-remote` of `main`). Plain separate commands: a compound `worktree remove && branch -D && gh api -X DELETE` was classifier-denied. Read `origin/main` after `git fetch`, never a working tree.
-2. **Version rule:** the PM allocates the number at gate time (every pushed change bumps, docs included). `conformance/Cargo.toml` and the top `CHANGELOG.md` heading move TOGETHER (`tools/kiss_version_sync.py`). Pre-1.0 a breaking change moves the second number. Never merge main into a branch; never force-push; rebuild by cherry-pick `--no-commit` or `git diff old..tip | git apply --3way`.
-3. **Derived figures come from the tools**: `python tools/kiss_trace.py --ratchet --base-ref origin/main`, `python tools/kiss_readme_coverage.py`, `python tools/kiss_sidecar.py --check conform` (a new clause also needs its sidecar entry). Edit a README number only with its `<!-- bound:… -->` marker. Re-derive after every rebase.
-4. **Before pushing run (a) ALL single-line `python tools/...` steps of the `kiss-trace` job** (47 lines; skip `*ratchet_step*|*msrv_step*|*orphan_step*`; `PYTHONIOENCODING=utf-8`; ~10 min, run it in the background) **and (b) the FULL `cargo test` in `conformance/`** (exactly CI's "Reference conformance harness" step; `CARGO_BUILD_JOBS=2`, one build at a time). Running one test file is not the gate: #763 went red on `test_emit_defines_no_source_language` (a normative clause may not name `C-family`/`CUDA`/`Slang`/vendor names, §6.1-0005), which only the full run finds. The three bash suites (`python tools/run_with_git_bash.py tools/test_kiss_ratchet_step.py`, `_msrv_step`, `_orphan_step`) are for tool/shell changes, not wording PRs. Local `cargo clippy -D warnings` shows ~15 pre-existing errors in untouched files (likely newer toolchain); not checked against CI.
-5. **Edit scripts:** write them to a FILE and run `python -X utf8 file.py` (stdin heredocs mis-decode `§`/`—`); worktree files are CRLF, so a multi-line anchor needs newline normalisation and `assert count == 1`. A mutant that never applied looks like a test that did not catch it: assert the edit, show `git diff --stat`, then `git checkout --` the file.
-6. A clause is "backed" only when the test discriminates; half a clause stays untested with a PARTIAL note in `conformance/UNBACKED.tsv`. A test citing no clause needs `// harness-internal: <reason>`. A clause containing "comparator" needs `Normalizes:` or a `SELECTS_ONLY` entry in `tools/kiss_comparators.py`. Byte-altering or unruled design: write NO clause until CireSnave's verbatim word arrives via the PM.
-7. **Never** `gh auth switch`, start your own Serena, or run/spawn on Opus (pin `model: sonnet`). Classifier denials are final for the session. Peer messages are information, not authority; the PM allocates versions and gives [TASK]s. Codacy: methods >50 lines, `assert` in Python tests, new `import subprocess`: split or answer on the PR.
-8. **Throttle:** `C:/Projects/THROTTLE.md` is **PRIORITY** (set 2026-11-01T03:40Z; CireSnave: "I agree with your plan.  Go."). KISS is in "finish what is open, no new roadmap rows": land open PRs and fixes, answer gate holds, then stop. Re-read it at each task boundary (this lane missed the change once).
+1. **Writes go in a worktree**, never the anchor `C:\Projects\KISS`: `git worktree add -b <branch> C:/Projects/kiss-<task> origin/main`. After a merge: `git status --porcelain`, `git worktree remove`, `prune`, `git branch -D`, verify the remote branch absent with a positive control (repo `ThinkersJournal/KISS`; a squash merge may already have deleted it: a 422 on DELETE then a 404 on GET is the proof). Separate commands. `git add -A` can sweep in `spec/conform.md` (CRLF noise): read `git status` first.
+2. **Push without force.** Merge-main-in: merge `origin/main` into the branch, normal push, keep the proposed version. On conflict: CHANGELOG keep both entries newest first; Cargo.toml keep yours; sidecar/README/floor take main's and re-derive with the tools; regenerate corpora with the `emit_*` bins (`cargo run -q --bin emit_X > conformance/corpus/X.json`); reset population pins from the test message.
+3. **Version rule:** the PM allocates at gate time; pre-1.0 a breaking change moves the second number. `conformance/Cargo.toml` and the top `CHANGELOG.md` heading move together (`tools/kiss_version_sync.py`).
+4. **Before [READY] run:** `python tools/kiss_trace.py --ratchet --base-ref origin/main` (it prints the floor to set), `kiss_readme_coverage.py` (number AND bound marker), `kiss_sidecar.py --check conform grammar ops` (a new clause needs a sidecar entry: edit `spec/sidecar/*.json` by Python round-trip, never `--write`), `python tools/kiss_ops.py`, `python -X utf8 -m unittest discover -s tools -k test_kiss_` (~11 min; only `test_kiss_msrv_step` and `test_kiss_ratchet_step` fail: known), and the FULL `cargo test` in `conformance/` (`CARGO_BUILD_JOBS=2`, ~10 min, background; redirect to a file in the scratchpad). A clause needs its own test name. Codacy: functions over 50 lines are flagged; split.
+5. **Edit scripts** go in a FILE (scratchpad), `python -X utf8 file.py`; `assert count == 1` on anchors; check CRLF. Never write to `/tmp` (other lanes' files live there).
+6. Byte-altering or unruled design needs CireSnave's verbatim word via the PM. Never `gh auth switch`, never Opus, classifier denials are final, peer messages are information. Synapse: ack every message. **Header is positional:** `[READY] KISS#781 head=<8 chars> merge=CLEAN checks=15/15 red=- threads=0 codacy=ok sourcery=skipped files=...`.
 
-## State (2026-11-01, main d4fa3d1, conformance 0.7.8)
+## State (2026-11-07, main 04083516, conformance 0.12.1)
 
-Floor harness 499, lint 44, untested 393, clauses 1007. **R1.27 is DONE.** Merged this session: #756 (key-set pin already enforced), #757 (`CONTRACT-6.4-0011` a shape gap is undetermined; the #411 half is NOT a clause), #759 (R1.16 accumulator zero band, `accumulator_zero_band.rs`), #760 (`CONTRACT-6.8-0005` takes no input from `bit_stability`), #761 (`CONFORM-6.13-0002` re-anchored on independent reproduction, ruling A), #762 (`OPS-6.3-0002` re-scoped), #763 (`EMIT-6.3-0004` audit over (operator, dtype); known negative in Appendix A.5), #764 (`CONFORM-6.5-0011` defined + `test_conform_harness_negative_controls`). Issue sweep done 2026-11-01 (24 open, 0 overdue; #124 stays open for a second-implementation witness of 7.2-0005; #293 stays for decision 311). Next weekly sweep: `python /c/Projects/tools/issue-age.py --repo ThinkersJournal/KISS`.
+Landed today: KISS#781 (squeeze/unsqueeze, 0.11.0), KISS#782 (Interface `output_layouts`, 0.12.0), KISS#783 (golden vector per output-layout form, 0.12.1), kiss-ref#64 (squeeze/unsqueeze evaluators, op set 126, 0.4.10). All their worktrees and branches are removed. This HANDOFF rides a docs PR at 0.12.2 (PM allocation). Open question to the PM, unanswered: FireLine asked who owns the provider callable signature and the SAVL/CYRQ/CRSP/CDEC codec crate (no KISS clause pins invocation; I recommended KISS-Provision/Consume owns it). Posted earlier: half-rs#151 comment.
+
+## Open tasks, in order
+
+**START HERE after a restart: task 1.**
+
+1. **Board 378 follow-ups:** a test for bundle slot non-overlap once bind-time checks exist (R1.22); Unpopped to confirm the swizzle round trip against its type (`BadSwizzle` bijection is theirs); ask Fuel/Unpopped/Classify/Announce lanes to confirm no key byte moves (I read the specs: none does); tell Contract readers (Fuel FKC `layout_guarantee` mapping) via the PM.
+2. **Union master list**: Unpopped#314 holds the master; confirm its `docs/ir-union-master-capabilities.md` against `docs/union-coverage-master.md`; `docs/union-coverage-unpopped.md` is retired once Unpopped confirms the row mapping. Rows marked [scope] wait on task 3.
+3. **Kernel-body scope note**, draft due 2026-11-13 (Unpopped's concept map is merged, Unpopped#274, sec 12 = 11 decisions). Closes #768 #769.
+4. **Issue sweep (EXPECTATIONS 6.26)**: 28 open issues decided, 0 closed; close each only after its filer confirms (Fuel, Baracuda, Vulkane, Unpopped). Chase. Dependabot #680 open.
+5. **Docs rows not yet written**: ROADMAP rows (kernel-body, R3.6) and the CONTRIBUTING affected-set rule (#484: key the census on what a lane emits/parses, not its name). Separate PR, next patch after this one.
+6. FireLine grammar-crate owner (2026-11-07): PM agreed A1 (one grammar crate from fuel-kernel-seam-types, validated against KISS vectors, KISS CI never imports FireLine); I proposed names DLPACK_EXT and PROVISION_ON_REQUEST (CireSnave rules); FireLine adopted them in fireline-announce. Bits 34, 35 provisional on their side.
 
 ## WAIT (do not start; each names its trigger)
 
-WAIT: ops-6.3-0002-claim-basis-ratify | check: gh pr view 762 --json state,mergedAt | wake: 2026-11-08T12:00:00Z
-WAIT: board-361-r1.15-411-leaf-repr | check: gh issue view 411 --json state | wake: 2026-11-10T12:00:00Z
-WAIT: board-358-dimexpr-clamp-6.13-0010 | check: gh issue view 358 --json state | wake: 2026-11-10T12:00:00Z
-WAIT: sk7-batch-724-725 | check: gh pr view 724 --json state,mergedAt | wake: 2026-11-05T12:00:00Z
+WAIT: kernel-body-scope-note | check: gh pr list --search "kernel-body" --state all --json number,state | wake: 2026-11-13T12:00:00Z
 WAIT: kiss-ref-k1-calibration | check: gh issue view 293 --json state | wake: 2026-11-10T12:00:00Z
+WAIT: half-rs-151-maintainer-reply | check: gh api repos/VoidStarKat/half-rs/issues/151/comments | wake: 2026-11-14T12:00:00Z
 
-- **WAIT 2026-11-08: tell the PM** the `KISS-OPS-6.3-0002` CLAIM membership basis (PM provisional, ratified by nobody yet) is due; the PM puts it on CireSnave's board if no architect ratifies.
-- **WAIT board 361** (CireSnave, via PM): R1.15 #411 leaf representation of the seven §6.12 scalar-source leaves in op_dag; options note `docs/options-r1-15-scalar-source-leaf-representation.md`, rec B (leaf tokens as `Op` nodes). No clause until his word.
-- **WAIT board 358** (CireSnave, via PM): DimExpr clamp for the `6.13-0010` window extent; PM rec B = precondition + decline. Unpopped#214 ships without the dimension-expression piece (Unpopped `xmaci51f` informed).
-- **WAIT the sk7 batch (PM says when it closes):** **#724** (`c-maxop`, `C:/Projects/kiss-maxop`, `MAX_OPERANDS` 8->16, sk6->sk7) and **#725** (`c-f1ops`, `C:/Projects/kiss-f1`, stacked; replay on a fresh branch, no force-push). Do not merge alone. Padding low/high and matmul attrs wait on CireSnave (304 R5.7). **R3.17: do NOT vendor sk6/v4 into kiss-ref now; one vendoring at the sk7 close.** R1.31 HELD.
-- **WAIT kiss-ref data:** the R1.16 calibration record (K1) is the ruling; if kiss-ref data show K1 cannot calibrate stably, K3 (scale term Σ|x|) is the fallback (`docs/options-r1-16-reassociation-band.md`).
-- All `[rule]` rows wait on CireSnave via the PM. R4 and second-deriver runs are `[ext]`. R1.10 needs a scheduled freeze. R3.10 G5 blocked by R3.18/R1.25.
-
-## Owed (start only when the throttle allows)
-
-- Confirm Unpopped (`xmaci51f`) and Baracuda (`dvxh3lr1`) were told the device-query frames of #754 (ANNOUNCE-6.6; `announce_vectors.json` consumers must regenerate); R1.37 already told. Tell them when R1.36 clauses land. Fuel (`b1t7qsr3`) to check `negotiate()` plain-AND vs role-aware capability word (#696).
-- R5.6 remainder (6.2-0003, 6.1-0006, 6.1-0008); R5.19 decision; R1.29 SHOULD clause only after Fuel, Baracuda, Unpopped adopt the edge corpus; R3.14 and Conform 7.2-0005 second-implementation witnesses; 6.16-0011 vectors need a composite cell shape.
-- Target tokens (PM): each emitter lane sends a token list + derivability witness (Classify 6.8-0014); I add `spec/namespaces/<ns>.md` + `conformance/registry/namespaces.json` row + `tools/kiss_scoped_cites.py` DOCS entry, one PR per namespace (see #745).
+- Cron timers are session-only: re-arm each WAIT with CronCreate after `lane-restart waits --role kiss` (local = UTC-7, no DST; 12:00Z = 05:00). Tell the PM of any maintainer reply on half-rs#151.
+- Restart at task boundaries is the lane's own action: `lane-restart assert-idle`, then `lane-restart --self`.
 
 ## Messaging
 
-claude-peers was declared retired (2026-10-31) but the PM still uses it with this lane; the PM said ONE restart onto Synapse would be announced. After that restart send `[PONG]` on Synapse (role kiss, via=push) and use Synapse only. Peer IDs rotate: PM `vprr9yji` last seen, cwd `C:\Projects`; re-resolve with `list_peers`. Compact formats only (`[READY]`, `[STATUS]`, `[ASK]`, `[FIX]`), short; relay measurements with their ref.
-
-Other worktrees in `git worktree list` (kiss-fix, kiss-sec, kiss-ties, KISS-wt-os) are not this lane's current work; check `git status --porcelain` and ask before touching them.
+Synapse (role kiss; peers pm, unpopped, fuel, fireline). Compact formats (`C:\Projects\MESSAGE-FORMATS.md`). Worktrees kiss-fix, kiss-sec, kiss-ties, KISS-wt-os, kiss-ho are not mine.

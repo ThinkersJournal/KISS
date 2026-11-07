@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.12.2 — 2026-11-07 (number allocated by the PM; docs only)
+
+- **HANDOFF** rewritten for the 0.12.1 state (#781, #782, #783 and kiss-ref#64 landed; the 782 WAIT dropped; the open FireLine ownership question recorded). No spec, code or artifact change.
+
 ## 0.12.1 — 2026-11-07 (number proposed; the PM allocates at gate time; additive, test and artifact only; based on main)
 
 - **Golden contract vectors for `output_layouts` (board 378 follow-up):** `contract_vectors.json` gains an `output_layout_vectors` object, one Interface block (hex) per layout form (`-`, `dense`, `dense_order`, `same_as`, `strided`, nested, swizzled nested, `bundle`, `none`) under a stated reader context, built by `contract::output_layout_vectors` (the library, not the test). No spec change and no wire byte moves; `test_contract_output_layout_golden_vectors` parses every block and element.
