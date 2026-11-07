@@ -838,6 +838,60 @@ pub fn sort_network(row: &[f32], direction: SortDirection) -> (Vec<f32>, Vec<usi
     (values, order)
 }
 
+// ---- normalization over an axis set (KISS-Ops §6.13-0008) ----------------------
+
+/// The normalized sub-shape of a normalization over `axes` of an operand of `shape`: its extents on the selected
+/// axes in ascending axis order, contiguous or not. This is the shape of `gamma` and `beta` (§6.13-0008).
+pub fn normalized_sub_shape(shape: &[usize], axes: &[usize]) -> Vec<usize> {
+    let mut sel: Vec<usize> = axes.to_vec();
+    sel.sort_unstable();
+    sel.dedup();
+    sel.iter().map(|&a| shape[a]).collect()
+}
+
+/// The row-major offset into `gamma` / `beta` read for the output element at `coord` (§6.13-0008): `coord`
+/// restricted to the selected axes in ascending order, over the normalized sub-shape.
+pub fn norm_param_offset(coord: &[usize], shape: &[usize], axes: &[usize]) -> usize {
+    let mut sel: Vec<usize> = axes.to_vec();
+    sel.sort_unstable();
+    sel.dedup();
+    sel.iter().fold(0, |off, &a| off * shape[a] + coord[a])
+}
+
+/// `layer_norm` over an axis set in `f64` (population variance, `eps` added to the variance): the mean and the
+/// variance are formed over ALL selected axes at once (§6.13-0008), `gamma`/`beta` indexed by
+/// [`norm_param_offset`]. A reference for the joint-statistics rule, not a bit-exact oracle.
+pub fn layer_norm_ref(x: &[f64], shape: &[usize], axes: &[usize], gamma: &[f64], beta: &[f64], eps: f64) -> Vec<f64> {
+    let rank = shape.len();
+    let total: usize = shape.iter().product();
+    let coord_of = |mut i: usize| -> Vec<usize> {
+        let mut c = vec![0; rank];
+        for d in (0..rank).rev() {
+            c[d] = i % shape[d];
+            i /= shape[d];
+        }
+        c
+    };
+    // group key = the coordinates on the NON-selected axes
+    let key = |c: &[usize]| -> Vec<usize> { (0..rank).filter(|d| !axes.contains(d)).map(|d| c[d]).collect() };
+    let mut groups: std::collections::BTreeMap<Vec<usize>, Vec<usize>> = std::collections::BTreeMap::new();
+    for i in 0..total {
+        groups.entry(key(&coord_of(i))).or_default().push(i);
+    }
+    let mut out = vec![0.0; total];
+    for members in groups.values() {
+        let n = members.len() as f64;
+        let mean = members.iter().map(|&i| x[i]).sum::<f64>() / n;
+        let var = members.iter().map(|&i| (x[i] - mean).powi(2)).sum::<f64>() / n;
+        let inv = 1.0 / (var + eps).sqrt();
+        for &i in members {
+            let o = norm_param_offset(&coord_of(i), shape, axes);
+            out[i] = (x[i] - mean) * inv * gamma[o] + beta[o];
+        }
+    }
+    out
+}
+
 // ---- concat (KISS-Ops §6.11-0020) ---------------------------------------------
 
 /// `concat`: join row-major `parts` end to end along `axis` (§6.11-0020). Each part is `(data, extents)`.

@@ -619,21 +619,21 @@ def check_leaf_and_empty_axis_clauses(ops, v):
 
 
 NORM_OPS = ("softmax", "log_softmax", "rms_norm", "layer_norm")
-NORM_AXIS_CELL = "`norm_axis`:`u8`:mandatory"
+NORM_AXIS_CELL = "`norm_axes`:`u16` LE:mandatory"
 
 
 def check_norm_and_gelu_clauses(ops, graph, v):
-    """§6.13-0008: each of the four normalization ops has a §6.19.3 row carrying `norm_axis` as a
-    mandatory `u8`, and the clause still pins the range and the typed decline.
+    """§6.13-0008: each of the four normalization ops has a §6.19.3 row carrying `norm_axes` as a
+    mandatory `u16` axis mask, and the clause still pins the range and the typed decline.
     §6.15-0004: `gelu` decomposes through `erf` and `gelu_tanh` through `tanh`, as distinct §6.13
     rows, neither reaching the other's distinguishing op."""
     flat = " ".join((clause_body(ops, "6.13-0008") or "").replace("**", "").split())
-    for phrase in ("0 <= norm_axis < MAX_RANK", "all four of", "typed decline"):
+    for phrase in ("any non-empty subset of `0 .. MAX_RANK-1`", "all four of", "typed decline"):
         if phrase not in flat:
             v.append(f"§6.13-0008: the clause no longer says '{phrase}'")
     for o in NORM_OPS:
         if not re.search(r"^\| `%s` \| %s" % (o, re.escape(NORM_AXIS_CELL)), ops, re.M):
-            v.append(f"§6.13-0008: `{o}` has no §6.19.3 row with mandatory `u8` `norm_axis`")
+            v.append(f"§6.13-0008: `{o}` has no §6.19.3 row with mandatory `u16` `norm_axes`")
     for op, own, other in (("gelu", "erf", "tanh"), ("gelu_tanh", "tanh", "erf")):
         if own not in graph.get(op, []):
             v.append(f"§6.15-0004: `{op}` no longer decomposes through `{own}`")

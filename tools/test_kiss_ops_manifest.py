@@ -360,9 +360,9 @@ class DecompositionGraphTest(unittest.TestCase):
         self.assertIn("erf", self.K.decomposition_graph(self.ops)["gelu"])  # a parse of nothing is "clean"
         self.assertEqual(self.norm_gelu_violations(self.ops), [])
 
-    def test_layer_norm_losing_its_norm_axis_row_is_caught(self):
-        v = self.norm_gelu_violations(self.mutate("| `layer_norm` | `norm_axis`:`u8`:mandatory",
-                                                  "| `layer_norm` | `norm_axis`:`u8`:optional"))
+    def test_layer_norm_losing_its_norm_axes_row_is_caught(self):
+        v = self.norm_gelu_violations(self.mutate("| `layer_norm` | `norm_axes`:`u16` LE:mandatory",
+                                                  "| `layer_norm` | `norm_axes`:`u16` LE:optional"))
         self.assertTrue(any("§6.13-0008" in m and "layer_norm" in m for m in v), v)
 
     def test_gelu_losing_erf_is_caught(self):

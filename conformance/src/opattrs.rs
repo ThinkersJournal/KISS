@@ -183,9 +183,12 @@ pub fn encode_reduce_var(reduced: &[usize], rank: usize, keepdim: bool, bessel: 
     out
 }
 
-/// `softmax` / `log_softmax`: norm_axis (§6.19-0031).
-pub fn encode_softmax(norm_axis: u8) -> Vec<u8> {
-    vec![norm_axis]
+/// `softmax` / `log_softmax` / `rms_norm` / `layer_norm`: `norm_axes`, the §6.19-0020 `reduce_axes` word
+/// for the normalized axis set of an operand of `rank` (§6.19-0031).
+pub fn encode_norm_axes(axes: &[usize], rank: usize) -> Vec<u8> {
+    let mut out = Vec::new();
+    push_u16_le(&mut out, reduce_axes_reduction(axes, rank));
+    out
 }
 
 /// `index_select`: axis, index_operand, index_dtype (§6.19-0034).

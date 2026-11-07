@@ -95,8 +95,15 @@ fn e2_sort_network_ascending_stable() {
 
 #[test]
 fn e2_softmax_norm_axis() {
-    let b = encode_softmax(1);
-    assert_golden("KISS-OPS-6.19-0031", "softmax_axis1", &b, "01");
+    // rank-2 operand, the lone trailing axis: 0xFFFE
+    let b = encode_norm_axes(&[1], 2);
+    assert_golden("KISS-OPS-6.19-0031", "softmax_axes_trailing", &b, "FE FF");
+    // PyTorch normalized_shape of two trailing dims over rank 3: a subset mask 0b110
+    assert_golden("KISS-OPS-6.19-0031", "layer_norm_axes_1_2", &encode_norm_axes(&[1, 2], 3), "06 00");
+    // non-contiguous {0,2} over rank 4: 0b0101
+    assert_golden("KISS-OPS-6.19-0031", "rms_norm_axes_0_2", &encode_norm_axes(&[0, 2], 4), "05 00");
+    // every axis: 0xFFFF, never the subset mask
+    assert_golden("KISS-OPS-6.19-0031", "softmax_axes_all", &encode_norm_axes(&[0, 1, 2], 3), "FF FF");
 }
 
 #[test]

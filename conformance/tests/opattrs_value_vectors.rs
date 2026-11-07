@@ -17,7 +17,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 180;
+const POPULATION: usize = 212; // 180 + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations (0.9.0)
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -47,9 +47,10 @@ fn vecu32(v: &EncodeVector, name: &str) -> Vec<u32> {
     }
 }
 fn axes(v: &EncodeVector) -> (Vec<usize>, usize) {
-    match get(v, "reduce_axes") {
+    let field = if v.attrs.iter().any(|(n, _)| n == "norm_axes") { "norm_axes" } else { "reduce_axes" };
+    match get(v, field) {
         Value::Axes { axes, rank } => (axes.clone(), *rank),
-        other => panic!("{}: reduce_axes is {other:?}", v.op),
+        other => panic!("{}: {field} is {other:?}", v.op),
     }
 }
 fn oob(t: &str) -> OobPolicy {
@@ -147,7 +148,10 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
             let (a, r) = axes(v);
             opattrs::encode_reduce_var(&a, r, flag(v, "keepdim"), flag(v, "bessel_correction"))
         }
-        "softmax" | "log_softmax" => opattrs::encode_softmax(byte(v, "norm_axis")),
+        "softmax" | "log_softmax" | "rms_norm" | "layer_norm" => {
+            let (a, r) = axes(v);
+            opattrs::encode_norm_axes(&a, r)
+        }
         "index_select" | "embedding" | "scatter_add" => {
             opattrs::encode_index_select(byte(v, "axis"), byte(v, "index_operand"), idt(tok(v, "index_dtype")))
         }
@@ -213,8 +217,8 @@ fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
             None => skipped += 1,
         }
     }
-    // generic-only (no hand encoder in opattrs.rs): max_pool (17), rms_norm (3), layer_norm (3)
-    assert_eq!(skipped, 23, "max_pool, rms_norm and layer_norm are generic-only");
+    // generic-only (no hand encoder in opattrs.rs): max_pool (17)
+    assert_eq!(skipped, 17, "max_pool is generic-only");
     assert_eq!(compared + skipped, POPULATION, "population is pinned");
 }
 
