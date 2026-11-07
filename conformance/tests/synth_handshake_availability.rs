@@ -39,6 +39,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
     "03 00 00 00 ",                          // op_identity len = 3 (u32 LE)
     "61 64 64 ",                             // op_identity bytes = "add"
     "01 ",                                   // revision_present = 1
+    "20 ",                                   // revision_hash length = 32 (§6.3-0003)
     "11 11 11 11 11 11 11 11 ",              // revision_hash = 32 × 0x11
     "11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 ",
@@ -48,7 +49,7 @@ const IDENTITY_PRESENT_GOLDEN: &str = concat!(
 
 /// A reference provision-request identity: key `AA BB CC`, revision pinned.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some(vec![0x11; 32]), correlation: None }
 }
 
 /// The same cell, named WITHOUT pinning a build (revision_present == 0).
@@ -92,7 +93,7 @@ fn test_synth_request_no_new_shape() {
     assert_ne!(&pinned[0..4], &CDEC.to_le_bytes());
 
     // (2) NO new field: the frame is exactly the CYRQ tag + identity, nothing added.
-    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 32 /*hash*/ + 1 /*correlation_len*/;
+    let pinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 1 /*hash_len*/ + 32 /*hash*/ + 1 /*correlation_len*/;
     assert_eq!(pinned.len(), 4 + pinned_identity, "pinned request = CYRQ tag + identity, no build/JIT flag or capability blob");
     let unpinned_identity = 4 /*key_len*/ + 3 /*key*/ + 4 /*op_len*/ + 3 /*op*/ + 1 /*revision_present*/ + 1 /*correlation_len*/; // no hash
     assert_eq!(unpinned.len(), 4 + unpinned_identity, "unpinned request adds nothing either");
@@ -121,7 +122,7 @@ fn test_synth_request_no_new_shape() {
 fn test_synth_contract_not_pushed_to_announce() {
     let key = vec![0xAA, 0xBB, 0xCC];
     let hash = [0x11u8; 32];
-    let record = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash };
+    let record = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash.to_vec() };
 
     // (i) exhaustive destructure — the availability record has NO contract/payload field.
     let AvailabilityRecord { structure_key, op_identity: _, revision_hash } = &record;
@@ -130,14 +131,14 @@ fn test_synth_contract_not_pushed_to_announce() {
 
     // (ii) the per-record wire region carries ONLY the identity — no contract bytes.
     let per_record = wire_identity(&record);
-    assert_eq!(per_record.len(), 4 + key.len() + 4 + 3 + 32, "availability record is identity-only: no eager contract payload");
+    assert_eq!(per_record.len(), 4 + key.len() + 4 + 3 + 1 + 32, "availability record is identity-only: no eager contract payload");
 
     // (iii) the contract's real wire home is the CRSP response, which DOES carry the
     // length-delimited contract payload. Slice its exact payload region and confirm
     // the contract bytes live there, NOT in the availability record.
     let contract_bytes = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03];
     let crsp = ContractResponse {
-        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash), correlation: None },
+        identity: Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(hash.to_vec()), correlation: None },
         payload: contract_bytes.clone(),
     }
     .encode();
@@ -301,7 +302,7 @@ fn test_synth_empty_profile_no_select() {
 fn test_synth_availability_identity_only() {
     let key = vec![0xAA, 0xBB, 0xCC];
     let hash = [0x11u8; 32];
-    let rec = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash };
+    let rec = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash.to_vec() };
     let wire = AvailabilityList { list_version: LIST_VERSION, records: vec![rec.clone()] }.encode();
 
     // round-trip: both halves survive the real codec.
@@ -311,7 +312,7 @@ fn test_synth_availability_identity_only() {
 
     // wire offsets: header 12, key_len [12..16], key [16..16+3], revision_hash [19..51].
     let key_off = 16;
-    let hash_off = 16 + key.len() + 4 + 3; // after the op_identity (len 3)
+    let hash_off = 16 + key.len() + 4 + 3 + 1; // after the op_identity (len 3) and the 1-byte hash length
 
     // (a) a KEY-region mutation changes ONLY the decoded structure_key (key half load-bearing).
     let mut m_key = wire.clone();
@@ -343,24 +344,25 @@ fn test_synth_availability_identity_only() {
 fn test_synth_hit_miss_by_identity() {
     let key = vec![0xAA, 0xBB, 0xCC];
     let hash = [0x11u8; 32];
-    let hit = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash };
+    let hit = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash.to_vec() };
 
     // (1) the wire identity carries the full (structure_key, revision_hash) pair.
     let mut expected = (key.len() as u32).to_le_bytes().to_vec();
     expected.extend_from_slice(&key);
     expected.extend_from_slice(&3u32.to_le_bytes());
     expected.extend_from_slice(b"add");
+    expected.push(32); // revision_hash length byte (§6.3-0003)
     expected.extend_from_slice(&hash);
     assert_eq!(wire_identity(&hit), expected, "the wire identity IS the full (structure_key, revision_hash) pair");
 
     // (2) a HIT: an independently-built identical record encodes to identical bytes.
-    let same = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash };
+    let same = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash.to_vec() };
     assert_eq!(wire_identity(&hit), wire_identity(&same), "same (key, hash) => identical wire identity (a hit)");
 
     // (3) a MISS: same key, ONE byte different in the 32-byte revision_hash.
     let mut hash2 = hash;
     hash2[31] ^= 0x01;
-    let miss = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash2 };
+    let miss = AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash2.to_vec() };
     assert_ne!(
         wire_identity(&hit),
         wire_identity(&miss),
@@ -384,8 +386,8 @@ fn test_synth_hit_not_key_alone() {
     let hash_a = [0x11u8; 32];
     let mut hash_b = hash_a;
     hash_b[0] ^= 0xFF; // same key, one hash byte different
-    let id_a = wire_identity(&AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash_a });
-    let id_b = wire_identity(&AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash_b });
+    let id_a = wire_identity(&AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash_a.to_vec() });
+    let id_b = wire_identity(&AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: hash_b.to_vec() });
 
     // the structure_key region matches (a key match alone)...
     let key_region = 4..4 + key.len(); // [u32 key_len][key bytes ...]
@@ -406,8 +408,8 @@ fn test_synth_hit_not_key_alone() {
 fn test_synth_hit_requires_op_identity() {
     let key = vec![0xAA, 0xBB, 0xCC];
     let hash = [0x11u8; 32];
-    let relu = AvailabilityRecord { structure_key: key.clone(), op_identity: b"relu".to_vec(), revision_hash: hash };
-    let silu = AvailabilityRecord { structure_key: key.clone(), op_identity: b"silu".to_vec(), revision_hash: hash };
+    let relu = AvailabilityRecord { structure_key: key.clone(), op_identity: b"relu".to_vec(), revision_hash: hash.to_vec() };
+    let silu = AvailabilityRecord { structure_key: key.clone(), op_identity: b"silu".to_vec(), revision_hash: hash.to_vec() };
     assert_ne!(wire_identity(&relu), wire_identity(&silu), "same key and hash but a different op => a miss");
     let wire = AvailabilityList { list_version: LIST_VERSION, records: vec![relu.clone(), silu.clone()] }.encode();
     let decoded = decode_availability_list(&wire).expect("two-op list round-trips");

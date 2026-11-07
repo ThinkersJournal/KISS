@@ -181,7 +181,7 @@ fn declared_decline_consts(src: &str) -> BTreeSet<String> {
 
 /// A reference identity: key `AA BB CC`, revision pinned to 32×`0x11`.
 fn identity_present() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some(vec![0x11; 32]), correlation: None }
 }
 
 // ---- §6.6 The never-panic obligation ----------------------------------------
@@ -256,7 +256,7 @@ fn test_synth_never_panics() {
     let request = QueryRequest { identity: identity_present() }.encode();
     let list = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![1, 2, 3], revision_hash: [7; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![1, 2, 3], revision_hash: vec![7; 32] }],
     }
     .encode();
     for n in 0..=request.len() {
@@ -307,7 +307,7 @@ fn test_synth_no_oob_read() {
         .identity;
     assert_eq!(decoded, ident, "trailing bytes MUST NOT fold into the decoded identity");
     assert_eq!(decoded.structure_key, vec![0xAA, 0xBB, 0xCC], "structure_key stops at its declared length");
-    assert_eq!(decoded.revision_hash, Some([0x11; 32]), "revision_hash is exactly 32 declared bytes, no poison");
+    assert_eq!(decoded.revision_hash, Some(vec![0x11; 32]), "revision_hash is exactly 32 declared bytes, no poison");
 
     // (b) over-declared structure_key length with a short buffer → checked before slice.
     let mut over = CYRQ.to_le_bytes().to_vec();
@@ -539,25 +539,26 @@ fn test_synth_decline_ranges() {
 fn test_synth_availability_no_capability() {
     let list = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: vec![0x11; 32] }],
     };
     let b = list.encode();
 
     // header = SAVL tag(4) + list_version(1) + 3 MBZ + record_count(4) = 12 bytes.
-    assert_golden("KISS-SYNTH-6.2-0007a", "savl_header", &b[..12], "53 41 56 4C 02 00 00 00 01 00 00 00");
+    assert_golden("KISS-SYNTH-6.2-0007a", "savl_header", &b[..12], "53 41 56 4C 03 00 00 00 01 00 00 00");
 
-    // per-record region: key_len(4, LE) + key(3) + revision_hash(32), nothing else.
+    // per-record region: key_len(4, LE) + key(3) + op_identity + revision_hash (1 length byte, then 32), nothing else.
     let record_golden = concat!(
         "03 00 00 00 ",
         "AA BB CC ",
         "03 00 00 00 ",
         "61 64 64 ",
+        "20 ",
         "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
         "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11",
     );
     assert_golden("KISS-SYNTH-6.2-0007a", "savl_record_identity_only", &b[12..], record_golden);
-    assert_eq!(b.len() - 12, 4 + 3 + 4 + 3 + 32, "the record carries ONLY (structure_key, op_identity, revision_hash)");
-    assert_eq!(b.len(), 12 + 46, "no room for any per-kernel capability/usage/guarantee/semantics field");
+    assert_eq!(b.len() - 12, 4 + 3 + 4 + 3 + 1 + 32, "the record carries ONLY (structure_key, op_identity, revision_hash)");
+    assert_eq!(b.len(), 12 + 47, "no room for any per-kernel capability/usage/guarantee/semantics field");
 }
 
 /// KISS-SYNTH-6.7-0003a — the level-2 availability record MUST NOT carry any
@@ -572,9 +573,9 @@ fn test_synth_availability_no_capability() {
 #[test]
 fn test_synth_availability_no_capability_fields() {
     let records = vec![
-        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01], revision_hash: [0x10; 32] },
-        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC, 0xDD], revision_hash: [0x20; 32] },
-        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: (0u16..=63).map(|x| x as u8).collect(), revision_hash: [0x33; 32] },
+        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01], revision_hash: vec![0x10; 32] },
+        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC, 0xDD], revision_hash: vec![0x20; 32] },
+        AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: (0u16..=63).map(|x| x as u8).collect(), revision_hash: vec![0x33; 32] },
     ];
     let list = AvailabilityList { list_version: LIST_VERSION, records: records.clone() };
     let wire = list.encode();
@@ -584,9 +585,9 @@ fn test_synth_availability_no_capability_fields() {
         .expect("KISS-SYNTH-6.7-0003a: a multi-record availability list round-trips");
     assert_eq!(decoded, list, "decode∘encode is the identity on the availability list");
 
-    // (ii) total wire length is fully accounted for by header + Σ(4 + key_len + 32).
+    // (ii) total wire length is fully accounted for by header + Σ(4 + key_len + 4 + op_len + 1 + 32).
     let accounted: usize =
-        12 + records.iter().map(|r| 4 + r.structure_key.len() + 4 + r.op_identity.len() + 32).sum::<usize>();
+        12 + records.iter().map(|r| 4 + r.structure_key.len() + 4 + r.op_identity.len() + 1 + 32).sum::<usize>();
     assert_eq!(
         wire.len(),
         accounted,

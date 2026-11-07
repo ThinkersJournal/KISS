@@ -121,7 +121,7 @@ fn test_classify_structure_key_opaque_carry() {
         records: tokens
             .iter()
             .enumerate()
-            .map(|(i, t)| AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: t.clone().into_bytes(), revision_hash: [i as u8; 32] })
+            .map(|(i, t)| AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: t.clone().into_bytes(), revision_hash: vec![i as u8; 32] })
             .collect(),
     };
     let back = decode_availability_list(&list.encode()).expect("a well-formed list decodes");
@@ -134,7 +134,7 @@ fn test_classify_structure_key_opaque_carry() {
     // opaque: the carrier does not require the bytes to be a token at all
     let junk = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xFF, 0x00, 0x7F, b'|'], revision_hash: [9; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xFF, 0x00, 0x7F, b'|'], revision_hash: vec![9; 32] }],
     };
     let jb = decode_availability_list(&junk.encode()).expect("opaque bytes carry");
     assert_eq!(jb.records[0].structure_key, [0xFF, 0x00, 0x7F, b'|']);

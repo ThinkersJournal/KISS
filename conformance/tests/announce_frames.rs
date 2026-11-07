@@ -381,7 +381,7 @@ fn test_announce_reader_never_repairs() {
 /// kernel as an availability record consisting SOLELY of the pair
 /// `(structure_key, revision_hash)`.
 /// TEETH: the per-record wire footprint is the closed form
-/// 4 (u32 key_len) + key_len + 32 (hash) with ZERO unexplained bytes before the
+/// 4 (u32 key_len) + key_len + 1 + 32 (hash length byte, hash) with ZERO unexplained bytes before the
 /// next record; a decode round-trip recovers the identical two-field record. Any
 /// added per-record field (a capability/dispatch/guarantee slot) enlarges the
 /// footprint and breaks the closed-form length and the round-trip.
@@ -390,15 +390,15 @@ fn test_announce_availability_is_identity_pair() {
     const HDR: usize = 12; // SAVL tag (4) + list_version block (4) + record_count (4)
     let one = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: [0x11; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: vec![0x11; 32] }],
     };
     let b = one.encode();
     let footprint = b.len() - HDR;
     let key_len = one.records[0].structure_key.len();
     assert_eq!(
         footprint,
-        4 + key_len + 4 + 3 + 32,
-        "KISS-ANNOUNCE-6.3-0001: a record is exactly (u32 key_len, key, u32 op_len, op, 32-byte hash) — no extra field"
+        4 + key_len + 4 + 3 + 1 + 32,
+        "KISS-ANNOUNCE-6.3-0001: a record is exactly (u32 key_len, key, u32 op_len, op, 1-byte hash length, hash) — no extra field"
     );
     assert_eq!(decode_availability_list(&b), Ok(one));
 
@@ -406,12 +406,12 @@ fn test_announce_availability_is_identity_pair() {
     let two = AvailabilityList {
         list_version: LIST_VERSION,
         records: vec![
-            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01], revision_hash: [0x00; 32] },
-            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xDE, 0xAD, 0xBE, 0xEF], revision_hash: [0xFF; 32] },
+            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01], revision_hash: vec![0x00; 32] },
+            AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0xDE, 0xAD, 0xBE, 0xEF], revision_hash: vec![0xFF; 32] },
         ],
     };
     let b2 = two.encode();
-    let expected = HDR + (4 + 1 + 4 + 3 + 32) + (4 + 4 + 4 + 3 + 32);
+    let expected = HDR + (4 + 1 + 4 + 3 + 1 + 32) + (4 + 4 + 4 + 3 + 1 + 32);
     assert_eq!(
         b2.len(),
         expected,
@@ -420,31 +420,60 @@ fn test_announce_availability_is_identity_pair() {
     assert_eq!(decode_availability_list(&b2), Ok(two));
 }
 
-/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0003 — `revision_hash` MUST be exactly 32 bytes.
-/// TEETH: two-sided. Producer — the encoded record's hash region is exactly 32
-/// bytes (`record_len - 4 - key_len == 32`), so a 16- or 20-byte hash fails the
-/// closed form. Reader — a list whose final record's hash is cut to 31 bytes
-/// declines `Truncated{region:"revision_hash"}` rather than reading a short/OOB
-/// hash.
+/// Enforces[enforced]: KISS-ANNOUNCE-6.3-0003 — `revision_hash` is written as a 1-byte length in
+/// `[8, 64]` then that many bytes; a reader declines a length outside the range before reading.
+/// TEETH: producer — the hash region of an encoded record is exactly `1 + len` bytes for the lengths
+/// 8, 32 and 64 (a fixed-32 writer fails 8 and 64; a writer with no length byte fails all three).
+/// Reader — length bytes 0, 7 and 65 decline `RevisionHashLenOutOfRange` (a reader that accepts any
+/// length, or that clamps, is caught); a record cut one byte short of its declared hash declines
+/// `Truncated{revision_hash}` rather than reading short or out of bounds; the same bound applies
+/// inside an identity block.
 #[test]
-fn test_announce_revision_hash_is_32_bytes() {
+fn test_announce_revision_hash_bounded_length() {
     const HDR: usize = 12;
     let key = vec![0x7A, 0x7B, 0x7C, 0x7D, 0x7E];
-    let list = AvailabilityList {
-        list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: [0x33; 32] }],
-    };
-    let b = list.encode();
-    // producer: the hash region is exactly 32 bytes.
-    let hash_region = b.len() - HDR - 4 - key.len() - 4 - 3;
-    assert_eq!(hash_region, 32, "KISS-ANNOUNCE-6.3-0003: encoded revision_hash is exactly 32 bytes");
+    for len in [8usize, 32, 64] {
+        let list = AvailabilityList {
+            list_version: LIST_VERSION,
+            records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: vec![0x33; len] }],
+        };
+        let b = list.encode();
+        let region = b.len() - HDR - 4 - key.len() - 4 - 3;
+        assert_eq!(region, 1 + len, "KISS-ANNOUNCE-6.3-0003: a {len}-byte hash is a length byte then {len} bytes");
+        let at = b.len() - region;
+        assert_eq!(b[at] as usize, len, "the length byte precedes the hash");
+        assert_eq!(decode_availability_list(&b), Ok(list), "a {len}-byte hash round-trips");
+        let cut = &b[..b.len() - 1];
+        assert_eq!(
+            decode_availability_list(cut),
+            Err(AnnounceDecline::Truncated { region: "revision_hash" }),
+            "KISS-ANNOUNCE-6.3-0003: a hash one byte short of its declared length must decline"
+        );
+        // a declared length outside [8, 64], with plenty of bytes behind it.
+        for bad in [0u8, 7, 65] {
+            let mut x = b.clone();
+            x[at] = bad;
+            x.extend_from_slice(&[0x33; 80]);
+            assert_eq!(
+                decode_availability_list(&x),
+                Err(AnnounceDecline::RevisionHashLenOutOfRange { got: bad }),
+                "KISS-ANNOUNCE-6.3-0003: a hash length byte of {bad} must decline"
+            );
+        }
+    }
 
-    // reader: chop the last hash byte (31 present) -> typed truncation decline.
-    let cut = &b[..b.len() - 1];
+    // the identity block (§6.4-0001) carries the same field.
+    let id = Identity { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: Some(vec![0x44; 9]), correlation: None };
+    let req = QueryRequest { identity: id }.encode();
+    assert_eq!(decode_query_request(&req).map(|r| r.identity.revision_hash), Ok(Some(vec![0x44; 9])));
+    let at = req.len() - 1 - 9 - 1; // hash length byte; then 9 hash bytes, then the correlation byte
+    assert_eq!(req[at], 9);
+    let mut bad = req.clone();
+    bad[at] = 65;
     assert_eq!(
-        decode_availability_list(cut),
-        Err(AnnounceDecline::Truncated { region: "revision_hash" }),
-        "KISS-ANNOUNCE-6.3-0003: a 31-byte hash tail must decline, not read a short/OOB hash"
+        decode_query_request(&bad).map(|r| r.identity.revision_hash),
+        Err(AnnounceDecline::RevisionHashLenOutOfRange { got: 65 }),
+        "an identity block's hash length is bounded too"
     );
 }
 
@@ -463,7 +492,7 @@ fn test_announce_structure_key_is_opaque() {
     // via an availability record.
     let list = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: [0x55; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: key.clone(), revision_hash: vec![0x55; 32] }],
     };
     let decoded = decode_availability_list(&list.encode()).expect("opaque key must decode");
     assert_eq!(
@@ -483,7 +512,7 @@ fn test_announce_structure_key_is_opaque() {
 /// Enforces[enforced]: KISS-ANNOUNCE-6.3-0008 — `revision_hash` MUST be treated as an
 /// opaque provider-assigned identifier compared only for equality; an impl MUST
 /// NOT assume any hash algorithm or recomputable input domain.
-/// TEETH: an all-zero [0u8;32] hash is a VALID record (not rejected as
+/// TEETH: an all-zero 32-byte hash is a VALID record (not rejected as
 /// "unhashed"/"missing"), and an arbitrary 32-byte value round-trips verbatim
 /// (no canonicalization/normalization). An impl that special-cases the zero hash
 /// or folds the hash through a domain check is caught.
@@ -492,11 +521,11 @@ fn test_announce_revision_hash_opaque_identity() {
     // all-zero hash is a valid, non-special record.
     let zero = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01, 0x02], revision_hash: [0u8; 32] }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x01, 0x02], revision_hash: vec![0u8; 32] }],
     };
     let d0 = decode_availability_list(&zero.encode())
         .expect("KISS-ANNOUNCE-6.3-0008: an all-zero revision_hash MUST be a valid record");
-    assert_eq!(d0.records[0].revision_hash, [0u8; 32]);
+    assert_eq!(d0.records[0].revision_hash, vec![0u8; 32]);
 
     // an arbitrary 32-byte value round-trips verbatim (no normalization).
     let mut arb = [0u8; 32];
@@ -505,7 +534,7 @@ fn test_announce_revision_hash_opaque_identity() {
     }
     let list = AvailabilityList {
         list_version: LIST_VERSION,
-        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x09], revision_hash: arb }],
+        records: vec![AvailabilityRecord { op_identity: b"add".to_vec(), structure_key: vec![0x09], revision_hash: arb.to_vec() }],
     };
     let d = decode_availability_list(&list.encode()).unwrap();
     assert_eq!(
@@ -533,7 +562,7 @@ fn test_announce_revision_hash_opaque_identity() {
 /// distinct from the per-frame goldens §6.4-0004 / §6.4-0007.
 #[test]
 fn test_announce_response_echoes_identity() {
-    let identity = Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None };
+    let identity = Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some(vec![0x11; 32]), correlation: None };
 
     // CYRQ is tag(4) + identity ONLY, so the identity block == everything past the tag.
     let req = QueryRequest { identity: identity.clone() }.encode();

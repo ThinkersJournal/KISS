@@ -23,13 +23,14 @@ const IDENTITY_GOLDEN: &str = concat!(
     "03 00 00 00 AA BB CC ",
     "03 00 00 00 61 64 64 ",
     "01 ",
+    "20 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
     "11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 ",
     "00 ", // correlation_len = 0 (KISS-ANNOUNCE-6.4-0013)
 );
 
 fn identity() -> Identity {
-    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some([0x11; 32]), correlation: None }
+    Identity { op_identity: b"add".to_vec(), structure_key: vec![0xAA, 0xBB, 0xCC], revision_hash: Some(vec![0x11; 32]), correlation: None }
 }
 
 fn success() -> ProvisionSuccess {

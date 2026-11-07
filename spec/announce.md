@@ -199,9 +199,9 @@ what is *inside* them — those are KISS-Classify and KISS-Contract respectively
 - **structure_key** — an opaque admissibility token owned by KISS-Classify,
   identifying a layout/dtype/arch specialization cell. Treated here as an opaque,
   length-delimited byte token.
-- **revision_hash** — a fixed 32-byte, opaque, provider-assigned identifier of a
-  specific build/revision of the kernel behind a `structure_key`, compared only for
-  byte-for-byte equality (no hash algorithm implied).
+- **revision_hash** — an opaque, provider-assigned identifier of 8 to 64 bytes (written with a
+  1-byte length, §6.3-0003) of a specific build/revision of the kernel behind a `structure_key`,
+  compared only for byte-for-byte equality (no hash algorithm implied).
 - **op_identity** — the KISS-Contract Identity `op_identity` (contract §6.3-0003) of the
   kernel: a bare KISS-Ops op name or a full KISS-Grammar advertisable-op tag. Treated here
   as an opaque, length-delimited byte string, compared byte-for-byte for equality only. A
@@ -412,10 +412,21 @@ envelope; all multi-byte integers little-endian):
   capability, usage/ABI, dispatch, guarantee, or semantics field; such facts are
   carried only by the queried contract. *Test:*
   `test_announce_availability_carries_no_capability`.
-- **KISS-ANNOUNCE-6.3-0003** — `revision_hash` MUST be exactly 32 bytes. *Test:*
-  `test_announce_revision_hash_is_32_bytes`.
+- **KISS-ANNOUNCE-6.3-0003** — **`revision_hash` is a bounded, length-prefixed field.** (CireSnave
+  decision 310, R1.24 Q4, 2026-11-06, verbatim: "310: Q1: A. Q2: A. Q3: A. Q4: go with your
+  recommendation", the recommendation being the bounded leading-length field.) Wherever it is
+  written (an availability record §6.3-0005, an identity block §6.4-0001, §6.4-0011) a
+  `revision_hash` MUST be a 1-byte length `n` with `8 <= n <= 64`, then exactly `n` bytes. A
+  producer MUST write `n` in that range; a reader MUST decline an `n` outside it
+  (`RevisionHashLenOutOfRange`) before reading any hash byte, and MUST decline input that ends before
+  the `n` bytes (`Truncated`). A provider whose native build identifier is shorter than 32 bytes
+  writes it at its own length (a 64-bit counter is 8 bytes), and a longer one up to 64 is written as
+  is; the value stays opaque (§6.3-0008). *Informative:* no other field changes width here. A
+  fixed-size record stays fixed where records must be indexable, and another field takes this
+  pattern only where a measured cost justifies it. *Test:*
+  `test_announce_revision_hash_bounded_length`.
 - **KISS-ANNOUNCE-6.3-0007** — A consumer MUST compare `revision_hash` for equality
-  byte-for-byte over all 32 bytes. *Test:* `test_announce_revision_hash_compared_bytewise`.
+  byte-for-byte over all of its bytes, and two values of different length are different. *Test:* `test_announce_revision_hash_compared_bytewise`.
 - **KISS-ANNOUNCE-6.3-0008** — `revision_hash` MUST be treated as an opaque
   provider-assigned identifier compared only for equality; an implementation MUST NOT
   assume any particular hash algorithm or recomputable input domain from the announce
@@ -435,17 +446,17 @@ envelope; all multi-byte integers little-endian):
   `SAVL` (wire bytes `53 41 56 4C`, u32 LE `0x4C564153`) at offset 0. *Test:*
   `test_announce_availability_list_tag`.
 - **KISS-ANNOUNCE-6.3-0012** — Immediately after the tag, an availability list MUST
-  carry a 1-byte `list_version` (producer writes `2`) followed by 3 MBZ bytes; a
+  carry a 1-byte `list_version` (producer writes `3`) followed by 3 MBZ bytes; a
   reader MUST reject a nonzero MBZ byte or an unsupported `list_version` with a typed
   decline. `list_version` `1` (the `(structure_key, revision_hash)` record, no
-  `op_identity`) is **retired**: it is unsupported, and a reader MUST decline it rather than
-  read a `1` list as a `2` list (the record shapes differ, so a misread desynchronizes every
-  later record). *Test:* `test_announce_availability_list_version`.
+  `op_identity`) and `2` (the record with a fixed 32-byte `revision_hash`, no length byte) are
+  **retired**: they are unsupported, and a reader MUST decline them rather than read a `1` or `2`
+  list as a `3` list (the record shapes differ, so a misread desynchronizes every later record). *Test:* `test_announce_availability_list_version`.
 - **KISS-ANNOUNCE-6.3-0005** — After the `list_version` block, an availability list
   MUST be framed as a little-endian u32 `record_count` followed by that many
   availability records, each record being a little-endian u32 `structure_key`
   byte-length, the `structure_key` bytes, a little-endian u32 `op_identity` byte-length,
-  the `op_identity` bytes (§6.3-0013), then the 32-byte `revision_hash`. *Test:*
+  the `op_identity` bytes (§6.3-0013), then the `revision_hash` (a 1-byte length, then that many bytes, §6.3-0003). *Test:*
   `test_announce_availability_framing`.
 - **KISS-ANNOUNCE-6.3-0009** — A producer MUST write a per-record `structure_key`
   byte-length in the inclusive range `[1, 4096]` (`MAX_STRUCTURE_KEY_LEN = 4096`;
@@ -483,7 +494,7 @@ envelope; all multi-byte integers little-endian):
   4-byte request tag `CYRQ` (wire bytes `43 59 52 51`, u32 LE `0x51525943`); a
   little-endian u32 `structure_key` byte-length in `[1, 4096]`; the `structure_key`
   bytes; the `op_identity` length and bytes (§6.3-0013); then a 1-byte `revision_present`
-  flag (`0` or `1`); only when `revision_present == 1`, a 32-byte `revision_hash`; and
+  flag (`0` or `1`); only when `revision_present == 1`, the `revision_hash` (§6.3-0003); and
   then the correlation field (§6.4-0013). A
   reader MUST reject a `revision_present` value other than `0` or `1`, a `structure_key`
   length outside `[1, 4096]`, or an `op_identity` length outside `[1, 4096]`, with a typed
@@ -503,7 +514,7 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.4-0012** — When `revision_present == 0`, a provider that returns a
   contract MUST return the contract for the highest-ordered `revision_hash` it holds
   for that `(structure_key, op_identity)` pair (ordering = byte-for-byte lexicographic
-  descending over the 32-byte value), or, if it holds none and cannot provision one, a typed
+  descending over the value's bytes, a value that is a proper prefix of another ordering before it), or, if it holds none and cannot provision one, a typed
   decline (`UNKNOWN_STRUCTURE_KEY` or `CANNOT_PROVISION`); a held `structure_key` with no
   kernel for the requested `op_identity` is the same case, and a provider MUST NOT return
   another op's contract for it. *Test:*
@@ -511,8 +522,8 @@ envelope; all multi-byte integers little-endian):
 - **KISS-ANNOUNCE-6.4-0011** — A contract or decline **response** MUST echo the
   `(structure_key, op_identity, revision_hash)` identity it is answering for: the response
   carries a little-endian u32 `structure_key` length, the `structure_key` bytes, the
-  `op_identity` length and bytes (§6.3-0013), a 1-byte `revision_present` flag, when `revision_present == 1` the 32-byte
-  `revision_hash` the provider selected, and then the correlation field (§6.4-0013). *Test:* `test_announce_response_echoes_identity`.
+  `op_identity` length and bytes (§6.3-0013), a 1-byte `revision_present` flag, when `revision_present == 1` the
+  `revision_hash` (§6.3-0003) the provider selected, and then the correlation field (§6.4-0013). *Test:* `test_announce_response_echoes_identity`.
 - **KISS-ANNOUNCE-6.4-0004** — A **contract response** MUST be framed as: the 4-byte
   response tag `CRSP` (wire bytes `43 52 53 50`, u32 LE `0x50535243`); the echoed
   identity block (§6.4-0011); a little-endian u32 payload byte-length; then that many
@@ -707,6 +718,15 @@ Assigned bits (first draft):
   *what* an attestation carries and *where* is left to that profile, and KISS does not specify
   signing (umbrella §10.6). *Test:* `test_announce_attestation_bit_reserved`.
 - **KISS-ANNOUNCE-7.2-0012** — An implementation MUST interpret bit 35 as `DEVICE_QUERY`: the provider answers §6.6 device-query requests. *Test:* `test_announce_device_query_bit_assignment`.
+- **KISS-ANNOUNCE-7.2-0013** — **The handshake does not negotiate an op vocabulary.** (CireSnave
+  decision 310, R1.24 Q1 A, 2026-11-06.) No Announce frame (the envelope, an availability list, a
+  contract query or a device query) carries a list or snapshot of the ops a side knows; `SPEAKS_OPS`
+  (bit 50) says only that a side speaks KISS-Ops. An op is pinned per artifact by the Contract, and an
+  op a consumer does not know is resolved on the consumer's side by its reference decomposition
+  (KISS-Ops §7.3, 7.3-0001), not by any exchange. A reader MUST NOT decline an availability record,
+  or a handshake, because the record's `op_identity` names an op the reader does not know. A
+  provider-private spelling of an op (an importer name) is an adapter outside the KISS op
+  vocabulary, not a second namespace. *Test:* `test_announce_op_vocabulary_not_negotiated`.
 - **KISS-ANNOUNCE-7.2-0008** — A KISS-owned (EXT-mirror / FEAT / SUB) capability-bit
   assignment MUST originate from a merged change to the PR-gated KISS capability
   registry under ThinkersJournal; an implementation MUST NOT rely on an unregistered
@@ -835,7 +855,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-6.2-0017 | `test_announce_bytes_after_extent_unread` |
 | KISS-ANNOUNCE-6.3-0001 | `test_announce_availability_is_identity_pair` |
 | KISS-ANNOUNCE-6.3-0002 | `test_announce_availability_carries_no_capability` |
-| KISS-ANNOUNCE-6.3-0003 | `test_announce_revision_hash_is_32_bytes` |
+| KISS-ANNOUNCE-6.3-0003 | `test_announce_revision_hash_bounded_length` |
 | KISS-ANNOUNCE-6.3-0007 | `test_announce_revision_hash_compared_bytewise` |
 | KISS-ANNOUNCE-6.3-0008 | `test_announce_revision_hash_opaque_identity` |
 | KISS-ANNOUNCE-6.3-0008a | `test_announce_revision_hash_is_not_integrity` |
@@ -882,6 +902,7 @@ a free-standing Announce clause.
 | KISS-ANNOUNCE-7.2-0003 | `test_announce_feat_bit_assignments` |
 | KISS-ANNOUNCE-7.2-0004 | `test_announce_sub_bit_assignments` |
 | KISS-ANNOUNCE-7.2-0010 | `test_announce_sub_axis_is_presence_only` |
+| KISS-ANNOUNCE-7.2-0013 | `test_announce_op_vocabulary_not_negotiated` |
 | KISS-ANNOUNCE-7.2-0005 | `test_announce_reserved_range_tiers` |
 | KISS-ANNOUNCE-7.2-0006 | `test_announce_unassigned_bits_zero` |
 | KISS-ANNOUNCE-7.2-0007 | `test_announce_reader_ignores_unknown_capability_bits` |
@@ -941,7 +962,7 @@ vector for `test_announce_magic_constant`, `test_announce_field_offsets_match_ta
 value is `0x0000_0003_0000_003F` (EXT bits 0–5 | FEAT bit 32 | FEAT bit 33), wire
 bytes `3F 00 00 00 03 00 00 00`. Additional negative vectors (nonzero `reserved1`,
 50-byte packed layout, big-endian magic, `profiles_len = 17`, non-ascending profiles,
-a zero live profile, an over-cap `structure_key` length, a zero or over-cap `op_identity` length, a `list_version` 1 list, an over-cap `record_count`,
+a zero live profile, an over-cap `structure_key` length, a zero or over-cap `op_identity` length, a `list_version` 1 or 2 list, a `revision_hash` length byte of `0`, `7` or `65`, an over-cap `record_count`,
 an out-of-range `revision_present` flag) drive the §6.2 / §6.3 / §6.4 reject tests and
 are the adversarial-outsider battery for the foreign-reader freeze gate. Each message
 tag (`SEAM`/`CYRQ`/`CRSP`/`CDEC`/`SAVL`) carries a golden vector with an explicit

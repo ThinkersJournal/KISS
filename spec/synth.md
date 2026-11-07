@@ -241,7 +241,7 @@ strided cell.
 3. **Provision (level 3).** The consumer sends the contract-query request (tag
    `CYRQ`): the `u32` `structure_key` length, the `structure_key` bytes, the `u32`
    `op_identity` length and bytes (`add`), a `revision_present = 0` flag, and the correlation field (`00`: no id, KISS-ANNOUNCE-6.4-0013). On the miss, the provider **builds** the kernel (JIT),
-   assigns it a 32-byte `revision_hash`, and answers with `{artifact, contract}` in a
+   assigns it a `revision_hash` (8 to 64 bytes, KISS-Announce §6.3-0003), and answers with `{artifact, contract}` in a
    `PRSP` frame: the echoed `(structure_key, op_identity, revision_hash)` identity block (with
    `revision_present = 1`, the freshly assigned `revision_hash`, and the correlation field), a 4-byte
    `artifact_format_tag`, the `u64`-framed artifact bytes, then the `u32`-framed opaque
@@ -550,7 +550,7 @@ correct comparator. See umbrella §3 for the full statement.
   `KISS-ANNOUNCE-6.4-0001`): the 4-byte tag; a little-endian `u32` `structure_key`
   byte-length in `[1, 4096]`; the `structure_key` bytes; the `op_identity` length (in
   `[1, 4096]`) and bytes (`KISS-ANNOUNCE-6.3-0013`); a 1-byte `revision_present` flag
-  (`0` or `1`); and, only when `revision_present == 1`, the 32-byte `revision_hash`.
+  (`0` or `1`); and, only when `revision_present == 1`, the length-prefixed `revision_hash` (KISS-Announce §6.3-0003).
   *Test:* `test_synth_request_reuses_cyrq`.
 - **KISS-SYNTH-6.1-0002a** — A provision request MUST NOT introduce a new request shape;
   provision IS the Announce contract-query, generalized so the response MAY include a
@@ -689,7 +689,7 @@ correct comparator. See umbrella §3 for the full statement.
 - **KISS-SYNTH-6.3-0005** — When `revision_present == 0`, a provider that returns a
   provision success MUST return the kernel for the highest-ordered `revision_hash` it
   holds for that `(structure_key, op_identity)` pair (ordering = byte-for-byte lexicographic descending over
-  the 32-byte value, reusing `KISS-ANNOUNCE-6.4-0012`), or, if it holds none, MUST build a
+  the value's bytes, a proper prefix ordering before the longer value, reusing `KISS-ANNOUNCE-6.4-0012`), or, if it holds none, MUST build a
   revision (assigning it a `revision_hash`) and return that, or — if it holds none and
   cannot provision one — MUST return a typed decline (`UNKNOWN_STRUCTURE_KEY` or
   `CANNOT_PROVISION`). *Test:* `test_synth_default_revision_provision`.
@@ -697,7 +697,7 @@ correct comparator. See umbrella §3 for the full statement.
   provider MUST set `revision_present == 1` in the echoed identity block, regardless of
   the request's `revision_present`. *Test:* `test_synth_success_echo_revision_present`.
 - **KISS-SYNTH-6.3-0006a** — On any provision success, the echoed identity block MUST
-  include the selected or assigned 32-byte `revision_hash` of the returned kernel,
+  include the selected or assigned `revision_hash` of the returned kernel,
   regardless of the request's `revision_present`. *Test:*
   `test_synth_success_echo_revision_hash`.
 
@@ -877,7 +877,7 @@ correct comparator. See umbrella §3 for the full statement.
   *Test:* `test_synth_never_panics`.
 - **KISS-SYNTH-6.6-0001b** — A provider handling a provision request MUST NOT read beyond
   the bytes declared by the request framing (the fixed `CYRQ` fields, plus the declared
-  `structure_key` length, plus the declared `op_identity` length, plus the 32-byte `revision_hash` when `revision_present == 1`).
+  `structure_key` length, plus the declared `op_identity` length, plus the length-prefixed `revision_hash` (its length byte, then the length that byte declares) when `revision_present == 1`).
   *Test:* `test_synth_no_oob_read`.
 - **KISS-SYNTH-6.6-0001c** — A provider MUST return a response (a provision success or a
   typed decline) within its implementation-declared maximum latency bound; exceeding that
@@ -1000,7 +1000,7 @@ correct comparator. See umbrella §3 for the full statement.
   only by the queried contract. *Test:* `test_synth_availability_no_capability_fields`.
 - **KISS-SYNTH-6.7-0004** — A consumer MUST distinguish a cache **hit** from a **miss** by
   full byte-for-byte identity: a hit is a match on **all three** of `structure_key`,
-  `op_identity` and the 32-byte `revision_hash`, and any other case is a miss (reusing
+  `op_identity` and the `revision_hash` (equal length and bytes), and any other case is a miss (reusing
   `KISS-ANNOUNCE-6.3-0006`). *Test:* `test_synth_hit_miss_by_identity`.
 - **KISS-SYNTH-6.7-0004a** — A consumer MUST NOT treat a `structure_key` match alone as a
   hit. *Test:* `test_synth_hit_not_key_alone`.
@@ -1323,7 +1323,7 @@ golden vector for `test_synth_request_reuses_cyrq`,
 request with a `revision_present = 0` flag over the `bin/f32,f32,f32/strided/cuda:sm89`
 `structure_key`, answered — on a miss — by a `PRSP` provision-success frame carrying the
 echoed `(structure_key, op_identity, revision_hash)` identity (with `revision_present = 1` and the
-freshly assigned 32-byte `revision_hash`, per §6.3-0006 / §6.3-0006a), a 4-byte
+freshly assigned `revision_hash`, per §6.3-0006 / §6.3-0006a), a 4-byte
 `artifact_format_tag` naming the artifact's format/target family, a `u64` artifact
 byte-length + the freshly-built artifact bytes, then a `u32` contract byte-length + the
 opaque KISS-Contract document (a one-node `add` Semantics DAG, determinism class
