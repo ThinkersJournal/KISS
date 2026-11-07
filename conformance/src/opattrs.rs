@@ -183,6 +183,19 @@ pub fn encode_reduce_var(reduced: &[usize], rank: usize, keepdim: bool, bessel: 
     out
 }
 
+/// `reduce_mean` / `reduce_norm2` / `logsumexp` / `any` / `all`: reduce_axes, keepdim (§6.19-0043).
+pub fn encode_reduction_family(reduced: &[usize], rank: usize, keepdim: bool) -> Vec<u8> {
+    let mut out = Vec::new();
+    push_u16_le(&mut out, reduce_axes_reduction(reduced, rank));
+    out.push(keepdim as u8);
+    out
+}
+
+/// `argmax` / `argmin`: keepdim, tie_rule (§6.19-0044, §6.19-0045).
+pub fn encode_arg_reduce(keepdim: bool, tie_rule: crate::structural::TieRule) -> Vec<u8> {
+    vec![keepdim as u8, tie_rule.ordinal()]
+}
+
 /// `softmax` / `log_softmax` / `rms_norm` / `layer_norm`: `norm_axes`, the §6.19-0020 `reduce_axes` word
 /// for the normalized axis set of an operand of `rank` (§6.19-0031).
 pub fn encode_norm_axes(axes: &[usize], rank: usize) -> Vec<u8> {

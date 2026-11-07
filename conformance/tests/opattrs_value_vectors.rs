@@ -12,12 +12,13 @@ use kiss_conformance::opattrs::{
     SortDirection,
 };
 use kiss_conformance::opattrs_schema::parse_table;
+use kiss_conformance::structural::TieRule;
 use kiss_conformance::opattrs_value::{
     self as ov, encode, encode_vectors, equivalences, not_emitted, Attrs, EncodeVector, Value,
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 212; // 180 + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations (0.9.0)
+const POPULATION: usize = 284; // 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -148,6 +149,19 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
             let (a, r) = axes(v);
             opattrs::encode_reduce_var(&a, r, flag(v, "keepdim"), flag(v, "bessel_correction"))
         }
+        "reduce_mean" | "reduce_norm2" | "logsumexp" | "any" | "all" => {
+            let (a, r) = axes(v);
+            opattrs::encode_reduction_family(&a, r, flag(v, "keepdim"))
+        }
+        "argmax" | "argmin" => {
+            let t = match tok(v, "tie_rule") {
+                "lowest" => TieRule::Lowest,
+                "highest" => TieRule::Highest,
+                "any" => TieRule::Any,
+                t => panic!("tie_rule {t}"),
+            };
+            opattrs::encode_arg_reduce(flag(v, "keepdim"), t)
+        }
         "softmax" | "log_softmax" | "rms_norm" | "layer_norm" => {
             let (a, r) = axes(v);
             opattrs::encode_norm_axes(&a, r)
@@ -274,8 +288,8 @@ fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     let eqs = equivalences();
     assert_eq!(
         eqs.len(),
-        10,
-        "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan, cast"
+        17,
+        "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan, cast,          reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin"
     );
     for e in &eqs {
         assert!(!e.omitted.is_empty(), "{}: an equivalence that omits nothing proves nothing", e.op);
@@ -340,14 +354,15 @@ fn reduce_and_prefix_scan_are_minted_at_six_bytes_with_the_pinned_ordinals() {
     }
 }
 
-// harness-internal: guards the suite's `is_fixed` keepdim special case against drift in the spec prose; asserts text, not an implementation
+// harness-internal: guards the suite's treatment of `keepdim` as a real (non-fixed) flag against drift in the spec prose; asserts text, not an implementation
 #[test]
-fn the_fixed_keepdim_exception_is_still_what_the_clause_says() {
-    // `is_fixed` special-cases `keepdim` because the table row omits it; the clause is the authority
+fn keepdim_is_a_real_flag_and_the_clause_says_so() {
+    // `is_fixed` no longer special-cases `keepdim`; the clause is the authority
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/ops.md")).unwrap().replace("\r\n", "\n");
     let at = spec.find("KISS-OPS-6.19-0030").expect("clause");
     let clause = &spec[at..at + 700];
-    assert!(clause.contains("`keepdim` (bool `u8`, fixed"), "6.19-0030 no longer says keepdim is fixed");
+    assert!(clause.contains("`keepdim` (bool `u8`, default `1`"), "6.19-0030 no longer says keepdim defaults to 1");
+    assert!(!clause.contains("`keepdim` (bool `u8`, fixed"), "6.19-0030 still says keepdim is fixed");
     assert!(spec.contains("`MAX_RANK = 8` and `MAX_OPERANDS = 16`"), "pinned constants moved");
 }
 

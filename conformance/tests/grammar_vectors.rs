@@ -155,13 +155,16 @@ fn test_grammar_vectors_match_appendix_a1() {
 #[test]
 fn test_grammar_vectors_state_their_own_population() {
     let json = grammar::emit_grammar_vectors_json();
-    for declared in ["G1", "G2", "G3", "G4", "G5"] {
+    for declared in ["G1", "G2", "G3", "G4", "G5", "S1", "S2", "S3", "S4", "S5", "S6"] {
         assert!(
             json.contains(&format!("\"{declared}\"")),
             "Appendix A.1 declares {declared}; the artifact must name it as rendered or unrendered"
         );
     }
-    assert!(json.contains("\"rendered_vectors\": [\"G1\", \"G3\", \"G4\"]"), "rendered set must be stated");
+    assert!(
+        json.contains("\"rendered_vectors\": [\"G1\", \"G3\", \"G4\", \"S1\", \"S2\", \"S3\", \"S4\", \"S5\", \"S6\"]"),
+        "rendered set must be stated"
+    );
     assert!(
         json.contains("\"unrendered_vectors\": [\"G2\", \"G5\"]"),
         "the UNRENDERED vectors must be named — a quiet omission is the defect this closes"
@@ -187,9 +190,9 @@ fn test_grammar_vectors_state_their_own_population() {
 #[test]
 fn test_grammar_golden_regions_are_singly_defined() {
     let regions = grammar::golden_regions();
-    assert_eq!(regions.len(), 2, "G1 and G4 are the buildable Appendix A.1 vectors");
-    assert_eq!(regions[0].0, "G1");
-    assert_eq!(regions[1].0, "G4");
+    assert_eq!(regions.len(), 8, "G1, G4 and the six Source vectors S1..S6 are the buildable Appendix A.1 vectors");
+    let ids: Vec<&str> = regions.iter().map(|r| r.0).collect();
+    assert_eq!(ids, ["G1", "G4", "S1", "S2", "S3", "S4", "S5", "S6"]);
     // The canonical builder and the artifact agree by construction — encode the region here and
     // compare to what the generator emitted, so a divergence between the two paths reddens.
     let json = grammar::emit_grammar_vectors_json();

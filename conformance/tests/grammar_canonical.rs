@@ -68,6 +68,7 @@ fn op_name_at(wire: &[u8], name: &str) -> usize {
 fn label(n: &ParsedNode) -> String {
     match n {
         ParsedNode::Bind(i) => format!("bind{i}"),
+        ParsedNode::Source(s) => format!("source{}", s.tag()),
         ParsedNode::Op { op_name, .. } => op_name.clone(),
     }
 }
@@ -249,8 +250,12 @@ fn test_grammar_operand_role_tuple() {
 #[test]
 fn test_grammar_wire_extract_record_order() {
     let _clause = "KISS-GRAMMAR-6.8-0011";
-    // Author three extracts OUT OF ORDER by param_slot: 2, 0, 1.
-    let mut r = g1_region();
+    // Author three extracts OUT OF ORDER by param_slot: 2, 0, 1. The targets are param leaves
+    // (§6.4-0014): `select` is positional, so its operands sit at indices 0, 1, 2 as authored.
+    let sel = |a: u32, b: u32, c: u32| {
+        Region::new(0, "1", "1", Node::op("select", vec![Node::Source(SourceLeaf::Param(a)), Node::Source(SourceLeaf::Param(b)), Node::Source(SourceLeaf::Param(c))]))
+    };
+    let mut r = sel(0, 2, 1);
     r.extracts = vec![
         Extract { path: vec![1], param_slot: 2 },
         Extract { path: vec![0], param_slot: 0 },
@@ -265,7 +270,7 @@ fn test_grammar_wire_extract_record_order() {
 
     // Tie case: two records share param_slot 5 with paths [2] and [1] -> lex-least
     // path [1] first.
-    let mut t = g1_region();
+    let mut t = sel(5, 5, 5);
     t.extracts = vec![
         Extract { path: vec![2], param_slot: 5 },
         Extract { path: vec![1], param_slot: 5 },
@@ -289,19 +294,20 @@ fn test_grammar_wire_extract_record_order() {
 #[test]
 fn test_grammar_extract_channel_on_root() {
     let _clause = "KISS-GRAMMAR-6.4-0007";
-    // G1 with zero extracts: 5 nodes, 0 extracts.
-    let base = decode(&encode(&g1_region()).unwrap()).unwrap();
-    assert_eq!(base.nodes.len(), 5, "G1 node_count is 5");
-    assert_eq!(base.extracts.len(), 0, "G1 has no extracts");
+    // A region with a param leaf (§6.4-0014) and zero extracts: 3 nodes, 0 extracts.
+    let region = || Region::new(1, "1", "1", Node::op("mul", vec![Node::Bind(0), Node::Source(SourceLeaf::Param(0))]));
+    let base = decode(&encode(&region()).unwrap()).unwrap();
+    assert_eq!(base.nodes.len(), 3, "the region has 3 nodes (Bind, param leaf, mul)");
+    assert_eq!(base.extracts.len(), 0, "no extracts");
 
     // Add ONE scalar extract, root-anchored (path is operand indices from the root).
-    let mut r = g1_region();
-    r.extracts = vec![Extract { path: vec![0], param_slot: 0 }];
+    let mut r = region();
+    r.extracts = vec![Extract { path: vec![1], param_slot: 0 }];
     let pr = decode(&encode(&r).unwrap()).unwrap();
-    assert_eq!(pr.nodes.len(), 5, "{_clause}: scalar rides extract channel, node_count unchanged");
+    assert_eq!(pr.nodes.len(), 3, "{_clause}: the extract adds no node, node_count unchanged");
     assert_eq!(pr.extracts.len(), 1, "the scalar added a tail extract record (0 -> 1)");
     // The extract round-trips root-anchored.
-    assert_eq!(pr.extracts[0], Extract { path: vec![0], param_slot: 0 }, "extract root-anchored");
+    assert_eq!(pr.extracts[0], Extract { path: vec![1], param_slot: 0 }, "extract root-anchored");
 }
 
 // ---------------------------------------------------------------------------

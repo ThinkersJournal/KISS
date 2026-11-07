@@ -45,6 +45,7 @@ pub const TAG_ADD: u8 = 0x05;
 pub const TAG_SUB: u8 = 0x06;
 pub const TAG_MUL: u8 = 0x07;
 pub const TAG_DIV: u8 = 0x08;
+pub const TAG_MAX: u8 = 0x0C; // DimExpr: the larger of two sizes, the zero clamp (§6.20-0012)
 pub const TAG_REDUCE: u8 = 0x09; // reserved (no consumer; extension-registry, umbrella §6.4)
 pub const TAG_WITH_DIM: u8 = 0x0A; // ShapeExpr, experimental extension (§6.20-0009, umbrella §6.4)
 pub const TAG_DIMS: u8 = 0x0B; // ShapeExpr, experimental extension (§6.20-0010, umbrella §6.4)
@@ -78,6 +79,8 @@ pub enum Dim {
     Mul(Box<Dim>, Box<Dim>),
     /// Floor division (rounds toward −∞).
     Div(Box<Dim>, Box<Dim>),
+    /// The larger of the two sizes (§6.20-0012); `Max(e, Const(0))` is the clamp of `e` at zero.
+    Max(Box<Dim>, Box<Dim>),
 }
 
 /// A whole-shape expression (`ShapeExpr`). The closed core is `SameAs`; `WithDim`
@@ -186,6 +189,7 @@ impl Dim {
             Dim::Sub(a, b) => encode_binary(TAG_SUB, a, b),
             Dim::Mul(a, b) => encode_binary(TAG_MUL, a, b),
             Dim::Div(a, b) => encode_binary(TAG_DIV, a, b),
+            Dim::Max(a, b) => encode_binary(TAG_MAX, a, b),
         }
     }
 }
@@ -232,7 +236,7 @@ fn decode_dim_at(blob: &[u8], pos: usize) -> Result<(Dim, usize), ShapeExprError
             need(blob, pos, 2)?;
             Ok((Dim::Param(blob[pos + 1]), pos + 2))
         }
-        TAG_ADD | TAG_SUB | TAG_MUL | TAG_DIV => {
+        TAG_ADD | TAG_SUB | TAG_MUL | TAG_DIV | TAG_MAX => {
             let (c1, p1) = read_child(blob, pos + 1)?;
             let (c2, p2) = read_child(blob, p1)?;
             let (a, b) = (Box::new(c1), Box::new(c2));
@@ -240,6 +244,7 @@ fn decode_dim_at(blob: &[u8], pos: usize) -> Result<(Dim, usize), ShapeExprError
                 TAG_ADD => Dim::Add(a, b),
                 TAG_SUB => Dim::Sub(a, b),
                 TAG_MUL => Dim::Mul(a, b),
+                TAG_MAX => Dim::Max(a, b),
                 _ => Dim::Div(a, b),
             };
             Ok((d, p2))
@@ -382,6 +387,7 @@ pub fn eval_dim(d: &Dim, operands: &[Vec<i64>], params: &[i64]) -> Result<DimVal
         Dim::Div(a, b) => eval_binary(eval_dim(a, operands, params)?, eval_dim(b, operands, params)?, |x, y| {
             if y == 0 { Err(ShapeExprError::DivideByZero) } else { Ok(floordiv(x, y)) }
         }),
+        Dim::Max(a, b) => eval_binary(eval_dim(a, operands, params)?, eval_dim(b, operands, params)?, |x, y| Ok(x.max(y))),
     }
 }
 

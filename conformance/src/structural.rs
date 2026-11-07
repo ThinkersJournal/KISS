@@ -892,6 +892,89 @@ pub fn layer_norm_ref(x: &[f64], shape: &[usize], axes: &[usize], gamma: &[f64],
     out
 }
 
+/// Whether `(values, index)` is a conformant output of `sort_network` over `row` (KISS-Ops §6.11-0007).
+/// With `stable = true` the output must equal the one stable permutation [`sort_network`] returns. With
+/// `stable = false` (`stability = 0`) ANY permutation passes in which the keys are ordered under the key
+/// order of `direction` (NaN greatest; `±0` and any two NaNs tied) and the two outputs agree bit for bit
+/// (`values[k]` is `row[index[k]]`, `index` a permutation of `0..n`).
+pub fn sort_network_conforms(row: &[f32], direction: SortDirection, stable: bool, values: &[f32], index: &[usize]) -> bool {
+    let n = row.len();
+    if values.len() != n || index.len() != n {
+        return false;
+    }
+    let mut seen = vec![false; n];
+    for &i in index {
+        if i >= n || std::mem::replace(&mut seen[i], true) {
+            return false;
+        }
+    }
+    if !index.iter().zip(values).all(|(&i, v)| row[i].to_bits() == v.to_bits()) {
+        return false;
+    }
+    if stable {
+        let (sv, si) = sort_network(row, direction);
+        return si == index && sv.iter().zip(values).all(|(a, b)| a.to_bits() == b.to_bits());
+    }
+    values.windows(2).all(|w| {
+        let c = nan_greatest_cmp(w[0], w[1]);
+        match direction {
+            SortDirection::Ascending => c != Ordering::Greater,
+            SortDirection::Descending => c != Ordering::Less,
+        }
+    })
+}
+
+/// The `tie_rule` of `argmax` / `argmin` (KISS-Ops §6.11-0021): the frozen `u8` ordinal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TieRule {
+    Lowest,
+    Highest,
+    Any,
+}
+
+impl TieRule {
+    /// The wire ordinal (`0` is reserved).
+    pub fn ordinal(self) -> u8 {
+        match self {
+            TieRule::Lowest => 1,
+            TieRule::Highest => 2,
+            TieRule::Any => 3,
+        }
+    }
+}
+
+/// The extreme-value positions of a row under the §6.11-0007 key order: the greatest (`argmax`, so a NaN
+/// wins) or the least (`argmin`, so a NaN loses unless every element is NaN). Returns every tied index.
+fn extreme_positions(row: &[f32], max: bool) -> Vec<usize> {
+    let best = (0..row.len()).reduce(|b, i| {
+        let c = nan_greatest_cmp(row[i], row[b]);
+        if (max && c == Ordering::Greater) || (!max && c == Ordering::Less) { i } else { b }
+    });
+    match best {
+        None => vec![],
+        Some(b) => (0..row.len()).filter(|&i| nan_greatest_cmp(row[i], row[b]) == Ordering::Equal).collect(),
+    }
+}
+
+/// `argmax` (`max = true`) / `argmin` (`max = false`) with a tie rule (KISS-Ops §6.11-0021): the lowest tied
+/// index, the highest, or (for `Any`) the lowest as the reference's representative. `None` for an empty row.
+pub fn arg_extreme(row: &[f32], max: bool, tie_rule: TieRule) -> Option<usize> {
+    let tied = extreme_positions(row, max);
+    match tie_rule {
+        TieRule::Lowest | TieRule::Any => tied.first().copied(),
+        TieRule::Highest => tied.last().copied(),
+    }
+}
+
+/// Whether `returned` is conformant for an `argmax`/`argmin` over `row` under `tie_rule`: for `Lowest` and
+/// `Highest` exactly that index; for `Any`, every tied index and no other (§6.11-0021).
+pub fn arg_extreme_conforms(row: &[f32], max: bool, tie_rule: TieRule, returned: usize) -> bool {
+    match tie_rule {
+        TieRule::Any => extreme_positions(row, max).contains(&returned),
+        _ => arg_extreme(row, max, tie_rule) == Some(returned),
+    }
+}
+
 // ---- concat (KISS-Ops §6.11-0020) ---------------------------------------------
 
 /// `concat`: join row-major `parts` end to end along `axis` (§6.11-0020). Each part is `(data, extents)`.

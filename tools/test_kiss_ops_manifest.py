@@ -175,17 +175,17 @@ class DecompositionGraphTest(unittest.TestCase):
 
     def test_carrier_clauses_control_is_parsed_and_clean(self):
         region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
-        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 19)
+        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 26)
         self.assertEqual(self.carrier_violations(self.ops), [])
 
     def test_carrier_clause_dropping_a_carrier_is_caught(self):
-        v = self.carrier_violations(self.mutate("index_select, embedding, scatter_add, cast, concat}",
-                                                "index_select, embedding, cast, concat}"))
+        v = self.carrier_violations(self.mutate("index_select, embedding, scatter_add, cast, concat,",
+                                                "index_select, embedding, cast, concat,"))
         self.assertTrue(any("scatter_add" in m for m in v), v)
 
     def test_noncarrier_with_a_schema_row_is_caught(self):
-        v = self.carrier_violations(self.mutate("`reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`",
-                                                "`reduce_mean`, `reduce_norm2`, `logsumexp`, `reduce`, `argmax`"))
+        v = self.carrier_violations(self.mutate("`cumprod`, and `cummax`.",
+                                                "`cumprod`, `reduce`, and `cummax`."))
         self.assertTrue(any("`reduce` is named a non-carrier" in m for m in v), v)
 
     def test_noncarrier_without_an_inner_carrier_node_is_caught(self):
@@ -267,8 +267,8 @@ class DecompositionGraphTest(unittest.TestCase):
 
     def test_sort_network_gaining_an_index_wire_field_is_caught(self):
         v = self.index_violations(self.mutate(
-            "`stability`:bool `u8`:`1` (fixed, §6.11-0007) |",
-            "`stability`:bool `u8`:`1` (fixed, §6.11-0007) — `index_dtype`:enum `u8`:`3` |"))
+            "`stability`:bool `u8`:`1` (§6.11-0007) |",
+            "`stability`:bool `u8`:`1` (§6.11-0007) — `index_dtype`:enum `u8`:`3` |"))
         self.assertTrue(any("§6.11-0019: the `sort_network`" in m for m in v), v)
 
     def test_max_rank_beyond_a_u8_axis_is_caught(self):
@@ -288,9 +288,9 @@ class DecompositionGraphTest(unittest.TestCase):
         self.assertEqual(self.atom_violations(self.ops), [])
 
     def test_reduce_keepdim_no_longer_fixed_is_caught(self):
-        v = self.atom_violations(self.mutate("`keepdim`:bool `u8`:`1` (fixed, §6.11-0008) —",
-                                             "`keepdim`:bool `u8`:`0` (§6.11-0008) —"))
-        self.assertTrue(any("`reduce` row no longer fixes" in m for m in v), v)
+        v = self.atom_violations(self.mutate("`keepdim`:bool `u8`:`1` (§6.11-0008) — `accumulator`",
+                                             "`keepdim`:bool `u8`:`0` (§6.11-0008) — `accumulator`"))
+        self.assertTrue(any("`reduce` row no longer carries" in m for m in v), v)
 
     def test_prefix_scan_gaining_keepdim_is_caught(self):
         v = self.atom_violations(self.mutate(

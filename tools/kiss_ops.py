@@ -526,14 +526,14 @@ def check_index_clauses(ops, v):
 
 
 def check_structural_atoms(ops, v):
-    """§6.11-0008: the `reduce` §6.19.3 row fixes `keepdim` at `1` and cites the clause, and the
+    """§6.11-0008: the `reduce` §6.19.3 row carries the real `keepdim` flag (default `1`) and cites the clause, and the
     length-preserving `prefix_scan` row has no `keepdim` field to drop an axis with.
     §6.11-0016: the clause and the §6.20-0008 shape-rule enumeration both pin the `scatter` output
     shape to `SameAs(dest)` and cite each other."""
     region = between(ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**", where="§6.19.3 table")
     rows = {_op(c[0]): c[1] for c in table_cells(region) if _op(c[0])}
-    if "`keepdim`:bool `u8`:`1` (fixed, §6.11-0008)" not in rows.get("reduce", ""):
-        v.append("§6.11-0008: the `reduce` row no longer fixes `keepdim` at `1` citing §6.11-0008")
+    if "`keepdim`:bool `u8`:`1` (§6.11-0008)" not in rows.get("reduce", ""):
+        v.append("§6.11-0008: the `reduce` row no longer carries `keepdim` (default `1`) citing §6.11-0008")
     if "keepdim" in rows.get("prefix_scan", "keepdim"):
         v.append("§6.11-0008: the `prefix_scan` row is missing or names a `keepdim` field, but "
                  "the op retains all axes")

@@ -605,7 +605,7 @@
 # F1 ops (cast + concat, board 304 R5.7; PM-approved option B): harness 483 -> 490, untested 393 -> 394. Eight NEW clauses: KISS-OPS-6.11-0020,
 # 6.19-0041, 6.19-0042, 6.20-0011, 6.21-0001/-0002/-0003 are harness-backed by tests/cast_atom.rs and tests/structural_access.rs;
 # KISS-OPS-6.21-0004 (a negative rule on producers and consumers) arrives unbacked with a recorded reason. lint unmoved.
-harness	507
+harness	515
 lint	44
 untested	393
 proven	20

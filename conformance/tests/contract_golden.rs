@@ -166,6 +166,18 @@ fn test_contract_text_op_dag() {
         children: vec![],
     };
     assert_eq!(serialize_op_dag(&gather), "[Op{gather; axis=k, oob=clamp; []}]");
+
+    // A `Source` node (KISS-GRAMMAR-6.4-0013) renders as `Source{<tag>; <source_attrs>}`; a
+    // `const` carries its exact bits (a NaN payload included), most significant byte first.
+    use kiss_conformance::grammar::SourceLeaf as S;
+    let c = |bits: u32| S::Const { dtype: "f32".into(), bits: bits.to_le_bytes().to_vec() };
+    assert_eq!(render_source_node(&c(0x3F80_0000)), "Source{const; dtype=f32, bits=0x3F800000}");
+    assert_eq!(render_source_node(&c(0x7FC0_0001)), "Source{const; dtype=f32, bits=0x7FC00001}");
+    assert_eq!(render_source_node(&S::Param(0)), "Source{param; index=0}");
+    assert_eq!(render_source_node(&S::Coord(1)), "Source{coord; axis=1}");
+    assert_eq!(render_source_node(&S::Reduced(0)), "Source{reduced; stage=0}");
+    assert_eq!(render_source_node(&S::Extent(2)), "Source{extent; axis=2}");
+    assert_eq!(render_source_node(&S::ReducedCount), "Source{reduced_count; }");
 }
 
 /// Enforces[enforced]: KISS-CONTRACT-6.1-0002 — a reader MUST fail loudly with a typed
