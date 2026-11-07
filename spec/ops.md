@@ -1440,7 +1440,11 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `D = d·(k − 1) + 1`; the output extent is `⌊(n + 2p − D) / s⌋ + 1` when `n + 2p ≥ D` and
   `0` when it is not (no window fits); output window `o` (`0 ≤ o < output extent`) has tap
   `j` (`0 ≤ j < k`) at operand position `o·s − p + j·d`; and a tap is in bounds exactly when
-  that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. *Test:*
+  that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. Written in
+  the shape-expression vocabulary (§6.20-0002) the output extent is
+  `Max(Add(Div(Sub(Add(n, 2p), D), s), 1), 0)`, and it is the `Max` (§6.20-0012) that makes the
+  no-window-fits case `0` and not a negative extent: for `n = 2`, `k = 8`, `s = 1`, `d = 1`,
+  `p = 0` the term before the clamp is `-5` and the output extent is `0`. *Test:*
   `test_ops_window_output_extent`.
 - **KISS-OPS-6.13-0011** — On every spatial axis of an `avg_pool`, `max_pool` or `im2col`
   window view, every output window MUST have at least one in-bounds tap (§6.13-0010), so
@@ -2540,7 +2544,7 @@ the shared surface is two constructors.
 - **KISS-OPS-6.20-0002** — A shape rule MUST be expressed in the closed
   **shape-expression vocabulary** `ShapeExpr := SameAs(operand)` (the operand's whole
   shape) and `DimExpr := Extent(operand, axis) | Const(i64) | Param(field) | DimExpr
-  BinOp DimExpr` with `BinOp ∈ {+, −, ×, ÷}`. An `operand` reference MUST be a
+  BinOp DimExpr` with `BinOp ∈ {+, −, ×, ÷, max}` (`max` is §6.20-0012). An `operand` reference MUST be a
   **positional** operand index in KISS-Classify canonical operand order — an op_dag
   interior node carries no operand-role tuple (KISS-CONTRACT §6.4-0009), so a role
   name is a KISS-Grammar/Contract surface alias defined by the position mapping,
@@ -2571,7 +2575,7 @@ the shared surface is two constructors.
   as an opaque-op / telemetry gap. *Test:* `test_shape_expr_symbolic_gap`.
 - **KISS-OPS-6.20-0005** — A shape expression MUST serialize in the §6.19 canonical
   form: a one-byte **tag** (`0` reserved per §6.19-0006; `SameAs=0x01`, `Extent=0x02`,
-  `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`; the
+  `Const=0x03`, `Param=0x04`, `Add=0x05`, `Sub=0x06`, `Mul=0x07`, `Div=0x08`, `Max=0x0C`; the
   reserved `Reduce=0x09` — never emitted, no consumer; and the **experimental,
   registry-gated** `WithDim=0x0A` / `Dims=0x0B`, activated by the umbrella §6.4 entry
   and specified at §6.20-0009 / §6.20-0010), fixed-width little-endian
@@ -2646,6 +2650,17 @@ the shared surface is two constructors.
   activating the §6.20-0005 tag `0x0B`). A core encoder MUST NOT emit `0x0B`, and a producer
   MUST NOT emit it at all until that registry entry is in force. *Test:*
   `test_shape_expr_dims_extension`.
+- **KISS-OPS-6.20-0012** — The `DimExpr` operator `Max(a, b)` — canonical functional spelling
+  **`max(a, b)`** — MUST denote the larger of the two evaluated sizes (both `i64`; equal values
+  give that value). A surfaced **gap** in either operand MUST propagate to a gap (§6.20-0004): the
+  larger of an unknown length and a number is unknown. It MUST serialize under the §6.19
+  canonical discipline exactly as `Add` does (§6.20-0005): the one-byte tag `0x0C`, then each
+  child expression **definite-length-prefixed** with a `u16` LE byte length (§6.19-0010). The
+  **clamp** of a size `e` at zero is `Max(e, Const(0))`: it is how a size computed by a
+  subtraction stays non-negative, so that "no window fits" is the size `0` and never a negative
+  extent. A reader MUST decode a `Max` blob with a typed decline for a truncated or trailing
+  child (§6.20-0006). CireSnave, board 358, verbatim: "358: A". *Test:*
+  `test_shape_expr_max_clamp`.
 - **KISS-OPS-6.20-0011** — A `cast` output shape MUST be `SameAs(operand 0)`. A `concat` output shape
   MUST be the shape of its operand 0 with the `axis` extent (§6.11-0020) replaced by the sum of the
   operands' `axis` extents; like the `matmul` shape of §6.20-0008 it is a semantic rule of the op, not a
@@ -3007,6 +3022,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.20-0009 | `test_shape_expr_withdim_extension` |
 | KISS-OPS-6.20-0010 | `test_shape_expr_dims_extension` |
 | KISS-OPS-6.20-0011 | `test_shape_rule_cast_concat_no_view_ops` |
+| KISS-OPS-6.20-0012 | `test_shape_expr_max_clamp` |
 | KISS-OPS-6.21-0001 | `test_ops_cast_atom_shape_and_dtype` |
 | KISS-OPS-6.21-0002 | `test_ops_cast_rounding_modes` |
 | KISS-OPS-6.21-0003 | `test_ops_cast_saturation` |

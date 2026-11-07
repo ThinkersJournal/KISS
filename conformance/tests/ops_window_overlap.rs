@@ -61,6 +61,26 @@ fn test_ops_window_output_extent() {
     assert_eq!(axis(5, 3, 1, 1, 1).output_extent(), Ok(5));
     assert_eq!(axis(7, 3, 2, 2, 0).output_extent(), Ok(2)); // D = 5, (7-5)/2 + 1
     assert_eq!(axis(2, 3, 2, 1, 0).output_extent(), Ok(0)); // D = 5 > 2: no window fits
+    // The same extent written in the shape-expression vocabulary (§6.20-0002, §6.20-0012): the `Max`
+    // clamp is what makes "no window fits" 0, over the whole grid, against the closed form above.
+    use kiss_conformance::shape_expr::{eval_dim, Dim, DimValue};
+    let b = |d: Dim| Box::new(d);
+    let c = |v: i64| b(Dim::Const(v));
+    let (n, k, s, d, p) = (b(Dim::Extent { operand: 0, axis: 0 }), b(Dim::Param(0)), b(Dim::Param(1)), b(Dim::Param(2)), b(Dim::Param(3)));
+    let dilated = Dim::Add(b(Dim::Mul(d, b(Dim::Sub(k, c(1))))), c(1));
+    let span = Dim::Sub(b(Dim::Add(n, b(Dim::Mul(c(2), p)))), b(dilated));
+    let extent = Dim::Max(b(Dim::Add(b(Dim::Div(b(span), s)), c(1))), c(0));
+    for a in grid() {
+        if matches!(brute(&a), Err(Decline::NoRealTap { .. })) {
+            continue;
+        }
+        let want = a.output_extent().expect("grid axes have non-zero parameters") as i64;
+        let got = eval_dim(&extent, &[vec![a.extent as i64]], &[a.window_size as i64, a.stride as i64, a.dilation as i64, a.padding as i64]);
+        assert_eq!(got, Ok(DimValue::Concrete(want)), "{a:?}");
+    }
+    // input 2, window 8, stride 1: -5 before the clamp, 0 after
+    let small = eval_dim(&extent, &[vec![2]], &[8, 1, 1, 0]);
+    assert_eq!(small, Ok(DimValue::Concrete(0)));
     for zero in [axis(5, 0, 1, 1, 0), axis(5, 3, 0, 1, 0), axis(5, 3, 1, 0, 0)] {
         assert_eq!(zero.output_extent(), Err(Decline::ZeroParameter), "{zero:?}");
     }
