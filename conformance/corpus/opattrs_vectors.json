@@ -149,33 +149,33 @@
     {
       "op": "softmax",
       "clauses": ["KISS-OPS-6.19-0031"],
-      "blob_bytes": 1,
+      "blob_bytes": 2,
       "fields": [
-        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+        {"ordinal": 0, "name": "norm_axes", "width": "u16le", "offset": 0}
       ]
     },
     {
       "op": "log_softmax",
       "clauses": ["KISS-OPS-6.19-0031"],
-      "blob_bytes": 1,
+      "blob_bytes": 2,
       "fields": [
-        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+        {"ordinal": 0, "name": "norm_axes", "width": "u16le", "offset": 0}
       ]
     },
     {
       "op": "rms_norm",
       "clauses": ["KISS-OPS-6.19-0031"],
-      "blob_bytes": 1,
+      "blob_bytes": 2,
       "fields": [
-        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+        {"ordinal": 0, "name": "norm_axes", "width": "u16le", "offset": 0}
       ]
     },
     {
       "op": "layer_norm",
       "clauses": ["KISS-OPS-6.19-0031"],
-      "blob_bytes": 1,
+      "blob_bytes": 2,
       "fields": [
-        {"ordinal": 0, "name": "norm_axis", "width": "u8", "offset": 0}
+        {"ordinal": 0, "name": "norm_axes", "width": "u16le", "offset": 0}
       ]
     },
     {

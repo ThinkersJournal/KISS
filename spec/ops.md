@@ -1410,7 +1410,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   about a running mean — and MUST NOT be computed as `E[x²] − E[x]²` (the §6.13 row's
   non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
   `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
-  normalization axis; `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
+  normalization axes (`norm_axes`, §6.19-0031); `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
   `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
   `reduced_count` — and the valid-tap count from the pooled view); `im2col` MUST
@@ -1502,16 +1502,28 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   inf/NaN edge that `cabs` (§6.18-0007) relies on, so standalone `hypot` and `cabs` agree.
   *Test:* `test_ops_hypot_inf_nan`.
 - **KISS-OPS-6.13-0008** — `rms_norm` and `layer_norm` MUST each carry an explicit
-  **normalization-axis** attribute `norm_axis` — the axis over which the mean-square
-  (`rms_norm`) or the mean and variance (`layer_norm`) is taken — of the same role, width,
-  and legal range as the `softmax` / `log_softmax` normalization axis required by
-  §6.13-0004: a non-negative integer in the range `0 <= norm_axis < MAX_RANK` (§6.19-0037),
-  carried as the `u8` OpAttrs `norm_axis` field of §6.19-0031. The §6.13-0004 requirement
-  that a parameterized op declare its normalization axis explicitly therefore covers all
-  four of `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`; an implementation MUST
-  reject a `norm_axis` outside the range with a typed decline and MUST NOT let an unstated
-  normalization axis change the op's pinned result. *Test:* `test_ops_norm_axis_all_four`.
-
+  **normalization-axes** attribute `norm_axes` — the **non-empty set** of axes over which the
+  mean-square (`rms_norm`) or the mean and variance (`layer_norm`) is taken — of the same role,
+  width, and legal range as the `softmax` / `log_softmax` normalization axes required by
+  §6.13-0004: any non-empty subset of `0 .. MAX_RANK-1` (§6.19-0037), carried as the `u16`
+  OpAttrs `norm_axes` field of §6.19-0031 in exactly the §6.19-0020 `reduce_axes` encoding
+  (any subset, one encoding across the spec). The §6.13-0004 requirement that a parameterized
+  op declare its normalization axes explicitly therefore covers all four of `softmax`,
+  `log_softmax`, `rms_norm`, and `layer_norm`; an implementation MUST reject an empty set
+  (`0x0000`, §6.19-0038) or an axis at or past the operand rank with a typed decline and MUST
+  NOT let an unstated normalization axis change the op's pinned result. **Several axes are
+  taken together:** the mean, the mean square, the variance, the maximum and the sum are each
+  formed over **all** selected axes at once (the divisor of a mean is the product of the
+  selected extents, `reduced_count`, §6.12-0001), never axis by axis, and a single selected
+  axis is the case of one. **`gamma` and `beta`:** the element of `gamma` (`rms_norm`,
+  `layer_norm`) and of `beta` (`layer_norm`) read for the output element at coordinate `c` is
+  the one at `c` restricted to the selected axes taken in ascending axis order, so the
+  parameter's own shape is the **normalized sub-shape** — the operand's extents on the
+  selected axes, in ascending axis order, whether or not those axes are contiguous (a
+  PyTorch `weight` of shape `normalized_shape` is the contiguous trailing case). Presented in
+  the iteration frame it has the operand's extent on each selected axis and extent `1` with
+  stride `0` on every other axis (the §6.11-0001 broadcast), and a parameter whose extent on a
+  selected axis differs from the operand's is a typed decline. *Test:* `test_ops_norm_axes_all_four`.
 ### 6.14 Termination guarantee (recursive resolution)
 
 - **KISS-OPS-6.14-0001** — Each op MUST have exactly one integer level: `level(op)=0`
@@ -2158,7 +2170,7 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0009** — A genuinely optional OpAttrs attribute MUST occupy an explicit
   slot and MUST NOT be represented by omission. Every schema field in this op-set version
   is either **mandatory** (caller-supplied, e.g. `monoid`, a mandatory `reduce_axes`,
-  `axis`, `index_operand`, `index_dtype`, `norm_axis`) or **mandatory-with-resolved-
+  `axis`, `index_operand`, `index_dtype`, `norm_axes`) or **mandatory-with-resolved-
   default** (e.g. `oob_policy`, `direction`, `exclusivity`, `count_include_pad`,
   `output_column_ordering`, and the fixed-by-decomposition or fixed-constant flags), and
   in all cases is **always present and explicitly emitted** at its effective value; a
@@ -2340,10 +2352,10 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `all` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
 | `argmax` | `keepdim`:bool `u8`:`1` (§6.11-0008) — `tie_rule`:`tie_rule` enum `u8`:`1` (lowest, §6.11-0021) |
 | `argmin` | `keepdim`:bool `u8`:`1` (§6.11-0008) — `tie_rule`:`tie_rule` enum `u8`:`1` (lowest, §6.11-0021) |
-| `softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
-| `log_softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
-| `rms_norm` | `norm_axis`:`u8`:mandatory (§6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
-| `layer_norm` | `norm_axis`:`u8`:mandatory (§6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)`, `beta`=`input(2)` are operands/params, NOT OpAttrs) |
+| `softmax` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0004) |
+| `log_softmax` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0004) |
+| `rms_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
+| `layer_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)`, `beta`=`input(2)` are operands/params, NOT OpAttrs) |
 | `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
 | `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec |
 | `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
@@ -2403,10 +2415,12 @@ by the embedding layer) selects the schema and the reader replays it positionall
   population, §6.13-0004), in that order. *Test:*
   `e2_reduce_var_population`.
 - **KISS-OPS-6.19-0031** — The `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`
-  OpAttrs blobs MUST each be exactly a single `norm_axis` (`u8`, mandatory, range
-  `0..MAX_RANK-1`) field — the normalization axis pinned by §6.13-0004 for
-  `softmax`/`log_softmax` and by §6.13-0008 for `rms_norm`/`layer_norm`; the
-  `eps`/`gamma`/`beta` quantities of `rms_norm`/`layer_norm` are operands/params
+  OpAttrs blobs MUST each be exactly a single `norm_axes` (`u16` LE, mandatory) field — the
+  non-empty set of normalization axes pinned by §6.13-0004 for `softmax`/`log_softmax` and by
+  §6.13-0008 for `rms_norm`/`layer_norm` — encoded as the §6.19-0020 `reduce_axes` word under
+  its rank-aware total precedence (`0xFFFF` every axis, `0xFFFE` the lone trailing axis of a
+  rank > 1 operand, otherwise the subset mask in the low byte; `0x0000` forbidden, §6.19-0038);
+  the `eps`/`gamma`/`beta` quantities of `rms_norm`/`layer_norm` are operands/params
   (§6.13 operand-ordering convention), NOT OpAttrs fields. *Test:*
   `e2_softmax_norm_axis`.
 - **KISS-OPS-6.19-0032** — The `avg_pool` OpAttrs blob MUST be exactly `window_size`,
@@ -2979,7 +2993,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0005 | `test_ops_pow_full_domain` |
 | KISS-OPS-6.13-0006 | `test_ops_decomposition_body_grammar` |
 | KISS-OPS-6.13-0007 | `test_ops_hypot_inf_nan` |
-| KISS-OPS-6.13-0008 | `test_ops_norm_axis_all_four` |
+| KISS-OPS-6.13-0008 | `test_ops_norm_axes_all_four` |
 | KISS-OPS-6.13-0009 | `test_ops_structured_decomposition_reference` |
 | KISS-OPS-6.13-0010 | `test_ops_window_output_extent` |
 | KISS-OPS-6.13-0011 | `test_ops_window_overlap_declined` |
@@ -3366,9 +3380,12 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     flags now.  I know it's more work across the board but it allows substantially more
     flexibility both now and in the future." Each accepts `0` and `1`, keeps its slot
     position, and defaults to `1` (§6.11-0007, §6.11-0008, §6.19-0022).
-    (i) **single-axis `norm_axis`** — modeled as one `u8`; confirm `softmax`/`log_softmax`
-    never normalize over multiple axes this version (which would need a `reduce_axes`-style
-    `u16`).
+    (i) **`norm_axes`, several axes** — CireSnave 2026-11-07: "PyTorch's normalized_shape allows
+    LayerNorm over several trailing axes.  As such, Unpopped's IR must as well.  If Unpopped's
+    IR can express that then KISS must have the ability to decribe it at the seams where it
+    applies." and, choosing the encoding (option B of `docs/options-r5-7-multi-axis-norm.md`):
+    "391: B". `softmax`/`log_softmax`/`rms_norm`/`layer_norm` take a `u16` axis mask in the
+    `reduce_axes` encoding (§6.19-0031, §6.13-0008).
 12. **`cast`: the values this version leaves open (added 2026-10-29, F1, options note
     `docs/options-cast-op-f1.md`).** §6.21 adds the conversion atom and pins the attributes, the
     enum encodings, single rounding and the cases a destination clause already fixes. It pins **no**
@@ -3452,7 +3469,9 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
   `math_fidelity`=bit-stable `01` → **`03 FF FF 01 00 01`** (6 bytes).
 - **`sort_network(ascending, stable)` over a rank-2 operand** (§6.19-0029): `axis`=trailing
   `01`, `direction`=ascending `01`, `stability`=stable `01` → **`01 01 01`** (3 bytes).
-- **`softmax(norm_axis=1)`** (§6.19-0031): `norm_axis` `01` → **`01`** (1 byte).
+- **`softmax(norm_axes={1})` over a rank-2 operand** (§6.19-0031): `norm_axes` is the lone trailing axis, `0xFFFE` → **`FE FF`** (2 bytes).
+- **`layer_norm(norm_axes={1,2})` over a rank-3 operand** (§6.19-0031; PyTorch `normalized_shape` of two trailing dims): a subset, mask `0b110` → **`06 00`** (2 bytes).
+- **`rms_norm(norm_axes={0,2})` over a rank-4 operand** (§6.19-0031; non-contiguous): mask `0b0101` → **`05 00`** (2 bytes).
 - **`index_select(axis=0, index_operand=1, index_dtype=u32)`** (§6.19-0034): `axis` `00`,
   `index_operand` `01`, `index_dtype`=u32 `01` → **`00 01 01`** (3 bytes).
 - **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding=`[0,0]`,
