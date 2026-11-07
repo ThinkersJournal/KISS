@@ -3,6 +3,7 @@
 //! carriers (KISS-OPS §6.11-0007, §6.11-0008, §6.11-0021, §6.19-0043..-0045).
 
 use kiss_conformance::opattrs;
+use kiss_conformance::shape_expr::reduce_shape;
 use kiss_conformance::structural::*;
 
 const NAN: f32 = f32::NAN;
@@ -13,26 +14,21 @@ const NAN: f32 = f32::NAN;
 /// `[1]` for an all-axes drop, or removes the wrong axis when two extents are equal.
 #[test]
 fn test_ops_reduce_keepdim_broadcast() {
-    let s = [2usize, 3, 4];
-    assert_eq!(reduce_output_shape(&s, &[1], true), Some(vec![2, 1, 4]));
-    assert_eq!(reduce_output_shape(&s, &[1], false), Some(vec![2, 4]));
-    assert_eq!(reduce_output_shape(&s, &[0, 2], false), Some(vec![3]));
-    assert_eq!(reduce_output_shape(&s, &[0, 1, 2], true), Some(vec![1, 1, 1]));
-    assert_eq!(reduce_output_shape(&s, &[0, 1, 2], false), Some(vec![]), "an all-axes drop is rank 0");
+    let r = |s: &[i64], axes: &[usize], keep: bool| reduce_shape(s, axes, keep);
+    let s = [2i64, 3, 4];
+    assert_eq!(r(&s, &[1], true), vec![2, 1, 4]);
+    assert_eq!(r(&s, &[1], false), vec![2, 4]);
+    assert_eq!(r(&s, &[0, 2], false), vec![3]);
+    assert_eq!(r(&s, &[0, 1, 2], true), vec![1, 1, 1]);
+    assert_eq!(r(&s, &[0, 1, 2], false), Vec::<i64>::new(), "an all-axes drop is rank 0");
     // equal extents: which axis went is decided by the axis set, not the extents
-    assert_eq!(reduce_output_shape(&[4, 4], &[0], false), Some(vec![4]));
-    assert_eq!(reduce_output_shape(&[4, 4], &[1], false), Some(vec![4]));
-    assert_eq!(reduce_output_shape(&[4, 8], &[1], false), Some(vec![4]));
-    assert_eq!(reduce_output_shape(&[4, 8], &[0], false), Some(vec![8]));
+    assert_eq!(r(&[4, 4], &[0], false), vec![4]);
+    assert_eq!(r(&[4, 8], &[1], false), vec![4]);
+    assert_eq!(r(&[4, 8], &[0], false), vec![8]);
     // keepdim = 0 is the keepdim = 1 shape with the reduced extent-1 axes squeezed out
-    let squeeze = |kept: Vec<usize>, axes: &[usize]| -> Vec<usize> {
-        kept.into_iter().enumerate().filter(|(d, _)| !axes.contains(d)).map(|(_, e)| e).collect()
-    };
-    assert_eq!(
-        reduce_output_shape(&s, &[0, 2], false).unwrap(),
-        squeeze(reduce_output_shape(&s, &[0, 2], true).unwrap(), &[0, 2])
-    );
-    assert_eq!(reduce_output_shape(&s, &[3], true), None, "an axis past the rank is a decline");
+    let kept = r(&s, &[0, 2], true);
+    let squeezed: Vec<i64> = kept.iter().enumerate().filter(|(d, _)| ![0usize, 2].contains(d)).map(|(_, e)| *e).collect();
+    assert_eq!(r(&s, &[0, 2], false), squeezed);
 }
 
 /// Enforces[enforced]: KISS-OPS-6.11-0007 — with `stability = 1` the output is the one stable

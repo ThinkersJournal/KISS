@@ -921,25 +921,6 @@ pub fn arg_extreme_conforms(row: &[f32], max: bool, tie_rule: TieRule, returned:
     }
 }
 
-/// The output shape of a reduction (KISS-Ops §6.11-0008): `keepdim = 1` sets every reduced axis to extent 1;
-/// `keepdim = 0` removes them (rank 0 when every axis is reduced). `None` when an axis is out of range.
-pub fn reduce_output_shape(shape: &[usize], reduced: &[usize], keepdim: bool) -> Option<Vec<usize>> {
-    if reduced.iter().any(|&a| a >= shape.len()) {
-        return None;
-    }
-    Some(
-        shape
-            .iter()
-            .enumerate()
-            .filter_map(|(d, &e)| match (reduced.contains(&d), keepdim) {
-                (true, true) => Some(1),
-                (true, false) => None,
-                (false, _) => Some(e),
-            })
-            .collect(),
-    )
-}
-
 // ---- concat (KISS-Ops §6.11-0020) ---------------------------------------------
 
 /// `concat`: join row-major `parts` end to end along `axis` (§6.11-0020). Each part is `(data, extents)`.
