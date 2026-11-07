@@ -337,7 +337,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, and `concat`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -1068,27 +1068,45 @@ section-intro paragraph is an informative pointer to it):
   tie-break), so `assign` never depends on hardware race order. *Test:*
   `scatter_fp_atomic_add_is_order_invariant_class`.
 - **KISS-OPS-6.11-0007** — `sort_network` MUST carry a `direction` attribute in
-  `{ascending, descending}` (default `ascending`) and MUST perform a **stable** per-row
+  `{ascending, descending}` (default `ascending`) and a boolean `stability` flag (default
+  `1`, §6.19-0022). With `stability = 1` it MUST perform a **stable** per-row
   permutation under a total order on `(key, original-index)` pairs in which NaN orders as
   the greatest value (ascending → NaN last, descending → NaN first) and ties break by the
-  lower original index (the stability rule). It MUST expose **two** outputs: (a) the values
+  lower original index (the stability rule). With `stability = 0` it MUST perform **any**
+  per-row permutation in which the keys are non-decreasing (`ascending`) or non-increasing
+  (`descending`) in the same key order, where keys that compare equal in that order — two
+  equal numbers, `+0` and `-0`, and any two NaNs whatever their payloads — are tied and MAY
+  appear in any relative order; a reference or a reader MUST accept every such permutation
+  and MUST reject any other, and the two outputs below MUST agree with each other bit for
+  bit (`values[k]` is `x[index[k]]`, and `index` is a permutation of the row's positions).
+  It MUST expose **two** outputs: (a) the values
   written back as a raw-bit permutation, and (b) the **original-index vector** — for each
   output rank, the source position it came from. It MUST be treated as a structural atom
   with no monoid. (`argmax` reads rank 0 of the index vector under `direction=descending`
   and `argmin` reads rank 0 under `direction=ascending`, §6.13 table. Because NaN orders as
   the greatest value, `argmax` selects the lowest-index NaN when any element is NaN, whereas
   `argmin` never selects a NaN while any element is non-NaN and selects index `0` when every
-  element is NaN; both resolve ties to the lower original index. This **differs from
+  element is NaN; with their default `tie_rule = 1` (§6.11-0021) both resolve ties to the
+  lower original index. This **differs from
   NumPy and PyTorch**, where `argmin` and `argmax` both return the NaN index: here the rule
   is derived from this clause's total order (NaN greatest), not chosen as a NaN-propagation
   policy.) *Test:*
   `test_ops_sort_network_total_order`.
-- **KISS-OPS-6.11-0008** — `reduce` MUST retain each reduced axis as an extent-`1` axis
-  with stride `0` (a keepdim result) so the reduced value broadcasts back over the
-  original axis via extent-1 / stride-0, so a shifted-shape decomposition such as
-  `sub(x, reduce(max, x))` reads the reduced value at every position of the original axis;
-  `prefix_scan` MUST retain all axes (length-preserving). *Test:*
-  `test_ops_reduce_keepdim_broadcast`.
+- **KISS-OPS-6.11-0008** — `reduce`, and every reduction-family op that carries the flag
+  (§6.19-0043), MUST carry a boolean `keepdim` (default `1`, §6.19-0022). With `keepdim = 1`
+  it MUST retain each reduced axis as an extent-`1` axis with stride `0` (a keepdim result)
+  so the reduced value broadcasts back over the original axis via extent-1 / stride-0, so a
+  shifted-shape decomposition such as `sub(x, reduce(max, x))` reads the reduced value at
+  every position of the original axis. With `keepdim = 0` the result MUST be the
+  `keepdim = 1` result with every reduced axis **removed**: the output rank is the input
+  rank minus the number of reduced axes, the surviving axes keep their order and extents,
+  and when **every** axis is reduced the output has **rank 0** (a scalar), never a rank-1
+  extent-1 tensor. That removal is pure shape and changes no element value or bit; it is
+  the `keepdim = 1` result with the reduced extent-1 axes squeezed out, so a decomposition
+  that needs the broadcast-back above MUST name `keepdim = 1` explicitly, and a `keepdim =
+  0` result is turned back into a broadcastable operand only by inserting the reduced axes
+  again. `prefix_scan` MUST retain all axes (length-preserving) and carries no `keepdim`.
+  *Test:* `test_ops_reduce_keepdim_broadcast`.
 - **KISS-OPS-6.11-0009** — The legal `index_dtype` set for the index operand of `gather`,
   `scatter`, `index_select`, `embedding`, and `scatter_add` MUST be exactly `{u32, i32,
   i64}`; an implementation MUST reject any other `index_dtype` with a typed decline. This
@@ -1223,6 +1241,21 @@ section-intro paragraph is an informative pointer to it):
   promoted, and no input is broadcast. An input with a zero `axis` extent contributes no elements; an
   operand-shape disagreement or a dtype disagreement is a typed decline. *Test:*
   `test_ops_concat_semantics`.
+- **KISS-OPS-6.11-0021** — `argmax` and `argmin` MUST carry a `tie_rule` attribute, the frozen
+  `u8` ordinal `{1 = lowest, 2 = highest, 3 = any}` with `0` reserved (default `1`,
+  §6.19-0044, §6.19-0045), which decides the index returned when several positions hold the extreme
+  value in the §6.11-0007 total order (NaN greatest; two NaNs, and `+0` with `-0`, are
+  equal for this purpose). `1` = the **lowest** tied original index (the §6.11-0007 stable
+  rule, and the behavior before this clause); `2` = the **highest** tied original index;
+  `3` = **any** tied index, conformant if and only if the element at the returned index
+  equals the extreme in that order (a reader MUST accept every tied index and reject every
+  other). The reference decomposition of `tie_rule = 1` is the stable `sort_network`
+  (`stability = 1`) of §6.13; of `tie_rule = 2` the same stable sort of the axis-reversed
+  view of the operand followed by `extent(axis) - 1 - index`; of `tie_rule = 3` a
+  `sort_network` with `stability = 0` (§6.11-0007). The `tie_rule` of an `argmax` or `argmin`
+  and the `stability` of a `sort_network` are **independent** attributes of different ops:
+  an `argmax` never inherits a `stability`, and a `sort_network` with `stability = 0` does
+  not change an `argmax` whose `tie_rule` is `1`. *Test:* `test_ops_argmax_tie_rule`.
 
 ### 6.12 Scalar-source leaves
 
@@ -2086,7 +2119,8 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0003** — The set of **carrier** ops (ops with a non-empty OpAttrs
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
-  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat}`; every
+  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
+  reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2185,6 +2219,7 @@ inlined normatively in §6.19-0037.
 | `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
 | `cast_rounding` | enum, `u8` | `0`=RESERVED, `1`=nearest-even, `2`=toward-zero, `3`=toward-negative-infinity, `4`=toward-positive-infinity |
 | `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
+| `tie_rule` | enum, `u8` | `0`=RESERVED, `1`=lowest, `2`=highest, `3`=any |
 | `boolean-flag` | bool, `u8` | `0`=false, `1`=true (both meaningful; `0` NOT reserved) |
 | `reduce_axes` | multiplexed category+bitmask, `u16` LE | `0x0000`=none/not-a-reduction; `0x0001..0x00FF`=per-axis subset keepdim mask (bit `k`⇔axis `k`, ≥1 bit set); `0x0100..0xFFFD`=RESERVED (never emitted); `0xFFFE`=trailing-axis (innermost) only; `0xFFFF`=all-axes. Category selected by the rank-aware total precedence of §6.19-0020 (all-axes beats trailing beats subset; `0xFFFF` covers the rank-1 sole-axis case and every all-axes case) |
 | `window-param-vector` | ordered length-prefixed vector | `u8` element-count prefix (`0..MAX_RANK`), then count × `u32` LE elements, in ascending operand spatial-axis order (element `i` ⇔ spatial axis `i`, outermost spatial axis first; never sorted) |
@@ -2258,9 +2293,9 @@ inlined normatively in §6.19-0037.
 - **KISS-OPS-6.19-0022** — Every boolean OpAttrs field (`keepdim`, `stability`,
   `bessel_correction`, `count_include_pad`) MUST be encoded as a `u8` with `0`=false and
   `1`=true; a boolean field is NOT subject to the reserve-`0` enum rule (both values are
-  meaningful), and MUST be emitted explicitly at its resolved value even where this
-  op-set version pins it to a constant (`keepdim`=1 per §6.11-0008, `stability`=1 per
-  §6.11-0007). *Test:* `test_ops_opattrs_boolean_flags`.
+  meaningful), and MUST be emitted explicitly at its resolved value. `keepdim` (§6.11-0008)
+  and `stability` (§6.11-0007) are real flags: each accepts `0` and `1`, each defaults to
+  `1`, and a reader MUST NOT reject a `0`. *Test:* `test_ops_opattrs_boolean_flags`.
 - **KISS-OPS-6.19-0023** — Every window-parameter OpAttrs vector (`window_size`,
   `stride`, `dilation`, `padding`) MUST be encoded as a `u8` element-count prefix
   (`0..MAX_RANK`, §6.19-0037) immediately followed by that many `u32` little-endian
@@ -2287,13 +2322,20 @@ by the embedding layer) selects the schema and the reader replays it positionall
 
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
-| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (fixed, §6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
+| `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
-| `sort_network` | `axis`:`u8`:trailing axis `r-1` (§6.11-0014) — `direction`:enum `u8`:`1` (ascending) — `stability`:bool `u8`:`1` (fixed, §6.11-0007) |
+| `sort_network` | `axis`:`u8`:trailing axis `r-1` (§6.11-0014) — `direction`:enum `u8`:`1` (ascending) — `stability`:bool `u8`:`1` (§6.11-0007) |
 | `reduce_var` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` — `bessel_correction`:bool `u8`:`0` (population) |
 | `reduce_std` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` — `bessel_correction`:bool `u8`:`0` (population) |
+| `reduce_mean` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
+| `reduce_norm2` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
+| `logsumexp` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
+| `any` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
+| `all` | `reduce_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) |
+| `argmax` | `keepdim`:bool `u8`:`1` (§6.11-0008) — `tie_rule`:`tie_rule` enum `u8`:`1` (lowest, §6.11-0021) |
+| `argmin` | `keepdim`:bool `u8`:`1` (§6.11-0008) — `tie_rule`:`tie_rule` enum `u8`:`1` (lowest, §6.11-0021) |
 | `softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
 | `log_softmax` | `norm_axis`:`u8`:mandatory (§6.13-0004) |
 | `rms_norm` | `norm_axis`:`u8`:mandatory (§6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
@@ -2309,7 +2351,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
-  `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, fixed `1`) then
+  `0x0000` forbidden per §6.19-0020/§6.19-0038) then `keepdim` (bool `u8`, default `1`, §6.11-0008) then
   — **(sk4)** — `accumulator` (`u8`) then `math_fidelity` (`u8`), in that order. **`accumulator`**
   is `0x00` when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal, its
   resolved default), otherwise the **1-based §6.1-table dtype ordinal** of the accumulator, which
@@ -2349,11 +2391,11 @@ by the embedding layer) selects the schema and the reader replays it positionall
   `e2_scatter_atomic_add`.
 - **KISS-OPS-6.19-0029** — The `sort_network` OpAttrs blob MUST be exactly `axis` (`u8`,
   the permuted axis of §6.11-0014, resolving to the trailing axis `r-1`) then `direction`
-  (`sort_direction` enum `u8`, default `1` ascending) then `stability` (bool `u8`, fixed
-  `1` stable), in that order. *Test:* `e2_sort_network_ascending_stable`.
+  (`sort_direction` enum `u8`, default `1` ascending) then `stability` (bool `u8`, default
+  `1` stable, `0` unstable, §6.11-0007), in that order. *Test:* `e2_sort_network_ascending_stable`.
 - **KISS-OPS-6.19-0030** — The `reduce_var` and `reduce_std` OpAttrs blobs MUST each be
   exactly `reduce_axes` (`u16` LE, mandatory; `0x0000` forbidden per §6.19-0038) then
-  `keepdim` (bool `u8`, fixed `1`) then `bessel_correction` (bool `u8`, default `0`
+  `keepdim` (bool `u8`, default `1`, §6.11-0008) then `bessel_correction` (bool `u8`, default `0`
   population, §6.13-0004), in that order. *Test:*
   `e2_reduce_var_population`.
 - **KISS-OPS-6.19-0031** — The `softmax`, `log_softmax`, `rms_norm`, and `layer_norm`
@@ -2393,6 +2435,43 @@ by the embedding layer) selects the schema and the reader replays it positionall
   are emitted explicitly (§6.19-0005); a reader MUST decline a `cast` blob whose `target_dtype` is
   `0x00` or names no §6.1 dtype, or whose enum field is `0` or outside its set. *Test:*
   `test_ops_opattrs_cast_concat_schema`.
+- **KISS-OPS-6.19-0043** — The `reduce_mean`, `reduce_norm2`, `logsumexp`, `any` and `all`
+  OpAttrs blobs MUST each be exactly `reduce_axes` (`u16` LE, mandatory; `0x0000` forbidden
+  per §6.19-0038, encoded by §6.19-0020) then `keepdim` (bool `u8`, default `1`, §6.11-0008),
+  in that order. Their reference decompositions (§6.13) apply the `keepdim = 1` form to the
+  inner `reduce`; with `keepdim = 0` the op's result is that result with the reduced axes
+  removed (§6.11-0008). *Test:* `test_ops_reduction_family_keepdim_blob`.
+- **KISS-OPS-6.19-0044** — The `argmax` and `argmin` OpAttrs blobs MUST each be exactly
+  `keepdim` (bool `u8`, default `1`, §6.11-0008) then `tie_rule` (enum `u8`, default `1`
+  lowest, §6.11-0021), in that order; the reduced axis is the trailing axis `r-1` resolved
+  from the inner `sort_network` (§6.11-0014, §6.19-0029) and is not a field here. With
+  `keepdim = 1` the index output keeps the reduced axis as extent `1`; with `keepdim = 0` it
+  is removed (rank 0 for a rank-1 operand). *Test:* `test_ops_argmax_blob_order`.
+- **KISS-OPS-6.19-0037** — For the OpAttrs channel of this op-set version the pinned
+  constants that bound the `axis`, `index_operand`, subset-mask, and vector-length fields
+  MUST take the concrete values `MAX_RANK = 8` and `MAX_OPERANDS = 16` (raised from `8` with the Classify constant at `sk7`; the OpAttrs bytes are unchanged, only the upper bound of `index_operand` widens from `7` to `15`). These are the same
+  shared-anchor constants referenced by name from the data vocabulary (§2.8); their values
+  are inlined here (exactly as §6.16 inlines the dtype bit layouts) so this document is
+  self-contained and every range MUST of §6.19 is verifiable from KISS-Ops plus the
+  umbrella alone, and they are **co-versioned with Classify** (a change to either value in
+  the shared anchor moves this value with it, §6.19-0011). `MAX_RANK = 8` satisfies the
+  KISS-Ops-local invariant `MAX_RANK <= 8` that the `reduce_axes` low-byte `u8` per-axis
+  subset mask (§6.19-0020) requires. A conforming encoder MUST NOT emit an `axis` field
+  `>= MAX_RANK`, an `index_operand` field `>= MAX_OPERANDS`, a subset mask with a bit set
+  at a position `>= MAX_RANK`, or a window/permutation vector whose element count exceeds
+  `MAX_RANK`; a reader MUST reject any such out-of-range field with a typed decline.
+  *Test:* `test_ops_opattrs_max_rank_operands_pinned`.
+- **KISS-OPS-6.19-0038** — `reduce_var` and `reduce_std` MUST NOT emit `reduce_axes=0x0000`,
+  exactly as `reduce` and `prefix_scan` MUST NOT (§6.19-0020). Because every carrier op
+  that owns a `reduce_axes` field (`reduce`, `prefix_scan`, `reduce_var`, `reduce_std`) is
+  a reduction or a scan, the none/not-a-reduction sentinel `0x0000` is **unreachable** in
+  any OpAttrs blob of this op-set version — its sole role is the Classify `structure_key`
+  `-` token reconciliation (§6.19-0035), not the OpAttrs channel. A reader MUST reject
+  `reduce_axes=0x0000` on any carrier OpAttrs blob as malformed. *Test:*
+  `test_ops_opattrs_reduce_axes_zero_unreachable`.
+- **KISS-OPS-6.19-0045** — The `tie_rule` OpAttrs field MUST be encoded as the frozen `u8` ordinal
+  `{1=lowest, 2=highest, 3=any}` with `0` reserved (§6.11-0021); it appears only in the `argmax` and
+  `argmin` schemas. *Test:* `test_ops_tie_rule_enum_ordinals`.
 
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
@@ -2422,8 +2501,7 @@ promoted to this normative OpAttrs encoding for that channel only.
 #### 6.19.5 Foundational constants and cross-op axis resolution
 
 - **KISS-OPS-6.19-0036** — Several advertised, axis-parameterized non-primitive ops are
-  **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field):
-  `reduce_mean`, `reduce_norm2`, `logsumexp`, `argmax`, `argmin`, `any`, `all`, `cumsum`,
+  **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field): `cumsum`,
   `cumprod`, and `cummax`. A consumer that natively matches one of these ops — and therefore does not
   expand its §6.13 reference decomposition (§6.14-0004) — MUST obtain the reduce/scan axis
   by resolving the axis of the **inner carrier node** of that op's reference decomposition
@@ -2433,32 +2511,9 @@ promoted to this normative OpAttrs encoding for that channel only.
   `reduce_std` are carriers of a free `reduce_axes` field **not** because their axis would
   otherwise be unspecified but solely because they additionally carry the
   `bessel_correction` attribute (§6.19-0030), which has no inner-carrier source and must be
-  declared alongside the axis; `reduce_mean`, `reduce_norm2`, and `logsumexp` carry no such
-  extra attribute and so remain non-carriers whose axis is resolved from their inner
-  `reduce` node. *Test:* `test_ops_opattrs_noncarrier_axis_resolution`.
-- **KISS-OPS-6.19-0037** — For the OpAttrs channel of this op-set version the pinned
-  constants that bound the `axis`, `index_operand`, subset-mask, and vector-length fields
-  MUST take the concrete values `MAX_RANK = 8` and `MAX_OPERANDS = 16` (raised from `8` with the Classify constant at `sk7`; the OpAttrs bytes are unchanged, only the upper bound of `index_operand` widens from `7` to `15`). These are the same
-  shared-anchor constants referenced by name from the data vocabulary (§2.8); their values
-  are inlined here (exactly as §6.16 inlines the dtype bit layouts) so this document is
-  self-contained and every range MUST of §6.19 is verifiable from KISS-Ops plus the
-  umbrella alone, and they are **co-versioned with Classify** (a change to either value in
-  the shared anchor moves this value with it, §6.19-0011). `MAX_RANK = 8` satisfies the
-  KISS-Ops-local invariant `MAX_RANK <= 8` that the `reduce_axes` low-byte `u8` per-axis
-  subset mask (§6.19-0020) requires. A conforming encoder MUST NOT emit an `axis` field
-  `>= MAX_RANK`, an `index_operand` field `>= MAX_OPERANDS`, a subset mask with a bit set
-  at a position `>= MAX_RANK`, or a window/permutation vector whose element count exceeds
-  `MAX_RANK`; a reader MUST reject any such out-of-range field with a typed decline.
-  *Test:* `test_ops_opattrs_max_rank_operands_pinned`.
-- **KISS-OPS-6.19-0038** — `reduce_var` and `reduce_std` MUST NOT emit `reduce_axes=0x0000`,
-  exactly as `reduce` and `prefix_scan` MUST NOT (§6.19-0020). Because every carrier op
-  that owns a `reduce_axes` field (`reduce`, `prefix_scan`, `reduce_var`, `reduce_std`) is
-  a reduction or a scan, the none/not-a-reduction sentinel `0x0000` is **unreachable** in
-  any OpAttrs blob of this op-set version — its sole role is the Classify `structure_key`
-  `-` token reconciliation (§6.19-0035), not the OpAttrs channel. A reader MUST reject
-  `reduce_axes=0x0000` on any carrier OpAttrs blob as malformed. *Test:*
-  `test_ops_opattrs_reduce_axes_zero_unreachable`.
-
+  declared alongside the axis. (`reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax` and `argmin` were
+  non-carriers until the `keepdim` flag made them carriers, §6.19-0043, §6.19-0044.) *Test:*
+  `test_ops_opattrs_noncarrier_axis_resolution`.
 #### 6.19.6 Index-lane wire references (recipe/FlatDag seam)
 
 The recipe/FlatDag container wire that carries these references — its node list, its
@@ -2898,6 +2953,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0018 | `test_ops_structural_empty_axis` |
 | KISS-OPS-6.11-0019 | `test_ops_sort_index_output_i64` |
 | KISS-OPS-6.11-0020 | `test_ops_concat_semantics` |
+| KISS-OPS-6.11-0021 | `test_ops_argmax_tie_rule` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -3001,6 +3057,9 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0040 | `test_ops_index_outputs_root_list` |
 | KISS-OPS-6.19-0041 | `test_ops_opattrs_cast_enums` |
 | KISS-OPS-6.19-0042 | `test_ops_opattrs_cast_concat_schema` |
+| KISS-OPS-6.19-0043 | `test_ops_reduction_family_keepdim_blob` |
+| KISS-OPS-6.19-0044 | `test_ops_argmax_blob_order` |
+| KISS-OPS-6.19-0045 | `test_ops_tie_rule_enum_ordinals` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
@@ -3287,9 +3346,10 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     cited by the §6.19-0031 schema; no longer resolved only in this open-question list. The
     indexed `axis` of `gather`/`scatter`/`index_select`/`embedding`/`scatter_add` is
     likewise now pinned by §6.11-0013. (h)
-    **fixed-constant flags** — `keepdim` (§6.11-0008) and `stability` (§6.11-0007) are
-    pinned to `1` and emitted as explicit slots (R1 favors retaining for additive-friendly
-    growth); confirm the design intent to keep them rather than drop for a smaller blob.
+    **`keepdim` and `stability` are real flags** — CireSnave 2026-11-07: "Make both real
+    flags now.  I know it's more work across the board but it allows substantially more
+    flexibility both now and in the future." Each accepts `0` and `1`, keeps its slot
+    position, and defaults to `1` (§6.11-0007, §6.11-0008, §6.19-0022).
     (i) **single-axis `norm_axis`** — modeled as one `u8`; confirm `softmax`/`log_softmax`
     never normalize over multiple axes this version (which would need a `reduce_axes`-style
     `u16`).

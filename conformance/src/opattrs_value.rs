@@ -131,6 +131,7 @@ fn vocab_of(field: &str) -> Option<&'static str> {
         "math_fidelity" => "math_fidelity",
         "rounding" => "cast_rounding",
         "saturation" => "cast_saturation",
+        "tie_rule" => "tie_rule",
         _ => return None,
     })
 }
@@ -142,9 +143,9 @@ fn is_flag(f: &SchemaField) -> bool {
 
 /// Whether the table marks the field fixed (a single legal value).
 pub fn is_fixed(f: &SchemaField) -> bool {
-    // ⚠️ `keepdim` is "fixed `1`" in the CLAUSE (§6.19-0030, §6.11-0008) but the §6.19.3 table row does
-    // not say so; the test asserts the clause text so this exception cannot go stale unnoticed.
-    f.encoding.contains("fixed") || f.name == "keepdim"
+    // `keepdim` and `stability` are real flags since 0.9.0 (§6.19-0022): both values are legal, so the
+    // old `keepdim` special case is gone and a field is fixed only when its table row says "fixed".
+    f.encoding.contains("fixed")
 }
 
 /// Whether the table marks the field mandatory (no default).
