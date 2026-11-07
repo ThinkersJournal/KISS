@@ -337,7 +337,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, and `concat`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -2114,7 +2114,8 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0003** — The set of **carrier** ops (ops with a non-empty OpAttrs
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
-  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat}`; every
+  layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
+  reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2496,9 +2497,7 @@ promoted to this normative OpAttrs encoding for that channel only.
 
 - **KISS-OPS-6.19-0036** — Several advertised, axis-parameterized non-primitive ops are
   **not** carriers (they hold no free `reduce_axes` or `axis` OpAttrs field): `cumsum`,
-  `cumprod`, and `cummax`. (`reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`,
-  `argmax` and `argmin` were non-carriers before they gained the `keepdim` flag, §6.19-0043,
-  §6.19-0044.) A consumer that natively matches one of these ops — and therefore does not
+  `cumprod`, and `cummax`. A consumer that natively matches one of these ops — and therefore does not
   expand its §6.13 reference decomposition (§6.14-0004) — MUST obtain the reduce/scan axis
   by resolving the axis of the **inner carrier node** of that op's reference decomposition
   (the `reduce`, `prefix_scan`, or `sort_network` the op is defined over), even though it
@@ -2507,7 +2506,9 @@ promoted to this normative OpAttrs encoding for that channel only.
   `reduce_std` are carriers of a free `reduce_axes` field **not** because their axis would
   otherwise be unspecified but solely because they additionally carry the
   `bessel_correction` attribute (§6.19-0030), which has no inner-carrier source and must be
-  declared alongside the axis. *Test:* `test_ops_opattrs_noncarrier_axis_resolution`.
+  declared alongside the axis. (`reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax` and `argmin` were
+  non-carriers until the `keepdim` flag made them carriers, §6.19-0043, §6.19-0044.) *Test:*
+  `test_ops_opattrs_noncarrier_axis_resolution`.
 #### 6.19.6 Index-lane wire references (recipe/FlatDag seam)
 
 The recipe/FlatDag container wire that carries these references — its node list, its
