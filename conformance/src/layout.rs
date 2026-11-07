@@ -292,7 +292,7 @@ fn parse_slot(s: &str, ctx: &LayoutContext) -> Result<Slot, LayoutDecline> {
     let (name, rest) = s.split_once("=").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
     let (lay, off) = rest.rsplit_once("@").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
     let ok = !name.is_empty()
-        && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_');
+        && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == 0x5f /* underscore */);
     if !ok {
         return Err(LayoutDecline::NonCanonical(name.into()));
     }
