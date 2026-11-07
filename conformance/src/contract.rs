@@ -143,6 +143,27 @@ impl OpTree {
     }
 }
 
+/// Render one `Source` node in the §6.11-0007 text form `Source{<tag>; <source_attrs>}`
+/// (KISS-GRAMMAR-6.4-0013 tags): `const` is `dtype=<token>, bits=0x<HEX>` with the exact bit
+/// pattern upper-case and zero-padded to `2 * ceil(width_bits / 8)` digits (most significant
+/// byte first), `param` `index=<u32>`, `coord` and `extent` `axis=<u8>`, `reduced`
+/// `stage=<u32>`, and `reduced_count` an empty list (elided, as for `Op`).
+pub fn render_source_node(leaf: &crate::grammar::SourceLeaf) -> String {
+    use crate::grammar::SourceLeaf as S;
+    let (tag, attrs) = match leaf {
+        S::Const { dtype, bits } => {
+            let hex: String = bits.iter().rev().map(|b| format!("{b:02X}")).collect();
+            ("const", format!("dtype={dtype}, bits=0x{hex}"))
+        }
+        S::Param(i) => ("param", format!("index={i}")),
+        S::Coord(a) => ("coord", format!("axis={a}")),
+        S::Reduced(s) => ("reduced", format!("stage={s}")),
+        S::Extent(a) => ("extent", format!("axis={a}")),
+        S::ReducedCount => ("reduced_count", String::new()),
+    };
+    format!("Source{{{tag}; {attrs}}}")
+}
+
 /// Serialize an op DAG as the §6.11-0007 array of nodes in **KISS-Grammar
 /// canonical node order**: every child strictly earlier than its parent, so each
 /// node's `child_edges` reference **strictly-earlier** indices and the **root

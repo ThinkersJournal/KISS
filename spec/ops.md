@@ -1270,13 +1270,18 @@ section-intro paragraph is an informative pointer to it):
   result, and the correct divisor for a mean over one **or more** reduced axes; it equals
   `extent(axis)` when a single axis is reduced and the product `∏ extent(axis_i)` over the
   selected set when several are). These leaves are part of the op-semantics currency and are
-  not themselves ops. *Test:* `test_ops_scalar_source_leaves`.
+  not themselves ops. In an `op_dag` (Contract 6.4-0009) `input(i)` is a `Bind` node and each of the other six is a
+  `Source` node (KISS-GRAMMAR-6.4-0013, tags `const`, `param`, `coord`, `reduced`, `extent`, `reduced_count`); none is
+  an `Op` node, so no op name is reserved for a leaf. *Test:* `test_ops_scalar_source_leaves`.
 - **KISS-OPS-6.12-0002** — A `const(bits)` leaf MUST carry its value as the exact dtype bit
   pattern (round-tripping ±∞, quiet/signaling NaN, ±0, and subnormals per §6.2-0008); the
   spelling of a constant in any source or target language is emitter-supplied and MUST NOT
   be relied upon across the semantics currency. A `const` leaf MUST NOT denote a non-
   literal, shape-dependent, or runtime-derived quantity (such a quantity MUST be sourced
-  from `extent(axis)`, `param(i)`, `coord(axis)`, or `reduced(stage)`). *Test:*
+  from `extent(axis)`, `param(i)`, `coord(axis)`, or `reduced(stage)`). In an `op_dag` the dtype and the bits are
+  carried by the `Source` node of tag `const` (KISS-GRAMMAR-6.4-0013, KISS-GRAMMAR-6.8-0014) and a reader MUST
+  return them bit-for-bit: a NaN payload and its quiet/signaling bit, a subnormal and a signed zero are never
+  canonicalized. *Test:*
   `test_ops_const_leaf_bits`.
 - **KISS-OPS-6.12-0003** — A symbolic constant named in the §6.13 reference-decomposition
   table (`0.5`, `1`, `-1`, `2`, `3`, `ln2`, `ln10`, `pi/2`, `sqrt2`, `sqrt(2/pi)`,
