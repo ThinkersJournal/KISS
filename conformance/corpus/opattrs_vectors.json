@@ -4,7 +4,7 @@
   "derivation": "PARSED from the spec table at compile time, never transcribed. No implementation output was consulted: this is an EXTERNAL reference for the OpAttrs channel, not another party's golden (#504).",
   "layout_authority": "KISS-OPS-6.19-0004 — the blob is its §6.19.3 schema fields CONCATENATED in canonical order (no padding, no alignment, no tag stream). The offset column is a restatement of that sentence, not a computed value; if the sentence changes the offsets are unfounded and the generator refuses.",
   "scope": "STATED LAYOUT ONLY. This artifact pins field order, widths, ordinals and offsets. It deliberately states NO expected VALUE for any op: a value would have to be COMPUTED, and two parties computing through a shared intermediate are comprehension-correlated even when code-disjoint (kiss-ref, DESIGN.md:17-20). Independence of DERIVATION is the property, not external-ness.",
-  "carrier_ops": 19,
+  "carrier_ops": 26,
   "ops": [
     {
       "op": "reduce",
@@ -81,6 +81,69 @@
         {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
         {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2},
         {"ordinal": 2, "name": "bessel_correction", "width": "u8", "offset": 3}
+      ]
+    },
+    {
+      "op": "reduce_mean",
+      "clauses": ["KISS-OPS-6.19-0043"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "reduce_norm2",
+      "clauses": ["KISS-OPS-6.19-0043"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "logsumexp",
+      "clauses": ["KISS-OPS-6.19-0043"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "any",
+      "clauses": ["KISS-OPS-6.19-0043"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "all",
+      "clauses": ["KISS-OPS-6.19-0043"],
+      "blob_bytes": 3,
+      "fields": [
+        {"ordinal": 0, "name": "reduce_axes", "width": "u16le", "offset": 0},
+        {"ordinal": 1, "name": "keepdim", "width": "u8", "offset": 2}
+      ]
+    },
+    {
+      "op": "argmax",
+      "clauses": ["KISS-OPS-6.19-0044"],
+      "blob_bytes": 2,
+      "fields": [
+        {"ordinal": 0, "name": "keepdim", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "tie_rule", "width": "u8", "offset": 1}
+      ]
+    },
+    {
+      "op": "argmin",
+      "clauses": ["KISS-OPS-6.19-0044"],
+      "blob_bytes": 2,
+      "fields": [
+        {"ordinal": 0, "name": "keepdim", "width": "u8", "offset": 0},
+        {"ordinal": 1, "name": "tie_rule", "width": "u8", "offset": 1}
       ]
     },
     {

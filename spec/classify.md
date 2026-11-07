@@ -264,7 +264,9 @@ the explicit bitmask with bit 0 set ⇒ `x01`. These are distinct cells and dist
 tokens. A *collapsed* (rank-reduced) output `[4]` is **not keyable** — axis 0 and
 axis 1 both collapse to `[4]`, so the cell would be indistinguishable; §6.6-0009
 requires reductions to be presented in keepdim form and a collapsed reduction
-yields a typed decline. The reduced operand's innermost axis is a reduced axis
+yields a typed decline. (A kernel whose KISS-Ops `keepdim` is `0` has such a collapsed
+output; it is presented as its keepdim view `[4,1]`, the reduced set coming from the
+KISS-Ops `reduce_axes`, because the shape `[4]` alone cannot say which axis was reduced.) The reduced operand's innermost axis is a reduced axis
 (under `rall`, `rlast`, or an `x<hh>` mask whose innermost bit is set), so it
 derives scalar vector width (`v1`, §6.5-0009).
 
@@ -1251,7 +1253,11 @@ form (§6.7-0011).
   reduced set matches), but the overall key still varies with the `rank` field, so a
   reduction key at one rank never byte-matches one at another rank. A reduction cell
   MUST be presented in **keepdim** form: each reduced axis `d` is folded to the
-  corresponding size-1 output axis. To keep the derivation canonical (§6.6-0011),
+  corresponding size-1 output axis. An op whose KISS-Ops `keepdim` flag is `0`
+  (KISS-OPS-6.11-0008) is presented to Classify through its `keepdim = 1` view: the reduced
+  set is the one its KISS-Ops `reduce_axes` names, the removed axes are reinstated as extent-1
+  axes, and the key carries **no** `keepdim` field (the bytes written are identical in both
+  forms); Classify itself still declines an output presented rank-reduced. To keep the derivation canonical (§6.6-0011),
   when the reduced set is exactly all iteration-frame axes the reduce spec MUST be
   encoded as `rall` (never the equivalent bitmask), and when it is exactly the
   innermost axis alone it MUST be encoded as `rlast` (never the equivalent bitmask);
