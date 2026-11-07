@@ -198,3 +198,33 @@ fn test_contract_output_layout_bundle() {
     assert!(matches!(one("bundle(A=dense@0)"), Err(LayoutDecline::NonCanonical(_))));
     assert!(matches!(one("bundle(a=dense)"), Err(LayoutDecline::Malformed(_))));
 }
+
+// Backs[enforced]: KISS-CONTRACT-6.5-0015 — one golden Interface block per layout form: every vector's block parses as an Interface section (eight fields, `output_layouts` last) and its element parses to the form it is named for under the stated context; the emitted artifact carries exactly these blocks
+#[test]
+fn test_contract_output_layout_golden_vectors() {
+    use kiss_conformance::contract::{emit_contract_vectors_json, output_layout_vectors};
+    let s = scalars();
+    let vectors = output_layout_vectors();
+    assert_eq!(vectors.len(), 9, "the seven forms (nested twice) plus the literal `-`");
+    let json = emit_contract_vectors_json();
+    for (name, text, block) in &vectors {
+        assert_eq!(parse_interface_block(block).map(|f| f.len()), Ok(8), "{name}");
+        let got = parse_layout(text, &ctx(&s, 2, 1)).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let head = match &got {
+            OutputLayout::Supplied => "supplied",
+            OutputLayout::Refused(_) => "refused",
+            OutputLayout::Guarantee(Layout::Dense) => "dense",
+            OutputLayout::Guarantee(Layout::DenseOrder(_)) => "dense_order",
+            OutputLayout::Guarantee(Layout::SameAs(_)) => "same_as",
+            OutputLayout::Guarantee(Layout::Strided(_)) => "strided",
+            OutputLayout::Guarantee(Layout::Hier(h)) if h.swizzle.is_some() => "nested_swizzled",
+            OutputLayout::Guarantee(Layout::Hier(_)) => "nested",
+            OutputLayout::Guarantee(Layout::Bundle(_)) => "bundle",
+            OutputLayout::Guarantee(Layout::None) => "none",
+        };
+        assert_eq!(head, *name, "{text}");
+        let block_text = String::from_utf8(block.clone()).unwrap();
+        assert!(block_text.contains(&format!("output_layouts = [{text}]\n")), "{name}");
+        assert_eq!(json.matches(&kiss_conformance::hex(block)).count(), 1, "{name}");
+    }
+}

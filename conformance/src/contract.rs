@@ -1277,6 +1277,50 @@ pub fn appendix_c_golden_document() -> Vec<u8> {
 ///   (ii) §8-0004/§8-0005 name Appendix C but are AUDIT-role checklist gates whose §9-named
 ///        tests do not exist — `UNBACKED.tsv` records both as `untested`, so the gap is
 ///        DECLARED and no coverage figure is overstated by it.
+/// One golden vector per `output_layouts` form (KISS-Contract §6.5-0014 to §6.5-0019, board 378):
+/// `(name, element text, Interface block bytes)`. The block is the §6.5-0001 Interface section of a
+/// rank-2 contract with one output, `output_layouts = [<text>]` pinned last; the text is the
+/// canonical spelling of §6.5-0016. A foreign reader parses the block, then the element under the
+/// context [`OUTPUT_LAYOUT_VECTOR_CONTEXT`], and byte-diffs its own render of the block.
+/// Every form of the closed set is present (`nested` and `nested_swizzled` are the two spellings
+/// of the one nested form), plus the literal `-`.
+pub fn output_layout_vectors() -> Vec<(&'static str, &'static str, Vec<u8>)> {
+    const FORMS: [(&str, &str); 9] = [
+        ("supplied", "-"),
+        ("dense", "dense"),
+        ("dense_order", "dense_order(1,0)"),
+        ("same_as", "same_as(0)"),
+        ("strided", "strided(strides0[0],1)"),
+        ("nested", "(2,2):(1,2)"),
+        ("nested_swizzled", "swz(2,3,-3)((8,8):(8,1))"),
+        ("bundle", "bundle(a=dense@0,b=dense_order(1,0)@ceil_div(n*4,16)*16)"),
+        ("none", "none"),
+    ];
+    FORMS
+        .iter()
+        .map(|&(name, text)| {
+            let layouts = format!("[{text}]");
+            let fields: Vec<(&str, Value)> = [
+                ("entry_point", "k"),
+                ("rank", "2"),
+                ("positional_signature", "[]"),
+                ("launch_scalars", "[]"),
+                ("count_unit", "elements"),
+                ("in_place", "none"),
+                ("alignment_bytes", "16"),
+                ("output_layouts", layouts.as_str()),
+            ]
+            .iter()
+            .map(|&(k, v)| (k, Value::Str(v.to_string())))
+            .collect();
+            (name, text, render_block(3, "interface", &fields))
+        })
+        .collect()
+}
+
+/// The reader context the [`output_layout_vectors`] elements are parsed under.
+pub const OUTPUT_LAYOUT_VECTOR_CONTEXT: &str = "n_inputs=2 n_outputs=1 rank=2";
+
 pub fn emit_contract_vectors_json() -> String {
     // ⚠️ `crate::hex`, not a private re-implementation of it. This function was byte-for-byte
     // the same as the public helper — same {b:02X}, same join(" ") — so it was a THIRD copy of a
@@ -1308,6 +1352,22 @@ pub fn emit_contract_vectors_json() -> String {
     s.push_str("    \"blocks_promised_by_appendix\": 7,\n");
     s.push_str(&format!("    \"byte_length\": {},\n", doc.len()));
     s.push_str(&format!("    \"bytes_hex\": {}\n", jstr(&hex(&doc))));
+    s.push_str("  },\n");
+    s.push_str("  \"output_layout_vectors\": {\n");
+    s.push_str("    \"spec_reference\": \"spec/contract.md 6.5-0014 to 6.5-0019: one Interface block per layout form, output_layouts pinned last\",\n");
+    s.push_str(&format!("    \"context\": {},\n", jstr(OUTPUT_LAYOUT_VECTOR_CONTEXT)));
+    s.push_str("    \"vectors\": [\n");
+    let forms = output_layout_vectors();
+    for (i, (name, text, block)) in forms.iter().enumerate() {
+        let comma = if i + 1 < forms.len() { "," } else { "" };
+        s.push_str(&format!(
+            "      {{\"name\": {}, \"element\": {}, \"interface_hex\": {}}}{comma}\n",
+            jstr(name),
+            jstr(text),
+            jstr(&hex(block))
+        ));
+    }
+    s.push_str("    ]\n");
     s.push_str("  },\n");
     s.push_str("  \"decline_vectors\": [\n");
     for (i, nv) in negatives.iter().enumerate() {
