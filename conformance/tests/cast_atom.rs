@@ -181,12 +181,12 @@ fn test_shape_rule_cast_concat_no_view_ops() {
     assert_eq!(shape, vec![2, 8]);
     let (_, shape0) = concat_f32(&[(&a, &[2, 3]), (&a, &[2, 3]), (&a, &[2, 3])], 0).unwrap();
     assert_eq!(shape0, vec![6, 3]);
-    // no transpose / permute / unsqueeze op token exists in the generated op manifest (control: concat and cast do)
+    // no transpose / permute op token exists in the generated op manifest (control: concat and cast do)
     let manifest = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/op_manifest.json")).unwrap();
-    for present in ["\"concat\"", "\"cast\""] {
+    for present in ["\"concat\"", "\"cast\"", "\"squeeze\"", "\"unsqueeze\""] {
         assert!(manifest.contains(present), "control: {present} must be a manifest op");
     }
-    for absent in ["\"transpose\"", "\"permute\"", "\"unsqueeze\""] {
+    for absent in ["\"transpose\"", "\"permute\""] {
         assert!(!manifest.contains(absent), "{absent} must not be a manifest op");
     }
 }

@@ -280,6 +280,8 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `scatter` | access-primitive | data-dependent indexed write; combine `{assign,atomic-add,atomic-max,atomic-min}` |
 | `sort_network` | access-primitive | stable per-row permutation; exposes permuted values and original-index vector |
 | `concat` | access-primitive | join operands end to end along one axis; pure data movement, bits preserved |
+| `squeeze` | access-primitive | remove the extent-1 axes a mask names; pure shape, bits preserved (§6.11-0022) |
+| `unsqueeze` | access-primitive | insert extent-1 axes at the output positions a mask names; pure shape, bits preserved (§6.11-0023) |
 | `cast` | conversion | convert each element to a destination dtype; rounding and saturation stated (§6.21) |
 
 **Non-primitive ops (each resolves to the floor via §6.13):**
@@ -337,7 +339,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, `concat`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -748,7 +750,7 @@ verbatim, everywhere).
   `atan`, `lgamma`; the binary-math atoms `atan2`, `copysign`, `nextafter`; the integer
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
   `clz`, `ctz`; the conversion atom `cast`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
-  `gather`, `scatter`, `sort_network`, `concat`. *Test:* `test_ops_primitive_floor_set`.
+  `gather`, `scatter`, `sort_network`, `concat`, `squeeze`, `unsqueeze`. *Test:* `test_ops_primitive_floor_set`.
 - **KISS-OPS-6.3-0002** — A party that **claims conformance to KISS-Ops as a consumer of
   op-semantics (evaluate)** (umbrella §3.6; §3 *Consumer of op-semantics*) MUST evaluate
   the pinned semantics of every op in the primitive floor; the floor is the mandatory core
@@ -1256,6 +1258,27 @@ section-intro paragraph is an informative pointer to it):
   and the `stability` of a `sort_network` are **independent** attributes of different ops:
   an `argmax` never inherits a `stability`, and a `sort_network` with `stability = 0` does
   not change an `argmax` whose `tie_rule` is `1`. *Test:* `test_ops_argmax_tie_rule`.
+- **KISS-OPS-6.11-0022** — `squeeze` MUST take exactly one input operand and one OpAttrs `axes` field
+  (§6.19-0046), a plain `u8` subset mask: bit `k` names axis `k` of the operand, with no rank-aware
+  sentinel (the `0xFFFF` and `0xFFFE` words of §6.19-0020 do not exist here). Every named axis MUST be
+  below the operand's rank and have extent `1`. The output has the operand's dtype and the operand's
+  shape with the named axes removed, the surviving axes keeping their order and extents; removing every
+  axis of an operand whose extents are all `1` gives rank `0`. It is **pure shape**: every element's bits,
+  a NaN's payload and sign and a signed zero included, are preserved exactly and nothing is computed
+  (§6.8-0010(a), §6.16-0009). An **empty mask** (`0x00`), a bit at or above the operand's rank, and a named
+  axis whose extent is not `1` are each a typed decline, never a silent reshape: the output rank is
+  therefore always the operand rank minus the popcount of `axes`, and never depends on the extents. For a
+  reduction-family op carrying `keepdim` (§6.11-0008) with a non-empty reduced-axis set `S`, the
+  `keepdim = 0` result MUST equal `squeeze` of the `keepdim = 1` result with `axes` = the mask of `S`.
+  *Test:* `test_ops_squeeze_semantics`.
+- **KISS-OPS-6.11-0023** — `unsqueeze` MUST take exactly one input operand and one OpAttrs `axes` field
+  (§6.19-0046), the plain `u8` mask of §6.11-0022, whose bit `k` names **output** axis `k`. The output
+  rank is the operand rank plus the popcount of `axes` and MUST NOT exceed `MAX_RANK`; the output has
+  extent `1` at every named axis and, at the remaining output axes in order, the operand's axes with their
+  extents (NumPy `expand_dims` over a set). Like `squeeze` it is **pure shape**: the elements and their
+  bits are unchanged. An **empty mask**, a bit at or above the output rank, and an output rank above
+  `MAX_RANK` are each a typed decline. `unsqueeze(squeeze(x, S), S) = x` whenever `S` is a legal
+  `squeeze` set of `x`. *Test:* `test_ops_unsqueeze_semantics`.
 
 ### 6.12 Scalar-source leaves
 
@@ -2136,7 +2159,7 @@ cross-op axis rules in §6.19.5.
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
   layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
-  reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
+  squeeze, unsqueeze, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2237,6 +2260,7 @@ inlined normatively in §6.19-0037.
 | `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
 | `tie_rule` | enum, `u8` | `0`=RESERVED, `1`=lowest, `2`=highest, `3`=any |
 | `boolean-flag` | bool, `u8` | `0`=false, `1`=true (both meaningful; `0` NOT reserved) |
+| `axes_mask` | bitmask, `u8` | `0x00`=RESERVED (refused); `0x01..0xFF`=subset mask, bit `k`⇔axis `k` (operand axis for `squeeze`, output axis for `unsqueeze`); no rank-aware sentinel, so the bytes do not depend on the operand rank (§6.19-0046) |
 | `reduce_axes` | multiplexed category+bitmask, `u16` LE | `0x0000`=none/not-a-reduction; `0x0001..0x00FF`=per-axis subset keepdim mask (bit `k`⇔axis `k`, ≥1 bit set); `0x0100..0xFFFD`=RESERVED (never emitted); `0xFFFE`=trailing-axis (innermost) only; `0xFFFF`=all-axes. Category selected by the rank-aware total precedence of §6.19-0020 (all-axes beats trailing beats subset; `0xFFFF` covers the rank-1 sole-axis case and every all-axes case) |
 | `window-param-vector` | ordered length-prefixed vector | `u8` element-count prefix (`0..MAX_RANK`), then count × `u32` LE elements, in ascending operand spatial-axis order (element `i` ⇔ spatial axis `i`, outermost spatial axis first; never sorted) |
 | `permutation` | ordered length-prefixed vector (RESERVED) | `u8` element-count prefix (`0..MAX_RANK`), then count × `u8` axis-index elements forming a valid permutation of `0..rank-1`, in order (never sorted) |
@@ -2364,6 +2388,8 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `scatter_add` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (combine FIXED atomic-add, oob FIXED skip by decomposition) |
 | `cast` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.21-0001) — `rounding`:`cast_rounding` enum `u8`:`1` (nearest-even) — `saturation`:`cast_saturation` enum `u8`:mandatory (no default: the legal value depends on the destination, §6.21-0003) |
 | `concat` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0020) |
+| `squeeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0022) |
+| `unsqueeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0023) |
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
@@ -2490,6 +2516,13 @@ by the embedding layer) selects the schema and the reader replays it positionall
 - **KISS-OPS-6.19-0045** — The `tie_rule` OpAttrs field MUST be encoded as the frozen `u8` ordinal
   `{1=lowest, 2=highest, 3=any}` with `0` reserved (§6.11-0021); it appears only in the `argmax` and
   `argmin` schemas. *Test:* `test_ops_tie_rule_enum_ordinals`.
+- **KISS-OPS-6.19-0046** — The `squeeze` and `unsqueeze` OpAttrs blobs MUST each be exactly one `axes`
+  byte, the `axes_mask` of §6.19.3: a plain `u8` subset mask, bit `k` = axis `k`, never the `u16`
+  `reduce_axes` word. `0x00` is reserved and a reader MUST decline it; a bit at or above the rank it
+  applies to (the operand's for `squeeze`, the output's for `unsqueeze`) cannot be seen in the blob and
+  is declined by the op (§6.11-0022, §6.11-0023). The blob is emitted explicitly (§6.19-0005), and
+  the mask `0x03` of a `squeeze` of `[1,1]` and of an `unsqueeze` to output rank 2 are the same byte.
+  *Test:* `test_ops_opattrs_axes_mask_schema`.
 
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
@@ -2601,7 +2634,7 @@ value oracle); this subsection pins the **shape** behaviour as its companion, in
 small closed vocabulary that is evaluable against concrete operand shapes and
 serializable under the §6.19 canonical discipline. Most ops derive their output
 shape from their operands directly (elementwise, `matmul`, `concat`, axis-based
-`reduce` with `keepdim`, `cast`) and carry no shape attr;
+`reduce` with `keepdim`, `cast`, `squeeze`, `unsqueeze`) and carry no shape attr;
 the only *irreducible* free cases are a **broadcast target** (another operand's
 whole shape) and a **slice/iota offset** (arithmetic on an operand's extent), so
 the shared surface is two constructors.
@@ -2739,11 +2772,16 @@ the shared surface is two constructors.
   MUST be the shape of its operand 0 with the `axis` extent (§6.11-0020) replaced by the sum of the
   operands' `axis` extents; like the `matmul` shape of §6.20-0008 it is a semantic rule of the op, not a
   core `ShapeExpr`, because the core vocabulary has no constructor that replaces one axis (`WithDim` is an
-  experimental extension, §6.20-0009). There is **no** `transpose`, `permute` or `unsqueeze` op in this
-  version, and none is named by the shape oracle: a transposed or axis-inserted operand is a view, stated
-  as the operand's strides (a stride of `0` broadcasts, §6.11-0001) and the Classify role hints
+  experimental extension, §6.20-0009). A `squeeze` output shape MUST be operand 0's shape with the
+  axes named by its `axes` mask (§6.11-0022) removed, and an `unsqueeze` output shape operand 0's shape
+  with an extent-`1` axis inserted at each output position its `axes` mask names (§6.11-0023); both are
+  semantic rules of the op, not core `ShapeExpr`s, for the same reason. There is **no** `transpose` or
+  `permute` op in this version, and none is named by the shape oracle: a transposed operand is a view,
+  stated as the operand's strides (a stride of `0` broadcasts, §6.11-0001) and the Classify role hints
   (KISS-CLASSIFY-6.6-0016), and a kernel that must materialize one does so with `element_map` over the
-  strided read. An implementation MUST NOT mint such an op token. *Test:*
+  strided read. A rank change of an interior node's **result**, which has no operand strides to carry
+  a view, is the `squeeze` / `unsqueeze` pair. An implementation MUST NOT mint a `transpose` or
+  `permute` op token. *Test:*
   `test_shape_rule_cast_concat_no_view_ops`.
 
 ### 6.21 The conversion atom (`cast`)
@@ -2983,6 +3021,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0019 | `test_ops_sort_index_output_i64` |
 | KISS-OPS-6.11-0020 | `test_ops_concat_semantics` |
 | KISS-OPS-6.11-0021 | `test_ops_argmax_tie_rule` |
+| KISS-OPS-6.11-0022 | `test_ops_squeeze_semantics` |
+| KISS-OPS-6.11-0023 | `test_ops_unsqueeze_semantics` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -3089,6 +3129,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0043 | `test_ops_reduction_family_keepdim_blob` |
 | KISS-OPS-6.19-0044 | `test_ops_argmax_blob_order` |
 | KISS-OPS-6.19-0045 | `test_ops_tie_rule_enum_ordinals` |
+| KISS-OPS-6.19-0046 | `test_ops_opattrs_axes_mask_schema` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |

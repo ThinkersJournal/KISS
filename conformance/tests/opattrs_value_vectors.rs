@@ -18,7 +18,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 284; // 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
+const POPULATION: usize = 294; // 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -202,6 +202,7 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
             opattrs::encode_cast(target, r, sat)
         }
         "concat" => opattrs::encode_concat(byte(v, "axis")),
+        "squeeze" | "unsqueeze" => opattrs::encode_axes_mask(byte(v, "axes")),
         _ => return None,
     })
 }
