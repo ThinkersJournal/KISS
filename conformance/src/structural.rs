@@ -1015,3 +1015,61 @@ pub fn concat_f32(parts: &[(&[f32], &[usize])], axis: usize) -> Result<(Vec<f32>
     }
     Ok((out, shape))
 }
+
+// ---- squeeze / unsqueeze (KISS-Ops §6.11-0022, §6.11-0023) ----------------------
+
+/// The axes a plain `u8` mask names (bit `k` = axis `k`, §6.19-0046), ascending.
+fn mask_axes(mask: u8) -> Vec<usize> {
+    (0..8).filter(|k| mask >> k & 1 == 1).collect()
+}
+
+/// `squeeze` output shape (§6.11-0022): the operand's shape without the axes `mask` names. A typed decline
+/// (`Err`) for the empty mask, a bit at or above the rank, or a named axis whose extent is not 1; the
+/// output rank is the operand rank minus the popcount, never a function of the extents.
+pub fn squeeze_shape(shape: &[usize], mask: u8) -> Result<Vec<usize>, String> {
+    if mask == 0 {
+        return Err("an empty squeeze mask is refused (§6.11-0022)".to_string());
+    }
+    let named = mask_axes(mask);
+    if let Some(a) = named.iter().find(|a| **a >= shape.len()) {
+        return Err(format!("axis {a} is not below rank {}", shape.len()));
+    }
+    if let Some(a) = named.iter().find(|a| shape[**a] != 1) {
+        return Err(format!("axis {a} has extent {}, not 1", shape[*a]));
+    }
+    Ok(shape.iter().enumerate().filter(|(k, _)| mask >> k & 1 == 0).map(|(_, e)| *e).collect())
+}
+
+/// `unsqueeze` output shape (§6.11-0023): an extent-1 axis at each output position `mask` names, the
+/// operand's axes in order elsewhere. A typed decline for the empty mask, a bit at or above the output rank,
+/// or an output rank above `MAX_RANK`.
+pub fn unsqueeze_shape(shape: &[usize], mask: u8) -> Result<Vec<usize>, String> {
+    if mask == 0 {
+        return Err("an empty unsqueeze mask is refused (§6.11-0023)".to_string());
+    }
+    let out_rank = shape.len() + mask.count_ones() as usize;
+    if out_rank > crate::opattrs::MAX_RANK as usize {
+        return Err(format!("output rank {out_rank} exceeds MAX_RANK"));
+    }
+    if let Some(a) = mask_axes(mask).iter().find(|a| **a >= out_rank) {
+        return Err(format!("axis {a} is not below output rank {out_rank}"));
+    }
+    let mut rest = shape.iter();
+    Ok((0..out_rank).map(|k| if mask >> k & 1 == 1 { 1 } else { *rest.next().expect("rank arithmetic") }).collect())
+}
+
+/// `squeeze` over row-major `f32` data: pure shape, the data is returned bit for bit.
+pub fn squeeze_f32(data: &[f32], shape: &[usize], mask: u8) -> Result<(Vec<f32>, Vec<usize>), String> {
+    if data.len() != shape.iter().product::<usize>() {
+        return Err("data length disagrees with its extents".to_string());
+    }
+    Ok((data.to_vec(), squeeze_shape(shape, mask)?))
+}
+
+/// `unsqueeze` over row-major `f32` data: pure shape, the data is returned bit for bit.
+pub fn unsqueeze_f32(data: &[f32], shape: &[usize], mask: u8) -> Result<(Vec<f32>, Vec<usize>), String> {
+    if data.len() != shape.iter().product::<usize>() {
+        return Err("data length disagrees with its extents".to_string());
+    }
+    Ok((data.to_vec(), unsqueeze_shape(shape, mask)?))
+}

@@ -121,11 +121,13 @@
     "sort_network",
     "sqr",
     "sqrt",
+    "squeeze",
     "step",
     "sub",
     "tan",
     "tanh",
-    "trunc"
+    "trunc",
+    "unsqueeze"
   ],
   "transcendental_atoms": [
     "atan",
@@ -143,6 +145,6 @@
   ],
   "coverage": {
     "declared": 1,
-    "total": 124
+    "total": 126
   }
 }

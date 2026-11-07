@@ -216,6 +216,14 @@ fn encode_field(f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, St
             other => Err(format!("target_dtype takes a dtype token, got {other:?}")),
         };
     }
+    if f.name == "axes" {
+        // `squeeze` / `unsqueeze` (§6.19-0046): a plain u8 subset mask, never the u16 reduce_axes word.
+        return match v {
+            Value::Byte(0) => Err("`axes` = 0x00 is reserved (§6.19-0046)".to_string()),
+            Value::Byte(n) => Ok(vec![*n]),
+            other => Err(format!("axes takes a u8 mask, got {other:?}")),
+        };
+    }
     match (f.width, v) {
         (FieldWidth::U16Le, Value::Axes { axes, rank }) => {
             Ok(reduce_axes_word(axes, *rank)?.to_le_bytes().to_vec())
@@ -337,6 +345,8 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
             let first = vocab.get(name)?.first()?.0;
             let ord = default_byte(f).filter(|_| !is_mandatory(f)).unwrap_or(first);
             Value::Token(token_of(name, ord)?)
+        } else if f.name == "axes" {
+            Value::Byte(0x05)
         } else {
             Value::Byte(if f.name == "index_operand" { 1 } else { 0 })
         };
@@ -375,6 +385,7 @@ pub fn alternatives(f: &SchemaField, base: &Value) -> Vec<Value> {
             .and_then(|n| vocab.get(n))
             .map(|es| es.iter().map(|(_, t)| Value::Token(t.clone())).collect())
             .unwrap_or_default(),
+        (_, Value::Byte(_)) if f.name == "axes" => [0x01u8, 0x03, 0x80, 0xFF].into_iter().map(Value::Byte).collect(),
         (_, Value::Byte(_)) => [0u8, 1, 7].into_iter().map(Value::Byte).collect(),
         _ => Vec::new(),
     };

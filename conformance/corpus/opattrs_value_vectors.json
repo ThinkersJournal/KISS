@@ -3,7 +3,7 @@
   "generated_from": "spec/ops.md §6.19.2 (ordinals) + §6.19.3 (schema, resolved defaults)",
   "derivation": "a GENERIC schema-driven encoder over the parsed spec tables (conformance/src/opattrs_value.rs); cross-checked against the hand encoders in opattrs.rs by tests/opattrs_value_vectors.rs. Same author and same reading of the spec as those encoders: a TARGET for a second party, not independent evidence (E6).",
   "reduce_axes_note": "`rank` is carried in the vector only; it is NOT in the blob (§6.19-0020). Two vectors with different (axes, rank) can share a blob by design (rank-1 sole axis and rank-2 full both encode FF FF).",
-  "number_of_vectors": 284,
+  "number_of_vectors": 294,
   "not_emitted": [
 
   ],
@@ -291,7 +291,17 @@
     {"tcId": 281, "kind": "encode", "op": "cast", "attrs": {"target_dtype":"bf16","rounding":"nearest-even","saturation":"clamp"}, "blob": "02 01 02", "tag": "vary:saturation", "clauses": ["KISS-OPS-6.19-0042"]},
     {"tcId": 282, "kind": "encode", "op": "concat", "attrs": {"axis":0}, "blob": "00", "tag": "base", "clauses": ["KISS-OPS-6.19-0042"]},
     {"tcId": 283, "kind": "encode", "op": "concat", "attrs": {"axis":1}, "blob": "01", "tag": "vary:axis", "clauses": ["KISS-OPS-6.19-0042"]},
-    {"tcId": 284, "kind": "encode", "op": "concat", "attrs": {"axis":7}, "blob": "07", "tag": "vary:axis", "clauses": ["KISS-OPS-6.19-0042"]}
+    {"tcId": 284, "kind": "encode", "op": "concat", "attrs": {"axis":7}, "blob": "07", "tag": "vary:axis", "clauses": ["KISS-OPS-6.19-0042"]},
+    {"tcId": 285, "kind": "encode", "op": "squeeze", "attrs": {"axes":5}, "blob": "05", "tag": "base", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 286, "kind": "encode", "op": "squeeze", "attrs": {"axes":1}, "blob": "01", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 287, "kind": "encode", "op": "squeeze", "attrs": {"axes":3}, "blob": "03", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 288, "kind": "encode", "op": "squeeze", "attrs": {"axes":128}, "blob": "80", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 289, "kind": "encode", "op": "squeeze", "attrs": {"axes":255}, "blob": "FF", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 290, "kind": "encode", "op": "unsqueeze", "attrs": {"axes":5}, "blob": "05", "tag": "base", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 291, "kind": "encode", "op": "unsqueeze", "attrs": {"axes":1}, "blob": "01", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 292, "kind": "encode", "op": "unsqueeze", "attrs": {"axes":3}, "blob": "03", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 293, "kind": "encode", "op": "unsqueeze", "attrs": {"axes":128}, "blob": "80", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]},
+    {"tcId": 294, "kind": "encode", "op": "unsqueeze", "attrs": {"axes":255}, "blob": "FF", "tag": "vary:axes", "clauses": ["KISS-OPS-6.19-0046"]}
   ],
   "equivalences": [
     {"op": "reduce", "explicit": {"monoid":"sum","reduce_axes":{"axes":[0,1],"rank":2},"keepdim":true,"accumulator":"compute-dtype","math_fidelity":"bit-stable"}, "omitted": ["keepdim","accumulator","math_fidelity"], "same_blob": "01 FF FF 01 00 01"},
@@ -532,6 +542,14 @@
     {"op": "cast", "a": 272, "b": 280},
     {"op": "cast", "a": 272, "b": 281},
     {"op": "concat", "a": 282, "b": 283},
-    {"op": "concat", "a": 282, "b": 284}
+    {"op": "concat", "a": 282, "b": 284},
+    {"op": "squeeze", "a": 285, "b": 286},
+    {"op": "squeeze", "a": 285, "b": 287},
+    {"op": "squeeze", "a": 285, "b": 288},
+    {"op": "squeeze", "a": 285, "b": 289},
+    {"op": "unsqueeze", "a": 290, "b": 291},
+    {"op": "unsqueeze", "a": 290, "b": 292},
+    {"op": "unsqueeze", "a": 290, "b": 293},
+    {"op": "unsqueeze", "a": 290, "b": 294}
   ]
 }

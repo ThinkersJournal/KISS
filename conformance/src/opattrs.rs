@@ -219,6 +219,11 @@ pub fn encode_concat(axis: u8) -> Vec<u8> {
     vec![axis]
 }
 
+/// `squeeze` / `unsqueeze`: the plain `u8` axes mask (§6.19-0046). `0x00` is reserved.
+pub fn encode_axes_mask(mask: u8) -> Vec<u8> {
+    vec![mask]
+}
+
 /// `avg_pool`: window_size, stride, dilation, padding, count_include_pad (§6.19-0032).
 pub fn encode_avg_pool(
     window: &[u32],
@@ -363,6 +368,19 @@ pub fn decode_concat(blob: &[u8]) -> Result<u8, Decline> {
     }
     if blob[0] >= MAX_RANK {
         return Err(Decline::FieldOutOfRange { field: "axis", value: blob[0], max: MAX_RANK });
+    }
+    Ok(blob[0])
+}
+
+/// Validate a decoded `squeeze` / `unsqueeze` blob (`[axes]`, a plain `u8` mask, §6.19-0046). The empty mask
+/// `0x00` is reserved and a typed decline; a bit at or above the rank it applies to needs that rank, so the
+/// op declines it (§6.11-0022, §6.11-0023), not the blob reader.
+pub fn decode_axes_mask(blob: &[u8]) -> Result<u8, Decline> {
+    if blob.len() != 1 {
+        return Err(Decline::TruncatedBlob { need: 1, got: blob.len() });
+    }
+    if blob[0] == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "axes" });
     }
     Ok(blob[0])
 }
