@@ -3,6 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.12.0 — 2026-11-07 (number proposed; the PM allocates at gate time; BREAKING wire, DRAFT; based on main)
+
+- **BREAKING (Contract Interface, pre-1.0 so the second number moves): an optional `output_layouts` field, pinned last, states each output operand's layout guarantee** (board 378 "B", board 393 "393: i", R1.13, KISS#316). Absent = the layout the caller supplied, so no existing contract moves; a Contract reader MUST parse the field and decline a count different from the output-operand count.
+- **Spec (Contract):** KISS-CONTRACT-6.5-0014 (the field, per-output array, count mismatch declines, not a `structure_key` field), -0015 (seven closed forms; an unknown form refuses the guarantee, not the contract), -0016 (canonical no-space text; `dense`, `dense_order`, `same_as`, `strided`), -0017 (nested `shape:stride`, integer leaves only, congruent, depth 16), -0018 (`swz(B,M,S)(…)`), -0019 (`bundle(name=layout@offset,…)`). 6.5-0001 and 6.11-0005 name the optional field.
+- **Reference:** `layout.rs` (`parse_output_layouts`, `parse_layout`), `contract.rs` optional trailing field in `parse_section_block`; `tests/contract_output_layouts.rs`.
+- **Readers:** Contract readers (Fuel FKC `layout_guarantee` maps `contiguous` to `dense`, `same_as(x)` to `same_as(i)`, `bundle` to `bundle(…)`; Unpopped states its `Layout` through the nested form). Bundle slot non-overlap is a bind-time check.
+
 ## 0.11.0 — 2026-11-07 (number proposed; the PM allocates at gate time; BREAKING op set, DRAFT; based on main)
 
 - **BREAKING (the op set, pre-1.0 so the second number moves): `squeeze` and `unsqueeze` join the primitive floor (45 to 47 ops, vocabulary 124 to 126)** (board 380 "B plus C" as amended, board 392, R1.19, KISS#426). CireSnave 2026-11-07, verbatim: "392 (a): one-byte mask. (b): A. (c): The question here is whether an empty mask bases its result rank on the extents like PyTorch or simply refuses the request.  What are the pros and cons to doing it PyTorch's way?" then "Refuse the empty rank." So: (a) the axes operand is a plain `u8` subset mask (bit `k` = axis `k`; no `reduce_axes` sentinel, so the bytes do not depend on the rank), (b) A: the #725 removal of `unsqueeze` is reversed, `squeeze` and `unsqueeze` keep those names, `transpose` and `permute` stay prohibited, (c) the empty mask is a typed refusal for both ops, so the output rank is the operand rank minus the popcount and never depends on the extents.

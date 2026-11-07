@@ -281,8 +281,9 @@ fn test_contract_interface_field_schema() {
         "count_unit",
         "in_place",
         "alignment_bytes",
+        "output_layouts?",
     ];
-    assert_eq!(iface, expected, "KISS-CONTRACT-6.5-0001: the Interface field list drifted from the pinned 7-field ordered schema");
+    assert_eq!(iface, expected, "KISS-CONTRACT-6.5-0001: the Interface field list drifted from the pinned 7-required-plus-1-optional ordered schema");
 
     // The three Interface-only fields live in Interface and are FORBIDDEN in Capabilities.
     for f in ["count_unit", "in_place", "alignment_bytes"] {
