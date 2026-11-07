@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.12.1 — 2026-11-07 (number proposed; the PM allocates at gate time; additive, test and artifact only; based on main)
+
+- **Golden contract vectors for `output_layouts` (board 378 follow-up):** `contract_vectors.json` gains an `output_layout_vectors` object, one Interface block (hex) per layout form (`-`, `dense`, `dense_order`, `same_as`, `strided`, nested, swizzled nested, `bundle`, `none`) under a stated reader context, built by `contract::output_layout_vectors` (the library, not the test). No spec change and no wire byte moves; `test_contract_output_layout_golden_vectors` parses every block and element.
+
 ## 0.12.0 — 2026-11-07 (number proposed; the PM allocates at gate time; BREAKING wire, DRAFT; based on main)
 
 - **BREAKING (Contract Interface, pre-1.0 so the second number moves): an optional `output_layouts` field, pinned last, states each output operand's layout guarantee** (board 378 "B", board 393 "393: i", R1.13, KISS#316). Absent = the layout the caller supplied, so no existing contract moves; a Contract reader MUST parse the field and decline a count different from the output-operand count.
