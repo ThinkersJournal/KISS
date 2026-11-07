@@ -68,6 +68,39 @@ fn test_shape_expr_serialization_golden() {
     }
 }
 
+// ---- §6.20-0012 Max, the zero clamp (board 358 "A") --------------------------
+
+// Backs[enforced]: KISS-OPS-6.20-0012 — Max is the larger of two sizes (tag 0x0C, children length-prefixed like Add); a gap in either operand is a gap; Max(e, 0) clamps a negative size to 0; truncated and trailing blobs are typed declines
+// TEETH: a Max that returns the smaller, ignores a gap, or shares Add's tag byte.
+#[test]
+fn test_shape_expr_max_clamp() {
+    let ext = |a: u8| Box::new(Dim::Extent { operand: 0, axis: a });
+    let c = |v: i64| Box::new(Dim::Const(v));
+    // the bytes, derived from the clause: 0C, child1 = 02 00 00 (len 3), child2 = 03 <i64 LE 0> (len 9)
+    let clamp = Dim::Max(ext(0), c(0));
+    assert_golden("KISS-OPS-6.20-0012", "max_extent_zero", &clamp.encode(), "0C 03 00 02 00 00 09 00 03 00 00 00 00 00 00 00 00");
+    assert_eq!(decode_dim(&clamp.encode()), Ok(clamp.clone()), "round trip");
+    // semantics: the larger; equal gives that value; a negative size clamps to 0
+    let ev = |d: &Dim, shape: Vec<i64>| eval_dim(d, &[shape], &[]);
+    assert_eq!(ev(&Dim::Max(c(3), c(5)), vec![1]), Ok(DimValue::Concrete(5)));
+    assert_eq!(ev(&Dim::Max(c(5), c(3)), vec![1]), Ok(DimValue::Concrete(5)));
+    assert_eq!(ev(&Dim::Max(c(4), c(4)), vec![1]), Ok(DimValue::Concrete(4)));
+    let neg = Dim::Max(Box::new(Dim::Sub(ext(0), c(8))), c(0)); // extent - 8
+    assert_eq!(ev(&neg, vec![2]), Ok(DimValue::Concrete(0)), "input 2, window 8: 0, not -6");
+    assert_eq!(ev(&Dim::Sub(ext(0), c(8)), vec![2]), Ok(DimValue::Concrete(-6)), "the unclamped size is negative");
+    assert_eq!(ev(&neg, vec![20]), Ok(DimValue::Concrete(12)));
+    // a symbolic extent stays a gap through Max
+    assert_eq!(ev(&clamp, vec![SYMBOLIC]), Ok(DimValue::Gap));
+    // the tag byte is its own
+    assert_ne!(Dim::Max(ext(0), c(0)).encode()[0], Dim::Add(ext(0), c(0)).encode()[0]);
+    // declines: truncated child, trailing bytes after the second child
+    let good = clamp.encode();
+    assert!(decode_dim(&good[..good.len() - 1]).is_err());
+    let mut trailing = good.clone();
+    trailing.push(0);
+    assert_eq!(decode_dim(&trailing), Err(ShapeExprError::TrailingBytes { extra: 1 }));
+}
+
 // ---- §6.20-0009 WithDim — experimental extension (umbrella §6.4, issue #80) ---
 
 #[test]
