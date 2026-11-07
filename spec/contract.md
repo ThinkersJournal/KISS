@@ -869,8 +869,9 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 
 - **KISS-CONTRACT-6.5-0001** — The Interface section MUST carry exactly the fields
   `{entry_point, rank, positional_signature, launch_scalars, count_unit, in_place,
-  alignment_bytes}`, serialized in that order (§6.11-0005); an implementation MUST NOT omit
-  any of these fields, and MUST NOT carry `count_unit`, `in_place`, or `alignment_bytes`
+  alignment_bytes, output_layouts?}`, serialized in that order (§6.11-0005), the last being
+  **optional** and pinned last (§6.5-0014); an implementation MUST NOT omit
+  any of the seven required fields, and MUST NOT carry `count_unit`, `in_place`, or `alignment_bytes`
   outside the Interface section (they MUST NOT live in the Capabilities section). The Interface
   section MUST NOT carry an independent `target` field; the compilation target is the Identity
   `target_capability` (§6.3-0007, §6.5-0003). *Test:* `test_contract_interface_field_schema`.
@@ -985,6 +986,61 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   binding (§6.5-0004a class 5); an implementation MUST NOT leave scalar-param count/order or
   the index-descriptor fields to out-of-band knowledge. *Test:*
   `test_contract_param_count_and_index_descriptor`.
+
+- **KISS-CONTRACT-6.5-0014** — The Interface section MAY carry one **optional** field
+  `output_layouts`, pinned **last**, after `alignment_bytes` (§6.5-0001, §6.11-0005). Its value
+  is an array (§6.11-0001) with **exactly one element per output operand**, in KISS-Classify
+  canonical operand order (the output pointers of the `positional_signature`, §6.5-0002); element
+  `j` states the layout guarantee of output operand `j`. An element is a layout form
+  (§6.5-0015) or the literal `-`, which states **no guarantee: the layout the caller supplied**.
+  An **absent** field means every output is `-`, so **no existing contract moves**. A reader MUST
+  decline, with a typed decline, a field whose element count differs from the number of output
+  operands (a count mismatch); it MUST NOT pad or truncate. The guarantee is something the
+  kernel **produces**, so it is **not** a `structure_key` field and no key byte moves
+  (KISS-Classify and KISS-Announce are unchanged); a build whose guarantee differs is a
+  different build, whose `revision_hash` the provider assigns (§6.9). *Test:*
+  `test_contract_output_layouts_field`.
+- **KISS-CONTRACT-6.5-0015** — A layout form MUST be exactly one of **seven**, and the set is
+  closed: `dense`, `dense_order(p0,p1,…)`, `same_as(i)`, `strided(e0,e1,…)`, a nested layout
+  (`shape:stride`, optionally `swz(B,M,S)(shape:stride)`, §6.5-0017/-0018), `bundle(slot,…)`
+  (§6.5-0019), and `none` (no guarantee: the reader reads the layout from the buffer). A form
+  whose head is **not** one of these is an **unknown form**: the reader MUST refuse the
+  *guarantee* of that output (treat it as `none` and record the refusal), and MUST NOT refuse the
+  whole contract and MUST NOT accept it silently. A new form is a new clause, never a free-form
+  string. Aliasing (`in_place`, §6.5-0009) and who allocates are **not** layout forms. *Test:*
+  `test_contract_output_layout_forms_closed`.
+- **KISS-CONTRACT-6.5-0016** — The canonical text of an `output_layouts` element carries **no
+  space**; a reader MUST decline a form with a space, a leading `+`, a leading zero or any
+  non-canonical integer. `dense` is densely packed in canonical (row-major) order;
+  `dense_order(p0,…,p{rank-1})` is densely packed with axis `p0` slowest, and `p` MUST be a
+  permutation of `0..rank-1` (column-major of rank 2 is `dense_order(1,0)`); `same_as(i)` states
+  the strides of **input** operand `i` and `i` MUST be less than the number of input operands;
+  `strided(e0,…)` states one stride per axis, **exactly `rank`** of them (§6.5-0012), each a
+  §6.6-0006 expression over this contract's launch-scalar symbol vocabulary written without
+  spaces (`strided(strides0[0],1)`); a malformed or out-of-vocabulary expression is a typed
+  decline. *Test:* `test_contract_output_layout_simple_forms`.
+- **KISS-CONTRACT-6.5-0017** — A nested layout is `shape:stride` with
+  `tuple := integer | "(" tuple {"," tuple} ")"`; shape and stride MUST be **congruent** (same
+  nesting profile), a shape leaf MUST be `>= 1`, a stride leaf `>= 0` (no negative stride), a
+  tuple is never empty, and the nesting depth (0 for an integer, `1 +` the deepest child for a
+  tuple) MUST be at most `16`. **Every leaf is an integer**: a run-time stride is written with
+  `strided(…)`, so nesting and a run-time leading dimension cannot be combined in one layout
+  (CireSnave, board 393, "393: i"). The grammar is kept so that a stride leaf that is an
+  expression MAY be added later without moving the bytes of an integer-only layout. *Test:*
+  `test_contract_output_layout_hier`.
+- **KISS-CONTRACT-6.5-0018** — A nested layout composed with a swizzle MUST be spelled
+  `swz(B,M,S)(shape:stride)`, where `B` and `M` are non-negative integers and `S` a signed
+  integer (CuTe `Swizzle<B,M,S>`: bits, base, shift; `swz(2,3,-3)`); the inner layout obeys
+  §6.5-0017. The spelling is the Unpopped lane's, confirmed 2026-11-07. *Test:*
+  `test_contract_output_layout_swizzle`.
+- **KISS-CONTRACT-6.5-0019** — `bundle(slot,…)` states **one** output operand (one buffer) whose
+  bytes are partitioned into named slots; a slot is `name=layout@offset`, where `name` is
+  `[a-z0-9_]+` and **unique** within the bundle, `layout` is a form of §6.5-0015 **other than**
+  `bundle` and `none`, and `offset` is a byte-offset §6.6-0006 expression over the launch scalars
+  written without spaces. Slots MUST NOT overlap: this is a **bind-time** check (it needs the
+  dtype and the extents), not a parse-time one. Several independent buffers are several output
+  operands, each with its own element; a kernel that hands back one packed buffer uses a
+  bundle. *Test:* `test_contract_output_layout_bundle`.
 
 ### 6.6 Dispatch section
 
@@ -1456,7 +1512,8 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   reject, with a typed decline, a block whose field order, field keys, or value encoding does
   not match the schema (a missing **required** field, an unknown field, or an extra field is a
   decline per §6.1-0006). A field the field-schema clause marks **optional** (such as the
-  Semantics `human_annotation`, pinned last in §6.4-0001) MAY be absent; when absent its line is
+  Semantics `human_annotation`, pinned last in §6.4-0001, or the Interface `output_layouts`,
+  pinned last in §6.5-0001) MAY be absent; when absent its line is
   omitted, and when present it MUST occupy its pinned position — its absence is **not** a
   field-order or missing-field decline. A field-schema clause MAY instead pin **alternative**
   field-line sets — exactly one of which MUST be present (the Dispatch section's five-geometry-fields
@@ -1721,6 +1778,12 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.5-0011 | `test_contract_launch_scalars_match_signature_tail` |
 | KISS-CONTRACT-6.5-0012 | `test_contract_rank_declared` |
 | KISS-CONTRACT-6.5-0013 | `test_contract_param_count_and_index_descriptor` |
+| KISS-CONTRACT-6.5-0014 | `test_contract_output_layouts_field` |
+| KISS-CONTRACT-6.5-0015 | `test_contract_output_layout_forms_closed` |
+| KISS-CONTRACT-6.5-0016 | `test_contract_output_layout_simple_forms` |
+| KISS-CONTRACT-6.5-0017 | `test_contract_output_layout_hier` |
+| KISS-CONTRACT-6.5-0018 | `test_contract_output_layout_swizzle` |
+| KISS-CONTRACT-6.5-0019 | `test_contract_output_layout_bundle` |
 | KISS-CONTRACT-6.6-0001 | `test_contract_dispatch_field_schema` |
 | KISS-CONTRACT-6.6-0002 | `test_contract_invocation_domain` |
 | KISS-CONTRACT-6.6-0003 | `test_contract_count_to_grid` |

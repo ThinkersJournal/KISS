@@ -529,6 +529,7 @@ fn parse_section_block(
     id: u8,
     name: &str,
     expected: &[&str],
+    optional: &[&str],
     forbidden: &[&str],
 ) -> Result<Vec<(String, String)>, SectionDecline> {
     let text = std::str::from_utf8(block).map_err(|_| SectionDecline::BadHeading)?;
@@ -556,7 +557,7 @@ fn parse_section_block(
         if forbidden.contains(&k.as_str()) {
             return Err(SectionDecline::ForbiddenField(k.clone()));
         }
-        if !expected.contains(&k.as_str()) {
+        if !expected.contains(&k.as_str()) && !optional.contains(&k.as_str()) {
             return Err(SectionDecline::UnknownField(k.clone()));
         }
     }
@@ -566,7 +567,11 @@ fn parse_section_block(
             return Err(SectionDecline::MissingField((*e).to_string()));
         }
     }
-    if keys != expected {
+    // An optional field (§6.11-0005) MAY be absent; when present it occupies its pinned
+    // position, after every required field, in the schema's optional order.
+    let mut want: Vec<&str> = expected.to_vec();
+    want.extend(optional.iter().filter(|o| keys.contains(o)));
+    if keys != want {
         return Err(SectionDecline::WrongOrder);
     }
     Ok(fields)
@@ -582,6 +587,8 @@ pub const INTERFACE_FIELDS: [&str; 7] = [
     "in_place",
     "alignment_bytes",
 ];
+/// The Interface section's optional trailing field (§6.5-0014), pinned after `alignment_bytes`.
+pub const INTERFACE_OPTIONAL_FIELDS: [&str; 1] = ["output_layouts"];
 /// The Capabilities section's field schema (§6.7-0001), in the pinned §6.11-0005 order.
 pub const CAPABILITIES_FIELDS: [&str; 8] = [
     "accept_predicate",
@@ -605,7 +612,7 @@ pub const PROVENANCE_FIELDS: [&str; 5] = [
 /// Read + validate an Interface section block (§6.5-0001). Forbids an independent `target` field
 /// (the target is the Identity `target_capability`, §6.3-0007 / §6.5-0003).
 pub fn parse_interface_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 3, "interface", &INTERFACE_FIELDS, &["target"])
+    parse_section_block(block, 3, "interface", &INTERFACE_FIELDS, &INTERFACE_OPTIONAL_FIELDS, &["target"])
 }
 
 /// Read + validate a Capabilities section block (§6.7-0001). Forbids the Interface-only fields
@@ -616,6 +623,7 @@ pub fn parse_capabilities_block(block: &[u8]) -> Result<Vec<(String, String)>, S
         5,
         "capabilities",
         &CAPABILITIES_FIELDS,
+        &[],
         &["count_unit", "in_place", "alignment_bytes"],
     )
 }
@@ -623,7 +631,7 @@ pub fn parse_capabilities_block(block: &[u8]) -> Result<Vec<(String, String)>, S
 /// Read + validate a Provenance section block (§6.9-0001). Forbids `audited_status` (a derived
 /// Guarantees field, §6.8-0001/-0008 — it MUST NOT live in Provenance).
 pub fn parse_provenance_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 7, "provenance", &PROVENANCE_FIELDS, &["audited_status"])
+    parse_section_block(block, 7, "provenance", &PROVENANCE_FIELDS, &[], &["audited_status"])
 }
 
 // ---------------------------------------------------------------------------
@@ -654,12 +662,12 @@ pub const GUARANTEES_FIELDS: [&str; 8] = [
 
 /// Read + validate an Identity section block (§6.3-0001).
 pub fn parse_identity_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 1, "identity", &IDENTITY_FIELDS, &[])
+    parse_section_block(block, 1, "identity", &IDENTITY_FIELDS, &[], &[])
 }
 
 /// Read + validate a Guarantees section block (§6.8-0001).
 pub fn parse_guarantees_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 6, "guarantees", &GUARANTEES_FIELDS, &[])
+    parse_section_block(block, 6, "guarantees", &GUARANTEES_FIELDS, &[], &[])
 }
 
 /// A typed decline from [`check_record_consistency`]. Never a panic.
