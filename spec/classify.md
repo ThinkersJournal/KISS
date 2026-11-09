@@ -396,7 +396,11 @@ Classify defines no op meaning.
   the external source of truth for the quant-family and scale-placement codes
   mirrored by the optional `quant` facts (§6.3). KISS pins only the projection, not
   the external vocabulary's semantics; `family` and `scale_placement` are opaque to
-  Classify (§6.3-0009). The registry publishes its facts in the **neutral quantization
+  Classify (§6.3-0009). The coherence rules **between** them (which `scale_placement`
+  values a `family` permits, for example that a block-scaled family keeps its scales in a
+  separate buffer) belong to the registry entry for that family; Classify states none and a
+  reader MUST NOT infer one from the opaque tokens (FDX validator V5,
+  `docs/design-fdx-phase-out.md` section 4). The registry publishes its facts in the **neutral quantization
   sidecar** whose ten fields and projection onto `quant` are pinned by §6.3-0012.
   *Informative, and the first thing a reader of that sidecar needs:* the `structure_key`
   does **not** distinguish what the sidecar carries (apart from `dequant_form`,
