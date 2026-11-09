@@ -9,6 +9,9 @@ second number.
 - **Spec:** KISS-CONTRACT-6.5-0019 (the slot grammar and rank rule; the non-overlap check stays bind-time and now has both inputs it needs).
 - **Reference:** `layout.rs` (`Slot { dtype, shape }`, `split_top` counts `[` `]`); `bundle` golden vector in `contract_vectors.json` regenerated (**readers regenerate their copies**).
 - **Readers:** Contract readers that parse a bundle (Fuel FKC `bundle` mapping) take the new spelling; Unpopped's pasted nested vectors are unchanged.
+## 0.12.3 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
+
+- **`docs/union-coverage-master.md`** (R5.7, informative): adds the missing verdict row **I1** (normalisation family: EXPRESSED, `norm_axes` mask, `eps` param, `gamma`/`beta` operands), re-reads **D1** and **D2** at 0.12.0 (EXPRESSED as an output's layout guarantee; an input's nested layout or swizzle is not stated), and corrects the row count to 49 (46 grid rows + C4b, F9, I1). Other rows stay as read at `d47b99e`. No spec change.
 
 ## 0.12.2 — 2026-11-07 (number allocated by the PM; docs only)
 
