@@ -4,7 +4,7 @@
 *"Please do. We need the full list before we have a well documented plan for how to move forward in Unpopped's IR or KISS."*
 His standing requirement (2026-10-28, via the PM): *"I don't want KISS to be unable to describe something Unpopped can build."*
 
-**Keying.** Rows use Unpopped's grid ids (`A1`..`H6`, `docs/ir-union-capability-grid.md`, 46 rows; the Unpopped lane owns the
+**Keying.** Rows use Unpopped's grid ids (`A1`..`H6`, `docs/ir-union-capability-grid.md`, 46 rows, plus the new rows C4b, F9 and I1; the Unpopped lane owns the
 master list `docs/ir-union-master-capabilities.md` and says new rows get new ids and none is renumbered). This file is the KISS
 column only, so there is no second table to drift. It **replaces `docs/union-coverage-unpopped.md` as the view** (that file's
 row numbers 1-38 map onto these ids in the "Was" column of Part 3; it is kept until the Unpopped lane confirms the mapping).
@@ -25,7 +25,7 @@ input and this column is re-read, not the reverse.
 Rows whose verdict depends on the **kernel-body scope note** (draft due 2026-11-13: how much of a kernel body KISS describes) are marked
 **[scope]**; their verdict is provisional until that note is ruled.
 
-## Part 1. All 46 rows
+## Part 1. All 49 rows (the 46 grid rows plus C4b, F9 and I1)
 
 | ID | Capability | KISS verdict | Clause / basis | Gap or note |
 |---|---|---|---|---|
@@ -45,8 +45,8 @@ Rows whose verdict depends on the **kernel-body scope note** (draft due 2026-11-
 | C5 | Gather / scatter | EXPRESSED | 6.11-0004/-0005/-0006/-0010, 6.19-0027/-0028 | none |
 | C6 | Textures, samplers, images | NO WAY | no construct in any sub-standard | filtering, wrap and normalised coordinates are a computed behaviour with no op |
 | C7 | Structs, arrays, vectors, matrices as values | NO WAY as a value type; vector width is a derived layout fact | Classify 6.5-0009 | **[scope]** same question as G2 |
-| D1 | Hierarchical layout algebra | flat strided layout EXPRESSED; nested **NEEDS** | Contract 6.5-0005 (signed strides) | board 378 "B" (CireSnave): a closed sum of seven layout forms in Interface 6.5; design pending (0.9.0 batch) |
-| D2 | Swizzle | SCHEDULE-ONLY for shared-memory placement; open for an operand's global layout | 378 design decides whether swizzle is one of the seven forms | do not answer before the 378 design |
+| D1 | Hierarchical layout algebra | EXPRESSED as an **output's** layout guarantee (the nested `shape:stride` form); an input's nested layout is not stated (flat strided access only); every stride leaf is an integer | Contract 6.5-0015, 6.5-0017 (0.12.0, board 378 "B"/"393: i"); flat access 6.5-0005 | a run-time stride is `strided(...)`, so nesting and a run-time leading dimension cannot be combined in one layout (CireSnave, 393: i); input-side nested layouts are not stated (re-read 2026-11-09 at `04083516`) |
+| D2 | Swizzle | EXPRESSED as an **output's** layout guarantee, `swz(B,M,S)(shape:stride)`; shared-memory placement stays SCHEDULE-ONLY | Contract 6.5-0018 (0.12.0) | `BadSwizzle` validity (`\|S\| >= B`, `B+M+\|S\| <= 62`) is Unpopped's, not checked in KISS; Unpopped confirmed the text round trip against its `Layout` (Unpopped#318); an input's swizzle is not stated (re-read at `04083516`) |
 | D3 | Reductions | EXPRESSED | `reduce` 6.11-0002, `reduce_*`/`argmax`/`argmin`/`any`/`all` §6.13 | none |
 | D4 | Custom combine function or tuple state | **NEEDS** (closed monoid set); `argmax`/`argmin` BY COMPOSITION | monoid set `{sum, prod, max, min}` 6.11-0002 | **R5.7 row**; Appendix D.11 (f) held for this; see Part 2 |
 | D5 | Scans | EXPRESSED | `prefix_scan` 6.11-0003, 6.19-0026 | none |
@@ -77,6 +77,7 @@ Rows whose verdict depends on the **kernel-body scope note** (draft due 2026-11-
 | H4 | Autotuning configs as schedule hints | SCHEDULE-ONLY | not a computed value | none |
 | H5 | Multi-GPU, peer pointers, multicast | NO WAY | a cross-device access has no construct | **[scope]** |
 | H6 | Emits to or parses from multiple targets | EXPRESSED | the purpose of KISS-Emit and KISS-Consume (umbrella §2) | none |
+| I1 | Normalisation family as an operation (new row, Unpopped): softmax, log_softmax, rms_norm, layer_norm over several trailing axes, affine gamma/beta | EXPRESSED | `softmax`/`log_softmax`/`rms_norm`/`layer_norm` §6.13 (6.13-0004, 6.13-0008); `norm_axes` is a `u16` axis mask, so several axes are one op (6.19-0038); `eps` is `param(0)`, `gamma`/`beta` are operands `input(1)`/`input(2)` | read at `04083516` (the rest of this file is read at `d47b99e`); not a primitive, a non-primitive op with a reference decomposition |
 
 ## Part 2. NEEDS rows: options
 

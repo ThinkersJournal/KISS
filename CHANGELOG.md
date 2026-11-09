@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.12.3 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
+
+- **`docs/union-coverage-master.md`** (R5.7, informative): adds the missing verdict row **I1** (normalisation family: EXPRESSED, `norm_axes` mask, `eps` param, `gamma`/`beta` operands), re-reads **D1** and **D2** at 0.12.0 (EXPRESSED as an output's layout guarantee; an input's nested layout or swizzle is not stated), and corrects the row count to 49 (46 grid rows + C4b, F9, I1). Other rows stay as read at `d47b99e`. No spec change.
+
 ## 0.12.2 — 2026-11-07 (number allocated by the PM; docs only)
 
 - **HANDOFF** rewritten for the 0.12.1 state (#781, #782, #783 and kiss-ref#64 landed; the 782 WAIT dropped; the open FireLine ownership question recorded). No spec, code or artifact change.
