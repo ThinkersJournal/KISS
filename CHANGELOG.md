@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.13.2 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
+
+- **Classify §4 (External quantization-token registry), informative:** the coherence rules between `family` and `scale_placement` belong to the registry entry for the family, not to Classify (FDX validator V5; option (i) of `docs/design-fdx-phase-out.md` section 4, ruled by the PM 2026-11-09, no byte change). No clause is added or changed.
+
 ## 0.13.0 — 2026-11-09 (number per the PM; BREAKING wire, pre-1.0 so the second number moves; based on main)
 
 - **BREAKING (Contract Interface `output_layouts`, `bundle` slot): every slot now states its data type and shape** (CireSnave, board 396, verbatim "396: A"). A slot is `name:dtype[e0,e1,…]=layout@offset` (was `name=layout@offset`), all parts mandatory: `dtype` a KISS-Classify dtype token, the shape one §6.6-0006 expression per axis (`[]` for rank 0). Where the layout form states a rank (`dense_order`, `strided`, a nested layout's top-level mode count) the shape must have that many axes. Unknown dtype and a rank disagreement are typed declines (`UnknownSlotDtype`, `SlotShapeRank`). `bundle` exists only since 0.12.0, so no earlier spelling is in the wild. The motivation is Fuel's FKC bundle slots, which carry dtype and shape.
