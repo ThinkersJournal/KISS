@@ -1293,7 +1293,7 @@ pub fn output_layout_vectors() -> Vec<(&'static str, &'static str, Vec<u8>)> {
         ("strided", "strided(strides0[0],1)"),
         ("nested", "(2,2):(1,2)"),
         ("nested_swizzled", "swz(2,3,-3)((8,8):(8,1))"),
-        ("bundle", "bundle(a=dense@0,b=dense_order(1,0)@ceil_div(n*4,16)*16)"),
+        ("bundle", "bundle(a:f32[n,4]=dense@0,b:bf16[4,n]=dense_order(1,0)@ceil_div(n*4,16)*16)"),
         ("none", "none"),
     ];
     FORMS

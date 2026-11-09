@@ -11,6 +11,8 @@
 //! layout         := dense | dense_order | same_as | strided | hier | bundle | none
 //! hier           := tuple ":" tuple | "swz(" B "," M "," S ")(" tuple ":" tuple ")"
 //! tuple          := integer | "(" tuple { "," tuple } ")"
+//! bundle         := "bundle(" slot { "," slot } ")"
+//! slot           := name ":" dtype "[" [ expr { "," expr } ] "]" "=" layout "@" expr   (§6.5-0019, board 396)
 //! ```
 //!
 //! A **known** form that is malformed is a typed [`LayoutDecline`] (the field is refused). A form
@@ -42,11 +44,16 @@ pub struct Hier {
     pub stride: IntTuple,
 }
 
-/// One slot of a `bundle`: a name, a layout of forms 1 to 5, a byte-offset expression.
+/// One slot of a `bundle`: a name, a data type, a shape, a layout of forms 1 to 5, a byte-offset
+/// expression (KISS-Contract §6.5-0019).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Slot {
     /// Slot name, unique within the bundle.
     pub name: String,
+    /// A KISS-Classify dtype token ([`crate::structure_key::DTYPES`]).
+    pub dtype: String,
+    /// One §6.6-0006 expression per axis, spelled without spaces; empty for a rank-0 slot.
+    pub shape: Vec<String>,
     /// Never itself a `bundle` or `none`.
     pub layout: Layout,
     /// A §6.6-0006 expression over the launch scalars, spelled without spaces.
@@ -108,6 +115,10 @@ pub enum LayoutDecline {
     DuplicateSlot(String),
     /// A `bundle` or `none` inside a bundle slot.
     NestedBundle,
+    /// A bundle slot whose dtype is not a KISS-Classify dtype token.
+    UnknownSlotDtype(String),
+    /// A bundle slot whose shape rank differs from the rank its layout form states.
+    SlotShapeRank { want: usize, got: usize },
     /// An expression the §6.6-0006 grammar or this contract's vocabulary rejects.
     BadExpression(String),
 }
@@ -149,8 +160,8 @@ fn split_top(s: &str) -> Result<Vec<&str>, LayoutDecline> {
     let (mut depth, mut start, mut out) = (0i32, 0usize, Vec::new());
     for (i, c) in s.char_indices() {
         match c {
-            '(' => depth += 1,
-            ')' => depth -= 1,
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
             ',' if depth == 0 => {
                 out.push(&s[start..i]);
                 start = i + 1;
@@ -288,8 +299,38 @@ fn parse_strided(args: &str, ctx: &LayoutContext) -> Result<Layout, LayoutDeclin
     Ok(Layout::Strided(es.into_iter().map(String::from).collect()))
 }
 
+/// The rank a layout form states, if it states one (§6.5-0019): `dense_order` and `strided` one
+/// entry per axis, a nested layout its top-level mode count; `dense` and `same_as(i)` state none.
+fn stated_rank(l: &Layout) -> Option<usize> {
+    match l {
+        Layout::DenseOrder(p) => Some(p.len()),
+        Layout::Strided(e) => Some(e.len()),
+        Layout::Hier(h) => Some(match &h.shape {
+            IntTuple::Leaf(_) => 1,
+            IntTuple::Tup(v) => v.len(),
+        }),
+        _ => None,
+    }
+}
+
+/// `dtype[e0,e1,…]` of a slot header (`name:dtype[shape]`), checked against the vocabulary.
+fn parse_slot_type(t: &str, ctx: &LayoutContext) -> Result<(String, Vec<String>), LayoutDecline> {
+    let body = t.strip_suffix(']').ok_or_else(|| LayoutDecline::Malformed(t.into()))?;
+    let (dtype, dims) = body.split_once('[').ok_or_else(|| LayoutDecline::Malformed(t.into()))?;
+    if !crate::structure_key::DTYPES.contains(&dtype) {
+        return Err(LayoutDecline::UnknownSlotDtype(dtype.into()));
+    }
+    let shape: Vec<String> =
+        if dims.is_empty() { Vec::new() } else { split_top(dims)?.into_iter().map(String::from).collect() };
+    for e in &shape {
+        check_expr(e, ctx)?;
+    }
+    Ok((dtype.into(), shape))
+}
+
 fn parse_slot(s: &str, ctx: &LayoutContext) -> Result<Slot, LayoutDecline> {
-    let (name, rest) = s.split_once("=").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
+    let (head, rest) = s.split_once("=").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
+    let (name, ty) = head.split_once(":").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
     let (lay, off) = rest.rsplit_once("@").ok_or_else(|| LayoutDecline::Malformed(s.into()))?;
     let ok = !name.is_empty()
         && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == 0x5f /* underscore */);
@@ -297,9 +338,13 @@ fn parse_slot(s: &str, ctx: &LayoutContext) -> Result<Slot, LayoutDecline> {
         return Err(LayoutDecline::NonCanonical(name.into()));
     }
     check_expr(off, ctx)?;
+    let (dtype, shape) = parse_slot_type(ty, ctx)?;
     match parse_known(lay, ctx)? {
         Layout::Bundle(_) | Layout::None => Err(LayoutDecline::NestedBundle),
-        layout => Ok(Slot { name: name.into(), layout, offset: off.into() }),
+        layout => match stated_rank(&layout) {
+            Some(want) if want != shape.len() => Err(LayoutDecline::SlotShapeRank { want, got: shape.len() }),
+            _ => Ok(Slot { name: name.into(), dtype, shape, layout, offset: off.into() }),
+        },
     }
 }
 

@@ -108,7 +108,7 @@ fn test_contract_output_layout_forms_closed() {
     assert!(matches!(one("strided(4,1)"), Ok(OutputLayout::Guarantee(Layout::Strided(_)))));
     assert!(matches!(one("(2,3):(1,2)"), Ok(OutputLayout::Guarantee(Layout::Hier(_)))));
     assert!(matches!(one("swz(2,3,-3)(8:1)"), Ok(OutputLayout::Guarantee(Layout::Hier(_)))));
-    assert!(matches!(one("bundle(a=dense@0)"), Ok(OutputLayout::Guarantee(Layout::Bundle(_)))));
+    assert!(matches!(one("bundle(a:f32[4]=dense@0)"), Ok(OutputLayout::Guarantee(Layout::Bundle(_)))));
     assert_eq!(one("-"), Ok(OutputLayout::Supplied));
     // an unknown form is a refusal of the GUARANTEE, recorded, never a whole-field decline.
     assert_eq!(one("tiled(4)"), Ok(OutputLayout::Refused("tiled(4)".into())));
@@ -181,22 +181,38 @@ fn test_contract_output_layout_swizzle() {
 // Backs[enforced]: KISS-CONTRACT-6.5-0019 — a bundle is named slots `name=layout@offset`, unique names, no nested bundle or none, offsets are §6.6-0006 expressions
 #[test]
 fn test_contract_output_layout_bundle() {
-    let ok = one("bundle(a=dense@0,b=dense_order(1,0)@ceil_div(n*4,16)*16)");
+    let ok = one("bundle(a:f32[n,4]=dense@0,b:bf16[4,n]=dense_order(1,0)@ceil_div(n*4,16)*16)");
     match ok {
         Ok(OutputLayout::Guarantee(Layout::Bundle(slots))) => {
             assert_eq!(slots.len(), 2);
             assert_eq!(slots[1].name, "b");
+            assert_eq!((slots[0].dtype.as_str(), slots[0].shape.clone()), ("f32", vec!["n".to_string(), "4".to_string()]));
+            assert_eq!(slots[1].dtype, "bf16");
             assert_eq!(slots[1].offset, "ceil_div(n*4,16)*16");
             assert_eq!(slots[1].layout, Layout::DenseOrder(vec![1, 0]));
         }
         other => panic!("bundle did not parse: {other:?}"),
     }
-    assert_eq!(one("bundle(a=dense@0,a=dense@8)"), Err(LayoutDecline::DuplicateSlot("a".into())));
-    assert_eq!(one("bundle(a=bundle(b=dense@0)@0)"), Err(LayoutDecline::NestedBundle));
-    assert_eq!(one("bundle(a=none@0)"), Err(LayoutDecline::NestedBundle));
-    assert!(matches!(one("bundle(a=dense@nosuch)"), Err(LayoutDecline::BadExpression(_))));
-    assert!(matches!(one("bundle(A=dense@0)"), Err(LayoutDecline::NonCanonical(_))));
-    assert!(matches!(one("bundle(a=dense)"), Err(LayoutDecline::Malformed(_))));
+    assert_eq!(one("bundle(a:f32[4]=dense@0,a:f32[4]=dense@8)"), Err(LayoutDecline::DuplicateSlot("a".into())));
+    assert_eq!(one("bundle(a:f32[4]=bundle(b:f32[4]=dense@0)@0)"), Err(LayoutDecline::NestedBundle));
+    assert_eq!(one("bundle(a:f32[4]=none@0)"), Err(LayoutDecline::NestedBundle));
+    assert!(matches!(one("bundle(a:f32[4]=dense@nosuch)"), Err(LayoutDecline::BadExpression(_))));
+    assert!(matches!(one("bundle(A:f32[4]=dense@0)"), Err(LayoutDecline::NonCanonical(_))));
+    assert!(matches!(one("bundle(a:f32[4]=dense)"), Err(LayoutDecline::Malformed(_))));
+    // 396-A: dtype and shape are mandatory per slot and checked.
+    assert!(matches!(one("bundle(a=dense@0)"), Err(LayoutDecline::Malformed(_))));
+    assert!(matches!(one("bundle(a:f32=dense@0)"), Err(LayoutDecline::Malformed(_))));
+    assert_eq!(one("bundle(a:float[4]=dense@0)"), Err(LayoutDecline::UnknownSlotDtype("float".into())));
+    assert!(matches!(one("bundle(a:f32[nosuch]=dense@0)"), Err(LayoutDecline::BadExpression(_))));
+    // a rank-0 slot, a reserved/scale dtype slot, and a free rank under `dense` / `same_as`.
+    assert!(matches!(one("bundle(s:f8e8m0[]=dense@0)"), Ok(OutputLayout::Guarantee(Layout::Bundle(_)))));
+    assert!(matches!(one("bundle(a:f32[2,3,4]=dense@0)"), Ok(_)));
+    assert!(matches!(one("bundle(a:f32[2,3]=same_as(0)@0)"), Ok(_)));
+    // the shape rank must match a form that states one (rank is 2 here).
+    assert_eq!(one("bundle(a:f32[4]=dense_order(1,0)@0)"), Err(LayoutDecline::SlotShapeRank { want: 2, got: 1 }));
+    assert_eq!(one("bundle(a:f32[4,4,4]=strided(strides0[0],1)@0)"), Err(LayoutDecline::SlotShapeRank { want: 2, got: 3 }));
+    assert_eq!(one("bundle(a:f32[4]=(2,2):(1,2)@0)"), Err(LayoutDecline::SlotShapeRank { want: 2, got: 1 }));
+    assert!(matches!(one("bundle(a:f32[8]=8:1@0)"), Ok(_)));
 }
 
 // Backs[enforced]: KISS-CONTRACT-6.5-0015 — one golden Interface block per layout form: every vector's block parses as an Interface section (eight fields, `output_layouts` last) and its element parses to the form it is named for under the stated context; the emitted artifact carries exactly these blocks

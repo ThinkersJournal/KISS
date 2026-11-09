@@ -1034,11 +1034,18 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   §6.5-0017. The spelling is the Unpopped lane's, confirmed 2026-11-07. *Test:*
   `test_contract_output_layout_swizzle`.
 - **KISS-CONTRACT-6.5-0019** — `bundle(slot,…)` states **one** output operand (one buffer) whose
-  bytes are partitioned into named slots; a slot is `name=layout@offset`, where `name` is
-  `[a-z0-9_]+` and **unique** within the bundle, `layout` is a form of §6.5-0015 **other than**
-  `bundle` and `none`, and `offset` is a byte-offset §6.6-0006 expression over the launch scalars
-  written without spaces. Slots MUST NOT overlap: this is a **bind-time** check (it needs the
-  dtype and the extents), not a parse-time one. Several independent buffers are several output
+  bytes are partitioned into named slots; a slot is `name:dtype[e0,e1,…]=layout@offset` (CireSnave,
+  board 396, "396: A": per-slot data type and shape), every part **mandatory**, where `name` is
+  `[a-z0-9_]+` and **unique** within the bundle, `dtype` is a KISS-Classify dtype token
+  (§6.1; an unknown token is a typed decline), `e0,e1,…` is the slot's **shape**, one §6.6-0006
+  expression per axis over the launch scalars written without spaces (`[]` for a rank-0 slot),
+  `layout` is a form of §6.5-0015 **other than** `bundle` and `none`, and `offset` is a byte-offset
+  §6.6-0006 expression over the launch scalars written without spaces. Where the layout form states
+  a rank, the shape MUST have exactly that many axes: `dense_order(…)` and `strided(…)` one per
+  entry, a nested layout its **top-level mode count** (a bare integer is one); `dense` and
+  `same_as(i)` state none, so the shape's rank is free. A shape rank that disagrees is a typed
+  decline. Slots MUST NOT overlap: this is a **bind-time** check (it needs the dtype and the
+  extents, both now stated per slot), not a parse-time one. Several independent buffers are several output
   operands, each with its own element; a kernel that hands back one packed buffer uses a
   bundle. *Test:* `test_contract_output_layout_bundle`.
 
