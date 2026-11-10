@@ -276,7 +276,7 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `element_map` | access-primitive | per-element scalar body, broadcast reads via stride-0 |
 | `reduce` | access-primitive | associative-monoid fold over an axis set (keepdim result) |
 | `prefix_scan` | access-primitive | inclusive/exclusive running monoid fold, length-preserving |
-| `gather` | access-primitive | data-dependent indexed read; OOB `{skip,clamp,zero-fill}` |
+| `gather` | access-primitive | data-dependent indexed read; OOB `{skip,clamp,zero-fill,reject}` |
 | `scatter` | access-primitive | data-dependent indexed write; combine `{assign,atomic-add,atomic-max,atomic-min}` |
 | `sort_network` | access-primitive | stable per-row permutation; exposes permuted values and original-index vector |
 | `concat` | access-primitive | join operands end to end along one axis; pure data movement, bits preserved |
@@ -418,8 +418,8 @@ reader holding only KISS-Ops plus the umbrella.
 - **Monoid** — an associative binary operation with an identity element; the `reduce` /
   `prefix_scan` fold operator, one of `{sum, prod, max, min}` (identities in §6.11-0002).
 - **OOB (out-of-bounds) policy** — the behavior of a data-dependent index that falls
-  outside the addressed extent: `skip`, `clamp`, or `zero-fill` for reads; `skip` for
-  writes.
+  outside the addressed extent: `skip`, `clamp`, `zero-fill`, or `reject` for reads; `skip`
+  for writes.
 - **Combine algebra** — the write-combining operator of `scatter`: `assign`,
   `atomic-add`, `atomic-max`, or `atomic-min`.
 - **Determinism class** — the comparator class a numeric result is checked under:
@@ -1054,9 +1054,15 @@ section-intro paragraph is an informative pointer to it):
   input position), distinct from `reduce`. *Test:* `scan_is_length_preserving`.
 - **KISS-OPS-6.11-0004** — `gather` MUST substitute a runtime integer index value for one
   iteration-axis coordinate (a data-dependent read) with an out-of-bounds policy in
-  `{skip, clamp, zero-fill}`; a negative index (representable only in a signed index
-  dtype, §6.11-0009) MUST always be treated as out-of-bounds (no from-end wrap). *Test:*
-  `gather_oob_policies`.
+  `{skip, clamp, zero-fill, reject}`; a negative index (representable only in a signed index
+  dtype, §6.11-0009) MUST always be treated as out-of-bounds (no from-end wrap). Under
+  `reject` an out-of-bounds index MUST NOT be skipped, clamped or filled: the `gather` MUST
+  end in a **typed decline** (KISS-Conform §6.7) that names the first out-of-bounds index
+  position in row-major index order, and MUST NOT write any partial output as its result.
+  KISS-Ops states **no** exemption value for `reject`: a consumer whose index operand
+  carries an in-band marker for an unmapped slot (for example a paged block table's
+  unmapped sentinel) MUST pick `skip`, `clamp` or `zero-fill`, or validate the marker out
+  of the index operand before the `gather`. *Test:* `gather_oob_policies`.
 - **KISS-OPS-6.11-0005** — `scatter` MUST substitute a runtime integer index for one
   output-axis coordinate (a data-dependent write) with a combine operator in `{assign,
   atomic-add, atomic-max, atomic-min}`, and MUST skip an out-of-bounds write. *Test:*
@@ -2249,7 +2255,7 @@ inlined normatively in §6.19-0037.
 | Sub-vocabulary | Kind / width | Code points |
 |---|---|---|
 | `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min |
-| `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp, `3`=zero-fill |
+| `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp, `3`=zero-fill, `4`=reject |
 | `scatter_combine` | enum, `u8` | `0`=RESERVED, `1`=assign, `2`=atomic-add, `3`=atomic-max, `4`=atomic-min |
 | `index_dtype` | enum, `u8` | `0`=RESERVED, `1`=u32, `2`=i32, `3`=i64 |
 | `sort_direction` | enum, `u8` | `0`=RESERVED, `1`=ascending, `2`=descending |
@@ -2271,11 +2277,13 @@ inlined normatively in §6.19-0037.
   the op token), and MUST distinguish e.g. `reduce(sum)` from `reduce(max)` by ordinal
   alone. *Test:* `test_ops_opattrs_monoid_enum`.
 - **KISS-OPS-6.19-0015** — The `oob_policy` OpAttrs field MUST be encoded as the frozen
-  `u8` ordinal `{1=skip, 2=clamp, 3=zero-fill}` with `0` reserved; a `gather` (read)
-  MAY carry any of the three, a `scatter` (write) MUST carry only ordinal `1` (skip)
+  `u8` ordinal `{1=skip, 2=clamp, 3=zero-fill, 4=reject}` with `0` reserved; a `gather` (read)
+  MAY carry any of the four, a `scatter` (write) MUST carry only ordinal `1` (skip)
   per §6.11-0005, and this single enum is also the frozen home of the pool/`im2col`
   boundary-fill policy (no separate pad-policy enum is minted; pad-fill IS `oob_policy`,
-  matching KISS-Grammar §6.2-0004 verbatim). *Test:* `test_ops_opattrs_oob_policy_enum`.
+  matching KISS-Grammar §6.2-0004 verbatim); ordinal `4` (reject) is a `gather` read
+  policy only, and a pool or `im2col` boundary fill MUST NOT carry it (a reader declines it
+  as it declines an out-of-range ordinal). *Test:* `test_ops_opattrs_oob_policy_enum`.
 - **KISS-OPS-6.19-0016** — The `scatter_combine` OpAttrs field MUST be encoded as the
   frozen `u8` ordinal `{1=assign, 2=atomic-add, 3=atomic-max, 4=atomic-min}` with `0`
   reserved, denoting the §6.11-0005 write-combine algebra. *Test:*
@@ -3272,7 +3280,7 @@ a NaN-propagation choice.
   `max`, `min` (identities in §6.11-0002).
 - **NaN-propagating / NaN-suppressing** — returns NaN when any operand is NaN / returns the
   non-NaN operand (§6.15-0001).
-- **OOB policy** — index out-of-bounds behavior: `skip` / `clamp` / `zero-fill` for reads,
+- **OOB policy** — index out-of-bounds behavior: `skip` / `clamp` / `zero-fill` / `reject` for reads,
   `skip` for writes (§6.11-0004, §6.11-0005).
 - **Primitive floor** — the mandatory-core op set at which every decomposition terminates
   (§6.3).
@@ -3455,7 +3463,7 @@ readability only.
 | Sub-vocabulary (clause) | Value | Bytes (LE hex) |
 |---|---|---|
 | `monoid` (§6.19-0014) | sum / prod / max / min | `01` / `02` / `03` / `04` |
-| `oob_policy` (§6.19-0015) | skip / clamp / zero-fill | `01` / `02` / `03` |
+| `oob_policy` (§6.19-0015) | skip / clamp / zero-fill / reject | `01` / `02` / `03` / `04` |
 | `scatter_combine` (§6.19-0016) | assign / atomic-add / atomic-max / atomic-min | `01` / `02` / `03` / `04` |
 | `index_dtype` (§6.19-0017) | u32 / i32 / i64 | `01` / `02` / `03` |
 | `sort_direction` (§6.19-0018) | ascending / descending | `01` / `02` |

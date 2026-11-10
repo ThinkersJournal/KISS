@@ -160,6 +160,7 @@ fn e1_sub_vocabulary_ordinals() {
     assert_eq!(Monoid::Sum.ordinal(), 0x01);
     assert_eq!(Monoid::Min.ordinal(), 0x04);
     assert_eq!(OobPolicy::ZeroFill.ordinal(), 0x03);
+    assert_eq!(OobPolicy::Reject.ordinal(), 0x04);
     assert_eq!(ScatterCombine::AtomicMin.ordinal(), 0x04);
     assert_eq!(IndexDtype::I64.ordinal(), 0x03);
     assert_eq!(SortDirection::Descending.ordinal(), 0x02);
@@ -348,7 +349,7 @@ fn test_ops_opattrs_enum_ordinal_reserve_zero() {
     for o in [Monoid::Sum, Monoid::Prod, Monoid::Max, Monoid::Min].map(Monoid::ordinal) {
         assert_ne!(o, 0, "Monoid reserves ordinal 0");
     }
-    for o in [OobPolicy::Skip, OobPolicy::Clamp, OobPolicy::ZeroFill].map(OobPolicy::ordinal) {
+    for o in [OobPolicy::Skip, OobPolicy::Clamp, OobPolicy::ZeroFill, OobPolicy::Reject].map(OobPolicy::ordinal) {
         assert_ne!(o, 0, "OobPolicy reserves ordinal 0");
     }
     for o in [

@@ -31,7 +31,7 @@ macro_rules! ordinal_enum {
 ordinal_enum!(/// §6.19-0014
     Monoid { Sum = 1, Prod = 2, Max = 3, Min = 4 });
 ordinal_enum!(/// §6.19-0015
-    OobPolicy { Skip = 1, Clamp = 2, ZeroFill = 3 });
+    OobPolicy { Skip = 1, Clamp = 2, ZeroFill = 3, Reject = 4 });
 ordinal_enum!(/// §6.19-0016
     ScatterCombine { Assign = 1, AtomicAdd = 2, AtomicMax = 3, AtomicMin = 4 });
 ordinal_enum!(/// §6.19-0017
@@ -309,6 +309,7 @@ pub fn decode_gather(blob: &[u8]) -> Result<(u8, OobPolicy, u8, IndexDtype), Dec
         1 => OobPolicy::Skip,
         2 => OobPolicy::Clamp,
         3 => OobPolicy::ZeroFill,
+        4 => OobPolicy::Reject,
         _ => return Err(Decline::ReservedZeroOrdinal { field: "oob_policy" }),
     };
     let idt = match blob[3] {

@@ -237,6 +237,23 @@ pub fn gather_f32(data: &[f32], indices: &[i64], policy: OobRead) -> Vec<Option<
         .collect()
 }
 
+/// `gather` under the `reject` policy (KISS-Ops §6.11-0004, `oob_policy = 4`): every index
+/// MUST be in bounds. The first out-of-bounds index (`idx < 0` or `idx >= len`, in index
+/// order) is a typed decline, `Err(position)`, and **no** partial output is returned; an
+/// all-in-bounds read returns the gathered values. KISS-Ops states no exemption value for
+/// `reject`, so a sentinel index is declined like any other out-of-bounds index.
+pub fn gather_f32_reject(data: &[f32], indices: &[i64]) -> Result<Vec<f32>, usize> {
+    let len = data.len() as u64;
+    let mut out = Vec::with_capacity(indices.len());
+    for (pos, &idx) in indices.iter().enumerate() {
+        if idx < 0 || (idx as u64) >= len {
+            return Err(pos);
+        }
+        out.push(data[idx as usize]);
+    }
+    Ok(out)
+}
+
 // =============================================================================
 // scatter — data-dependent indexed write + combine algebra (KISS-Ops §6.11-0005)
 // =============================================================================

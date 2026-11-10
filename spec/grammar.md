@@ -689,7 +689,7 @@ the full statement.
 
 - **KISS-GRAMMAR-6.2-0001** — `pattern_attrs` MUST carry the KISS-Ops **OpAttrs** channel
   (the `reduce`/`gather`/`scan` axis, the out-of-bounds policy drawn from the KISS-Ops set
-  `{skip, clamp, zero-fill}`, the permutation/`perm` guard for layout ops, and the
+  `{skip, clamp, zero-fill, reject}`, the permutation/`perm` guard for layout ops, and the
   reduce-axis mask/keepdim), **owned by KISS-Ops** and referenced here — never re-defined —
   plus the operand-role tuple (§6.1-0005), the KISS-Ops-declared commutativity property
   (§6.4-0005), the consumer-count guard (§6.4-0004), and the node-identity binds
@@ -718,7 +718,7 @@ the full statement.
   tuple — and MUST NOT rely on op-name substring matching, keyword sniffing, or any
   spelling-based heuristic. *Test:* `test_grammar_recognition_is_structural`.
 - **KISS-GRAMMAR-6.2-0004** — The out-of-bounds policy surfaced on `pattern_attrs` MUST be
-  exactly one of the KISS-Ops-owned set `{skip, clamp, zero-fill}` for reads (and `skip`
+  exactly one of the KISS-Ops-owned set `{skip, clamp, zero-fill, reject}` for reads (and `skip`
   for writes), spelled as KISS-Ops spells it; KISS-Grammar MUST NOT define an alternative
   OOB policy vocabulary. *Test:* `test_grammar_oob_policy_from_ops`.
 - **KISS-GRAMMAR-6.2-0005** — The KISS-Ops-declared commutativity property surfaced on
@@ -727,7 +727,7 @@ the full statement.
   be read from KISS-Ops by name rather than from any Grammar-owned literal. *Test:*
   `test_grammar_commutativity_is_canonicalization_only`.
 - **KISS-GRAMMAR-6.2-0006** — The OpAttrs **sub-vocabularies** surfaced on `pattern_attrs`
-  — the **out-of-bounds policy** set (`{skip, clamp, zero-fill}` for reads, `skip` for
+  — the **out-of-bounds policy** set (`{skip, clamp, zero-fill, reject}` for reads, `skip` for
   writes), the **permutation** encoding, and the **reduce-axis mask / keepdim** encoding —
   are **owned by KISS-Ops** as op semantics; KISS-Grammar MUST cite KISS-Ops as the single
   owner of each — KISS-OPS **§6.19-0001** pins KISS-Ops as the **single normative owner** of

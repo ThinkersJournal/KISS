@@ -3,6 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.14.0 — 2026-11-10 (number proposed; the PM allocates at gate time; BREAKING wire, pre-1.0 so the second number moves)
+
+- **`gather` gains the `reject` out-of-bounds policy (FDX V21; board 404 "2: A", CireSnave 2026-11-10).** `oob_policy` ordinal `4` = `reject`, in KISS-OPS-6.19-0015 and the §6.19.2 tables, KISS-OPS-6.11-0004 (an out-of-bounds or negative index under `reject` ends the `gather` in a typed decline naming the first bad index position, never a skip, clamp or fill, and no partial output), and the Grammar clauses that restate the set (6.2-0001, -0004, -0006). `reject` is a `gather` read policy only: `scatter` stays fixed `skip` and a pool or `im2col` boundary fill does not carry it. **No exemption value is added**: a consumer whose index operand carries an in-band unmapped marker (a paged block table's sentinel) uses `skip`, `clamp` or `zero-fill`, or validates the marker out first; an in-OpAttrs sentinel field would be a further wire change and is not ruled.
+- **Why breaking:** ordinal `4` was an out-of-set value a reader declined; it is now a legal `gather` policy, so a reader built before this version declines a blob a current writer emits. No existing byte moves.
+- **Conformance:** `OobPolicy::Reject` (ordinal 4) and `decode_gather` accepts it; the oracle `structural::gather_f32_reject` (first out-of-bounds position as `Err`) with test `gather_reject_declines_first_out_of_bounds_index`; the generated OpAttrs value corpus gains one vector (`gather` `oob_policy=reject`, blob `00 04 01 01`; 294 to 295, later tcIds shift by one); README `test_fns` 897.
+- **Not in this PR:** the kiss-ref evaluator change (separate repo, follows this version).
+
 ## 0.13.3 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
 
 - **`docs/design-fdx-phase-out.md`** (new, design with draft clause text; no spec change): maps Fuel's 22 FDX validators (V1..V22) to KISS clauses, drafts the bind-time buffer-bounds clauses (V3, V8, V9, V12, V13), and lists the quant (V5, V6) and paged-gather (V18..V21) decisions that need CireSnave. Ruling: "FDX should have been phased out in favor of a KISS standard." (CireSnave, 2026-11-09).
