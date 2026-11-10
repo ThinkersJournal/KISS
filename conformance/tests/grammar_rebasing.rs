@@ -423,13 +423,13 @@ fn test_grammar_op_name_set_is_open_via_ops() {
 
 // ---------------------------------------------------------------------------
 // 6.2-0004 — the OOB read policy is the KISS-Ops-owned set {skip, clamp,
-//            zero-fill}; Grammar carries the ordinal verbatim, invents nothing.
+//            zero-fill, reject}; Grammar carries the ordinal verbatim, invents nothing.
 // ---------------------------------------------------------------------------
 
 /// KISS-GRAMMAR-6.2-0004 — the out-of-bounds read policy surfaced on
-/// `pattern_attrs` is exactly the KISS-Ops-owned set `{skip, clamp, zero-fill}`,
+/// `pattern_attrs` is exactly the KISS-Ops-owned set `{skip, clamp, zero-fill, reject}`,
 /// spelled as KISS-Ops spells it; KISS-Grammar defines NO alternative OOB
-/// vocabulary and carries the ordinal uninterpreted. Teeth: for each of the three
+/// vocabulary and carries the ordinal uninterpreted. Teeth: for each of the four
 /// Ops `OobPolicy` ordinals, a `gather` OpAttrs blob carrying it round-trips
 /// through the Grammar codec BYTE-EXACT (Grammar never remaps/normalizes the oob
 /// byte) and the Ops validator `decode_gather` recovers the SAME policy —
@@ -443,7 +443,7 @@ fn test_grammar_op_name_set_is_open_via_ops() {
 fn test_grammar_oob_policy_from_ops() {
     let _clause = "KISS-GRAMMAR-6.2-0004";
 
-    for policy in [opattrs::OobPolicy::Skip, opattrs::OobPolicy::Clamp, opattrs::OobPolicy::ZeroFill] {
+    for policy in [opattrs::OobPolicy::Skip, opattrs::OobPolicy::Clamp, opattrs::OobPolicy::ZeroFill, opattrs::OobPolicy::Reject] {
         let blob = opattrs::encode_gather(0, policy, 1, opattrs::IndexDtype::U32);
         // Grammar carries the Ops oob byte verbatim through a full round-trip.
         let pr = decode(&encode(&gather_region(blob.clone(), vec![])).unwrap()).unwrap();

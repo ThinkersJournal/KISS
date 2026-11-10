@@ -141,6 +141,21 @@ fn gather_oob_policies() {
     assert_eq!(gather_f32(&d, &[0], OobRead::Clamp), vec![Some(10.0)]);
 }
 
+// Backs[enforced]: KISS-OPS-6.11-0004
+#[test]
+fn gather_reject_declines_first_out_of_bounds_index() {
+    // KISS-OPS-6.11-0004 under `reject`: an out-of-bounds index (too large, or negative) is a
+    // typed decline naming the FIRST bad position, with no partial output; all-in-bounds reads.
+    let d = [10.0, 20.0, 30.0];
+    assert_eq!(gather_f32_reject(&d, &[2, 0, 1]), Ok(vec![30.0, 10.0, 20.0]));
+    assert_eq!(gather_f32_reject(&d, &[0, 3, 9]), Err(1), "idx == len is out of bounds");
+    assert_eq!(gather_f32_reject(&d, &[1, -1]), Err(1), "a negative index never wraps");
+    // No exemption value: a sentinel that is out of range is declined like any other index.
+    assert_eq!(gather_f32_reject(&d, &[u32::MAX as i64]), Err(0));
+    // Empty index vector reads nothing and is not a decline.
+    assert_eq!(gather_f32_reject(&d, &[]), Ok(vec![]));
+}
+
 // Backs[enforced]: KISS-OPS-6.11-0004 — a negative gather index is always out-of-bounds, never a from-end wrap
 #[test]
 fn gather_negative_index_never_wraps() {
