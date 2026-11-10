@@ -3,9 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.13.1 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
+## 0.13.3 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
 
 - **`docs/design-fdx-phase-out.md`** (new, design with draft clause text; no spec change): maps Fuel's 22 FDX validators (V1..V22) to KISS clauses, drafts the bind-time buffer-bounds clauses (V3, V8, V9, V12, V13), and lists the quant (V5, V6) and paged-gather (V18..V21) decisions that need CireSnave. Ruling: "FDX should have been phased out in favor of a KISS standard." (CireSnave, 2026-11-09).
+
+## 0.13.2 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
+
+- **Classify §4 (External quantization-token registry), informative:** the coherence rules between `family` and `scale_placement` belong to the registry entry for the family, not to Classify (FDX validator V5; option (i) of `docs/design-fdx-phase-out.md` section 4, ruled by the PM 2026-11-09, no byte change). No clause is added or changed.
 
 ## 0.13.0 — 2026-11-09 (number per the PM; BREAKING wire, pre-1.0 so the second number moves; based on main)
 
