@@ -701,7 +701,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 | `dtype` | dtype token | one of the twenty-seven recognized tokens (§6.1; a reserved one typed-declines, §6.1-0001) |
 | `alignment` | u32 | any unsigned 32-bit byte count (`0` and non-power-of-two permitted; §6.5-0009 pins the gating) |
 | `layout_tag` | enum | `{contiguous, inner-contiguous, strided, broadcast}` (§6.5-0001) |
-| `quant` | optional record | `{family, sub_byte_bits: u8, block_elems: u16, scale_placement, dequant_form}` |
+| `quant` | optional record | `{family, sub_byte_bits: u8, block_shape: u16[rank], scale_placement, dequant_form}` |
 | `symbolic_extent` | optional record | `{axis: u8 (< rank), kind ∈ {scalar, range, affine}}`; `kind` is an uninterpreted tag at this schema version (no bounds payload) |
 
 - **KISS-CLASSIFY-6.3-0001** — An operand descriptor's `rank` MUST be in the
@@ -735,8 +735,9 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   (§6.5-0015) from the derivation inputs of §6.6-0012; it MUST NOT be supplied by
   the caller as a label. *Test:* `test_classify_cell_class_is_cell_level`.
 - **KISS-CLASSIFY-6.3-0009** — When present, the `quant` record MUST carry
-  `{family, sub_byte_bits (u8), block_elems (u16), scale_placement, dequant_form}`;
-  `sub_byte_bits` and `block_elems` are pinned integer fields, `dequant_form` is the
+  `{family, sub_byte_bits (u8), block_shape (u16 list), scale_placement, dequant_form}`;
+  `sub_byte_bits` is a pinned integer field, `block_shape` is a pinned list of integers,
+  `dequant_form` is the
   closed Classify-owned enumerant of §6.3-0009a, while `family` and `scale_placement`
   are opaque tokens **uninterpreted by Classify** at this schema version (their
   vocabularies are owned by the external quantization-token registry, §4). Every field
@@ -767,6 +768,19 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   distinctions that ARE inter-substitutable stay out of the key, per §6.3-0009: this
   clause prices only the distinction where a wrong choice is wrong rather than slow.
   *Test:* `test_classify_dequant_form_keyed`.
+- **KISS-CLASSIFY-6.3-0009b** — `block_shape` MUST give the **block extent along each axis
+  of the operand that carries the `quant` record**: exactly `rank` entries (§6.3-0001), in
+  operand axis order, each a `u16` of at least `1`. The elements that share one scale are
+  the product of the entries; an entry of `1` on an axis means the scale does not vary
+  across that axis within a block, so a one-dimensional block of `N` elements along axis
+  `a` is `N` at position `a` and `1` at every other position. A reader MUST answer a
+  `block_shape` whose length differs from the operand's `rank`, or that has an entry `0`,
+  with a typed decline (§6.7-0009). Classify attaches no further meaning to the list: that
+  an entry need not divide its axis extent, how a trailing partial block is scaled, and
+  which shapes a `family` permits belong to the registry entry for that family (§4), and a
+  reader MUST NOT infer them. `block_shape` is carried for binding and is **not** folded
+  into the `structure_key` admissibility key (§6.3-0009). *Test:*
+  `test_classify_quant_block_shape`.
 - **KISS-CLASSIFY-6.3-0010** — When present, the `symbolic_extent` record MUST
   carry `{axis (u8, `< rank`), kind ∈ {scalar, range, affine}}`. At this schema
   version `kind` is an **uninterpreted tag** carrying no bounds payload: the record
@@ -808,7 +822,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
   |---|---|
   | `encoding` | `family` |
   | `scale.placement` | `scale_placement` |
-  | `quant_block.block_size` | `block_elems` |
+  | `quant_block.block_size` | `block_shape` |
   | `logical_dtype` | `sub_byte_bits` |
   | `dequant_form` | `dequant_form` |
   | `quant_block.scale_dtype` | — |
@@ -2428,6 +2442,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.3-0008 | `test_classify_cell_class_is_cell_level` |
 | KISS-CLASSIFY-6.3-0009 | `test_classify_quant_carried_not_keyed` |
 | KISS-CLASSIFY-6.3-0009a | `test_classify_dequant_form_keyed` |
+| KISS-CLASSIFY-6.3-0009b | `test_classify_quant_block_shape` |
 | KISS-CLASSIFY-6.3-0010 | `test_classify_symbolic_extent_flags_live_length` |
 | KISS-CLASSIFY-6.3-0011 | `test_classify_axis_ordering_convention` |
 | KISS-CLASSIFY-6.3-0012 | `test_classify_quant_sidecar_projection` |

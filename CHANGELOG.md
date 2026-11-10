@@ -3,6 +3,13 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.0 — 2026-11-10 (number per the PM, after #789's 0.14.0; BREAKING wire, pre-1.0 so the second number moves)
+
+- **The Classify `quant` record carries `block_shape`, a list of block extents per axis, in place of the scalar `block_elems` (FDX V6; board 404 "1: B", CireSnave 2026-11-10: "list of sizes per axis").** `{family, sub_byte_bits: u8, block_shape: u16[rank], scale_placement, dequant_form}` in the §6.3 field table and KISS-CLASSIFY-6.3-0009, the sidecar projection row `quant_block.block_size` -> `block_shape`, and new KISS-CLASSIFY-6.3-0009b: exactly `rank` entries in operand axis order, each at least 1, elements per scale is their product; a wrong length or a `0` entry is a typed decline (§6.7-0009). A one-dimensional block of `N` along axis `a` is `N` at position `a` and `1` elsewhere. Classify states nothing further: whether an entry must divide its axis, how a trailing partial block is scaled and which shapes a `family` permits belong to the registry entry (§4). Not keyed (§6.3-0009 unchanged).
+- **Why breaking:** a `quant` record written with the scalar `block_elems` no longer matches the record; a reader must read a list, and the one-number form is a length-mismatch decline on any operand of rank other than 1.
+- **Conformance:** `quant_block::block_elems(rank, &[u16])` models the shape rule (`BlockShapeDecline::{RankMismatch, ZeroExtent}`) with test `test_classify_quant_block_shape`; sidecar entry for 6.3-0009b; the table-projection test and the UNBACKED row use the new name; README `test_fns` 897.
+- **Not in this PR:** a wire encoding of the `quant` record (Classify carries it abstractly; no codec models it yet).
+
 ## 0.13.3 — 2026-11-09 (number proposed; the PM allocates at gate time; docs only)
 
 - **`docs/design-fdx-phase-out.md`** (new, design with draft clause text; no spec change): maps Fuel's 22 FDX validators (V1..V22) to KISS clauses, drafts the bind-time buffer-bounds clauses (V3, V8, V9, V12, V13), and lists the quant (V5, V6) and paged-gather (V18..V21) decisions that need CireSnave. Ruling: "FDX should have been phased out in favor of a KISS standard." (CireSnave, 2026-11-09).

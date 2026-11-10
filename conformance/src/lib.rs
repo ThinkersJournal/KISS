@@ -114,6 +114,7 @@ pub mod key_match;
 pub mod namespace_vocabulary;
 pub mod opattrs;
 pub mod opattrs_value;
+pub mod quant_block;
 pub mod reference_vectors;
 pub mod semantics;
 pub mod shape_expr;
