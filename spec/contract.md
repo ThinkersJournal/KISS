@@ -1633,6 +1633,46 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   malformed member poison its siblings on the wire. *Test:*
   `test_contract_bundle_member_isolation`.
 
+### 6.12 Bind-time obligations
+
+A contract is produced and read at **build time**; a kernel is launched at **bind time**, against a
+**bound environment**. Some verdicts cannot be computed until that environment exists: the Dispatch
+expressions of §6.6-0006 name launch scalars (§6.5-0004a) whose values arrive only at launch. This
+section is the class of obligations that bind such a verdict, and the typed declines they raise. It
+adds no field and moves no byte of any contract document, vector or `structure_key`.
+
+- **KISS-CONTRACT-6.12-0001** — A **bound environment** MUST assign an integer (signed 64-bit) to
+  each launch-scalar symbol of the contract's vocabulary (§6.5-0004a) and a length to each
+  rank-length array symbol. **Bind time** is the moment a consumer launches against a bound
+  environment; **build time** is the moment a contract is produced or read. A **bind-time
+  obligation** is one whose verdict cannot be computed before an environment exists, and an
+  implementation MUST NOT compute it at build time from a guessed environment. *Test:*
+  `test_contract_bind_environment_definition`.
+- **KISS-CONTRACT-6.12-0002** — Every clause whose verdict depends on a bound environment MUST say
+  "at bind time" in its first sentence, and MUST name its typed decline code. A clause that does not
+  say so is a build-time clause, and a reader MUST NOT defer it to bind time: a malformed
+  expression is a build-time fault, not a bind-time decline. *Test:*
+  `test_contract_bind_time_marking`.
+- **KISS-CONTRACT-6.12-0003** — Binding MUST decline `unbound_symbol` at bind time when an
+  expression names a symbol of the vocabulary that the environment does not assign. An
+  implementation MUST NOT substitute zero or any default for it. *Test:*
+  `test_contract_bind_unbound_symbol`.
+- **KISS-CONTRACT-6.12-0004** — Binding MUST decline `extent_out_of_range` at bind time for a
+  negative final value, and for a final value outside a range its field declares, before any
+  narrowing to a smaller integer type. A negative **intermediate** value is legal; only the final
+  value is gated. *Test:* `test_contract_bind_extent_range`.
+- **KISS-CONTRACT-6.12-0005** — Evaluating a Dispatch expression MUST decline `affine_overflow` at
+  bind time when any `+`, `-` or `*` leaves the signed 64-bit range, and for the one unrepresentable
+  quotient `i64::MIN / -1` (§6.6-0009(d)); it MUST NOT wrap or saturate. The width is KISS's: an
+  implementation that evaluates in a wider type (Fuel evaluates FDX affine extents in i128) answers
+  a value past `i64` as an out-of-range extent, not an overflow, and a KISS vector at the `i64`
+  edge is a KISS vector, not an FDX one. *Test:* `test_contract_bind_affine_overflow`.
+- **KISS-CONTRACT-6.12-0006** — Evaluation MUST proceed left to right; at each operand the symbol
+  lookup (§6.12-0003) comes first, then the arithmetic step (§6.12-0005), and the **first failing
+  step** names the decline, so an overflow in term 1 is reported before an unbound symbol in term
+  2. The non-negative and range gate (§6.12-0004) runs **last**, after every step has succeeded.
+  *Test:* `test_contract_bind_evaluation_order`.
+
 ---
 
 ## 7. Capability, Profile & Extension model
@@ -1843,6 +1883,12 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.11-0009 | `test_contract_text_op_identity` |
 | KISS-CONTRACT-6.11-0010 | `test_contract_text_real_encoding` |
 | KISS-CONTRACT-6.11-0011 | `test_contract_bundle_member_isolation` |
+| KISS-CONTRACT-6.12-0001 | `test_contract_bind_environment_definition` |
+| KISS-CONTRACT-6.12-0002 | `test_contract_bind_time_marking` |
+| KISS-CONTRACT-6.12-0003 | `test_contract_bind_unbound_symbol` |
+| KISS-CONTRACT-6.12-0004 | `test_contract_bind_extent_range` |
+| KISS-CONTRACT-6.12-0005 | `test_contract_bind_affine_overflow` |
+| KISS-CONTRACT-6.12-0006 | `test_contract_bind_evaluation_order` |
 | KISS-CONTRACT-7.1-0001 | `test_contract_mandatory_core` |
 | KISS-CONTRACT-7.1-0002 | `test_contract_semantics_degrade_axis` |
 | KISS-CONTRACT-7.1-0003 | `test_contract_typed_decline_core` |

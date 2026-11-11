@@ -3,6 +3,12 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.2 — 2026-11-11 (proposed; number per the PM, after #791's 0.15.1)
+
+- **Contract §6.12 "Bind-time obligations" (KISS-CONTRACT-6.12-0001..-0006; R1.22, board 379 "1"; FDX phase-out group A).** The class of obligations whose verdict needs a bound environment: the definition, the "at bind time" marking rule, `unbound_symbol`, `extent_out_of_range`, `affine_overflow` and the evaluation order. Additive: no field, no vector and no `structure_key` byte moves.
+- `conformance/src/bind.rs` (`bind_expr`, `BindDecline`) is the reference, with `test_contract_bind_*`. `dispatch_expr::Decline` gains `Overflow` (an overflow was a `ParseError`; the tests that pinned it now pin `Overflow`).
+- Not in this PR: Conform §6.7-0006 (a decline vector carrying an environment), the `bind_vectors.json` family and its emitter, and group B (buffer-bounds clauses).
+
 ## 0.15.1 — 2026-11-11 (proposed; docs only, PM allocates)
 
 - HANDOFF.md rewritten for the 0.15.0 state (FDX phase-out landed, board 404 V6/V21, ONNX finding, WAIT lines). No spec or code change.
