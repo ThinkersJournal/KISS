@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.1 — 2026-11-11 (proposed; docs only, PM allocates)
+
+- HANDOFF.md rewritten for the 0.15.0 state (FDX phase-out landed, board 404 V6/V21, ONNX finding, WAIT lines). No spec or code change.
+
 ## 0.15.0 — 2026-11-10 (number per the PM, after #789's 0.14.0; BREAKING wire, pre-1.0 so the second number moves)
 
 - **The Classify `quant` record carries `block_shape`, a list of block extents per axis, in place of the scalar `block_elems` (FDX V6; board 404 "1: B", CireSnave 2026-11-10: "list of sizes per axis").** `{family, sub_byte_bits: u8, block_shape: u16[rank], scale_placement, dequant_form}` in the §6.3 field table and KISS-CLASSIFY-6.3-0009, the sidecar projection row `quant_block.block_size` -> `block_shape`, and new KISS-CLASSIFY-6.3-0009b: exactly `rank` entries in operand axis order, each at least 1, elements per scale is their product; a wrong length or a `0` entry is a typed decline (§6.7-0009). A one-dimensional block of `N` along axis `a` is `N` at position `a` and `1` elsewhere. Classify states nothing further: whether an entry must divide its axis, how a trailing partial block is scaled and which shapes a `family` permits belong to the registry entry (§4). Not keyed (§6.3-0009 unchanged).
