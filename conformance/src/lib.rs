@@ -100,6 +100,7 @@ pub mod differential;
 pub mod harness;
 pub mod dispatch;
 pub mod dispatch_expr;
+pub mod bind;
 pub mod expressibility;
 pub mod grammar;
 pub mod opattrs_schema;

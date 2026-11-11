@@ -608,7 +608,8 @@
 # R1.24 Q1 (KISS-ANNOUNCE-7.2-0013, the handshake does not negotiate an op vocabulary): harness 516 -> 517, backed by tests/announce_op_vocabulary.rs. TOOL-DERIVED: `--ratchet --base-ref origin/main` reported "Set the floor to harness 517, lint 44, untested 392". The Q4 change (revision_hash length byte) rewrites KISS-ANNOUNCE-6.3-0003 and moves no floor.
 # squeeze + unsqueeze (board 380 + 392, R1.19): harness 517 -> 520, backed by tests/squeeze_unsqueeze.rs: KISS-OPS-6.11-0022, 6.11-0023, 6.19-0046. TOOL-DERIVED: `--ratchet --base-ref origin/main`. untested and lint unmoved.
 # Classify `quant` block_shape (board 404 "1: B", FDX V6): harness 526 -> 527, backed by tests/classify_quant_block_shape.rs: KISS-CLASSIFY-6.3-0009b. TOOL-DERIVED: `--ratchet --base-ref origin/main`. lint and untested unmoved.
-harness	527
+# Contract §6.12 bind-time obligations (R1.22 group A, board 379): harness 527 -> 533, backed by tests/contract_bind_time.rs: KISS-CONTRACT-6.12-0001..-0006. TOOL-DERIVED: `--ratchet --base-ref origin/main`. lint and untested unmoved.
+harness	534
 lint	44
 untested	392
 proven	20
