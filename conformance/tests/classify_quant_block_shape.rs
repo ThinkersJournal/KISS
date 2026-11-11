@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! KISS-CLASSIFY-6.3-0009b: the `quant` record's `block_shape` has one `u16` entry per operand
 //! axis, each at least 1; a wrong length or a `0` entry is a typed decline.
 

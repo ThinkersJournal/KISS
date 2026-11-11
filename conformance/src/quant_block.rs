@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! The Classify `quant` record's `block_shape` (KISS-CLASSIFY-6.3-0009b): one block extent per
 //! operand axis. This models only the shape rule Classify pins (length and positivity); which
 //! shapes a quantization `family` permits is the registry's, and Classify does not interpret it.
