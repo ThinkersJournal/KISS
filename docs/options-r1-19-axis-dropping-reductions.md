@@ -4,7 +4,7 @@ Status: **options with a recommendation; nothing here is a clause.** 2026-11-04,
 
 ## 1. What KISS has today (measured at 5988cf1)
 
-`reduce` is "associative-monoid fold over an axis set (keepdim result)" (`spec/ops.md` line 277); the result keeps each reduced axis at extent 1 with stride 0 so it broadcasts back (line 1085; test `test_ops_reduce_keepdim_broadcast`); `reduce_axes` is a per-axis keepdim bitmask (line 2166). `squeeze`: 0 hits in `spec/ops.md` and `spec/contract.md` (control: `keepdim` 30 and 3 hits in the same files). `unsqueeze`: one mention, no op entry (finding F1 of `docs/union-coverage-unpopped.md`). `reshape`: 1 hit in contract.md, no op. §6.4-0011 requires a declared shape to equal the op rule's shape.
+`reduce` is "associative-monoid fold over an axis set (keepdim result)" (`spec/ops.md` line 277); the result keeps each reduced axis at extent 1 with stride 0 so it broadcasts back (line 1085; test `test_ops_reduce_keepdim_broadcast`); `reduce_axes` is a per-axis keepdim bitmask (line 2166). `squeeze`: 0 hits in `spec/ops.md` and `spec/contract.md` (control: `keepdim` 30 and 3 hits in the same files). `unsqueeze`: one mention, no op entry (finding F1 of the retired `docs/union-coverage-unpopped.md`, `git show 3fa8d11:docs/union-coverage-unpopped.md`). `reshape`: 1 hit in contract.md, no op. §6.4-0011 requires a declared shape to equal the op rule's shape.
 
 ## 2. What other languages do
 

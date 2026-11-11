@@ -8,7 +8,7 @@ below is from that relay only.
 
 ## The question
 
-The union-coverage table (`docs/union-coverage-unpopped.md`, finding F1, row 33) found that `cast` is **named** by the shape
+The union-coverage table (finding F1, row 33 of the retired `docs/union-coverage-unpopped.md`, `git show 3fa8d11:docs/union-coverage-unpopped.md`; now row G3 of `docs/union-coverage-master.md`) found that `cast` is **named** by the shape
 oracle (Ops 6.20 preamble) and by Conform's signature rule ("a `Cast`'s target dtype rides inside that node's OpAttrs blob",
 `spec/conform.md:2060`), but is **not in the op catalog** (§2.7), the registry (§6.1) or the OpAttrs schema table (§6.19.3).
 Unpopped's IR has `Cast(x, {to, round, sat})` and `Bitcast`. So a converting kernel cannot be described, and mixed-dtype
