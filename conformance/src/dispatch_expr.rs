@@ -81,6 +81,9 @@ pub enum Decline {
     /// A Domain-mode expression (or one of its sub-expressions) evaluated
     /// negative.
     NegativeInDomain(i64),
+    /// A `+ - *` or `ceil_div` step (or the one unrepresentable quotient, `i64::MIN / -1`,
+    /// §6.6-0009(d)) left the signed 64-bit range. Never wrapped or saturated (§6.12-0005).
+    Overflow,
 }
 
 // ---- lexer ---------------------------------------------------------------
@@ -437,7 +440,7 @@ fn ceil_div(a: i64, b: i64) -> Result<i64, Decline> {
     let numerator = a
         .checked_add(b)
         .and_then(|x| x.checked_sub(1))
-        .ok_or_else(|| Decline::ParseError("integer overflow in ceil_div".to_string()))?;
+        .ok_or(Decline::Overflow)?;
     Ok(numerator.div_euclid(b))
 }
 
@@ -452,17 +455,17 @@ fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Declin
         Ast::Add(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
             av.checked_add(bv)
-                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+                .ok_or(Decline::Overflow)?
         }
         Ast::Sub(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
             av.checked_sub(bv)
-                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+                .ok_or(Decline::Overflow)?
         }
         Ast::Mul(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
             av.checked_mul(bv)
-                .ok_or_else(|| Decline::ParseError("integer overflow".to_string()))?
+                .ok_or(Decline::Overflow)?
         }
         Ast::Div(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
@@ -471,9 +474,10 @@ fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Declin
             // recorded residual) — distinct from `ceil_div`'s flooring `div_euclid`.
             // `checked_div` covers BOTH a zero divisor and the one other way integer
             // division can trap (`i64::MIN / -1`, which overflows the positive result).
-            av.checked_div(bv).ok_or_else(|| {
-                Decline::ParseError("division by zero or overflow (i64::MIN / -1)".to_string())
-            })?
+            if bv == 0 {
+                return Err(Decline::ParseError("division by zero".to_string()));
+            }
+            av.checked_div(bv).ok_or(Decline::Overflow)?
         }
         Ast::CeilDiv(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);

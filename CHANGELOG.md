@@ -8,6 +8,12 @@ second number.
 - Docs only. **No normative text changes**: `spec/classify.md` §6.4-0002 has its parenthetical file reference repointed from `docs/union-coverage-unpopped.md` (Flag 1) to `docs/union-coverage-master.md` (F9); the clause's words, its constant (`16`) and its test are untouched.
 - `docs/union-coverage-unpopped.md` is retired (deleted; last text at `3fa8d11`) now that the Unpopped lane has confirmed the Part 3 row mapping (2026-11-11). Five corrections from that check are applied to Part 3 of `docs/union-coverage-master.md` (row 7 adds I1; row 8 drops C5; row 13 pooling mapped to D3 + C4b; row 28 notes H5; row 35 is G4 only). Other docs that cited the old file now name it as retired with its last ref.
 
+## 0.15.2 — 2026-11-11 (proposed; number per the PM, after #791's 0.15.1)
+
+- **Contract §6.12 "Bind-time obligations" (KISS-CONTRACT-6.12-0001..-0006; R1.22, board 379 "1"; FDX phase-out group A).** The class of obligations whose verdict needs a bound environment: the definition, the "at bind time" marking rule, `unbound_symbol`, `extent_out_of_range`, `affine_overflow` and the evaluation order. Additive: no field, no vector and no `structure_key` byte moves.
+- `conformance/src/bind.rs` (`bind_expr`, `BindDecline`) is the reference, with `test_contract_bind_*`. `dispatch_expr::Decline` gains `Overflow` (an overflow was a `ParseError`; the tests that pinned it now pin `Overflow`).
+- Not in this PR: Conform §6.7-0006 (a decline vector carrying an environment), the `bind_vectors.json` family and its emitter, and group B (buffer-bounds clauses).
+
 ## 0.15.1 — 2026-11-11 (proposed; docs only, PM allocates)
 
 - HANDOFF.md rewritten for the 0.15.0 state (FDX phase-out landed, board 404 V6/V21, ONNX finding, WAIT lines). No spec or code change.
