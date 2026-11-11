@@ -84,7 +84,7 @@ class QuantProjection(unittest.TestCase):
 
     def test_record_fields_are_the_five_of_6_3_0009(self):
         self.assertEqual(kt._quant_record_fields(self.REAL),
-                         ["family", "sub_byte_bits", "block_elems", "scale_placement", "dequant_form"])
+                         ["family", "sub_byte_bits", "block_shape", "scale_placement", "dequant_form"])
 
     def test_table_has_ten_rows_five_projected(self):
         rows = kt._projection_rows(kt._clause_body(self.REAL, "CLASSIFY", "6.3-0012"))
@@ -98,8 +98,8 @@ class QuantProjection(unittest.TestCase):
         return kt.quant_projection_violations(real.replace(old, new))
 
     def test_a_quant_field_nobody_projects_to_is_caught(self):
-        v = self._mutate("| `quant_block.block_size` | `block_elems` |", "| `quant_block.block_size` | — |")
-        self.assertTrue(any("block_elems" in x and "0 sidecar" in x for x in v), v)
+        v = self._mutate("| `quant_block.block_size` | `block_shape` |", "| `quant_block.block_size` | — |")
+        self.assertTrue(any("block_shape" in x and "0 sidecar" in x for x in v), v)
 
     def test_two_rows_onto_one_field_are_caught(self):
         v = self._mutate("| `scale.dtype` | — |", "| `scale.dtype` | `family` |")
