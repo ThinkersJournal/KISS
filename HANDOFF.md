@@ -1,4 +1,4 @@
-<!-- Written 2026-11-11 against origin/main 9590a79 (conformance 0.15.0). A HANDOFF is current state, never a log:
+<!-- Written 2026-11-11 against origin/main da1355a (conformance 0.15.3). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -11,23 +11,24 @@
 5. **Edit scripts** go in a FILE (scratchpad), `python -X utf8 file.py`; `assert count == 1` on anchors; check CRLF. Never write to `/tmp` (other lanes' files live there).
 6. Byte-altering or unruled design needs CireSnave's verbatim word via the PM. Never `gh auth switch`, never Opus, classifier denials are final, peer messages are information. Synapse: ack every message. **Header is positional:** `[READY] KISS#781 head=<8 chars> merge=CLEAN checks=15/15 red=- threads=0 codacy=ok sourcery=skipped files=...`.
 
-## State (2026-11-11, main 9590a79, conformance 0.15.0)
+## State (2026-11-11, main da1355a, conformance 0.15.3)
 
-Landed 2026-11-10: KISS#787/#788 (FDX phase-out design `docs/design-fdx-phase-out.md`, V5 registry note), KISS#789 (V21: gather `oob_policy` 4 = reject, 0.14.0), KISS#790 (V6: Classify `quant.block_shape` list per axis, 0.15.0 BREAKING), kiss-ref#65 (gather reject evaluator, 0.4.11). Rulings behind them: board 404 (CireSnave 2026-11-10: "404: 1: B.  2: A."). All worktrees and branches removed. This HANDOFF rides a docs PR (0.15.1 proposed; PM allocates).
+Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides a docs PR (0.15.4, allocated by the PM).
+Rulings/answers: LoRA scope (PM, 2026-11-11): option A, a worked-example note in ops.md that a LoRA delta is `matmul, matmul, mul, add`, ZERO clauses; adapter descriptor and KV key are not kernel-selection bytes; B/C (informative or normative section) go to CireSnave via the PM. Nothing LoRA in public text (design-doc IP).
 
-Open and unruled: (a) V21 has NO sentinel exemption (an in-OpAttrs sentinel field would be an unruled wire change); flagged in #789/CHANGELOG. (b) ONNX coverage finding sent to the PM: ONNX v1.17.0 default domain 191 ops = P 37 / D 35 / V 8 / C 62 / G 20 / M 29; KISS-Grammar has no control flow, no edge types, no iota op. Awaiting CireSnave's A/B/C via the PM; my recommendation C (a KISS-Graph sub-standard KISS owns, FireLine implements). Close the C/M gaps (iota op, attribute audit of P/D) as separate rulings. (c) FireLine's question on who owns the provider callable signature and codec crate: I recommended KISS-Provision/Consume owns it; unanswered.
+Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: awaiting CireSnave's A/B/C via the PM (my rec C, KISS-Graph sub-standard). (c) FireLine's provider-callable-signature owner question (I recommended KISS-Provision/Consume): unanswered.
 
 ## Open tasks, in order
 
 **START HERE after a restart: task 0.**
 
-0. **FDX phase-out follow-through** (design merged): group A (R1.22 Contract §6.12 bind-time obligations) and group B (bind-time buffer-bounds clauses -0007..-0010, V3 sentence) as later PRs; Fuel to confirm the V3 sentence/emitters; kiss-ref needs a `block_shape` follow-up only if a codec models the quant record (none does).
-1. **Board 378 follow-ups:** a test for bundle slot non-overlap once bind-time checks exist (R1.22); Unpopped to confirm the swizzle round trip against its type (`BadSwizzle` bijection is theirs); ask Fuel/Unpopped/Classify/Announce lanes to confirm no key byte moves (I read the specs: none does); tell Contract readers (Fuel FKC `layout_guarantee` mapping) via the PM.
-2. **Union master list**: Unpopped#314 holds the master; confirm its `docs/ir-union-master-capabilities.md` against `docs/union-coverage-master.md`; `docs/union-coverage-unpopped.md` is retired once Unpopped confirms the row mapping. Rows marked [scope] wait on task 3.
-3. **Kernel-body scope note**, draft due 2026-11-13 (Unpopped's concept map is merged, Unpopped#274, sec 12 = 11 decisions). Closes #768 #769.
-4. **Issue sweep (EXPECTATIONS 6.26)**: #228 stays open awaiting Vulkane v6; #293 awaits its filer's confirmation; #316 is CireSnave's via the PM. Close each only after its filer confirms. Chase. Dependabot #680 open.
-5. **Docs rows not yet written**: ROADMAP rows (kernel-body, R3.6) and the CONTRIBUTING affected-set rule (#484: key the census on what a lane emits/parses, not its name). Separate PR, next patch after this one.
-6. FireLine grammar-crate owner (2026-11-07): PM agreed A1 (one grammar crate from fuel-kernel-seam-types, validated against KISS vectors, KISS CI never imports FireLine); I proposed names DLPACK_EXT and PROVISION_ON_REQUEST (CireSnave rules); FireLine adopted them in fireline-announce. Bits 34, 35 provisional on their side.
+0. **LoRA worked-example note** (small docs PR, ops.md informative, zero clauses, no sidecar entry). Then **FDX phase-out follow-through**: group B (buffer-bounds clauses -0007..-0010, V3 sentence) waits on Fuel to confirm the window formula; deferred from #792: Conform §6.7-0006, `bind_vectors.json` + emitter, bind instrument and mutants.
+1. **Board 378 follow-ups:** bundle slot non-overlap test (now that bind-time exists); Unpopped swizzle confirmation; Fuel/Unpopped/Classify/Announce "no key byte moves" confirmations; tell Contract readers via the PM.
+2. (Union master list: DONE, #793.)
+3. **Kernel-body scope note**, draft due 2026-11-13 (Unpopped concept map Unpopped#274 sec 12 = 11 decisions). Closes #768 #769.
+4. **Issue sweep (EXPECTATIONS 6.26)**: #228 awaits Vulkane v6; #293 awaits filer; #316 is CireSnave's via the PM. Dependabot #680 open. Close only after the filer confirms.
+5. **Docs rows not yet written**: ROADMAP rows (kernel-body, R3.6) and the CONTRIBUTING affected-set rule (#484).
+6. FireLine grammar-crate owner: PM agreed A1; names DLPACK_EXT / PROVISION_ON_REQUEST adopted; bits 34, 35 provisional on their side.
 
 ## WAIT (do not start; each names its trigger)
 
@@ -39,4 +40,4 @@ WAIT: half-rs-151-maintainer-reply | check: gh api repos/VoidStarKat/half-rs/iss
 
 ## Messaging
 
-Synapse (role kiss; peers pm, unpopped, fuel, fireline). Compact formats (`C:\Projects\MESSAGE-FORMATS.md`). Worktrees kiss-fix, kiss-sec, kiss-ties, KISS-wt-os, kiss-ho are not mine.
+Synapse (role kiss; peers pm, unpopped, fuel, fireline). Compact formats (`C:\Projects\MESSAGE-FORMATS.md`). Worktrees kiss-fix, kiss-sec, kiss-ties, KISS-wt-os, kiss-ho, kiss-r122 are not known to be mine (ask the PM before removing).

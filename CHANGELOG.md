@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.4 — 2026-11-11 (proposed; docs only)
+
+- Docs only: HANDOFF.md rewritten for the 0.15.3 state (R1.22 group A and union list done; LoRA scope answer recorded; WAIT lines kept). No spec, vector or code change.
+
 ## 0.15.3 — 2026-11-11 (proposed; docs only, number per the PM, after #792's 0.15.2)
 
 - Docs only. **No normative text changes**: `spec/classify.md` §6.4-0002 has its parenthetical file reference repointed from `docs/union-coverage-unpopped.md` (Flag 1) to `docs/union-coverage-master.md` (F9); the clause's words, its constant (`16`) and its test are untouched.
