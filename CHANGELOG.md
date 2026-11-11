@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.3 — 2026-11-11 (proposed; docs only, number per the PM, after #792's 0.15.2)
+
+- Docs only. **No normative text changes**: `spec/classify.md` §6.4-0002 has its parenthetical file reference repointed from `docs/union-coverage-unpopped.md` (Flag 1) to `docs/union-coverage-master.md` (F9); the clause's words, its constant (`16`) and its test are untouched.
+- `docs/union-coverage-unpopped.md` is retired (deleted; last text at `3fa8d11`) now that the Unpopped lane has confirmed the Part 3 row mapping (2026-11-11). Five corrections from that check are applied to Part 3 of `docs/union-coverage-master.md` (row 7 adds I1; row 8 drops C5; row 13 pooling mapped to D3 + C4b; row 28 notes H5; row 35 is G4 only). Other docs that cited the old file now name it as retired with its last ref.
+
 ## 0.15.2 — 2026-11-11 (proposed; number per the PM, after #791's 0.15.1)
 
 - **Contract §6.12 "Bind-time obligations" (KISS-CONTRACT-6.12-0001..-0006; R1.22, board 379 "1"; FDX phase-out group A).** The class of obligations whose verdict needs a bound environment: the definition, the "at bind time" marking rule, `unbound_symbol`, `extent_out_of_range`, `affine_overflow` and the evaluation order. Additive: no field, no vector and no `structure_key` byte moves.

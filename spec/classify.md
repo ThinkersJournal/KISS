@@ -867,7 +867,7 @@ token (§6.7) is the sole normative wire form (§6.7-0011).
 - **KISS-CLASSIFY-6.4-0002** — `MAX_OPERANDS` MUST equal `16`. A `structure_key`
   MUST carry no more than `MAX_OPERANDS` per-operand sub-keys; a producer MUST NOT
   emit and a reader MUST reject a key declaring more than `MAX_OPERANDS`. (Raised from `8`
-  at `sk7`: a causal conv1d has nine operands (`docs/union-coverage-unpopped.md`, Flag 1), and the token
+  at `sk7`: a causal conv1d has nine operands (`docs/union-coverage-master.md`, F9), and the token
   carries no operand-count field, so the count is bounded only by this constant. `16` is a power
   of two and a count that fits `n_operands` as a `u8`; sixteen sub-keys of 14 to about 40 bytes each
   stay far inside `MAX_STRUCTURE_KEY_LEN`, §6.4-0004.)

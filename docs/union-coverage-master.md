@@ -7,7 +7,7 @@ His standing requirement (2026-10-28, via the PM): *"I don't want KISS to be una
 **Keying.** Rows use Unpopped's grid ids (`A1`..`H6`, `docs/ir-union-capability-grid.md`, 46 rows, plus the new rows C4b, F9 and I1; the Unpopped lane owns the
 master list `docs/ir-union-master-capabilities.md` and says new rows get new ids and none is renumbered). This file is the KISS
 column only, so there is no second table to drift. It **replaces `docs/union-coverage-unpopped.md` as the view** (that file's
-row numbers 1-38 map onto these ids in the "Was" column of Part 3; it is kept until the Unpopped lane confirms the mapping).
+row numbers 1-38 map onto these ids in Part 3; **the Unpopped lane confirmed that mapping on 2026-11-11 at KISS `3fa8d11` (five corrections applied below), and the old file is retired**: its last text is `git show 3fa8d11:docs/union-coverage-unpopped.md`).
 
 **Read at** KISS `origin/main` `d47b99e` (conformance 0.8.1: `cast` and `concat` landed, `MAX_OPERANDS` 16, `sk7`). Spec text
 quoted from that ref. **Unpopped's side is not read by me**; its statements come from its grid and messages and are marked **[U]**.
@@ -188,19 +188,21 @@ fact that the kernel never reads the pruned half; **C.** defer. **Corrected 2026
 | 1 contraction, plain | F1 |
 | 2 mixed dtype | F2, F3 |
 | 3 TF32/3xTF32; 4 int32; 5 f16/fp8 accumulate | F3 |
-| 6 reduction; 7 RowReduce second input | D3 |
-| 8 multi-output | F9 (operand count), C5 |
+| 6 reduction | D3 |
+| 7 RowReduce second input (gamma/beta on `rms_norm`/`layer_norm`) | D3, I1 |
+| 8 multi-output | F9 (operand count; `sort_network`'s two outputs also touch D6). Not C5: gather/scatter has no multi-output |
 | 9 view | D1, C3 |
 | 10 gather; 11 scatter | C5 |
 | 12 scan; 17 sort; 18 top-k | D5; D6 |
-| 13 pooling; 14 causal conv1d; 15 implicit GEMM; 16 im2col | C4b, F7, F4 |
+| 13 pooling | D3, C4b (padding). **Pooling has no master row of its own**; it is mapped to the reduction row plus the padding row |
+| 14 causal conv1d; 15 implicit GEMM; 16 im2col | C4b, F7, F4 |
 | 19 offset | A1 (`coord`) |
 | 20 dropout | H3 |
 | 21 block-dequant | F2, G1 |
 | 22 attention; 23 EVT; 24 split-K | F8; F6; B4 |
-| 26-28 atomics | E4, E3 |
+| 26-28 atomics | E4, E3 (row 28, order/scope: E3, and H5 once Unpopped U12 lands System scope; S2 was in flight, not on its main at `cbf2e882`) |
 | 29-32 cooperative groups, subgroup ops | E5, E6 |
-| 33 cast; 34 fma; 35 qualifiers | G3; G4; G4, G5 |
+| 33 cast; 34 fma; 35 qualifiers | G3; G4; G4 only. G5 (NaN/Inf control) is not a qualifier row and has no old row |
 | 36 integer arithmetic; 37 packed lanes; 38 new dtypes | A1; G2; G1 |
 
 ## What this file does not claim
