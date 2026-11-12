@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.5 — 2026-11-11 (proposed; docs only, number per the PM, after the HANDOFF PR's 0.15.4)
+
+- Docs only. `spec/ops.md` Appendix A.6 (informative): a low-rank adapter delta `y = base(x) + (alpha/r)*B(A x)` is a composition of existing ops (`matmul`, `matmul`, `mul`, `add`). **No op, attribute, clause, vector or sidecar entry is added**; adapter identity and lifecycle are runtime concerns outside this standard (PM/CireSnave ruling, option A, 2026-11-11).
+
 ## 0.15.3 — 2026-11-11 (proposed; docs only, number per the PM, after #792's 0.15.2)
 
 - Docs only. **No normative text changes**: `spec/classify.md` §6.4-0002 has its parenthetical file reference repointed from `docs/union-coverage-unpopped.md` (Flag 1) to `docs/union-coverage-master.md` (F9); the clause's words, its constant (`16`) and its test are untouched.
