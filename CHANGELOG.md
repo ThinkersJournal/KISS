@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.14 — 2026-11-12 (proposed; docs and one read-only script; PM allocates; after #801's 0.15.13)
+
+- Docs only. `docs/options-414-kiss-graph.md`: options note and clause **skeleton** for a KISS-Graph sub-standard (CireSnave 2026-11-12, verbatim via the PM: *"414: C."*); six decisions with recommendations (G1-G6), nothing binding. `docs/onnx-1-17-attribute-audit.md`: the 72 ONNX 1.17 ops matched to KISS-Ops by name (44 exact + 28 alias), the 22 with attributes, 50 attributes tallied (E 23, R 9, G 15, U 3; 7 distinct gaps). `docs/onnx-audit/onnx_attr_audit.py`: the read-only script that rebuilds the counts. No spec, vector or code change.
+
 ## 0.15.11 — 2026-11-12 (proposed; PM allocates; Draft change, PM ruling 2026-11-12 "option a")
 
 - **Contract §6.12 gains two bind-time codes: `division_by_zero` (KISS-CONTRACT-6.12-0007) and `ceil_div_divisor` (KISS-CONTRACT-6.12-0008).** A `/` whose divisor names a launch-scalar symbol and evaluates to zero, and a `ceil_div` whose such divisor is zero or negative, now decline at bind time. **This changes a MUST's decline kind:** before, a zero or non-positive divisor read from the environment was classified `build_time` (it came out of the evaluator as a `ParseError`); a divisor that names no symbol (`n / 0`) stays a build-time fault. §6.6-0009(b)(c) and the subscript rule are unchanged (an out-of-bounds subscript stays build-time).
