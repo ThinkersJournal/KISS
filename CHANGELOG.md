@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.7 — 2026-11-12 (proposed; docs only, PM allocates)
+
+- Docs only. `docs/kernel-body-scope-note.md`: scope-and-process proposal for a kernel-body layer (Unpopped IR as source; KISS#768, #769). Informative, no clause, no vector, nothing ruled; every item waits on CireSnave via the PM.
+
 ## 0.15.6 — 2026-11-11 (proposed; docs only)
 
 - Docs only: HANDOFF.md rewritten for the 0.15.3 state (R1.22 group A and union list done; LoRA scope answer recorded; WAIT lines kept). No spec, vector or code change.
