@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.8 — 2026-11-12 (proposed; number per the PM, after #796's 0.15.7)
+
+- **Bundle slot non-overlap is now registered and implemented (KISS-CONTRACT-6.5-0019, R1.22 / board 378 follow-up).** The clause already said slots MUST NOT overlap at bind time; it now names its typed decline `slot_overlap` (§6.12-0002) and defines overlap as intersecting **byte hulls** (a conservative rule: interleaved slots are refused). No new clause, field, vector or `structure_key` byte; PM allocated the decline name, 2026-11-12.
+- `conformance/src/bind.rs`: `check_slot_overlap`, `BindDecline::SlotOverlap`; test `test_contract_bind_slot_overlap`.
+
 ## 0.15.6 — 2026-11-11 (proposed; docs only)
 
 - Docs only: HANDOFF.md rewritten for the 0.15.3 state (R1.22 group A and union list done; LoRA scope answer recorded; WAIT lines kept). No spec, vector or code change.
