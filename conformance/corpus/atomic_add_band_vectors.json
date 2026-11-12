@@ -1,0 +1,14 @@
+{
+  "schema": "kiss-atomic-add-band-vectors-v1.json",
+  "generated_from": "conformance/src/tolerance.rs::emit_atomic_add_band_vectors_json",
+  "clause": "KISS-OPS-6.11-0024 (band as KISS-CONTRACT-6.8-0012 defines it)",
+  "band": "k = 1, eps_A = 2^-24 (f32), per position: k * N * eps_A * |max partial sum|; values are f32 bit patterns in hex",
+  "cases": [
+    {"name": "exact_sum_same_in_every_order", "dest": "00000000", "updates": ["3F800000", "40000000", "40400000", "40800000"], "reference": "41200000", "n": 4, "candidate": "41200000", "admitted": true},
+    {"name": "reassociation_inside_band", "dest": "00000000", "updates": ["4CBEBC20", "3F800000", "CCBEBC20", "3F800000"], "reference": "3F800000", "n": 4, "candidate": "40000000", "admitted": true},
+    {"name": "reassociation_outside_band", "dest": "00000000", "updates": ["4CBEBC20", "3F800000", "CCBEBC20", "3F800000"], "reference": "3F800000", "n": 4, "candidate": "42C80000", "admitted": false},
+    {"name": "dest_in_the_partials_edge_admitted", "dest": "4B800000", "updates": ["3F800000", "3F800000"], "reference": "4B800000", "n": 2, "candidate": "4B800001", "admitted": true},
+    {"name": "dest_in_the_partials_past_edge_refused", "dest": "4B800000", "updates": ["3F800000", "3F800000"], "reference": "4B800000", "n": 2, "candidate": "4B800002", "admitted": false},
+    {"name": "zero_partials_demand_exact_zero", "dest": "00000000", "updates": ["00000000", "00000000", "00000000"], "reference": "00000000", "n": 3, "candidate": "0DA24260", "admitted": false}
+  ]
+}

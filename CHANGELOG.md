@@ -3,9 +3,15 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.15.12 — 2026-11-12 (proposed; tooling only, PM allocates; renumbered from 0.15.10 because #800 took 0.15.11 first)
+## 0.15.15 — 2026-11-12 (proposed; tooling only, PM allocates; renumbered again because #801 took 0.15.13 and #802 is 0.15.14)
 
 - Tooling only: the fragment-and-stamp kit (CireSnave standing order, 2026-11-12). `tools/stamp-version.py`, `tools/check-fragment.py`, `.github/workflows/changelog-fragment.yml`, `changelog.d/README.md`, and `tools/stamp-current.txt` naming `conformance/Cargo.toml`. From the next PR on a branch adds one `changelog.d/<topic>.md` fragment and never edits a version line or `CHANGELOG.md`; the gate stamps the allocated number. KISS tracks no `Cargo.lock` and pins its version nowhere else, so `tools/stamp-extra.txt` is not needed; `tools/kiss_version_sync.py` reads what the stamp writes and is unchanged. No spec, vector or code change.
+
+## 0.15.13 — 2026-11-12 (proposed; PM allocates; Draft change, CireSnave 2026-11-12 board 417 "A")
+
+- **A floating-point `atomic-add` now has a stated tolerance: the 6.8-0012 band (KISS-OPS-6.11-0024; KISS-CONTRACT-6.8-0012 widened to name it).** CireSnave, verbatim: *"417: A."* (adopt the float atomic add band in v1, bound defined as 6.8-0012 defines it so the clauses agree). **Draft change:** before, the `scatter` `atomic-add` combine on a float dtype was declared order-invariant/nondeterministic (6.11-0006, 6.0-0004) with no bound; now its tolerance is `k(S,A) * N * eps_A * |max partial sum|` per destination position, `S = A =` the destination dtype, with the reference the ascending-source-index evaluation starting from `dest[j]` (6.17-0009), absolute (never result-relative), exact where the band is 0. 6.11-0006 and 6.17-0008 name the new clause. Integer `atomic-add` stays exact.
+- This moves no wire byte and no `structure_key` byte. The kernel-body scope note (`docs/kernel-body-scope-note.md`) item 9 and sec 4 are updated to say ruled. In-kernel atomics will cite 6.11-0024 when that layer exists; Unpopped's `gamma_(n-1) * sum|x_i|` band is a different (order-bounding) formula and is not adopted.
+- `conformance/src/tolerance.rs`: `atomic_add_cell_f32`, `atomic_add_admits_f32`, six vectors in `conformance/corpus/atomic_add_band_vectors.json` (emitter `emit_atomic_add_band_vectors`); tests `test_ops_scatter_atomic_add_band`, `test_contract_accumulator_tolerance_band (the name 6.8-0012 already carried; it had no test)`.
 
 ## 0.15.11 — 2026-11-12 (proposed; PM allocates; Draft change, PM ruling 2026-11-12 "option a")
 

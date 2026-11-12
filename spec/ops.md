@@ -1073,7 +1073,8 @@ section-intro paragraph is an informative pointer to it):
   deterministic. The `assign` combine MUST be deterministic: when two or more source
   elements scatter to the **same** destination index, the write from the **highest
   source (row-major iteration) index** MUST win (a pinned last-writer-in-iteration-order
-  tie-break), so `assign` never depends on hardware race order. *Test:*
+  tie-break), so `assign` never depends on hardware race order. The floating-point `atomic-add`
+  combine's declared tolerance is the band of §6.11-0024. *Test:*
   `scatter_fp_atomic_add_is_order_invariant_class`.
 - **KISS-OPS-6.11-0007** — `sort_network` MUST carry a `direction` attribute in
   `{ascending, descending}` (default `ascending`) and a boolean `stability` flag (default
@@ -1285,6 +1286,22 @@ section-intro paragraph is an informative pointer to it):
   bits are unchanged. An **empty mask**, a bit at or above the output rank, and an output rank above
   `MAX_RANK` are each a typed decline. `unsqueeze(squeeze(x, S), S) = x` whenever `S` is a legal
   `squeeze` set of `x`. *Test:* `test_ops_unsqueeze_semantics`.
+- **KISS-OPS-6.11-0024** — The `scatter` `atomic-add` combine on a floating-point dtype (and the
+  `scatter_add` wrapper) MUST declare its tolerance as the **ULP-of-A band of KISS-CONTRACT-6.8-0012**,
+  `k(S,A) · N · eps_A · |max partial sum|`, evaluated **per destination position `j`** with
+  `S = A =` the destination dtype (an atomic does not widen). For that position, the reference
+  sequence is `dest[j]` (§6.11-0016) followed by every non-skipped `updates` element that scatters to
+  `j`, in **ascending source (row-major) index** (the order of §6.11-0006's tie-break); `N` is the
+  number of those updates; the §6.17-0009 **reference value** is that sequence accumulated in order with
+  each accumulate rounded to `A`; and `|max partial sum|` is the maximum absolute running partial of that
+  sequence, `dest[j]` included. Any accumulation order a candidate used is admitted when its result for
+  `j` is within the band **in absolute terms** (never result-relative, §6.8-0012); a position no update
+  reaches has `N = 0` and MUST equal `dest[j]` exactly, and where `|max partial sum|` is 0 the result
+  MUST equal the reference exactly. The calibration record and the "no fixed constant, no wide-truth
+  bound" rules of §6.8-0012 apply to this cell unchanged. Integer `atomic-add` stays exact
+  (§6.11-0006). *Draft change (CireSnave 2026-11-12, board 417 "A"): before it, a floating-point
+  `atomic-add` was declared nondeterministic with no stated bound.* *Test:*
+  `test_ops_scatter_atomic_add_band` (vectors: `conformance/corpus/atomic_add_band_vectors.json`).
 
 ### 6.12 Scalar-source leaves
 
@@ -1890,7 +1907,8 @@ surfaces it in a kernel's guarantees section.
   accumulator), not an error to be toleranced away. *Test:*
   `test_ops_math_precision_reproducibility_class`.
 - **KISS-OPS-6.17-0008** — A float `sum`/`prod` reduction, scan (`prefix_scan`), or
-  contraction (`matmul` and every op carrying a float fold, §6.0-0004) is a
+  contraction (`matmul` and every op carrying a float fold, §6.0-0004), and the floating-point
+  `atomic-add` combine (§6.11-0024, whose pair is the destination dtype twice), is a
   **tolerance-cell** whose determinism class and declared tolerance are a function of the
   pair **(compute-dtype, accumulator-dtype)**. The accumulator dtype MUST be a **float**
   dtype **at least as wide** as the compute dtype (a narrower accumulator cannot improve on
@@ -3031,6 +3049,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0021 | `test_ops_argmax_tie_rule` |
 | KISS-OPS-6.11-0022 | `test_ops_squeeze_semantics` |
 | KISS-OPS-6.11-0023 | `test_ops_unsqueeze_semantics` |
+| KISS-OPS-6.11-0024 | `test_ops_scatter_atomic_add_band` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
