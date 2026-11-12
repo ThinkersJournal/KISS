@@ -44,8 +44,8 @@ backend's list).
 
 1. **CireSnave rules the scope and the sub-standard question** (sections 2-3). Nothing is drafted as a clause before.
 2. **Decisions list (concept map sec 12, eleven items)** are ruled one by one, as options notes with a recommendation, in
-   the usual way. Items that move bytes (float atomic add as a band versus the pinned KISS-CONTRACT-6.8-0012 form) are
-   marked and go to him verbatim.
+   the usual way. Items that move bytes are marked and go to him verbatim (float atomic add was one: ruled A on board 417,
+   landed as KISS-OPS-6.11-0024).
 3. **Second implementer.** The map names Fuel, Baracuda, Vulkane (Slang/SPIR-V), and the soft-stopped SYCL/OpenCL
    emitters as candidates, unverified. A clause is *frozen* only when two independent codebases pass its vectors; until
    then it is `proposed`. The oracle-independence caveat applies: one author's comprehension is not two.
@@ -67,7 +67,7 @@ backend's list).
 | 6 | Conservative divergence analysis | Adopt as a *sufficient* rule; a reader may be less conservative only if it never accepts what the rule rejects |
 | 7 | Device barrier assumes residency | Adopt; residency is a Target row |
 | 8 | Atomic old value = any consistent serialization | Adopt |
-| 9 | Float atomic add is a band | **Byte-affecting**: needs his word against 6.8-0012 |
+| 9 | Float atomic add is a band | **Ruled A (CireSnave 2026-11-12, board 417): adopt in v1, the bound defined as 6.8-0012 defines it.** Landed as KISS-OPS-6.11-0024 (Draft change) |
 | 10 | `Constant` memory shape-only | Adopt for v1 |
 | 11 | Named barriers, mbarrier, async, tensor memory, MMA absent | Keep out of v1 |
 

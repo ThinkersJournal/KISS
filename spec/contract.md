@@ -1267,7 +1267,9 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   fields (§6.8-0003/-0004). *Test:* `test_contract_accumulation_type_matches_key_acc`.
 - **KISS-CONTRACT-6.8-0012** — The **declared tolerance** for an accumulator-keyed
   reduction/scan/contraction tolerance-cell `(S, A)` (KISS-OPS §6.17-0008, where `S` is the
-  compute dtype and `A` the `accumulation_type` of §6.8-0011) MUST be declared in the
+  compute dtype and `A` the `accumulation_type` of §6.8-0011), **and for the floating-point
+  `atomic-add` cell of KISS-OPS §6.11-0024** (`S = A =` the destination dtype; `N` is that
+  position's contribution count; *Draft change, CireSnave 2026-11-12, board 417 "A"*), MUST be declared in the
   Guarantees (§6.8-0002 / §6.8-0004) as a **ULP-of-A band** of the form
   `k(S,A) · N · eps_A · |max partial sum|` — where `eps_A` is the accumulator dtype's unit
   roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell calibrated
