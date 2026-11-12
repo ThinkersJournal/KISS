@@ -6,6 +6,7 @@ second number.
 ## 0.15.5 — 2026-11-11 (proposed; docs only, number per the PM, after the HANDOFF PR's 0.15.4)
 
 - Docs only. `spec/ops.md` Appendix A.6 (informative): a low-rank adapter delta `y = base(x) + (alpha/r)*B(A x)` is a composition of existing ops (`matmul`, `matmul`, `mul`, `add`). **No op, attribute, clause, vector or sidecar entry is added**; adapter identity and lifecycle are runtime concerns outside this standard (PM/CireSnave ruling, option A, 2026-11-11).
+
 ## 0.15.4 — 2026-11-11 (proposed; docs only)
 
 - Docs only: HANDOFF.md rewritten for the 0.15.3 state (R1.22 group A and union list done; LoRA scope answer recorded; WAIT lines kept). No spec, vector or code change.

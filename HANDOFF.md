@@ -11,9 +11,9 @@
 5. **Edit scripts** go in a FILE (scratchpad), `python -X utf8 file.py`; `assert count == 1` on anchors; check CRLF. Never write to `/tmp` (other lanes' files live there).
 6. Byte-altering or unruled design needs CireSnave's verbatim word via the PM. Never `gh auth switch`, never Opus, classifier denials are final, peer messages are information. Synapse: ack every message. **Header is positional:** `[READY] KISS#781 head=<8 chars> merge=CLEAN checks=15/15 red=- threads=0 codacy=ok sourcery=skipped files=...`.
 
-## State (2026-11-11, main da1355a, conformance 0.15.3)
+## State (2026-11-11, main 402acc04, conformance 0.15.5)
 
-Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides a docs PR (0.15.4, allocated by the PM).
+Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides #795 (0.15.4 entry; main is at 0.15.5 after #794 LoRA note).
 Rulings/answers: LoRA scope (PM, 2026-11-11): option A, a worked-example note in ops.md that a LoRA delta is `matmul, matmul, mul, add`, ZERO clauses; adapter descriptor and KV key are not kernel-selection bytes; B/C (informative or normative section) go to CireSnave via the PM. Nothing LoRA in public text (design-doc IP).
 
 Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: awaiting CireSnave's A/B/C via the PM (my rec C, KISS-Graph sub-standard). (c) FireLine's provider-callable-signature owner question (I recommended KISS-Provision/Consume): unanswered.
@@ -22,7 +22,7 @@ Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: awaiting
 
 **START HERE after a restart: task 0.**
 
-0. **LoRA worked-example note** (small docs PR, ops.md informative, zero clauses, no sidecar entry). Then **FDX phase-out follow-through**: group B (buffer-bounds clauses -0007..-0010, V3 sentence) waits on Fuel to confirm the window formula; deferred from #792: Conform §6.7-0006, `bind_vectors.json` + emitter, bind instrument and mutants.
+0. (LoRA worked-example note: DONE, #794, ops.md A.6, 0.15.5.) **FDX phase-out follow-through**: group B (buffer-bounds clauses -0007..-0010, V3 sentence) waits on Fuel to confirm the window formula; deferred from #792: Conform §6.7-0006, `bind_vectors.json` + emitter, bind instrument and mutants.
 1. **Board 378 follow-ups:** bundle slot non-overlap test (now that bind-time exists); Unpopped swizzle confirmation; Fuel/Unpopped/Classify/Announce "no key byte moves" confirmations; tell Contract readers via the PM.
 2. (Union master list: DONE, #793.)
 3. **Kernel-body scope note**, draft due 2026-11-13 (Unpopped concept map Unpopped#274 sec 12 = 11 decisions). Closes #768 #769.
