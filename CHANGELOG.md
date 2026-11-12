@@ -9,6 +9,10 @@ second number.
 - `conformance/src/bind.rs`: `check_slot_overlap`, `BindDecline::SlotOverlap`; test `test_contract_bind_slot_overlap`.
 - PM-requested additions: an informative note in 6.5-0019 that the byte-hull rule is deliberately conservative (a later minor may relax it to element-level intersection) with its one refused-but-valid example, and a new vector family `conformance/corpus/slot_overlap_vectors.json` (emitter `emit_slot_overlap_vectors`, test `test_contract_slot_overlap_vectors`) whose `interleaved_valid_refused_v1` case pins that v1 behaviour.
 
+## 0.15.7 — 2026-11-12 (proposed; docs only, PM allocates)
+
+- Docs only. `docs/kernel-body-scope-note.md`: scope-and-process proposal for a kernel-body layer (Unpopped IR as source; KISS#768, #769). Informative, no clause, no vector, nothing ruled; every item waits on CireSnave via the PM.
+
 ## 0.15.6 — 2026-11-11 (proposed; docs only)
 
 - Docs only: HANDOFF.md rewritten for the 0.15.3 state (R1.22 group A and union list done; LoRA scope answer recorded; WAIT lines kept). No spec, vector or code change.
