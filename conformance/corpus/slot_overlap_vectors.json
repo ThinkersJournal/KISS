@@ -1,0 +1,15 @@
+{
+  "schema": "kiss-slot-overlap-vectors-v1.json",
+  "generated_from": "conformance/src/bind.rs::emit_slot_overlap_vectors_json",
+  "clause": "KISS-CONTRACT-6.5-0019",
+  "environment": "rank 2, n as stated, extents0 [3,4], strides0 [4,1], no workspace",
+  "hull_rule": "a slot's byte hull is [offset + lowest element, offset + highest element + 1); two slots overlap when their hulls intersect",
+  "cases": [
+    {"name": "touching_hulls_ok", "bundle": "bundle(a:f32[4]=dense@0,b:f32[4]=dense@16)", "n": 12, "expect": "ok", "pinned_v1_conservative": false},
+    {"name": "overlapping_hulls", "bundle": "bundle(a:f32[4]=dense@0,b:f32[4]=dense@15)", "n": 12, "expect": "slot_overlap", "pinned_v1_conservative": false},
+    {"name": "verdict_follows_environment_ok", "bundle": "bundle(a:f32[n]=dense@0,b:f32[4]=dense@32)", "n": 8, "expect": "ok", "pinned_v1_conservative": false},
+    {"name": "verdict_follows_environment_overlap", "bundle": "bundle(a:f32[n]=dense@0,b:f32[4]=dense@32)", "n": 9, "expect": "slot_overlap", "pinned_v1_conservative": false},
+    {"name": "empty_slot_overlaps_nothing", "bundle": "bundle(a:f32[0]=dense@8,b:f32[4]=dense@0)", "n": 12, "expect": "ok", "pinned_v1_conservative": false},
+    {"name": "interleaved_valid_refused_v1", "bundle": "bundle(a:f32[1,2]=strided(2,2)@0,b:f32[1]=dense@4)", "n": 12, "expect": "slot_overlap", "pinned_v1_conservative": true}
+  ]
+}

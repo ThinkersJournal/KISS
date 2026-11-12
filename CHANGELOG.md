@@ -7,6 +7,7 @@ second number.
 
 - **Bundle slot non-overlap is now registered and implemented (KISS-CONTRACT-6.5-0019, R1.22 / board 378 follow-up).** The clause already said slots MUST NOT overlap at bind time; it now names its typed decline `slot_overlap` (§6.12-0002) and defines overlap as intersecting **byte hulls** (a conservative rule: interleaved slots are refused). No new clause, field, vector or `structure_key` byte; PM allocated the decline name, 2026-11-12.
 - `conformance/src/bind.rs`: `check_slot_overlap`, `BindDecline::SlotOverlap`; test `test_contract_bind_slot_overlap`.
+- PM-requested additions: an informative note in 6.5-0019 that the byte-hull rule is deliberately conservative (a later minor may relax it to element-level intersection) with its one refused-but-valid example, and a new vector family `conformance/corpus/slot_overlap_vectors.json` (emitter `emit_slot_overlap_vectors`, test `test_contract_slot_overlap_vectors`) whose `interleaved_valid_refused_v1` case pins that v1 behaviour.
 
 ## 0.15.6 — 2026-11-11 (proposed; docs only)
 
