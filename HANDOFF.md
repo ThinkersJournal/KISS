@@ -13,7 +13,7 @@
 
 ## State (2026-11-11, main 402acc04, conformance 0.15.5)
 
-Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides #795 (0.15.4 entry; main is at 0.15.5 after #794 LoRA note).
+Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides #795 (0.15.6; #794 LoRA note was 0.15.5).
 Rulings/answers: LoRA scope (PM, 2026-11-11): option A, a worked-example note in ops.md that a LoRA delta is `matmul, matmul, mul, add`, ZERO clauses; adapter descriptor and KV key are not kernel-selection bytes; B/C (informative or normative section) go to CireSnave via the PM. Nothing LoRA in public text (design-doc IP).
 
 Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: awaiting CireSnave's A/B/C via the PM (my rec C, KISS-Graph sub-standard). (c) FireLine's provider-callable-signature owner question (I recommended KISS-Provision/Consume): unanswered.
