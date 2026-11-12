@@ -81,6 +81,13 @@ pub enum Decline {
     /// A Domain-mode expression (or one of its sub-expressions) evaluated
     /// negative.
     NegativeInDomain(i64),
+    /// A `/` whose divisor is zero (§6.6-0009(c)). `bound` is true when the divisor expression names a
+    /// launch-scalar symbol (its value comes from the bound environment: a bind-time decline, §6.12-0007);
+    /// false when it is constant text (`n / 0`: a build-time fault).
+    DivisionByZero { bound: bool },
+    /// A `ceil_div` whose divisor is zero or negative (§6.6-0009(b)); `bound` as for [`Decline::DivisionByZero`]
+    /// (§6.12-0008).
+    CeilDivDivisor { bound: bool, value: i64 },
     /// A `+ - *` or `ceil_div` step (or the one unrepresentable quotient, `i64::MIN / -1`,
     /// §6.6-0009(d)) left the signed 64-bit range. Never wrapped or saturated (§6.12-0005).
     Overflow,
@@ -428,11 +435,9 @@ fn resolve_subscript(name: &str, k: i64, s: &LaunchScalars) -> Result<i64, Decli
 /// divisor. A non-positive divisor is a decline (design choice: the grammar
 /// gives no meaning to `ceil_div` by zero or a negative divisor, so it is
 /// treated as malformed input rather than silently picking a rounding rule).
-fn ceil_div(a: i64, b: i64) -> Result<i64, Decline> {
+fn ceil_div(a: i64, b: i64, bound: bool) -> Result<i64, Decline> {
     if b <= 0 {
-        return Err(Decline::ParseError(format!(
-            "ceil_div divisor must be positive, got {b}"
-        )));
+        return Err(Decline::CeilDivDivisor { bound, value: b });
     }
     // `a + b - 1` in checked arithmetic: this module never panics, including
     // on the near-i64::MAX inputs a Dispatch expression's launch scalars can
@@ -442,6 +447,15 @@ fn ceil_div(a: i64, b: i64) -> Result<i64, Decline> {
         .and_then(|x| x.checked_sub(1))
         .ok_or(Decline::Overflow)?;
     Ok(numerator.div_euclid(b))
+}
+
+/// Whether an expression names any launch-scalar symbol (so its value can come from the bound environment).
+fn names_symbol(node: &Ast) -> bool {
+    match node {
+        Ast::Int(_) => false,
+        Ast::Symbol(_) | Ast::Subscript(..) => true,
+        Ast::Add(a, b) | Ast::Sub(a, b) | Ast::Mul(a, b) | Ast::Div(a, b) | Ast::CeilDiv(a, b) => names_symbol(a) || names_symbol(b),
+    }
 }
 
 fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Decline> {
@@ -475,13 +489,13 @@ fn eval_ast(node: &Ast, s: &LaunchScalars, mode: EvalMode) -> Result<i64, Declin
             // `checked_div` covers BOTH a zero divisor and the one other way integer
             // division can trap (`i64::MIN / -1`, which overflows the positive result).
             if bv == 0 {
-                return Err(Decline::ParseError("division by zero".to_string()));
+                return Err(Decline::DivisionByZero { bound: names_symbol(b) });
             }
             av.checked_div(bv).ok_or(Decline::Overflow)?
         }
         Ast::CeilDiv(a, b) => {
             let (av, bv) = (eval_ast(a, s, mode)?, eval_ast(b, s, mode)?);
-            ceil_div(av, bv)?
+            ceil_div(av, bv, names_symbol(b))?
         }
     };
     if mode == EvalMode::Domain && v < 0 {
