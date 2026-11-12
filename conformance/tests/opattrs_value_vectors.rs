@@ -18,7 +18,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 307; // 295 + 12 (iota: target_dtype x extents x axis value vectors, board 422); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
+const POPULATION: usize = 313; // 307 + 6 (bitcast: target_dtype value vectors, board 427); 295 + 12 (iota: target_dtype x extents x axis value vectors, board 422); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -204,6 +204,18 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
         }
         "concat" => opattrs::encode_concat(byte(v, "axis")),
         "squeeze" | "unsqueeze" => opattrs::encode_axes_mask(byte(v, "axes")),
+        "bitcast" => {
+            let target = match tok(v, "target_dtype") {
+                "f16" => 1,
+                "bf16" => 2,
+                "f32" => 3,
+                "i32" => 9,
+                "f8e4m3fn" => 14,
+                "f4e2m1" => 25,
+                t => panic!("target_dtype {t} not in the hand table"),
+            };
+            opattrs::encode_bitcast(target)
+        }
         "iota" => {
             let target = match tok(v, "target_dtype") {
                 "f16" => 1,

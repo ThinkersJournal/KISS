@@ -1148,3 +1148,35 @@ pub fn iota_values(dtype: &str, extents: &[u32], axis: usize) -> Result<Vec<u64>
     let len = extents[axis] as usize;
     Ok((0..total).map(|i| ((i / inner) % len) as u64).collect())
 }
+
+/// Why a `bitcast` is refused (§6.21-0005).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BitcastDecline {
+    /// The source or destination dtype is not an integer or one of `f16`, `bf16`, `f32`, `f64`, `f8e4m3fn`, `f8e5m2`.
+    Dtype(String),
+    /// The two dtypes have different bit widths.
+    Width { src: u32, dst: u32 },
+}
+
+/// The bit width of a legal `bitcast` dtype, or `None` for a dtype the op refuses (sub-byte, MX, `f8e8m0`, reserved
+/// floats, complex, `bool`, unknown).
+pub fn bitcast_width(dtype: &str) -> Option<u32> {
+    match dtype {
+        "i8" | "u8" | "f8e4m3fn" | "f8e5m2" => Some(8),
+        "i16" | "u16" | "f16" | "bf16" => Some(16),
+        "i32" | "u32" | "f32" => Some(32),
+        "i64" | "u64" | "f64" => Some(64),
+        _ => None,
+    }
+}
+
+/// The `bitcast` reference (§6.21-0005): the destination's reading of the same bits. A pure bit move, so the result is
+/// `bits` unchanged (masked to the width); a typed decline, never a panic, for an illegal pair.
+pub fn bitcast_bits(src: &str, dst: &str, bits: u64) -> Result<u64, BitcastDecline> {
+    let s = bitcast_width(src).ok_or_else(|| BitcastDecline::Dtype(src.to_string()))?;
+    let d = bitcast_width(dst).ok_or_else(|| BitcastDecline::Dtype(dst.to_string()))?;
+    if s != d {
+        return Err(BitcastDecline::Width { src: s, dst: d });
+    }
+    Ok(if s == 64 { bits } else { bits & ((1u64 << s) - 1) })
+}
