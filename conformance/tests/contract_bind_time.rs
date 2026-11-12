@@ -40,6 +40,8 @@ fn test_contract_bind_time_marking() {
         ("0003", "unbound_symbol"),
         ("0004", "extent_out_of_range"),
         ("0005", "affine_overflow"),
+        ("0007", "division_by_zero"),
+        ("0008", "ceil_div_divisor"),
     ] {
         let head = format!("- **KISS-CONTRACT-6.12-{id}** — ");
         let at = text.find(&head).unwrap_or_else(|| panic!("clause 6.12-{id} missing"));
@@ -181,4 +183,39 @@ fn test_contract_slot_overlap_vectors() {
     }
     let pinned: Vec<&str> = SLOT_OVERLAP_VECTORS.iter().filter(|v| v.4).map(|v| v.0).collect();
     assert_eq!(pinned, ["interleaved_valid_refused_v1"]);
+}
+
+// Backs[enforced]: KISS-CONTRACT-6.12-0007 — a `/` whose divisor names a launch-scalar symbol and is zero declines `division_by_zero` at bind time; a constant zero divisor is a build-time fault; the decline follows the first-failing-step order
+#[test]
+fn test_contract_bind_division_by_zero() {
+    let e = env(5);
+    // the divisor comes from the environment: bind-time, whatever its spelling.
+    for bad in ["8 / (n - 5)", "n / (n - n)", "8 / extents0[0] / (extents0[1] - 4)"] {
+        let r = bind_expr(bad, &e, None);
+        assert_eq!(r, Err(BindDecline::DivisionByZero), "{bad}");
+        assert_eq!(r.unwrap_err().code(), "division_by_zero");
+    }
+    assert_eq!(bind_expr("8 / (n - 4)", &e, None), Ok(8), "a non-zero bound divisor binds");
+    // constant text: the same fault, a build-time one.
+    for bad in ["n / 0", "8 / (3 - 3)"] {
+        let r = bind_expr(bad, &e, None);
+        assert!(matches!(r, Err(BindDecline::BuildTime(_))), "{bad}: {r:?}");
+        assert_eq!(r.unwrap_err().code(), "build_time");
+    }
+    // first failing step: an unbound symbol in the dividend is reported before the zero divisor.
+    assert_eq!(bind_expr("ws_bytes / (n - 5)", &e, None).unwrap_err().code(), "unbound_symbol");
+}
+
+// Backs[enforced]: KISS-CONTRACT-6.12-0008 — a `ceil_div` whose divisor names a launch-scalar symbol and is zero or negative declines `ceil_div_divisor` at bind time, carrying the value; a constant non-positive divisor is a build-time fault
+#[test]
+fn test_contract_bind_ceil_div_divisor() {
+    let e = env(5);
+    assert_eq!(bind_expr("ceil_div(8, n - 5)", &e, None), Err(BindDecline::CeilDivDivisor(0)));
+    assert_eq!(bind_expr("ceil_div(8, n - 7)", &e, None), Err(BindDecline::CeilDivDivisor(-2)));
+    assert_eq!(bind_expr("ceil_div(8, n - 5)", &e, None).unwrap_err().code(), "ceil_div_divisor");
+    assert_eq!(bind_expr("ceil_div(8, n - 1)", &e, None), Ok(2), "a positive bound divisor binds");
+    for bad in ["ceil_div(8, 0)", "ceil_div(8, 2 - 3)"] {
+        let r = bind_expr(bad, &e, None);
+        assert!(matches!(r, Err(BindDecline::BuildTime(_))), "{bad}: {r:?}");
+    }
 }

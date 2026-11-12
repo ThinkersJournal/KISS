@@ -3,6 +3,11 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.11 — 2026-11-12 (proposed; PM allocates; Draft change, PM ruling 2026-11-12 "option a")
+
+- **Contract §6.12 gains two bind-time codes: `division_by_zero` (KISS-CONTRACT-6.12-0007) and `ceil_div_divisor` (KISS-CONTRACT-6.12-0008).** A `/` whose divisor names a launch-scalar symbol and evaluates to zero, and a `ceil_div` whose such divisor is zero or negative, now decline at bind time. **This changes a MUST's decline kind:** before, a zero or non-positive divisor read from the environment was classified `build_time` (it came out of the evaluator as a `ParseError`); a divisor that names no symbol (`n / 0`) stays a build-time fault. §6.6-0009(b)(c) and the subscript rule are unchanged (an out-of-bounds subscript stays build-time).
+- `conformance/src/dispatch_expr.rs`: `Decline::DivisionByZero { bound }` and `Decline::CeilDivDivisor { bound, value }` replace two `ParseError` spellings; `conformance/src/bind.rs`: `BindDecline::{DivisionByZero, CeilDivDivisor}` and one `classify`. Tests `test_contract_bind_division_by_zero`, `test_contract_bind_ceil_div_divisor`; the marking test now also reads -0007/-0008. FireLine to be told when this lands.
+
 ## 0.15.9 — 2026-11-12 (proposed; docs only, PM allocates)
 
 - Docs only: HANDOFF.md rewritten for the 0.15.8 state (#796 scope note and #797 slot_overlap landed; kernel-body waits on CireSnave, board 417). No spec, vector or code change.
