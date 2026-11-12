@@ -3262,6 +3262,27 @@ places NaN last, so `argmin` skips NaN unless every element is NaN (then index `
 index for `argmin` as well): it is derived from the §6.11-0007 total order (NaN greatest), not
 a NaN-propagation choice.
 
+**A.6 A low-rank adapter delta from existing ops (no new op).** A low-rank adaptation of a linear
+layer (Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models", arXiv:2106.09685) adds, to the
+output of a frozen layer, a scaled product of two narrow matrices. In the §6.13 operand convention
+(`input(0)` read at `[m,k]`, `input(1)` at `[k,n]`), with `x` of shape `[m,k]`, `W` `[k,n]`, `A` `[k,r]`
+and `B` `[r,n]` for a rank `r` far smaller than `k` and `n`:
+
+```
+base  = matmul(x, W)                  # the frozen layer
+down  = matmul(x, A)                  # [m,r]
+up    = matmul(down, B)               # [m,n]
+y     = add(base, mul(up, const(alpha / r)))
+```
+
+Every node is an existing op: two further `matmul` contractions, one `mul` by a scalar-source leaf
+(§6.12) broadcast over the output, and one `add`. A consumer that has no notion of an adapter resolves
+this DAG like any other, and a provider that ships a fused kernel for it advertises that kernel under a
+KISS-Grammar tag as it would for any fusion (§2.1). The ops standard adds no op, no attribute and no
+clause for it. Which adapter is active, how adapters are loaded and swapped, and any cache keyed by
+adapter are properties of a runtime, not of an op, and are outside this standard. Determinism class:
+order-invariant/nondeterministic, from the float contractions (§6.0-0004/-0005).
+
 ## Appendix B — Glossary (informative)
 
 - **Atom** — a primitive-floor op with no in-standard decomposition (§6.3-0003, §6.3-0005).
