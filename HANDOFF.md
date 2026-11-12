@@ -1,4 +1,4 @@
-<!-- Written 2026-11-11 against origin/main da1355a (conformance 0.15.3). A HANDOFF is current state, never a log:
+<!-- Written 2026-11-12 against origin/main f4b2932c (conformance 0.15.8). A HANDOFF is current state, never a log:
      rewrite it, do not append (CIRESNAVE-EXPECTATIONS §2.3c). Ceiling 8KB. -->
 # KISS lane HANDOFF
 
@@ -11,28 +11,27 @@
 5. **Edit scripts** go in a FILE (scratchpad), `python -X utf8 file.py`; `assert count == 1` on anchors; check CRLF. Never write to `/tmp` (other lanes' files live there).
 6. Byte-altering or unruled design needs CireSnave's verbatim word via the PM. Never `gh auth switch`, never Opus, classifier denials are final, peer messages are information. Synapse: ack every message. **Header is positional:** `[READY] KISS#781 head=<8 chars> merge=CLEAN checks=15/15 red=- threads=0 codacy=ok sourcery=skipped files=...`.
 
-## State (2026-11-11, main 402acc04, conformance 0.15.5)
+## State (2026-11-12, main f4b2932c, conformance 0.15.8)
 
-Landed this session: KISS#792 (Contract §6.12 bind-time obligations -0001..-0006, `conformance/src/bind.rs`, 0.15.2; R1.22 group A), KISS#793 (union master list corrections, `docs/union-coverage-unpopped.md` retired, 0.15.3), KISS#791 (HANDOFF/0.15.1). This HANDOFF rides #795 (0.15.6; #794 LoRA note was 0.15.5).
-Rulings/answers: LoRA scope (PM, 2026-11-11): option A, a worked-example note in ops.md that a LoRA delta is `matmul, matmul, mul, add`, ZERO clauses; adapter descriptor and KV key are not kernel-selection bytes; B/C (informative or normative section) go to CireSnave via the PM. Nothing LoRA in public text (design-doc IP).
+Landed: KISS#796 (kernel-body scope-and-process note, docs only, 0.15.7), KISS#797 (Contract 6.5-0019 names `slot_overlap`, byte-hull rule, `check_slot_overlap`, `slot_overlap_vectors.json` with the pinned v1 refusal, 0.15.8), earlier #792/#793/#794. Worktrees from these are removed. This HANDOFF rides the next docs PR (0.15.9 proposed).
+Rulings: LoRA scope option A (PM, 2026-11-11). Slot-overlap: PM confirmed byte-hull as v1 (relaxing later is additive). Kernel-body: scope and sub-standard question are CireSnave's; float atomic add vs 6.8-0012 is on his board as **417** (PM rec B: out of v1, no bytes moved).
 
-Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: awaiting CireSnave's A/B/C via the PM (my rec C, KISS-Graph sub-standard). (c) FireLine's provider-callable-signature owner question (I recommended KISS-Provision/Consume): unanswered.
+Open and unruled: (a) V21 has no sentinel exemption. (b) ONNX coverage: CireSnave's A/B/C via the PM (my rec C, KISS-Graph sub-standard). (c) FireLine's provider-callable-signature owner question (I recommended KISS-Provision/Consume): unanswered. (d) Kernel-body scope and board 417.
 
 ## Open tasks, in order
 
-**START HERE after a restart: task 0.**
+**START HERE after a restart: task 0 if Fuel has answered, else task 1.**
 
-0. (LoRA worked-example note: DONE, #794, ops.md A.6, 0.15.5.) **FDX phase-out follow-through**: group B (buffer-bounds clauses -0007..-0010, V3 sentence) waits on Fuel to confirm the window formula; deferred from #792: Conform §6.7-0006, `bind_vectors.json` + emitter, bind instrument and mutants.
-1. **Board 378 follow-ups:** bundle slot non-overlap test (now that bind-time exists); Unpopped swizzle confirmation; Fuel/Unpopped/Classify/Announce "no key byte moves" confirmations; tell Contract readers via the PM.
-2. (Union master list: DONE, #793.)
-3. **Kernel-body scope note**, draft due 2026-11-13 (Unpopped concept map Unpopped#274 sec 12 = 11 decisions). Closes #768 #769.
-4. **Issue sweep (EXPECTATIONS 6.26)**: #228 awaits Vulkane v6; #293 awaits filer; #316 is CireSnave's via the PM. Dependabot #680 open. Close only after the filer confirms.
-5. **Docs rows not yet written**: ROADMAP rows (kernel-body, R3.6) and the CONTRIBUTING affected-set rule (#484).
-6. FireLine grammar-crate owner: PM agreed A1; names DLPACK_EXT / PROVISION_ON_REQUEST adopted; bits 34, 35 provisional on their side.
+0. **FDX phase-out follow-through**: group B (buffer-bounds clauses -0007..-0010, V3 sentence) waits on Fuel to confirm the window formula; deferred from #792: Conform 6.7-0006 (a decline vector carrying an environment), `bind_vectors.json` + emitter, bind instrument and mutants. #797's slot_overlap vectors are a separate small family.
+1. **Board 378 follow-ups:** Unpopped swizzle confirmation (`BadSwizzle` bijection is theirs); Fuel/Unpopped/Classify/Announce "no key byte moves" confirmations; tell Contract readers via the PM (now incl. the `slot_overlap` decline).
+2. **Kernel-body layer**: nothing to draft until CireSnave rules the scope note (#796). After a ruling follow its sec 6 sequence; then #768/#769 get real clauses.
+3. **Issue sweep (EXPECTATIONS 6.26)**: #228 awaits Vulkane v6; #293 awaits filer; #316 is CireSnave's via the PM. Dependabot #680 open. Close only after the filer confirms.
+4. **Docs rows not yet written**: ROADMAP rows (kernel-body, R3.6) and the CONTRIBUTING affected-set rule (#484).
+5. FireLine grammar-crate owner: PM agreed A1; names DLPACK_EXT / PROVISION_ON_REQUEST adopted; bits 34, 35 provisional on their side.
 
 ## WAIT (do not start; each names its trigger)
 
-WAIT: kernel-body-scope-note | check: gh pr list --search "kernel-body" --state all --json number,state | wake: 2026-11-13T12:00:00Z
+WAIT: kernel-body-scope-ruling | check: grep -n -A3 "^### 417" C:/Projects/CIRESNAVE-DECISIONS.md | wake: 2026-11-15T12:00:00Z
 WAIT: half-rs-151-maintainer-reply | check: gh api repos/VoidStarKat/half-rs/issues/151/comments | wake: 2026-11-14T12:00:00Z
 
 - Cron timers are session-only: re-arm each WAIT with CronCreate after `lane-restart waits --role kiss` (local = UTC-7, no DST; 12:00Z = 05:00). Tell the PM of any maintainer reply on half-rs#151.

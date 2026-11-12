@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.9 — 2026-11-12 (proposed; docs only, PM allocates)
+
+- Docs only: HANDOFF.md rewritten for the 0.15.8 state (#796 scope note and #797 slot_overlap landed; kernel-body waits on CireSnave, board 417). No spec, vector or code change.
+
 ## 0.15.8 — 2026-11-12 (proposed; number per the PM, after #796's 0.15.7)
 
 - **Bundle slot non-overlap is now registered and implemented (KISS-CONTRACT-6.5-0019, R1.22 / board 378 follow-up).** The clause already said slots MUST NOT overlap at bind time; it now names its typed decline `slot_overlap` (§6.12-0002) and defines overlap as intersecting **byte hulls** (a conservative rule: interleaved slots are refused). No new clause, field, vector or `structure_key` byte; PM allocated the decline name, 2026-11-12.
