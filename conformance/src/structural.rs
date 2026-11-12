@@ -1090,3 +1090,61 @@ pub fn unsqueeze_f32(data: &[f32], shape: &[usize], mask: u8) -> Result<(Vec<f32
     }
     Ok((data.to_vec(), unsqueeze_shape(shape, mask)?))
 }
+
+/// Why an `iota` is refused (§6.11-0025, §6.19-0047).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IotaDecline {
+    /// The dtype is not an integer dtype or one of `f16`, `bf16`, `f32`, `f64`.
+    Dtype(String),
+    /// An empty or over-long extent list (rank outside `1..=MAX_RANK`).
+    Rank(usize),
+    /// A zero extent.
+    ZeroExtent,
+    /// `axis` at or above the rank.
+    Axis { axis: usize, rank: usize },
+    /// The largest count, `extents[axis] - 1`, is not exactly representable in the dtype.
+    Unrepresentable { last: u64 },
+}
+
+/// The largest integer `dtype` holds **exactly** as a count (floats: `2^p`, `p` the significand width
+/// with the implicit bit; integers: their maximum), or `None` for a dtype `iota` refuses.
+pub fn iota_max_exact(dtype: &str) -> Option<u64> {
+    Some(match dtype {
+        "i8" => 127,
+        "u8" => 255,
+        "i16" => 32_767,
+        "u16" => 65_535,
+        "i32" => 2_147_483_647,
+        "u32" => 4_294_967_295,
+        "i64" => 9_223_372_036_854_775_807,
+        "u64" => u64::MAX,
+        "f16" => 1 << 11,
+        "bf16" => 1 << 8,
+        "f32" => 1 << 24,
+        "f64" => 1 << 53,
+        _ => return None,
+    })
+}
+
+/// The `iota` reference (§6.11-0025): the count along `axis` at every coordinate of a tensor of shape
+/// `extents`, row-major, as the exact integer the dtype then holds. A typed decline, never a panic.
+pub fn iota_values(dtype: &str, extents: &[u32], axis: usize) -> Result<Vec<u64>, IotaDecline> {
+    let max = iota_max_exact(dtype).ok_or_else(|| IotaDecline::Dtype(dtype.to_string()))?;
+    if extents.is_empty() || extents.len() > crate::opattrs::MAX_RANK as usize {
+        return Err(IotaDecline::Rank(extents.len()));
+    }
+    if extents.contains(&0) {
+        return Err(IotaDecline::ZeroExtent);
+    }
+    if axis >= extents.len() {
+        return Err(IotaDecline::Axis { axis, rank: extents.len() });
+    }
+    let last = u64::from(extents[axis]) - 1;
+    if last > max {
+        return Err(IotaDecline::Unrepresentable { last });
+    }
+    let total: usize = extents.iter().map(|&e| e as usize).product();
+    let inner: usize = extents[axis + 1..].iter().map(|&e| e as usize).product();
+    let len = extents[axis] as usize;
+    Ok((0..total).map(|i| ((i / inner) % len) as u64).collect())
+}
