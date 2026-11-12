@@ -3,9 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
-## 0.15.10 — 2026-11-12 (proposed; tooling only, PM allocates; after #798's 0.15.9)
+## 0.15.12 — 2026-11-12 (proposed; tooling only, PM allocates; renumbered from 0.15.10 because #800 took 0.15.11 first)
 
 - Tooling only: the fragment-and-stamp kit (CireSnave standing order, 2026-11-12). `tools/stamp-version.py`, `tools/check-fragment.py`, `.github/workflows/changelog-fragment.yml`, `changelog.d/README.md`, and `tools/stamp-current.txt` naming `conformance/Cargo.toml`. From the next PR on a branch adds one `changelog.d/<topic>.md` fragment and never edits a version line or `CHANGELOG.md`; the gate stamps the allocated number. KISS tracks no `Cargo.lock` and pins its version nowhere else, so `tools/stamp-extra.txt` is not needed; `tools/kiss_version_sync.py` reads what the stamp writes and is unchanged. No spec, vector or code change.
+
+## 0.15.11 — 2026-11-12 (proposed; PM allocates; Draft change, PM ruling 2026-11-12 "option a")
+
+- **Contract §6.12 gains two bind-time codes: `division_by_zero` (KISS-CONTRACT-6.12-0007) and `ceil_div_divisor` (KISS-CONTRACT-6.12-0008).** A `/` whose divisor names a launch-scalar symbol and evaluates to zero, and a `ceil_div` whose such divisor is zero or negative, now decline at bind time. **This changes a MUST's decline kind:** before, a zero or non-positive divisor read from the environment was classified `build_time` (it came out of the evaluator as a `ParseError`); a divisor that names no symbol (`n / 0`) stays a build-time fault. §6.6-0009(b)(c) and the subscript rule are unchanged (an out-of-bounds subscript stays build-time).
+- `conformance/src/dispatch_expr.rs`: `Decline::DivisionByZero { bound }` and `Decline::CeilDivDivisor { bound, value }` replace two `ParseError` spellings; `conformance/src/bind.rs`: `BindDecline::{DivisionByZero, CeilDivDivisor}` and one `classify`. Tests `test_contract_bind_division_by_zero`, `test_contract_bind_ceil_div_divisor`; the marking test now also reads -0007/-0008. FireLine to be told when this lands.
 
 ## 0.15.9 — 2026-11-12 (proposed; docs only, PM allocates)
 

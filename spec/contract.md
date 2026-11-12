@@ -1681,6 +1681,18 @@ adds no field and moves no byte of any contract document, vector or `structure_k
   step** names the decline, so an overflow in term 1 is reported before an unbound symbol in term
   2. The non-negative and range gate (§6.12-0004) runs **last**, after every step has succeeded.
   *Test:* `test_contract_bind_evaluation_order`.
+- **KISS-CONTRACT-6.12-0007** — Evaluating a `/` MUST decline `division_by_zero` at bind time when
+  its divisor names a launch-scalar symbol and evaluates to zero (§6.6-0009(c)); a divisor that
+  names no symbol is constant text, so a zero one is a **build-time** fault (§6.12-0002), never
+  `division_by_zero`. This is an arithmetic step of §6.12-0006: it fails once the divisor and the
+  dividend have both been evaluated. *(Draft change, PM ruling 2026-11-12: before it, a zero
+  divisor read from the environment was classified as a build-time fault.)* *Test:*
+  `test_contract_bind_division_by_zero`.
+- **KISS-CONTRACT-6.12-0008** — Evaluating a `ceil_div` MUST decline `ceil_div_divisor` at bind
+  time when its divisor names a launch-scalar symbol and evaluates to zero or a negative value
+  (§6.6-0009(b)); a divisor that names no symbol is constant text, so a non-positive one is a
+  **build-time** fault (§6.12-0002), never `ceil_div_divisor`. It is an arithmetic step of
+  §6.12-0006, as §6.12-0007 is. *Test:* `test_contract_bind_ceil_div_divisor`.
 
 ---
 
@@ -1898,6 +1910,8 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.12-0004 | `test_contract_bind_extent_range` |
 | KISS-CONTRACT-6.12-0005 | `test_contract_bind_affine_overflow` |
 | KISS-CONTRACT-6.12-0006 | `test_contract_bind_evaluation_order` |
+| KISS-CONTRACT-6.12-0007 | `test_contract_bind_division_by_zero` |
+| KISS-CONTRACT-6.12-0008 | `test_contract_bind_ceil_div_divisor` |
 | KISS-CONTRACT-7.1-0001 | `test_contract_mandatory_core` |
 | KISS-CONTRACT-7.1-0002 | `test_contract_semantics_degrade_axis` |
 | KISS-CONTRACT-7.1-0003 | `test_contract_typed_decline_core` |

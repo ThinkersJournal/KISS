@@ -27,6 +27,11 @@ pub enum BindDecline {
     ExtentOutOfRange(i64),
     /// `affine_overflow` (§6.12-0005): a `+`, `-` or `*` left the signed 64-bit range.
     AffineOverflow,
+    /// `division_by_zero` (§6.12-0007): a `/` whose divisor, computed from the bound environment, is zero.
+    DivisionByZero,
+    /// `ceil_div_divisor` (§6.12-0008): a `ceil_div` whose divisor, computed from the bound environment, is
+    /// zero or negative; carries the value.
+    CeilDivDivisor(i64),
     /// `slot_overlap` (§6.5-0019): two bundle slots' byte hulls intersect; carries both names.
     SlotOverlap(String, String),
     /// A build-time fault (malformed expression, bad subscript): not a bind-time decline.
@@ -41,8 +46,23 @@ impl BindDecline {
             BindDecline::ExtentOutOfRange(_) => "extent_out_of_range",
             BindDecline::AffineOverflow => "affine_overflow",
             BindDecline::SlotOverlap(..) => "slot_overlap",
+            BindDecline::DivisionByZero => "division_by_zero",
+            BindDecline::CeilDivDivisor(_) => "ceil_div_divisor",
             BindDecline::BuildTime(_) => "build_time",
         }
+    }
+}
+
+/// Map an evaluator decline to its bind-time code, or to a build-time fault. A divisor that names no
+/// launch-scalar symbol is constant text, so a zero one is a build-time fault (§6.12-0002); one computed
+/// from the environment is bind-time (§6.12-0007/-0008).
+fn classify(d: Decline) -> BindDecline {
+    match d {
+        Decline::UnknownSymbol(s) => BindDecline::UnboundSymbol(s),
+        Decline::Overflow => BindDecline::AffineOverflow,
+        Decline::DivisionByZero { bound: true } => BindDecline::DivisionByZero,
+        Decline::CeilDivDivisor { bound: true, value } => BindDecline::CeilDivDivisor(value),
+        other => BindDecline::BuildTime(other),
     }
 }
 
@@ -53,11 +73,7 @@ pub fn bind_expr(
     env: &LaunchScalars,
     range: Option<(i64, i64)>,
 ) -> Result<i64, BindDecline> {
-    let v = eval(expr, env, EvalMode::Structural).map_err(|d| match d {
-        Decline::UnknownSymbol(s) => BindDecline::UnboundSymbol(s),
-        Decline::Overflow => BindDecline::AffineOverflow,
-        other => BindDecline::BuildTime(other),
-    })?;
+    let v = eval(expr, env, EvalMode::Structural).map_err(classify)?;
     let in_range = range.map_or(true, |(lo, hi)| (lo..=hi).contains(&v));
     if v < 0 || !in_range {
         return Err(BindDecline::ExtentOutOfRange(v));
@@ -87,11 +103,7 @@ fn hull(extents: &[i128], strides: &[i128]) -> Option<(i128, i128)> {
 }
 
 fn eval_i128(expr: &str, env: &LaunchScalars) -> Result<i128, BindDecline> {
-    let v = eval(expr, env, EvalMode::Structural).map_err(|d| match d {
-        Decline::UnknownSymbol(s) => BindDecline::UnboundSymbol(s),
-        Decline::Overflow => BindDecline::AffineOverflow,
-        other => BindDecline::BuildTime(other),
-    })?;
+    let v = eval(expr, env, EvalMode::Structural).map_err(classify)?;
     Ok(i128::from(v))
 }
 
