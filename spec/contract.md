@@ -1045,9 +1045,18 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   entry, a nested layout its **top-level mode count** (a bare integer is one); `dense` and
   `same_as(i)` state none, so the shape's rank is free. A shape rank that disagrees is a typed
   decline. Slots MUST NOT overlap: this is a **bind-time** check (it needs the dtype and the
-  extents, both now stated per slot), not a parse-time one. Several independent buffers are several output
+  extents, both now stated per slot), not a parse-time one, and it declines `slot_overlap` (§6.12-0002).
+  A slot's **byte hull** is `[offset + its lowest element, offset + its highest element + 1)`
+  (a sub-byte dtype rounds outward; a swizzle rounds the end up to its window; a zero extent is an
+  empty slot with no bytes), and two slots overlap when their hulls intersect, so interleaved
+  slots are refused. *Informative:* this is deliberately conservative: it declines every
+  overlapping pair and also some valid ones, and a later minor MAY relax it to element-level
+  intersection (a relaxation only turns a decline into an acceptance). The one example v1 refuses:
+  `bundle(a:f32[1,2]=strided(2,2)@0,b:f32[1]=dense@4)`, where `a` occupies bytes 0..4 and 8..12 and `b`
+  bytes 4..8, element-disjoint but with hulls `[0,12)` and `[4,8)`. The vector
+  `interleaved_valid_refused_v1` (`conformance/corpus/slot_overlap_vectors.json`) pins that behaviour. Several independent buffers are several output
   operands, each with its own element; a kernel that hands back one packed buffer uses a
-  bundle. *Test:* `test_contract_output_layout_bundle`.
+  bundle. *Test:* `test_contract_output_layout_bundle`. The overlap decline is also backed by `test_contract_bind_slot_overlap`.
 
 ### 6.6 Dispatch section
 

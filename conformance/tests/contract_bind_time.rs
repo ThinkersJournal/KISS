@@ -121,3 +121,64 @@ fn test_contract_bind_evaluation_order() {
     // the range gate runs last, only after every step succeeded.
     assert_eq!(bind_expr("n - 3", &e, None), Err(BindDecline::ExtentOutOfRange(-1)));
 }
+
+// Backs[enforced]: KISS-CONTRACT-6.5-0019 — two bundle slots whose byte hulls intersect under the bound environment decline `slot_overlap`; touching hulls, empty slots and an unbound symbol are told apart
+#[test]
+fn test_contract_bind_slot_overlap() {
+    use kiss_conformance::layout::{parse_layout, Layout, LayoutContext, OutputLayout};
+    use kiss_conformance::bind::check_slot_overlap;
+    let slots = |t: &str, e: &LaunchScalars| {
+        let ctx = LayoutContext { n_inputs: 1, n_outputs: 1, scalars: e };
+        match parse_layout(t, &ctx) {
+            Ok(OutputLayout::Guarantee(Layout::Bundle(s))) => s,
+            other => panic!("not a bundle: {other:?}"),
+        }
+    };
+    let e = env(12);
+    let run = |t: &str| check_slot_overlap(&slots(t, &e), &e);
+    // a: 4 f32 = bytes [0,16); b starts at 16 (touching: legal) or 15 (overlap).
+    assert_eq!(run("bundle(a:f32[4]=dense@0,b:f32[4]=dense@16)"), Ok(()));
+    let err = run("bundle(a:f32[4]=dense@0,b:f32[4]=dense@15)").unwrap_err();
+    assert_eq!((err.code(), err), ("slot_overlap", BindDecline::SlotOverlap("a".into(), "b".into())));
+    // the verdict depends on the environment: the same text, a different n.
+    let two = "bundle(a:f32[n]=dense@0,b:f32[4]=dense@32)";
+    assert_eq!(check_slot_overlap(&slots(two, &env(8)), &env(8)), Ok(()));
+    assert_eq!(check_slot_overlap(&slots(two, &env(9)), &env(9)), Err(BindDecline::SlotOverlap("a".into(), "b".into())));
+    // an empty slot has no bytes; a sub-byte dtype rounds outward (7 u4 = 4 bytes).
+    assert_eq!(run("bundle(a:f32[0]=dense@8,b:f32[4]=dense@0)"), Ok(()));
+    assert_eq!(run("bundle(a:u4[7]=dense@0,b:u8[1]=dense@4)"), Ok(()));
+    assert!(run("bundle(a:u4[7]=dense@0,b:u8[1]=dense@3)").is_err());
+    // strided and dense_order hulls: strides (4,1) over 2x2 reach element 5; dense_order stays packed.
+    assert!(run("bundle(a:f32[2,2]=strided(4,1)@0,b:f32[1]=dense@20)").is_err());
+    assert_eq!(run("bundle(a:f32[2,2]=strided(4,1)@0,b:f32[1]=dense@24)"), Ok(()));
+    assert_eq!(run("bundle(a:f32[2,2]=dense_order(1,0)@0,b:f32[1]=dense@16)"), Ok(()));
+    // a nested layout's hull is its highest reachable element: (2,2):(1,4) reaches 5.
+    assert!(run("bundle(a:f32[2,2]=(2,2):(1,4)@0,b:f32[1]=dense@20)").is_err());
+    assert_eq!(run("bundle(a:f32[2,2]=(2,2):(1,4)@0,b:f32[1]=dense@24)"), Ok(()));
+    // an unbound symbol or an out-of-range offset is a different decline, never an overlap.
+    // (the symbol is in the vocabulary at read time, then the bound environment assigns none.)
+    let declared = LaunchScalars { ws_bytes: Some(0), ..env(12) };
+    let s = slots("bundle(a:f32[4]=dense@0,b:f32[4]=dense@ws_bytes)", &declared);
+    assert_eq!(check_slot_overlap(&s, &e).unwrap_err().code(), "unbound_symbol");
+}
+
+// Backs[enforced]: KISS-CONTRACT-6.5-0019 — the committed slot_overlap vectors equal the emitter's output and replay through `check_slot_overlap`; the interleaved-but-valid case is the pinned v1 (byte-hull) refusal
+#[test]
+fn test_contract_slot_overlap_vectors() {
+    use kiss_conformance::bind::{check_slot_overlap, emit_slot_overlap_vectors_json, slot_overlap_env, SLOT_OVERLAP_VECTORS};
+    use kiss_conformance::layout::{parse_layout, Layout, LayoutContext, OutputLayout};
+    let committed = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/slot_overlap_vectors.json")).expect("corpus file");
+    assert_eq!(committed.replace("\r\n", "\n"), emit_slot_overlap_vectors_json(), "stale: cargo run --bin emit_slot_overlap_vectors > conformance/corpus/slot_overlap_vectors.json");
+    for (name, text, n, expect, _) in SLOT_OVERLAP_VECTORS {
+        let e = slot_overlap_env(n);
+        let ctx = LayoutContext { n_inputs: 1, n_outputs: 1, scalars: &e };
+        let slots = match parse_layout(text, &ctx) {
+            Ok(OutputLayout::Guarantee(Layout::Bundle(s))) => s,
+            other => panic!("{name}: not a bundle: {other:?}"),
+        };
+        let got = check_slot_overlap(&slots, &e).err().map_or("ok", |d| d.code());
+        assert_eq!(got, expect, "{name}");
+    }
+    let pinned: Vec<&str> = SLOT_OVERLAP_VECTORS.iter().filter(|v| v.4).map(|v| v.0).collect();
+    assert_eq!(pinned, ["interleaved_valid_refused_v1"]);
+}
