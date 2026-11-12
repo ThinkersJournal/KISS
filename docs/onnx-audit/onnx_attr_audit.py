@@ -52,7 +52,9 @@ def main():
     kiss = set(json.load(open(sys.argv[2], encoding="utf-8"))["all_ops"])
     latest, attrs = parse(md)
     exact = {n: (n.lower() if n.lower() in kiss else snake(n)) for n in latest if n.lower() in kiss or snake(n) in kiss}
-    assert all(a.split("|")[0] in kiss for a in ALIAS.values()), "alias names a non-KISS op"
+    bad = sorted(a for a in ALIAS.values() if a.split("|")[0] not in kiss)
+    if bad:
+        raise SystemExit(f"alias names a non-KISS op: {bad}")
     matched = {**exact, **ALIAS}
     print(f"ONNX default-domain ops: {len(latest)}; KISS-Ops ops: {len(kiss)}")
     print(f"name-matched: {len(exact)} exact + {len(ALIAS)} alias = {len(matched)}; unmatched {len(latest) - len(matched)}")
