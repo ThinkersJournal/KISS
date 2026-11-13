@@ -4,7 +4,7 @@
 
 Implements the core of **KISS-Conform §6.1** (the bidirectional clause↔test
 traceability matrix) and **§6.2** (the suite build fails on any untested
-normative MUST), run against the specification text itself.
+normative MUST: **as a design rule; this repository's CI enforces the coverage ratchet instead, see `README.md`**), run against the specification text itself.
 
 It parses every `spec/*.md`, extracts each normative clause
 `KISS-<SUB>-<section>-<nnnn>[letter]` together with its mapped conformance test,
