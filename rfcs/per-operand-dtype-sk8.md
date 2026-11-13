@@ -182,10 +182,17 @@ a reserved dtype in a non-primary operand, and an `sk7` token presented to an `s
 
 ## 8. Decisions this note needs from CireSnave
 
-Not asked, and not needed to start the work: the direction is ruled. Open items for the maintainer, in
-order of consequence: **(1)** the `u16`/`u64` prune (board 430 Part 2 item 4) as a ride-along or not;
-**(2)** option A (recommended) versus C for the sub-key; **(3)** whether a narrow-index range limit is a key
-rule or an op decline (recommended: op decline). Everything else is a clause-authoring detail for the
-editors once the parties have reported.
+The direction is ruled; these three are open. Each is a question with its choices (recommendation first).
+
+1. **Does the `u16` / `u64` prune ride this event?** (board 430 Part 2 item 4)
+   - (a) Decide it now and ride it: one re-derivation, the closed set shrinks from 24 to 22 tokens.
+   - (b) Keep both tokens: the set stays 24 and nothing extra rides. **Recommended if undecided in time:** it can still ride a later event.
+2. **Where does the per-operand dtype go in the key?**
+   - (A) A mandatory dtype in every per-operand sub-key. **Recommended.**
+   - (B) Only when some operand differs from field 2 (conditional presence).
+   - (C) Only for role-designated operands, such as the index operand (does not meet the general ruling).
+3. **If a narrow index dtype cannot span the gathered axis** (an `i32` index into an axis over 2^31 elements), is that a key rule or an op decline?
+   - (a) An op-level decline (the key stays about addressing). **Recommended.**
+   - (b) A key rule (the key refuses the combination).
 
 *— lane: kiss*
