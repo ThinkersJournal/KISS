@@ -1281,8 +1281,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   accumulator widths. The reduction extent `N` is **runtime**: the `structure_key` is
   **extent-free** (KISS-CLASSIFY §6.6-0003), so `N` MUST NOT enter the key. The key carries
   only the `(compute, accumulator)` class via the accumulator coordinate (the contraction
-  `<acc>` of KISS-CLASSIFY §6.7-0006, or the deferred non-contraction coordinate of
-  §6.7-0012), while the numeric FORMULA lives here in the Contract Guarantees and is
+  `<acc>` of KISS-CLASSIFY §6.7-0006, or the non-contraction accumulator-and-mode field of
+  §6.7-0013 (realizing §6.7-0012)), while the numeric FORMULA lives here in the Contract Guarantees and is
   evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
   constant declared here, and an implementation MUST be able to produce, for each declared
   `k(S,A)`, its **calibration record**: the method by which it was calibrated, the corpus
