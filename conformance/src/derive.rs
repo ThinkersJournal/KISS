@@ -88,6 +88,9 @@ pub enum DeriveDecline {
     CollapsedReduction,
     /// A declared reduced axis is not an axis of the frame (§6.6-0009).
     ReducedAxisOutOfRange,
+    /// A reduction's output operand is wider than every input operand: a tuple-state reduction's state axis was
+    /// left in (§6.6-0025: it is presented through its keepdim view without the state axis).
+    StateAxisPresented,
     /// M, N or K does not name an existing operand axis, or two of them name the same one (§6.6-0016).
     ContractionAxisInvalid,
     /// The weight or scale role names a slot that is not an operand (§6.6-0019, §6.6-0022).
@@ -114,6 +117,7 @@ impl DeriveDecline {
             Self::BadShape => "BadShape",
             Self::CollapsedReduction => "CollapsedReduction",
             Self::ReducedAxisOutOfRange => "ReducedAxisOutOfRange",
+            Self::StateAxisPresented => "StateAxisPresented",
             Self::ContractionAxisInvalid => "ContractionAxisInvalid",
             Self::RoleSlotOutOfRange => "RoleSlotOutOfRange",
             Self::ContractionNoOutput => "ContractionNoOutput",
@@ -229,6 +233,10 @@ fn reduce_spec(
 ) -> Result<Reduce, DeriveDecline> {
     if class != "rdc" {
         return Ok(Reduce::None);
+    }
+    let in_rank = ordered.iter().filter(|o| o.usage != OperandUse::Output).map(|o| o.extents.len()).max().unwrap_or(0);
+    if ordered.iter().any(|o| o.usage == OperandUse::Output && o.extents.len() > in_rank) {
+        return Err(DeriveDecline::StateAxisPresented);
     }
     let r = canonical_reduce(&cell.reduced_axes, frame_rank)?;
     for o in ordered.iter().filter(|o| o.usage == OperandUse::Output) {

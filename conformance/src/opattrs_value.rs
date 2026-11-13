@@ -55,7 +55,7 @@ pub fn not_emitted() -> [(&'static str, &'static str); 0] {
 /// dtype token whose 1-based position in [`crate::structure_key::DTYPES`] is the wire ordinal.
 pub const COMPUTE_DTYPE_TOKEN: &str = "compute-dtype";
 
-fn accumulator_ordinal(token: &str) -> Result<u8, String> {
+fn accumulator_ordinal(token: &str, op: &str) -> Result<u8, String> {
     use crate::structure_key::{DTYPES, RESERVED_DTYPES};
     if token == COMPUTE_DTYPE_TOKEN {
         return Ok(0);
@@ -64,7 +64,9 @@ fn accumulator_ordinal(token: &str) -> Result<u8, String> {
     // §6.7-0012: the accumulator MUST be a float; the float members lead the §6.1 table (f16..f64) and
     // the fp8 members follow the integers. Reserved members have no computation semantics.
     let float = token.starts_with('f') || token == "bf16";
-    if !float || RESERVED_DTYPES.contains(&token) {
+    // §6.17-0010: a `matmul` over an integer compute dtype takes a signed 32- or 64-bit integer accumulator.
+    let matmul_int = op == "matmul" && matches!(token, "i32" | "i64");
+    if !(float || matmul_int) || RESERVED_DTYPES.contains(&token) {
         return Err(format!("accumulator `{token}` must be a non-reserved float dtype (§6.7-0012)"));
     }
     if crate::structure_key::MX_ELEMENT_DTYPES.contains(&token) {
@@ -129,6 +131,7 @@ fn vocab_of(field: &str) -> Option<&'static str> {
         "exclusivity" => "scan_exclusivity",
         "output_column_ordering" => "column_ordering",
         "math_fidelity" => "math_fidelity",
+        "precision_tag" => "precision_tag",
         "rounding" => "cast_rounding",
         "saturation" => "cast_saturation",
         "tie_rule" => "tie_rule",
@@ -203,10 +206,10 @@ pub fn scan_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
     }
 }
 
-fn encode_field(f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, String)>>) -> Result<Vec<u8>, String> {
+fn encode_field(op: &str, f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, String)>>) -> Result<Vec<u8>, String> {
     if f.name == "accumulator" {
         return match v {
-            Value::Token(t) => Ok(vec![accumulator_ordinal(t)?]),
+            Value::Token(t) => Ok(vec![accumulator_ordinal(t, op)?]),
             other => Err(format!("accumulator takes a dtype token, got {other:?}")),
         };
     }
@@ -280,7 +283,7 @@ pub fn encode_with_schema(schema: &OpSchema, attrs: &Attrs) -> Result<Vec<u8>, S
             out.extend(scan_axes_word(axes, *rank)?.to_le_bytes());
             continue;
         }
-        out.extend(encode_field(f, v, &vocab)?);
+        out.extend(encode_field(&schema.op, f, v, &vocab)?);
     }
     Ok(out)
 }
@@ -356,7 +359,7 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
 }
 
 /// Alternatives to the base value of one field: the values a vector varies it over.
-pub fn alternatives(f: &SchemaField, base: &Value) -> Vec<Value> {
+pub fn alternatives(op: &str, f: &SchemaField, base: &Value) -> Vec<Value> {
     if is_fixed(f) {
         return Vec::new();
     }
@@ -373,6 +376,10 @@ pub fn alternatives(f: &SchemaField, base: &Value) -> Vec<Value> {
             .map(Value::Vector)
             .collect(),
         (_, Value::Flag(b)) => vec![Value::Flag(!b)],
+        (_, Value::Token(_)) if f.name == "accumulator" && op == "matmul" => ["f16", "bf16", "f32", "f64", "i32", "i64"]
+            .into_iter()
+            .map(|d| Value::Token(d.into()))
+            .collect(),
         (_, Value::Token(_)) if f.name == "accumulator" => ["f16", "bf16", "f32", "f64"]
             .into_iter()
             .map(|d| Value::Token(d.into()))
@@ -441,9 +448,13 @@ pub fn encode_vectors() -> Vec<EncodeVector> {
         };
         push(base.clone(), "base".into());
         for (i, f) in schema.fields.iter().enumerate() {
-            for alt in alternatives(f, &base[i].1) {
+            for alt in alternatives(&schema.op, f, &base[i].1) {
                 // a scan folds exactly one axis: multi-axis sets are not values of its field
                 if schema.op == "prefix_scan" && matches!(&alt, Value::Axes { axes, .. } if axes.len() != 1) {
+                    continue;
+                }
+                // a scan takes only the four scalar folds (§6.11-0026): a tuple-state monoid is not a value of its field
+                if schema.op == "prefix_scan" && f.name == "monoid" && matches!(&alt, Value::Token(t) if matches!(t.as_str(), "welford" | "online-softmax" | "argmax")) {
                     continue;
                 }
                 let mut attrs = base.clone();

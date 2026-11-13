@@ -18,7 +18,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 295; // 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
+const POPULATION: usize = 308; // 295 + 13 (`matmul` is a carrier: its base + 11 field variations, +3 reduce monoid members; the tuple-state monoids are not values of a scan's field); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -78,6 +78,9 @@ fn monoid(t: &str) -> Monoid {
         "prod" => Monoid::Prod,
         "max" => Monoid::Max,
         "min" => Monoid::Min,
+        "welford" => Monoid::Welford,
+        "online-softmax" => Monoid::OnlineSoftmax,
+        "argmax" => Monoid::ArgMax,
         _ => panic!("monoid {t}"),
     }
 }
@@ -131,6 +134,16 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
                 acc_ordinal(tok(v, "accumulator")), fidelity(tok(v, "math_fidelity")),
             )
         }
+        "matmul" => opattrs::encode_matmul(
+            acc_ordinal(tok(v, "accumulator")),
+            fidelity(tok(v, "math_fidelity")),
+            match tok(v, "precision_tag") {
+                "none" => opattrs::PrecisionTag::None,
+                "3xtf32" => opattrs::PrecisionTag::ThreeXTf32,
+                "fp8-fast-accumulate" => opattrs::PrecisionTag::Fp8FastAccumulate,
+                t => panic!("precision_tag {t}"),
+            },
+        ),
         "gather" => opattrs::encode_gather(byte(v, "axis"), oob(tok(v, "oob_policy")), byte(v, "index_operand"), idt(tok(v, "index_dtype"))),
         "scatter" => {
             let c = match tok(v, "combine") {
@@ -290,7 +303,7 @@ fn defaulted_and_explicit_equal_attributes_give_identical_bytes() {
     let eqs = equivalences();
     assert_eq!(
         eqs.len(),
-        17,
+        18,
         "gather, scatter, sort_network, reduce_var, reduce_std, avg_pool, im2col, reduce, prefix_scan, cast,          reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin"
     );
     for e in &eqs {

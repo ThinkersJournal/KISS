@@ -28,8 +28,9 @@ macro_rules! ordinal_enum {
     };
 }
 
-ordinal_enum!(/// §6.19-0014
-    Monoid { Sum = 1, Prod = 2, Max = 3, Min = 4 });
+ordinal_enum!(/// §6.19-0014 (the first four are the scalar folds of §6.11-0002; the last three are the tuple-state
+    /// monoids of §6.11-0026 to §6.11-0029)
+    Monoid { Sum = 1, Prod = 2, Max = 3, Min = 4, Welford = 5, OnlineSoftmax = 6, ArgMax = 7 });
 ordinal_enum!(/// §6.19-0015
     OobPolicy { Skip = 1, Clamp = 2, ZeroFill = 3, Reject = 4 });
 ordinal_enum!(/// §6.19-0016
@@ -51,6 +52,10 @@ ordinal_enum!(/// §6.19-0041 (schema field `rounding` of `cast`, §6.21-0002)
     CastRounding { NearestEven = 1, TowardZero = 2, TowardNegInf = 3, TowardPosInf = 4 });
 ordinal_enum!(/// §6.19-0041 (schema field `saturation` of `cast`, §6.21-0003)
     CastSaturation { None = 1, Clamp = 2 });
+
+ordinal_enum!(/// §6.17-0011 (schema field `precision_tag` of `matmul`): the maintainer-owned vocabulary of named
+    /// reduced-precision strategies. KISS pins the NAME and the duty to declare a bound, never the recipe.
+    PrecisionTag { None = 1, ThreeXTf32 = 2, Fp8FastAccumulate = 3 });
 
 /// `accumulator` byte meaning "the compute dtype" (the §6.17-0005 diagonal, §6.19-0025).
 pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
@@ -130,6 +135,42 @@ pub fn encode_reduce(
     out.push(accumulator);
     out.push(fidelity.ordinal());
     out
+}
+
+/// `matmul`: accumulator, math_fidelity, precision_tag (§6.19-0049, board 426 6 "A" and board 427 "1: A").
+/// `accumulator` is [`ACCUMULATOR_COMPUTE_DTYPE`] or the 1-based §6.1-table dtype ordinal (a float for a float
+/// compute dtype, a signed 32- or 64-bit integer for an integer one, §6.17-0010; that legality needs the
+/// operand's dtype and is `structural::matmul_attrs_check`'s).
+pub fn encode_matmul(accumulator: u8, fidelity: MathFidelityOrd, tag: PrecisionTag) -> Vec<u8> {
+    vec![accumulator, fidelity.ordinal(), tag.ordinal()]
+}
+
+/// Validate a decoded `matmul` blob `[accumulator, math_fidelity, precision_tag]` (§6.19-0049): wrong length,
+/// a reserved `0` fidelity or tag, an out-of-table fidelity or tag, and a reserved or out-of-table accumulator
+/// ordinal are typed declines.
+pub fn decode_matmul(blob: &[u8]) -> Result<(u8, MathFidelityOrd, PrecisionTag), Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if blob.len() != 3 {
+        return Err(Decline::TruncatedBlob { need: 3, got: blob.len() });
+    }
+    let acc = blob[0];
+    if acc != ACCUMULATOR_COMPUTE_DTYPE && DTYPES.get(acc as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "accumulator", value: acc, max: DTYPES.len() as u8 });
+    }
+    let fid = match blob[1] {
+        0 => return Err(Decline::ReservedZeroOrdinal { field: "math_fidelity" }),
+        1 => MathFidelityOrd::BitStable,
+        2 => MathFidelityOrd::ReducedMantissa,
+        v => return Err(Decline::FieldOutOfRange { field: "math_fidelity", value: v, max: 2 }),
+    };
+    let tag = match blob[2] {
+        0 => return Err(Decline::ReservedZeroOrdinal { field: "precision_tag" }),
+        1 => PrecisionTag::None,
+        2 => PrecisionTag::ThreeXTf32,
+        3 => PrecisionTag::Fp8FastAccumulate,
+        v => return Err(Decline::FieldOutOfRange { field: "precision_tag", value: v, max: 3 }),
+    };
+    Ok((acc, fid, tag))
 }
 
 /// `prefix_scan`: monoid, reduce_axes, exclusivity, accumulator, math_fidelity (§6.19-0026, sk4).

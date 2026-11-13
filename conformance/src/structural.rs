@@ -1090,3 +1090,93 @@ pub fn unsqueeze_f32(data: &[f32], shape: &[usize], mask: u8) -> Result<(Vec<f32
     }
     Ok((data.to_vec(), unsqueeze_shape(shape, mask)?))
 }
+
+/// Why a `matmul` OpAttrs combination is refused for its operand dtype (§6.17-0010, §6.17-0011, §6.19-0049).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MatmulAttrDecline {
+    /// The compute dtype is not a float or an integer dtype a `matmul` can fold over (`bool`, complex, unknown).
+    ComputeDtype(String),
+    /// A float compute dtype with a non-float or a narrower accumulator (§6.17-0008).
+    FloatAccumulator,
+    /// An integer compute dtype with an accumulator that is not a signed 32- or 64-bit integer at least as
+    /// wide as the compute dtype (an unsigned or narrower or float accumulator, §6.17-0010).
+    IntegerAccumulator,
+    /// The accumulator ordinal is reserved or outside the dtype table.
+    AccumulatorOrdinal(u8),
+    /// A `precision_tag` other than `none` with a `math_fidelity` other than reduced-mantissa-permitted.
+    TagNeedsReducedMantissa,
+    /// A `precision_tag` whose compute dtype is not the one the tag names (§6.17-0011).
+    TagComputeDtype,
+    /// A tagged cell with no declared bound (§6.17-0011: a tag without a bound is refused at advertisement).
+    TagWithoutBound,
+}
+
+/// Storage bit width of a dtype `matmul` may fold over, `None` for the rest.
+fn matmul_width(dtype: &str) -> Option<u32> {
+    Some(match dtype {
+        "f4e2m1" | "i4" | "u4" => 4,
+        "f6e2m3" | "f6e3m2" => 6,
+        "i8" | "u8" | "f8e4m3fn" | "f8e5m2" => 8,
+        "i16" | "u16" | "f16" | "bf16" => 16,
+        "i32" | "u32" | "f32" => 32,
+        "i64" | "u64" | "f64" => 64,
+        _ => return None,
+    })
+}
+
+fn matmul_is_int(dtype: &str) -> bool {
+    matches!(dtype, "i4" | "u4" | "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64")
+}
+
+/// The `matmul` attribute legality over the operand's compute dtype (§6.17-0008, §6.17-0010, §6.17-0011):
+/// `accumulator` (`0x00` diagonal or a dtype ordinal), `fidelity` (1 bit-stable, 2 reduced-mantissa) and `tag`
+/// (1 none, 2 3xtf32, 3 fp8-fast-accumulate), with `declared_bound` the Contract-declared ULP bound for a tagged
+/// cell (`None` = none declared). A typed decline, never a panic.
+pub fn matmul_attrs_check(compute: &str, accumulator: u8, fidelity: u8, tag: u8, declared_bound: Option<u32>) -> Result<(), MatmulAttrDecline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    let cw = matmul_width(compute).ok_or_else(|| MatmulAttrDecline::ComputeDtype(compute.to_string()))?;
+    if accumulator != 0 {
+        let acc = DTYPES.get(accumulator as usize - 1).filter(|d| !RESERVED_DTYPES.contains(d)).ok_or(MatmulAttrDecline::AccumulatorOrdinal(accumulator))?;
+        let aw = matmul_width(acc);
+        if matmul_is_int(compute) {
+            let ok = matches!(*acc, "i32" | "i64") && aw.map_or(false, |w| w >= cw && !(compute.starts_with('u') && w == cw));
+            if !ok {
+                return Err(MatmulAttrDecline::IntegerAccumulator);
+            }
+        } else if !(matches!(*acc, "f16" | "bf16" | "f32" | "f64") && aw.map_or(false, |w| w >= cw)) {
+            return Err(MatmulAttrDecline::FloatAccumulator);
+        }
+    }
+    if tag != 1 {
+        if fidelity != 2 {
+            return Err(MatmulAttrDecline::TagNeedsReducedMantissa);
+        }
+        let named = match tag {
+            2 => compute == "f32",
+            3 => matches!(compute, "f8e4m3fn" | "f8e5m2"),
+            _ => false,
+        };
+        if !named {
+            return Err(MatmulAttrDecline::TagComputeDtype);
+        }
+        if declared_bound.is_none() {
+            return Err(MatmulAttrDecline::TagWithoutBound);
+        }
+    }
+    Ok(())
+}
+
+/// The integer `matmul` fold (§6.17-0010): products and sums of an integer compute dtype accumulate exactly in a
+/// signed `acc_bits`-wide integer (two's-complement wrap on overflow, §6.2-0002), so the result is independent
+/// of the reduction order and is **exact-byte**. `acc_bits` is 32 or 64.
+pub fn int_dot_exact(a: &[i64], b: &[i64], acc_bits: u32) -> i64 {
+    assert!(acc_bits == 32 || acc_bits == 64);
+    let mut acc: i64 = 0;
+    for (x, y) in a.iter().zip(b) {
+        acc = acc.wrapping_add(x.wrapping_mul(*y));
+        if acc_bits == 32 {
+            acc = acc as i32 as i64;
+        }
+    }
+    acc
+}

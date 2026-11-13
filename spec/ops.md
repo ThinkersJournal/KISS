@@ -339,7 +339,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, `argmin`, and `matmul`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -1032,11 +1032,12 @@ section-intro paragraph is an informative pointer to it):
   `0` along an axis, applying a per-element scalar-expression body; it MUST be treated as
   a structural atom. *Test:* `test_ops_element_map_base_access`.
 - **KISS-OPS-6.11-0002** — `reduce` MUST fold over an axis set using an associative monoid
-  drawn from `{sum (identity +0.0 / integer 0), prod (identity 1), max (identity the
+  drawn from the scalar folds `{sum (identity +0.0 / integer 0), prod (identity 1), max (identity the
   dtype minimum: −∞ for float, INT_MIN for signed int, 0 for unsigned int), min (identity
   the dtype maximum: +∞ for float, INT_MAX for signed int, the unsigned maximum for
   unsigned int)}`; the `max` and `min` monoids MUST be **NaN-propagating**, and a
-  reduction over an **empty** axis MUST yield the monoid identity. *Test:*
+  reduction over an **empty** axis MUST yield the monoid identity; the three tuple-state
+  monoids are §6.11-0026 to §6.11-0029. *Test:*
   `test_ops_reduce_monoids`.
 - **KISS-OPS-6.11-0002a** — When a §6.11-0002 monoid identity is an infinity — the `max`
   identity `−∞` or the `min` identity `+∞` — and the reduction's compute dtype has **no
@@ -1302,6 +1303,57 @@ section-intro paragraph is an informative pointer to it):
   (§6.11-0006). *Draft change (CireSnave 2026-11-12, board 417 "A"): before it, a floating-point
   `atomic-add` was declared nondeterministic with no stated bound.* *Test:*
   `test_ops_scatter_atomic_add_band` (vectors: `conformance/corpus/atomic_add_band_vectors.json`).
+
+- **KISS-OPS-6.11-0026** — `reduce` MUST additionally accept three **tuple-state monoids**, `welford`
+  (variance), `online_softmax` and `argmax`, ordinals 5, 6 and 7 of §6.19-0014, each defined by a
+  **state**, an **identity** (its starting value), an associative **merge** and a **finalise** written in
+  ordinary ops (§6.11-0027 to §6.11-0029). The set is **closed by definition**: no further tuple-state
+  monoid exists until this clause is amended. A reduction over a tuple-state monoid MUST return **one packed
+  tensor**: the `keepdim = 1` result of §6.11-0008 (or, with `keepdim = 0`, that result with the reduced axes
+  removed) with **one trailing state axis** appended, of extent **3** for `welford` and **2** for
+  `online_softmax` and `argmax`; the rank of the packed output is therefore the rank of that result plus one,
+  and a rank above `MAX_RANK` (§6.19-0037) is a **typed decline** (a rank-`MAX_RANK` operand with
+  `keepdim = 1` would need `MAX_RANK + 1`); `argmax` MUST reduce **exactly one** axis; `prefix_scan` (§6.11-0003) accepts only the four scalar folds, so a tuple-state ordinal in a `prefix_scan` blob is a typed decline. The **state dtype** is
+  the compute dtype when it is `f32` or `f64` and `f32` when the compute dtype is a narrower float; a
+  non-float compute dtype is a typed decline; and the `accumulator` field (§6.19-0025) MUST be `0x00` for a
+  tuple-state monoid, because the state dtype is derived. A **count or index lane** is an **unsigned integer
+  of the state dtype's width** (`u32` beside `f32`, `u64` beside `f64`) stored by `bitcast` (KISS-OPS-6.21-0005),
+  so every lane of the packed tensor has the one dtype of the tensor and a count or an index is never
+  converted through a float. A reduction over an **empty** axis yields the identity state (as §6.11-0002), and
+  the cell is a **tolerance-cell** (§6.17-0008) for `welford` and `online_softmax`, whose reference is the
+  ascending-order fold `state = merge(state, element)` of §6.17-0009, and **exact-byte** for `argmax`, which
+  only compares. The vectors are `conformance/corpus/packed_reduction_vectors.json`. *Draft change (**Breaking**;
+  CireSnave 2026-11-12, board 427 "2) d)": the closed `reduce` monoid set of §6.11-0002 is extended by
+  definition for exactly these three; the packed output form was ruled option d, one packed tensor).* *Test:*
+  `test_ops_packed_reduction_shape`.
+- **KISS-OPS-6.11-0027** — The `welford` state MUST be `(n, mean, M2)` in trailing-axis order, `n` the count
+  lane (an unsigned integer, §6.11-0026), `mean` and `M2` of the state dtype. The **identity** is
+  `(0, +0, +0)`; the state of one element `x` is `(1, x, +0)`. The **merge** of `A` and `B` is: if `nA = 0` the
+  result is `B`, if `nB = 0` it is `A`; otherwise `n = nA + nB` (a count past the lane is a typed decline, never
+  a wrap), `delta = meanB − meanA`, `mean = meanA + delta · (nB / n)` and
+  `M2 = (M2A + M2B) + (delta · delta) · ((nA · nB) / n)`, the counts converted to the state dtype (round to
+  nearest even) and every operation rounded to the state dtype (Chan et al.). The **finalise** is the
+  population variance `M2 / n`, or with Bessel's correction `M2 / (n − 1)` (§6.13-0004's `bessel_correction`);
+  an empty or, with the correction, single-element state finalises to `0 / 0`, NaN. A NaN element gives a state
+  whose `mean` and `M2` are NaN and whose `n` still counts it. `M2` is non-negative by construction. *Test:*
+  `test_ops_welford_reduction`.
+- **KISS-OPS-6.11-0028** — The `online_softmax` state MUST be `(m, l)` in trailing-axis order, both of the state
+  dtype: the running maximum and the running sum of `exp(x − m)`. The **identity** is `(−∞, +0)`; the state of one
+  element `x` is `(x, 1)`, except that `x = −∞` is the identity (it adds weight `exp(−∞) = 0`) and a NaN or `+∞`
+  element is the **NaN state** `(NaN, NaN)`. The **merge** is: a NaN lane on either side gives the NaN state;
+  `m = max(mA, mB)`; if `m = −∞` the result is the identity (so two identities never produce `−∞ − −∞`, NaN);
+  otherwise `l = lA · exp(mA − m) + lB · exp(mB − m)`. The **finalise** is `m + log(l)` (the logsumexp), and the
+  probability of an element `x` is `exp(x − m) / l`; an empty state finalises to `−∞`. A fully masked row
+  therefore keeps the identity, never NaN. *Test:* `test_ops_online_softmax_reduction`.
+- **KISS-OPS-6.11-0029** — The `argmax` state MUST be `(value, index)` in trailing-axis order, `value` of the state
+  dtype and `index` the index lane (an unsigned integer, §6.11-0026): the extremal value and its **zero-based
+  position along the reduced axis**. The **identity** is `(−∞, 2^w − 1)` (the maximal index, so any element
+  replaces it); the state of the element at position `p` is `(x, p)`. The **merge** keeps `A` unless `B`'s value
+  is greater under the §6.11-0007 total order (NaN is the greatest value; `+0` and `−0` are equal; any two NaNs
+  are equal) **or** the values are equal and `B`'s index is lower (`tie_rule = lowest`, fixed here). It is the
+  maximum of a total order, so it is exact, associative and commutative: every grouping gives the same bits, the
+  lowest-index NaN wins when any element is NaN, and the bits of the winning element are kept (`−0` wins over a
+  later `+0`). The **finalise** is the index lane. *Test:* `test_ops_argmax_reduction`.
 
 ### 6.12 Scalar-source leaves
 
@@ -1912,7 +1964,8 @@ surfaces it in a kernel's guarantees section.
   **tolerance-cell** whose determinism class and declared tolerance are a function of the
   pair **(compute-dtype, accumulator-dtype)**. The accumulator dtype MUST be a **float**
   dtype **at least as wide** as the compute dtype (a narrower accumulator cannot improve on
-  storage precision and is forbidden by the reference). The §6.17-0005 storage-precision
+  storage precision and is forbidden by the reference; this is the rule for a **float** compute dtype, an
+  **integer** compute dtype being §6.17-0010). The §6.17-0005 storage-precision
   reference profile is exactly the **diagonal** cell accumulator-dtype == compute-dtype;
   every off-diagonal (wider-accumulator) cell is a **distinct** tolerance-cell compared
   against its own per-cell reference (§6.17-0009), never against the diagonal cell and never
@@ -1933,6 +1986,30 @@ surfaces it in a kernel's guarantees section.
   thus preserved transitively, not discarded. *Test:*
   `test_ops_accumulator_reference_value`.
 
+- **KISS-OPS-6.17-0010** — The accumulator of a `matmul` over an **integer** compute dtype (`i4`, `u4`, `i8`, `u8`, `i16`, `u16`,
+  `i32`, `u32`, `i64`, `u64`) MUST be `0x00` (the compute dtype, wrapping) or a
+  **signed** integer dtype of **32 or 64 bits** at least as wide as the compute dtype (an unsigned compute dtype
+  of the accumulator's own width is refused), and no other: not an integer narrower than 32 bits, not an
+  unsigned one, not a float. A float accumulator for an integer compute dtype and an integer accumulator for a
+  float compute dtype are typed declines (the float rule is §6.17-0008, unchanged). The integer fold MUST be
+  **exact**: products and sums are taken in the accumulator dtype with two's-complement wrap on overflow
+  (§6.2-0002), so the result has the same bits for **every reduction order** and the cell is **exact-byte**
+  (§6.0-0002), not a tolerance-cell (§6.17-0008). Converting the accumulator to a different output dtype is a
+  `cast` (§6.21) and is not defined here. *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A"):
+  relaxes the float-only wording of §6.17-0008 and §6.19-0025 for `matmul`; `reduce` is unchanged.* *Test:*
+  `test_ops_matmul_integer_accumulator`.
+- **KISS-OPS-6.17-0011** — The **precision tag** of a `matmul` is a named reduced-precision strategy drawn
+  from the **maintainer-owned** `precision_tag` vocabulary of §6.19.2 (`none`, `3xtf32`, `fp8-fast-accumulate`),
+  whose members the maintainer adds under the ordinary growth rule and KISS never defines by recipe. A tag other
+  than `none` MUST be paired with `math_fidelity` = reduced-mantissa-permitted, MUST name the compute dtype it
+  applies to (`3xtf32` to `f32`; `fp8-fast-accumulate` to `f8e4m3fn` or `f8e5m2`), and a kernel that advertises
+  a tagged cell MUST **declare a bound** for it (a `per_backend_ulp_tiers` entry in its Guarantees, §6.8, the
+  R1.36 declaration format): a tagged cell with no declared bound is refused. The tag names a strategy and the
+  bound is what a consumer relies on; KISS pins neither the arithmetic (the number of passes, the split of a
+  product, the accumulate width) nor the value of any bound. The tag travels in the OpAttrs blob, so it is part
+  of the op identity beside the key (§6.6-0020), not of the `structure_key`, whose `<mp>` code stays `st`/`rm`.
+  *Draft change (**Breaking**; CireSnave 2026-11-12, board 427 "1: A"): a new `matmul` field and a new
+  sub-vocabulary.* *Test:* `test_ops_precision_tag`.
 ### 6.18 Complex-arithmetic op family (c64 / c128)
 
 This version defines a **complex-arithmetic op family** over the interleaved-storage
@@ -2183,7 +2260,7 @@ cross-op axis rules in §6.19.5.
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
   layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
-  squeeze, unsqueeze, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
+  squeeze, unsqueeze, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin, matmul}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2272,7 +2349,7 @@ inlined normatively in §6.19-0037.
 
 | Sub-vocabulary | Kind / width | Code points |
 |---|---|---|
-| `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min |
+| `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min, `5`=welford, `6`=online-softmax, `7`=argmax |
 | `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp, `3`=zero-fill, `4`=reject |
 | `scatter_combine` | enum, `u8` | `0`=RESERVED, `1`=assign, `2`=atomic-add, `3`=atomic-max, `4`=atomic-min |
 | `index_dtype` | enum, `u8` | `0`=RESERVED, `1`=u32, `2`=i32, `3`=i64 |
@@ -2280,6 +2357,7 @@ inlined normatively in §6.19-0037.
 | `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
 | `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
 | `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
+| `precision_tag` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=3xtf32, `3`=fp8-fast-accumulate |
 | `cast_rounding` | enum, `u8` | `0`=RESERVED, `1`=nearest-even, `2`=toward-zero, `3`=toward-negative-infinity, `4`=toward-positive-infinity |
 | `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
 | `tie_rule` | enum, `u8` | `0`=RESERVED, `1`=lowest, `2`=highest, `3`=any |
@@ -2290,8 +2368,8 @@ inlined normatively in §6.19-0037.
 | `permutation` | ordered length-prefixed vector (RESERVED) | `u8` element-count prefix (`0..MAX_RANK`), then count × `u8` axis-index elements forming a valid permutation of `0..rank-1`, in order (never sorted) |
 
 - **KISS-OPS-6.19-0014** — The `monoid` OpAttrs field MUST be encoded as the frozen
-  `u8` ordinal `{1=sum, 2=prod, 3=max, 4=min}` with `0` reserved (never emitted); it
-  denotes the §6.11-0002 fold operator, is a member of an op's semantics (not part of
+  `u8` ordinal `{1=sum, 2=prod, 3=max, 4=min, 5=welford, 6=online-softmax, 7=argmax}` with `0` reserved (never emitted); it
+  denotes the §6.11-0002 fold operator or, for ordinals 5 to 7, a §6.11-0026 tuple-state monoid, is a member of an op's semantics (not part of
   the op token), and MUST distinguish e.g. `reduce(sum)` from `reduce(max)` by ordinal
   alone. *Test:* `test_ops_opattrs_monoid_enum`.
 - **KISS-OPS-6.19-0015** — The `oob_policy` OpAttrs field MUST be encoded as the frozen
@@ -2389,6 +2467,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
 | `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
+| `matmul` | `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; §6.17-0010) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default) — `precision_tag`:enum `u8`:`1` (none, §6.17-0011) |
 | `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
@@ -2550,6 +2629,20 @@ by the embedding layer) selects the schema and the reader replays it positionall
   the mask `0x03` of a `squeeze` of `[1,1]` and of an `unsqueeze` to output rank 2 are the same byte.
   *Test:* `test_ops_opattrs_axes_mask_schema`.
 
+- **KISS-OPS-6.19-0049** — The `matmul` OpAttrs blob MUST be exactly `accumulator` (`u8`) then `math_fidelity`
+  (`u8`) then `precision_tag` (`u8`), in that order, each emitted explicitly (§6.19-0005). `accumulator` is `0x00`
+  when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal) and otherwise the 1-based
+  §6.1-table dtype ordinal of the accumulator, a float for a float compute dtype and a signed 32- or 64-bit
+  integer for an integer one (§6.17-0010), never a reserved dtype; `math_fidelity` is the §6.17-0001
+  MathFidelity ordinal exactly as for `reduce` in §6.19-0025 (default `bit-stable`, emitted `01`);
+  `precision_tag` is the §6.17-0011 ordinal (`1`=none, the default, emitted `01`). A reader MUST decline, with
+  a typed decline (§7.1-0002), a blob of any other length, a `0x00` `math_fidelity` or `precision_tag`, an
+  ordinal outside either enum, and an accumulator ordinal outside the dtype table or naming a reserved dtype;
+  whether the accumulator and the tag are legal for the operand's compute dtype is the op's rule (§6.17-0010,
+  §6.17-0011). The pair `(accumulator, math_fidelity)` is the pair, in the order, that `reduce` carries.
+  *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A" and board 427 "1: A"): `matmul` carried
+  no OpAttrs, so every `matmul` blob changes from empty to these three bytes.* *Test:*
+  `test_ops_opattrs_matmul_schema`.
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
 The `reduce_axes` OpAttrs field and the KISS-Classify `structure_key` reduce-field
@@ -3050,6 +3143,10 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0022 | `test_ops_squeeze_semantics` |
 | KISS-OPS-6.11-0023 | `test_ops_unsqueeze_semantics` |
 | KISS-OPS-6.11-0024 | `test_ops_scatter_atomic_add_band` |
+| KISS-OPS-6.11-0026 | `test_ops_packed_reduction_shape` |
+| KISS-OPS-6.11-0027 | `test_ops_welford_reduction` |
+| KISS-OPS-6.11-0028 | `test_ops_online_softmax_reduction` |
+| KISS-OPS-6.11-0029 | `test_ops_argmax_reduction` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -3094,6 +3191,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.17-0007 | `test_ops_math_precision_reproducibility_class` |
 | KISS-OPS-6.17-0008 | `test_ops_accumulator_tolerance_cell_class` |
 | KISS-OPS-6.17-0009 | `test_ops_accumulator_reference_value` |
+| KISS-OPS-6.17-0010 | `test_ops_matmul_integer_accumulator` |
+| KISS-OPS-6.17-0011 | `test_ops_precision_tag` |
 | KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
 | KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
 | KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |
@@ -3157,6 +3256,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0044 | `test_ops_argmax_blob_order` |
 | KISS-OPS-6.19-0045 | `test_ops_tie_rule_enum_ordinals` |
 | KISS-OPS-6.19-0046 | `test_ops_opattrs_axes_mask_schema` |
+| KISS-OPS-6.19-0049 | `test_ops_opattrs_matmul_schema` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
@@ -3455,8 +3555,9 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     provisional `{1=channel-major, 2=tap-major}` member set is pending normative pinning.
     (d) **padding shape** — the per-axis `padding` is modeled as a single symmetric `u32`
     per axis; confirm no op needs asymmetric low/high pairs. (e) **`matmul`** — modeled as
-    carrying NO free OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
-    Classify role hints); confirm it needs no free contract-axis field. (f) **`monoid` as
+    carrying NO free contract-axis OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
+    Classify role hints). **Resolved 2026-11-12 (CireSnave, board 426 6 "A", Breaking):** it now carries
+    `accumulator`, `math_fidelity` and `precision_tag` (§6.19-0049); M/N/K stay out of the blob. (f) **`monoid` as
     OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
     confirm KISS-Ops does not instead fold it into distinct op tokens. (g)
     **`norm_axis` for `rms_norm`/`layer_norm` (covered 2026-07-13).** §6.13-0008 now
@@ -3585,6 +3686,15 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
   `output_column_ordering`=channel-major `01` →
   **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
   (37 bytes).
+
+- **`matmul` defaults** (§6.19-0049): `accumulator` `00`, `math_fidelity`=bit-stable `01`, `precision_tag`=none `01` →
+  **`00 01 01`** (3 bytes).
+- **`matmul` over `i8` with an `i32` accumulator** (§6.17-0010; `i32` is dtype ordinal 9): **`09 01 01`**.
+- **`matmul` over `f32`, `3xtf32`, reduced mantissa** (§6.17-0011): `accumulator` `00`, `math_fidelity`
+  `02`, `precision_tag`=3xtf32 `02` → **`00 02 02`**.
+- **`reduce(welford)` over axis 1 of a rank-2 operand, keepdim** (§6.19-0025, §6.11-0027): `monoid`=welford `05`,
+  `reduce_axes`=rlast `FE FF`, `keepdim` `01`, `accumulator` `00`, `math_fidelity`=bit-stable `01` →
+  **`05 FE FF 01 00 01`** (6 bytes; `online_softmax` is `06 …`, `argmax` `07 …`).
 
 **E.3 Default-resolution equality.** A `gather` written with the default `oob_policy`
 (skip) and one written explicitly `oob_policy=skip`, all other fields equal (`axis=0`,
