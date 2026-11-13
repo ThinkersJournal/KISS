@@ -11,7 +11,7 @@
 > | D1 operand/accumulator/output dtypes in the `gem` key, `batch` | **DONE** | classify.md §6.7 (weight/acc/output dtype, conditional `b<class>`), superseded by sk4 |
 > | D2 transcendental ULP ceiling retired | **DONE** | #63 (+#42) |
 > | D3 §6.6 Dispatch optional, geometry-agnostic class | **DONE** | #43 closed; #483 (sentinel), #489 (Dispatch document layer) |
-> | D4 dtype vocabulary, `f32s` retired, `<mp>` | **DONE** | `f32s` absent from classify.md; `<mp>`/acc field realised by KISS-CLASSIFY-6.7-0013. The `u16`/`u64` prune: **not re-verified** |
+> | D4 dtype vocabulary, `f32s` retired, `<mp>` | **DONE** | `f32s` absent from classify.md; `<mp>`/acc field realised by KISS-CLASSIFY-6.7-0013. The `u16`/`u64` prune: **ruled, not pruned** (CireSnave 2026-11-13, board 430 Part 2 item 4: "we support all dtypes usable with any device people may use for compute with code utilizing KISS standards.  If those dtypes are usable with even just one device ... we include them.") |
 > | D5 `accumulation_type` | **DONE** | contract.md |
 > | D6 reproducibility-scope axis | **DONE** | contract.md §6.8 (closed set; `bit_stability`, 6.8-0013) |
 > | D7 neutral FDX-successor sidecar | **DONE** | adopted as an informative annex plus KISS-CLASSIFY-6.3-0012 (2026-10-09, #533; `rfcs/d7-fdx-successor-sidecar.md`, ROADMAP R2.7) |
@@ -41,7 +41,7 @@
 |---|------|-----------------|-------|--------|
 | **D2** | Retire §6.8 transcendental ULP ceiling → advisory floor; declared per-target tier `{max_ulp\|max_relative\|max_absolute}` is the sole gate; arg-dependent form reserved post-v1 | **#63 MERGED** | KISS | ✅ **MERGED to main** (both cosignatories approved) — **closed #39 + #42.** |
 | **D1** | Operand + accumulator + output dtypes in the `gem` identity key; formalize `batch` | sk3 RFC §4.1.2 | KISS-Classify + Baracuda | 🔶 In the sk3 bundle (g6uuwo0p). |
-| **D4** | dtype vocab + retire the `f32s` *token* (atomic with the `<mp>` MathFidelity coordinate); keep `s16`; prune `u16`/`u64`; MX additive | sk3 RFC §4.1.2 / §6.17 | KISS + Baracuda | 🔶 In the sk3 bundle; `f32s`-retire ordered strictly after `<mp>` exists (C-1). |
+| **D4** | dtype vocab + retire the `f32s` *token* (atomic with the `<mp>` MathFidelity coordinate); keep `s16`; ~~prune `u16`/`u64`~~ **(ruled 2026-11-13: both stay, see the D4 line of the table above)**; MX additive | sk3 RFC §4.1.2 / §6.17 | KISS + Baracuda | 🔶 In the sk3 bundle; `f32s`-retire ordered strictly after `<mp>` exists (C-1). |
 | **D5** | Surface Contract `accumulation_type` from `PrecisionGuarantee.accumulator` (one-field emit) | sk3 RFC §4.2 (**folded**) | Baracuda emit; KISS text | ✅ **Folded into sk3 §4.2** (not a standalone issue — would fragment the single bump). Informative lattice + same-token-spelling invariant + deferred exact-reduction note. |
 | **batch** | `/b<class>` suffix, conditionally-present `<batch>` | sk3 RFC §4.1.2/§7 | KISS + Fuel | 🔶 In the sk3 bundle (g6uuwo0p flipping §4.1.2/§7). |
 | **sk3 bundle** | D1+D4+D5+batch = **one** `sk2→sk3` bump (grow the key once, C-2) | sk3 RFC | KISS (g6uuwo0p) + Fuel/Baracuda ack | 🔶 **Eric-approved, gated on the §6.17 `<mp>` input-rounding pin** (with kiss-ref for sign-off). NOT "open." |
@@ -60,7 +60,7 @@
 | **#57** governance / RFC-as-GitHub-issue | ✅ **MERGED** — umbrella §7.2 + CONTRIBUTING + issue templates. |
 | **#22** namespaced target_capability + output operand in key | ✅ **Closed** — both halves landed on origin/main + provider-confirmed. |
 | **#5** build-on-miss latency | 🟡 Partial: bounded-latency floor landed (§6.6-0001c); two-phase light-offer/heavy-fetch handover shape still open. |
-| **#9** broaden dtype table | 🟡 Partial: integer half (s16/u16/u64) landed (#30); sub-byte floats → #32; u16/u64 pruning is an open editors' call. |
+| **#9** broaden dtype table | 🟡 Partial: integer half (s16/u16/u64) landed (#30); sub-byte floats → #32; u16/u64 pruning **closed: not pruned** (CireSnave 2026-11-13, board 430 Part 2 item 4). |
 | **#10** op-vocab agreement + vendor op tier | 🟡 Partial: vendor-namespaced op tier landed (§7.3); op-vocab-agreement pin + importer-spelling clause open. |
 | **#64** determinism.rs typed-decline (Option vs panic) | ⏳ Filed (Fuel review follow-up; non-blocking). |
 
