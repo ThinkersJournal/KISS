@@ -611,7 +611,7 @@
 # Contract §6.12 bind-time obligations (R1.22 group A, board 379): harness 527 -> 533, backed by tests/contract_bind_time.rs: KISS-CONTRACT-6.12-0001..-0006. TOOL-DERIVED: `--ratchet --base-ref origin/main`. lint and untested unmoved.
 # Contract §6.12 division codes (PM ruling 2026-11-12, option a): harness 533 -> 535, backed by tests/contract_bind_time.rs: KISS-CONTRACT-6.12-0007, -0008.
 # Float atomic-add band (CireSnave 2026-11-12, board 417 "A"): harness 535 -> 537, untested 392 -> 391, backed by tests/atomic_add_band.rs: KISS-OPS-6.11-0024, and a first backing for KISS-CONTRACT-6.8-0012.
-harness	537
+harness	538
 lint	44
 untested	391
 proven	20

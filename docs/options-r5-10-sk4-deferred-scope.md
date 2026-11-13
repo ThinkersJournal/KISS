@@ -21,11 +21,11 @@ deliberate caller precondition. The RFC says it is a describability gap, because
 index width are already keyed, and that it is not urgent.
 
 **3. Catalog-vs-compiler capability bit.** A provider says whether it serves a fixed catalog or compiles
-on demand. The RFC says it stands on trust-model merits, not urgent.
+on demand. The RFC says it stands on trust-model merits, not urgent. **Ruled not defined (CireSnave 2026-11-13, board 430 Q3):** neither kind of provider is inherently trusted, and the distinction is not worth defining; no bit will be drafted.
 
 **4. A MUST that requests carry honest operand types.** Motivated by a near miss: substituting `i32` for
 `u32` index operands would have made the region uniform and falsely passed the synthesizer gate. The RFC
-treats this as a request-validity MUST, independently valuable.
+treats this as a request-validity MUST, independently valuable. **Ruled and written (2026-11-13, board 430 Q4): KISS-CLASSIFY-6.6-0024.**
 
 **5. A migration note for the `Other(n)` reclassification hazard.** New variants that used to fall into
 `Other(n)` silently reclassify earlier values, with no build break. A note flagging it beside the
