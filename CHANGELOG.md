@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.16 — docs: R5.18 stale statements corrected
+
+Docs only. Corrected statements that contradicted `origin/main` (ROADMAP R5.18): the clause and coverage figures and the "fails the build" wording in `DESIGN.md`, `tools/README.md`, `conformance/README.md` and `conformance/TESTABILITY.md` (figures stamped at `e84b36a`, live figures by `python tools/kiss_trace.py --report`); the D7, #477 and schema-version rows in `docs/kiss-convergence-reconciliation.md`; the historical `78/106` anchor in `docs/conformance-architecture.md`; the `math_precision` note in `docs/design-263-cell-class.md`; the `ctr` scope note in `docs/sk6-vector-changes.md`; and ROADMAP R5.18 marked done. No spec clause changed. Verified: `python tools/kiss_readme_coverage.py`, `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_version_sync.py` are clean.
+
 ## 0.15.15 — 2026-11-12 (proposed; tooling only, PM allocates; renumbered again because #801 took 0.15.13 and #802 is 0.15.14)
 
 - Tooling only: the fragment-and-stamp kit (CireSnave standing order, 2026-11-12). `tools/stamp-version.py`, `tools/check-fragment.py`, `.github/workflows/changelog-fragment.yml`, `changelog.d/README.md`, and `tools/stamp-current.txt` naming `conformance/Cargo.toml`. From the next PR on a branch adds one `changelog.d/<topic>.md` fragment and never edits a version line or `CHANGELOG.md`; the gate stamps the allocated number. KISS tracks no `Cargo.lock` and pins its version nowhere else, so `tools/stamp-extra.txt` is not needed; `tools/kiss_version_sync.py` reads what the stamp writes and is unchanged. No spec, vector or code change.

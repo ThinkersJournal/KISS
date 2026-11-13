@@ -40,17 +40,18 @@ specification has a named conformance test, and that the clause↔test mapping i
 consistent and 1:1 across all nine sub-standards. This is the spec-level form of
 Conform §6.2 — *no MUST without a test*.
 
-It does **not** yet verify that those tests are *implemented* or that they
-*pass*. The test names are stubs the specification pins; the executable
-conformance harness (golden byte-vectors, the independent CPU-oracle
-differential engine, the IR-DAG fuzzer, and the negative-vector battery of
-Conform §6.4–§6.7) is the next phase, and lives in a separate reference crate.
+It reads the Rust source in `conformance/`, so it knows a named test **exists**, but it
+never builds or runs it, so it does **not** verify that a test compiles or *passes*
+(`cargo test` does that). The executable harness (golden byte-vectors, the independent
+CPU-oracle differential, the negative-vector battery, and the discriminating pairs
+checked by `tools/kiss_pairs.py`) lives in `conformance/`; the **IR-DAG fuzzer** of Conform
+§6.6 is **not implemented** (see `conformance/README.md`).
 
 ### Latest result
 
 ```
-853 normative clauses across the nine sub-standards, every one mapped 1:1 to a
-named conformance test.  RESULT: CLEAN.
+1043 normative clauses across the nine sub-standards, every one mapped 1:1 to a
+named conformance test.  RESULT: CLEAN.   (figure at `e84b36a`; run the tool for the live one)
 ```
 
 ## `run_with_git_bash.py` — running the bash-launching suites on a Windows box with WSL
