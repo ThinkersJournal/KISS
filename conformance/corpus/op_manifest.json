@@ -71,6 +71,7 @@
     "hypot",
     "im2col",
     "index_select",
+    "iota",
     "layer_norm",
     "ldexp",
     "lgamma",
@@ -145,6 +146,6 @@
   ],
   "coverage": {
     "declared": 1,
-    "total": 126
+    "total": 127
   }
 }

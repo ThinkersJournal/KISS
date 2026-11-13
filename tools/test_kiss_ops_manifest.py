@@ -175,7 +175,7 @@ class DecompositionGraphTest(unittest.TestCase):
 
     def test_carrier_clauses_control_is_parsed_and_clean(self):
         region = self.K.between(self.ops, "#### 6.19.3", "\n- **KISS-OPS-6.19-0025**")
-        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 28)
+        self.assertEqual(len([1 for c in self.K.table_cells(region) if self.K._op(c[0])]), 29)
         self.assertEqual(self.carrier_violations(self.ops), [])
 
     def test_carrier_clause_dropping_a_carrier_is_caught(self):

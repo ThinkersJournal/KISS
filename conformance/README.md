@@ -12,11 +12,12 @@ distinct from the specification text under `spec/`, which is CC0.
 
 ## What it verifies today
 
-**Three of the four** KISS-Conform test modalities — **golden byte-vectors**
-(§6.4), the **independent CPU-oracle differential** (§6.5), and
-**negative/decline vectors** (§6.7) — under the determinism-class comparators of
+**Four of the five** KISS-Conform test modalities (§2.4) — **golden byte-vectors**
+(§6.4), the **independent CPU-oracle differential** (§6.5),
+**negative/decline vectors** (§6.7) and **discriminating vector pairs** (checked by
+`tools/kiss_pairs.py` in CI) — under the determinism-class comparators of
 §6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
-run** that is not one of the four modalities but exercises §6.5's differential on
+run** that is not one of the five modalities but exercises §6.5's differential on
 real silicon. Every golden vector is transcribed from the spec's own appendix.
 **The harness runs by default and adds on-device cases under `--features cuda`.** No count
 is stated here: the number that PASSES cannot be reached without executing the suite, so it
@@ -29,12 +30,12 @@ below, where it sits beside the figure it is actually about.
 generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
 Nothing here does that; the `*_under_fuzz` tests are seeded scalar corpus loops
 over binary f32 functions (§6.5), not DAG generation. All 17 §6.6 clauses are in
-[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all four
+[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all of the (then four)
 modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**538<!-- bound:harness --> of 1043<!-- bound:clauses --> normative clauses are
+**541<!-- bound:harness --> of 1046<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
 [`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 225<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
@@ -51,7 +52,7 @@ The remaining 505<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UN
 population: **387<!-- bound:untested_rows --> genuinely untested**, 44 enforced by a
 document lint, 33 `blocked`, 14 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-the harness one for exactly this reason. Of this crate's 910<!-- bound:test_fns --> test fns, **234<!-- bound:uncited_tests --> cite
+the harness one for exactly this reason. Of this crate's 913<!-- bound:test_fns --> test fns, **234<!-- bound:uncited_tests --> cite
 no backing clause**: each is either named by a §9 row or tagged `// harness-internal: <reason>`
 (KISS-CONFORM-6.1-0003), and the 185 that were neither were cited or tagged one by one (KISS#136). The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
@@ -148,7 +149,7 @@ and randomized loops catch the mistakes.
 
 ```sh
 cd conformance
-cargo test                     # 130 tests, CPU, no dependencies
+cargo test                     # every test, CPU, no dependencies (the count is bound above)
 cargo test --features cuda     # + 3 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
@@ -170,7 +171,7 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
-- **Phase 5 (next, cheap) — cite the clause in every test.** The uncited test
+- **Phase 5 (open, cheap; 235 test fns were still uncited at `e84b36a`) — cite the clause in every test.** The uncited test
   fns counted above are real coverage that is invisible to the matrix.
   Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
   `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
@@ -181,7 +182,7 @@ default build and CI stay GPU-free.
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
   0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
-  Synth at 44<!-- bound:synth_backed -->/136<!-- bound:synth_clauses --> and the highest Classify at 97<!-- bound:classify_backed -->/127<!-- bound:classify_clauses -->; Announce is 60<!-- bound:announce_backed -->/97<!-- bound:announce_clauses -->. Every one has a
+  Synth at 44<!-- bound:synth_backed -->/136<!-- bound:synth_clauses --> and the highest Classify at 98<!-- bound:classify_backed -->/128<!-- bound:classify_clauses -->; Announce is 60<!-- bound:announce_backed -->/97<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync
