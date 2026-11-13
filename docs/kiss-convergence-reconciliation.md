@@ -3,8 +3,8 @@
 > ## CURRENT 2026-10-09 — read this block; the tables below are the 2026-07-20/21 record
 >
 > Measured at KISS `origin/main` `904a4b4`. **Every row below that says "open", "queued to author" or
-> "in the sk3 bundle" is superseded by this block.** Schema is now **`sk4`** (RFC `sk4-schema-event`,
-> Accepted 2026-08-08), not `sk3`.
+> "in the sk3 bundle" is superseded by this block.** Schema was then **`sk4`** (RFC `sk4-schema-event`,
+> Accepted 2026-08-08), not `sk3`; it is **`sk7`** at `e84b36a`.
 >
 > | Item | Now | Basis |
 > |---|---|---|
@@ -14,9 +14,9 @@
 > | D4 dtype vocabulary, `f32s` retired, `<mp>` | **DONE** | `f32s` absent from classify.md; `<mp>`/acc field realised by KISS-CLASSIFY-6.7-0013. The `u16`/`u64` prune: **not re-verified** |
 > | D5 `accumulation_type` | **DONE** | contract.md |
 > | D6 reproducibility-scope axis | **DONE** | contract.md §6.8 (closed set; `bit_stability`, 6.8-0013) |
-> | D7 neutral FDX-successor sidecar | **OPEN — spec adoption pending** | `rfcs/d7-fdx-successor-sidecar.md` is cosigned (2026-07-21) and ready for editor adoption; **no clause in `spec/` adopts it**. Blocked on the KISS editors, not on Fuel or Baracuda |
+> | D7 neutral FDX-successor sidecar | **DONE** | adopted as an informative annex plus KISS-CLASSIFY-6.3-0012 (2026-10-09, #533; `rfcs/d7-fdx-successor-sidecar.md`, ROADMAP R2.7) |
 > | D8 sk2 codec | **DONE** | superseded by sk4 |
-> | sk3 bundle / §6.17 input-rounding pin | **DONE** | KISS-OPS-6.17-0001..0005; the attribute is now `MathFidelity` (#478). The wire-field rename `math_precision` → `math_fidelity` is **open (#477)** |
+> | sk3 bundle / §6.17 input-rounding pin | **DONE** | KISS-OPS-6.17-0001..0005; the attribute is now `MathFidelity` (#478). The wire-field rename `math_precision` → `math_fidelity` is **done (#477 closed; KISS-CONTRACT-6.8-0001/-0004)** |
 > | E6 freeze gate | **OPEN by design** | Eric's ruling stands: external implementors required. Open: #462, #387, #524, #263 |
 >
 > **Not done and not claimed here:** this block says what the *spec* now says. It does not say that Fuel or

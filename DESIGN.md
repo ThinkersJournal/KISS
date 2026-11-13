@@ -52,17 +52,18 @@ carries an append-only clause identifier `KISS-<SUB>-<section>-<nnnn>` that maps
 specification cannot drift from its tests, and "conformant" is a factual,
 checkable property rather than a marketing claim.
 
-**This is the goal, and the suite does not meet it yet.** As of the pre-1.0 draft,
-853 clauses each *name* a test, but only **29 (3.4%) are backed by executable
-code**; the other 824 name tests that do not exist. That gap is recorded, clause
-by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv), and
-`tools/kiss_trace.py --strict` fails on every line of it. The ledger is a ratchet:
-a new untested MUST fails the build, and a clause that gains a test must be struck
-from the ledger. Earlier drafts of this document claimed the build already failed
-on any untested MUST — it did not. The checker compared markdown to markdown and
-never read `conformance/`, so 846 of 852 named tests could not have been detected
-as missing. The number in the ledger is the honest measure of how far the suite is
-from the property this section describes, and closing it is the pre-1.0 priority.
+**This is the goal, and the suite does not meet it yet.** At `e84b36a` (`python tools/kiss_trace.py
+--report`), of **1043** normative clauses **537 (51.5%)** are backed by executable code and **44** more by a
+document lint; **391 are genuinely untested**, and the 506 clauses without a harness test are recorded, clause
+by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv). `tools/kiss_trace.py --strict` fails on
+every line of that ledger, but CI does **not** run it as a blocking gate: it enforces a **ratchet** (coverage
+may not fall below `conformance/COVERAGE_FLOOR.tsv`, and a clause that gains a test must be struck from the
+ledger), so a new untested MUST does not by itself fail the build and a *regression* does (see the README,
+"How coverage is enforced"). Earlier drafts of this document claimed the build already failed on any untested
+MUST, and quoted 853 clauses with 29 (3.4%) backed: neither is true now, and the first was not true then: the
+checker compared markdown to markdown and never read `conformance/`. The numbers in the ledger are the
+honest measure of how far the suite is from the property this section describes, and closing the gap is the
+pre-1.0 priority.
 
 ### 1.5 Determinism and fidelity are first-class
 

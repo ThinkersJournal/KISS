@@ -32,7 +32,7 @@ extent-1 axis token fix and the field rename into one schema bump.
 **Not in this PR (named, not forgotten):** deriver-project edits; any publish; Announce (§6); #222
 candidate 1 (keying a quantized `gem` cell's scale dtype — needs its own ruling); the KISS-Ops
 **OpAttrs** field named `math_precision` (a different wire channel, `opattrs_vectors.json`; it is not
-the Contract field #477 names, and renaming it is a separate Ops wire change).
+the Contract field #477 names; **update 2026-11-13:** the Ops spec now spells the field `math_fidelity`, so that rename has been made).
 
 ## 3. The derivation (§6.5-0015)
 

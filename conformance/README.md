@@ -12,11 +12,12 @@ distinct from the specification text under `spec/`, which is CC0.
 
 ## What it verifies today
 
-**Three of the four** KISS-Conform test modalities — **golden byte-vectors**
-(§6.4), the **independent CPU-oracle differential** (§6.5), and
-**negative/decline vectors** (§6.7) — under the determinism-class comparators of
+**Four of the five** KISS-Conform test modalities (§2.4) — **golden byte-vectors**
+(§6.4), the **independent CPU-oracle differential** (§6.5),
+**negative/decline vectors** (§6.7) and **discriminating vector pairs** (checked by
+`tools/kiss_pairs.py` in CI) — under the determinism-class comparators of
 §6.8 (exact-byte, ULP-tolerance, and order-invariant), plus a **real on-device
-run** that is not one of the four modalities but exercises §6.5's differential on
+run** that is not one of the five modalities but exercises §6.5's differential on
 real silicon. Every golden vector is transcribed from the spec's own appendix.
 **The harness runs by default and adds on-device cases under `--features cuda`.** No count
 is stated here: the number that PASSES cannot be reached without executing the suite, so it
@@ -29,7 +30,7 @@ below, where it sits beside the figure it is actually about.
 generate random-but-valid KISS-Ops IR DAGs and drive each through every backend.
 Nothing here does that; the `*_under_fuzz` tests are seeded scalar corpus loops
 over binary f32 functions (§6.5), not DAG generation. All 17 §6.6 clauses are in
-[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all four
+[`UNBACKED.tsv`](UNBACKED.tsv). An earlier version of this README claimed all of the (then four)
 modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
@@ -148,7 +149,7 @@ and randomized loops catch the mistakes.
 
 ```sh
 cd conformance
-cargo test                     # 130 tests, CPU, no dependencies
+cargo test                     # every test, CPU, no dependencies (the count is bound above)
 cargo test --features cuda     # + 3 on-device tests (needs nvcc + an NVIDIA GPU)
 ```
 
@@ -170,7 +171,7 @@ default build and CI stay GPU-free.
   closed loop — a `relu_add` kernel **emitted by the reference generator**, proven
   conformant on-device. Remaining: more generated ops and cells, and a single-source
   corpus (Rust emits → `.cu` consumes) so the two can never drift.
-- **Phase 5 (next, cheap) — cite the clause in every test.** The uncited test
+- **Phase 5 (open, cheap; 235 test fns were still uncited at `e84b36a`) — cite the clause in every test.** The uncited test
   fns counted above are real coverage that is invisible to the matrix.
   Pass the clause ID at the assertion site, as `opattrs_golden.rs` and
   `structure_key_golden.rs` already do (`assert_golden("KISS-OPS-6.19-0025", …)`),
