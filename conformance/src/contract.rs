@@ -518,6 +518,39 @@ pub enum SectionDecline {
     /// `count_unit`/`in_place`/`alignment_bytes` in Capabilities §6.5-0001; `audited_status` in
     /// Provenance §6.9-0001) — the section-specific misplacement each clause forbids.
     ForbiddenField(String),
+    /// A field value outside its pinned spelling (`in_place` is `none` or `input:<k>`, §6.5-0009).
+    BadFieldValue { field: &'static str, got: String },
+}
+
+/// The Interface `in_place` value (§6.5-0009): the output aliases no input, or the input operand `k` (0-based among
+/// the INPUT operands in the canonical order, KISS-CLASSIFY §6.6-0014).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InPlace {
+    None,
+    Input(usize),
+}
+
+/// Read an `in_place` value: exactly `none` or `input:<k>`, `<k>` decimal with no leading zeros and no sign. Any other
+/// spelling (`false`, `true`, empty, `input:`, `input:01`, `input:-1`) is a typed decline.
+pub fn parse_in_place(value: &str) -> Result<InPlace, SectionDecline> {
+    let bad = || SectionDecline::BadFieldValue { field: "in_place", got: value.to_string() };
+    if value == "none" {
+        return Ok(InPlace::None);
+    }
+    let k = value.strip_prefix("input:").ok_or_else(bad)?;
+    let well_formed = !k.is_empty() && k.bytes().all(|b| b.is_ascii_digit()) && (k == "0" || !k.starts_with('0'));
+    if !well_formed {
+        return Err(bad());
+    }
+    k.parse::<usize>().map(InPlace::Input).map_err(|_| bad())
+}
+
+/// Whether an `in_place` value names an operand that exists: `input:<k>` needs `k < n_inputs`.
+pub fn in_place_names_an_input(ip: InPlace, n_inputs: usize) -> bool {
+    match ip {
+        InPlace::None => true,
+        InPlace::Input(k) => k < n_inputs,
+    }
 }
 
 /// Validate a single section block's field lines against a pinned schema: exactly `expected` keys,
@@ -612,7 +645,11 @@ pub const PROVENANCE_FIELDS: [&str; 5] = [
 /// Read + validate an Interface section block (§6.5-0001). Forbids an independent `target` field
 /// (the target is the Identity `target_capability`, §6.3-0007 / §6.5-0003).
 pub fn parse_interface_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 3, "interface", &INTERFACE_FIELDS, &INTERFACE_OPTIONAL_FIELDS, &["target"])
+    let fields = parse_section_block(block, 3, "interface", &INTERFACE_FIELDS, &INTERFACE_OPTIONAL_FIELDS, &["target"])?;
+    if let Some((_, v)) = fields.iter().find(|(k, _)| k == "in_place") {
+        parse_in_place(v)?;
+    }
+    Ok(fields)
 }
 
 /// Read + validate a Capabilities section block (§6.7-0001). Forbids the Interface-only fields
@@ -1082,7 +1119,7 @@ pub fn appendix_c_interface_block() -> Vec<u8> {
             ("positional_signature", Value::Str("[]".into())),
             ("launch_scalars", Value::Str("[]".into())),
             ("count_unit", Value::Str("elements".into())),
-            ("in_place", Value::Str("false".into())),
+            ("in_place", Value::Str("none".into())),
             ("alignment_bytes", Value::Str("1".into())),
         ],
     )
