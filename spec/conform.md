@@ -14,7 +14,7 @@
 > least one named KISS-Conform test `test_conform_<slug>`. The KISS-Conform suite
 > build FAILS on any normative MUST without a mapped citing test — the mechanism
 > this sub-standard itself defines and, uniquely in the suite, applies to its own
-> clauses.
+> clauses. *(Enforcement correction, 2026-11-13, a statement about what is enforced and not a normative change: in this Draft repository CI enforces a coverage **ratchet**, which fails on regression, not on every untested MUST; see `README.md`, "How coverage is enforced".)*
 
 ---
 
@@ -107,7 +107,7 @@ requirements into a build that refuses to compile when a requirement is unenforc
 to turn "Frozen" into a signed fact rather than an authorial claim.
 
 Every other sub-standard forward-references Conform in three fixed places: its §0 header
-("the KISS-Conform suite build FAILS on any normative MUST without a mapped test"), its
+("the KISS-Conform suite build FAILS on any normative MUST without a mapped test" — see the enforcement correction in each §0), its
 §8 freeze gate ("the sub-standard's KISS-Conform suite exists and passes"), and its §9
 traceability matrix. This document is where each of those deferrals is honored with an
 actual, named, checkable clause.
@@ -149,7 +149,7 @@ POD-tier sidecar that does not match its canonical-schema regeneration (drift). 
 mapped test *passes* is a separate **run-time** conformance property (§6.2-0006), kept
 distinct from the generate-time structural gate so two independently-built suites never
 disagree on whether a sub-standard "builds." This is the concrete realization of the
-obligation every one of the eight sub-standards forward-references verbatim.
+obligation every one of the eight sub-standards forward-references verbatim. *(Enforcement correction, 2026-11-13, a statement about what is enforced and not a normative change: in this Draft repository CI enforces a coverage **ratchet**, which fails on regression, not on every untested MUST; see `README.md`, "How coverage is enforced".)*
 
 ### 2.4 Five modalities — what a passing run means
 

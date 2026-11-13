@@ -42,7 +42,7 @@ as a language's spelling of a constant. This is what lets two independently-writ
 implementations agree not merely on syntax but on meaning, and what makes a
 conformance claim checkable byte-for-byte.
 
-### 1.4 Every clause is testable, or the build fails
+### 1.4 Every clause is testable, or the build fails *(in the Draft: the ratchet fails on regression; see README "How coverage is enforced")*
 
 Each sub-standard follows one dual-document template: an informative overview
 (§0–§5) and a tight normative conformance spec (§6+). Every normative requirement
@@ -52,17 +52,18 @@ carries an append-only clause identifier `KISS-<SUB>-<section>-<nnnn>` that maps
 specification cannot drift from its tests, and "conformant" is a factual,
 checkable property rather than a marketing claim.
 
-**This is the goal, and the suite does not meet it yet.** As of the pre-1.0 draft,
-853 clauses each *name* a test, but only **29 (3.4%) are backed by executable
-code**; the other 824 name tests that do not exist. That gap is recorded, clause
-by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv), and
-`tools/kiss_trace.py --strict` fails on every line of it. The ledger is a ratchet:
-a new untested MUST fails the build, and a clause that gains a test must be struck
-from the ledger. Earlier drafts of this document claimed the build already failed
-on any untested MUST — it did not. The checker compared markdown to markdown and
-never read `conformance/`, so 846 of 852 named tests could not have been detected
-as missing. The number in the ledger is the honest measure of how far the suite is
-from the property this section describes, and closing it is the pre-1.0 priority.
+**This is the goal, and the suite does not meet it yet.** At `e84b36a` (`python tools/kiss_trace.py
+--report`), of **1043** normative clauses **537 (51.5%)** are backed by executable code and **44** more by a
+document lint; **391 are genuinely untested**, and the 506 clauses without a harness test are recorded, clause
+by clause, in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv). `tools/kiss_trace.py --strict` fails on
+every line of that ledger, but CI does **not** run it as a blocking gate: it enforces a **ratchet** (coverage
+may not fall below `conformance/COVERAGE_FLOOR.tsv`, and a clause that gains a test must be struck from the
+ledger), so a new untested MUST does not by itself fail the build and a *regression* does (see the README,
+"How coverage is enforced"). Earlier drafts of this document claimed the build already failed on any untested
+MUST, and quoted 853 clauses with 29 (3.4%) backed: neither is true now, and the first was not true then: the
+checker compared markdown to markdown and never read `conformance/`. The numbers in the ledger are the
+honest measure of how far the suite is from the property this section describes, and closing the gap is the
+pre-1.0 priority.
 
 ### 1.5 Determinism and fidelity are first-class
 
@@ -136,8 +137,10 @@ Conformance is a self-certified claim backed by published results from the
 KISS does not police "KISS-conformant" claims made off-registry: a false claim
 self-reveals (the software will not interoperate, and it is not on the registry),
 so value accrues to being *listed*, not to the assertion. A registered
-certification mark is an optional future lever, not a v1 requirement — which keeps
-the standard simple.
+certification mark is **promised** (CireSnave, 2026-11-13, board 430 Part 2 item 1: *"1) Promise."*), as the
+README states it: it is where a claim becomes checkable. It is **not a v1 requirement**, so v1 ships
+without it and the standard stays simple; what it certifies, who issues it and when are open
+(`ROADMAP.md` R5.20).
 
 ---
 
