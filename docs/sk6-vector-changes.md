@@ -8,7 +8,7 @@ after each table. Nothing is removed. Regenerate with `cargo run --bin emit_stru
 
 Cell derivation is **unchanged** for every non-`ctr` cell: the only derivation change is the optional
 `q<dtype>` coordinate of a quantized `ctr` cell (§6.6-0022), which the derivation vectors do not cover (their
-scope excludes `ctr`, KISS#543); it is covered by the `structure_key_vectors.json` rows
+scope excluded `ctr` when this was written; KISS#543 has since added it); it is covered by the `structure_key_vectors.json` rows
 `quantized_ctr_scale_f8e8m0` / `quantized_ctr_scale_f16` and the four new decline rows.
 
 ### `conformance/corpus/structure_key_vectors.json`
