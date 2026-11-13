@@ -136,9 +136,11 @@ Committed by a ruling:
   outside it.
 
 Pending, undecided, would be byte-visible and should ride if decided in time:
-- **The `u16` / `u64` prune** (board 430 Part 2 item 4, **undecided**). Removing two of the 24 dtype tokens
-  (§6.1-0001, which `PRIOR-ART.md` still spells "twenty-token") changes the closed set; any persisted key
-  using them must be re-derived (it declines at `sk8` as unknown). If kept, the 24-token set is unchanged.
+- **The `u16` / `u64` prune: ruled, they STAY** (CireSnave 2026-11-13, board 430 Part 2 item 4: *"we support
+  all dtypes usable with any device people may use for compute with code utilizing KISS standards.  If those
+  dtypes are usable with even just one device ... we include them."*). This event **does not prune** them;
+  the 24 usable tokens are unchanged by it (the only change to the set is the naming list of
+  `docs/dtype-completeness-audit.md` §2.8).
 - **R1.26 remainder** (ROADMAP, `[wait: schema event]`): keying the block length and the scale-group axis
   (a closed length set `{16, 32}`), and who pins in-block packing and conversion rounding. Block scaling
   adds components to the contraction field or sub-key; it should share the event.
@@ -236,9 +238,7 @@ a reserved dtype in a non-primary operand, and an `sk7` token presented to an `s
 
 The direction is ruled; these three are open. Each is a question with its choices (recommendation first).
 
-1. **Does the `u16` / `u64` prune ride this event?** (board 430 Part 2 item 4)
-   - (a) Decide it now and ride it: one re-derivation, the closed set shrinks from 24 to 22 tokens.
-   - (b) Keep both tokens: the set stays 24 and nothing extra rides. **Recommended if undecided in time:** it can still ride a later event.
+1. ~~**Does the `u16` / `u64` prune ride this event?**~~ **Closed: ruled 2026-11-13, they stay (§5).** No question remains.
 2. **Where does the per-operand dtype go in the key?**
    - (A) A mandatory dtype in every per-operand sub-key. **Recommended.**
    - (B) Only when some operand differs from field 2 (conditional presence).
