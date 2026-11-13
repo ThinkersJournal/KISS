@@ -2864,17 +2864,26 @@ written over the other atoms without a double rounding.
   value's sign, an infinity source included, and an integer destination takes the nearest bound of its
   range. With `saturation = 1` (**none**): a float destination takes the result its rounding direction
   gives (infinity, or the largest finite value where the direction points away from the overflow) and an
-  integer destination takes the value modulo 2^width, two's complement. A destination whose own clause
+  integer destination takes, from an **integer** source, the value modulo 2^width, two's complement
+  (a **float** source never takes `saturation = 1` into an integer: §6.21-0004). A destination whose own clause
   pins saturation (`f8e4m3fn` and `f8e5m2`, §6.16-0004 and §6.16-0005, and the three MX element types)
   MUST be requested with `saturation = 2`, and `none` for one is a typed decline. A NaN source
   into a float destination that has a NaN stays a NaN, with its sign kept. *Test:*
   `test_ops_cast_saturation`.
-- **KISS-OPS-6.21-0004** — This version pins **no** result for the cases of Appendix D item 12 (a NaN
-  into a destination with no NaN, a NaN into an integer, an out-of-range float into an integer under
-  `saturation = 1`, and a reinterpreting `bitcast`, which has no op here). A producer MUST NOT emit a
-  `cast` that depends on one of them as if it were pinned, and a consumer MUST NOT assume a value for
-  one; the recommended values recorded there are not normative. *Test:*
-  `test_ops_cast_unpinned_cases_not_relied_on`.
+- **KISS-OPS-6.21-0004** — `cast` MUST give these results for the cases Appendix D item 12 left open
+  (CireSnave 2026-11-12, board 426 "8: A": adopt what Unpopped does, per case): (a) a **NaN into a
+  destination with no NaN** (the three MX element types, §6.16) is **`+0`**; (b) a **NaN into an
+  integer** is **`0`**, whatever the width, signedness or `rounding`; (c) a **float into an integer** always
+  saturates: with `saturation = 2` an out-of-range value takes the nearest bound (§6.21-0003), and
+  `saturation = 1` (none) is a **typed decline**, so a float source never wraps; (d) an **overflow into an
+  IEEE-style float** follows the rounding direction under `saturation = 1` and clamps to the largest finite
+  value under `saturation = 2`, exactly as §6.21-0003 states, unchanged; (e) a `cast` into `bf16` or
+  `f16` with a non-nearest `rounding` is **allowed** (§6.21-0002); only the fp8 and MX destinations accept
+  nearest-even alone. A reinterpreting `bitcast` has **no op here** and nothing is pinned for it. *Draft
+  change (same ruling): before it, (a) to (c) were unpinned and neither a producer nor a consumer could
+  rely on them; it adds result rules only, no byte of any blob or key moves.* The hardware behaviour of
+  a NaN into an MX type is **unverified** (it is an IR rule, Unpopped's). *Test:*
+  `test_ops_cast_odd_cases_pinned`.
 
 ---
 
@@ -3201,7 +3210,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.21-0001 | `test_ops_cast_atom_shape_and_dtype` |
 | KISS-OPS-6.21-0002 | `test_ops_cast_rounding_modes` |
 | KISS-OPS-6.21-0003 | `test_ops_cast_saturation` |
-| KISS-OPS-6.21-0004 | `test_ops_cast_unpinned_cases_not_relied_on` |
+| KISS-OPS-6.21-0004 | `test_ops_cast_odd_cases_pinned` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |
@@ -3418,14 +3427,15 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
    (no new axiom, §6.18-0002); `c64`/`c128` remain interleaved (re,im) storage containers.
 5. **Transcendental atoms as declared-ULP with a normative ceiling.** The §6.8 ceilings
    (4 ULP for the elementary transcendentals, 8 ULP for `lgamma`, correctly-rounded-or-2-ULP
-   for `sqrt`) are reference values pending confirmation against real per-target math
-   libraries; they make §6.8-0001 testable at the KISS-Ops layer without mandating a
-   reference polynomial.
+   for `sqrt`) were reference values pending confirmation against real per-target math
+   libraries. **Resolved 2026-11-12 (CireSnave, board 426 "7: A"):** closed. The **declared tier is the
+   sole conformance gate** (§6.8-0001, CireSnave decision 311); the §6.8 table is an informative
+   reasonableness guide, not a threshold, and nothing is rejected against it.
 6. **Float reduction determinism.** This version classes float `sum`/`prod` reductions,
    scans, and contractions as order-invariant/nondeterministic (§6.0-0004) rather than
    pinning a canonical reduction order and accumulator width. Whether a future profile
    should offer an opt-in byte-exact reduction (pinned low-to-high order + accumulator
-   dtype) is open.
+   dtype) is open. **Stays open (CireSnave 2026-11-12, board 426 "2: A").**
 7. **`extent(axis)` and `reduced_count` leaves.** `extent(axis)` (single-axis length) and
    `reduced_count` (the product of extents over **all** reduced axes) are in the
    scalar-source leaf set (§6.12-0001); `reduced_count` is the correct divisor for a mean
@@ -3480,14 +3490,14 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     in this open-question list. (b) **`permutation` encoding** — frozen and reserved (Grammar §6.2-0006
     requires KISS-Ops to own it) but attached to NO op this version, since `sort_network`
     emits its permutation as a runtime index-vector output; confirm it is reserved for
-    future shape/transpose/permute ops. (c) **`im2col` `output_column_ordering`** — the
-    provisional `{1=channel-major, 2=tap-major}` member set is pending normative pinning.
+    future shape/transpose/permute ops. **Confirmed reserved (CireSnave 2026-11-12, board 426 "3: A"); §6.20-0011 (no `transpose` or `permute` op) stands.** (c) **`im2col` `output_column_ordering`** — the
+    set `{1=channel-major, 2=tap-major}` is **pinned** (§6.19-0021; CireSnave 2026-11-12, board 426 "4: A").
     (d) **padding shape** — the per-axis `padding` is modeled as a single symmetric `u32`
     per axis; confirm no op needs asymmetric low/high pairs. (e) **`matmul`** — modeled as
     carrying NO free OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
     Classify role hints); confirm it needs no free contract-axis field. (f) **`monoid` as
     OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
-    confirm KISS-Ops does not instead fold it into distinct op tokens. (g)
+    confirm KISS-Ops does not instead fold it into distinct op tokens. **Confirmed as a field (CireSnave 2026-11-12, board 426 "9: A")**; tuple-state reductions (the closed monoid set) are a separate open item, board 427. (g)
     **`norm_axis` for `rms_norm`/`layer_norm` (covered 2026-07-13).** §6.13-0008 now
     normatively requires an explicit `norm_axis` (same role, width, and range as the
     §6.13-0004 `softmax`/`log_softmax` normalization axis) for `rms_norm` and `layer_norm`,
@@ -3503,20 +3513,10 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     IR can express that then KISS must have the ability to decribe it at the seams where it
     applies." and, choosing the encoding (option B of `docs/options-r5-7-multi-axis-norm.md`):
     "391: B". `softmax`/`log_softmax`/`rms_norm`/`layer_norm` take a `u16` axis mask in the
-    `reduce_axes` encoding (§6.19-0031, §6.13-0008).
+    `reduce_axes` encoding (§6.19-0031, §6.13-0008). **Confirmed as written, no longer pending (CireSnave 2026-11-12, board 426 "1: A").**
 12. **`cast`: the values this version leaves open (added 2026-10-29, F1, options note
     `docs/options-cast-op-f1.md`).** §6.21 adds the conversion atom and pins the attributes, the
-    enum encodings, single rounding and the cases a destination clause already fixes. It pins **no**
-    result for: (a) **NaN into a destination with no NaN** (the MX element types) — Unpopped's draft
-    gives +0, the alternatives are a typed decline or a canonical value; (b) **NaN into an integer** —
-    Unpopped's cast gives 0; (c) **an out-of-range float into an integer** — Unpopped's cast always
-    clamps, which here is `saturation = 2`, leaving `saturation = 1` (wrap) undefined for a float
-    source; (d) **overflow into an IEEE-style float** — Unpopped's cast follows the rounding direction
-    unless clamp is asked for, which is what `saturation = 1` says in §6.21-0003; (e) **`bitcast`**
-    (reinterpret the bits as a dtype of the same width), which Unpopped carries as a scalar expression
-    and KISS has no op for; (f) whether `cast` into `bf16` with a non-nearest mode, which §6.21-0002
-    allows by amending §6.16-0003, is wanted. The values in (a) to (d) are **recommended, not
-    normative**. Decision: CireSnave, via the sk7 batch.
+    enum encodings, single rounding and the cases a destination clause already fixes. It pinned **no** result for the cases below. **Resolved 2026-11-12 (CireSnave, board 426 "8: A": adopt what Unpopped does, per case)**, as §6.21-0004: (a) **NaN into a destination with no NaN** (the MX element types) is `+0`; (b) **NaN into an integer** is `0`; (c) an **out-of-range float into an integer** always clamps, and `saturation = 1` (wrap) for a float source is a typed decline; (d) **overflow into an IEEE-style float** follows the rounding direction under `saturation = 1` and clamps under `saturation = 2` (unchanged); (e) a **`bitcast`** (reinterpret the bits as a dtype of the same width) has **no op here**, Unpopped carries it as a scalar expression, and adopting it would be a primitive-floor addition (§6.3-0001), which this ruling does not apply; (f) **`cast` into `bf16` with a non-nearest mode** is wanted and allowed (§6.21-0002). Decision: CireSnave.
 
 ---
 

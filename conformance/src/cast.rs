@@ -15,15 +15,38 @@ pub enum CastDecline {
     SaturationRequired,
     /// A complex source or destination (§6.21-0001).
     UndefinedPair,
+    /// A float source into an integer destination with `saturation = none`: the integer destination always
+    /// saturates for a float source (§6.21-0004, CireSnave 2026-11-12, board 426 "8: A").
+    WrapOfFloat,
 }
 
 const SATURATING_DESTINATIONS: [&str; 5] = ["f8e4m3fn", "f8e5m2", "f4e2m1", "f6e2m3", "f6e3m2"];
+
+/// The value a NaN source takes in a destination that has no NaN (the three MX element types): `+0`
+/// (§6.21-0004 (a), Unpopped's behaviour, CireSnave 2026-11-12, board 426 "8: A").
+pub const NAN_INTO_NO_NAN_DESTINATION: f32 = 0.0;
+
+/// Whether a §6.1 dtype token is a float format (any width).
+pub fn is_float_dtype(d: &str) -> bool {
+    matches!(
+        d,
+        "f16" | "bf16" | "f32" | "f64" | "f8e4m3fn" | "f8e4m3fnuz" | "f8e5m2" | "f8e5m2fnuz" | "f8e8m0" | "f8e6m2" | "f4e2m1" | "f6e2m3" | "f6e3m2"
+    )
+}
+
+/// Whether a §6.1 dtype token is an integer type (signed or unsigned, any width).
+pub fn is_integer_dtype(d: &str) -> bool {
+    matches!(d, "i4" | "u4" | "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64")
+}
 
 /// Whether `rounding`/`saturation` are legal for destination `dst` (and source `src`), per §6.21.
 pub fn check_cast(src: &str, dst: &str, rounding: CastRounding, saturation: CastSaturation) -> Result<(), CastDecline> {
     let complex = |d: &str| d == "c64" || d == "c128";
     if complex(src) || complex(dst) {
         return Err(CastDecline::UndefinedPair);
+    }
+    if is_float_dtype(src) && is_integer_dtype(dst) && saturation != CastSaturation::Clamp {
+        return Err(CastDecline::WrapOfFloat);
     }
     if SATURATING_DESTINATIONS.contains(&dst) {
         if rounding != CastRounding::NearestEven {
@@ -107,11 +130,12 @@ pub fn int_to_int(v: i64, bits: u32, signed: bool, saturation: CastSaturation) -
     }
 }
 
-/// Float to integer. `None` for the cases §6.21-0004 leaves unpinned: a NaN, and an out-of-range value under
-/// `saturation = none`. The recommended values (NaN to 0, always clamp) are Appendix D item 12, not normative.
+/// Float to integer (§6.21-0003, §6.21-0004). A NaN is `0`; an out-of-range value under `saturation = clamp` takes
+/// the nearest bound; `None` is the typed decline of an out-of-range value under `saturation = none` (a float
+/// source never wraps, `check_cast` refuses that pair).
 pub fn f32_to_int(x: f32, rounding: CastRounding, saturation: CastSaturation, bits: u32, signed: bool) -> Option<i64> {
     if x.is_nan() {
-        return None;
+        return Some(0);
     }
     let r = match rounding {
         CastRounding::NearestEven => x.round_ties_even(),
