@@ -1498,6 +1498,28 @@ form (§6.7-0011).
   carried; the rule additionally pins every cell of rank above `3`, and a rank-3 cell with no
   declared batch axis is not batched. *Test:* `test_classify_batch_role_derivation`.
 
+- **KISS-CLASSIFY-6.6-0024** — A consumer that derives a `structure_key` for a request MUST state
+  **each operand's dtype, extents and strides as the operand actually is**, and MUST NOT supply a
+  descriptor it knows or suspects differs from the buffer the kernel will be applied to (CireSnave
+  2026-11-13, board 430 Q4: *"A kernel consumer making a request to a kernel provider must specify what
+  it wants accurately (including input types) if it expects the kernel provider to be able to provide
+  what it asks for."*). The derivation input of §6.6-0012 is therefore a **statement of fact**, not a
+  hint: a deriver MUST take every dtype the key carries from the operand that dtype belongs to, never from
+  a default, from a neighbouring operand, or from an approximate substitute (an `i32` presented for a
+  `u32`, which can make a heterogeneous cell look uniform and pass a gate it should fail). A provider is
+  bound only to what the key states (§6.6-0001): for a request that misstates an operand it has **no
+  obligation for the buffer actually passed**, and the guarantees of the contract it returns hold on the
+  condition that the stated types are the true ones. A provider cannot verify the statement, so this is a
+  **caller obligation**; it adds no field to a request (§6.1-0001a of KISS-Synth). *Scope at this schema
+  version:* the key carries operand 0's dtype and, for a `ctr` cell, the weight, accumulator, output
+  and scale dtypes (§6.6-0005, §6.7-0006, §6.6-0022), so the clause is **witnessed** by the reference
+  deriver for exactly those positions; a **non-primary** operand's dtype of a non-`ctr` cell is not a
+  key position (§6.6-0015), so a misstatement there changes no byte. The clause binds the caller there
+  all the same, and the per-operand dtype schema event (`rfcs/per-operand-dtype-sk8.md`) makes it
+  byte-witnessable for every operand. *Draft change (same ruling): a caller obligation that was
+  previously only the unwritten precondition of §6.6-0015; no byte of any key moves.* *Test:*
+  `test_classify_request_states_input_types`.
+
 ### 6.7 The `structure_key` token codec
 
 The token is the stable string serialization of a `structure_key` — the wire form
@@ -2488,6 +2510,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0021 | `test_classify_scale_dtype_at_operand0_declines` |
 | KISS-CLASSIFY-6.6-0022 | `test_classify_quantized_scale_dtype_keyed` |
 | KISS-CLASSIFY-6.6-0023 | `test_classify_batch_role_derivation` |
+| KISS-CLASSIFY-6.6-0024 | `test_classify_request_states_input_types` |
 | KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |
