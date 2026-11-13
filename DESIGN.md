@@ -42,7 +42,7 @@ as a language's spelling of a constant. This is what lets two independently-writ
 implementations agree not merely on syntax but on meaning, and what makes a
 conformance claim checkable byte-for-byte.
 
-### 1.4 Every clause is testable, or the build fails
+### 1.4 Every clause is testable, or the build fails *(in the Draft: the ratchet fails on regression; see README "How coverage is enforced")*
 
 Each sub-standard follows one dual-document template: an informative overview
 (§0–§5) and a tight normative conformance spec (§6+). Every normative requirement
