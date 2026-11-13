@@ -224,32 +224,34 @@ pub fn encode_axes_mask(mask: u8) -> Vec<u8> {
     vec![mask]
 }
 
-/// `avg_pool`: window_size, stride, dilation, padding, count_include_pad (§6.19-0032).
+/// `avg_pool`: window_size, stride, dilation, padding_lo, padding_hi, count_include_pad (§6.19-0032).
 pub fn encode_avg_pool(
     window: &[u32],
     stride: &[u32],
     dilation: &[u32],
-    padding: &[u32],
+    padding_lo: &[u32],
+    padding_hi: &[u32],
     count_include_pad: bool,
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [window, stride, dilation, padding] {
+    for v in [window, stride, dilation, padding_lo, padding_hi] {
         out.extend(window_param_vector(v));
     }
     out.push(count_include_pad as u8);
     out
 }
 
-/// `im2col`: window_size, stride, dilation, padding, output_column_ordering (§6.19-0033).
+/// `im2col`: window_size, stride, dilation, padding_lo, padding_hi, output_column_ordering (§6.19-0033).
 pub fn encode_im2col(
     window: &[u32],
     stride: &[u32],
     dilation: &[u32],
-    padding: &[u32],
+    padding_lo: &[u32],
+    padding_hi: &[u32],
     column_ordering: ColumnOrdering,
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [window, stride, dilation, padding] {
+    for v in [window, stride, dilation, padding_lo, padding_hi] {
         out.extend(window_param_vector(v));
     }
     out.push(column_ordering.ordinal());

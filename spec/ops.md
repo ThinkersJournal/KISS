@@ -1424,7 +1424,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `index_select` | gather_scatter | — | `gather(oob=skip)` with a 1-D index operand |
 | `embedding` | gather_scatter | — | `gather(oob=zero-fill)` with a 1-D index operand |
 | `scatter_add` | gather_scatter | — | `scatter(combine=atomic-add, oob=skip)` |
-| `im2col` | shape | — | closed-form structured `gather` mapping each output element `(patch, tap)` to the source element at `coord`-derived index `base(patch)·stride + tap_offset·dilation − padding` over `window_size` taps per axis (window/stride/dilation/padding and the output-column flatten order pinned as attributes per §6.13-0004; OOB taps zero-filled) |
+| `im2col` | shape | — | closed-form structured `gather` mapping each output element `(patch, tap)` to the source element at `coord`-derived index `base(patch)·stride + tap_offset·dilation − padding_lo` over `window_size` taps per axis (window/stride/dilation/padding_lo/padding_hi and the output-column flatten order pinned as attributes per §6.13-0004; OOB taps zero-filled) |
 
 - **KISS-OPS-6.13-0001** — Each non-primitive op MUST carry the reference decomposition
   in the table above (and, for the complex-arithmetic family, in the §6.18 tables), and
@@ -1457,7 +1457,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
   `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
   normalization axes (`norm_axes`, §6.19-0031); `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
-  `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
+  `window_size`, `stride`, `dilation`, `padding_lo`, and `padding_hi`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
   `reduced_count` — and the valid-tap count from the pooled view); `im2col` MUST
   additionally declare its
@@ -1466,7 +1466,8 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `matmul` MUST use the operand-ordering convention stated above the table. The pooled
   **window view** is a structured `gather`
   that adds one window axis whose taps lie at `dilation`-spaced offsets over
-  `window_size` positions with the given `stride` and `padding`, OOB taps skipped.
+  `window_size` positions with the given `stride` and `padding_lo` / `padding_hi` (the padding
+  on the low-index and the high-index side of each axis), OOB taps skipped.
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
   `test_ops_parameterized_attributes_explicit`.
 - **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain by the IEEE 754-2019
@@ -1519,22 +1520,26 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `test_ops_structured_decomposition_reference`.
 - **KISS-OPS-6.13-0010** — The §6.13-0004 window view MUST be defined per spatial axis
   by the operand extent `n` (`n ≥ 0`) and that axis's `window_size` `k`, `stride` `s`,
-  `dilation` `d` and `padding` `p` (§6.19-0023; `k`, `s`, `d` ≥ 1 and `p` ≥ 0 — a zero
-  `window_size`, `stride` or `dilation` is not expressible) as follows: the dilated extent is
-  `D = d·(k − 1) + 1`; the output extent is `⌊(n + 2p − D) / s⌋ + 1` when `n + 2p ≥ D` and
-  `0` when it is not (no window fits); output window `o` (`0 ≤ o < output extent`) has tap
-  `j` (`0 ≤ j < k`) at operand position `o·s − p + j·d`; and a tap is in bounds exactly when
+  `dilation` `d`, low-side padding `p_lo` and high-side padding `p_hi` (§6.19-0023; `k`, `s`,
+  `d` ≥ 1 and `p_lo`, `p_hi` ≥ 0 — a zero `window_size`, `stride` or `dilation` is not
+  expressible) as follows: the dilated extent is `D = d·(k − 1) + 1`; the output extent is
+  `⌊(n + p_lo + p_hi − D) / s⌋ + 1` when `n + p_lo + p_hi ≥ D` and `0` when it is not (no
+  window fits); output window `o` (`0 ≤ o < output extent`) has tap
+  `j` (`0 ≤ j < k`) at operand position `o·s − p_lo + j·d`; and a tap is in bounds exactly when
   that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. Written in
   the shape-expression vocabulary (§6.20-0002) the output extent is
-  `Max(Add(Div(Sub(Add(n, 2p), D), s), 1), 0)`, and it is the `Max` (§6.20-0012) that makes the
+  `Max(Add(Div(Sub(Add(Add(n, p_lo), p_hi), D), s), 1), 0)`, and it is the `Max` (§6.20-0012) that makes the
   no-window-fits case `0` and not a negative extent: for `n = 2`, `k = 8`, `s = 1`, `d = 1`,
-  `p = 0` the term before the clamp is `-5` and the output extent is `0`. *Test:*
+  `p_lo = p_hi = 0` the term before the clamp is `-5` and the output extent is `0`. *Draft change
+  (CireSnave 2026-11-12, board 426 5 "A", **Breaking**): the single symmetric `padding` vector became
+  the pair `padding_lo`, `padding_hi`, so an asymmetric padding ("same" padding at an even window)
+  is expressible; a symmetric `p` is `p_lo = p_hi = p`.* *Test:*
   `test_ops_window_output_extent`.
 - **KISS-OPS-6.13-0011** — On every spatial axis of an `avg_pool`, `max_pool` or `im2col`
   window view, every output window MUST have at least one in-bounds tap (§6.13-0010), so
   that every window over all axes overlaps at least one real operand element. The condition
   is over the window attributes **and** the operand extent: the attribute-only bound
-  `2·p ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p = 1` has
+  `p_lo + p_hi ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p_lo = p_hi = 1` has
   one window whose taps lie at −1 and 1, and no real tap). A shape that violates it is not
   expressible: a producer MUST NOT write it and a reader MUST decline it, so the empty
   reduction it would otherwise name (a `max_pool` with no tap, an `avg_pool` with
@@ -2208,7 +2213,7 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0007** — Every integer OpAttrs field MUST be encoded at the
   fixed width pinned in its schema (not chosen by magnitude), little-endian, two's-
   complement: axis-index and operand-index and vector length-prefixes and `u8` enum
-  ordinals as one byte, `reduce_axes` as `u16` LE, and window/stride/dilation/padding
+  ordinals as one byte, `reduce_axes` as `u16` LE, and window/stride/dilation/padding_lo/padding_hi
   elements as `u32` LE. *Test:* `test_ops_opattrs_int_fixed_width_le`.
 - **KISS-OPS-6.19-0008** — The OpAttrs canonical wire form MUST be little-endian
   throughout, consistent with the KISS-Announce POD and KISS-Grammar region wire forms;
@@ -2363,7 +2368,7 @@ inlined normatively in §6.19-0037.
   and `stability` (§6.11-0007) are real flags: each accepts `0` and `1`, each defaults to
   `1`, and a reader MUST NOT reject a `0`. *Test:* `test_ops_opattrs_boolean_flags`.
 - **KISS-OPS-6.19-0023** — Every window-parameter OpAttrs vector (`window_size`,
-  `stride`, `dilation`, `padding`) MUST be encoded as a `u8` element-count prefix
+  `stride`, `dilation`, `padding_lo`, `padding_hi`) MUST be encoded as a `u8` element-count prefix
   (`0..MAX_RANK`, §6.19-0037) immediately followed by that many `u32` little-endian
   elements, where **element `i` corresponds to spatial axis `i` in ascending operand
   spatial-axis index order (the outermost spatial axis first, the innermost spatial axis
@@ -2406,9 +2411,9 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `log_softmax` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0004) |
 | `rms_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
 | `layer_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)`, `beta`=`input(2)` are operands/params, NOT OpAttrs) |
-| `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
-| `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec |
-| `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
+| `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
+| `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec |
+| `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
 | `index_select` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED skip by decomposition, carries no free `oob` field) |
 | `embedding` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED zero-fill by decomposition) |
 | `scatter_add` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (combine FIXED atomic-add, oob FIXED skip by decomposition) |
@@ -2476,14 +2481,18 @@ by the embedding layer) selects the schema and the reader replays it positionall
   (§6.13 operand-ordering convention), NOT OpAttrs fields. *Test:*
   `e2_softmax_norm_axis`.
 - **KISS-OPS-6.19-0032** — The `avg_pool` OpAttrs blob MUST be exactly `window_size`,
-  `stride`, `dilation`, `padding` (each a window-parameter vector, §6.19-0023) then
+  `stride`, `dilation`, `padding_lo`, `padding_hi` (each a window-parameter vector, §6.19-0023) then
   `count_include_pad` (bool `u8`, default `1`), in that order; the `max_pool` OpAttrs
-  blob MUST be exactly `window_size`, `stride`, `dilation`, `padding` in that order with
-  no trailing flag. *Test:* `e2_avg_pool_square_37_bytes`.
+  blob MUST be exactly `window_size`, `stride`, `dilation`, `padding_lo`, `padding_hi` in that
+  order with no trailing flag. *Draft change (**Breaking**, board 426 5 "A"): `padding` is
+  replaced by the pair; the blob of a two-axis `avg_pool` grows from 37 to 46 bytes and of a
+  `max_pool` from 36 to 45; no existing blob decodes under the new schema.* *Test:*
+  `e2_avg_pool_square_46_bytes`.
 - **KISS-OPS-6.19-0033** — The `im2col` OpAttrs blob MUST be exactly `window_size`,
-  `stride`, `dilation`, `padding` (each a window-parameter vector) then
+  `stride`, `dilation`, `padding_lo`, `padding_hi` (each a window-parameter vector) then
   `output_column_ordering` (`column_ordering` enum `u8`, default `1` channel-major), in
-  that order. *Test:* `e2_im2col_channel_major`.
+  that order. *Draft change (**Breaking**, board 426 5 "A"): as §6.19-0032.* *Test:*
+  `e2_im2col_channel_major`.
 - **KISS-OPS-6.19-0034** — The `index_select`, `embedding`, and `scatter_add` OpAttrs
   blobs MUST each be exactly `axis` (`u8`, the indexed axis of §6.11-0013) then
   `index_operand` (`u8`) then `index_dtype` (enum `u8`), in that order; these
@@ -3142,7 +3151,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0029 | `e2_sort_network_ascending_stable` |
 | KISS-OPS-6.19-0030 | `e2_reduce_var_population` |
 | KISS-OPS-6.19-0031 | `e2_softmax_norm_axis` |
-| KISS-OPS-6.19-0032 | `e2_avg_pool_square_37_bytes` |
+| KISS-OPS-6.19-0032 | `e2_avg_pool_square_46_bytes` |
 | KISS-OPS-6.19-0033 | `e2_im2col_channel_major` |
 | KISS-OPS-6.19-0034 | `e2_index_select_u32` |
 | KISS-OPS-6.19-0035 | `test_ops_opattrs_reduce_axes_classify_reconciliation` |
@@ -3453,8 +3462,8 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     emits its permutation as a runtime index-vector output; confirm it is reserved for
     future shape/transpose/permute ops. (c) **`im2col` `output_column_ordering`** — the
     provisional `{1=channel-major, 2=tap-major}` member set is pending normative pinning.
-    (d) **padding shape** — the per-axis `padding` is modeled as a single symmetric `u32`
-    per axis; confirm no op needs asymmetric low/high pairs. (e) **`matmul`** — modeled as
+    (d) **padding shape** — **resolved 2026-11-12 (CireSnave, board 426 5 "A", Breaking):** the
+    single symmetric `padding` became the pair `padding_lo` / `padding_hi` (§6.19-0023, -0032, -0033). (e) **`matmul`** — modeled as
     carrying NO free OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
     Classify role hints); confirm it needs no free contract-axis field. (f) **`monoid` as
     OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
@@ -3563,28 +3572,35 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
 - **`rms_norm(norm_axes={0,2})` over a rank-4 operand** (§6.19-0031; non-contiguous): mask `0b0101` → **`05 00`** (2 bytes).
 - **`index_select(axis=0, index_operand=1, index_dtype=u32)`** (§6.19-0034): `axis` `00`,
   `index_operand` `01`, `index_dtype`=u32 `01` → **`00 01 01`** (3 bytes).
-- **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding=`[0,0]`,
-  count_include_pad=true** (§6.19-0032): `window_size` `02·02 00 00 00·02 00 00 00`;
+- **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding_lo=`[0,0]`,
+  padding_hi=`[0,0]`, count_include_pad=true** (§6.19-0032): `window_size` `02·02 00 00 00·02 00 00 00`;
   `stride` `02·02 00 00 00·02 00 00 00`; `dilation` `02·01 00 00 00·01 00 00 00`;
-  `padding` `02·00 00 00 00·00 00 00 00`; `count_include_pad` `01` →
-  **`02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
-  (37 bytes).
-- **`avg_pool` window=`[3,5]`, stride=`[1,2]`, dilation=`[1,1]`, padding=`[0,0]`,
-  count_include_pad=true** (§6.19-0032; **non-square**, exercising the §6.19-0023
+  `padding_lo` `02·00 00 00 00·00 00 00 00`; `padding_hi` `02·00 00 00 00·00 00 00 00`;
+  `count_include_pad` `01` →
+  **`02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (46 bytes).
+- **`avg_pool` window=`[3,5]`, stride=`[1,2]`, dilation=`[1,1]`, padding_lo=`[0,0]`,
+  padding_hi=`[0,0]`, count_include_pad=true** (§6.19-0032; **non-square**, exercising the §6.19-0023
   ascending-spatial-axis order — element 0 = axis 0 = `3`/`1`, element 1 = axis 1 = `5`/`2`
   — so a reversed encoder that emitted `[5,3]`/`[2,1]` would diverge here): `window_size`
   `02·03 00 00 00·05 00 00 00`; `stride` `02·01 00 00 00·02 00 00 00`; `dilation`
-  `02·01 00 00 00·01 00 00 00`; `padding` `02·00 00 00 00·00 00 00 00`;
-  `count_include_pad` `01` →
-  **`02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
-  (37 bytes).
-- **`im2col` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding=`[1,1]`,
-  output_column_ordering=channel-major** (§6.19-0033): `window_size`
+  `02·01 00 00 00·01 00 00 00`; `padding_lo` `02·00 00 00 00·00 00 00 00`; `padding_hi`
+  `02·00 00 00 00·00 00 00 00`; `count_include_pad` `01` →
+  **`02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (46 bytes).
+- **`avg_pool` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding_lo=`[2,0]`,
+  padding_hi=`[0,1]`, count_include_pad=true** (§6.19-0032; **asymmetric**, so a decoder that
+  merged or swapped the two sides would diverge): `padding_lo` `02·02 00 00 00·00 00 00 00`;
+  `padding_hi` `02·00 00 00 00·01 00 00 00` →
+  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 02 00 00 00 00 00 00 00 02 00 00 00 00 01 00 00 00 01`**
+  (46 bytes).
+- **`im2col` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding_lo=`[1,1]`,
+  padding_hi=`[1,1]`, output_column_ordering=channel-major** (§6.19-0033): `window_size`
   `02·03 00 00 00·03 00 00 00`; `stride` `02·01 00 00 00·01 00 00 00`; `dilation`
-  `02·01 00 00 00·01 00 00 00`; `padding` `02·01 00 00 00·01 00 00 00`;
-  `output_column_ordering`=channel-major `01` →
-  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
-  (37 bytes).
+  `02·01 00 00 00·01 00 00 00`; `padding_lo` `02·01 00 00 00·01 00 00 00`; `padding_hi`
+  `02·01 00 00 00·01 00 00 00`; `output_column_ordering`=channel-major `01` →
+  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
+  (46 bytes).
 
 **E.3 Default-resolution equality.** A `gather` written with the default `oob_policy`
 (skip) and one written explicitly `oob_policy=skip`, all other fields equal (`axis=0`,

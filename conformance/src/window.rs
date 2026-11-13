@@ -5,14 +5,16 @@
 //! The overlap check is the closed form (a range of tap indices per output window); the test
 //! scope holds it against a brute-force scan of every tap, so the two derivations differ.
 
-/// One spatial axis of a window view: the operand extent and the four `OpAttrs` values.
+/// One spatial axis of a window view: the operand extent and the five `OpAttrs` values (`padding_lo` and
+/// `padding_hi` are the low-side and high-side padding, §6.19-0023).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Axis {
     pub extent: u64,
     pub window_size: u64,
     pub stride: u64,
     pub dilation: u64,
-    pub padding: u64,
+    pub padding_lo: u64,
+    pub padding_hi: u64,
 }
 
 /// Why an axis is not expressible.
@@ -30,21 +32,21 @@ impl Axis {
         self.dilation * self.window_size.saturating_sub(1) + 1
     }
 
-    /// The output extent: `floor((n + 2p - D) / s) + 1`, or 0 when no window fits.
+    /// The output extent: `floor((n + p_lo + p_hi - D) / s) + 1`, or 0 when no window fits.
     pub fn output_extent(&self) -> Result<u64, Decline> {
         if self.window_size == 0 || self.stride == 0 || self.dilation == 0 {
             return Err(Decline::ZeroParameter);
         }
-        let span = self.extent + 2 * self.padding;
+        let span = self.extent + self.padding_lo + self.padding_hi;
         let d = self.dilated_extent();
         Ok(if span < d { 0 } else { (span - d) / self.stride + 1 })
     }
 
     /// Whether output window `o` has an in-bounds tap, by the range of tap indices `j` with
-    /// `0 <= o*s - p + j*d < n`.
+    /// `0 <= o*s - p_lo + j*d < n`.
     fn window_has_real_tap(&self, o: u64) -> bool {
         let (n, k) = (self.extent as i128, self.window_size as i128);
-        let (s, d, p) = (self.stride as i128, self.dilation as i128, self.padding as i128);
+        let (s, d, p) = (self.stride as i128, self.dilation as i128, self.padding_lo as i128);
         let base = o as i128 * s - p;
         let j_lo = if base >= 0 { 0 } else { (-base + d - 1) / d };
         let j_hi = ((n - 1 - base).div_euclid(d)).min(k - 1);
