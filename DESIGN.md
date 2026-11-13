@@ -136,8 +136,10 @@ Conformance is a self-certified claim backed by published results from the
 KISS does not police "KISS-conformant" claims made off-registry: a false claim
 self-reveals (the software will not interoperate, and it is not on the registry),
 so value accrues to being *listed*, not to the assertion. A registered
-certification mark is an optional future lever, not a v1 requirement — which keeps
-the standard simple.
+certification mark is **promised** (CireSnave, 2026-11-13, board 430 Part 2 item 1: *"1) Promise."*), as the
+README states it: it is where a claim becomes checkable. It is **not a v1 requirement**, so v1 ships
+without it and the standard stays simple; what it certifies, who issues it and when are open
+(`ROADMAP.md` R5.20).
 
 ---
 
