@@ -131,6 +131,9 @@ Sub-key shown as `<contig>/<bcasthex>/<vec>/<div>/<flip>/<dtype>`.
 
 Committed by a ruling:
 - **Per-operand dtype (this RFC).**
+- **Removing the `x<n>` / `Other(n)` escape (CireSnave 2026-11-13, board 430 Q5, option 5b; §5.1).** A type
+  KISS cannot name stays out of every key; the device reports an explicit "unnamed type present" marker
+  outside it.
 
 Pending, undecided, would be byte-visible and should ride if decided in time:
 - **The `u16` / `u64` prune** (board 430 Part 2 item 4, **undecided**). Removing two of the 24 dtype tokens
@@ -141,6 +144,55 @@ Pending, undecided, would be byte-visible and should ride if decided in time:
   adds components to the contraction field or sub-key; it should share the event.
 - **Cell class for multi-level indirection** (the block-table question above): only if the parties find
   one `ndx` cell cannot distinguish single- from two-level indirection. Possibly not needed.
+
+### 5.1 Removing the `x<n>` / `Other(n)` escape (ruled, 5b)
+
+*Ruling, verbatim (relayed by the PM):* **"b.  A type KISS can't describe should result in an urgent update to
+KISS so that it can.  KISS should support all types used by all devices that might provide compute described
+via KISS standards.  The list is finite and describable."**
+
+**What exists today (read at `origin/main`).** The escape lives in the **Vulkan namespace** only
+(`spec/namespaces/vulkan.md` V-7): a `VkComponentTypeKHR` the vocabulary does not name derives `x<n>`
+(`n` the decimal enumerant) inside a `cm-` cooperative-matrix tuple (§2.4) or a `cv-` cooperative-vector
+tuple (§2.5). The vocabulary crates carry the same idea as an `Other(n)` variant (sk4 RFC §10:
+Vulkane "emit[s] `Other(n)` and drop[s] the type"). I found **no other** escape in the specs: the
+Classify dtype set is already closed (an unknown dtype token is a typed decline, §6.1-0001, §6.7-0009), and
+the CUDA and SYCL namespace tokens carry no type names. Op-class letters and arith names in the Vulkan token
+have **no escape at all** today (V-7's neighbour, §4): they under-claim silently, which is the same hazard
+this removal makes explicit for types. **Whether the escape is load-bearing in the vocabulary crates or in a
+consumer's code is not visible from this repository**; the parties (§7 step 2) must say so before the cut.
+
+**The change.**
+1. **No `x<n>` token** in any key, and **no `Other(n)` variant** in any vocabulary. A reader MUST decline an
+   `x<n>` component type as an unknown token (the typed unknown-token decline of §6.7-0009), exactly as for
+   any unrecognized dtype.
+2. **A type KISS cannot name stays out of the key.** For Vulkan: a cooperative-matrix or cooperative-vector
+   **tuple that has an unnamed component type is omitted whole** (never truncated, never partly named), so
+   the token under-claims what the device can do. An under-claiming key is safe (the device is never
+   admitted for a cell it was not described for) and is now made *visible* by item 3.
+3. **The marker.** The device reports an explicit **`unnamed_types`** record **outside the key**, in the
+   **Announce device record** (§6.6-0006), the record that already carries `target`, `store_dtypes` and
+   `compute_dtypes`, which are **closed** to the Classify dtype table (§6.6-0007) and so cannot list an
+   unnamed type. Proposed shape (illustrative, not frozen): a `u32` count `<= 64`, then that many
+   length-prefixed **raw identifiers**, each an opaque byte string `<namespace>:<kind>:<value>` (for
+   example `vulkan:component_type:1000491002`), never compared byte-exact and never part of any key. A
+   count above zero means: *this device's `target` token and dtype sets under-claim.* It is informative for
+   consumers and is the **input of the urgent-update process** (`docs/dtype-completeness-audit.md` §3).
+   Alternatives: (B) one FEAT capability bit (coarse; carries no identifiers, so the process gets no
+   data); (C) a reserved in-band token in the dtype sets (puts an unnamed type back inside a key-like
+   field, which is what the ruling removes). **Recommend A.** It is a wire change to Announce, so it
+   rides Announce's own version rules (§8), separate from the Classify schema event.
+
+**What it moves (byte-visible).** Every sk7 token containing `x<n>` changes at the cut (the tuple is
+omitted, or, once the type is named, replaced by its spelling): that is the same re-derivation this
+RFC already schedules, and the Vulkan namespace's own vocabulary version bumps. Naming a type **later**
+also changes the token of any device that already exposes it (its tuples were omitted, now present),
+so the Vulkan "additive test" (§4 of the namespace spec, baseline by registry date) is replaced for
+component types by: **naming a type that any device has reported (a non-empty marker for it) bumps the
+namespace vocabulary version**; naming one no device has yet exposed is additive.
+
+**The naming list** (the types the vocabulary must name before the escape can go) is the finite remainder
+of the completeness audit: `docs/dtype-completeness-audit.md` §2.
 
 Not byte-visible, do **not** need the event: the packed tuple-state reductions (ruled 427, presenter rule:
 key bytes unchanged), `padding_lo/padding_hi` and the matmul fields (OpAttrs, Ops layer), `bitcast`/`iota`
