@@ -17,8 +17,9 @@
 An operation is just an operation. There is no "backward op category". Instead **every op has a backward**:
 a short sequence of ordinary catalog operations that, given the **output gradients** and some **saved
 values**, computes the **input gradients**. It sits beside the op's reference decomposition (§6.13) and is
-written in the same language. A provider is free to run a **fused kernel** for the backward, exactly as it
-may run a fused kernel for any decomposition. Because the backward is a sequence of ordinary ops, **the
+written in the same language. **No backward operation is named**: there is no `attention_backward`,
+`layer_norm_backward` or `conv_backward` token (§3.1). A provider that fuses a backward **advertises the
+region** (KISS-Grammar: the fusion's structure is its identity), exactly as it would for any fusion. Because the backward is a sequence of ordinary ops, **the
 backward of a backward is defined for free** (each op in the sequence has its own backward).
 
 What this RFC settles, in order: where the section lives (§3), the four points the PM asked for (§4 to
@@ -40,11 +41,69 @@ Two surfaces, with one owner each:
 | Surface | Holds | Owner |
 |---|---|---|
 | **KISS-Ops** | the **semantic** backward of an op: its sequence, its saved values (as definitions), its tie rule, its precision statement, or the words **no backward** | Ops editors; one place per op, in or next to the §6.13 table (a new column) |
-| **KISS-Contract** | what a **kernel** says about it: whether it provides the backward as `sequence-only` or via a `fused` kernel id, **and the layout of its saved values** (§5) | the kernel's Contract (the §6.5 guarantees surface) |
+| **KISS-Contract** | what a **kernel** says about it: whether it is run as the plain sequence or **advertised as a fused region** (a Grammar region, §3.1), **and the layout of its saved values** (§5) | the kernel's Contract (the §6.5 guarantees surface) |
 
 The Ops text defines *what* the gradient is; the Contract states *how this kernel hands it over*. A
-consumer that sees an op with no fused backward runs the sequence; this is the same fallback rule as
-§6.14-0004 for an unrecognized op.
+consumer that does not recognize a provider's fused region runs the sequence; this is the same fallback
+rule as §6.14-0004 for an unrecognized op.
+
+### 3.1 No pre-named backward operations (CireSnave, board 430 Q1 follow-up)
+
+*Relayed by the PM, 2026-11-13:* do not pre-name backward operations. A backward is **a sequence of
+ordinary operations in the forward operation's contract** (KISS-Ops reference decomposition). A provider
+that fuses it **advertises the region** (KISS-Grammar region grammar: the fusion's structure is its
+identity). A name is added **later only by the ordinary growth rule** (add a high-level op *by definition*)
+when a region **recurs** and consumers need to match it without raising the primitive DAG.
+
+So this RFC adds **no op token** and **no tag**. Backward sections are sequences; the table below is a
+*watch list*, not a list of names to add.
+
+**Likely to recur (candidates for later promotion, in the order they are likely to be asked for):**
+
+| Candidate region | Why it recurs | Where it appears |
+|---|---|---|
+| attention backward (§9.1) | every transformer trainer wants one fused kernel | the same seven-step DAG across heads, masks, dropouts |
+| layer norm / RMS norm backward (§9.3) | every transformer block, twice | `dx`, `dgamma`, `dbeta` |
+| softmax / log-softmax backward (§9.2) | the loss and the attention | a three-op region |
+| convolution backward, input and weight (§9.5) | every CNN | `col2im`-style scatter plus two contractions |
+
+Not listed, because they are elementwise fusions the ordinary elementwise-chain growth rule already
+covers (activation gradients) or are one `scatter_add` (embedding). The promotion test is the existing one:
+a region recurs **and** consumers need to match it by name **and** the primitive DAG would otherwise grow;
+none of the three is satisfied by a draft.
+
+### 3.2 Is a canonical form of a backward region needed? (the PM's question)
+
+Short answer: **no new canonical form; one real gap; one decision.** What the Grammar already erases, and
+what it does not, read at `origin/main` (`spec/grammar.md`):
+
+| Difference between two equal-looking backward sequences | Matched today? | Why |
+|---|---|---|
+| **Operand swap** of a commutative op (`mul(a,b)` vs `mul(b,a)`) | **Yes** | canonical operand order, §6.4-0010 |
+| **Independent steps written in a different order** (the `dV` step before or after the `dP` step) | **Yes** | a region is a **DAG**, not a sequence; the node table is emitted in canonical post-order (§6.8-0004), so step order is not part of the identity |
+| **A repeated sub-expression written twice** | **Yes** | structural common-subexpression dedup, §6.4-0011 |
+| **Algebraically equal but structurally different** (`add(mul(a,b), mul(a,c))` vs `mul(a, add(b,c))`; `sub(g,x)` vs `add(g, neg(x))`) | **No, deliberately** | these round differently, so they are different computations; deciding equality is not a canonicalization problem |
+| **Regrouped associative sums** (`(a+b)+c` vs `a+(b+c)`) | **No, deliberately** | different reduction order, different bits (§6.17 reduction-order cells) |
+| **A saved value that is stored versus recomputed** | **No** | an emitted `L` is a bind leaf; a recomputed `L` is a subtree; those are two regions |
+| **Several gradients from one kernel** (`dQ`, `dK`, `dV`) | **Not expressible** | a region has **exactly one root**; a multi-output forest is a typed decline (§6.4-0009) |
+
+So reordered-but-equal **steps** already match; reordered-but-**not**-equal ones should not. The two rows
+that matter are the last two:
+
+1. **Saved versus recomputed.** Recommend: the Ops reference backward binds each saved value as a **leaf**
+   (it is a declared input, §5). A provider that recomputes it advertises a **different, larger region**,
+   which is the truth: it is a different fusion. A consumer wanting either matches either. No rule needed
+   beyond stating the reference's choice.
+2. **Multi-output backward.** A fused attention or layer-norm backward emits several gradients, and the
+   Grammar cannot advertise that as one region today. Options: (a) advertise **one region per gradient**
+   (each has one root; shared sub-expressions repeat in each region, and the kernel's Contract bundles the
+   outputs with `bundle(...)`, §6.5-0019; recommended, **no Grammar change**); (b) extend the Grammar to a
+   **forest** of roots (a Grammar change, §6.4-0009 reversed, and a new canonical form for the forest);
+   (c) forbid advertising multi-output regions (the fused backward stays unmatched). **Recommend (a).**
+
+**Where the reference sequence is written** matters for matching: the Ops editors MUST write each backward
+in the Grammar's canonical region form (post-order node table, dedup applied) so that matching a provider's
+region against the reference is a byte comparison, not an equivalence proof.
 
 **Primitives and non-primitives.** For a **primitive** (§6.3-0001) the backward is written by hand: the
 floor is small. For a **non-primitive** the default is the **mechanical derivative of its reference
@@ -196,7 +255,7 @@ dK = mul(matmul(dS^T, Q), scale)
 ```
 
 All present ops; the transposes are operand views (item 6). A **fused kernel** (flash style) computes this in
-tiles and never writes `P`. **Kink:** a fully masked row has `L = -inf`; the convention (§6) pins `P = 0`
+tiles and never writes `P`; it advertises the region, under no new name (§3.1). **Kink:** a fully masked row has `L = -inf`; the convention (§6) pins `P = 0`
 and the row's gradients `0`, not `NaN`. **Precision:** `D`, `dQ`, `dK`, `dV` sum over the sequence: `f32`
 accumulate by default.
 
@@ -266,7 +325,10 @@ The principle is ruled. Each open point is a question with its choices (recommen
 6. **How to close the catalog gaps** (§8):
    - (a) add `digamma`, give `scatter` an accumulator field and a deterministic combine, express the slice and `col2im` as views and `iota`+`scatter_add` rather than new ops. **Recommended.**
    - (b) mint `slice` and `col2im` ops as well (shorter backward sequences, a bigger catalog).
-7. **Complex gradient convention:** which derivative is "the gradient" for complex values?
+7. **Multi-output backward regions** (§3.2):
+   - (a) one region per output gradient, outputs bundled by the Contract. **Recommended.**
+   - (b) extend the Grammar to a forest of roots. (c) do not advertise them.
+8. **Complex gradient convention:** which derivative is "the gradient" for complex values?
    - (a) defer until a complex training consumer exists. **Recommended.**
    - (b) rule it now with the conjugate-Wirtinger convention.
 
