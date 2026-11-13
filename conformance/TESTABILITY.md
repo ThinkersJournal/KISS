@@ -2,8 +2,7 @@
 
 **Informative.** A companion to [`UNBACKED.tsv`](UNBACKED.tsv): that file says *which*
 clauses have no executable test; this one says *why*, and *which of them can be fixed
-today*. (The suite has **857** normative clauses total; when this analysis was first run,
-**~812** were unbacked. Track the live split with `python tools/kiss_trace.py --report`.)
+today*. (When this analysis was first run the suite had **857** normative clauses, **~812** unbacked; at `e84b36a` it has **1043**, **506** of them unbacked and **391** genuinely untested. Track the live split with `python tools/kiss_trace.py --report`.)
 
 The honest short answer: **not the whole backlog.** A clause names a conformance test, but a
 conformance test is only worth writing if it has **teeth** — a plausible wrong
@@ -43,7 +42,7 @@ The full verified list, with the wrong implementation each test catches, is
 
 ### Progress — 62 of the 72 are now written
 
-Backing has gone **45 → 109 / 857 clauses (12.7%)**, with five new reference modules
+*(historical record of that pass; live figures above)* Backing has gone **45 → 109 / 857 clauses (12.7%)**, with five new reference modules
 (`grammar`, `fp`, `dtype`, `contract`, plus the `§6.18-0017` split comparator) and 192
 passing tests. `WORKLIST.tsv` marks each done row `DONE`. Coverage by sub-standard:
 OPS 25.6%, Announce 30.7%, Classify 23.1%, Grammar 19.2%, Contract 5.8%.

@@ -39,3 +39,7 @@ of the clause set, say so and I will follow that process.
 Contract is not frozen, so nothing is irreversible. Decisions needed: **A, B or C**, and whether the
 remaining R5.18 doc fixes (the `[go]` file groups) may proceed as docs-only PRs without further sign-off,
 which is what the roadmap marks.
+
+## Ruling
+
+**Ruled A** (CireSnave 2026-11-13, board 433, verbatim: *"433: A"*). Applied to `spec/contract.md` KISS-CONTRACT-6.8-0012 as: "the non-contraction accumulator-and-mode field of §6.7-0013 (realizing §6.7-0012)". No obligation changed; the sidecar keys on clause IDs only, and no test or tool reads the old words (checked at `origin/main`).
