@@ -21,11 +21,12 @@
     {
       "op": "matmul",
       "clauses": ["KISS-OPS-6.19-0049"],
-      "blob_bytes": 3,
+      "blob_bytes": 11,
       "fields": [
         {"ordinal": 0, "name": "accumulator", "width": "u8", "offset": 0},
         {"ordinal": 1, "name": "math_fidelity", "width": "u8", "offset": 1},
-        {"ordinal": 2, "name": "precision_tag", "width": "u8", "offset": 2}
+        {"ordinal": 2, "name": "accuracy_kind", "width": "u8", "offset": 2},
+        {"ordinal": 3, "name": "accuracy_value", "width": "u64le", "offset": 3}
       ]
     },
     {

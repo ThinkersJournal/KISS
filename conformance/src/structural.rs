@@ -1103,12 +1103,48 @@ pub enum MatmulAttrDecline {
     IntegerAccumulator,
     /// The accumulator ordinal is reserved or outside the dtype table.
     AccumulatorOrdinal(u8),
-    /// A `precision_tag` other than `none` with a `math_fidelity` other than reduced-mantissa-permitted.
-    TagNeedsReducedMantissa,
-    /// A `precision_tag` whose compute dtype is not the one the tag names (§6.17-0011).
-    TagComputeDtype,
-    /// A tagged cell with no declared bound (§6.17-0011: a tag without a bound is refused at advertisement).
-    TagWithoutBound,
+}
+
+/// Why a reduced-precision cell is refused at advertisement (§6.17-0012, board 443).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReducedPrecisionDecline {
+    /// A cell whose MathFidelity is reduced-mantissa-permitted declares no tier in its Guarantees. The Contract's
+    /// allowance of "no finite bound, no tier" (`unbounded`, KISS-CONTRACT §6.8-0002) does not apply to it.
+    NoTier,
+}
+
+/// §6.17-0012: a kernel advertising a cell with MathFidelity reduced-mantissa-permitted, for ANY op, must
+/// declare a tier for it. `reduced` is the cell's MathFidelity; `declared_tiers` counts the tiers it declares
+/// for the target.
+pub fn reduced_cell_declares_tier(reduced: bool, declared_tiers: usize) -> Result<(), ReducedPrecisionDecline> {
+    if reduced && declared_tiers == 0 {
+        return Err(ReducedPrecisionDecline::NoTier);
+    }
+    Ok(())
+}
+
+/// §6.17-0011: whether a kernel is admitted for a requested accuracy bound. A request of kind `none` admits every
+/// kernel the key admits; otherwise the kernel must declare a tier of the SAME kind no looser than the request
+/// (`declared <= requested`; kinds are not convertible, so a kernel declaring only other kinds, or none, is not
+/// admitted). `max_ulp` compares as `u64`; `max_relative` and `max_absolute` compare as binary64, and a declared
+/// value that is NaN is never admitted.
+pub fn accuracy_request_admits(
+    requested: (crate::opattrs::AccuracyKind, u64),
+    declared: &[(crate::opattrs::AccuracyKind, u64)],
+) -> bool {
+    use crate::opattrs::AccuracyKind::{MaxAbsolute, MaxRelative, MaxUlp, None as NoBound};
+    let (kind, want) = requested;
+    if kind == NoBound {
+        return true;
+    }
+    declared.iter().any(|&(k, have)| {
+        k == kind
+            && match kind {
+                MaxUlp => have <= want,
+                MaxRelative | MaxAbsolute => f64::from_bits(have) <= f64::from_bits(want),
+                NoBound => false,
+            }
+    })
 }
 
 /// Storage bit width of a dtype `matmul` may fold over, `None` for the rest.
@@ -1163,11 +1199,11 @@ fn matmul_is_int(dtype: &str) -> bool {
     matches!(dtype, "i4" | "u4" | "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64")
 }
 
-/// The `matmul` attribute legality over the operand's compute dtype (§6.17-0008, §6.17-0010, §6.17-0011):
-/// `accumulator` (`0x00` diagonal or a dtype ordinal), `fidelity` (1 bit-stable, 2 reduced-mantissa) and `tag`
-/// (1 none, 2 3xtf32, 3 fp8-fast-accumulate), with `declared_bound` the Contract-declared ULP bound for a tagged
-/// cell (`None` = none declared). A typed decline, never a panic.
-pub fn matmul_attrs_check(compute: &str, accumulator: u8, fidelity: u8, tag: u8, declared_bound: Option<u32>) -> Result<(), MatmulAttrDecline> {
+/// The `matmul` attribute legality over the operand's compute dtype (§6.17-0008, §6.17-0010): `accumulator`
+/// (`0x00` diagonal or a dtype ordinal). The accuracy request (§6.17-0011) is legal for every compute dtype, and
+/// whether a reduced-mantissa cell declares its tier is [`reduced_cell_declares_tier`]'s (§6.17-0012). A typed
+/// decline, never a panic.
+pub fn matmul_attrs_check(compute: &str, accumulator: u8) -> Result<(), MatmulAttrDecline> {
     use crate::structure_key::{DTYPES, RESERVED_DTYPES};
     let cw = matmul_width(compute).ok_or_else(|| MatmulAttrDecline::ComputeDtype(compute.to_string()))?;
     if accumulator != 0 {
@@ -1180,22 +1216,6 @@ pub fn matmul_attrs_check(compute: &str, accumulator: u8, fidelity: u8, tag: u8,
             }
         } else if !(matches!(*acc, "f16" | "bf16" | "f32" | "f64") && aw.map_or(false, |w| w >= cw)) {
             return Err(MatmulAttrDecline::FloatAccumulator);
-        }
-    }
-    if tag != 1 {
-        if fidelity != 2 {
-            return Err(MatmulAttrDecline::TagNeedsReducedMantissa);
-        }
-        let named = match tag {
-            2 => compute == "f32",
-            3 => matches!(compute, "f8e4m3fn" | "f8e5m2"),
-            _ => false,
-        };
-        if !named {
-            return Err(MatmulAttrDecline::TagComputeDtype);
-        }
-        if declared_bound.is_none() {
-            return Err(MatmulAttrDecline::TagWithoutBound);
         }
     }
     Ok(())

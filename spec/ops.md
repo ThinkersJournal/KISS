@@ -1947,22 +1947,23 @@ surfaces it in a kernel's guarantees section.
   and reduced-mantissa-permitted is verified by the same per-atom mantissa-width probe. The
   attribute therefore constrains per-atom mantissa width independently of reduction order.
   *Test:* `test_ops_math_precision_order_invariant_scope`.
-- **KISS-OPS-6.17-0006** — For each MathFidelity value, §6.17 MUST pin the exact
-  input-rounding applied to each operand before compute, as
-  `(retained_mantissa_bits, rounding_mode)`, precise enough for a spec-derived reference
-  to (a) derive the accuracy bound (`u = 2^−(retained_mantissa_bits + 1)`) and (b)
-  reproduce the rounded operand bit-for-bit. **bit-stable** applies no input rounding
-  (each operand at its storage-dtype mantissa). **reduced-mantissa-permitted** rounds each
-  operand's mantissa to a pinned width via the named mode before compute; the canonical
-  value is **TF32** (`f32` primary, `cuda:sm80+`): 10 retained mantissa bits, exponent
-  unchanged, round-to-nearest-even, `u = 2⁻¹¹`. The rounding MUST be a true round (RNE),
-  not truncation, and MUST carry into the exponent (`1.11…1` → `10.0…0`, exponent + 1); a
-  reference that truncates is non-conformant. Where a target admits more than one
-  reduced-mantissa width for the same primary dtype and capability, each MUST be named
-  separately (an additive refinement); the kernel's declared width (§6.17-0003) still
-  governs: bfloat16-input rounding is `n = 7`, TF32 is `n = 10`. This pin is what the KISS-Classify `<mp>` key coordinate
-  (KISS-CLASSIFY §6.7-0006, `st`/`rm`) resolves to per `(primary_dtype, target)`. *Test:*
-  `test_ops_math_precision_input_rounding`.
+- **KISS-OPS-6.17-0006** — For each MathFidelity value, §6.17 pins, **as a measuring reference only**, the
+  input-rounding a bound is derived from, as `(retained_mantissa_bits, rounding_mode)`, precise enough for a
+  spec-derived reference to (a) derive the accuracy bound (`u = 2^−(retained_mantissa_bits + 1)`) and (b)
+  reproduce the rounded operand bit-for-bit. **bit-stable** applies no input rounding (each operand at its
+  storage-dtype mantissa). For **reduced-mantissa-permitted** the canonical reference is **TF32** (`f32` primary,
+  `cuda:sm80+`): 10 retained mantissa bits, exponent unchanged, round-to-nearest-even, `u = 2⁻¹¹`; the rounding of
+  the **reference** MUST be a true round (RNE), not truncation, and MUST carry into the exponent (`1.11…1` →
+  `10.0…0`, exponent + 1), and a reference that truncates is non-conformant. **This is a yardstick, not a rule a
+  kernel must follow** (CireSnave 2026-11-14, board 443: *"Is the fixed TF32 rounding rule a measuring reference
+  only?  Yes."*): a kernel is not required to round its operands this way, is permitted to compute at any width at
+  or above its declared width `n` (§6.17-0003) or at full precision, and is held only to the bound it declares
+  (§6.17-0011, KISS-CONTRACT §6.8-0002). Where a target admits more than one reduced-mantissa width for the same
+  primary dtype and capability, each reference MUST be named separately (an additive refinement); the kernel's
+  declared width still governs: bfloat16-input rounding is `n = 7`, TF32 is `n = 10`. The KISS-Classify `<mp>` key
+  coordinate (KISS-CLASSIFY §6.7-0006, `st`/`rm`) names what a cell admits and resolves to no rounding rule.
+  *Draft change (board 443): reworded from a pin on how operands are rounded to a measuring reference; no byte
+  moves.* *Test:* `test_ops_math_precision_input_rounding`.
 - **KISS-OPS-6.17-0007** — Input-rounding (§6.17-0006) and accumulator width do NOT by
   themselves fix a float contraction's bits: float accumulation is non-associative, so the
   reduction order/schedule also moves bits. A contraction cell is bit-reproducible (admits
@@ -2022,18 +2023,35 @@ surfaces it in a kernel's guarantees section.
   `cast` (§6.21) and is not defined here. *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A"):
   relaxes the float-only wording of §6.17-0008 and §6.19-0025 for `matmul`; `reduce` is unchanged.* *Test:*
   `test_ops_matmul_integer_accumulator`.
-- **KISS-OPS-6.17-0011** — The **precision tag** of a `matmul` is a named reduced-precision strategy drawn
-  from the **maintainer-owned** `precision_tag` vocabulary of §6.19.2 (`none`, `3xtf32`, `fp8-fast-accumulate`),
-  whose members the maintainer adds under the ordinary growth rule and KISS never defines by recipe. A tag other
-  than `none` MUST be paired with `math_fidelity` = reduced-mantissa-permitted, MUST name the compute dtype it
-  applies to (`3xtf32` to `f32`; `fp8-fast-accumulate` to `f8e4m3fn` or `f8e5m2`), and a kernel that advertises
-  a tagged cell MUST **declare a bound** for it (a `per_backend_ulp_tiers` entry in its Guarantees, §6.8, the
-  R1.36 declaration format): a tagged cell with no declared bound is refused. The tag names a strategy and the
-  bound is what a consumer relies on; KISS pins neither the arithmetic (the number of passes, the split of a
-  product, the accumulate width) nor the value of any bound. The tag travels in the OpAttrs blob, so it is part
-  of the op identity beside the key (§6.6-0020), not of the `structure_key`, whose `<mp>` code stays `st`/`rm`.
-  *Draft change (**Breaking**; CireSnave 2026-11-12, board 427 "1: A"): a new `matmul` field and a new
-  sub-vocabulary.* *Test:* `test_ops_precision_tag`.
+- **KISS-OPS-6.17-0011** — The accuracy a `matmul` requester needs, if any, MUST be stated as a **requested
+  accuracy bound**, the pair `accuracy_kind` and `accuracy_value` of §6.19-0049, in the shape of the KISS-CONTRACT §6.8-0002 tier (CireSnave 2026-11-14,
+  board 443: *"Should a requester be able to state an accuracy bound in the operation itself?  Yes."*).
+  `accuracy_kind` is one of `none`, `max_ulp`, `max_relative`, `max_absolute` (§6.19.2): `max_ulp` is the largest
+  ULP distance from the reference function and `accuracy_value` its `u64` count; `max_relative` and `max_absolute`
+  carry an IEEE 754 binary64 value that is finite and not negative; `none` (the default) requests no bound and
+  carries the value `0`. A kernel is **admitted** for a request whose kind is not `none` **iff** it declares, for
+  the target, a tier of the **same kind** whose value is **no looser** than the requested one (`declared <=
+  requested`); a kernel that declares only other kinds, or no tier, is not admitted, because the kinds are not
+  convertible into one another; a request of kind `none` admits every kernel the `structure_key` admits. KISS pins
+  this format and this matching rule, **never the value of any bound and never how a kernel meets one**: the
+  vocabulary of named strategies (`3xtf32`, `fp8-fast-accumulate`) that 0.17.0 introduced as `precision_tag` is
+  **removed** (CireSnave 2026-11-14, board 443: *"Timing: remove the tag with sk8."*), because what crosses the
+  seam is the accuracy a requester accepts and a kernel declares, not the recipe inside the kernel; a compound
+  strategy is described by the contract of the fused kernel that implements it (KISS-CONTRACT §6.4-0002). The
+  request is part of the op identity (OpAttrs, KISS-CLASSIFY §6.6-0020), not of the `structure_key`. *Draft change
+  (**Breaking**; board 443, 2026-11-14): replaces the `precision_tag` field of §6.19-0049 by `accuracy_kind` and
+  `accuracy_value`.* *Test:* `test_ops_requested_accuracy_bound`.
+- **KISS-OPS-6.17-0012** — A kernel that **advertises a cell whose MathFidelity is
+  reduced-mantissa-permitted**, for any op, MUST **declare the precision of that cell**: a tier (a
+  `per_backend_ulp_tiers` entry in its Guarantees, KISS-CONTRACT §6.8-0002) for the target, in addition to the
+  declared width `n` (KISS-CONTRACT §6.8-0004a). A reduced-mantissa cell advertised **without** a tier is
+  **refused**, and the allowance of KISS-CONTRACT §6.8-0002 for a kernel with no finite bound to declare no tier
+  (`precision_class` `unbounded`) **does not apply to it**: without the declaration a consumer cannot decide
+  whether the lower precision is acceptable (CireSnave 2026-11-14, board 443: *"must a kernel that runs with
+  lower precision specify that precision, definitely!  Without it, a decision about whether it is acceptable is
+  impossible."*). This keeps the rule that 0.17.0 stated for a tagged cell and states it for the cell, not the
+  tag. *Draft change (board 443).* *Test:* `test_ops_reduced_precision_declares_tier`.
+
 ### 6.18 Complex-arithmetic op family (c64 / c128)
 
 This version defines a **complex-arithmetic op family** over the interleaved-storage
@@ -2381,7 +2399,7 @@ inlined normatively in §6.19-0037.
 | `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
 | `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
 | `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
-| `precision_tag` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=3xtf32, `3`=fp8-fast-accumulate |
+| `accuracy_kind` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=max_ulp, `3`=max_relative, `4`=max_absolute |
 | `cast_rounding` | enum, `u8` | `0`=RESERVED, `1`=nearest-even, `2`=toward-zero, `3`=toward-negative-infinity, `4`=toward-positive-infinity |
 | `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
 | `tie_rule` | enum, `u8` | `0`=RESERVED, `1`=lowest, `2`=highest, `3`=any |
@@ -2491,7 +2509,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
 | `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
-| `matmul` | `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; §6.17-0010) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default) — `precision_tag`:enum `u8`:`1` (none, §6.17-0011) |
+| `matmul` | `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; §6.17-0010) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default) — `accuracy_kind`:enum `u8`:`1` (none, §6.17-0011) — `accuracy_value`:`u64` LE:`0` (zero under none, §6.17-0011) |
 | `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
@@ -2671,20 +2689,23 @@ by the embedding layer) selects the schema and the reader replays it positionall
   `bitcast` destination for the operand's dtype is the op's rule (§6.21-0005). The blob is emitted
   explicitly (§6.19-0005). *Test:* `test_ops_opattrs_bitcast_schema`.
 
-- **KISS-OPS-6.19-0049** — The `matmul` OpAttrs blob MUST be exactly `accumulator` (`u8`) then `math_fidelity`
-  (`u8`) then `precision_tag` (`u8`), in that order, each emitted explicitly (§6.19-0005). `accumulator` is `0x00`
-  when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal) and otherwise the 1-based
-  §6.1-table dtype ordinal of the accumulator, a float for a float compute dtype and a signed 32- or 64-bit
-  integer for an integer one (§6.17-0010), never a reserved dtype; `math_fidelity` is the §6.17-0001
-  MathFidelity ordinal exactly as for `reduce` in §6.19-0025 (default `bit-stable`, emitted `01`);
-  `precision_tag` is the §6.17-0011 ordinal (`1`=none, the default, emitted `01`). A reader MUST decline, with
-  a typed decline (§7.1-0002), a blob of any other length, a `0x00` `math_fidelity` or `precision_tag`, an
-  ordinal outside either enum, and an accumulator ordinal outside the dtype table or naming a reserved dtype;
-  whether the accumulator and the tag are legal for the operand's compute dtype is the op's rule (§6.17-0010,
-  §6.17-0011). The pair `(accumulator, math_fidelity)` is the pair, in the order, that `reduce` carries.
-  *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A" and board 427 "1: A"): `matmul` carried
-  no OpAttrs, so every `matmul` blob changes from empty to these three bytes.* *Test:*
-  `test_ops_opattrs_matmul_schema`.
+- **KISS-OPS-6.19-0049** — The `matmul` OpAttrs blob MUST be exactly `accumulator` (`u8`), `math_fidelity` (`u8`),
+  `accuracy_kind` (`u8`) and `accuracy_value` (`u64` little-endian), in that order, **eleven bytes**, each emitted
+  explicitly (§6.19-0005). `accumulator` is `0x00` when the accumulator dtype equals the compute dtype (the
+  §6.17-0005 diagonal) and otherwise the 1-based §6.1-table dtype ordinal of the accumulator, a float for a float
+  compute dtype and a signed 32- or 64-bit integer for an integer one (§6.17-0010), never a reserved dtype; for a
+  float compute dtype it is the requester's **floor**, the narrowest accumulation it accepts (§6.17-0008;
+  board 443: *"Keep it as that floor."*); `math_fidelity` is the §6.17-0001 MathFidelity ordinal exactly as for
+  `reduce` in §6.19-0025 (default `bit-stable`, emitted `01`); `accuracy_kind` and `accuracy_value` are the
+  requested accuracy bound of §6.17-0011 (`1`=none, the default, with the value `0`; emitted `01` and eight `00`
+  bytes). A reader MUST decline, with a typed decline (§7.1-0002), a blob of any other length, a `0x00`
+  `math_fidelity` or `accuracy_kind`, an ordinal outside either enum, an `accuracy_value` other than `0` under
+  kind `none`, a `max_relative` or `max_absolute` value that is NaN, infinite or negative, and an accumulator
+  ordinal outside the dtype table or naming a reserved dtype; whether the accumulator is legal for the operand's
+  compute dtype is the op's rule (§6.17-0010). The pair `(accumulator, math_fidelity)` is the pair, in the order,
+  that `reduce` carries. *Draft change (**Breaking**; board 426 6 "A" gave the blob its three bytes at 0.17.0;
+  CireSnave 2026-11-14, board 443 replaces `precision_tag` by `accuracy_kind` and `accuracy_value`, so every
+  `matmul` blob changes from three bytes to eleven).* *Test:* `test_ops_opattrs_matmul_schema`.
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
 The `reduce_axes` OpAttrs field and the KISS-Classify `structure_key` reduce-field
@@ -3266,7 +3287,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.17-0008 | `test_ops_accumulator_tolerance_cell_class` |
 | KISS-OPS-6.17-0009 | `test_ops_accumulator_reference_value` |
 | KISS-OPS-6.17-0010 | `test_ops_matmul_integer_accumulator` |
-| KISS-OPS-6.17-0011 | `test_ops_precision_tag` |
+| KISS-OPS-6.17-0011 | `test_ops_requested_accuracy_bound` |
+| KISS-OPS-6.17-0012 | `test_ops_reduced_precision_declares_tier` |
 | KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
 | KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
 | KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |
@@ -3635,7 +3657,7 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     single symmetric `padding` became the pair `padding_lo` / `padding_hi` (§6.19-0023, -0032, -0033). (e) **`matmul`** — modeled as
     carrying NO free contract-axis OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
     Classify role hints). **Resolved 2026-11-12 (CireSnave, board 426 6 "A", Breaking):** it now carries
-    `accumulator`, `math_fidelity` and `precision_tag` (§6.19-0049); M/N/K stay out of the blob. (f) **`monoid` as
+    `accumulator`, `math_fidelity` and, from 0.18.0, `accuracy_kind` and `accuracy_value` (§6.19-0049; 0.17.0 carried a `precision_tag` there, removed by board 443); M/N/K stay out of the blob. (f) **`monoid` as
     OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
     confirm KISS-Ops does not instead fold it into distinct op tokens. **Confirmed as a field (CireSnave 2026-11-12, board 426 "9: A")**; tuple-state reductions (the closed monoid set) are a separate open item, board 427. (g)
     **`norm_axis` for `rms_norm`/`layer_norm` (covered 2026-07-13).** §6.13-0008 now
@@ -3762,11 +3784,15 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
   **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
   (46 bytes).
 
-- **`matmul` defaults** (§6.19-0049): `accumulator` `00`, `math_fidelity`=bit-stable `01`, `precision_tag`=none `01` →
-  **`00 01 01`** (3 bytes).
-- **`matmul` over `i8` with an `i32` accumulator** (§6.17-0010; `i32` is dtype ordinal 9): **`09 01 01`**.
-- **`matmul` over `f32`, `3xtf32`, reduced mantissa** (§6.17-0011): `accumulator` `00`, `math_fidelity`
-  `02`, `precision_tag`=3xtf32 `02` → **`00 02 02`**.
+- **`matmul` defaults** (§6.19-0049): `accumulator` `00`, `math_fidelity`=bit-stable `01`, `accuracy_kind`=none `01`,
+  `accuracy_value` `00 00 00 00 00 00 00 00` → **`00 01 01 00 00 00 00 00 00 00 00`** (11 bytes).
+- **`matmul` over `i8` with an `i32` accumulator** (§6.17-0010; `i32` is dtype ordinal 9): **`09 01 01 00 00 00 00 00 00 00 00`**.
+- **`matmul` over `f32`, reduced mantissa, requesting at most 4 ULP** (§6.17-0011): `accumulator` `00`,
+  `math_fidelity` `02`, `accuracy_kind`=max_ulp `02`, `accuracy_value` 4 as a `u64` LE `04 00 00 00 00 00 00 00` →
+  **`00 02 02 04 00 00 00 00 00 00 00`**.
+- **`matmul` requesting a relative error of at most 2⁻¹⁰** (§6.17-0011): `accuracy_kind`=max_relative `03`,
+  `accuracy_value` the IEEE 754 binary64 `0x3F50000000000000` (2⁻¹⁰), little-endian `00 00 00 00 00 00 50 3F` →
+  **`00 01 03 00 00 00 00 00 00 50 3F`**.
 - **`reduce(welford)` over axis 1 of a rank-2 operand, keepdim** (§6.19-0025, §6.11-0027): `monoid`=welford `05`,
   `reduce_axes`=rlast `FE FF`, `keepdim` `01`, `accumulator` `00`, `math_fidelity`=bit-stable `01` →
   **`05 FE FF 01 00 01`** (6 bytes; `online_softmax` is `06 …`, `argmax` `07 …`).

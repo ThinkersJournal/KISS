@@ -18,7 +18,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 338; // 325 + 13 (`matmul` is a carrier: its base + 11 field variations, +3 reduce monoid members; the tuple-state monoids are not values of a scan's field); 313 + 12 (the window ops' `padding` vector became `padding_lo` + `padding_hi`: avg_pool, max_pool, im2col mint four more variations each); 307 + 6 (bitcast: target_dtype value vectors, board 427); 295 + 12 (iota: target_dtype x extents x axis value vectors, board 422); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
+const POPULATION: usize = 339; // 338 + 1 (0.18.0: `matmul`'s `precision_tag` (2 variations) became `accuracy_kind` (3: max_ulp, max_relative, max_absolute); `accuracy_value` is not varied alone, its legal values depend on the kind); 325 + 13 (`matmul` is a carrier: its base + 11 field variations, +3 reduce monoid members; the tuple-state monoids are not values of a scan's field); 313 + 12 (the window ops' `padding` vector became `padding_lo` + `padding_hi`: avg_pool, max_pool, im2col mint four more variations each); 307 + 6 (bitcast: target_dtype value vectors, board 427); 295 + 12 (iota: target_dtype x extents x axis value vectors, board 422); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -137,11 +137,16 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
         "matmul" => opattrs::encode_matmul(
             acc_ordinal(tok(v, "accumulator")),
             fidelity(tok(v, "math_fidelity")),
-            match tok(v, "precision_tag") {
-                "none" => opattrs::PrecisionTag::None,
-                "3xtf32" => opattrs::PrecisionTag::ThreeXTf32,
-                "fp8-fast-accumulate" => opattrs::PrecisionTag::Fp8FastAccumulate,
-                t => panic!("precision_tag {t}"),
+            match tok(v, "accuracy_kind") {
+                "none" => opattrs::AccuracyKind::None,
+                "max_ulp" => opattrs::AccuracyKind::MaxUlp,
+                "max_relative" => opattrs::AccuracyKind::MaxRelative,
+                "max_absolute" => opattrs::AccuracyKind::MaxAbsolute,
+                t => panic!("accuracy_kind {t}"),
+            },
+            match get(v, "accuracy_value") {
+                Value::U64(n) => *n,
+                other => panic!("matmul: `accuracy_value` is {other:?}"),
             },
         ),
         "gather" => opattrs::encode_gather(byte(v, "axis"), oob(tok(v, "oob_policy")), byte(v, "index_operand"), idt(tok(v, "index_dtype"))),

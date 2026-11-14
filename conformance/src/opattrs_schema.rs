@@ -53,6 +53,8 @@ pub enum FieldWidth {
     U8,
     /// `u16` LE — two bytes, little-endian.
     U16Le,
+    /// `u64` LE — eight bytes, little-endian (`matmul` `accuracy_value`, §6.19-0049).
+    U64Le,
     /// The table does not pin a fixed width here (`vec`).
     Variable,
 }
@@ -63,6 +65,7 @@ impl FieldWidth {
         match self {
             FieldWidth::U8 => Some(1),
             FieldWidth::U16Le => Some(2),
+            FieldWidth::U64Le => Some(8),
             FieldWidth::Variable => None,
         }
     }
@@ -132,7 +135,9 @@ pub fn parse_table() -> Vec<OpSchema> {
             let Some(rest) = part.strip_prefix('`') else { continue };
             let Some((name, tail)) = rest.split_once('`') else { continue };
             let encoding = tail.trim_start_matches(':').trim().to_string();
-            let width = if encoding.contains("`u16`") {
+            let width = if encoding.contains("`u64`") {
+                FieldWidth::U64Le
+            } else if encoding.contains("`u16`") {
                 FieldWidth::U16Le
             } else if encoding.contains("`u8`") {
                 FieldWidth::U8
@@ -284,6 +289,7 @@ fn render_field(f: &SchemaField, ordinal: usize, offset: Option<usize>, last: bo
     let width = match f.width {
         FieldWidth::U8 => "\"u8\"",
         FieldWidth::U16Le => "\"u16le\"",
+        FieldWidth::U64Le => "\"u64le\"",
         FieldWidth::Variable => "\"variable\"",
     };
     // ⚠️ `null`, never 0: past a Variable field no later offset is KNOWABLE, and a 0 would read
