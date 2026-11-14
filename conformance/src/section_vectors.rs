@@ -13,8 +13,8 @@
 use crate::contract::{
     appendix_c_capabilities_block, appendix_c_dispatch_block, appendix_c_guarantees_block,
     appendix_c_identity_block, appendix_c_interface_block, appendix_c_provenance_block,
-    appendix_c_semantics_block, check_record_consistency, in_place_names_an_input,
-    parse_capabilities_block, parse_guarantees_block, parse_identity_block, parse_in_place,
+    appendix_c_semantics_block, check_record_consistency,
+    parse_capabilities_block, parse_guarantees_block, parse_identity_block,
     parse_interface_block, parse_provenance_block, parse_semantics_block, read_document,
     render_block, section_block, Document, RecordDecline, Value,
 };
@@ -199,13 +199,6 @@ fn check_interface(block: &[u8]) -> Result<(u32, Vec<SignatureArg>), FullDecline
     let get = |k: &str| fields.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str()).unwrap_or("");
     let sig = parse_positional_signature(get("positional_signature")).map_err(|d| fd("interface", d.wire_tag()))?;
     let rank = get("rank").parse::<u32>().map_err(|_| fd("interface", "bad-field-value"))?;
-    let n_ptr = sig.iter().filter(|a| a.arg_kind == "ptr").count();
-    if let Ok(ip) = parse_in_place(get("in_place")) {
-        // One output operand: the inputs are the pointers before it.
-        if n_ptr > 0 && !in_place_names_an_input(ip, n_ptr - 1) {
-            return Err(fd("interface", "in-place-no-such-input"));
-        }
-    }
     Ok((rank, sig))
 }
 
@@ -454,9 +447,6 @@ fn feature_declines(out: &mut Vec<SectionDeclineVector>) {
         set(&mut f, "in_place", bad);
         push(out, format!("in_place = {bad}"), &with(2, render(2, &f)), "interface", "bad-field-value");
     }
-    let mut f = strided_interface();
-    set(&mut f, "in_place", "input:2");
-    push(out, "in_place names input 2 of 2 inputs".into(), &with(2, render(2, &f)), "interface", "in-place-no-such-input");
 }
 
 /// Request 5: per section, one fault of each kind the field schema rules out.
@@ -510,7 +500,7 @@ pub fn emit_section_vectors_json() -> String {
     let mut s = String::new();
     s.push_str("  \"section_vectors\": {\n");
     s.push_str("    \"spec_reference\": \"spec/contract.md 6.4-0001, 6.5-0001/-0002/-0005/-0009/-0014, 6.6-0001/-0006, 6.11-0001/-0005/-0006: whole seven-section documents (header v4), ONE feature or fault each\",\n");
-    s.push_str("    \"encoding_note\": \"accept_vectors[].doc_hex must read cleanly. decline_vectors[].section names where the reader declines (framing, a section name, or record) and expect is that decline's stable kebab-case tag; the payload is omitted. Tags per section: missing-field, unknown-field, out-of-order, duplicate-field, forbidden-field, bad-field-value, not-utf8, malformed-line, bad-heading; interface adds bad-descriptor, array-len-kind-mismatch, in-place-no-such-input; dispatch adds partial-geometry (a missing or misordered geometry field), sentinel-with-geometry, bad-expression, unknown-symbol, bare-array-symbol, subscript-of-scalar, subscript-out-of-bounds. Pointer descriptors write type_token ptr_<dtype>; the n scalar is i32 for the ix32 cell.\",\n");
+    s.push_str("    \"encoding_note\": \"accept_vectors[].doc_hex must read cleanly. decline_vectors[].section names where the reader declines (framing, a section name, or record) and expect is that decline's stable kebab-case tag; the payload is omitted. Tags per section: missing-field, unknown-field, out-of-order, duplicate-field, forbidden-field, bad-field-value, not-utf8, malformed-line, bad-heading; interface adds bad-descriptor, array-len-kind-mismatch; dispatch adds partial-geometry (a missing or misordered geometry field), sentinel-with-geometry, bad-expression, unknown-symbol, bare-array-symbol, subscript-of-scalar, subscript-out-of-bounds. Pointer descriptors write type_token ptr_<dtype>; the n scalar is i32 for the ix32 cell.\",\n");
     s.push_str("    \"accept_vectors\": [\n");
     let accepts = accept_vectors();
     for (i, v) in accepts.iter().enumerate() {

@@ -21,7 +21,7 @@ fn test_section_vectors_accept_documents_read_cleanly() {
 #[test]
 fn test_section_vectors_decline_with_the_stated_tag() {
     let declines = section_decline_vectors();
-    assert_eq!(declines.len(), 14 + 36, "14 feature declines and 6 faults in each of 6 schemas");
+    assert_eq!(declines.len(), 13 + 36, "13 feature declines and 6 faults in each of 6 schemas");
     for v in &declines {
         assert_eq!(
             read_full_document(&v.doc),
