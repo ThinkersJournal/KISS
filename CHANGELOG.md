@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.17.6 — docs: options note for board 440 (seam-only audit of precision_tag and the other strategy-naming items)
+
+Informative, no normative text. `docs/options-440-seam-only-audit.md` applies CireSnave's 2026-11-14 rule (KISS specifies what crosses the seam, never how a kernel achieves it) to `spec/ops.md`, `spec/contract.md` and `conformance/`: it marks each strategy-naming item seam or internal, proposes what a requester states and a kernel declares in place of `precision_tag`, checks how a fused kernel's contract describes a compound operation, and lists five open questions for CireSnave. No spec or vector changes.
+
 ## 0.17.5 — docs only, HANDOFF rewritten for the 0.17.4 state
 
 Docs only. `HANDOFF.md` is rewritten (a rewrite, not an append) for the state after #818: FireLine's five contract-vector requests landed as 0.17.4 and their task is removed; the issue sweep is the next unblocked task, and the three WAIT timers are unchanged. No spec, vector or code change.
