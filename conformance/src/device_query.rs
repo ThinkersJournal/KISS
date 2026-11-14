@@ -38,6 +38,10 @@ pub const MAX_DEVICE_ID_LEN: u32 = 4096;
 pub const MAX_DTYPES_PER_SET: u8 = 64;
 /// The most accuracy records in one device record (§6.6-0008).
 pub const MAX_ACCURACY_RECORDS: u32 = 1 << 16;
+/// The most unnamed-type identifiers one device record may carry (§6.6-0011, `sk8`).
+pub const MAX_UNNAMED_TYPES: u32 = 64;
+/// The longest unnamed-type identifier, in bytes (§6.6-0011).
+pub const MAX_UNNAMED_ID_LEN: u32 = 256;
 /// `max_ulp` value meaning the device declares no bound for the key (§6.6-0008).
 pub const NO_ULP_BOUND: u32 = u32::MAX;
 /// `math_fidelity` bytes: the `MathFidelity` ordinals of the OpAttrs table (`bit-stable`, `reduced-mantissa-permitted`).
@@ -61,6 +65,10 @@ pub struct DeviceRecord {
     pub store_dtypes: Vec<String>,
     pub compute_dtypes: Vec<String>,
     pub accuracy: Vec<AccuracyRecord>,
+    /// Raw identifiers of the types the device exposes that KISS cannot name (§6.6-0011, `sk8`): opaque
+    /// `<namespace>:<kind>:<value>` bytes, in the order the provider reports them. A non-empty list means the
+    /// record's `target` token and dtype sets under-claim.
+    pub unnamed_types: Vec<Vec<u8>>,
 }
 
 /// A device-query request (§6.6-0003).
@@ -135,6 +143,11 @@ impl DeviceRecord {
             b.push(a.math_fidelity);
             push_token(b, &a.dtype);
             b.extend_from_slice(&a.max_ulp.to_le_bytes());
+        }
+        b.extend_from_slice(&(self.unnamed_types.len() as u32).to_le_bytes());
+        for u in &self.unnamed_types {
+            b.extend_from_slice(&(u.len() as u32).to_le_bytes());
+            b.extend_from_slice(u);
         }
     }
 }
@@ -276,7 +289,19 @@ fn read_device(c: &mut Cursor, semantic: bool) -> Result<DeviceRecord, AnnounceD
         let max_ulp = c.u32("max_ulp")?;
         accuracy.push(AccuracyRecord { op, math_fidelity, dtype, max_ulp });
     }
-    let rec = DeviceRecord { device_id, target, store_dtypes, compute_dtypes, accuracy };
+    let unnamed = c.u32("unnamed_count")?;
+    if unnamed > MAX_UNNAMED_TYPES {
+        return Err(AnnounceDecline::UnnamedCountOverflow { got: unnamed });
+    }
+    let mut unnamed_types = Vec::new();
+    for _ in 0..unnamed {
+        let len = c.u32("unnamed_len")?;
+        if !(1..=MAX_UNNAMED_ID_LEN).contains(&len) {
+            return Err(AnnounceDecline::UnnamedLenOutOfRange { got: len });
+        }
+        unnamed_types.push(c.take(len as usize, "unnamed_type")?.to_vec());
+    }
+    let rec = DeviceRecord { device_id, target, store_dtypes, compute_dtypes, accuracy, unnamed_types };
     if semantic {
         check_record(&rec)?;
     }
@@ -404,6 +429,8 @@ pub fn reference_device() -> DeviceRecord {
             AccuracyRecord { op: "exp".into(), math_fidelity: FIDELITY_BIT_STABLE, dtype: "f32".into(), max_ulp: 1 },
             AccuracyRecord { op: "exp".into(), math_fidelity: FIDELITY_REDUCED_MANTISSA, dtype: "f32".into(), max_ulp: 4 },
         ],
+        // the reference device exposes no type KISS cannot name; a device that does lists it here (§6.6-0011)
+        unnamed_types: vec![],
     }
 }
 

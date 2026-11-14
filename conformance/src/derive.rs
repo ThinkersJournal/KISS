@@ -23,6 +23,9 @@ pub struct CellOperand {
     pub alignment: u32,
     /// The operand's `quant.dequant_form` iff it carries a `quant` record (§6.3-0009a).
     pub dequant: Option<DequantForm>,
+    /// The operand's `quant.block_shape` (§6.3-0009b), empty iff it carries no `quant` record. The weight's
+    /// product is the block length keyed from `sk8` (§6.6-0022).
+    pub block_shape: Vec<u16>,
 }
 
 /// A cell and the caller-declared facts (§6.6-0012).
@@ -103,6 +106,11 @@ pub enum DeriveDecline {
     IndexSlotOutOfRange,
     /// The accumulator coordinate the key would spell is an MX element dtype (§6.1-0016).
     ElementDtypeAsAccumulator,
+    /// A scale operand is designated but the weight carries no `quant.block_shape` (§6.6-0022, `sk8`).
+    BlockLengthMissing,
+    /// The weight's block length (the product of its `block_shape`) is outside the closed set `{16, 32}`
+    /// (§6.6-0022, `sk8`).
+    BlockLengthUnsupported,
 }
 
 impl DeriveDecline {
@@ -123,6 +131,8 @@ impl DeriveDecline {
             Self::ContractionNoOutput => "ContractionNoOutput",
             Self::Batch(b) => b.wire(),
             Self::IndexSlotOutOfRange => "IndexSlotOutOfRange",
+            Self::BlockLengthMissing => "BlockLengthMissing",
+            Self::BlockLengthUnsupported => "BlockLengthUnsupported",
         }
     }
 }
@@ -173,9 +183,9 @@ fn canonical_reduce(axes: &[usize], rank: usize) -> Result<Reduce, DeriveDecline
     })
 }
 
-/// Validate the cell's shape and dtypes before anything is derived from it. Only an UNKNOWN dtype is
-/// refused here (its storage width is needed for the per-operand vector width); a RESERVED dtype is
-/// refused only where it occupies a key position — the primary dtype and the accumulator (§6.1-0001).
+/// Validate the cell's shape and dtypes before anything is derived from it. From `sk8` every operand's dtype
+/// occupies a key position (its own sub-key), so an unknown or reserved dtype in ANY operand is refused here
+/// (§6.1-0001, §6.6-0007).
 fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
     if cell.operands.is_empty() || cell.operands.len() > MAX_OPERANDS {
         return Err(DeriveDecline::OperandCount);
@@ -187,9 +197,9 @@ fn validate(cell: &DerivationCell) -> Result<(), DeriveDecline> {
         if o.extents.len() != o.strides.len() || o.extents.len() > MAX_RANK as usize {
             return Err(DeriveDecline::BadShape);
         }
-        if !DTYPES.contains(&o.dtype) {
-            return Err(DeriveDecline::UnknownDtype);
-        }
+        // sk8 (§6.6-0007, §6.1): every operand's dtype is a key position, so a reserved dtype in any
+        // operand declines (it used to decline only in the primary and the accumulator).
+        check_dtype(o.dtype)?;
     }
     if let Some(a) = cell.accumulator {
         check_dtype(a)?;
@@ -266,6 +276,7 @@ fn sub_key(o: &CellOperand, frame: &[i64], reduced_innermost: bool, vec_cap: u32
         vec,
         div: derive_div_bucket_of(&o.extents),
         flipped: o.strides.iter().any(|&s| s < 0),
+        dtype: o.dtype,
         dequant: o.dequant,
     }
 }
@@ -284,6 +295,32 @@ fn precision_field(cell: &DerivationCell, primary: &str) -> Result<Option<AccMp>
     } else {
         Ok(None)
     }
+}
+
+/// The dtype positions of a contraction field: `<wdt>`, `<out>` and `<sdt>` are key positions (§6.1-0001), and
+/// `<acc>` is always spelled and is never an MX element (§6.1-0016), so an MX-element operand 0 with an undeclared
+/// accumulator (which defaults to it) declines.
+fn check_contraction_dtypes(operands: &[&CellOperand], scale: Option<&CellOperand>, acc: &str) -> Result<(), DeriveDecline> {
+    for d in operands.iter().map(|o| o.dtype).chain(scale.map(|o| o.dtype)) {
+        check_dtype(d)?;
+    }
+    if MX_ELEMENT_DTYPES.contains(&acc) {
+        return Err(DeriveDecline::ElementDtypeAsAccumulator);
+    }
+    Ok(())
+}
+
+/// sk8 (§6.6-0022a): a designated scale operand keys the weight's block length, the product of its
+/// `block_shape`, a closed set {16, 32}; the group axis is implied and not keyed. `None` without a scale.
+fn block_length(weight: &CellOperand, scale: Option<&CellOperand>) -> Result<Option<BlockLen>, DeriveDecline> {
+    if scale.is_none() {
+        return Ok(None);
+    }
+    if weight.block_shape.is_empty() {
+        return Err(DeriveDecline::BlockLengthMissing);
+    }
+    let elems: u64 = weight.block_shape.iter().map(|&e| u64::from(e)).product();
+    BlockLen::from_elems(elems).map(Some).ok_or(DeriveDecline::BlockLengthUnsupported)
 }
 
 /// The `contraction` field of a `ctr` cell (§6.7-0006) from the declared roles: M/N/K size classes from
@@ -318,14 +355,8 @@ fn contraction_field(
     // frame axes the output covers (right-aligned, §6.5-0010)
     let out_axes: Vec<usize> = (rank - out.extents.len()..rank).collect();
     let batch = derive_batch_class(frame, &roles.batch, &[ma, na, ka], &out_axes).map_err(DeriveDecline::Batch)?;
-    for d in [weight.dtype, out.dtype].into_iter().chain(scale.map(|o| o.dtype)) {
-        check_dtype(d)?; // wdt, out and sdt are key positions (§6.1-0001)
-    }
-    // §6.1-0016: `<acc>` is always spelled in a contraction field and is never an MX element, so an
-    // MX-element operand 0 with an undeclared accumulator (which defaults to it) declines.
-    if MX_ELEMENT_DTYPES.contains(&cell.accumulator.unwrap_or(primary)) {
-        return Err(DeriveDecline::ElementDtypeAsAccumulator);
-    }
+    check_contraction_dtypes(&[weight, out], scale, cell.accumulator.unwrap_or(primary))?;
+    let block = block_length(weight, scale)?;
     Ok(Contraction {
         m: size_class_of(me),
         n: size_class_of(ne),
@@ -337,6 +368,7 @@ fn contraction_field(
         out: out.dtype.to_string(),
         mp: cell.math_fidelity,
         sdt: scale.map(|o| o.dtype.to_string()),
+        block,
     })
 }
 

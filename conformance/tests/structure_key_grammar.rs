@@ -27,12 +27,27 @@ use kiss_conformance::structure_key::*;
 // ---- shared builders (this file's own; a sibling test file is a separate crate) ----
 
 fn op(contig: Contig, mask: u8, vec: VecWidth, div: DivBucket, flipped: bool) -> OperandSubKey {
-    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dequant: None }
+    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dtype: "", dequant: None }
 }
 
 /// A plain contiguous v4/d16 operand — the reusable filler sub-key.
 fn co() -> OperandSubKey {
     op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false)
+}
+
+/// sk8 (§6.6-0007): every sub-key carries its operand's dtype. `op()` leaves it unset and `key()` fills the
+/// unset ones with the key's primary dtype (a uniform-dtype cell); a mixed cell sets it with `with_dt`.
+fn with_dt(mut o: OperandSubKey, dtype: &str) -> OperandSubKey {
+    o.dtype = DTYPES.iter().copied().find(|d| *d == dtype).expect("closed dtype set");
+    o
+}
+fn fill_dtypes(mut operands: Vec<OperandSubKey>, primary: &str) -> Vec<OperandSubKey> {
+    for o in &mut operands {
+        if o.dtype.is_empty() {
+            o.dtype = DTYPES.iter().copied().find(|d| *d == primary).expect("closed dtype set");
+        }
+    }
+    operands
 }
 
 fn key(
@@ -52,7 +67,7 @@ fn key(
         index_width: "ix32".to_string(),
         work_class,
         rank,
-        operands,
+        operands: fill_dtypes(operands, dtype),
         reduce,
         contraction,
         acc_mp: None,
@@ -247,8 +262,8 @@ fn test_classify_structure_key_is_admissibility_predicate() {
 // ============================================================================
 
 /// KISS-CLASSIFY-6.6-0007: each per-operand sub-key carries exactly
-/// `{layout_tag, broadcast-axis mask, vector width, divisibility bucket, flipped}`
-/// as five `/`-joined fields in that fixed order, and round-trips. (The clause's
+/// `{layout_tag, broadcast-axis mask, vector width, divisibility bucket, flipped, dtype}`
+/// as six `/`-joined fields in that fixed order, and round-trips. (The clause's
 /// "flipped iff any negative stride" DERIVATION is not modeled in `src` — there is
 /// no `derive_flipped` — so it is out of scope here; only the field set, order, and
 /// round-trip of the sub-key are bound.)
@@ -265,11 +280,11 @@ fn test_classify_operand_sub_key_fields() {
             .to_string()
     };
     let f = field7(sk);
-    // exactly five fields => exactly four `/` separators (no field dropped or padded).
+    // exactly six fields (sk8: the dtype is the sixth) => exactly five `/` separators (none dropped or padded).
     assert_eq!(
         f.matches('/').count(),
-        4,
-        "KISS-CLASSIFY-6.6-0007: sub-key does not have exactly 5 `/`-joined fields ({f})"
+        5,
+        "KISS-CLASSIFY-6.6-0007: sub-key does not have exactly 6 `/`-joined fields ({f})"
     );
     let p: Vec<&str> = f.split('/').collect();
     assert_eq!(p[0], "st", "KISS-CLASSIFY-6.6-0007: position 0 is not the layout_tag");
@@ -277,6 +292,7 @@ fn test_classify_operand_sub_key_fields() {
     assert_eq!(p[2], "v2", "KISS-CLASSIFY-6.6-0007: position 2 is not the vector width");
     assert_eq!(p[3], "d8", "KISS-CLASSIFY-6.6-0007: position 3 is not the divisibility bucket");
     assert_eq!(p[4], "r", "KISS-CLASSIFY-6.6-0007: position 4 is not the flipped flag");
+    assert_eq!(p[5], "f32", "KISS-CLASSIFY-6.6-0007: position 5 is not the operand dtype (sk8)");
 
     // each field is independent and stays in its own position (a reorder of, e.g.,
     // vec and div would move the changed code to the wrong slot).
@@ -311,32 +327,32 @@ fn test_classify_operand_sub_key_fields() {
         key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![sk], Reduce::None, None).to_token();
     assert_eq!(
         from_token(&tok).unwrap().operands[0],
-        sk,
+        with_dt(sk, "f32"),
         "KISS-CLASSIFY-6.6-0007: sub-key did not round-trip"
     );
 
-    // arity is five, or six with the optional `dequant_form` component (sk5): a 4-field
-    // sub-key, a 6-field one whose sixth part is not `dl`/`dc`, and a 7-field one are
+    // arity is six (sk8: the dtype is the sixth), or seven with the optional `dequant_form` component (sk5): a
+    // 5-field sub-key (the sk7 shape), a 7-field one whose seventh part is not `dl`/`dc`, and an 8-field one are
     // typed declines.
-    let base = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f|-";
+    let base = "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.6-0007: base token invalid");
     assert_eq!(
-        from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16", 1)),
+        from_token(&base.replacen("co/00/v4/d16/f/f32", "co/00/v4/d16/f", 1)),
         Err(KeyDecline::BadOperandSubKey),
-        "KISS-CLASSIFY-6.6-0007: a 4-field sub-key was accepted"
+        "KISS-CLASSIFY-6.6-0007: a 5-field (sk7-shaped) sub-key was accepted"
     );
     assert_eq!(
-        from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/x", 1)),
+        from_token(&base.replacen("co/00/v4/d16/f/f32", "co/00/v4/d16/f/f32/x", 1)),
         Err(KeyDecline::BadDequantForm),
-        "KISS-CLASSIFY-6.6-0007: a 6-field sub-key with an unknown dequant_form was accepted"
+        "KISS-CLASSIFY-6.6-0007: a 7-field sub-key with an unknown dequant_form was accepted"
     );
     assert_eq!(
-        from_token(&base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/dl/dl", 1)),
+        from_token(&base.replacen("co/00/v4/d16/f/f32", "co/00/v4/d16/f/f32/dl/dl", 1)),
         Err(KeyDecline::BadOperandSubKey),
-        "KISS-CLASSIFY-6.6-0007: a 7-field sub-key was accepted"
+        "KISS-CLASSIFY-6.6-0007: an 8-field sub-key was accepted"
     );
-    // ... and the six-field form with a valid `dequant_form` is accepted and round-trips.
-    let with_dq = base.replacen("co/00/v4/d16/f", "co/00/v4/d16/f/dc", 1);
+    // ... and the seven-field form with a valid `dequant_form` is accepted and round-trips.
+    let with_dq = base.replacen("co/00/v4/d16/f/f32", "co/00/v4/d16/f/f32/dc", 1);
     assert_eq!(from_token(&with_dq).map(|k| k.to_token()), Ok(with_dq.clone()));
 }
 
@@ -395,97 +411,68 @@ fn test_classify_cell_class_is_cell_level() {
 }
 
 // ============================================================================
-// KISS-CLASSIFY-6.6-0015 — secondary-operand dtype is unkeyed outside a gem cell
+// KISS-CLASSIFY-6.6-0015 — every operand's dtype is keyed (sk8)
 // ============================================================================
 
-/// KISS-CLASSIFY-6.6-0015: outside a dense-contraction (`gem`) cell a
-/// `structure_key` keys only the primary (operand-0) dtype; per-operand sub-keys
-/// carry **no** dtype. For a `gem` cell this is superseded — the sk4 contraction
-/// field carries the weight/accumulator/output dtypes explicitly (still not via a
-/// sub-key).
+/// KISS-CLASSIFY-6.6-0015 (sk8): a `structure_key` is distinct for two cells that differ in ANY operand's
+/// dtype, because each per-operand sub-key carries that operand's dtype as its sixth component. The `ctr`
+/// contraction coordinates restate dtypes the sub-keys carry and must agree with them.
 #[test]
-fn test_classify_secondary_dtype_unkeyed() {
-    // a non-gem, multi-operand cell. One operand has a bcast mask 0xb1, which
-    // serializes as "b1" — that collides with the `b1` DTYPE token, so the dtype
-    // scan MUST exclude the mask position (position 1) to avoid a false positive.
-    let ops = vec![
+fn test_classify_operand_dtypes_keyed() {
+    // a non-ctr, three-operand cell. One operand has a bcast mask 0xb1, which serializes as "b1": that is
+    // also the `b1` DTYPE token, so the dtype scan MUST exclude the mask position (position 1).
+    let ops = || vec![
         co(),
-        op(Contig::Broadcast, 0xb1, VecWidth::V1, DivBucket::Da, false),
+        with_dt(op(Contig::Broadcast, 0xb1, VecWidth::V1, DivBucket::Da, false), "i32"),
         op(Contig::Strided, 0x00, VecWidth::V2, DivBucket::D8, true),
     ];
-    let tok = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 3, ops, Reduce::None, None).to_token();
+    let tok = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 3, ops(), Reduce::None, None).to_token();
     let fields: Vec<&str> = tok.split('|').collect();
-
-    // count dtype tokens across the whole token, EXCLUDING the sub-key mask positions.
-    let mut dtype_hits = 0usize;
-    for (fi, field) in fields.iter().enumerate() {
-        if fi == 7 {
-            for sub in field.split(';') {
-                for (pos, comp) in sub.split('/').enumerate() {
-                    if pos == 1 {
-                        continue; // mask position: 0xb1 -> "b1" is a mask, not a dtype
-                    }
-                    if DTYPES.contains(&comp) {
-                        dtype_hits += 1;
-                    }
-                }
-            }
-        } else if DTYPES.contains(field) {
-            dtype_hits += 1;
-        }
+    let mut dtypes = Vec::new();
+    for sub in fields[7].split(';') {
+        let comps: Vec<&str> = sub.split('/').collect();
+        assert_eq!(comps.len(), 6, "KISS-CLASSIFY-6.6-0007: a sub-key is six components: {sub}");
+        assert!(DTYPES.contains(&comps[5]), "KISS-CLASSIFY-6.6-0015: component 5 is the operand dtype: {sub}");
+        dtypes.push(comps[5]);
     }
-    assert_eq!(
-        dtype_hits, 1,
-        "KISS-CLASSIFY-6.6-0015: a non-gem token carries a dtype outside field 2 (per-operand dtype leaked)"
-    );
-    assert!(
-        DTYPES.contains(&fields[2]),
-        "KISS-CLASSIFY-6.6-0015: the single dtype is not the primary (field 2)"
-    );
+    assert_eq!(dtypes, vec!["f32", "i32", "f32"], "KISS-CLASSIFY-6.6-0015: each operand's own dtype, in canonical order");
+    assert_eq!(dtypes[0], fields[2], "KISS-CLASSIFY-6.6-0005: the first sub-key's dtype is field 2");
 
-    // contrast: a gem cell DOES carry the secondary dtypes — but only in the
-    // contraction field (field 9), never in a sub-key.
+    // two cells that differ only in a NON-primary operand's dtype now derive different keys.
+    let other = key(
+        "ew2", "f32", "cuda:sm89", WorkClass::Grid, 3,
+        vec![
+            co(),
+            with_dt(op(Contig::Broadcast, 0xb1, VecWidth::V1, DivBucket::Da, false), "u32"),
+            op(Contig::Strided, 0x00, VecWidth::V2, DivBucket::D8, true),
+        ],
+        Reduce::None, None,
+    )
+    .to_token();
+    assert_ne!(tok, other, "KISS-CLASSIFY-6.6-0015: an i32 and a u32 operand must not share a key");
+
+    // a ctr cell: the coordinates agree with the sub-keys, and a coordinate no sub-key carries declines.
     let gem = key(
-        "ctr",
-        "f32",
-        "cuda:sm90",
-        WorkClass::Grid,
-        2,
-        vec![co(), co(), co()],
+        "ctr", "f32", "cuda:sm90", WorkClass::Grid, 2,
+        vec![co(), with_dt(co(), "f8e5m2"), with_dt(co(), "f16")],
         Reduce::None,
         Some(Contraction {
-            m: SizeClass::Tiny,
-            n: SizeClass::Large,
-            k: SizeClass::Large,
-            k_div: DivBucket::D16,
-            batch: None,
-            wdt: "f8e5m2".to_string(),
-            acc: "f32".to_string(),
-            out: "f16".to_string(),
-            mp: MathFidelity::Stable, sdt: None }),
+            m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16, batch: None,
+            wdt: "f8e5m2".to_string(), acc: "f32".to_string(), out: "f16".to_string(),
+            mp: MathFidelity::Stable, sdt: None, block: None }),
     );
     let gt = gem.to_token();
-    let gf: Vec<&str> = gt.split('|').collect();
-    assert_eq!(gf.len(), 10, "KISS-CLASSIFY-6.6-0015: gem token missing the contraction field");
-    assert!(
-        gf[9].split('/').any(|c| c == "f8e5m2"),
-        "KISS-CLASSIFY-6.6-0015: gem weight dtype not carried in the contraction field"
+    assert_eq!(from_token(&gt).as_ref(), Ok(&gem), "KISS-CLASSIFY-6.6-0015: agreeing coordinates round-trip");
+    assert_eq!(
+        from_token(&gt.replacen("/f8e5m2/f32/f16/st", "/u8/f32/f16/st", 1)),
+        Err(KeyDecline::OperandDtypeDisagrees),
+        "KISS-CLASSIFY-6.6-0015: <wdt> that no sub-key carries"
     );
-    assert!(
-        gf[9].split('/').any(|c| c == "f16"),
-        "KISS-CLASSIFY-6.6-0015: gem output dtype not carried in the contraction field"
+    assert_eq!(
+        from_token(&gt.replacen("/f8e5m2/f32/f16/st", "/f8e5m2/f32/u8/st", 1)),
+        Err(KeyDecline::OperandDtypeDisagrees),
+        "KISS-CLASSIFY-6.6-0015: <out> that no sub-key carries"
     );
-    for sub in gf[7].split(';') {
-        for (pos, comp) in sub.split('/').enumerate() {
-            if pos == 1 {
-                continue;
-            }
-            assert!(
-                !DTYPES.contains(&comp),
-                "KISS-CLASSIFY-6.6-0015: a gem sub-key component `{comp}` is a dtype"
-            );
-        }
-    }
 }
 
 // ============================================================================
@@ -499,7 +486,7 @@ fn test_classify_secondary_dtype_unkeyed() {
 /// decline.
 #[test]
 fn test_classify_target_token_charset() {
-    let base = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-";
+    let base = "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-";
     assert!(from_token(base).is_ok(), "KISS-CLASSIFY-6.8-0005: baseline token invalid");
 
     // legal targets still parse: `.` (e.g. spirv1.6) and uppercase letters (ASCII,

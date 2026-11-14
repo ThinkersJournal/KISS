@@ -80,6 +80,10 @@ pub enum AnnounceDecline {
     SetCountOverflow { region: &'static str, got: u8 },
     /// An accuracy count exceeded `MAX_ACCURACY_RECORDS` (§6.6-0008).
     AccuracyCountOverflow { got: u32 },
+    /// An `unnamed_count` exceeded `MAX_UNNAMED_TYPES` (§6.6-0011).
+    UnnamedCountOverflow { got: u32 },
+    /// An unnamed-type identifier length was `0` or above `MAX_UNNAMED_ID_LEN` (§6.6-0011).
+    UnnamedLenOutOfRange { got: u32 },
     /// A `math_fidelity` byte was neither 1 nor 2 (§6.6-0008).
     BadMathFidelity { got: u8 },
     /// A token held a byte that is not printable ASCII, or a target was not `<ns>:<cap>` (§6.6-0006).

@@ -14,7 +14,7 @@ const MANIFEST: &str = include_str!("../corpus/dtype_manifest.json");
 const CUDA: &str = "cuda:sm89";
 
 fn op(usage: kiss_conformance::structure_key::OperandUse, dtype: &'static str, e: &[i64], s: &[i64]) -> CellOperand {
-    CellOperand { usage, dtype, extents: e.to_vec(), strides: s.to_vec(), alignment: 256, dequant: None }
+    CellOperand { usage, dtype, extents: e.to_vec(), strides: s.to_vec(), alignment: 256, dequant: None, block_shape: vec![] }
 }
 
 fn cell(operands: Vec<CellOperand>) -> DerivationCell {
@@ -49,7 +49,7 @@ fn reduce(dtype: &'static str, fidelity: MathFidelity) -> DerivationCell {
     c
 }
 
-/// The dtype component of a token (`sk7|<class>|<dtype>|...`).
+/// The dtype component of a token (`sk8|<class>|<dtype>|...`).
 fn dtype_of(token: &str) -> &str {
     token.split('|').nth(2).expect("dtype component")
 }

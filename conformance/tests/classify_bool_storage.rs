@@ -78,6 +78,7 @@ fn derive_declines_an_extents_strides_length_mismatch() {
         strides: s.to_vec(),
         alignment: 256,
         dequant: None,
+        block_shape: vec![],
     };
     let mut out = operand(&[4, 8], &[8, 1]);
     out.usage = Output;

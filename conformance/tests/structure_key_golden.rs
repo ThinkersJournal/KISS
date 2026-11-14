@@ -7,7 +7,22 @@
 use kiss_conformance::structure_key::*;
 
 fn op(contig: Contig, mask: u8, vec: VecWidth, div: DivBucket, flipped: bool) -> OperandSubKey {
-    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dequant: None }
+    OperandSubKey { contig, bcast_mask: mask, vec, div, flipped, dtype: "", dequant: None }
+}
+
+/// sk8 (§6.6-0007): every sub-key carries its operand's dtype. `op()` leaves it unset and `key()` fills the
+/// unset ones with the key's primary dtype (a uniform-dtype cell); a mixed cell sets it with `with_dt`.
+fn with_dt(mut o: OperandSubKey, dtype: &str) -> OperandSubKey {
+    o.dtype = DTYPES.iter().copied().find(|d| *d == dtype).expect("closed dtype set");
+    o
+}
+fn fill_dtypes(mut operands: Vec<OperandSubKey>, primary: &str) -> Vec<OperandSubKey> {
+    for o in &mut operands {
+        if o.dtype.is_empty() {
+            o.dtype = DTYPES.iter().copied().find(|d| *d == primary).expect("closed dtype set");
+        }
+    }
+    operands
 }
 
 fn key(
@@ -27,7 +42,7 @@ fn key(
         index_width: "ix32".to_string(),
         work_class,
         rank,
-        operands,
+        operands: fill_dtypes(operands, dtype),
         reduce,
         contraction,
         acc_mp: None,
@@ -51,7 +66,7 @@ fn key_acc_mp(
         index_width: "ix32".to_string(),
         work_class,
         rank,
-        operands,
+        operands: fill_dtypes(operands, dtype),
         reduce,
         contraction: None,
         acc_mp,
@@ -85,51 +100,51 @@ fn red_out(mask: u8) -> OperandSubKey { op(Contig::Contiguous, mask, VecWidth::V
 #[test]
 fn a1_elementwise_binary_canonical() {
     let k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-");
 }
 
 // Proven: KISS-CLASSIFY-6.7-0004 (subject: impl; ref: PROVEN_BATCH2.md)
 #[test]
 fn a1_elementwise_with_broadcast_operand() {
     let k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), br1(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0004", &k, "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0004", &k, "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;br/01/v1/d16/f/f32;co/00/v4/d16/f/f32|-");
 }
 
 #[test]
 fn a1_unary_f16_v8() {
     let k = key("ew1", "f16", "cuda:sm89", WorkClass::Grid, 2, vec![co8(), co8()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0003", &k, "sk7|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0003", &k, "sk8|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f/f16;co/00/v8/d16/f/f16|-");
 }
 
 #[test]
 fn a1_reduction_trailing_axis() {
     let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x02)], Reduce::Trailing, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/02/v1/da/f/f32|rlast");
 }
 
 #[test]
 fn a1_reduction_all_axes() {
     let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall");
 }
 
 #[test]
 fn a1_reduction_rank1_all_axes() {
     let k = key("rdc", "f32", "cuda:sm89", WorkClass::Warp, 1, vec![co1_d8(), red_out(0x01)], Reduce::All, None);
-    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall");
+    assert_token("KISS-CLASSIFY-6.6-0009", &k, "sk8|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f/f32;co/01/v1/da/f/f32|rall");
 }
 
 #[test]
 fn a1_reduction_subset_mask() {
     // rank-4 reduction over a non-trivial subset -> explicit x<hh> keepdim mask 0x0a
     let k = key("rdc", "f32", "cuda:sm89", WorkClass::Block, 4, vec![co1_da(), red_out(0x0a)], Reduce::Subset(0x0a), None);
-    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk7|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a");
+    assert_token("KISS-CLASSIFY-6.7-0005", &k, "sk8|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f/f32;co/0a/v1/da/f/f32|x0a");
 }
 
 #[test]
 fn a1_binary_two_operands() {
     let k = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4()], Reduce::None, None);
-    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-");
+    assert_token("KISS-CLASSIFY-6.7-0001", &k, "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-");
 }
 
 /// The reference-generator (`baracuda-kernelgen`) `relu_add` cell — the freeze-gate
@@ -148,7 +163,7 @@ fn relu_add_generated_r1_cell() {
     assert_token(
         "KISS-CLASSIFY-6.7-0001",
         &k,
-        "sk7|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk8|ew2|f32|cuda:sm89|ix32|grid|r1|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-",
     );
 }
 
@@ -159,9 +174,9 @@ fn a1_dense_contraction_cuda() {
     let c = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathFidelity::Stable, sdt: None };
+        mp: MathFidelity::Stable, sdt: None, block: None };
     let k = key("ctr", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
-    assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
+    assert_token("KISS-CLASSIFY-6.7-0006", &k, "sk8|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/st");
 }
 
 // Backs[enforced]: KISS-CLASSIFY-6.7-0003 — a dotted vulkan target_capability string is emitted verbatim as field 3 of the token.
@@ -170,9 +185,9 @@ fn a1_dense_contraction_vulkan_target() {
     let c = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathFidelity::Stable, sdt: None };
+        mp: MathFidelity::Stable, sdt: None, block: None };
     let k = key("ctr", "f32", "vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
-    assert_token("KISS-CLASSIFY-6.8", &k, "sk7|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st");
+    assert_token("KISS-CLASSIFY-6.8", &k, "sk8|ctr|f32|vulkan:sg64.ops-abr.arith-f16.cm-none.cv-none|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/st");
 }
 
 // ---- sk4 gem precision-coordinate goldens (D1/D4/D5, sk3-origin) -------------
@@ -189,12 +204,12 @@ fn sk4_gem_batched_cell() {
         m: SizeClass::Medium, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: Some(SizeClass::Medium),
         wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathFidelity::Stable, sdt: None };
+        mp: MathFidelity::Stable, sdt: None, block: None };
     let k = key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(c));
     assert_token(
         "KISS-CLASSIFY-6.7-0006",
         &k,
-        "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|cmll/d16/bm/f32/f32/f32/st",
+        "sk8|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|cmll/d16/bm/f32/f32/f32/st",
     );
 }
 
@@ -207,18 +222,18 @@ fn sk4_gem_batched_cell() {
 fn sk4_simt_f32_vs_tf32_distinct_by_mp() {
     let base = |mp| Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
-        batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(), mp, sdt: None };
+        batch: None, wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(), mp, sdt: None, block: None };
     let simt = key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathFidelity::Stable)));
     let tf32 = key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(base(MathFidelity::ReducedMantissa)));
     assert_token(
         "KISS-CLASSIFY-6.7-0006",
         &simt,
-        "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st",
+        "sk8|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/st",
     );
     assert_token(
         "KISS-CLASSIFY-6.7-0006",
         &tf32,
-        "sk7|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/rm",
+        "sk8|ctr|f32|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/rm",
     );
     assert_ne!(simt.to_token(), tf32.to_token(), "SIMT-f32 and TF32 must not collide");
 }
@@ -234,23 +249,23 @@ fn sk4_mixed_precision_fp8_disambiguated() {
     let e4m3_f8e5m2_f32 = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f8e5m2".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathFidelity::Stable, sdt: None };
+        mp: MathFidelity::Stable, sdt: None, block: None };
     // E4M3 x E4M3 -> F16, f32 acc, bit-stable.
     let e4m3_e4m3_f16 = Contraction {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16,
         batch: None, wdt: "f8e4m3fn".to_string(), acc: "f32".to_string(), out: "f16".to_string(),
-        mp: MathFidelity::Stable, sdt: None };
-    let a = key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_f8e5m2_f32));
-    let b = key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, Some(e4m3_e4m3_f16));
+        mp: MathFidelity::Stable, sdt: None, block: None };
+    let a = key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), with_dt(co4(), "f8e5m2"), with_dt(co4(), "f32")], Reduce::None, Some(e4m3_f8e5m2_f32));
+    let b = key("ctr", "f8e4m3fn", "cuda:sm90", WorkClass::Grid, 2, vec![co4(), co4(), with_dt(co4(), "f16")], Reduce::None, Some(e4m3_e4m3_f16));
     assert_token(
         "KISS-CLASSIFY-6.6-0018",
         &a,
-        "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e5m2/f32/f32/st",
+        "sk8|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f8e4m3fn;co/00/v4/d16/f/f8e5m2;co/00/v4/d16/f/f32|-|ctll/d16/f8e5m2/f32/f32/st",
     );
     assert_token(
         "KISS-CLASSIFY-6.6-0018",
         &b,
-        "sk7|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f8e4m3fn/f32/f16/st",
+        "sk8|ctr|f8e4m3fn|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f8e4m3fn;co/00/v4/d16/f/f8e4m3fn;co/00/v4/d16/f/f16|-|ctll/d16/f8e4m3fn/f32/f16/st",
     );
     assert_ne!(a.to_token(), b.to_token(), "mixed-precision FP8 cells must not collide under sk4");
 }
@@ -262,7 +277,7 @@ fn sk4_mixed_precision_fp8_disambiguated() {
 #[test]
 fn sk4_contraction_precision_group_declines() {
     // valid sk4 gem stem for mutation.
-    let ok = "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f32/f32/st";
+    let ok = "sk8|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/st";
     assert!(from_token(ok).is_ok());
     // unknown dtype in the precision group (`f99` weight).
     assert_eq!(
@@ -310,7 +325,7 @@ fn test_classify_noncontraction_acc_mp_field() {
     assert_token(
         "KISS-CLASSIFY-6.7-0013",
         &k,
-        "sk7|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
+        "sk8|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f16;co/02/v1/da/f/f16|rlast|f32/st",
     );
 }
 
@@ -330,7 +345,7 @@ fn sk4_noncontraction_acc_mp_deviating_precision_only() {
     assert_token(
         "KISS-CLASSIFY-6.7-0013",
         &k,
-        "sk7|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f;co/00/v4/d16/f|-|f32/rm",
+        "sk8|ew1|f32|cuda:sm89|ix32|warp|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|f32/rm",
     );
 }
 
@@ -343,7 +358,7 @@ fn sk4_noncontraction_acc_mp_deviating_precision_only() {
 fn sk4_noncontraction_acc_mp_omitted_when_default() {
     let k = key_acc_mp("rdc", "f32", WorkClass::Warp, 2, vec![co1_d8(), red_out(0x03)], Reduce::All, None);
     let token = k.to_token();
-    assert_eq!(token, "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall");
+    assert_eq!(token, "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall");
     // the omitted field means a nine-field token: no trailing precision field at all.
     assert_eq!(token.split('|').count(), 9, "rule (c)/(e): no trailing precision field");
 }
@@ -356,13 +371,13 @@ fn sk4_noncontraction_acc_mp_omitted_when_default() {
 #[test]
 fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
     // f32 compute, f32 accumulator, default `st` — all-default → RedundantAccMpField.
-    let redundant = "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/st";
+    let redundant = "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall|f32/st";
     assert_eq!(from_token(redundant), Err(KeyDecline::RedundantAccMpField));
     // but a deviating spelling on the same stem parses (accumulator f64 ≠ compute f32).
-    let deviating = "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f64/st";
+    let deviating = "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall|f64/st";
     assert!(from_token(deviating).is_ok(), "a genuinely-deviating acc+mp field must parse");
     // and a default accumulator with a deviating mp parses (mp ≠ default).
-    let mp_only = "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall|f32/rm";
+    let mp_only = "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall|f32/rm";
     assert!(from_token(mp_only).is_ok(), "a deviating-mp-only acc+mp field must parse");
 }
 
@@ -374,7 +389,7 @@ fn sk4_noncontraction_acc_mp_rejects_redundant_default() {
 // Backs[enforced]: KISS-CLASSIFY-6.7-0009 — each malformed (acc + mp) spelling declines with a typed decline, not a panic.
 #[test]
 fn sk4_noncontraction_acc_mp_declines() {
-    let stem = "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall";
+    let stem = "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall";
     // unknown accumulator dtype.
     assert_eq!(from_token(&format!("{stem}|f99/rm")), Err(KeyDecline::UnknownDtype));
     // reserved accumulator dtype (recognized-but-reserved, distinct from unknown).
@@ -489,13 +504,13 @@ fn test_classify_vec_width_unit_stride() {
 
 // ---- A.2 decline vectors: structural codec rejects (§6.7-0009) ---------------
 
-const A_GOLDEN: &str = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-";
+const A_GOLDEN: &str = "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-";
 
 // Proven: KISS-CLASSIFY-6.7-0009 (subject: impl; ref: PROVEN_BATCH1.md)
 #[test]
 fn reject_wrong_field_count() {
     // Backs[enforced]: KISS-CLASSIFY-6.7-0009 — a wrong field count declines WrongFieldCount, never a panic.
-    assert_eq!(from_token("sk7|ew2|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
+    assert_eq!(from_token("sk8|ew2|f32"), Err(KeyDecline::WrongFieldCount { got: 3 }));
 }
 
 // Backs[enforced]: KISS-CLASSIFY-6.7-0002 — a field 0 that is not `sk` plus a version (`vv4`, `skx`) declines BadVersionPrefix.
@@ -503,10 +518,10 @@ fn reject_wrong_field_count() {
 fn reject_bad_version_prefix() {
     // the "wall": a MALFORMED version field (no `sk` prefix) is BadVersionPrefix,
     // distinct from a well-formed-but-other version (see reject_unsupported_schema_version).
-    let t = A_GOLDEN.replacen("sk7", "vv4", 1);
+    let t = A_GOLDEN.replacen("sk8", "vv4", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::BadVersionPrefix));
     // a non-numeric remainder after `sk` is likewise the wall.
-    let t2 = A_GOLDEN.replacen("sk7", "skx", 1);
+    let t2 = A_GOLDEN.replacen("sk8", "skx", 1);
     assert_eq!(from_token(&t2), Err(KeyDecline::BadVersionPrefix));
 }
 
@@ -521,18 +536,18 @@ fn reject_bad_version_prefix() {
 fn test_classify_unsupported_schema_version() {
     // signpost: a well-formed CANONICAL other version → UnsupportedSchemaVersion{got}.
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk7", "sk9", 1)),
+        from_token(&A_GOLDEN.replacen("sk8", "sk9", 1)),
         Err(KeyDecline::UnsupportedSchemaVersion { got: 9 })
     );
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk7", "sk3", 1)),
+        from_token(&A_GOLDEN.replacen("sk8", "sk3", 1)),
         Err(KeyDecline::UnsupportedSchemaVersion { got: 3 })
     );
     // wall: a malformed version field stays BadVersionPrefix, NOT the signpost —
     // no `sk` prefix, a non-numeric remainder, or the non-canonical leading zero.
-    assert_eq!(from_token(&A_GOLDEN.replacen("sk7", "vv4", 1)), Err(KeyDecline::BadVersionPrefix));
-    assert_eq!(from_token(&A_GOLDEN.replacen("sk7", "skx", 1)), Err(KeyDecline::BadVersionPrefix));
-    assert_eq!(from_token(&A_GOLDEN.replacen("sk7|", "sk04|", 1)), Err(KeyDecline::BadVersionPrefix));
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk8", "vv4", 1)), Err(KeyDecline::BadVersionPrefix));
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk8", "skx", 1)), Err(KeyDecline::BadVersionPrefix));
+    assert_eq!(from_token(&A_GOLDEN.replacen("sk8|", "sk04|", 1)), Err(KeyDecline::BadVersionPrefix));
 }
 
 /// KISS-CLASSIFY-6.7-0014: a build MAY retain a bounded `sk3` decoder arm through the
@@ -542,7 +557,7 @@ fn test_classify_unsupported_schema_version() {
 /// with the signpost (UnsupportedSchemaVersion), telling a consumer to re-derive.
 #[test]
 fn test_classify_no_sk3_decoder_arm() {
-    let sk3 = A_GOLDEN.replacen("sk7", "sk3", 1);
+    let sk3 = A_GOLDEN.replacen("sk8", "sk3", 1);
     // ships no accept-both arm: the sk3 token is NOT decoded, it is declined …
     assert_eq!(from_token(&sk3), Err(KeyDecline::UnsupportedSchemaVersion { got: 3 }));
     // … and specifically NOT accepted as if it were sk4 (no silent cross-vocab decode).
@@ -594,7 +609,7 @@ fn reject_bad_rank() {
 #[test]
 fn reject_unknown_cell_class() {
     // Backs[enforced]: KISS-CLASSIFY-6.5-0006 — a non-member op-family declines UnknownCellClass.
-    // A.2 decline vector: `sk7|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
+    // A.2 decline vector: `sk8|zzz|f32|…` — op-family outside the closed §6.5-0006 set.
     let t = A_GOLDEN.replacen("|ew2|", "|zzz|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownCellClass));
 }
@@ -603,7 +618,7 @@ fn reject_unknown_cell_class() {
 #[test]
 fn reject_unknown_dtype() {
     // Backs[enforced]: KISS-CLASSIFY-6.1-0001 — a dtype outside the closed set declines UnknownDtype.
-    // A.2 decline vector: `sk7|ew2|f99|…` — dtype outside the closed §6.1 set.
+    // A.2 decline vector: `sk8|ew2|f99|…` — dtype outside the closed §6.1 set.
     let t = A_GOLDEN.replacen("|f32|", "|f99|", 1);
     assert_eq!(from_token(&t), Err(KeyDecline::UnknownDtype));
 }
@@ -813,7 +828,7 @@ fn reserved_fnuz_dtypes_typed_decline() {
     let bare = A_GOLDEN.replacen("|f32|", "|e4m3|", 1);
     assert_eq!(from_token(&bare), Err(KeyDecline::UnknownDtype));
     // a reserved spelling inside the gem precision group declines the same way.
-    let gem = "sk7|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|ctll/d16/f32/f8e4m3fnuz/f32/st";
+    let gem = "sk8|ctr|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f8e4m3fnuz/f32/st";
     assert_eq!(from_token(gem), Err(KeyDecline::ReservedDtype));
 }
 
@@ -856,8 +871,8 @@ fn test_classify_structure_key_token_length_bound() {
 fn test_classify_max_operands_is_16() {
     assert_eq!(MAX_OPERANDS, 16);
     let with = |n: usize| {
-        let ops = std::iter::repeat("co/00/v4/d16/f").take(n).collect::<Vec<_>>().join(";");
-        A_GOLDEN.replacen("co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", &ops, 1)
+        let ops = std::iter::repeat("co/00/v4/d16/f/f32").take(n).collect::<Vec<_>>().join(";");
+        A_GOLDEN.replacen("co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32", &ops, 1)
     };
     // one past the bound is a typed decline, not a truncation.
     assert_eq!(from_token(&with(17)), Err(KeyDecline::TooManyOperands { got: 17 }));
@@ -890,13 +905,13 @@ fn test_classify_token_version_prefix() {
     // non-canonical leading-zero `sk04` is the WALL (BadVersionPrefix): a bare
     // parse::<u32>() would accept it as 4 — the load-bearing guard §6.7-0015 keeps.
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk7|", "sk04|", 1)),
+        from_token(&A_GOLDEN.replacen("sk8|", "sk04|", 1)),
         Err(KeyDecline::BadVersionPrefix)
     );
     // a well-formed CANONICAL other version `sk9` is the SIGNPOST
     // (UnsupportedSchemaVersion), not the wall — §6.7-0015 recognized-vs-malformed split.
     assert_eq!(
-        from_token(&A_GOLDEN.replacen("sk7|", "sk9|", 1)),
+        from_token(&A_GOLDEN.replacen("sk8|", "sk9|", 1)),
         Err(KeyDecline::UnsupportedSchemaVersion { got: 9 })
     );
     assert!(from_token(A_GOLDEN).is_ok()); // `sk4` is canonical
@@ -981,30 +996,30 @@ fn test_classify_reduce_field_cell_class_gated() {
 fn test_classify_noncanonical_reduce_mask_declines() {
     // all-axes at rank 2 (bits 0,1) — MUST be rall, never x03.
     assert_eq!(
-        from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03"),
+        from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x03"),
         Err(KeyDecline::NonCanonicalReduceField)
     );
     // lone innermost axis at rank 2 (bit 1) — MUST be rlast, never x02.
     assert_eq!(
-        from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x02"),
+        from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x02"),
         Err(KeyDecline::NonCanonicalReduceField)
     );
     // empty set — that is not a reduction; MUST be `-`, never x00.
     assert_eq!(
-        from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x00"),
+        from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x00"),
         Err(KeyDecline::NonCanonicalReduceField)
     );
     // rank 1: all-axes and the lone trailing axis coincide (both are bit 0). §6.6-0009 ties
     // that to `rall`, so `x01` at rank 1 is non-canonical — the tie has one winner, not x<hh>.
     assert_eq!(
-        from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/00/v1/da/f|x01"),
+        from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x01"),
         Err(KeyDecline::NonCanonicalReduceField)
     );
     // out-of-range: bit 2 set at rank 2 (only axes 0,1 exist). A DIFFERENT producer bug from a
     // sentinel overload — kept discriminable so a consumer can tell "wrong spelling of a real
     // set" from "a set that cannot exist for this rank." §6.7-0009.
     assert_eq!(
-        from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x04"),
+        from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x04"),
         Err(KeyDecline::BadReduceField)
     );
     // rank 0 (scalar): no axis to reduce, so ONLY `-` is valid. The `rall`/`rlast` SENTINELS are
@@ -1016,8 +1031,8 @@ fn test_classify_noncanonical_reduce_mask_declines() {
     //     owns → NonCanonicalReduceField, exactly x00's shape;
     //   * `rlast` = a lone innermost axis that does not exist at rank 0 — a set that cannot exist
     //     for the rank → BadReduceField, exactly x04@r2's out-of-range shape.
-    let rall_r0 = from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall");
-    let rlast_r0 = from_token("sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rlast");
+    let rall_r0 = from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|rall");
+    let rlast_r0 = from_token("sk8|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|rlast");
     assert_eq!(rall_r0, Err(KeyDecline::NonCanonicalReduceField));
     assert_eq!(rlast_r0, Err(KeyDecline::BadReduceField));
     // The discriminability §6.7-0005 / §6.6-0009 demand OF THIS PAIR — asserted on the two
@@ -1026,7 +1041,7 @@ fn test_classify_noncanonical_reduce_mask_declines() {
     assert_ne!(rall_r0, rlast_r0);
     // boundary: `-` is the ONE valid rank-0 reduce (built at runtime, not a source literal).
     let ok_r0 =
-        "sk7|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f;co/00/v1/da/f|rall"
+        "sk8|rdc|f32|cuda:sm89|ix32|warp|r0|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|rall"
             .replace("|rdc|", "|ew2|") // a rank-0 NON-reduction: an `rdc` cell cannot carry `-` (§6.6-0017)
             .replace("|rall", "|-");
     assert!(from_token(&ok_r0).is_ok(), "rank-0 `-` (no reduction) must parse");
@@ -1036,7 +1051,7 @@ fn test_classify_noncanonical_reduce_mask_declines() {
     // accepted x<hh> spelling. Built at runtime so it is not a source literal the artifact-
     // superset scanner would require as a vector.
     let survives =
-        "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/00/v1/da/f|x03".replace("|x03", "|x01");
+        "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/00/v1/da/f/f32|x03".replace("|x03", "|x01");
     assert!(
         from_token(&survives).is_ok(),
         "a partial reduction with no shorter canonical spelling must parse as x<hh>"
@@ -1070,9 +1085,9 @@ fn test_classify_unclaimed_input_typed_decline() {
     // boundary: r8 == MAX_RANK is accepted (the bound is not off-by-one).
     assert!(from_token(&A_GOLDEN.replacen("|r2|", "|r8|", 1)).is_ok());
     // over-MAX_OPERANDS count: 17 sub-keys
-    let seventeen = std::iter::repeat("co/00/v4/d16/f").take(17).collect::<Vec<_>>().join(";");
+    let seventeen = std::iter::repeat("co/00/v4/d16/f/f32").take(17).collect::<Vec<_>>().join(";");
     let over_ops = A_GOLDEN.replacen(
-        "co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f",
+        "co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32",
         &seventeen,
         1,
     );
@@ -1154,7 +1169,7 @@ fn test_classify_axis_ordering_convention() {
     // (Assembled from fields, not written as one literal: these worked-example tokens are
     // deliberately NOT corpus vectors -- the corpus has no shape-input derivation format --
     // and `artifact_covers_every_golden_token_literal` scans test literals for corpus coverage.)
-    let fuel_tok = ["sk7", "ew2", "f32", "cuda:sm89", "ix32", "warp", "r2", "co/00/v1/da/f", "-"].join("|");
+    let fuel_tok = ["sk8", "ew2", "f32", "cuda:sm89", "ix32", "warp", "r2", "co/00/v1/da/f/f32", "-"].join("|");
     assert_eq!(k.to_token(), fuel_tok);
     assert_eq!(from_token(&fuel_tok), Ok(k));
 }
@@ -1206,8 +1221,8 @@ fn test_classify_layout_own_axes_mask_frame_padded() {
         "ew2", "f32", "cuda:sm89", WorkClass::Grid, 2,
         vec![f32_sub_key_in_frame(&[256], &[1], frame), co4(), co4()], Reduce::None, None,
     );
-    let tok = ["sk7", "ew2", "f32", "cuda:sm89", "ix32", "grid", "r2",
-        "co/01/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f", "-"].join("|");
+    let tok = ["sk8", "ew2", "f32", "cuda:sm89", "ix32", "grid", "r2",
+        "co/01/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32", "-"].join("|");
     assert_eq!(k.to_token(), tok);
     // [1,256] stride [0,1] in the same frame (r == R, no padded axis): own axis 0 is a
     // unit axis (co, no own broadcast -> v4) but the frame extent 128 > 1 sets mask bit 0.
@@ -1252,8 +1267,8 @@ fn test_classify_layout_own_axes_mask_frame_padded() {
     assert_eq!(derive_layout_tag(&de, &ds), Contig::Broadcast);
     assert_eq!(derive_layout_tag(&se, &ss), Contig::Broadcast);
     let k4 = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 4, vec![dense, strided], Reduce::None, None);
-    let tok4 = ["sk7", "ew2", "f32", "cuda:sm89", "ix32", "grid", "r4",
-        "co/01/v4/d16/f;st/01/v1/d16/f", "-"].join("|");
+    let tok4 = ["sk8", "ew2", "f32", "cuda:sm89", "ix32", "grid", "r4",
+        "co/01/v4/d16/f/f32;st/01/v1/d16/f/f32", "-"].join("|");
     assert_eq!(k4.to_token(), tok4);
 }
 
@@ -1432,7 +1447,7 @@ fn test_classify_emit_only_profile_emit_direction() {
         // (2) producer obligations, read off the emitted bytes with no reader.
         let f: Vec<&str> = tok.split('|').collect();
         assert!(f.len() == 9 || f.len() == 10, "[{}] 6.7-0001: field count {}", v.name, f.len());
-        assert_eq!(f[0], "sk7", "[{}] 6.7-0002: field 0", v.name);
+        assert_eq!(f[0], "sk8", "[{}] 6.7-0002: field 0", v.name);
         assert!(CELL_CLASSES.contains(&f[1]), "[{}] 6.5-0006 cell class", v.name);
         assert!(DTYPES.contains(&f[2]) && !RESERVED_DTYPES.contains(&f[2]), "[{}] 6.1 dtype usable", v.name);
         assert!(f[3].contains(':'), "[{}] 6.8-0001 namespaced target", v.name);
@@ -1440,9 +1455,10 @@ fn test_classify_emit_only_profile_emit_direction() {
         assert!(!ops.is_empty() && ops.len() <= MAX_OPERANDS as usize, "[{}] 6.4-0002 operand count", v.name);
         for o in &ops {
             let p: Vec<&str> = o.split('/').collect();
-            assert!(p.len() == 5 || p.len() == 6, "[{}] 6.7-0004 sub-key shape {o}", v.name);
-            if p.len() == 6 {
-                assert!(["dl", "dc"].contains(&p[5]), "[{}] 6.7-0004 dequant_form code {o}", v.name);
+            assert!(p.len() == 6 || p.len() == 7, "[{}] 6.7-0004 sub-key shape {o}", v.name);
+            assert!(DTYPES.contains(&p[5]), "[{}] 6.7-0004 dtype component {o}", v.name);
+            if p.len() == 7 {
+                assert!(["dl", "dc"].contains(&p[6]), "[{}] 6.7-0004 dequant_form code {o}", v.name);
             }
             assert!(["co", "ic", "st", "br"].contains(&p[0]), "[{}] layout code", v.name);
             assert!(is_lower_hex2(p[1]), "[{}] 6.7-0010 lowercase two-digit mask {o}", v.name);
@@ -1552,10 +1568,10 @@ fn test_classify_dequant_form_keyed() {
     let cbk = cell(with(DequantForm::Codebook)).to_token();
     // three cells, three keys: a codebook is not a linear dequant at any scale.
     assert!(none != lin && none != cbk && lin != cbk, "dequant_form must distinguish the cells: {none} / {lin} / {cbk}");
-    assert!(lin.contains("|co/00/v4/d16/f/dl;"), "linear spelled `dl` as the sixth component: {lin}");
-    assert!(cbk.contains("|co/00/v4/d16/f/dc;"), "codebook spelled `dc` as the sixth component: {cbk}");
-    // an operand with no quant record is the pre-sk5 five-part spelling, unchanged.
-    assert!(none.contains("|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|"), "no component without a quant record: {none}");
+    assert!(lin.contains("|co/00/v4/d16/f/i4/dl;"), "linear spelled `dl` as the seventh component, after the dtype: {lin}");
+    assert!(cbk.contains("|co/00/v4/d16/f/i4/dc;"), "codebook spelled `dc` as the seventh component: {cbk}");
+    // an operand with no quant record carries the dtype and no dequant component.
+    assert!(none.contains("|co/00/v4/d16/f/i4;co/00/v4/d16/f/i4;co/00/v4/d16/f/i4|"), "no component without a quant record: {none}");
     // the component round-trips and is read back to the same form.
     for tok in [&none, &lin, &cbk] {
         let k = from_token(tok).expect("a well-formed dequant_form spelling must parse");
@@ -1581,8 +1597,13 @@ fn test_classify_quantized_scale_dtype_keyed() {
             m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Large, k_div: DivBucket::D16, batch: None,
             wdt: derive_weight_dtype(&dtypes, 0).to_string(), acc: "f32".to_string(), out: "bf16".to_string(),
             mp: MathFidelity::Stable, sdt: sdt.map(str::to_string),
+            block: sdt.map(|_| BlockLen::L32),
         };
-        key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2, vec![plain, plain, plain], Reduce::None, Some(c))
+        // sk8: every sub-key carries its operand's dtype; the scale sibling carries the scale dtype.
+        let with = |d: &'static str| OperandSubKey { dtype: d, ..plain };
+        let scale_dt = DTYPES.iter().copied().find(|d| Some(*d) == sdt).unwrap_or("f8e8m0");
+        key("ctr", "i4", "cuda:sm90", WorkClass::Grid, 2,
+            vec![with("i4"), with(scale_dt), with("bf16"), with("bf16")], Reduce::None, Some(c))
     };
     // the caller's scale-role hint (slot 1) selects the scale operand; position alone does not.
     assert_eq!(derive_scale_dtype(&dtypes, Some(1)), Some("f8e8m0"));
@@ -1591,8 +1612,8 @@ fn test_classify_quantized_scale_dtype_keyed() {
     let f16 = cell(Some("f16")).to_token();
     let none = cell(None).to_token();
     assert!(e8 != f16 && e8 != none && f16 != none, "scale dtype must distinguish the cells: {e8} / {f16} / {none}");
-    assert!(e8.ends_with("/st/qf8e8m0"), "spelled as the trailing `q<dtype>` component: {e8}");
-    assert!(f16.ends_with("/st/qf16"), "{f16}");
+    assert!(e8.ends_with("/st/qf8e8m0/g32"), "spelled as `q<dtype>` then the block length: {e8}");
+    assert!(f16.ends_with("/st/qf16/g32"), "{f16}");
     assert!(none.ends_with("/bf16/st"), "absent when no scale operand is designated: {none}");
     for tok in [&e8, &f16, &none] {
         let k = from_token(tok).expect("a well-formed scale-dtype spelling must parse");
@@ -1610,9 +1631,10 @@ fn test_classify_quantized_scale_dtype_keyed() {
     assert_eq!(from_token(&e8.replacen("qf8e8m0", "qf8e6m2", 1)), Err(KeyDecline::ReservedDtype));
     // a `q` component with nothing else in the slot, or a second `q`, is malformed.
     assert_eq!(from_token(&e8.replacen("/st/qf8e8m0", "/qf8e8m0", 1)), Err(KeyDecline::BadContractionField));
-    assert_eq!(from_token(&format!("{e8}/qf16")), Err(KeyDecline::BadContractionField));
+    // a second `q`, after the block length, leaves a `q` without its own block length (sk8, §6.6-0022a).
+    assert_eq!(from_token(&format!("{e8}/qf16")), Err(KeyDecline::BadBlockLength));
     // a non-`ctr` cell never carries the component (§6.6-0015 stands for it).
-    let ew = "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-|f32/st/qf16";
+    let ew = "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|f32/st/qf16";
     assert!(from_token(ew).is_err(), "a scale component outside a ctr contraction field MUST decline");
 }
 
@@ -1659,7 +1681,7 @@ fn test_classify_batch_role_derivation() {
         m: SizeClass::Tiny, n: SizeClass::Large, k: SizeClass::Medium, k_div: DivBucket::D16,
         batch: derive_batch_class(&frame4, &[0, 1], &mnk4, &out4).unwrap(),
         wdt: "f32".to_string(), acc: "f32".to_string(), out: "f32".to_string(),
-        mp: MathFidelity::Stable, sdt: None,
+        mp: MathFidelity::Stable, sdt: None, block: None,
     };
     let plain = op(Contig::Contiguous, 0x00, VecWidth::V4, DivBucket::D16, false);
     let tok = key("ctr", "f32", "cuda:sm90", WorkClass::Grid, 2, vec![plain, plain, plain], Reduce::None, Some(c)).to_token();

@@ -1230,7 +1230,9 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   **accuracy tier** — a tagged quantity carrying at least one of `{max_ulp, max_relative,
   max_absolute}` against that reference, **except that a kernel with no finite bound on a backend declares no tier for it**: its
   `precision_class` is then `unbounded` (KISS-OPS §6.8-0008, tier kind `none`) and its `audited_status` is
-  `unaudited` (§6.8-0010). A provider that is unsure which bound a kernel meets SHOULD understate it: declare the looser
+  `unaudited` (§6.8-0010); **this allowance does not apply to a cell that advertises
+  `reduced-mantissa-permitted`, which MUST declare a tier (KISS-OPS §6.17-0012, CireSnave 2026-11-14, board
+  443)**. A provider that is unsure which bound a kernel meets SHOULD understate it: declare the looser
   bound it can establish, or no tier, and SHOULD NOT declare a tighter bound than it has established, because an
   overstated tier binds a consumer to a kernel that is wrong for it while an understated one costs only a missed
   opportunity. The declared per-target tier is the **sole** accuracy
@@ -2065,7 +2067,7 @@ contract_kind = kiss-contract
 contract_version = 4
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
-accept_predicate = sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
+accept_predicate = sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;st/00/v1/d16/f/f32;co/00/v4/d16/f/f32|-
 op_identity = add
 target_capability = cuda:sm89
 ```
@@ -2115,7 +2117,7 @@ carried here and in Guarantees:
 
 ```
 [section:5:capabilities]
-accept_predicate = sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;st/00/v1/d16/f;co/00/v4/d16/f|-
+accept_predicate = sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;st/00/v1/d16/f/f32;co/00/v4/d16/f/f32|-
 supported_dtype_set = [f32]
 awkward_layout_strategy = decline
 in_place_eligible_variants = []

@@ -165,17 +165,17 @@ fn test_classify_weight_and_scale_roles_in_cells() {
         Expect::Decline(e) => panic!("{name} declines: {e:?}"),
     };
     let ctr = |name: &str| tok(name).split('|').nth(9).unwrap().to_string();
-    assert_eq!(ctr("ctr_quantized_scale_e8m0"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
-    assert_eq!(ctr("ctr_quantized_scale_f16"), "ctll/d16/i4/bf16/bf16/st/qf16");
+    assert_eq!(ctr("ctr_quantized_scale_e8m0"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0/g32");
+    assert_eq!(ctr("ctr_quantized_scale_f16"), "ctll/d16/i4/bf16/bf16/st/qf16/g32");
     assert_eq!(ctr("ctr_quantized_no_scale_designated"), "ctll/d16/i4/bf16/bf16/st");
     assert_ne!(tok("ctr_quantized_scale_e8m0"), tok("ctr_quantized_scale_f16"));
     // weight at operand 0, scale at operand 1: wdt is the declared weight (i4), not the operand-1 dtype.
-    assert_eq!(ctr("ctr_weight_role_not_operand_one"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
+    assert_eq!(ctr("ctr_weight_role_not_operand_one"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0/g32");
     // weight NOT at operand 0, accumulator undeclared: operand 0's bf16, not the weight's i4.
-    assert_eq!(ctr("ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0");
+    assert_eq!(ctr("ctr_weight_second_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0/g32");
     // the trap: undeclared accumulator on a weight-first call order defaults to the weight's i4 (the primary dtype);
     // the two cells differ in <acc> only.
-    assert_eq!(ctr("ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/i4/bf16/st/qf8e8m0");
+    assert_eq!(ctr("ctr_weight_first_undeclared_accumulator_defaults_to_operand0_dtype"), "ctll/d16/i4/i4/bf16/st/qf8e8m0/g32");
     let decline = |name: &str| match expect_of(vectors().iter().find(|d| d.name == name).expect(name)) {
         Expect::Decline(e) => e.wire(),
         Expect::Token(t) => panic!("{name} derived {t}"),
@@ -204,8 +204,34 @@ fn test_classify_derivation_input_tuple() {
     let base = declared.to_token();
     let mut c = gemm.clone();
     c.contraction.as_mut().unwrap().scale = Some(0);
+    // sk8 (§6.6-0022a): designating a scale also keys the weight's block length, so the weight carries a block_shape.
+    let weight = c.contraction.as_ref().unwrap().weight;
+    c.operands[weight].block_shape = vec![1, 32];
     assert_ne!(derive_structure_key(&c).unwrap().to_token(), base, "a designated scale operand is keyed");
     let mut c = gemm.clone();
     c.contraction.as_mut().unwrap().batch = vec![0];
     assert_ne!(derive_structure_key(&c).map(|k| k.to_token()), Ok(base), "a declared batch axis is keyed or declines, never ignored");
+}
+
+// Backs[enforced]: KISS-CLASSIFY-6.6-0022a — sk8: a quantized `ctr` cell keys the block length of its scale, the product of the weight's `block_shape`, closed set {16, 32}; a product outside it, or no `block_shape`, is a typed decline.
+#[test]
+fn test_classify_block_length_keyed() {
+    let by_name = |name: &str| expect_of(vectors().iter().find(|d| d.name == name).expect(name));
+    let ctr = |name: &str| match by_name(name) {
+        Expect::Token(t) => t.split('|').nth(9).unwrap().to_string(),
+        Expect::Decline(e) => panic!("{name} declines: {e:?}"),
+    };
+    // a one-dimensional block of 32 along one axis keys as g32, directly after q<dtype>.
+    assert_eq!(ctr("ctr_quantized_scale_e8m0"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0/g32");
+    // the PRODUCT of block_shape is the length: [2, 8] is 16 elements, so g16 (the group axis is not keyed).
+    assert_eq!(ctr("ctr_block_length_is_the_product_of_block_shape"), "ctll/d16/i4/bf16/bf16/st/qf8e8m0/g16");
+    // no scale designated: neither q nor g.
+    assert_eq!(ctr("ctr_quantized_no_scale_designated"), "ctll/d16/i4/bf16/bf16/st");
+    // outside the closed set, or no block_shape at all: a typed decline, never a rounded or omitted length.
+    assert!(matches!(by_name("decline_ctr_block_length_outside_closed_set"), Expect::Decline(kiss_conformance::derive::DeriveDecline::BlockLengthUnsupported)));
+    assert!(matches!(by_name("decline_ctr_scale_without_block_shape"), Expect::Decline(kiss_conformance::derive::DeriveDecline::BlockLengthMissing)));
+    // two cells that differ only in block length derive different keys.
+    let a = match by_name("ctr_quantized_scale_e8m0") { Expect::Token(t) => t, Expect::Decline(e) => panic!("{e:?}") };
+    let b = match by_name("ctr_block_length_is_the_product_of_block_shape") { Expect::Token(t) => t, Expect::Decline(e) => panic!("{e:?}") };
+    assert_ne!(a, b, "KISS-CLASSIFY-6.6-0022a: g16 and g32 cells must not share a key");
 }

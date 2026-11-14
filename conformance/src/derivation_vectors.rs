@@ -35,7 +35,7 @@ pub struct DerivationVector {
 }
 
 fn op(usage: OperandUse, dtype: &'static str, extents: &[i64], strides: &[i64], alignment: u32) -> CellOperand {
-    CellOperand { usage, dtype, extents: extents.to_vec(), strides: strides.to_vec(), alignment, dequant: None }
+    CellOperand { usage, dtype, extents: extents.to_vec(), strides: strides.to_vec(), alignment, dequant: None, block_shape: vec![] }
 }
 
 fn cell(target: &'static str, operands: Vec<CellOperand>) -> DerivationCell {
@@ -84,11 +84,11 @@ fn a1_elementwise(out: &mut Vec<DerivationVector>) {
     // ---- Appendix A.1 goldens, derived from raw cells (spec-independent expected bytes) ----
     out.push(golden(
         v("a1_binary_add", "KISS-CLASSIFY-6.6-0011", "the canonical derivation golden: two inputs + output, contiguous f32 [128,256]", add_cell(&[256, 1], &[128, 256])),
-        "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-",
     ));
     out.push(golden(
         v("a1_binary_add_operand1_broadcast_axis0", "KISS-CLASSIFY-6.6-0008", "operand 1 stride [0,1]: layout br, mask 01, v1", add_cell(&[0, 1], &[128, 256])),
-        "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;br/01/v1/d16/f;co/00/v4/d16/f|-",
+        "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;br/01/v1/d16/f/f32;co/00/v4/d16/f/f32|-",
     ));
     out.push(golden(
         v(
@@ -97,22 +97,22 @@ fn a1_elementwise(out: &mut Vec<DerivationVector>) {
             "f16 [64,128]: v8 (8*2 = 16 bytes), d16, ix32, grid",
             cell(CUDA, vec![op(Input, "f16", &[64, 128], &[128, 1], 256), op(Output, "f16", &[64, 128], &[128, 1], 256)]),
         ),
-        "sk7|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f;co/00/v8/d16/f|-",
+        "sk8|ew1|f16|cuda:sm89|ix32|grid|r2|co/00/v8/d16/f/f16;co/00/v8/d16/f/f16|-",
     ));
 }
 
 fn a1_reductions(out: &mut Vec<DerivationVector>) {
     out.push(golden(
         v("a1_reduction_trailing_axis", "KISS-CLASSIFY-6.6-0009", "keepdim [4,8]->[4,1]: rlast; output mask 02 (extent-1 axis, frame extent 8)", reduce("f32", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[1])),
-        "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast",
+        "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/02/v1/da/f/f32|rlast",
     ));
     out.push(golden(
         v("a1_reduction_all_axes", "KISS-CLASSIFY-6.6-0009", "keepdim [4,8]->[1,1]: rall; output mask 03", reduce("f32", &[4, 8], &[8, 1], &[1, 1], &[1, 1], &[0, 1])),
-        "sk7|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/03/v1/da/f|rall",
+        "sk8|rdc|f32|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f32;co/03/v1/da/f/f32|rall",
     ));
     out.push(golden(
         v("a1_reduction_rank1", "KISS-CLASSIFY-6.6-0009", "rank-1 [8]->[1]: all-axes AND trailing; rall wins the tie", reduce("f32", &[8], &[1], &[1], &[1], &[0])),
-        "sk7|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f;co/01/v1/da/f|rall",
+        "sk8|rdc|f32|cuda:sm89|ix32|warp|r1|co/00/v1/d8/f/f32;co/01/v1/da/f/f32|rall",
     ));
     out.push(golden(
         v(
@@ -121,14 +121,14 @@ fn a1_reductions(out: &mut Vec<DerivationVector>) {
             "[2,4,3,5]->[2,1,3,1] reducing axes 1 and 3: bitmask x0a; output mask 0a",
             reduce("f32", &[2, 4, 3, 5], &[60, 15, 5, 1], &[2, 1, 3, 1], &[3, 3, 1, 1], &[1, 3]),
         ),
-        "sk7|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f;co/0a/v1/da/f|x0a",
+        "sk8|rdc|f32|cuda:sm89|ix32|block|r4|co/00/v1/da/f/f32;co/0a/v1/da/f/f32|x0a",
     ));
     {
         let mut c = reduce("f16", &[4, 8], &[8, 1], &[4, 1], &[1, 1], &[1]);
         c.accumulator = Some("f32");
         out.push(golden(
             v("a1_reduction_f16_accumulates_f32", "KISS-CLASSIFY-6.7-0013", "accumulator f32 != compute f16: |f32/st carried", c),
-            "sk7|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f;co/02/v1/da/f|rlast|f32/st",
+            "sk8|rdc|f16|cuda:sm89|ix32|warp|r2|co/00/v1/d8/f/f16;co/02/v1/da/f/f16|rlast|f32/st",
         ));
     }
     out.push(golden(
@@ -138,7 +138,7 @@ fn a1_reductions(out: &mut Vec<DerivationVector>) {
             "an in-place operand appears once, as an input; n_operands = 2",
             cell(CUDA, vec![op(InPlace, "f32", &[128, 256], &[256, 1], 256), op(Input, "f32", &[128, 256], &[256, 1], 256)]),
         ),
-        "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-",
     ));
 
     // ---- derivation cases the token vectors cannot express ----
@@ -159,7 +159,7 @@ fn frame_cases(out: &mut Vec<DerivationVector>) {
                 ],
             ),
         ),
-        "sk7|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f;co/00/v4/d16/f;co/00/v4/d16/f|-",
+        "sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-",
     ));
     out.push(v(
         "lower_rank_operand_in_frame",
@@ -283,10 +283,11 @@ fn quantized_and_precision_cases(out: &mut Vec<DerivationVector>) {
     {
         let mut w = op(Input, "i4", &[8, 16], &[16, 1], 256);
         w.dequant = Some(DequantForm::Linear);
+        w.block_shape = vec![1, 16];
         out.push(v(
             "quantized_operand_dequant_form",
             "KISS-CLASSIFY-6.3-0009a",
-            "operand 0 carries a quant record (linear): sixth sub-key component dl; the scale sibling carries none",
+            "operand 0 carries a quant record (linear): seventh sub-key component dl after the dtype; the scale sibling carries none",
             cell(CUDA, vec![w, op(Input, "f32", &[8, 1], &[1, 1], 256), op(Output, "f16", &[8, 16], &[16, 1], 256)]),
         ));
     }
@@ -385,6 +386,7 @@ fn with_roles(mut c: DerivationCell, f: impl FnOnce(&mut ContractionRoles)) -> D
 fn quant(scale_dtype: &'static str, weight: usize, scale: Option<usize>, order: [usize; 3]) -> DerivationCell {
     let mut w = dense(Input, "i4", &[4096, 4096]);
     w.dequant = Some(DequantForm::Linear);
+    w.block_shape = vec![1, 32]; // one block of 32 along axis 1: 4096 / 128 scales
     let base = [dense(Input, "bf16", &[8, 4096]), w, dense(Input, scale_dtype, &[4096, 128])];
     let mut ops: Vec<CellOperand> = order.iter().map(|&i| base[i].clone()).collect();
     ops.push(dense(Output, "bf16", &[8, 4096]));
@@ -558,13 +560,58 @@ fn ctr_role_decline_cases(out: &mut Vec<DerivationVector>) {
         "the scale role names slot 7 of a 3-operand cell: not silently ignored",
         with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.scale = Some(7)),
     ));
+}
+
+/// sk8 dtype and block-length declines (§6.6-0007, §6.6-0022): a reserved dtype in any operand, and the closed
+/// block-length set {16, 32}.
+fn ctr_dtype_and_block_cases(out: &mut Vec<DerivationVector>) {
+    {
+        // sk8 (§6.6-0007): every operand dtype is a key position, so a reserved dtype in a NON-designated
+        // operand now declines too (at sk7 it derived a key).
+        out.push(v(
+            "decline_reserved_dtype_in_nonprimary_operand",
+            "KISS-CLASSIFY-6.6-0007",
+            "a non-primary operand is a reserved dtype: its own sub-key carries it, so it declines",
+            cell(CUDA, vec![op(Input, "f32", &[8, 8], &[8, 1], 256), op(Input, "f8e4m3fnuz", &[8, 8], &[8, 1], 256), op(Output, "f32", &[8, 8], &[8, 1], 256)]),
+        ));
+    }
+    {
+        let mut c = quant("f8e8m0", 1, Some(2), [0, 1, 2]);
+        c.operands[1].block_shape = vec![];
+        out.push(v(
+            "decline_ctr_scale_without_block_shape",
+            "KISS-CLASSIFY-6.6-0022",
+            "a scale operand is designated but the weight's quant record has no block_shape: the block length cannot be keyed",
+            c,
+        ));
+        let mut c = quant("f8e8m0", 1, Some(2), [0, 1, 2]);
+        c.operands[1].block_shape = vec![1, 64];
+        out.push(v(
+            "decline_ctr_block_length_outside_closed_set",
+            "KISS-CLASSIFY-6.6-0022",
+            "the weight's block length is 64: outside the closed set {16, 32}",
+            c,
+        ));
+        let mut c = quant("f8e8m0", 1, Some(2), [0, 1, 2]);
+        c.operands[1].block_shape = vec![2, 8];
+        out.push(v(
+            "ctr_block_length_is_the_product_of_block_shape",
+            "KISS-CLASSIFY-6.6-0022",
+            "block_shape [2, 8] is a 16-element block: the product keys as g16; the group axis is implied, not keyed",
+            c,
+        ));
+    }
+}
+
+/// A reserved weight dtype and a missing output operand (§6.1-0001, §6.7-0006): typed declines.
+fn ctr_weight_and_output_decline_cases(out: &mut Vec<DerivationVector>) {
     {
         let mut c = gemm("f16", &[], 8, 4096, 4096);
         c.operands[1].dtype = "f8e4m3fnuz";
         out.push(v(
             "decline_ctr_reserved_weight_dtype",
             "KISS-CLASSIFY-6.1-0001",
-            "the designated weight is a reserved dtype (f8e4m3fnuz): <wdt> is a key position, so unlike a sibling operand it declines",
+            "the designated weight is a reserved dtype (f8e4m3fnuz): a key position in <wdt> and, from sk8, in its own sub-key",
             c,
         ));
     }
@@ -618,6 +665,8 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
     ctr_batch_cases(out);
     ctr_quant_cases(out);
     ctr_role_decline_cases(out);
+    ctr_dtype_and_block_cases(out);
+    ctr_weight_and_output_decline_cases(out);
     ctr_batch_decline_cases(out);
 }
 
@@ -751,14 +800,16 @@ fn operand_json(o: &CellOperand) -> String {
         Some(d) => js(d.code()),
         None => "null".to_string(),
     };
+    let block: Vec<i64> = o.block_shape.iter().map(|&b| i64::from(b)).collect();
     format!(
-        "{{\"use\":{},\"dtype\":{},\"extents\":{},\"strides\":{},\"alignment\":{},\"dequant_form\":{}}}",
+        "{{\"use\":{},\"dtype\":{},\"extents\":{},\"strides\":{},\"alignment\":{},\"dequant_form\":{},\"block_shape\":{}}}",
         js(usage),
         js(o.dtype),
         ints(&o.extents),
         ints(&o.strides),
         o.alignment,
-        dq
+        dq,
+        ints(&block)
     )
 }
 

@@ -38,9 +38,9 @@ fn test_classify_request_states_input_types() {
     assert_eq!(k.dtype, "bf16", "field 2 is operand 0's dtype (§6.6-0005)");
     assert_eq!(k.contraction.as_ref().unwrap().wdt, "f16", "the weight stays the weight operand's, not operand 0's");
 
-    // the boundary the clause states: a non-primary operand of a NON-ctr cell is not a key position at this
-    // schema version (§6.6-0015), so a misstatement there changes no byte. The clause still binds the caller;
-    // this control flips when the per-operand-dtype event lands (rfcs/per-operand-dtype-sk8.md).
+    // the boundary the clause stated at sk7 flipped with the per-operand-dtype event (rfcs/per-operand-dtype-sk8.md):
+    // from sk8 every operand's dtype is a key position (§6.6-0007, §6.6-0015), so a misstatement of a NON-primary
+    // operand of a non-ctr cell now changes a byte and the key witnesses it.
     let ew = vectors()
         .iter()
         .find(|d| d.cell.contraction.is_none() && d.cell.operands.len() == 3 && derive_structure_key(&d.cell).map_or(false, |k| k.cell_class.starts_with("ew")))
@@ -51,7 +51,7 @@ fn test_classify_request_states_input_types() {
     let other = if ew.operands[1].dtype == "u32" { "i32" } else { "u32" };
     let mut c = ew.clone();
     c.operands[1].dtype = other;
-    assert_eq!(derive_structure_key(&c).map(|k| k.to_token()), Ok(ke.to_token()), "sk7: a non-primary dtype is not keyed, so the key cannot witness it");
+    assert_ne!(derive_structure_key(&c).map(|k| k.to_token()), Ok(ke.to_token()), "sk8: a non-primary dtype is keyed, so the key witnesses a misstatement");
 
     // the spec states it, beside the derivation input (§6.6-0012).
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/classify.md"))

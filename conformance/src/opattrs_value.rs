@@ -40,6 +40,8 @@ pub enum Value {
     Axes { axes: Vec<usize>, rank: usize },
     /// A window-parameter vector (§6.19-0023), in ascending spatial-axis order.
     Vector(Vec<u32>),
+    /// A `u64` field (`matmul` `accuracy_value`, §6.19-0049), little-endian on the wire.
+    U64(u64),
 }
 
 /// Named attribute values in any order; the encoder replays the schema order.
@@ -131,7 +133,7 @@ fn vocab_of(field: &str) -> Option<&'static str> {
         "exclusivity" => "scan_exclusivity",
         "output_column_ordering" => "column_ordering",
         "math_fidelity" => "math_fidelity",
-        "precision_tag" => "precision_tag",
+        "accuracy_kind" => "accuracy_kind",
         "rounding" => "cast_rounding",
         "saturation" => "cast_saturation",
         "tie_rule" => "tie_rule",
@@ -174,37 +176,7 @@ fn schema_of(op: &str) -> Result<OpSchema, String> {
     parse_table().into_iter().find(|s| s.op == op).ok_or_else(|| format!("`{op}` is not a carrier op"))
 }
 
-/// `reduce_axes` word (§6.19-0020 total precedence), by bitmask arithmetic.
-pub fn reduce_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
-    if !(1..=MAX_RANK as usize).contains(&rank) {
-        return Err(format!("rank {rank} outside 1..=MAX_RANK"));
-    }
-    if axes.is_empty() || axes.iter().any(|&a| a >= rank) {
-        return Err("reduced axes empty or out of range".into());
-    }
-    let mask = axes.iter().fold(0u32, |m, &a| m | (1 << a));
-    let full = (1u32 << rank) - 1;
-    Ok(if mask == full {
-        0xFFFF
-    } else if rank > 1 && mask == 1 << (rank - 1) {
-        0xFFFE
-    } else {
-        mask as u16
-    })
-}
-
-/// `reduce_axes` word for a `prefix_scan` (§6.19-0020 scan precedence): exactly ONE axis; the trailing
-/// axis of a rank>1 operand is `0xFFFE`, every other axis its single-bit subset mask. Never `0xFFFF`
-/// (a rank-1 scan is `0x0001`, not all-axes) and never `0x0000`.
-pub fn scan_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
-    if !(1..=MAX_RANK as usize).contains(&rank) {
-        return Err(format!("rank {rank} outside 1..=MAX_RANK"));
-    }
-    match axes {
-        [a] if *a < rank => Ok(if rank > 1 && *a == rank - 1 { 0xFFFE } else { 1u16 << a }),
-        _ => Err(format!("a prefix_scan folds exactly one in-range axis, got {axes:?} of rank {rank}")),
-    }
-}
+pub use crate::opattrs_axes::{reduce_axes_word, scan_axes_word};
 
 /// The three fields whose spelling is not decided by width alone (`accumulator`, `target_dtype`, `axes`);
 /// `None` for every other field.
@@ -237,6 +209,7 @@ fn encode_field(op: &str, f: &SchemaField, v: &Value, vocab: &BTreeMap<String, V
         return r;
     }
     match (f.width, v) {
+        (FieldWidth::U64Le, Value::U64(n)) => Ok(n.to_le_bytes().to_vec()),
         (FieldWidth::U16Le, Value::Axes { axes, rank }) => {
             Ok(reduce_axes_word(axes, *rank)?.to_le_bytes().to_vec())
         }
@@ -312,6 +285,11 @@ pub fn resolve_defaults(op: &str, partial: &Attrs) -> Result<Attrs, String> {
             out.push((f.name.clone(), v.clone()));
             continue;
         }
+        if f.width == FieldWidth::U64Le {
+            // `accuracy_value`: the table's default is `0` (zero under kind `none`, §6.17-0011)
+            out.push((f.name.clone(), Value::U64(0)));
+            continue;
+        }
         let byte = default_byte(f).filter(|_| !is_mandatory(f)).ok_or_else(|| {
             format!("`{}` omits `{}`, which has no resolved default", op, f.name)
         })?;
@@ -338,7 +316,9 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
     let vocab = vocab();
     let mut out = Attrs::new();
     for f in &schema.fields {
-        let v = if f.width == FieldWidth::U16Le {
+        let v = if f.width == FieldWidth::U64Le {
+            Value::U64(0)
+        } else if f.width == FieldWidth::U16Le {
             // a scan folds exactly one axis (§6.19-0020): the trailing axis of a rank-2 operand
             Value::Axes { axes: if op == "prefix_scan" { vec![1] } else { vec![0, 1] }, rank: 2 }
         } else if f.width == FieldWidth::Variable {
@@ -380,6 +360,9 @@ pub fn alternatives(op: &str, f: &SchemaField, base: &Value) -> Vec<Value> {
             .into_iter()
             .map(|(axes, rank)| Value::Axes { axes, rank })
             .collect(),
+        // `accuracy_value` is not varied on its own: its legal values depend on `accuracy_kind` (§6.17-0011), so a
+        // one-field variation of the base (kind `none`) would be a blob a reader declines. The tests pin its values.
+        (FieldWidth::U64Le, _) => Vec::new(),
         (FieldWidth::Variable, _) => [vec![3, 5], vec![2], vec![2, 2, 2], vec![1; 8]]
             .into_iter()
             .map(Value::Vector)
@@ -426,6 +409,7 @@ fn json_value(v: &Value) -> String {
             let a: Vec<String> = e.iter().map(ToString::to_string).collect();
             format!("[{}]", a.join(","))
         }
+        Value::U64(n) => n.to_string(),
     }
 }
 

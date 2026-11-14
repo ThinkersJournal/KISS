@@ -22,6 +22,7 @@ fn cell(cap: Option<u32>) -> DerivationCell {
         strides: vec![128, 1],
         alignment: 256,
         dequant: None,
+        block_shape: vec![],
     };
     DerivationCell {
         target: "rocm:gfx942",

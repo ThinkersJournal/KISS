@@ -53,9 +53,10 @@ ordinal_enum!(/// §6.19-0041 (schema field `rounding` of `cast`, §6.21-0002)
 ordinal_enum!(/// §6.19-0041 (schema field `saturation` of `cast`, §6.21-0003)
     CastSaturation { None = 1, Clamp = 2 });
 
-ordinal_enum!(/// §6.17-0011 (schema field `precision_tag` of `matmul`): the maintainer-owned vocabulary of named
-    /// reduced-precision strategies. KISS pins the NAME and the duty to declare a bound, never the recipe.
-    PrecisionTag { None = 1, ThreeXTf32 = 2, Fp8FastAccumulate = 3 });
+ordinal_enum!(/// §6.17-0011 (schema field `accuracy_kind` of `matmul`, 0.18.0): the kind of the requested accuracy bound,
+    /// in the shape of the Contract tier (KISS-CONTRACT §6.8-0002). Replaces the 0.17.0 `precision_tag`, which
+    /// named a kernel's internal strategy (board 443).
+    AccuracyKind { None = 1, MaxUlp = 2, MaxRelative = 3, MaxAbsolute = 4 });
 
 /// `accumulator` byte meaning "the compute dtype" (the §6.17-0005 diagonal, §6.19-0025).
 pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
@@ -137,21 +138,26 @@ pub fn encode_reduce(
     out
 }
 
-/// `matmul`: accumulator, math_fidelity, precision_tag (§6.19-0049, board 426 6 "A" and board 427 "1: A").
+/// `matmul`: accumulator, math_fidelity, accuracy_kind, accuracy_value (§6.19-0049; board 426 6 "A", board 443).
+/// `accuracy_value` is a `u64` count under `max_ulp`, the IEEE 754 binary64 bits under `max_relative` and
+/// `max_absolute`, and `0` under `none`. Eleven bytes.
 /// `accumulator` is [`ACCUMULATOR_COMPUTE_DTYPE`] or the 1-based §6.1-table dtype ordinal (a float for a float
 /// compute dtype, a signed 32- or 64-bit integer for an integer one, §6.17-0010; that legality needs the
 /// operand's dtype and is `structural::matmul_attrs_check`'s).
-pub fn encode_matmul(accumulator: u8, fidelity: MathFidelityOrd, tag: PrecisionTag) -> Vec<u8> {
-    vec![accumulator, fidelity.ordinal(), tag.ordinal()]
+pub fn encode_matmul(accumulator: u8, fidelity: MathFidelityOrd, kind: AccuracyKind, value: u64) -> Vec<u8> {
+    let mut out = vec![accumulator, fidelity.ordinal(), kind.ordinal()];
+    out.extend_from_slice(&value.to_le_bytes());
+    out
 }
 
-/// Validate a decoded `matmul` blob `[accumulator, math_fidelity, precision_tag]` (§6.19-0049): wrong length,
-/// a reserved `0` fidelity or tag, an out-of-table fidelity or tag, and a reserved or out-of-table accumulator
-/// ordinal are typed declines.
-pub fn decode_matmul(blob: &[u8]) -> Result<(u8, MathFidelityOrd, PrecisionTag), Decline> {
+/// Validate a decoded `matmul` blob `[accumulator, math_fidelity, accuracy_kind, accuracy_value u64 LE]`
+/// (§6.19-0049): wrong length, a reserved `0` fidelity or kind, an out-of-table fidelity or kind, a non-zero value
+/// under kind `none`, a NaN, infinite or negative `max_relative` / `max_absolute` value, and a reserved or
+/// out-of-table accumulator ordinal are typed declines.
+pub fn decode_matmul(blob: &[u8]) -> Result<(u8, MathFidelityOrd, AccuracyKind, u64), Decline> {
     use crate::structure_key::{DTYPES, RESERVED_DTYPES};
-    if blob.len() != 3 {
-        return Err(Decline::TruncatedBlob { need: 3, got: blob.len() });
+    if blob.len() != 11 {
+        return Err(Decline::TruncatedBlob { need: 11, got: blob.len() });
     }
     let acc = blob[0];
     if acc != ACCUMULATOR_COMPUTE_DTYPE && DTYPES.get(acc as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
@@ -163,14 +169,29 @@ pub fn decode_matmul(blob: &[u8]) -> Result<(u8, MathFidelityOrd, PrecisionTag),
         2 => MathFidelityOrd::ReducedMantissa,
         v => return Err(Decline::FieldOutOfRange { field: "math_fidelity", value: v, max: 2 }),
     };
-    let tag = match blob[2] {
-        0 => return Err(Decline::ReservedZeroOrdinal { field: "precision_tag" }),
-        1 => PrecisionTag::None,
-        2 => PrecisionTag::ThreeXTf32,
-        3 => PrecisionTag::Fp8FastAccumulate,
-        v => return Err(Decline::FieldOutOfRange { field: "precision_tag", value: v, max: 3 }),
+    let kind = match blob[2] {
+        0 => return Err(Decline::ReservedZeroOrdinal { field: "accuracy_kind" }),
+        1 => AccuracyKind::None,
+        2 => AccuracyKind::MaxUlp,
+        3 => AccuracyKind::MaxRelative,
+        4 => AccuracyKind::MaxAbsolute,
+        v => return Err(Decline::FieldOutOfRange { field: "accuracy_kind", value: v, max: 4 }),
     };
-    Ok((acc, fid, tag))
+    let mut raw = [0u8; 8];
+    raw.copy_from_slice(&blob[3..11]);
+    let value = u64::from_le_bytes(raw);
+    match kind {
+        AccuracyKind::None if value != 0 => return Err(Decline::AccuracyValue { kind: blob[2] }),
+        AccuracyKind::MaxRelative | AccuracyKind::MaxAbsolute => {
+            let f = f64::from_bits(value);
+            // a sign bit with a zero magnitude is -0.0: not negative, but still not a bound a producer emits
+            if !f.is_finite() || f.is_sign_negative() {
+                return Err(Decline::AccuracyValue { kind: blob[2] });
+            }
+        }
+        _ => {}
+    }
+    Ok((acc, fid, kind, value))
 }
 
 /// `prefix_scan`: monoid, reduce_axes, exclusivity, accumulator, math_fidelity (§6.19-0026, sk4).
@@ -328,6 +349,9 @@ pub enum Decline {
     /// A bounded field exceeded its pinned maximum (§6.19-0027, §6.19-0037):
     /// `axis` must be < MAX_RANK, `index_operand` < MAX_OPERANDS.
     FieldOutOfRange { field: &'static str, value: u8, max: u8 },
+    /// A `matmul` `accuracy_value` that its `accuracy_kind` forbids (§6.19-0049): non-zero under `none`, or NaN,
+    /// infinite or negative under `max_relative` / `max_absolute`. `kind` is the wire ordinal.
+    AccuracyValue { kind: u8 },
 }
 
 /// Read a window/permutation parameter vector (§6.19-0023): `u8` count then count x `u32` LE. A count
