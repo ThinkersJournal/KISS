@@ -284,6 +284,7 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `unsqueeze` | access-primitive | insert extent-1 axes at the output positions a mask names; pure shape, bits preserved (§6.11-0023) |
 | `iota` | access-primitive | no operands: a static-shape tensor whose element is its own coordinate along one axis, in the stated dtype (§6.11-0025) |
 | `cast` | conversion | convert each element to a destination dtype; rounding and saturation stated (§6.21) |
+| `bitcast` | conversion | reinterpret each element's bits as a same-width dtype; pure bit move, nothing computed (§6.21-0005) |
 
 **Non-primitive ops (each resolves to the floor via §6.13):**
 
@@ -340,7 +341,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `iota`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `iota`, `bitcast`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -751,7 +752,7 @@ verbatim, everywhere).
   `atan`, `lgamma`; the binary-math atoms `atan2`, `copysign`, `nextafter`; the integer
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
   `clz`, `ctz`; the conversion atom `cast`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
-  `gather`, `scatter`, `sort_network`, `concat`, `squeeze`, `unsqueeze`, `iota`. *Test:* `test_ops_primitive_floor_set`.
+  `gather`, `scatter`, `sort_network`, `concat`, `squeeze`, `unsqueeze`, `iota`, `bitcast`. *Test:* `test_ops_primitive_floor_set`.
 - **KISS-OPS-6.3-0002** — A party that **claims conformance to KISS-Ops as a consumer of
   op-semantics (evaluate)** (umbrella §3.6; §3 *Consumer of op-semantics*) MUST evaluate
   the pinned semantics of every op in the primitive floor; the floor is the mandatory core
@@ -2201,7 +2202,7 @@ cross-op axis rules in §6.19.5.
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
   layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
-  squeeze, unsqueeze, iota, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
+  squeeze, unsqueeze, iota, bitcast, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2434,6 +2435,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `concat` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0020) |
 | `squeeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0022) |
 | `unsqueeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0023) |
+| `bitcast` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.21-0005) |
 | `iota` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.11-0025) — `extents`:vec:mandatory (rank `1..MAX_RANK`, every extent `>= 1`) — `axis`:`u8`:mandatory (`0..MAX_RANK-1`) |
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
@@ -2575,6 +2577,11 @@ by the embedding layer) selects the schema and the reader replays it positionall
   `target_dtype` of `0x00`, and an `axis` at or above the count are each a typed decline; the dtype and
   representability rules of §6.11-0025 are the op's. The blob is emitted explicitly (§6.19-0005).
   *Test:* `test_ops_opattrs_iota_schema`.
+- **KISS-OPS-6.19-0048** — The `bitcast` OpAttrs blob MUST be exactly one `target_dtype` byte: the
+  1-based §6.1 dtype ordinal of the destination, never `0x00`, as for `cast` (§6.21-0001). A `0x00`, an
+  ordinal past the dtype table and a reserved dtype are typed declines; whether the destination is a legal
+  `bitcast` destination for the operand's dtype is the op's rule (§6.21-0005). The blob is emitted
+  explicitly (§6.19-0005). *Test:* `test_ops_opattrs_bitcast_schema`.
 
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
@@ -2833,7 +2840,7 @@ the shared surface is two constructors.
   (KISS-CLASSIFY-6.6-0016), and a kernel that must materialize one does so with `element_map` over the
   strided read. A rank change of an interior node's **result**, which has no operand strides to carry
   a view, is the `squeeze` / `unsqueeze` pair. An `iota` output shape MUST be its `extents`
-  attribute (§6.19-0047), a semantic rule of the op that reads no operand. An implementation MUST NOT mint a `transpose` or
+  attribute (§6.19-0047), a semantic rule of the op that reads no operand. A `bitcast` output shape MUST be `SameAs(operand 0)` (§6.21-0005). An implementation MUST NOT mint a `transpose` or
   `permute` op token. *Test:*
   `test_shape_rule_cast_concat_no_view_ops`.
 
@@ -2884,6 +2891,27 @@ written over the other atoms without a double rounding.
   rely on them; it adds result rules only, no byte of any blob or key moves.* The hardware behaviour of
   a NaN into an MX type is **unverified** (it is an IR rule, Unpopped's). *Test:*
   `test_ops_cast_odd_cases_pinned`.
+
+- **KISS-OPS-6.21-0005** — `bitcast` MUST take exactly one input operand and one OpAttrs
+  `target_dtype` (§6.19-0048) and produce an output of the same shape, element for element, whose
+  dtype is `target_dtype`: it **reinterprets each element's bits** as the destination and computes
+  nothing. Source and destination MUST have the **same bit width**, and both MUST be an integer dtype
+  (`i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`) or one of `f16`, `bf16`, `f32`, `f64`,
+  `f8e4m3fn`, `f8e5m2`; the **sub-byte** dtypes (`i4`, `u4`, `b1`), the **MX** element types,
+  `f8e8m0` and the reserved float dtypes, the **complex** dtypes and **`bool`** (whose value set is
+  `0` and `1`, so an arbitrary bit pattern is not a `bool`) are a typed decline, as is a destination
+  of a different width. A destination equal to the source dtype is the identity. Every bit is
+  **preserved exactly**: a NaN keeps its payload, its quiet or signalling bit and its sign, a signed
+  zero keeps its sign, a subnormal is not flushed, and nothing is canonicalised, so `bitcast` there and
+  back is the identity on every pattern. The value is the destination dtype's reading of the same
+  bits (a float pattern read as `i32` is its two's-complement integer). `bitcast` is therefore
+  **exact-byte** (§6.0-0002), a **primitive** on the floor (§6.3-0001, a mandatory-core addition,
+  §7.3-0002): the raw-bit atoms `select`, `copysign`, `neg` and `abs` move or edit bits within one
+  dtype, and nothing else on the floor reads a float's bits as an integer (a `cmp` over a bitcast
+  integer gives a float's total order; `isnan` and the sign are compositions of `bitcast` with
+  `bit_and`, `cmp_*`). *Draft change (CireSnave 2026-11-12, board 427 "B": add `bitcast` to the
+  primitive floor now): an additive op token and a floor member; no existing field, clause or
+  `structure_key` byte moves.* *Test:* `test_ops_bitcast_semantics`.
 
 ---
 
@@ -3195,6 +3223,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0045 | `test_ops_tie_rule_enum_ordinals` |
 | KISS-OPS-6.19-0046 | `test_ops_opattrs_axes_mask_schema` |
 | KISS-OPS-6.19-0047 | `test_ops_opattrs_iota_schema` |
+| KISS-OPS-6.19-0048 | `test_ops_opattrs_bitcast_schema` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
@@ -3211,6 +3240,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.21-0002 | `test_ops_cast_rounding_modes` |
 | KISS-OPS-6.21-0003 | `test_ops_cast_saturation` |
 | KISS-OPS-6.21-0004 | `test_ops_cast_odd_cases_pinned` |
+| KISS-OPS-6.21-0005 | `test_ops_bitcast_semantics` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |

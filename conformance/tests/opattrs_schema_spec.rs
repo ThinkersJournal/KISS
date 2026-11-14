@@ -12,7 +12,7 @@
 use kiss_conformance::opattrs_schema::{self, FieldWidth};
 
 /// The number of carrier ops §6.19.3's table declares. PRE-REGISTERED.
-const EXPECTED_OPS: usize = 29; // 19 + reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin (§6.19-0043/-0044)
+const EXPECTED_OPS: usize = 30; // 19 + reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin (§6.19-0043/-0044)
 
 /// ⚠️ THE TABLE MUST PARSE TO THE PRE-REGISTERED POPULATION.
 ///
@@ -20,7 +20,7 @@ const EXPECTED_OPS: usize = 29; // 19 + reduce_mean, reduce_norm2, logsumexp, an
 /// under-specified extraction in this repo produced exactly that — a well-formed count that was
 /// simply short. Pinning the expected total makes a narrowing REDDEN instead of reading as a
 /// clean run over less text.
-// harness-internal: pins the population of the suite's own spec-table parser (29 pre-registered rows); counts rows, does not check the carrier-op names
+// harness-internal: pins the population of the suite's own spec-table parser (30 pre-registered rows); counts rows, does not check the carrier-op names
 #[test]
 fn test_opattrs_table_parses_to_the_preregistered_population() {
     let schemas = opattrs_schema::parse_table();
