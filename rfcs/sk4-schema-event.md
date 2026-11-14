@@ -400,13 +400,13 @@ independent token derivation. All six cosigns are recorded and verified against 
   named for dispatch, preserving the forward-only primitive floor). Not schema-affecting; not part of
   `sk4`.
 - **Per-operand dtype / indexed-region-synthesis** (§3.5) — its own scope decision + RFC.
-- **Catalog-vs-compiler capability bit** — stands on trust-model merits, not urgent; separate RFC.
+- **Catalog-vs-compiler capability bit** — stands on trust-model merits, not urgent; separate RFC. **Ruled not defined (CireSnave 2026-11-13, board 430 Q3): *"...Neither should be inherently trusted... defining whether a provider serves pre-built kernels or builds them on demand is not worth defining as the two should be treated with equal skepticism."* No such bit exists or will be drafted.**
 - **Request-time operand fidelity** — a normative **MUST on the request itself** (not merely a
   conformance-test obligation): requests MUST carry honest operand types. Fuel's near-miss
   (substituting `i32` for `u32` index operands would have made the region uniform-dtype and *falsely
   passed* the synthesizer gate) shows an approximate request produces a confidently-wrong *result*,
   not merely an untested one — so it is a request-validity MUST. Independently valuable, tracked
-  separately.
+  separately. **Resolved (CireSnave 2026-11-13, board 430 Q4): written as KISS-CLASSIFY-6.6-0024, beside §6.6-0012.**
 
 ## 9. Resolved decisions (maintainer, 2026-08-06)
 

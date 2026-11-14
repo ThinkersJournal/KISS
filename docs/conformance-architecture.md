@@ -167,7 +167,7 @@ discrepancy-*detector feeding escalation*, wired distinct from the corpus verdic
 
 ## 8. Coverage anchor
 
-`kiss-ref@ce4c047 · coverage_ledger → 78/106 ops evaluable` (machine-checked by the
+`kiss-ref@ce4c047 · coverage_ledger → 78/106 ops evaluable` (a **historical anchor**, not current: the op manifest lists **126** ops at KISS `e84b36a`; machine-checked at that commit by the
 `coverage_ledger` test in `kiss-ref-conformance`). Composition: **106 = 43 primitive floor + 63
 non-primitive** (complex `KISS-OPS-6.18` deferred; the count is the vocab enumeration, which matches
 KISS's own `op_manifest.json all_ops` — a no-drift cross-check, not independence). Done = float
