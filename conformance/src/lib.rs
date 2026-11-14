@@ -87,6 +87,7 @@ pub mod bundle_isolation;
 pub mod antifork;
 pub mod consumer_verify;
 pub mod contract;
+pub mod section_vectors;
 pub mod corpus;
 pub mod decline;
 pub mod decomp_grammar;

@@ -520,6 +520,29 @@ pub enum SectionDecline {
     ForbiddenField(String),
     /// A field value outside its pinned spelling (`in_place` is `none` or `input:<k>`, §6.5-0009).
     BadFieldValue { field: &'static str, got: String },
+    /// The block's bytes are not UTF-8 (§6.11-0001: a contract document is UTF-8 text).
+    NotUtf8,
+    /// A field key occurs more than once in the block (§6.x-0001: "exactly the fields", each once).
+    DuplicateField(String),
+}
+
+impl SectionDecline {
+    /// The stable kebab-case category tag a foreign reader matches in `contract_vectors.json`
+    /// (`section_decline_vectors[].expect`): pinned per variant, never a Rust `Debug` string; the
+    /// payload is intentionally omitted (as for [`ContractDecline::wire_tag`]).
+    pub fn wire_tag(&self) -> &'static str {
+        match self {
+            SectionDecline::BadHeading => "bad-heading",
+            SectionDecline::MalformedLine(_) => "malformed-line",
+            SectionDecline::MissingField(_) => "missing-field",
+            SectionDecline::UnknownField(_) => "unknown-field",
+            SectionDecline::WrongOrder => "out-of-order",
+            SectionDecline::ForbiddenField(_) => "forbidden-field",
+            SectionDecline::BadFieldValue { .. } => "bad-field-value",
+            SectionDecline::NotUtf8 => "not-utf8",
+            SectionDecline::DuplicateField(_) => "duplicate-field",
+        }
+    }
 }
 
 /// The Interface `in_place` value (§6.5-0009): the output aliases no input, or the input operand `k` (0-based among
@@ -565,8 +588,10 @@ fn parse_section_block(
     optional: &[&str],
     forbidden: &[&str],
 ) -> Result<Vec<(String, String)>, SectionDecline> {
-    let text = std::str::from_utf8(block).map_err(|_| SectionDecline::BadHeading)?;
-    let mut lines = text.lines();
+    let text = std::str::from_utf8(block).map_err(|_| SectionDecline::NotUtf8)?;
+    // LF is the only line terminator (§6.11-0001): split on LF, never `lines()`, which would
+    // silently strip a CR and accept a CRLF document.
+    let mut lines = text.strip_suffix('\n').unwrap_or(text).split('\n');
     match lines.next() {
         Some(h) if h == format!("[section:{id}:{name}]") => {}
         _ => return Err(SectionDecline::BadHeading),
@@ -580,8 +605,8 @@ fn parse_section_block(
             break; // next section — this block ended
         }
         match line.split_once(" = ") {
-            Some((k, v)) => fields.push((k.to_string(), v.to_string())),
-            None => return Err(SectionDecline::MalformedLine(line.to_string())),
+            Some((k, v)) if !line.contains('\r') => fields.push((k.to_string(), v.to_string())),
+            _ => return Err(SectionDecline::MalformedLine(line.to_string())),
         }
     }
     // A MUST-NOT field is the section-specific misplacement (checked before "unknown" so it gets
@@ -595,6 +620,9 @@ fn parse_section_block(
         }
     }
     let keys: Vec<&str> = fields.iter().map(|(k, _)| k.as_str()).collect();
+    if let Some(dup) = keys.iter().enumerate().find(|(i, k)| keys[..*i].contains(k)).map(|(_, k)| *k) {
+        return Err(SectionDecline::DuplicateField(dup.to_string()));
+    }
     for e in expected {
         if !keys.contains(e) {
             return Err(SectionDecline::MissingField((*e).to_string()));
@@ -697,6 +725,16 @@ pub const GUARANTEES_FIELDS: [&str; 8] = [
     "cost_provenance",
 ];
 
+/// The Semantics section's required fields (§6.4-0001), in the pinned §6.11-0005 order.
+pub const SEMANTICS_FIELDS: [&str; 2] = ["semantics_kind", "op_dag"];
+/// The Semantics section's optional trailing field (§6.4-0001), pinned last.
+pub const SEMANTICS_OPTIONAL_FIELDS: [&str; 1] = ["human_annotation"];
+
+/// Read + validate a Semantics section block (§6.4-0001): `{semantics_kind, op_dag, human_annotation?}`.
+pub fn parse_semantics_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
+    parse_section_block(block, 2, "semantics", &SEMANTICS_FIELDS, &SEMANTICS_OPTIONAL_FIELDS, &[])
+}
+
 /// Read + validate an Identity section block (§6.3-0001).
 pub fn parse_identity_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
     parse_section_block(block, 1, "identity", &IDENTITY_FIELDS, &[], &[])
@@ -732,7 +770,7 @@ fn field<'a>(fields: &'a [(String, String)], key: &str) -> &'a str {
 }
 
 /// The block of the section with heading `[section:<id>:<name>]`, up to the next heading.
-fn section_block<'a>(body: &'a [u8], id: u8, name: &str) -> Option<&'a [u8]> {
+pub(crate) fn section_block<'a>(body: &'a [u8], id: u8, name: &str) -> Option<&'a [u8]> {
     let heading = format!("[section:{id}:{name}]\n").into_bytes();
     let mut start = None;
     let mut off = 0;
@@ -1382,7 +1420,7 @@ pub fn emit_contract_vectors_json() -> String {
     // renders all seven blocks. It is replaced rather than annotated -- a correction that
     // leaves the old text in place leaves it where readers read. What REMAINS partial is
     // stated in its own key below, because an absence must be declared, never inferred.
-    s.push_str("  \"coverage_note_496\": \"This artifact renders all SEVEN section blocks (header line + Identity + Semantics + Interface + Dispatch + Capabilities + Guarantees + Provenance), codec-generated, fulfilling Appendix C's preamble promise of the complete document. Two limits are STATED rather than left to be discovered. (i) The Dispatch block carries the SS6.6-0007 geometry-agnostic sentinel, not the five-field geometry alternative: SS6.6-0005 requires the geometry derivations to reference exactly the Interface positional_signature, and this document declares that empty. A foreign reader reproducing this golden therefore never exercises the five-field path. (ii) KISS-CONTRACT-8-0004 and -0005 name Appendix C as their target but are AUDIT-role checklist gates: their SS9-named tests do not exist and UNBACKED.tsv records both as untested. Widening this artifact closes no red and inflates no coverage figure -- it makes the artifact an AUDIT sign-off attests actually contain what the sign-off claims.\",\n");
+    s.push_str("  \"coverage_note_496\": \"This artifact renders all SEVEN section blocks (header line + Identity + Semantics + Interface + Dispatch + Capabilities + Guarantees + Provenance), codec-generated, fulfilling Appendix C's preamble promise of the complete document. Two limits are STATED rather than left to be discovered. (i) The Dispatch block carries the SS6.6-0007 geometry-agnostic sentinel, not the five-field geometry alternative: SS6.6-0005 requires the geometry derivations to reference exactly the Interface positional_signature, and this document declares that empty. A foreign reader reproducing this golden therefore does not exercise the five-field path HERE; the section_vectors key below carries it (the five-field-dispatch accept vector and its declines). (ii) KISS-CONTRACT-8-0004 and -0005 name Appendix C as their target but are AUDIT-role checklist gates: their SS9-named tests do not exist and UNBACKED.tsv records both as untested. Widening this artifact closes no red and inflates no coverage figure -- it makes the artifact an AUDIT sign-off attests actually contain what the sign-off claims.\",\n");
     s.push_str("  \"expect_encoding\": \"each decline_vectors[].expect is the decline's STABLE category tag (kebab-case), pinned per variant by ContractDecline::wire_tag — NOT a Rust Debug string. A foreign reader matches the category; the impl-derived payload (declared/computed/got) is intentionally omitted.\",\n");
     s.push_str("  \"golden_document\": {\n");
     s.push_str("    \"blocks_shown\": 7,\n");
@@ -1406,6 +1444,7 @@ pub fn emit_contract_vectors_json() -> String {
     }
     s.push_str("    ]\n");
     s.push_str("  },\n");
+    s.push_str(&crate::section_vectors::emit_section_vectors_json());
     s.push_str("  \"decline_vectors\": [\n");
     for (i, nv) in negatives.iter().enumerate() {
         let comma = if i + 1 < negatives.len() { "," } else { "" };
