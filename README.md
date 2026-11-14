@@ -36,6 +36,30 @@ with a strict dependency DAG**. An implementation adopts only the subset it need
 provider that merely announces pre-built kernels implements far less than a
 just-in-time generator, and neither is forced to adopt the parts it does not use.
 
+## Why the key is a join key, not a cache key
+
+Almost every compute library already has a *cache key*: cuBLASLt's algo, cuDNN's engine config, oneDNN's
+`primitive_desc`, Composable Kernel's template tuple, Triton's hash of source plus compiler plus environment,
+Inductor's graph-cache key. KISS's `structure_key` is a different kind of object, and the difference is the
+reason it exists (the full argument is [`PRIOR-ART.md`](PRIOR-ART.md) §3):
+
+| | Cache key | Join key (KISS) |
+|---|---|---|
+| Computed | **from the artifact**, after the build | **from the need**, before any artifact exists |
+| By whom | the party that owns the artifact | a party that may never see the build |
+| Wrong answer costs | a false hit is a silent wrong result, a false miss only a rebuild, so it is **over-specified on purpose** | a false miss means two parties that should have met did not, so it is **under-specified on purpose** |
+| Goal | never reuse the wrong build | two parties who share no code, no version and no vendor derive the **same bytes** |
+
+**Why KISS chose a join key.** A cache key cannot be derived without the artifact, so it can never be agreed
+between a consumer asking for a kernel and a provider that has not built it yet, and it cannot list a build
+matrix ahead of time. A join key is a predicate over the *need* (dtype, layout class, target, iteration
+rank, reduced axes), carrying no extents, so the set of cells a provider can build is **finite and
+publishable**, and a consumer can derive the same token at run time from an invocation the provider never sees.
+The first buyer is a provider who wants to publish *what* it built without publishing *how*. **What it costs:**
+the key is deliberately silent on the computation, so a byte-match is **necessary, not sufficient** for
+admission (KISS-CLASSIFY-6.6-0001), and two kernels in one cell are not interchangeable
+(KISS-CLASSIFY-6.6-0020); the op identity travels beside the key.
+
 ## The nine sub-standards
 
 | Sub-standard | Tier | Owns | Status |
@@ -87,13 +111,13 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/synth.md`](spec/synth.md) | **KISS-Synth / Provision**, the kernel-provision protocol: ask by identity → `{artifact, contract}` (built on a cache miss); the PRSP provision-success frame; the never-panic typed-decline taxonomy. |
 | [`spec/consume.md`](spec/consume.md) | **KISS-Consume** *(Recognition / Lift)*, the recognition direction — **not the consumer's sub-standard; the role is orthogonal to provider/consumer**: structure-based lifting into the KISS-Ops op DAG, the MECE refusal taxonomy, and the residue / lift-fraction. |
 | [`spec/emit.md`](spec/emit.md) | **KISS-Emit**, the generation direction: the complete driver-may-spell vs emitter-must-supply lowering partition, and the two-tier emit/consume round-trip. |
-| [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix (the build fails on any untested MUST), the five test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. |
+| [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix, the five test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. **What CI actually enforces of this is stated in [How coverage is enforced](#how-coverage-is-enforced); it is a ratchet, not "the build fails on any untested MUST".** |
 | `LICENSE`, `LICENSE-MIT`, `LICENSE-APACHE`, `REUSE.toml` | The licence texts and the machine-readable map of which applies where (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
 | [`DESIGN.md`](DESIGN.md) | Design rationale (informative): the cross-cutting commitments, the alternatives weighed and set aside, and how the suite is authored and advanced. |
 | [`PRIOR-ART.md`](PRIOR-ART.md) | Prior art (informative): KISS measured against StableHLO/PJRT, ONNX, Triton/MLIR, PyTorch, DLPack, SPIR-V/IREE, the vendor kernel libraries, and the Khronos ULP/CTS precedent — what they already solve, what they do not, and the one claim that survives. **Read this before implementing.** |
 | [`WIRE-FIRST.md`](WIRE-FIRST.md) | A work order (informative): the 38 confirmed blockers between here and one real handshake+provision across a process boundary, what is already green, and what each implementation can do now. |
-| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The 549 normative clauses with no executable harness test. The honest coverage record; a ratchet enforced by `tools/kiss_trace.py`. |
+| [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) | The normative clauses with no executable harness test (506 at `e84b36a`). The honest coverage record; its floor is a ratchet enforced by `tools/kiss_trace.py --ratchet` in CI (see [How coverage is enforced](#how-coverage-is-enforced)). |
 
 ## How to read a KISS sub-standard
 
@@ -107,27 +131,58 @@ Every sub-standard follows one **dual-document template** (umbrella §4):
 
 Read the informative half for understanding; implement against the normative half.
 
-> **Test coverage — a clause↔test *mapping*, not a passing rate — is ~40% as of
-> `b311f1c`, not the 3.4% this note long claimed.** Of 921 normative clauses, 372
-> (40.4%) are backed by a named executable test; 549 have no harness test. Read the
-> 40% precisely: `tools/kiss_trace.py` reads spec markdown and Rust source and never
-> builds or runs the crate, so a named test is known to **exist** — not to compile,
-> run, or pass. Of the 549 without a harness test, **494** are the real gap (genuinely
-> untested); the rest are lint-enforced (32), blocked on an unpinned decision (19), or
-> definitional (4) — "no harness test" is not "no coverage." Every unbacked clause is
-> listed in [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv); treat a clause as
-> *proposed* unless it appears outside that ledger — a named test is not a passing
-> test. These figures drift with every merge; run `python tools/kiss_trace.py
-> --report` for the live numbers and **record the commit you read them at** (the
-> figures here are stamped `b311f1c`) — a figure without its commit is not a
-> measurement.
+## How coverage is enforced
+
+> **Test coverage — a clause↔test *mapping*, not a passing rate.** Measured at `e84b36a`
+> (`python tools/kiss_trace.py --report`): of **1043** normative clauses, **537** (51.5%) are backed by a named
+> executable test and **44** more are enforced by a document lint, **581 (55.7%)** in all; **391 are
+> genuinely untested**, and the rest of the **506** unbacked clauses (71) are recorded in
+> [`conformance/UNBACKED.tsv`](conformance/UNBACKED.tsv) as blocked, untestable, definitional or attested.
+> `tools/kiss_trace.py` reads spec markdown and Rust source and never builds or runs the crate, so a named
+> test is known to **exist**, not to compile, run or pass (that is `cargo test`, run separately by the
+> `conformance` workflow). Treat a clause as *proposed* unless it appears outside the ledger.
+
+**What the tooling actually enforces, and what it does not** (each line names its tool or workflow, in
+[`.github/workflows/traceability.yml`](.github/workflows/traceability.yml) unless stated):
+
+- **The build does *not* fail on an untested MUST.** 391 of them exist today and CI is green. The strict
+  reading (every MUST backed, `kiss_trace.py --strict`) is run **non-blocking**; the job instead
+  **asserts the tolerated red is the known one** (`kiss_trace.py --assert-known-red`, `kiss_strict_report.py`).
+- **What fails the build is a regression:** `kiss_trace.py --ratchet` (the *Coverage ratchet (blocking)*
+  step) compares the live figures to [`conformance/COVERAGE_FLOOR.tsv`](conformance/COVERAGE_FLOOR.tsv)
+  and to the base branch's ledger, and fails if backed clauses fall, untested clauses rise, or the lint set
+  changes in a way that would launder a regression (#213). "Green" means *at* the floor, never under it.
+- **The ledger is a record, not an exemption:** a stale `UNBACKED.tsv` or floor fails the same ratchet.
+- **The figures quoted in `conformance/README.md` are checked** (`kiss_readme_coverage.py`, blocking). The
+  figures in **this** README are a stamped snapshot and are **not** checked: a figure without its commit is not
+  a measurement.
+- **Lint-enforced clauses (44)** are credited only where a `tools/kiss_*.py` linter emits coverage for them
+  (`--emit-coverage`, discovered by `kiss_trace.py`); such a credit says a document lint checks the clause,
+  not that a test passed.
+- **The freeze gate is only partly automated.** `tools/kiss_freeze_gate.py` (*Frozen sub-standard passes
+  --freeze-ready*, blocking) fails the build if a sub-standard marked **Frozen** is not fully traced
+  (umbrella §5.3 condition 3). Every sub-standard is Draft today, so this gate has never had to block a real
+  promotion (its controls seed the red). It does **not** check the two independent implementations, the
+  adversarial-outsider review or the three signatures (umbrella §5.3, tracked in #462): those remain human
+  process.
+- **Licence headers:** `tools/kiss_spdx.py --check` (*Every code file carries its SPDX header*, blocking).
+- **Not checked by CI:** that any third party's conformance claim is true (see below), and the corpus files'
+  sha256 pins recorded in [`conformance/corpus/PROVENANCE.md`](conformance/corpus/PROVENANCE.md); some
+  corpus artifacts are checked for staleness by regeneration tests (for example
+  `test_derivation_vectors_artifact_is_fresh`), which is a different check.
 
 ## Conformance
 
-Conformance is a **factual, self-certified** claim backed by published results from the
-**unmodified** KISS-Conform suite. The steward maintains a free registry of results.
-KISS does not police claims made off-registry; the registry (and an eventual
-certification mark) is where a claim is made checkable. See umbrella §8.
+Conformance is a **factual, self-certified** claim: an implementor runs the **unmodified** KISS-Conform
+suite and states the result. Nothing in this repository's CI verifies a third party's claim, and KISS does
+not police claims (umbrella §8.4). What KISS **promises** (umbrella §8.3; CireSnave 2026-10-28) is a **free
+registry of verified implementations**: on request the steward runs the unmodified suite and, on a pass,
+lists the implementation. No date is promised, there is no interim entry for an unverified claim, and **no
+such registry is published in this repository yet** (the only registry here, `conformance/registry/`, is the
+namespace table). Results from a **modified** suite are ineligible for listing, which is the *only*
+enforcement of the mark policy in v1. The **certification mark** is **promised** (CireSnave, 2026-11-13,
+board 430 Part 2), not a v1 requirement; what it certifies and who issues it are open
+([`ROADMAP.md`](ROADMAP.md) R5.20).
 
 ## Governance & contributing
 
@@ -135,8 +190,9 @@ KISS is developed in the open under a lightweight RFC process, stewarded by
 ThinkersJournal. Each sub-standard has an **editor of record**; substantive changes go
 through an RFC that interested parties may co-sign and comment on; advancing a maturity
 stage (Draft → Frozen) requires passing the **freeze gate** — at least two dissimilar
-independent implementations plus an adversarial-outsider review. See umbrella §5.3 and
-§7, and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+independent implementations plus an adversarial-outsider review. **The rule is a process; only its
+traceability condition is automated** (see [How coverage is enforced](#how-coverage-is-enforced)). See umbrella
+§5.3 and §7, and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Comment and proposals are welcome now, while the drafts are still soft. A substantive
 change is an **RFC — a GitHub issue** labeled `rfc` (use the RFC issue template); the issue
@@ -159,8 +215,8 @@ KISS is split **by file kind**, because a standard and the code that tests it wa
   (umbrella §9.4).
 - **The code is dual-licensed** under the usual Rust terms, at your option.
 - **Text is not stamped in-file.** An added first line would shift every specification line number,
-  and those numbers are cited in issues and in other repositories; the corpus JSON is also
-  sha256-pinned. `REUSE.toml` records the licence by path instead, touching no byte of those files.
+  and those numbers are cited in issues and in other repositories; the corpus JSON's generators and
+  sha256 pins are recorded in `conformance/corpus/PROVENANCE.md`. `REUSE.toml` records the licence by path instead, touching no byte of those files.
 - **Third-party files keep their origin's terms.** `conformance/cuda/generated/` holds a kernel
   emitted verbatim by Baracuda's generator; it is annotated in `REUSE.toml` with its origin's
   licence and holder and is not edited.
@@ -169,7 +225,7 @@ KISS is split **by file kind**, because a standard and the code that tests it wa
 - `conformance/Cargo.toml` has `publish = false`, so no crate is published from this repository and
   there is no crates.io licence field to keep in step.
 - **KISS-Conform suite** — permissive to run; a conformance claim is backed only by results from the
-  unmodified suite.
+  unmodified suite (the mark policy, umbrella §9.3; enforced through registry eligibility, not by any tool).
 
 ---
 

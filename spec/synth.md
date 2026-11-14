@@ -11,7 +11,7 @@
 > clauses use RFC-2119 / RFC-8174 uppercase keywords, carry an append-only clause
 > ID `KISS-SYNTH-<section>-<nnnn>`, and each MUST/SHALL maps 1:1 to at least one
 > named KISS-Conform test. The KISS-Conform suite build FAILS on any normative MUST
-> without a mapped test.
+> without a mapped test. *(Enforcement correction, 2026-11-13, a statement about what is enforced and not a normative change: in this Draft repository CI enforces a coverage **ratchet**, which fails on regression, not on every untested MUST; see `README.md`, "How coverage is enforced".)*
 
 ---
 

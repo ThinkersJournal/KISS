@@ -20,6 +20,7 @@
     "bit_not",
     "bit_or",
     "bit_xor",
+    "bitcast",
     "cabs",
     "cadd",
     "carg",
@@ -71,6 +72,7 @@
     "hypot",
     "im2col",
     "index_select",
+    "iota",
     "layer_norm",
     "ldexp",
     "lgamma",
@@ -145,6 +147,6 @@
   ],
   "coverage": {
     "declared": 1,
-    "total": 126
+    "total": 128
   }
 }

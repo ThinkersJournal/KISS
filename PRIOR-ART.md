@@ -179,14 +179,19 @@ expression grammar has no array subscript, no thread-index symbol, no modulo, an
 constructor, so all five mandated derivation fields cannot be spelled at any rank — including
 for the spec's own rank-1 `add` example).
 
-**KISS-Classify's dtype table is preempted by DLPack, and currently wrong.** DLPack carries 19
-open-ended `DLDataTypeCode`s and grew specifically to absorb `kDLFloat4_e2m1fn`,
-`kDLFloat8_e8m0fnu`, and the FP6 pair — exactly the formats issue #32 is about. Worse:
-KISS's `e4m3` is defined as max-finite ±448, no infinities, single NaN — those are DLPack's
-`kDLFloat8_e4m3fn` semantics, and DLPack *also* has a distinct inf-carrying `kDLFloat8_e4m3`.
-**A bridge author mapping by name ships a silently wrong dtype.** And KISS-CLASSIFY-6.1-0001's
-closed twenty-token set forecloses the exact mechanism — frozen container, extensible leaves —
-that let both DLPack and Arrow's C Data Interface survive 2023–2026.
+**KISS-Classify's dtype table began from DLPack and is KISS's own.** *(Reworded 2026-11-13 after CireSnave's
+ruling, board 430 Part 2 item 3, verbatim: "DLPack does not determine anything in our code.  It provided us
+with a starting point...not a destination.  We have already extended the token set and may continue to do so.
+If DLPack no longer serves our needs, we replace it.")* DLPack carries 19 open-ended `DLDataTypeCode`s and
+grew to absorb `kDLFloat4_e2m1fn`, `kDLFloat8_e8m0fnu` and the FP6 pair, the formats issue #32 was about;
+KISS has since named them itself (`f4e2m1`, `f8e8m0`, `f6e2m3`, `f6e3m2`). KISS **owns its token set**: DLPack
+was the starting point, it determines nothing in KISS's code, and **no token changes** follow from this
+document. The audit's real finding survives: the spelling `e4m3` was ambiguous (KISS defined max-finite
+±448, no infinities, single NaN, DLPack's `kDLFloat8_e4m3fn` semantics, while DLPack *also* has a distinct
+inf-carrying `kDLFloat8_e4m3`), so **a bridge author mapping by name ships a silently wrong dtype**; the
+variant-explicit spelling `f8e4m3fn` (sk4) closes it. The set is closed per schema version (§6.1-0001, now
+twenty-seven tokens, twenty-four usable) and grows by KISS's own rule, not by adopting DLPack's codes. A
+bridge to DLPack is a mapping KISS may offer; it is not the source of the table.
 
 ## 5. The objections KISS must answer
 
@@ -240,7 +245,7 @@ This is findable by diffing one table against a document that has been public si
 
 The honest answer is **partly, and it should**:
 
-- **Dtypes:** adopt DLPack's `DLDataType` (code, bits, lanes) rather than a closed 20-token set.
+- **Dtypes:** *(as written in the audit; **not adopted**, CireSnave 2026-11-13: KISS owns its token set, see §4.)* adopt DLPack's `DLDataType` (code, bits, lanes) rather than a closed 20-token set.
   It already has the sub-byte and MX element formats, it is the de facto standard, and it solves
   issue #32 by adoption instead of by design.
 - **Numerics:** cite the Khronos ULP tables as the floor and StableHLO's `ResultAccuracyAttr` as
@@ -266,7 +271,7 @@ The recommendation this analysis supports:
 
 1. **Fix §6.8's ULP ceilings** (§5.2). Non-negotiable, and cheap.
 2. **Fix the dtype table** — adopt DLPack's codes, or at minimum disambiguate `e4m3` and open
-   the set.
+   the set. *(Done in KISS's own terms: `e4m3` disambiguated at sk4; DLPack's codes **not** adopted, ruling in §4.)*
 3. **Lead with claim 2 alone.** Retitle the pitch: *a publishable, joinable specialization-cell
    identity*. Explain the cache-key/join-key distinction (§3) in the README's first paragraph —
    it is the single most convincing thing the project has, and it appears nowhere today.

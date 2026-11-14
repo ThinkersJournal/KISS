@@ -219,6 +219,20 @@ pub fn encode_concat(axis: u8) -> Vec<u8> {
     vec![axis]
 }
 
+/// `bitcast`: the destination `target_dtype` ordinal (§6.19-0048).
+pub fn encode_bitcast(target_dtype: u8) -> Vec<u8> {
+    vec![target_dtype]
+}
+
+/// `iota`: `target_dtype` ordinal, the `extents` vector (§6.19-0023 encoding, one extent per output axis), `axis`
+/// (§6.19-0047).
+pub fn encode_iota(target_dtype: u8, extents: &[u32], axis: u8) -> Vec<u8> {
+    let mut out = vec![target_dtype];
+    out.extend(window_param_vector(extents));
+    out.push(axis);
+    out
+}
+
 /// `squeeze` / `unsqueeze`: the plain `u8` axes mask (§6.19-0046). `0x00` is reserved.
 pub fn encode_axes_mask(mask: u8) -> Vec<u8> {
     vec![mask]
@@ -362,6 +376,50 @@ pub fn decode_cast(blob: &[u8]) -> Result<(u8, CastRounding, CastSaturation), De
         _ => return Err(Decline::ReservedZeroOrdinal { field: "saturation" }),
     };
     Ok((blob[0], rounding, saturation))
+}
+
+/// Validate a decoded `bitcast` blob (`[target_dtype]`, §6.19-0048): a zero, out-of-table or reserved ordinal is a
+/// typed decline. Whether the destination is legal for the operand's dtype is the op's rule (§6.21-0005).
+pub fn decode_bitcast(blob: &[u8]) -> Result<u8, Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if blob.len() != 1 {
+        return Err(Decline::TruncatedBlob { need: 1, got: blob.len() });
+    }
+    if blob[0] == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "target_dtype" });
+    }
+    if DTYPES.get(blob[0] as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "target_dtype", value: blob[0], max: DTYPES.len() as u8 });
+    }
+    Ok(blob[0])
+}
+
+/// Validate a decoded `iota` blob (`[target_dtype, extents…, axis]`, §6.19-0047): a zero or reserved dtype ordinal,
+/// an empty or over-long extent vector, a zero extent and an `axis` at or above the extent count are typed
+/// declines. Which dtypes may hold the count is the op's rule (§6.11-0025), not the blob reader's.
+pub fn decode_iota(blob: &[u8]) -> Result<(u8, Vec<u32>, u8), Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    let Some(&dt) = blob.first() else {
+        return Err(Decline::TruncatedBlob { need: 1, got: 0 });
+    };
+    if dt == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "target_dtype" });
+    }
+    if DTYPES.get(dt as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "target_dtype", value: dt, max: DTYPES.len() as u8 });
+    }
+    let extents = decode_window_param_vector(&blob[1..])?;
+    if extents.is_empty() || extents.contains(&0) {
+        return Err(Decline::ReservedZeroOrdinal { field: "extents" });
+    }
+    let end = 1 + 1 + 4 * extents.len();
+    let Some(&axis) = blob.get(end) else {
+        return Err(Decline::TruncatedBlob { need: end + 1, got: blob.len() });
+    };
+    if axis as usize >= extents.len() {
+        return Err(Decline::FieldOutOfRange { field: "axis", value: axis, max: extents.len() as u8 });
+    }
+    Ok((dt, extents, axis))
 }
 
 /// Validate a decoded `concat` blob (`[axis]`, range `0..MAX_RANK-1`, §6.19-0042).
