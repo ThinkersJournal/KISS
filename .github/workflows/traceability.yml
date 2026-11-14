@@ -35,7 +35,7 @@ jobs:
           # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
           # the PR path fetches its base ref explicitly.
           fetch-depth: 2
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.x"
       - name: Clause↔test traceability + binding (ratcheted)
@@ -356,7 +356,7 @@ jobs:
           # depth 2 so the ratchet can read the pre-change ledger at HEAD^ on push-to-main;
           # the PR path fetches its base ref explicitly.
           fetch-depth: 2
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.x"
       # Runs `--strict` (§6.2) and `--freeze-ready` (§5.3 condition 3), writes the
