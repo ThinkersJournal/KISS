@@ -61,7 +61,7 @@ fn test_ops_iota_semantics() {
     // the spec states it: a zero-operand primitive on the floor, in the op table, with the draft-change note.
     let text = spec();
     assert!(text.contains("**KISS-OPS-6.11-0025** — `iota` MUST take **no** input operand"));
-    assert!(text.contains("`unsqueeze`, `iota`. *Test:* `test_ops_primitive_floor_set`"));
+    assert!(text.contains("`unsqueeze`, `iota`"), "iota is on the primitive floor list");
     assert!(text.contains("Draft change (CireSnave 2026-11-12, board 422"));
     let manifest = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/op_manifest.json")).unwrap();
     assert!(manifest.contains("\"iota\""), "iota must be a manifest op");

@@ -156,9 +156,7 @@ fn test_ops_cast_odd_cases_pinned() {
         assert_eq!(cast::check_cast("f32", "bf16", r, S::None), Ok(()), "{r:?}");
         assert_eq!(cast::check_cast("f32", "f4e2m1", r, S::Clamp), Err(CastDecline::RoundingNotDefined), "{r:?}");
     }
-    // (e) bitcast: no op token in the manifest.
-    let manifest = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/op_manifest.json")).unwrap();
-    assert!(!manifest.contains("\"bitcast\""), "bitcast has no op here (floor change, not applied)");
+    // (e) bitcast is its own op (KISS-OPS-6.21-0005, tests/bitcast_op.rs), not a cast mode.
 }
 
 // Backs[enforced]: KISS-OPS-6.19-0041 — the two cast enums are frozen u8 ordinals with 0 reserved

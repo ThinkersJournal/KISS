@@ -20,6 +20,7 @@
     "bit_not",
     "bit_or",
     "bit_xor",
+    "bitcast",
     "cabs",
     "cadd",
     "carg",
@@ -146,6 +147,6 @@
   ],
   "coverage": {
     "declared": 1,
-    "total": 127
+    "total": 128
   }
 }
