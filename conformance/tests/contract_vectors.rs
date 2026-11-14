@@ -146,8 +146,10 @@ fn test_contract_vectors_states_what_remains_partial() {
         "must still state Appendix C promises 7 blocks"
     );
     assert!(
-        json.contains("geometry-agnostic sentinel") && json.contains("never exercises"),
-        "must state that the Dispatch sentinel leaves the five-field geometry path unexercised"
+        json.contains("geometry-agnostic sentinel")
+            && json.contains("does not exercise the five-field path HERE")
+            && json.contains("\"section_vectors\""),
+        "must state that the golden's Dispatch sentinel leaves the five-field path to the section_vectors key"
     );
     assert!(
         json.contains("AUDIT-role checklist") || json.contains("UNBACKED.tsv records both as untested"),
