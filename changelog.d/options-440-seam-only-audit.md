@@ -1,3 +1,0 @@
-kind: docs: options note for board 440 (seam-only audit of precision_tag and the other strategy-naming items)
----
-Informative, no normative text. `docs/options-440-seam-only-audit.md` applies CireSnave's 2026-11-14 rule (KISS specifies what crosses the seam, never how a kernel achieves it) to `spec/ops.md`, `spec/contract.md` and `conformance/`: it marks each strategy-naming item seam or internal, proposes what a requester states and a kernel declares in place of `precision_tag`, checks how a fused kernel's contract describes a compound operation, and lists five open questions for CireSnave. No spec or vector changes.
