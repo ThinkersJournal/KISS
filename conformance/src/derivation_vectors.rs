@@ -560,6 +560,11 @@ fn ctr_role_decline_cases(out: &mut Vec<DerivationVector>) {
         "the scale role names slot 7 of a 3-operand cell: not silently ignored",
         with_roles(gemm("f16", &[], 8, 4096, 4096), |r| r.scale = Some(7)),
     ));
+}
+
+/// sk8 dtype and block-length declines (§6.6-0007, §6.6-0022): a reserved dtype in any operand, and the closed
+/// block-length set {16, 32}.
+fn ctr_dtype_and_block_cases(out: &mut Vec<DerivationVector>) {
     {
         // sk8 (§6.6-0007): every operand dtype is a key position, so a reserved dtype in a NON-designated
         // operand now declines too (at sk7 it derived a key).
@@ -596,6 +601,10 @@ fn ctr_role_decline_cases(out: &mut Vec<DerivationVector>) {
             c,
         ));
     }
+}
+
+/// A reserved weight dtype and a missing output operand (§6.1-0001, §6.7-0006): typed declines.
+fn ctr_weight_and_output_decline_cases(out: &mut Vec<DerivationVector>) {
     {
         let mut c = gemm("f16", &[], 8, 4096, 4096);
         c.operands[1].dtype = "f8e4m3fnuz";
@@ -656,6 +665,8 @@ fn ctr_cases(out: &mut Vec<DerivationVector>) {
     ctr_batch_cases(out);
     ctr_quant_cases(out);
     ctr_role_decline_cases(out);
+    ctr_dtype_and_block_cases(out);
+    ctr_weight_and_output_decline_cases(out);
     ctr_batch_decline_cases(out);
 }
 

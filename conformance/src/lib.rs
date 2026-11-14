@@ -115,6 +115,7 @@ pub mod layout;
 pub mod key_match;
 pub mod namespace_vocabulary;
 pub mod opattrs;
+pub mod opattrs_axes;
 pub mod opattrs_value;
 pub mod packed_reduce;
 pub mod quant_block;

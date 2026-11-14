@@ -297,6 +297,32 @@ fn precision_field(cell: &DerivationCell, primary: &str) -> Result<Option<AccMp>
     }
 }
 
+/// The dtype positions of a contraction field: `<wdt>`, `<out>` and `<sdt>` are key positions (§6.1-0001), and
+/// `<acc>` is always spelled and is never an MX element (§6.1-0016), so an MX-element operand 0 with an undeclared
+/// accumulator (which defaults to it) declines.
+fn check_contraction_dtypes(operands: &[&CellOperand], scale: Option<&CellOperand>, acc: &str) -> Result<(), DeriveDecline> {
+    for d in operands.iter().map(|o| o.dtype).chain(scale.map(|o| o.dtype)) {
+        check_dtype(d)?;
+    }
+    if MX_ELEMENT_DTYPES.contains(&acc) {
+        return Err(DeriveDecline::ElementDtypeAsAccumulator);
+    }
+    Ok(())
+}
+
+/// sk8 (§6.6-0022a): a designated scale operand keys the weight's block length, the product of its
+/// `block_shape`, a closed set {16, 32}; the group axis is implied and not keyed. `None` without a scale.
+fn block_length(weight: &CellOperand, scale: Option<&CellOperand>) -> Result<Option<BlockLen>, DeriveDecline> {
+    if scale.is_none() {
+        return Ok(None);
+    }
+    if weight.block_shape.is_empty() {
+        return Err(DeriveDecline::BlockLengthMissing);
+    }
+    let elems: u64 = weight.block_shape.iter().map(|&e| u64::from(e)).product();
+    BlockLen::from_elems(elems).map(Some).ok_or(DeriveDecline::BlockLengthUnsupported)
+}
+
 /// The `contraction` field of a `ctr` cell (§6.7-0006) from the declared roles: M/N/K size classes from
 /// the caller-assigned operand axes (§6.6-0016), K-divisibility from the K extent, the
 /// batch class (§6.6-0023), and `<wdt>`/`<sdt>` from the hinted operands' own dtypes (§6.6-0019/-0022).
@@ -329,26 +355,8 @@ fn contraction_field(
     // frame axes the output covers (right-aligned, §6.5-0010)
     let out_axes: Vec<usize> = (rank - out.extents.len()..rank).collect();
     let batch = derive_batch_class(frame, &roles.batch, &[ma, na, ka], &out_axes).map_err(DeriveDecline::Batch)?;
-    for d in [weight.dtype, out.dtype].into_iter().chain(scale.map(|o| o.dtype)) {
-        check_dtype(d)?; // wdt, out and sdt are key positions (§6.1-0001)
-    }
-    // §6.1-0016: `<acc>` is always spelled in a contraction field and is never an MX element, so an
-    // MX-element operand 0 with an undeclared accumulator (which defaults to it) declines.
-    if MX_ELEMENT_DTYPES.contains(&cell.accumulator.unwrap_or(primary)) {
-        return Err(DeriveDecline::ElementDtypeAsAccumulator);
-    }
-    // sk8 (§6.6-0022): a designated scale operand keys the weight's block length, the product of its
-    // `block_shape`, a closed set {16, 32}; the group axis is implied and not keyed.
-    let block = match scale {
-        None => None,
-        Some(_) => {
-            if weight.block_shape.is_empty() {
-                return Err(DeriveDecline::BlockLengthMissing);
-            }
-            let elems: u64 = weight.block_shape.iter().map(|&e| u64::from(e)).product();
-            Some(BlockLen::from_elems(elems).ok_or(DeriveDecline::BlockLengthUnsupported)?)
-        }
-    };
+    check_contraction_dtypes(&[weight, out], scale, cell.accumulator.unwrap_or(primary))?;
+    let block = block_length(weight, scale)?;
     Ok(Contraction {
         m: size_class_of(me),
         n: size_class_of(ne),
