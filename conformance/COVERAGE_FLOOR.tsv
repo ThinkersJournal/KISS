@@ -614,7 +614,8 @@
 # Cast odd cases (CireSnave 2026-11-12, board 426): harness 540 -> 541, untested 391 -> 390, KISS-OPS-6.21-0004.
 # bitcast (CireSnave 2026-11-12, board 427 B): harness 541 -> 543, KISS-OPS-6.21-0005, 6.19-0048.
 # Breaking batch 0.17.0 (CireSnave 2026-11-12, board 426 6 / 427): harness 543 -> 551, KISS-OPS-6.11-0026..0029, 6.17-0010, 6.17-0011, 6.19-0049, KISS-CLASSIFY-6.6-0025.
-harness	551
+# Contract in_place spelling (PM 2026-11-13): harness 551 -> 552, untested 390 -> 389, KISS-CONTRACT-6.5-0009.
+harness	552
 lint	44
-untested	390
+untested	389
 proven	20

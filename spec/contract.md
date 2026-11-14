@@ -958,9 +958,16 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   MUST NOT leave `count_unit` unspecified where a vectorized/packed cell counts `w`-element
   vectors. *Test:* `test_contract_count_unit_enum`.
 - **KISS-CONTRACT-6.5-0009** — The `in_place` field MUST state either that the output aliases
-  a named input operand (identifying which input) or that it aliases none; an implementation
+  a named input operand (identifying which input) or that it aliases none, spelled exactly
+  `none` or `input:<k>`, where `<k>` is the 0-based index of the aliased operand among the
+  **input** operands in the canonical operand order (KISS-CLASSIFY §6.6-0014), in decimal with
+  no leading zeros (`input:0`, never `input:00`); any other spelling (`false`, `true`, an empty
+  value, a `<k>` that names no input) is a typed decline. An implementation
   MUST NOT declare `in_place` aliasing an input for a kernel whose output pointer does not in
-  fact alias that input. *Test:* `test_contract_in_place_declared`.
+  fact alias that input. *Draft change (PM, 2026-11-13, on FireLine's finding that the clause
+  pinned no spelling and the golden said `false` while the prose said `none`): the spelling is
+  pinned and the golden document follows; no new obligation.* *Test:*
+  `test_contract_in_place_declared`.
 - **KISS-CONTRACT-6.5-0010** — The `alignment_bytes` field MUST state the base-pointer
   alignment (in bytes) the kernel's ABI requires; an implementation MUST NOT omit it. *Test:*
   `test_contract_alignment_declared`.
@@ -2087,7 +2094,7 @@ rank = 2
 positional_signature = []
 launch_scalars = []
 count_unit = elements
-in_place = false
+in_place = none
 alignment_bytes = 1
 ```
 
