@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.17.7 — docs: plan for the sk8 breaking batch (board 443)
+
+Informative, no normative text. `docs/plan-sk8-batch.md` plans the one 0.18.0 release that carries the per-operand dtype key change, the `x<n>` removal, removal of `precision_tag` and the optional requested accuracy bound on `matmul` (CireSnave board 443, 2026-11-14): exact blob, clause and corpus changes, the order of work, and who re-vendors. No spec or vector changes.
+
 ## 0.17.6 — docs: options note for board 440 (seam-only audit of precision_tag and the other strategy-naming items)
 
 Informative, no normative text. `docs/options-440-seam-only-audit.md` applies CireSnave's 2026-11-14 rule (KISS specifies what crosses the seam, never how a kernel achieves it) to `spec/ops.md`, `spec/contract.md` and `conformance/`: it marks each strategy-naming item seam or internal, proposes what a requester states and a kernel declares in place of `precision_tag`, checks how a fused kernel's contract describes a compound operation, and lists five open questions for CireSnave. No spec or vector changes.
