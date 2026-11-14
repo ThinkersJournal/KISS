@@ -113,42 +113,61 @@ fn e2_index_select_u32() {
 }
 
 #[test]
-fn e2_avg_pool_square_37_bytes() {
-    // avg_pool window=[2,2] stride=[2,2] dilation=[1,1] padding=[0,0] cip=true
-    let b = encode_avg_pool(&[2, 2], &[2, 2], &[1, 1], &[0, 0], true);
+fn e2_avg_pool_square_46_bytes() {
+    // avg_pool window=[2,2] stride=[2,2] dilation=[1,1] padding_lo=[0,0] padding_hi=[0,0] cip=true
+    let b = encode_avg_pool(&[2, 2], &[2, 2], &[1, 1], &[0, 0], &[0, 0], true);
     assert_golden(
         "KISS-OPS-6.19-0032",
         "avg_pool_2x2",
         &b,
         "02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 \
-         02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01",
+         02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 \
+         02 00 00 00 00 00 00 00 00 01",
     );
-    assert_eq!(b.len(), 37);
+    assert_eq!(b.len(), 46);
 }
 
 #[test]
 fn e2_avg_pool_nonsquare_preserves_axis_order() {
     // window=[3,5] stride=[1,2] — a reversed encoder emitting [5,3]/[2,1] diverges
-    let b = encode_avg_pool(&[3, 5], &[1, 2], &[1, 1], &[0, 0], true);
+    let b = encode_avg_pool(&[3, 5], &[1, 2], &[1, 1], &[0, 0], &[0, 0], true);
     assert_golden(
         "KISS-OPS-6.19-0023",
         "avg_pool_3x5",
         &b,
         "02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 \
-         02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01",
+         02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 \
+         02 00 00 00 00 00 00 00 00 01",
     );
+}
+
+// Backs[enforced]: KISS-OPS-6.19-0032 — padding_lo and padding_hi are two separate vectors in that order, so an asymmetric padding keeps its sides: lo=[2,0] hi=[0,1] is not the same bytes as lo=[0,1] hi=[2,0] or as a summed pair
+#[test]
+fn e2_avg_pool_asymmetric_padding_46_bytes() {
+    let b = encode_avg_pool(&[3, 3], &[1, 1], &[1, 1], &[2, 0], &[0, 1], true);
+    assert_golden(
+        "KISS-OPS-6.19-0032",
+        "avg_pool_3x3_pad_lo20_hi01",
+        &b,
+        "02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 \
+         02 02 00 00 00 00 00 00 00 02 00 00 00 00 01 00 00 00 01",
+    );
+    assert_eq!(b.len(), 46);
+    assert_ne!(b, encode_avg_pool(&[3, 3], &[1, 1], &[1, 1], &[0, 1], &[2, 0], true), "lo and hi are not interchangeable");
+    assert_ne!(b, encode_avg_pool(&[3, 3], &[1, 1], &[1, 1], &[0, 0], &[2, 1], true), "the sides are not summed");
 }
 
 #[test]
 fn e2_im2col_channel_major() {
     // im2col window=[3,3] stride=[1,1] dilation=[1,1] padding=[1,1] channel-major
-    let b = encode_im2col(&[3, 3], &[1, 1], &[1, 1], &[1, 1], ColumnOrdering::ChannelMajor);
+    let b = encode_im2col(&[3, 3], &[1, 1], &[1, 1], &[1, 1], &[1, 1], ColumnOrdering::ChannelMajor);
     assert_golden(
         "KISS-OPS-6.19-0033",
         "im2col_3x3_pad1",
         &b,
         "02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 \
-         02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01",
+         02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 \
+         02 01 00 00 00 01 00 00 00 01",
     );
 }
 
@@ -455,10 +474,10 @@ fn test_ops_opattrs_definite_length_prefix() {
     let v2 = window_param_vector(&[2, 2]);
     assert_eq!(v2[0], 0x02, "count prefix precedes the elements");
     assert_eq!(v2.len(), 1 + 2 * 4, "definite length = 9");
-    // the whole avg_pool blob's length is the sum of its four count-prefixed vectors
+    // the whole avg_pool blob's length is the sum of its five count-prefixed vectors
     // plus the one flag byte — a definite length, no indefinite terminator.
-    let ap = encode_avg_pool(&[2, 2], &[2, 2], &[1, 1], &[0, 0], true);
-    assert_eq!(ap.len(), 4 * (1 + 2 * 4) + 1, "definite length = 4 vectors + 1 flag = 37");
+    let ap = encode_avg_pool(&[2, 2], &[2, 2], &[1, 1], &[0, 0], &[0, 0], true);
+    assert_eq!(ap.len(), 5 * (1 + 2 * 4) + 1, "definite length = 5 vectors + 1 flag = 46");
 }
 
 /// Enforces[enforced]: KISS-OPS-6.19-0010 — the embedding layer frames the OpAttrs blob length-prefixed and

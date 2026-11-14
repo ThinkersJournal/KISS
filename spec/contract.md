@@ -1178,7 +1178,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 - **KISS-CONTRACT-6.7-0003** — The Capabilities section MUST declare the per-kernel
   **envelope** (the family of invocations the kernel can serve) and MUST NOT be a per-call
   signature: `supported_dtype_set` MUST use KISS-Classify dtype tokens, `index_width` MUST be
-  one of the KISS-Classify `{idx32, idx64}` codes, and `awkward_layout_strategy` and
+  spelled as the KISS-Classify token codes `ix32` or `ix64` (the codes of KISS-CLASSIFY-6.5-0005, not the
+  domain names `idx32`/`idx64`), and `awkward_layout_strategy` and
   `in_place_eligible_variants` MUST describe the kernel's declared layout/aliasing family; an
   implementation MUST NOT place a per-call argument (an extent, a stride, an offset, `n`) in
   the Capabilities section. *Test:* `test_contract_capabilities_is_envelope`.
@@ -1281,8 +1282,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   accumulator widths. The reduction extent `N` is **runtime**: the `structure_key` is
   **extent-free** (KISS-CLASSIFY §6.6-0003), so `N` MUST NOT enter the key. The key carries
   only the `(compute, accumulator)` class via the accumulator coordinate (the contraction
-  `<acc>` of KISS-CLASSIFY §6.7-0006, or the deferred non-contraction coordinate of
-  §6.7-0012), while the numeric FORMULA lives here in the Contract Guarantees and is
+  `<acc>` of KISS-CLASSIFY §6.7-0006, or the non-contraction accumulator-and-mode field of
+  §6.7-0013 (realizing §6.7-0012)), while the numeric FORMULA lives here in the Contract Guarantees and is
   evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
   constant declared here, and an implementation MUST be able to produce, for each declared
   `k(S,A)`, its **calibration record**: the method by which it was calibrated, the corpus

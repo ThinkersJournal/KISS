@@ -334,7 +334,7 @@ pub fn base_attrs(op: &str) -> Option<Attrs> {
             Value::Axes { axes: if op == "prefix_scan" { vec![1] } else { vec![0, 1] }, rank: 2 }
         } else if f.width == FieldWidth::Variable {
             Value::Vector(match f.name.as_str() {
-                "padding" => vec![0, 0],
+                "padding_lo" | "padding_hi" => vec![0, 0],
                 "window_size" => vec![3, 3],
                 _ => vec![1, 1],
             })

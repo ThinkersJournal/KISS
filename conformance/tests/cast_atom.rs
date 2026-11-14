@@ -109,7 +109,7 @@ fn cast_saturating_destinations_require_clamp() {
     for dst in ["f8e4m3fn", "f8e5m2", "f4e2m1", "f6e2m3", "f6e3m2"] {
         assert_eq!(cast::check_cast("f32", dst, R::NearestEven, S::None), Err(CastDecline::SaturationRequired), "{dst}");
     }
-    assert_eq!(cast::check_cast("f32", "i32", R::TowardZero, S::None), Ok(()), "control: i32 may wrap");
+    assert_eq!(cast::check_cast("i64", "i32", R::TowardZero, S::None), Ok(()), "control: an integer source into i32 may wrap");
 }
 
 // Backs[enforced]: KISS-OPS-6.21-0001 — one operand in, same shape out, destination dtype from the attribute
@@ -126,13 +126,37 @@ fn test_ops_cast_atom_shape_and_dtype() {
     assert_eq!(opattrs::decode_cast(&[0, 1, 1]), Err(Decline::ReservedZeroOrdinal { field: "target_dtype" }));
 }
 
-// harness-internal: negative control for the unpinned cases, no clause asserted
+// Backs[enforced]: KISS-OPS-6.21-0004 — the odd cases are pinned as Unpopped does them: a NaN into a destination with no NaN is +0, a NaN into an integer is 0, a float into an integer always saturates (saturation = none is a typed decline), overflow into an IEEE float follows the direction unless clamped, a directed mode into bf16 is allowed; bitcast has no op
 #[test]
-fn unpinned_cases_report_no_pinned_value() {
-    // §6.21-0004 / App. D item 12: a NaN into an integer, and an out-of-range float under saturation = none
-    assert_eq!(cast::f32_to_int(f32::NAN, R::NearestEven, S::Clamp, 32, true), None);
-    assert_eq!(cast::f32_to_int(1.0e10, R::NearestEven, S::None, 16, true), None);
-    assert_eq!(cast::f32_to_int(1.0e10, R::NearestEven, S::Clamp, 16, true), Some(32767), "control: clamp has a value");
+fn test_ops_cast_odd_cases_pinned() {
+    // (a) NaN into a destination with no NaN: +0 (the sign of the zero is positive).
+    assert_eq!(cast::NAN_INTO_NO_NAN_DESTINATION.to_bits(), 0.0f32.to_bits());
+    // (b) NaN into an integer: 0, whatever the width, signedness or rounding mode.
+    for (bits, signed) in [(8, true), (8, false), (16, true), (32, true), (32, false)] {
+        for r in [R::NearestEven, R::TowardZero, R::TowardNegInf, R::TowardPosInf] {
+            assert_eq!(cast::f32_to_int(f32::NAN, r, S::Clamp, bits, signed), Some(0), "{bits} {signed} {r:?}");
+        }
+    }
+    // (c) a float into an integer always saturates: clamp has the nearest bound, none is a typed decline.
+    assert_eq!(cast::f32_to_int(1.0e10, R::NearestEven, S::Clamp, 16, true), Some(32767));
+    assert_eq!(cast::f32_to_int(-1.0e10, R::NearestEven, S::Clamp, 16, true), Some(-32768));
+    assert_eq!(cast::f32_to_int(f32::INFINITY, R::NearestEven, S::Clamp, 8, false), Some(255));
+    assert_eq!(cast::f32_to_int(1.0e10, R::NearestEven, S::None, 16, true), None, "no wrap for an out-of-range float");
+    for src in ["f16", "bf16", "f32", "f64", "f8e4m3fn"] {
+        for dst in ["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"] {
+            assert_eq!(cast::check_cast(src, dst, R::TowardZero, S::None), Err(CastDecline::WrapOfFloat), "{src}->{dst}");
+            assert_eq!(cast::check_cast(src, dst, R::TowardZero, S::Clamp), Ok(()), "control {src}->{dst}");
+        }
+    }
+    // (d) overflow into an IEEE float follows the rounding direction (none) or clamps: unchanged by this clause.
+    assert_eq!(cast::f32_to_bf16(f32::MAX, R::NearestEven, S::None), 0x7F80, "to infinity under none");
+    assert_eq!(cast::f32_to_bf16(f32::MAX, R::NearestEven, S::Clamp), 0x7F7F, "to the largest finite under clamp");
+    // (f) a directed mode into bf16 is allowed; only the fp8 and MX destinations accept nearest-even alone.
+    for r in [R::TowardZero, R::TowardNegInf, R::TowardPosInf] {
+        assert_eq!(cast::check_cast("f32", "bf16", r, S::None), Ok(()), "{r:?}");
+        assert_eq!(cast::check_cast("f32", "f4e2m1", r, S::Clamp), Err(CastDecline::RoundingNotDefined), "{r:?}");
+    }
+    // (e) bitcast is its own op (KISS-OPS-6.21-0005, tests/bitcast_op.rs), not a cast mode.
 }
 
 // Backs[enforced]: KISS-OPS-6.19-0041 — the two cast enums are frozen u8 ordinals with 0 reserved

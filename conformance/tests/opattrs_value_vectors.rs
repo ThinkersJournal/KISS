@@ -18,7 +18,7 @@ use kiss_conformance::opattrs_value::{
 };
 
 /// The pinned size of the minted population (133 before `reduce`/`prefix_scan` were minted).
-const POPULATION: usize = 308; // 295 + 13 (`matmul` is a carrier: its base + 11 field variations, +3 reduce monoid members; the tuple-state monoids are not values of a scan's field); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
+const POPULATION: usize = 338; // 325 + 13 (`matmul` is a carrier: its base + 11 field variations, +3 reduce monoid members; the tuple-state monoids are not values of a scan's field); 313 + 12 (the window ops' `padding` vector became `padding_lo` + `padding_hi`: avg_pool, max_pool, im2col mint four more variations each); 307 + 6 (bitcast: target_dtype value vectors, board 427); 295 + 12 (iota: target_dtype x extents x axis value vectors, board 422); 294 + 1 (gather `oob_policy=reject`); 252 (0.9.1) + 32: the four norm ops take a u16 axis mask (norm_axes), which mints the subset variations
 
 fn get<'a>(v: &'a EncodeVector, name: &str) -> &'a Value {
     &v.attrs.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("{}: no `{name}`", v.op)).1
@@ -187,12 +187,13 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
             &vecu32(v, "window_size"),
             &vecu32(v, "stride"),
             &vecu32(v, "dilation"),
-            &vecu32(v, "padding"),
+            &vecu32(v, "padding_lo"),
+            &vecu32(v, "padding_hi"),
             flag(v, "count_include_pad"),
         ),
         "im2col" => {
             let o = if tok(v, "output_column_ordering") == "channel-major" { ColumnOrdering::ChannelMajor } else { ColumnOrdering::TapMajor };
-            opattrs::encode_im2col(&vecu32(v, "window_size"), &vecu32(v, "stride"), &vecu32(v, "dilation"), &vecu32(v, "padding"), o)
+            opattrs::encode_im2col(&vecu32(v, "window_size"), &vecu32(v, "stride"), &vecu32(v, "dilation"), &vecu32(v, "padding_lo"), &vecu32(v, "padding_hi"), o)
         }
         "cast" => {
             // independent of the generic encoder's table lookup: the ordinals this suite exercises, spelled out
@@ -217,6 +218,30 @@ fn hand(v: &EncodeVector) -> Option<Vec<u8>> {
         }
         "concat" => opattrs::encode_concat(byte(v, "axis")),
         "squeeze" | "unsqueeze" => opattrs::encode_axes_mask(byte(v, "axes")),
+        "bitcast" => {
+            let target = match tok(v, "target_dtype") {
+                "f16" => 1,
+                "bf16" => 2,
+                "f32" => 3,
+                "i32" => 9,
+                "f8e4m3fn" => 14,
+                "f4e2m1" => 25,
+                t => panic!("target_dtype {t} not in the hand table"),
+            };
+            opattrs::encode_bitcast(target)
+        }
+        "iota" => {
+            let target = match tok(v, "target_dtype") {
+                "f16" => 1,
+                "bf16" => 2,
+                "f32" => 3,
+                "i32" => 9,
+                "f8e4m3fn" => 14,
+                "f4e2m1" => 25,
+                t => panic!("target_dtype {t} not in the hand table"),
+            };
+            opattrs::encode_iota(target, &vecu32(v, "extents"), byte(v, "axis"))
+        }
         _ => return None,
     })
 }
@@ -246,8 +271,8 @@ fn generic_encoder_agrees_with_the_hand_encoders_on_every_vector() {
             None => skipped += 1,
         }
     }
-    // generic-only (no hand encoder in opattrs.rs): max_pool (17)
-    assert_eq!(skipped, 17, "max_pool is generic-only");
+    // generic-only (no hand encoder in opattrs.rs): max_pool (21)
+    assert_eq!(skipped, 21, "max_pool is generic-only");
     assert_eq!(compared + skipped, POPULATION, "population is pinned");
 }
 
@@ -272,14 +297,15 @@ fn generic_encoder_reproduces_the_spec_appendix_e2_blobs() {
             ("window_size".into(), Value::Vector(vec![3, 5])),
             ("stride".into(), Value::Vector(vec![1, 2])),
             ("dilation".into(), Value::Vector(vec![1, 1])),
-            ("padding".into(), Value::Vector(vec![0, 0])),
+            ("padding_lo".into(), Value::Vector(vec![0, 0])),
+            ("padding_hi".into(), Value::Vector(vec![0, 0])),
             ("count_include_pad".into(), Value::Flag(true)),
         ],
     );
     assert_eq!(
         hex(&ap),
-        "02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01",
-        "E.2 non-square avg_pool (37 bytes)"
+        "02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 01",
+        "E.2 non-square avg_pool (46 bytes)"
     );
 }
 
