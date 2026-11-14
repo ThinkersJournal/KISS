@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.23 — tools: track conformance/Cargo.lock so the stamp tool's `cargo metadata --locked` works
+
+Tooling only. `conformance/Cargo.lock` was listed in `conformance/.gitignore`, so the PM stamp tool (`tools/stamp-at-merge.sh`, which runs `cargo metadata --locked` on `conformance/Cargo.toml`) failed with exit 101 and could not stamp any KISS PR. The lockfile is now committed and the ignore entry removed; the crate is `publish = false` with no dependencies, so there is nothing to drift, and `tools/stamp-version.py` updates the tracked lock's version entry. Verified: `cargo metadata --locked --format-version 1 --manifest-path conformance/Cargo.toml` exits 0 on the branch.
+
 ## 0.15.22 — spec: `cast` odd cases pinned and Appendix D items resolved (Draft change, board 426)
 
 Draft change, result rules only; no byte of any blob or key moves. KISS-OPS-6.21-0004 in `spec/ops.md` now pins the cases Appendix D item 12 left open (CireSnave board 426 "8: A", adopt what Unpopped does): NaN into a destination with no NaN (the MX element types) is `+0`, NaN into an integer is `0`, a float into an integer always saturates and `saturation = none` for a float source is a typed decline (`CastDecline::WrapOfFloat` in `conformance/src/cast.rs`), overflow into an IEEE float follows the rounding direction, and a non-nearest `rounding` into `bf16` or `f16` is allowed; KISS-OPS-6.21-0003 amended. Appendix D items 1, 2, 3, 4, 7 and 9 record the board 426 answers (the declared tier is the sole accuracy gate, 6.8 table informative; trailing-axis norm confirmed; no `transpose` or `permute` op). The test `test_ops_cast_odd_cases_pinned` in `conformance/tests/cast_atom.rs` replaces the unpinned negative control. Verified: full `cargo test --no-fail-fast` green, `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_readme_coverage.py` clean.
