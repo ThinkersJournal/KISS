@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 5 · **Status:** draft
+· **Vocabulary version:** 6 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -152,8 +152,8 @@ A tuple is `<M>-<N>-<K>-<A>-<B>-<C>-<R>` optionally suffixed `-sat` for
 saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
 and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
 `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, `i8packed`,
-`u8packed`, or `x<n>` for a `VkComponentTypeKHR` this vocabulary version does
-not name. **`i8packed` and `u8packed` are the shared component-type vocabulary's
+`u8packed`. A `VkComponentTypeKHR` this vocabulary version does not name has **no
+spelling** (V-7): a tuple containing one is omitted whole. **`i8packed` and `u8packed` are the shared component-type vocabulary's
 cooperative-VECTOR members and MUST NOT appear in a `cm-` tuple** — V-14 makes them
 reachable only through the cooperative-vector query, so a cooperative-matrix tuple
 naming one is malformed rather than merely unsupported.
@@ -166,13 +166,21 @@ naming one is malformed rather than merely unsupported.
 > **FP8 is named as of vocabulary version 3.** `f8e4m3fn` spells
 > `VK_COMPONENT_TYPE_FLOAT8_E4M3_EXT` and `f8e5m2` spells
 > `VK_COMPONENT_TYPE_FLOAT8_E5M2_EXT`. Both previously derived `x1000491002` /
-> `x1000491003` under V-7, which is why naming them bumps the version — see §4,
-> where this is the worked example.
+> `x1000491003` under the former V-7 (the `x<n>` escape, removed at vocabulary version 6), which is why
+> naming them bumps the version — see §4, where this is the worked example.
 
-- **V-7.** `x<n>` exists so that a driver exposing a component type newer than
-  this vocabulary yields an honest, round-trippable token rather than a decline
-  or a silent mis-spelling. New Vulkan component types appear faster than a
-  vocabulary revision can track them.
+- **V-7.** **There is no `x<n>` escape (removed at vocabulary version 6; CireSnave 2026-11-13, board 430
+  Q5 "b": *"A type KISS can't describe should result in an urgent update to KISS so that it can."*).** A
+  `VkComponentTypeKHR` this vocabulary does not name is **never spelled**: a `cm-` or `cv-` tuple that has one
+  in any component position is **omitted whole** (never truncated, never partly named), so the token
+  **under-claims** what the device can do. An under-claiming token is safe: the device is never admitted for a
+  cell it was not described for. The omission is made **visible** outside the key: the device reports each
+  omitted raw identifier in the `unnamed_types` record of its Announce device record
+  (KISS-ANNOUNCE-6.6-0011), which is the input of the urgent-naming process
+  (`docs/dtype-completeness-audit.md` §3). (At vocabulary versions 1 to 5 an unnamed type derived `x<n>`, the
+  decimal enumerant, e.g. `x1000491002`, so the token over-claimed nothing and hid nothing; the cost was that
+  naming the type later changed the token of unchanged hardware.) A reader MUST decline an `x<n>`
+  component type as an unknown token.
 - **V-8.** Tuples are ordered by `(M, N, K, A, B, C, R, saturating)` ascending
   and deduplicated. Driver-reported order is **not** stable across drivers or
   even across calls on one driver, so a producer that emitted them as reported
@@ -219,8 +227,8 @@ naming one is malformed rather than merely unsupported.
 - **V-11.** `VK_COMPONENT_TYPE_FLOAT_E4M3_NV` and `..._FLOAT_E5M2_NV` are
   registry **aliases** of the two EXT enumerants, not distinct values, so they
   spell identically and need no separate names. Recorded because a future
-  registry that split them would silently make an NV-only driver derive `x<n>`
-  again.
+  registry that split them would silently make an NV-only driver's tuples be omitted
+  again (V-7).
 
 ### 2.5 `<coopvec>` — cooperative-vector combinations used
 
@@ -235,7 +243,7 @@ One of:
 A tuple is `<input>-<inputInterp>-<matrixInterp>-<biasInterp>-<result>`,
 optionally suffixed `-t` when the combination transposes the matrix operand.
 Each of the five positions is a component type from the same set §2.4 lists —
-including the `x<n>` escape, and including `i8packed` / `u8packed`, which are
+including `i8packed` / `u8packed`, which are
 reachable **here and only here** (V-14).
 
 - **V-12.** Cooperative vector is a **separate capability from cooperative
@@ -270,7 +278,7 @@ reachable **here and only here** (V-14).
   enumerants are defined by `VK_NV_cooperative_vector` with no dependency on
   `VK_KHR_cooperative_matrix`, which is why naming them had to wait for a
   deriver that reads it — before that they were spellable and underivable, and
-  a name nothing can emit is worse than an honest `x<n>`.
+  a name nothing can emit is worse than an honest omission (V-7).
 
   Verified rather than assumed: an NVIDIA RTX 4070 reports 16 cooperative-vector
   combinations whose component values include `1000491000` and `1000491001`,
@@ -326,10 +334,10 @@ additive **only when no prior token could have been affected by its absence.**
 That is narrower than it sounds, and the two ways it fails are the reason this
 clause is spelled out rather than left to judgment:
 
-- **Component types have the `x<n>` escape (V-7).** A device exposing a
-  component type this vocabulary does not name derives `x<n>` for it *today*.
-  Naming it later changes that device's token from `x1000491002` to
-  `f8e4m3fn` — different bytes, **unchanged hardware, unchanged kernel**.
+- **A component type this vocabulary does not name has its tuples omitted (V-7).** A device exposing one
+  has every `cm-` / `cv-` tuple containing it left out of its token *today*. Naming the type later
+  **adds** those tuples — different bytes, **unchanged hardware, unchanged kernel**. (Through vocabulary
+  version 5 the same case changed `x1000491002` to `f8e4m3fn`.)
 - **Op-class letters and arith names have no escape at all.** An unrecognized
   capability is simply absent from the field, so the token under-claims what
   the device offers. Adding the name later *adds a character* to the token of
@@ -349,11 +357,11 @@ version (below).
 > If it was assigned only **after** that baseline, no prior token could have
 > contained or omitted it → **additive, no bump.**
 
-Mechanically checkable, and it preserves V-7's forward-compatibility intent: a
-driver reporting a component type this vocabulary does not name still derives a
-token for it, spelled `x<n>`, rather than the deriver refusing to produce one.
-What the test closes is the separate case where *naming* such a type later
-silently invalidates tokens already in the wild.
+**For a component type, from vocabulary version 6, this baseline test is replaced:** naming a type that **any
+device has reported** (a non-empty `unnamed_types` record for it, KISS-ANNOUNCE-6.6-0011) **bumps** the
+vocabulary version, because that device's token changes; naming one **no device has yet exposed** is additive.
+The baseline test stays as written for op-class letters and arith names, which have no escape and no marker.
+What the rule closes is the case where *naming* a type later silently invalidates tokens already in the wild.
 
 Over-bumping is the safe direction: a version bump on an addition nobody was
 affected by costs a cache flush, whereas a missed bump costs silent
@@ -372,6 +380,15 @@ against, so the test above has a fixed thing to compare with rather than
 | 3 | 348 |
 | 4 | 348 |
 | 5 | 348 |
+| 6 | 348 |
+
+**Version 6 removes the `x<n>` escape (a partial invalidation).** CireSnave 2026-11-13, board 430 Q5 "b": an
+unnamed component type is no longer spelled; the tuples containing one are omitted whole and the device reports
+the raw identifiers in the Announce `unnamed_types` record (V-7). The bytes change only for tokens that
+contained an `x<n>` component or whose `cm-fnv1a64-<hex16>` / `cv-fnv1a64-<hex16>` digest ran over an
+enumeration that contained one (the digest hashes the spelled token list, so removing a tuple from the list
+moves it); a device whose component types are all named spells exactly what it spelled at version 5. It rides the
+`sk8` event of KISS-CLASSIFY (version 0.18.0) so that parties re-derive once.
 
 **Version 5 is an addition, and a partial invalidation.** Three `<arith>` names
 land at once — `i16`, `i64`, `f64` — and they change the bytes only of tokens

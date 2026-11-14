@@ -127,7 +127,8 @@ fn test_announce_device_accuracy_record() {
     assert_eq!(decode_response(&r), Err(AnnounceDecline::AccuracyNotCanonical));
     // with no accuracy records the count is the 4 bytes before the 1-byte correlation field
     let mut huge = with(|d| d.accuracy.clear());
-    let at = huge.len() - 5;
+    // sk8: the `unnamed_count` (4 bytes) now sits between the accuracy records and the correlation field
+    let at = huge.len() - 9;
     huge[at..at + 4].copy_from_slice(&(MAX_ACCURACY_RECORDS + 1).to_le_bytes());
     assert_eq!(decode_response(&huge), Err(AnnounceDecline::AccuracyCountOverflow { got: MAX_ACCURACY_RECORDS + 1 }));
     // max_ulp u32::MAX means "no bound", and a ulp of 0 is a real (exact) bound, not "none"
@@ -135,6 +136,37 @@ fn test_announce_device_accuracy_record() {
     assert_eq!(decode_response(&r).unwrap().devices[0].accuracy[0].max_ulp, NO_ULP_BOUND);
     let r = with(|d| d.accuracy[0].max_ulp = 0);
     assert_eq!(decode_response(&r).unwrap().devices[0].accuracy[0].max_ulp, 0);
+}
+
+// Backs[enforced]: KISS-ANNOUNCE-6.6-0011 — a device record carries the raw identifiers of the types it exposes that KISS cannot name (u32 count <= 64, each a u32 length in [1, 256] and opaque bytes), written in the order reported; a count or length out of range, or a list that runs past the bytes, is a typed decline.
+#[test]
+fn test_announce_device_unnamed_types() {
+    let id = |s: &str| s.as_bytes().to_vec();
+    // two unnamed types round-trip in the order the provider reports them (not sorted by the codec)
+    let r = with(|d| d.unnamed_types = vec![id("vulkan:component_type:1000491002"), id("vulkan:component_type:1000491000")]);
+    let got = decode_response(&r).unwrap().devices[0].unnamed_types.clone();
+    assert_eq!(got, vec![id("vulkan:component_type:1000491002"), id("vulkan:component_type:1000491000")]);
+    // an empty list is the reference device: count 0, and a non-empty list changes the bytes
+    assert_ne!(r, with(|d| d.unnamed_types.clear()));
+    // the identifier is opaque: no printable-ASCII or `ns:kind:value` shape is enforced by the reader
+    let r = with(|d| d.unnamed_types = vec![vec![0x00, 0xFF, b':']]);
+    assert_eq!(decode_response(&r).unwrap().devices[0].unnamed_types, vec![vec![0x00, 0xFF, b':']]);
+    // bounds: 64 identifiers are accepted, 65 are not; a length of 0 or 257 is not
+    let many = |n: usize| with(|d| d.unnamed_types = (0..n).map(|i| vec![b'a' + (i % 26) as u8]).collect());
+    assert!(decode_response(&many(MAX_UNNAMED_TYPES as usize)).is_ok());
+    let mut huge = with(|d| d.unnamed_types.clear());
+    let at = huge.len() - 5; // the 4-byte `unnamed_count` before the 1-byte correlation field
+    huge[at..at + 4].copy_from_slice(&(MAX_UNNAMED_TYPES + 1).to_le_bytes());
+    assert_eq!(decode_response(&huge), Err(AnnounceDecline::UnnamedCountOverflow { got: MAX_UNNAMED_TYPES + 1 }));
+    let zero_len = with(|d| d.unnamed_types = vec![vec![]]);
+    assert_eq!(decode_response(&zero_len), Err(AnnounceDecline::UnnamedLenOutOfRange { got: 0 }));
+    let too_long = with(|d| d.unnamed_types = vec![vec![b'x'; MAX_UNNAMED_ID_LEN as usize + 1]]);
+    assert_eq!(decode_response(&too_long), Err(AnnounceDecline::UnnamedLenOutOfRange { got: MAX_UNNAMED_ID_LEN + 1 }));
+    assert!(decode_response(&with(|d| d.unnamed_types = vec![vec![b'x'; MAX_UNNAMED_ID_LEN as usize]])).is_ok());
+    // a list that runs past the bytes supplied is a typed truncation, never an over-read
+    let mut cut = with(|d| d.unnamed_types = vec![id("vulkan:component_type:1")]);
+    cut.truncate(cut.len() - 3);
+    assert!(matches!(decode_response(&cut), Err(AnnounceDecline::Truncated { .. })));
 }
 
 // Backs[enforced]: KISS-ANNOUNCE-6.6-0009
