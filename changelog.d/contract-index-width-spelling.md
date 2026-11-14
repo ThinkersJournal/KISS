@@ -1,0 +1,3 @@
+kind: spec: Contract 6.7-0003 names the `index_width` spelling (`ix32` / `ix64`)
+---
+Wording clarification, no byte moves. KISS-CONTRACT-6.7-0003 in `spec/contract.md` said `index_width` is one of the KISS-Classify `{idx32, idx64}` codes, while the golden document in `conformance/src/contract.rs` and the structure_key tokens write `ix32`; KISS-CLASSIFY-6.5-0005 in `spec/classify.md` already fixes the token codes as `ix32` / `ix64`. The clause now says the field is spelled as those token codes, so the clause, the golden and `conformance/corpus/contract_vectors.json` agree (raised by FireLine). Verified: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_readme_coverage.py` clean.
