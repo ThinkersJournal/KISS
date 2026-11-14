@@ -234,8 +234,8 @@ class DecompositionGraphTest(unittest.TestCase):
         self.assertTrue(any("2^-10 but" in m for m in v), v)
 
     def test_tf32_rounding_mode_change_is_caught(self):
-        v = self.fidelity_violations(self.mutate("exponent\n  unchanged, round-to-nearest-even,",
-                                                 "exponent\n  unchanged, round-toward-zero,"))
+        v = self.fidelity_violations(self.mutate("exponent unchanged, round-to-nearest-even,",
+                                                 "exponent unchanged, round-toward-zero,"))
         self.assertTrue(any("round-to-nearest-even" in m for m in v), v)
 
     def index_violations(self, ops):

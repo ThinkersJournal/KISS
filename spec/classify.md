@@ -1555,6 +1555,14 @@ form (§6.7-0011).
   a typed decline (§7.1-0002) and MUST NOT derive a rank-`r + 1` cell. No byte of any key moves and
   `STRUCTURE_KEY_VERSION` is unchanged. *Draft change (CireSnave 2026-11-12, board 427 "Lets go with i.",
   option (i)): a presenter rule, not a schema event.* *Test:* `test_classify_packed_reduction_presenter`.
+- **KISS-CLASSIFY-6.6-0026** — **From `sk8`, no `structure_key` and no target token carries an escape for a type KISS cannot name.** A type
+  that the closed dtype table (§6.1) and the target namespace's own named set do not name **stays out of every key**: a namespace vocabulary
+  MUST NOT spell an `x<n>` or `Other(n)` token for it, and a **tuple** (in the Vulkan namespace, a `cm-` or `cv-` tuple) that would
+  contain one is **omitted whole**, never truncated and never partly named, so the token **under-claims** what the device can do, which is safe: a device is
+  never admitted for a cell it was not described for. A reader MUST decline an `x<n>` component type as an unknown token (§6.7-0009), exactly as any unrecognized
+  spelling. The omission is made visible **outside** the key, in the `unnamed_types` list of the Announce device record (KISS-ANNOUNCE-6.6-0011).
+  *Draft change (**Breaking**; CireSnave 2026-11-13, board 430 Q5 "b": *"A type KISS can't describe should result in an urgent update to KISS so that it can.  KISS should support all types used by all devices that might provide compute described via KISS standards.  The list is finite and describable."*).*
+  *Test:* `test_classify_unnamed_type_has_no_escape`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -1582,14 +1590,6 @@ codes `{t, s, m, l}`, the K-divisibility code, and a conditionally-present batch
 size-class `b<class>`) followed by a precision group (the weight / accumulator / output
 dtype tokens and the math-precision code `<mp>` ∈ `{st, rm}`).
 
-- **KISS-CLASSIFY-6.6-0026** — **From `sk8`, no `structure_key` and no target token carries an escape for a type KISS cannot name.** A type
-  that the closed dtype table (§6.1) and the target namespace's own named set do not name **stays out of every key**: a namespace vocabulary
-  MUST NOT spell an `x<n>` or `Other(n)` token for it, and a **tuple** (in the Vulkan namespace, a `cm-` or `cv-` tuple) that would
-  contain one is **omitted whole**, never truncated and never partly named, so the token **under-claims** what the device can do, which is safe: a device is
-  never admitted for a cell it was not described for. A reader MUST decline an `x<n>` component type as an unknown token (§6.7-0009), exactly as any unrecognized
-  spelling. The omission is made visible **outside** the key, in the `unnamed_types` list of the Announce device record (KISS-ANNOUNCE-6.6-0011).
-  *Draft change (**Breaking**; CireSnave 2026-11-13, board 430 Q5 "b": *"A type KISS can't describe should result in an urgent update to KISS so that it can.  KISS should support all types used by all devices that might provide compute described via KISS standards.  The list is finite and describable."*).*
-  *Test:* `test_classify_unnamed_type_has_no_escape`.
 - **KISS-CLASSIFY-6.7-0001** — A `structure_key` token MUST consist of exactly nine
   `|`-separated fields for a non-contraction cell, or exactly ten fields (the tenth
   being the contraction field) for a dense-contraction cell; a reader MUST reject a
