@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.17.5 — docs only, HANDOFF rewritten for the 0.17.4 state
+
+Docs only. `HANDOFF.md` is rewritten (a rewrite, not an append) for the state after #818: FireLine's five contract-vector requests landed as 0.17.4 and their task is removed; the issue sweep is the next unblocked task, and the three WAIT timers are unchanged. No spec, vector or code change.
+
 ## 0.17.4 — contract section vectors for FireLine (additive artifact keys, stricter section reader)
 
 Additive to `conformance/corpus/contract_vectors.json`: a `section_vectors` key carries whole seven-section documents (header v4) in two sets, built by the library from the Appendix C blocks with one change each. Accept vectors (6): a strided `add` signature in the §6.11-0006 descriptor layout (extents, strides, `n`; the `launch_scalars` tail equals the signature tail), the five-field Dispatch (`invocation_domain`, `workgroup_sizing`, `count_to_grid`, `thread_mapping`, `addressing_rule`), `output_layouts` present, `human_annotation` present, `in_place = input:0` and `input:1` with non-empty `in_place_eligible_variants`. Decline vectors (49): the V11 stride descriptor declared `scalar`, a five-slot descriptor, Dispatch with a field missing, out of order, beside the sentinel, or with an unparseable, out-of-vocabulary or unsubscripted expression, `output_layouts` not last, `human_annotation` before `op_dag`, `in_place` = `false` / `input:01` / `input:`, and for each of Identity, Semantics, Interface, Capabilities, Guarantees, Provenance one dropped field, unknown key, swapped keys, repeated key, non-UTF-8 byte and CR line. Each decline carries `section` and a stable kebab-case `expect` tag (`SectionDecline::wire_tag`, `DispatchDecline::wire_tag`, `SignatureDecline::wire_tag`), never `Debug`.
