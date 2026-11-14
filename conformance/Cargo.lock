@@ -4,4 +4,4 @@ version = 3
 
 [[package]]
 name = "kiss-conformance"
-version = "0.15.23"
+version = "0.15.24"

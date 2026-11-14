@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.15.24 — spec: `bitcast` joins the primitive floor (Draft change, board 427 "B")
+
+Draft change, additive. KISS-OPS-6.21-0005 in `spec/ops.md` adds `bitcast`: one operand, a `target_dtype`, same bit width only; a pure bit move that keeps NaN payloads, the quiet/signalling bit, the sign and signed zeros, and whose round trip is the identity on every pattern. Sub-byte, MX, `f8e8m0`, reserved, complex and bool dtypes and a width change are typed declines (`BitcastDecline` in `conformance/src/structural.rs`). KISS-OPS-6.19-0048 pins its OpAttrs blob as one `target_dtype` byte (`encode_bitcast` and `decode_bitcast` in `conformance/src/opattrs.rs`). It joins the closed primitive floor (6.3-0001, 7.3-0002), the manifest `conformance/corpus/op_manifest.json` and the vector files `conformance/corpus/opattrs_vectors.json` and `conformance/corpus/opattrs_value_vectors.json`. The tests are `test_ops_bitcast_semantics` and `test_ops_opattrs_bitcast_schema` in `conformance/tests/bitcast_op.rs`. Verified: full `cargo test --no-fail-fast` green, `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_readme_coverage.py` clean.
+
 ## 0.15.23 — tools: track conformance/Cargo.lock so the stamp tool's `cargo metadata --locked` works
 
 Tooling only. `conformance/Cargo.lock` was listed in `conformance/.gitignore`, so the PM stamp tool (`tools/stamp-at-merge.sh`, which runs `cargo metadata --locked` on `conformance/Cargo.toml`) failed with exit 101 and could not stamp any KISS PR. The lockfile is now committed and the ignore entry removed; the crate is `publish = false` with no dependencies, so there is nothing to drift, and `tools/stamp-version.py` updates the tracked lock's version entry. Verified: `cargo metadata --locked --format-version 1 --manifest-path conformance/Cargo.toml` exits 0 on the branch.
