@@ -1,5 +1,6 @@
 /target
-Cargo.lock
+# Cargo.lock is TRACKED (publish = false test crate, no dependencies): the stamp tool's
+# `cargo metadata --locked` needs it, and tools/stamp-version.py updates its version entry.
 
 # nvcc / device-run build artifacts (the on-device test compiles to a temp dir,
 # but a manual cuda/build_and_run.* invocation may leave binaries behind)

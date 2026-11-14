@@ -1519,6 +1519,17 @@ form (§6.7-0011).
   byte-witnessable for every operand. *Draft change (same ruling): a caller obligation that was
   previously only the unwritten precondition of §6.6-0015; no byte of any key moves.* *Test:*
   `test_classify_request_states_input_types`.
+- **KISS-CLASSIFY-6.6-0025** — A reduction over a **tuple-state monoid** (KISS-OPS-6.11-0026: `welford`,
+  `online_softmax`, `argmax`) returns a packed tensor with one trailing **state axis** that is NOT an axis of the
+  reduction's iteration frame, so the cell MUST be presented to the `structure_key` derivation through its
+  **keepdim view without the state axis**: the output operand has the rank and extents of the `keepdim = 1`
+  result (§6.6-0009), exactly as for a scalar-monoid reduction. The key therefore carries **neither the monoid nor
+  the state axis**: a tuple-state reduction and a scalar one over the same operands derive the **same** key
+  (§6.6-0002), and the monoid travels in the op identity beside the key (§6.6-0020). A derivation fed a
+  reduction whose **output operand is wider than every input operand** (a state axis left in) MUST decline with
+  a typed decline (§7.1-0002) and MUST NOT derive a rank-`r + 1` cell. No byte of any key moves and
+  `STRUCTURE_KEY_VERSION` is unchanged. *Draft change (CireSnave 2026-11-12, board 427 "Lets go with i.",
+  option (i)): a presenter rule, not a schema event.* *Test:* `test_classify_packed_reduction_presenter`.
 
 ### 6.7 The `structure_key` token codec
 
@@ -2511,6 +2522,7 @@ registry listing, and is not restated as a free-standing Classify clause.
 | KISS-CLASSIFY-6.6-0022 | `test_classify_quantized_scale_dtype_keyed` |
 | KISS-CLASSIFY-6.6-0023 | `test_classify_batch_role_derivation` |
 | KISS-CLASSIFY-6.6-0024 | `test_classify_request_states_input_types` |
+| KISS-CLASSIFY-6.6-0025 | `test_classify_packed_reduction_presenter` |
 | KISS-CLASSIFY-6.7-0001 | `a1_binary_two_operands` |
 | KISS-CLASSIFY-6.7-0002 | `test_classify_token_version_prefix` |
 | KISS-CLASSIFY-6.7-0003 | `a1_unary_f16_v8` |

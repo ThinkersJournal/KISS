@@ -1090,3 +1090,183 @@ pub fn unsqueeze_f32(data: &[f32], shape: &[usize], mask: u8) -> Result<(Vec<f32
     }
     Ok((data.to_vec(), unsqueeze_shape(shape, mask)?))
 }
+
+/// Why a `matmul` OpAttrs combination is refused for its operand dtype (§6.17-0010, §6.17-0011, §6.19-0049).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MatmulAttrDecline {
+    /// The compute dtype is not a float or an integer dtype a `matmul` can fold over (`bool`, complex, unknown).
+    ComputeDtype(String),
+    /// A float compute dtype with a non-float or a narrower accumulator (§6.17-0008).
+    FloatAccumulator,
+    /// An integer compute dtype with an accumulator that is not a signed 32- or 64-bit integer at least as
+    /// wide as the compute dtype (an unsigned or narrower or float accumulator, §6.17-0010).
+    IntegerAccumulator,
+    /// The accumulator ordinal is reserved or outside the dtype table.
+    AccumulatorOrdinal(u8),
+    /// A `precision_tag` other than `none` with a `math_fidelity` other than reduced-mantissa-permitted.
+    TagNeedsReducedMantissa,
+    /// A `precision_tag` whose compute dtype is not the one the tag names (§6.17-0011).
+    TagComputeDtype,
+    /// A tagged cell with no declared bound (§6.17-0011: a tag without a bound is refused at advertisement).
+    TagWithoutBound,
+}
+
+/// Storage bit width of a dtype `matmul` may fold over, `None` for the rest.
+fn matmul_width(dtype: &str) -> Option<u32> {
+    Some(match dtype {
+        "f4e2m1" | "i4" | "u4" => 4,
+        "f6e2m3" | "f6e3m2" => 6,
+        "i8" | "u8" | "f8e4m3fn" | "f8e5m2" => 8,
+        "i16" | "u16" | "f16" | "bf16" => 16,
+        "i32" | "u32" | "f32" => 32,
+        "i64" | "u64" | "f64" => 64,
+        _ => return None,
+    })
+}
+
+/// Why an `iota` is refused (§6.11-0025, §6.19-0047).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IotaDecline {
+    /// The dtype is not an integer dtype or one of `f16`, `bf16`, `f32`, `f64`.
+    Dtype(String),
+    /// An empty or over-long extent list (rank outside `1..=MAX_RANK`).
+    Rank(usize),
+    /// A zero extent.
+    ZeroExtent,
+    /// `axis` at or above the rank.
+    Axis { axis: usize, rank: usize },
+    /// The largest count, `extents[axis] - 1`, is not exactly representable in the dtype.
+    Unrepresentable { last: u64 },
+}
+
+/// The largest integer `dtype` holds **exactly** as a count (floats: `2^p`, `p` the significand width
+/// with the implicit bit; integers: their maximum), or `None` for a dtype `iota` refuses.
+pub fn iota_max_exact(dtype: &str) -> Option<u64> {
+    Some(match dtype {
+        "i8" => 127,
+        "u8" => 255,
+        "i16" => 32_767,
+        "u16" => 65_535,
+        "i32" => 2_147_483_647,
+        "u32" => 4_294_967_295,
+        "i64" => 9_223_372_036_854_775_807,
+        "u64" => u64::MAX,
+        "f16" => 1 << 11,
+        "bf16" => 1 << 8,
+        "f32" => 1 << 24,
+        "f64" => 1 << 53,
+        _ => return None,
+    })
+}
+
+fn matmul_is_int(dtype: &str) -> bool {
+    matches!(dtype, "i4" | "u4" | "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64")
+}
+
+/// The `matmul` attribute legality over the operand's compute dtype (§6.17-0008, §6.17-0010, §6.17-0011):
+/// `accumulator` (`0x00` diagonal or a dtype ordinal), `fidelity` (1 bit-stable, 2 reduced-mantissa) and `tag`
+/// (1 none, 2 3xtf32, 3 fp8-fast-accumulate), with `declared_bound` the Contract-declared ULP bound for a tagged
+/// cell (`None` = none declared). A typed decline, never a panic.
+pub fn matmul_attrs_check(compute: &str, accumulator: u8, fidelity: u8, tag: u8, declared_bound: Option<u32>) -> Result<(), MatmulAttrDecline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    let cw = matmul_width(compute).ok_or_else(|| MatmulAttrDecline::ComputeDtype(compute.to_string()))?;
+    if accumulator != 0 {
+        let acc = DTYPES.get(accumulator as usize - 1).filter(|d| !RESERVED_DTYPES.contains(d)).ok_or(MatmulAttrDecline::AccumulatorOrdinal(accumulator))?;
+        let aw = matmul_width(acc);
+        if matmul_is_int(compute) {
+            let ok = matches!(*acc, "i32" | "i64") && aw.map_or(false, |w| w >= cw && !(compute.starts_with('u') && w == cw));
+            if !ok {
+                return Err(MatmulAttrDecline::IntegerAccumulator);
+            }
+        } else if !(matches!(*acc, "f16" | "bf16" | "f32" | "f64") && aw.map_or(false, |w| w >= cw)) {
+            return Err(MatmulAttrDecline::FloatAccumulator);
+        }
+    }
+    if tag != 1 {
+        if fidelity != 2 {
+            return Err(MatmulAttrDecline::TagNeedsReducedMantissa);
+        }
+        let named = match tag {
+            2 => compute == "f32",
+            3 => matches!(compute, "f8e4m3fn" | "f8e5m2"),
+            _ => false,
+        };
+        if !named {
+            return Err(MatmulAttrDecline::TagComputeDtype);
+        }
+        if declared_bound.is_none() {
+            return Err(MatmulAttrDecline::TagWithoutBound);
+        }
+    }
+    Ok(())
+}
+
+/// The integer `matmul` fold (§6.17-0010): products and sums of an integer compute dtype accumulate exactly in a
+/// signed `acc_bits`-wide integer (two's-complement wrap on overflow, §6.2-0002), so the result is independent
+/// of the reduction order and is **exact-byte**. `acc_bits` is 32 or 64.
+pub fn int_dot_exact(a: &[i64], b: &[i64], acc_bits: u32) -> i64 {
+    assert!(acc_bits == 32 || acc_bits == 64);
+    let mut acc: i64 = 0;
+    for (x, y) in a.iter().zip(b) {
+        acc = acc.wrapping_add(x.wrapping_mul(*y));
+        if acc_bits == 32 {
+            acc = acc as i32 as i64;
+        }
+    }
+    acc
+}
+
+/// The `iota` reference (§6.11-0025): the count along `axis` at every coordinate of a tensor of shape
+/// `extents`, row-major, as the exact integer the dtype then holds. A typed decline, never a panic.
+pub fn iota_values(dtype: &str, extents: &[u32], axis: usize) -> Result<Vec<u64>, IotaDecline> {
+    let max = iota_max_exact(dtype).ok_or_else(|| IotaDecline::Dtype(dtype.to_string()))?;
+    if extents.is_empty() || extents.len() > crate::opattrs::MAX_RANK as usize {
+        return Err(IotaDecline::Rank(extents.len()));
+    }
+    if extents.contains(&0) {
+        return Err(IotaDecline::ZeroExtent);
+    }
+    if axis >= extents.len() {
+        return Err(IotaDecline::Axis { axis, rank: extents.len() });
+    }
+    let last = u64::from(extents[axis]) - 1;
+    if last > max {
+        return Err(IotaDecline::Unrepresentable { last });
+    }
+    let total: usize = extents.iter().map(|&e| e as usize).product();
+    let inner: usize = extents[axis + 1..].iter().map(|&e| e as usize).product();
+    let len = extents[axis] as usize;
+    Ok((0..total).map(|i| ((i / inner) % len) as u64).collect())
+}
+
+/// Why a `bitcast` is refused (§6.21-0005).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BitcastDecline {
+    /// The source or destination dtype is not an integer or one of `f16`, `bf16`, `f32`, `f64`, `f8e4m3fn`, `f8e5m2`.
+    Dtype(String),
+    /// The two dtypes have different bit widths.
+    Width { src: u32, dst: u32 },
+}
+
+/// The bit width of a legal `bitcast` dtype, or `None` for a dtype the op refuses (sub-byte, MX, `f8e8m0`, reserved
+/// floats, complex, `bool`, unknown).
+pub fn bitcast_width(dtype: &str) -> Option<u32> {
+    match dtype {
+        "i8" | "u8" | "f8e4m3fn" | "f8e5m2" => Some(8),
+        "i16" | "u16" | "f16" | "bf16" => Some(16),
+        "i32" | "u32" | "f32" => Some(32),
+        "i64" | "u64" | "f64" => Some(64),
+        _ => None,
+    }
+}
+
+/// The `bitcast` reference (§6.21-0005): the destination's reading of the same bits. A pure bit move, so the result is
+/// `bits` unchanged (masked to the width); a typed decline, never a panic, for an illegal pair.
+pub fn bitcast_bits(src: &str, dst: &str, bits: u64) -> Result<u64, BitcastDecline> {
+    let s = bitcast_width(src).ok_or_else(|| BitcastDecline::Dtype(src.to_string()))?;
+    let d = bitcast_width(dst).ok_or_else(|| BitcastDecline::Dtype(dst.to_string()))?;
+    if s != d {
+        return Err(BitcastDecline::Width { src: s, dst: d });
+    }
+    Ok(if s == 64 { bits } else { bits & ((1u64 << s) - 1) })
+}

@@ -28,8 +28,9 @@ macro_rules! ordinal_enum {
     };
 }
 
-ordinal_enum!(/// §6.19-0014
-    Monoid { Sum = 1, Prod = 2, Max = 3, Min = 4 });
+ordinal_enum!(/// §6.19-0014 (the first four are the scalar folds of §6.11-0002; the last three are the tuple-state
+    /// monoids of §6.11-0026 to §6.11-0029)
+    Monoid { Sum = 1, Prod = 2, Max = 3, Min = 4, Welford = 5, OnlineSoftmax = 6, ArgMax = 7 });
 ordinal_enum!(/// §6.19-0015
     OobPolicy { Skip = 1, Clamp = 2, ZeroFill = 3, Reject = 4 });
 ordinal_enum!(/// §6.19-0016
@@ -51,6 +52,10 @@ ordinal_enum!(/// §6.19-0041 (schema field `rounding` of `cast`, §6.21-0002)
     CastRounding { NearestEven = 1, TowardZero = 2, TowardNegInf = 3, TowardPosInf = 4 });
 ordinal_enum!(/// §6.19-0041 (schema field `saturation` of `cast`, §6.21-0003)
     CastSaturation { None = 1, Clamp = 2 });
+
+ordinal_enum!(/// §6.17-0011 (schema field `precision_tag` of `matmul`): the maintainer-owned vocabulary of named
+    /// reduced-precision strategies. KISS pins the NAME and the duty to declare a bound, never the recipe.
+    PrecisionTag { None = 1, ThreeXTf32 = 2, Fp8FastAccumulate = 3 });
 
 /// `accumulator` byte meaning "the compute dtype" (the §6.17-0005 diagonal, §6.19-0025).
 pub const ACCUMULATOR_COMPUTE_DTYPE: u8 = 0x00;
@@ -130,6 +135,42 @@ pub fn encode_reduce(
     out.push(accumulator);
     out.push(fidelity.ordinal());
     out
+}
+
+/// `matmul`: accumulator, math_fidelity, precision_tag (§6.19-0049, board 426 6 "A" and board 427 "1: A").
+/// `accumulator` is [`ACCUMULATOR_COMPUTE_DTYPE`] or the 1-based §6.1-table dtype ordinal (a float for a float
+/// compute dtype, a signed 32- or 64-bit integer for an integer one, §6.17-0010; that legality needs the
+/// operand's dtype and is `structural::matmul_attrs_check`'s).
+pub fn encode_matmul(accumulator: u8, fidelity: MathFidelityOrd, tag: PrecisionTag) -> Vec<u8> {
+    vec![accumulator, fidelity.ordinal(), tag.ordinal()]
+}
+
+/// Validate a decoded `matmul` blob `[accumulator, math_fidelity, precision_tag]` (§6.19-0049): wrong length,
+/// a reserved `0` fidelity or tag, an out-of-table fidelity or tag, and a reserved or out-of-table accumulator
+/// ordinal are typed declines.
+pub fn decode_matmul(blob: &[u8]) -> Result<(u8, MathFidelityOrd, PrecisionTag), Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if blob.len() != 3 {
+        return Err(Decline::TruncatedBlob { need: 3, got: blob.len() });
+    }
+    let acc = blob[0];
+    if acc != ACCUMULATOR_COMPUTE_DTYPE && DTYPES.get(acc as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "accumulator", value: acc, max: DTYPES.len() as u8 });
+    }
+    let fid = match blob[1] {
+        0 => return Err(Decline::ReservedZeroOrdinal { field: "math_fidelity" }),
+        1 => MathFidelityOrd::BitStable,
+        2 => MathFidelityOrd::ReducedMantissa,
+        v => return Err(Decline::FieldOutOfRange { field: "math_fidelity", value: v, max: 2 }),
+    };
+    let tag = match blob[2] {
+        0 => return Err(Decline::ReservedZeroOrdinal { field: "precision_tag" }),
+        1 => PrecisionTag::None,
+        2 => PrecisionTag::ThreeXTf32,
+        3 => PrecisionTag::Fp8FastAccumulate,
+        v => return Err(Decline::FieldOutOfRange { field: "precision_tag", value: v, max: 3 }),
+    };
+    Ok((acc, fid, tag))
 }
 
 /// `prefix_scan`: monoid, reduce_axes, exclusivity, accumulator, math_fidelity (§6.19-0026, sk4).
@@ -219,37 +260,53 @@ pub fn encode_concat(axis: u8) -> Vec<u8> {
     vec![axis]
 }
 
+/// `bitcast`: the destination `target_dtype` ordinal (§6.19-0048).
+pub fn encode_bitcast(target_dtype: u8) -> Vec<u8> {
+    vec![target_dtype]
+}
+
+/// `iota`: `target_dtype` ordinal, the `extents` vector (§6.19-0023 encoding, one extent per output axis), `axis`
+/// (§6.19-0047).
+pub fn encode_iota(target_dtype: u8, extents: &[u32], axis: u8) -> Vec<u8> {
+    let mut out = vec![target_dtype];
+    out.extend(window_param_vector(extents));
+    out.push(axis);
+    out
+}
+
 /// `squeeze` / `unsqueeze`: the plain `u8` axes mask (§6.19-0046). `0x00` is reserved.
 pub fn encode_axes_mask(mask: u8) -> Vec<u8> {
     vec![mask]
 }
 
-/// `avg_pool`: window_size, stride, dilation, padding, count_include_pad (§6.19-0032).
+/// `avg_pool`: window_size, stride, dilation, padding_lo, padding_hi, count_include_pad (§6.19-0032).
 pub fn encode_avg_pool(
     window: &[u32],
     stride: &[u32],
     dilation: &[u32],
-    padding: &[u32],
+    padding_lo: &[u32],
+    padding_hi: &[u32],
     count_include_pad: bool,
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [window, stride, dilation, padding] {
+    for v in [window, stride, dilation, padding_lo, padding_hi] {
         out.extend(window_param_vector(v));
     }
     out.push(count_include_pad as u8);
     out
 }
 
-/// `im2col`: window_size, stride, dilation, padding, output_column_ordering (§6.19-0033).
+/// `im2col`: window_size, stride, dilation, padding_lo, padding_hi, output_column_ordering (§6.19-0033).
 pub fn encode_im2col(
     window: &[u32],
     stride: &[u32],
     dilation: &[u32],
-    padding: &[u32],
+    padding_lo: &[u32],
+    padding_hi: &[u32],
     column_ordering: ColumnOrdering,
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [window, stride, dilation, padding] {
+    for v in [window, stride, dilation, padding_lo, padding_hi] {
         out.extend(window_param_vector(v));
     }
     out.push(column_ordering.ordinal());
@@ -360,6 +417,50 @@ pub fn decode_cast(blob: &[u8]) -> Result<(u8, CastRounding, CastSaturation), De
         _ => return Err(Decline::ReservedZeroOrdinal { field: "saturation" }),
     };
     Ok((blob[0], rounding, saturation))
+}
+
+/// Validate a decoded `bitcast` blob (`[target_dtype]`, §6.19-0048): a zero, out-of-table or reserved ordinal is a
+/// typed decline. Whether the destination is legal for the operand's dtype is the op's rule (§6.21-0005).
+pub fn decode_bitcast(blob: &[u8]) -> Result<u8, Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    if blob.len() != 1 {
+        return Err(Decline::TruncatedBlob { need: 1, got: blob.len() });
+    }
+    if blob[0] == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "target_dtype" });
+    }
+    if DTYPES.get(blob[0] as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "target_dtype", value: blob[0], max: DTYPES.len() as u8 });
+    }
+    Ok(blob[0])
+}
+
+/// Validate a decoded `iota` blob (`[target_dtype, extents…, axis]`, §6.19-0047): a zero or reserved dtype ordinal,
+/// an empty or over-long extent vector, a zero extent and an `axis` at or above the extent count are typed
+/// declines. Which dtypes may hold the count is the op's rule (§6.11-0025), not the blob reader's.
+pub fn decode_iota(blob: &[u8]) -> Result<(u8, Vec<u32>, u8), Decline> {
+    use crate::structure_key::{DTYPES, RESERVED_DTYPES};
+    let Some(&dt) = blob.first() else {
+        return Err(Decline::TruncatedBlob { need: 1, got: 0 });
+    };
+    if dt == 0 {
+        return Err(Decline::ReservedZeroOrdinal { field: "target_dtype" });
+    }
+    if DTYPES.get(dt as usize - 1).map_or(true, |d| RESERVED_DTYPES.contains(d)) {
+        return Err(Decline::FieldOutOfRange { field: "target_dtype", value: dt, max: DTYPES.len() as u8 });
+    }
+    let extents = decode_window_param_vector(&blob[1..])?;
+    if extents.is_empty() || extents.contains(&0) {
+        return Err(Decline::ReservedZeroOrdinal { field: "extents" });
+    }
+    let end = 1 + 1 + 4 * extents.len();
+    let Some(&axis) = blob.get(end) else {
+        return Err(Decline::TruncatedBlob { need: end + 1, got: blob.len() });
+    };
+    if axis as usize >= extents.len() {
+        return Err(Decline::FieldOutOfRange { field: "axis", value: axis, max: extents.len() as u8 });
+    }
+    Ok((dt, extents, axis))
 }
 
 /// Validate a decoded `concat` blob (`[axis]`, range `0..MAX_RANK-1`, §6.19-0042).

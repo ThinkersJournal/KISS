@@ -282,7 +282,9 @@ readable rendering of the normative registry in §6.1 and the semantics tables i
 | `concat` | access-primitive | join operands end to end along one axis; pure data movement, bits preserved |
 | `squeeze` | access-primitive | remove the extent-1 axes a mask names; pure shape, bits preserved (§6.11-0022) |
 | `unsqueeze` | access-primitive | insert extent-1 axes at the output positions a mask names; pure shape, bits preserved (§6.11-0023) |
+| `iota` | access-primitive | no operands: a static-shape tensor whose element is its own coordinate along one axis, in the stated dtype (§6.11-0025) |
 | `cast` | conversion | convert each element to a destination dtype; rounding and saturation stated (§6.21) |
+| `bitcast` | conversion | reinterpret each element's bits as a same-width dtype; pure bit move, nothing computed (§6.21-0005) |
 
 **Non-primitive ops (each resolves to the floor via §6.13):**
 
@@ -339,7 +341,7 @@ family a node denotes (a reduce's `monoid` and `reduce_axes`, a gather's `oob_po
 pool's window geometry, and so on). The carrier ops for this version are `reduce`,
 `prefix_scan`, `gather`, `scatter`, `sort_network`, `reduce_var`, `reduce_std`, `softmax`,
 `log_softmax`, `rms_norm`, `layer_norm`, `avg_pool`, `max_pool`, `im2col`, `index_select`,
-`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, and `argmin`. Their schemas, sub-vocabularies, and canonical
+`embedding`, `scatter_add`, `cast`, `concat`, `squeeze`, `unsqueeze`, `iota`, `bitcast`, `reduce_mean`, `reduce_norm2`, `logsumexp`, `any`, `all`, `argmax`, `argmin`, and `matmul`. Their schemas, sub-vocabularies, and canonical
 default-resolved little-endian wire encoding are pinned normatively in **§6.19**; worked
 golden vectors are in Appendix E.
 
@@ -750,7 +752,7 @@ verbatim, everywhere).
   `atan`, `lgamma`; the binary-math atoms `atan2`, `copysign`, `nextafter`; the integer
   bitwise atoms `bit_and`, `bit_or`, `bit_xor`, `bit_not`, `shl`, `shr`, `popcount`,
   `clz`, `ctz`; the conversion atom `cast`; and the structural access atoms `element_map`, `reduce`, `prefix_scan`,
-  `gather`, `scatter`, `sort_network`, `concat`, `squeeze`, `unsqueeze`. *Test:* `test_ops_primitive_floor_set`.
+  `gather`, `scatter`, `sort_network`, `concat`, `squeeze`, `unsqueeze`, `iota`, `bitcast`. *Test:* `test_ops_primitive_floor_set`.
 - **KISS-OPS-6.3-0002** — A party that **claims conformance to KISS-Ops as a consumer of
   op-semantics (evaluate)** (umbrella §3.6; §3 *Consumer of op-semantics*) MUST evaluate
   the pinned semantics of every op in the primitive floor; the floor is the mandatory core
@@ -1032,11 +1034,12 @@ section-intro paragraph is an informative pointer to it):
   `0` along an axis, applying a per-element scalar-expression body; it MUST be treated as
   a structural atom. *Test:* `test_ops_element_map_base_access`.
 - **KISS-OPS-6.11-0002** — `reduce` MUST fold over an axis set using an associative monoid
-  drawn from `{sum (identity +0.0 / integer 0), prod (identity 1), max (identity the
+  drawn from the scalar folds `{sum (identity +0.0 / integer 0), prod (identity 1), max (identity the
   dtype minimum: −∞ for float, INT_MIN for signed int, 0 for unsigned int), min (identity
   the dtype maximum: +∞ for float, INT_MAX for signed int, the unsigned maximum for
   unsigned int)}`; the `max` and `min` monoids MUST be **NaN-propagating**, and a
-  reduction over an **empty** axis MUST yield the monoid identity. *Test:*
+  reduction over an **empty** axis MUST yield the monoid identity; the three tuple-state
+  monoids are §6.11-0026 to §6.11-0029. *Test:*
   `test_ops_reduce_monoids`.
 - **KISS-OPS-6.11-0002a** — When a §6.11-0002 monoid identity is an infinity — the `max`
   identity `−∞` or the `min` identity `+∞` — and the reduction's compute dtype has **no
@@ -1286,6 +1289,23 @@ section-intro paragraph is an informative pointer to it):
   bits are unchanged. An **empty mask**, a bit at or above the output rank, and an output rank above
   `MAX_RANK` are each a typed decline. `unsqueeze(squeeze(x, S), S) = x` whenever `S` is a legal
   `squeeze` set of `x`. *Test:* `test_ops_unsqueeze_semantics`.
+- **KISS-OPS-6.11-0025** — `iota` MUST take **no** input operand and MUST carry the OpAttrs fields
+  `target_dtype`, `extents` and `axis` (§6.19-0047). Its output has the dtype `target_dtype`, the
+  static shape `extents` (rank `1..MAX_RANK`, every extent at least `1`), and, at the coordinate
+  `(c0, …, c(r-1))`, the value `c(axis)` converted to `target_dtype` **exactly**: a count along one
+  axis, constant along every other (XLA `iota`, NumPy `arange` over a grid). `target_dtype` MUST be
+  an integer dtype or one of `f16`, `bf16`, `f32`, `f64`; any other dtype (`bool`, a sub-byte,
+  MX or `f8*` dtype, a complex dtype, a reserved one) is a typed decline, and so is an `axis` at or
+  above the rank, and **a value `extents[axis] - 1` that `target_dtype` cannot hold exactly** (a
+  float dtype holds every integer up to `2^p`, `p` the significand width including the implicit bit;
+  an integer dtype holds up to its maximum), because a rounded count is a wrong count. `iota`
+  computes no floating-point arithmetic, so its result is **exact-byte** (§6.0-0002) and every
+  conforming reader MUST produce the same bytes. It is a **primitive** (the floor, §6.3-0001, has no
+  other zero-operand source), and the ops that build on it are compositions: `arange(start, limit,
+  delta)` is `add(mul(iota, delta), start)` over a rank-1 `extents`, a mask such as lower-triangular
+  is `cmp_ge(iota(axis 0), iota(axis 1))` over two `iota`s of one shape, and a one-hot is
+  `cmp_eq(iota, index)`. *Draft change (CireSnave 2026-11-12, board 422 "A"): an additive op
+  token; no existing field, clause or `structure_key` byte moves.* *Test:* `test_ops_iota_semantics`.
 - **KISS-OPS-6.11-0024** — The `scatter` `atomic-add` combine on a floating-point dtype (and the
   `scatter_add` wrapper) MUST declare its tolerance as the **ULP-of-A band of KISS-CONTRACT-6.8-0012**,
   `k(S,A) · N · eps_A · |max partial sum|`, evaluated **per destination position `j`** with
@@ -1302,6 +1322,57 @@ section-intro paragraph is an informative pointer to it):
   (§6.11-0006). *Draft change (CireSnave 2026-11-12, board 417 "A"): before it, a floating-point
   `atomic-add` was declared nondeterministic with no stated bound.* *Test:*
   `test_ops_scatter_atomic_add_band` (vectors: `conformance/corpus/atomic_add_band_vectors.json`).
+
+- **KISS-OPS-6.11-0026** — `reduce` MUST additionally accept three **tuple-state monoids**, `welford`
+  (variance), `online_softmax` and `argmax`, ordinals 5, 6 and 7 of §6.19-0014, each defined by a
+  **state**, an **identity** (its starting value), an associative **merge** and a **finalise** written in
+  ordinary ops (§6.11-0027 to §6.11-0029). The set is **closed by definition**: no further tuple-state
+  monoid exists until this clause is amended. A reduction over a tuple-state monoid MUST return **one packed
+  tensor**: the `keepdim = 1` result of §6.11-0008 (or, with `keepdim = 0`, that result with the reduced axes
+  removed) with **one trailing state axis** appended, of extent **3** for `welford` and **2** for
+  `online_softmax` and `argmax`; the rank of the packed output is therefore the rank of that result plus one,
+  and a rank above `MAX_RANK` (§6.19-0037) is a **typed decline** (a rank-`MAX_RANK` operand with
+  `keepdim = 1` would need `MAX_RANK + 1`); `argmax` MUST reduce **exactly one** axis; `prefix_scan` (§6.11-0003) accepts only the four scalar folds, so a tuple-state ordinal in a `prefix_scan` blob is a typed decline. The **state dtype** is
+  the compute dtype when it is `f32` or `f64` and `f32` when the compute dtype is a narrower float; a
+  non-float compute dtype is a typed decline; and the `accumulator` field (§6.19-0025) MUST be `0x00` for a
+  tuple-state monoid, because the state dtype is derived. A **count or index lane** is an **unsigned integer
+  of the state dtype's width** (`u32` beside `f32`, `u64` beside `f64`) stored by `bitcast` (KISS-OPS-6.21-0005),
+  so every lane of the packed tensor has the one dtype of the tensor and a count or an index is never
+  converted through a float. A reduction over an **empty** axis yields the identity state (as §6.11-0002), and
+  the cell is a **tolerance-cell** (§6.17-0008) for `welford` and `online_softmax`, whose reference is the
+  ascending-order fold `state = merge(state, element)` of §6.17-0009, and **exact-byte** for `argmax`, which
+  only compares. The vectors are `conformance/corpus/packed_reduction_vectors.json`. *Draft change (**Breaking**;
+  CireSnave 2026-11-12, board 427 "2) d)": the closed `reduce` monoid set of §6.11-0002 is extended by
+  definition for exactly these three; the packed output form was ruled option d, one packed tensor).* *Test:*
+  `test_ops_packed_reduction_shape`.
+- **KISS-OPS-6.11-0027** — The `welford` state MUST be `(n, mean, M2)` in trailing-axis order, `n` the count
+  lane (an unsigned integer, §6.11-0026), `mean` and `M2` of the state dtype. The **identity** is
+  `(0, +0, +0)`; the state of one element `x` is `(1, x, +0)`. The **merge** of `A` and `B` is: if `nA = 0` the
+  result is `B`, if `nB = 0` it is `A`; otherwise `n = nA + nB` (a count past the lane is a typed decline, never
+  a wrap), `delta = meanB − meanA`, `mean = meanA + delta · (nB / n)` and
+  `M2 = (M2A + M2B) + (delta · delta) · ((nA · nB) / n)`, the counts converted to the state dtype (round to
+  nearest even) and every operation rounded to the state dtype (Chan et al.). The **finalise** is the
+  population variance `M2 / n`, or with Bessel's correction `M2 / (n − 1)` (§6.13-0004's `bessel_correction`);
+  an empty or, with the correction, single-element state finalises to `0 / 0`, NaN. A NaN element gives a state
+  whose `mean` and `M2` are NaN and whose `n` still counts it. `M2` is non-negative by construction. *Test:*
+  `test_ops_welford_reduction`.
+- **KISS-OPS-6.11-0028** — The `online_softmax` state MUST be `(m, l)` in trailing-axis order, both of the state
+  dtype: the running maximum and the running sum of `exp(x − m)`. The **identity** is `(−∞, +0)`; the state of one
+  element `x` is `(x, 1)`, except that `x = −∞` is the identity (it adds weight `exp(−∞) = 0`) and a NaN or `+∞`
+  element is the **NaN state** `(NaN, NaN)`. The **merge** is: a NaN lane on either side gives the NaN state;
+  `m = max(mA, mB)`; if `m = −∞` the result is the identity (so two identities never produce `−∞ − −∞`, NaN);
+  otherwise `l = lA · exp(mA − m) + lB · exp(mB − m)`. The **finalise** is `m + log(l)` (the logsumexp), and the
+  probability of an element `x` is `exp(x − m) / l`; an empty state finalises to `−∞`. A fully masked row
+  therefore keeps the identity, never NaN. *Test:* `test_ops_online_softmax_reduction`.
+- **KISS-OPS-6.11-0029** — The `argmax` state MUST be `(value, index)` in trailing-axis order, `value` of the state
+  dtype and `index` the index lane (an unsigned integer, §6.11-0026): the extremal value and its **zero-based
+  position along the reduced axis**. The **identity** is `(−∞, 2^w − 1)` (the maximal index, so any element
+  replaces it); the state of the element at position `p` is `(x, p)`. The **merge** keeps `A` unless `B`'s value
+  is greater under the §6.11-0007 total order (NaN is the greatest value; `+0` and `−0` are equal; any two NaNs
+  are equal) **or** the values are equal and `B`'s index is lower (`tie_rule = lowest`, fixed here). It is the
+  maximum of a total order, so it is exact, associative and commutative: every grouping gives the same bits, the
+  lowest-index NaN wins when any element is NaN, and the bits of the winning element are kept (`−0` wins over a
+  later `+0`). The **finalise** is the index lane. *Test:* `test_ops_argmax_reduction`.
 
 ### 6.12 Scalar-source leaves
 
@@ -1424,7 +1495,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `index_select` | gather_scatter | — | `gather(oob=skip)` with a 1-D index operand |
 | `embedding` | gather_scatter | — | `gather(oob=zero-fill)` with a 1-D index operand |
 | `scatter_add` | gather_scatter | — | `scatter(combine=atomic-add, oob=skip)` |
-| `im2col` | shape | — | closed-form structured `gather` mapping each output element `(patch, tap)` to the source element at `coord`-derived index `base(patch)·stride + tap_offset·dilation − padding` over `window_size` taps per axis (window/stride/dilation/padding and the output-column flatten order pinned as attributes per §6.13-0004; OOB taps zero-filled) |
+| `im2col` | shape | — | closed-form structured `gather` mapping each output element `(patch, tap)` to the source element at `coord`-derived index `base(patch)·stride + tap_offset·dilation − padding_lo` over `window_size` taps per axis (window/stride/dilation/padding_lo/padding_hi and the output-column flatten order pinned as attributes per §6.13-0004; OOB taps zero-filled) |
 
 - **KISS-OPS-6.13-0001** — Each non-primitive op MUST carry the reference decomposition
   in the table above (and, for the complex-arithmetic family, in the §6.18 tables), and
@@ -1457,7 +1528,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
   `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
   normalization axes (`norm_axes`, §6.19-0031); `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
-  `window_size`, `stride`, `dilation`, and `padding`; `avg_pool` MUST declare
+  `window_size`, `stride`, `dilation`, `padding_lo`, and `padding_hi`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
   `reduced_count` — and the valid-tap count from the pooled view); `im2col` MUST
   additionally declare its
@@ -1466,7 +1537,8 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `matmul` MUST use the operand-ordering convention stated above the table. The pooled
   **window view** is a structured `gather`
   that adds one window axis whose taps lie at `dilation`-spaced offsets over
-  `window_size` positions with the given `stride` and `padding`, OOB taps skipped.
+  `window_size` positions with the given `stride` and `padding_lo` / `padding_hi` (the padding
+  on the low-index and the high-index side of each axis), OOB taps skipped.
   KISS-Ops MUST NOT let an unstated attribute change an op's pinned result. *Test:*
   `test_ops_parameterized_attributes_explicit`.
 - **KISS-OPS-6.13-0005** — `pow` MUST be pinned over its full domain by the IEEE 754-2019
@@ -1519,22 +1591,26 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `test_ops_structured_decomposition_reference`.
 - **KISS-OPS-6.13-0010** — The §6.13-0004 window view MUST be defined per spatial axis
   by the operand extent `n` (`n ≥ 0`) and that axis's `window_size` `k`, `stride` `s`,
-  `dilation` `d` and `padding` `p` (§6.19-0023; `k`, `s`, `d` ≥ 1 and `p` ≥ 0 — a zero
-  `window_size`, `stride` or `dilation` is not expressible) as follows: the dilated extent is
-  `D = d·(k − 1) + 1`; the output extent is `⌊(n + 2p − D) / s⌋ + 1` when `n + 2p ≥ D` and
-  `0` when it is not (no window fits); output window `o` (`0 ≤ o < output extent`) has tap
-  `j` (`0 ≤ j < k`) at operand position `o·s − p + j·d`; and a tap is in bounds exactly when
+  `dilation` `d`, low-side padding `p_lo` and high-side padding `p_hi` (§6.19-0023; `k`, `s`,
+  `d` ≥ 1 and `p_lo`, `p_hi` ≥ 0 — a zero `window_size`, `stride` or `dilation` is not
+  expressible) as follows: the dilated extent is `D = d·(k − 1) + 1`; the output extent is
+  `⌊(n + p_lo + p_hi − D) / s⌋ + 1` when `n + p_lo + p_hi ≥ D` and `0` when it is not (no
+  window fits); output window `o` (`0 ≤ o < output extent`) has tap
+  `j` (`0 ≤ j < k`) at operand position `o·s − p_lo + j·d`; and a tap is in bounds exactly when
   that position lies in `[0, n)`, an out-of-bounds tap being skipped per §6.13-0004. Written in
   the shape-expression vocabulary (§6.20-0002) the output extent is
-  `Max(Add(Div(Sub(Add(n, 2p), D), s), 1), 0)`, and it is the `Max` (§6.20-0012) that makes the
+  `Max(Add(Div(Sub(Add(Add(n, p_lo), p_hi), D), s), 1), 0)`, and it is the `Max` (§6.20-0012) that makes the
   no-window-fits case `0` and not a negative extent: for `n = 2`, `k = 8`, `s = 1`, `d = 1`,
-  `p = 0` the term before the clamp is `-5` and the output extent is `0`. *Test:*
+  `p_lo = p_hi = 0` the term before the clamp is `-5` and the output extent is `0`. *Draft change
+  (CireSnave 2026-11-12, board 426 5 "A", **Breaking**): the single symmetric `padding` vector became
+  the pair `padding_lo`, `padding_hi`, so an asymmetric padding ("same" padding at an even window)
+  is expressible; a symmetric `p` is `p_lo = p_hi = p`.* *Test:*
   `test_ops_window_output_extent`.
 - **KISS-OPS-6.13-0011** — On every spatial axis of an `avg_pool`, `max_pool` or `im2col`
   window view, every output window MUST have at least one in-bounds tap (§6.13-0010), so
   that every window over all axes overlaps at least one real operand element. The condition
   is over the window attributes **and** the operand extent: the attribute-only bound
-  `2·p ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p = 1` has
+  `p_lo + p_hi ≤ k` is not equivalent to it once `d > 1` (`n = 1, k = 2, d = 2, s = 1, p_lo = p_hi = 1` has
   one window whose taps lie at −1 and 1, and no real tap). A shape that violates it is not
   expressible: a producer MUST NOT write it and a reader MUST decline it, so the empty
   reduction it would otherwise name (a `max_pool` with no tap, an `avg_pool` with
@@ -1912,7 +1988,8 @@ surfaces it in a kernel's guarantees section.
   **tolerance-cell** whose determinism class and declared tolerance are a function of the
   pair **(compute-dtype, accumulator-dtype)**. The accumulator dtype MUST be a **float**
   dtype **at least as wide** as the compute dtype (a narrower accumulator cannot improve on
-  storage precision and is forbidden by the reference). The §6.17-0005 storage-precision
+  storage precision and is forbidden by the reference; this is the rule for a **float** compute dtype, an
+  **integer** compute dtype being §6.17-0010). The §6.17-0005 storage-precision
   reference profile is exactly the **diagonal** cell accumulator-dtype == compute-dtype;
   every off-diagonal (wider-accumulator) cell is a **distinct** tolerance-cell compared
   against its own per-cell reference (§6.17-0009), never against the diagonal cell and never
@@ -1933,6 +2010,30 @@ surfaces it in a kernel's guarantees section.
   thus preserved transitively, not discarded. *Test:*
   `test_ops_accumulator_reference_value`.
 
+- **KISS-OPS-6.17-0010** — The accumulator of a `matmul` over an **integer** compute dtype (`i4`, `u4`, `i8`, `u8`, `i16`, `u16`,
+  `i32`, `u32`, `i64`, `u64`) MUST be `0x00` (the compute dtype, wrapping) or a
+  **signed** integer dtype of **32 or 64 bits** at least as wide as the compute dtype (an unsigned compute dtype
+  of the accumulator's own width is refused), and no other: not an integer narrower than 32 bits, not an
+  unsigned one, not a float. A float accumulator for an integer compute dtype and an integer accumulator for a
+  float compute dtype are typed declines (the float rule is §6.17-0008, unchanged). The integer fold MUST be
+  **exact**: products and sums are taken in the accumulator dtype with two's-complement wrap on overflow
+  (§6.2-0002), so the result has the same bits for **every reduction order** and the cell is **exact-byte**
+  (§6.0-0002), not a tolerance-cell (§6.17-0008). Converting the accumulator to a different output dtype is a
+  `cast` (§6.21) and is not defined here. *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A"):
+  relaxes the float-only wording of §6.17-0008 and §6.19-0025 for `matmul`; `reduce` is unchanged.* *Test:*
+  `test_ops_matmul_integer_accumulator`.
+- **KISS-OPS-6.17-0011** — The **precision tag** of a `matmul` is a named reduced-precision strategy drawn
+  from the **maintainer-owned** `precision_tag` vocabulary of §6.19.2 (`none`, `3xtf32`, `fp8-fast-accumulate`),
+  whose members the maintainer adds under the ordinary growth rule and KISS never defines by recipe. A tag other
+  than `none` MUST be paired with `math_fidelity` = reduced-mantissa-permitted, MUST name the compute dtype it
+  applies to (`3xtf32` to `f32`; `fp8-fast-accumulate` to `f8e4m3fn` or `f8e5m2`), and a kernel that advertises
+  a tagged cell MUST **declare a bound** for it (a `per_backend_ulp_tiers` entry in its Guarantees, §6.8, the
+  R1.36 declaration format): a tagged cell with no declared bound is refused. The tag names a strategy and the
+  bound is what a consumer relies on; KISS pins neither the arithmetic (the number of passes, the split of a
+  product, the accumulate width) nor the value of any bound. The tag travels in the OpAttrs blob, so it is part
+  of the op identity beside the key (§6.6-0020), not of the `structure_key`, whose `<mp>` code stays `st`/`rm`.
+  *Draft change (**Breaking**; CireSnave 2026-11-12, board 427 "1: A"): a new `matmul` field and a new
+  sub-vocabulary.* *Test:* `test_ops_precision_tag`.
 ### 6.18 Complex-arithmetic op family (c64 / c128)
 
 This version defines a **complex-arithmetic op family** over the interleaved-storage
@@ -2183,7 +2284,7 @@ cross-op axis rules in §6.19.5.
   schema) for this op-set version MUST be exactly `{reduce, prefix_scan, gather,
   scatter, sort_network, reduce_var, reduce_std, softmax, log_softmax, rms_norm,
   layer_norm, avg_pool, max_pool, im2col, index_select, embedding, scatter_add, cast, concat,
-  squeeze, unsqueeze, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin}`; every
+  squeeze, unsqueeze, iota, bitcast, reduce_mean, reduce_norm2, logsumexp, any, all, argmax, argmin, matmul}`; every
   other op MUST have an empty OpAttrs blob (definite length `0`), and any semantics-
   affecting axis of a non-carrier non-primitive op MUST be determined by its reference
   decomposition's inner carrier node (§6.19-0036), not by a free OpAttrs field. *Test:*
@@ -2208,7 +2309,7 @@ cross-op axis rules in §6.19.5.
 - **KISS-OPS-6.19-0007** — Every integer OpAttrs field MUST be encoded at the
   fixed width pinned in its schema (not chosen by magnitude), little-endian, two's-
   complement: axis-index and operand-index and vector length-prefixes and `u8` enum
-  ordinals as one byte, `reduce_axes` as `u16` LE, and window/stride/dilation/padding
+  ordinals as one byte, `reduce_axes` as `u16` LE, and window/stride/dilation/padding_lo/padding_hi
   elements as `u32` LE. *Test:* `test_ops_opattrs_int_fixed_width_le`.
 - **KISS-OPS-6.19-0008** — The OpAttrs canonical wire form MUST be little-endian
   throughout, consistent with the KISS-Announce POD and KISS-Grammar region wire forms;
@@ -2272,7 +2373,7 @@ inlined normatively in §6.19-0037.
 
 | Sub-vocabulary | Kind / width | Code points |
 |---|---|---|
-| `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min |
+| `monoid` | enum, `u8` | `0`=RESERVED, `1`=sum, `2`=prod, `3`=max, `4`=min, `5`=welford, `6`=online-softmax, `7`=argmax |
 | `oob_policy` | enum, `u8` | `0`=RESERVED, `1`=skip, `2`=clamp, `3`=zero-fill, `4`=reject |
 | `scatter_combine` | enum, `u8` | `0`=RESERVED, `1`=assign, `2`=atomic-add, `3`=atomic-max, `4`=atomic-min |
 | `index_dtype` | enum, `u8` | `0`=RESERVED, `1`=u32, `2`=i32, `3`=i64 |
@@ -2280,6 +2381,7 @@ inlined normatively in §6.19-0037.
 | `scan_exclusivity` | enum, `u8` | `0`=RESERVED, `1`=inclusive, `2`=exclusive |
 | `column_ordering` | enum, `u8` | `0`=RESERVED, `1`=channel-major (tap-minor), `2`=tap-major (channel-minor) |
 | `math_fidelity` | enum, `u8` | `0`=RESERVED, `1`=bit-stable, `2`=reduced-mantissa-permitted |
+| `precision_tag` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=3xtf32, `3`=fp8-fast-accumulate |
 | `cast_rounding` | enum, `u8` | `0`=RESERVED, `1`=nearest-even, `2`=toward-zero, `3`=toward-negative-infinity, `4`=toward-positive-infinity |
 | `cast_saturation` | enum, `u8` | `0`=RESERVED, `1`=none, `2`=clamp |
 | `tie_rule` | enum, `u8` | `0`=RESERVED, `1`=lowest, `2`=highest, `3`=any |
@@ -2290,8 +2392,8 @@ inlined normatively in §6.19-0037.
 | `permutation` | ordered length-prefixed vector (RESERVED) | `u8` element-count prefix (`0..MAX_RANK`), then count × `u8` axis-index elements forming a valid permutation of `0..rank-1`, in order (never sorted) |
 
 - **KISS-OPS-6.19-0014** — The `monoid` OpAttrs field MUST be encoded as the frozen
-  `u8` ordinal `{1=sum, 2=prod, 3=max, 4=min}` with `0` reserved (never emitted); it
-  denotes the §6.11-0002 fold operator, is a member of an op's semantics (not part of
+  `u8` ordinal `{1=sum, 2=prod, 3=max, 4=min, 5=welford, 6=online-softmax, 7=argmax}` with `0` reserved (never emitted); it
+  denotes the §6.11-0002 fold operator or, for ordinals 5 to 7, a §6.11-0026 tuple-state monoid, is a member of an op's semantics (not part of
   the op token), and MUST distinguish e.g. `reduce(sum)` from `reduce(max)` by ordinal
   alone. *Test:* `test_ops_opattrs_monoid_enum`.
 - **KISS-OPS-6.19-0015** — The `oob_policy` OpAttrs field MUST be encoded as the frozen
@@ -2363,7 +2465,7 @@ inlined normatively in §6.19-0037.
   and `stability` (§6.11-0007) are real flags: each accepts `0` and `1`, each defaults to
   `1`, and a reader MUST NOT reject a `0`. *Test:* `test_ops_opattrs_boolean_flags`.
 - **KISS-OPS-6.19-0023** — Every window-parameter OpAttrs vector (`window_size`,
-  `stride`, `dilation`, `padding`) MUST be encoded as a `u8` element-count prefix
+  `stride`, `dilation`, `padding_lo`, `padding_hi`) MUST be encoded as a `u8` element-count prefix
   (`0..MAX_RANK`, §6.19-0037) immediately followed by that many `u32` little-endian
   elements, where **element `i` corresponds to spatial axis `i` in ascending operand
   spatial-axis index order (the outermost spatial axis first, the innermost spatial axis
@@ -2389,6 +2491,7 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | Op | Canonical field order (name : encoding : resolved default) |
 |---|---|
 | `reduce` | `monoid`:enum `u8`:mandatory (identity-bearing, no default) — `reduce_axes`:`u16` LE:mandatory (`rall`/`rlast`/subset; `0x0000` forbidden, §6.19-0038) — `keepdim`:bool `u8`:`1` (§6.11-0008) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
+| `matmul` | `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; §6.17-0010) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default) — `precision_tag`:enum `u8`:`1` (none, §6.17-0011) |
 | `prefix_scan` | `monoid`:enum `u8`:mandatory — `reduce_axes`:`u16` LE:mandatory (exactly one axis; §6.19-0020) — `exclusivity`:`scan_exclusivity` enum `u8`:`1` (inclusive) — `accumulator`:dtype-ordinal `u8`:`0x00` (=compute-dtype, §6.17-0005 diagonal; sk4) — `math_fidelity`:enum `u8`:`1` (bit-stable, the §6.17-0001 default; sk4) |
 | `gather` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0013) — `oob_policy`:enum `u8`:`1` (skip) — `index_operand`:`u8`:mandatory (`0..MAX_OPERANDS-1`) — `index_dtype`:enum `u8`:mandatory |
 | `scatter` | `axis`:`u8`:mandatory (§6.11-0013) — `combine`:enum `u8`:`1` (assign) — `oob_policy`:enum `u8`:`1` (skip, fixed) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory |
@@ -2406,9 +2509,9 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `log_softmax` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0004) |
 | `rms_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)` are operands/params, NOT OpAttrs) |
 | `layer_norm` | `norm_axes`:`u16` LE:mandatory (`0x0000` forbidden, §6.19-0038; §6.13-0008; `eps`=`param(0)`, `gamma`=`input(1)`, `beta`=`input(2)` are operands/params, NOT OpAttrs) |
-| `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
-| `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec |
-| `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
+| `avg_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec — `count_include_pad`:bool `u8`:`1` (include pad) |
+| `max_pool` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec |
+| `im2col` | `window_size`:vec — `stride`:vec — `dilation`:vec — `padding_lo`:vec — `padding_hi`:vec — `output_column_ordering`:enum `u8`:`1` (channel-major) |
 | `index_select` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED skip by decomposition, carries no free `oob` field) |
 | `embedding` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (oob FIXED zero-fill by decomposition) |
 | `scatter_add` | `axis`:`u8`:mandatory (§6.11-0013) — `index_operand`:`u8`:mandatory — `index_dtype`:enum `u8`:mandatory (combine FIXED atomic-add, oob FIXED skip by decomposition) |
@@ -2416,6 +2519,8 @@ by the embedding layer) selects the schema and the reader replays it positionall
 | `concat` | `axis`:`u8`:mandatory (`0..MAX_RANK-1`, §6.11-0020) |
 | `squeeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0022) |
 | `unsqueeze` | `axes`:`axes_mask` `u8`:mandatory (`0x00` forbidden, §6.11-0023) |
+| `bitcast` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.21-0005) |
+| `iota` | `target_dtype`:dtype-ordinal `u8`:mandatory (never `0x00`, §6.11-0025) — `extents`:vec:mandatory (rank `1..MAX_RANK`, every extent `>= 1`) — `axis`:`u8`:mandatory (`0..MAX_RANK-1`) |
 
 - **KISS-OPS-6.19-0025** — The `reduce` OpAttrs blob MUST be exactly `monoid` (`u8`,
   mandatory non-zero ordinal) then `reduce_axes` (`u16` LE, `rall`/`rlast`/subset;
@@ -2476,14 +2581,18 @@ by the embedding layer) selects the schema and the reader replays it positionall
   (§6.13 operand-ordering convention), NOT OpAttrs fields. *Test:*
   `e2_softmax_norm_axis`.
 - **KISS-OPS-6.19-0032** — The `avg_pool` OpAttrs blob MUST be exactly `window_size`,
-  `stride`, `dilation`, `padding` (each a window-parameter vector, §6.19-0023) then
+  `stride`, `dilation`, `padding_lo`, `padding_hi` (each a window-parameter vector, §6.19-0023) then
   `count_include_pad` (bool `u8`, default `1`), in that order; the `max_pool` OpAttrs
-  blob MUST be exactly `window_size`, `stride`, `dilation`, `padding` in that order with
-  no trailing flag. *Test:* `e2_avg_pool_square_37_bytes`.
+  blob MUST be exactly `window_size`, `stride`, `dilation`, `padding_lo`, `padding_hi` in that
+  order with no trailing flag. *Draft change (**Breaking**, board 426 5 "A"): `padding` is
+  replaced by the pair; the blob of a two-axis `avg_pool` grows from 37 to 46 bytes and of a
+  `max_pool` from 36 to 45; no existing blob decodes under the new schema.* *Test:*
+  `e2_avg_pool_square_46_bytes`.
 - **KISS-OPS-6.19-0033** — The `im2col` OpAttrs blob MUST be exactly `window_size`,
-  `stride`, `dilation`, `padding` (each a window-parameter vector) then
+  `stride`, `dilation`, `padding_lo`, `padding_hi` (each a window-parameter vector) then
   `output_column_ordering` (`column_ordering` enum `u8`, default `1` channel-major), in
-  that order. *Test:* `e2_im2col_channel_major`.
+  that order. *Draft change (**Breaking**, board 426 5 "A"): as §6.19-0032.* *Test:*
+  `e2_im2col_channel_major`.
 - **KISS-OPS-6.19-0034** — The `index_select`, `embedding`, and `scatter_add` OpAttrs
   blobs MUST each be exactly `axis` (`u8`, the indexed axis of §6.11-0013) then
   `index_operand` (`u8`) then `index_dtype` (enum `u8`), in that order; these
@@ -2549,7 +2658,33 @@ by the embedding layer) selects the schema and the reader replays it positionall
   is declined by the op (§6.11-0022, §6.11-0023). The blob is emitted explicitly (§6.19-0005), and
   the mask `0x03` of a `squeeze` of `[1,1]` and of an `unsqueeze` to output rank 2 are the same byte.
   *Test:* `test_ops_opattrs_axes_mask_schema`.
+- **KISS-OPS-6.19-0047** — The `iota` OpAttrs blob MUST be exactly `target_dtype` (the 1-based §6.1
+  dtype ordinal, never `0x00`, as for `cast`, §6.21-0001), then `extents` (the length-prefixed `u32`
+  LE vector of §6.19-0023: a `u8` element count `1..MAX_RANK`, then that many extents, element `i`
+  being output axis `i`), then `axis` (`u8`). A zero extent, a count of `0` or above `MAX_RANK`, a
+  `target_dtype` of `0x00`, and an `axis` at or above the count are each a typed decline; the dtype and
+  representability rules of §6.11-0025 are the op's. The blob is emitted explicitly (§6.19-0005).
+  *Test:* `test_ops_opattrs_iota_schema`.
+- **KISS-OPS-6.19-0048** — The `bitcast` OpAttrs blob MUST be exactly one `target_dtype` byte: the
+  1-based §6.1 dtype ordinal of the destination, never `0x00`, as for `cast` (§6.21-0001). A `0x00`, an
+  ordinal past the dtype table and a reserved dtype are typed declines; whether the destination is a legal
+  `bitcast` destination for the operand's dtype is the op's rule (§6.21-0005). The blob is emitted
+  explicitly (§6.19-0005). *Test:* `test_ops_opattrs_bitcast_schema`.
 
+- **KISS-OPS-6.19-0049** — The `matmul` OpAttrs blob MUST be exactly `accumulator` (`u8`) then `math_fidelity`
+  (`u8`) then `precision_tag` (`u8`), in that order, each emitted explicitly (§6.19-0005). `accumulator` is `0x00`
+  when the accumulator dtype equals the compute dtype (the §6.17-0005 diagonal) and otherwise the 1-based
+  §6.1-table dtype ordinal of the accumulator, a float for a float compute dtype and a signed 32- or 64-bit
+  integer for an integer one (§6.17-0010), never a reserved dtype; `math_fidelity` is the §6.17-0001
+  MathFidelity ordinal exactly as for `reduce` in §6.19-0025 (default `bit-stable`, emitted `01`);
+  `precision_tag` is the §6.17-0011 ordinal (`1`=none, the default, emitted `01`). A reader MUST decline, with
+  a typed decline (§7.1-0002), a blob of any other length, a `0x00` `math_fidelity` or `precision_tag`, an
+  ordinal outside either enum, and an accumulator ordinal outside the dtype table or naming a reserved dtype;
+  whether the accumulator and the tag are legal for the operand's compute dtype is the op's rule (§6.17-0010,
+  §6.17-0011). The pair `(accumulator, math_fidelity)` is the pair, in the order, that `reduce` carries.
+  *Draft change (**Breaking**; CireSnave 2026-11-12, board 426 6 "A" and board 427 "1: A"): `matmul` carried
+  no OpAttrs, so every `matmul` blob changes from empty to these three bytes.* *Test:*
+  `test_ops_opattrs_matmul_schema`.
 #### 6.19.4 Reconciliation with KISS-Classify `structure_key`
 
 The `reduce_axes` OpAttrs field and the KISS-Classify `structure_key` reduce-field
@@ -2660,7 +2795,7 @@ value oracle); this subsection pins the **shape** behaviour as its companion, in
 small closed vocabulary that is evaluable against concrete operand shapes and
 serializable under the §6.19 canonical discipline. Most ops derive their output
 shape from their operands directly (elementwise, `matmul`, `concat`, axis-based
-`reduce` with `keepdim`, `cast`, `squeeze`, `unsqueeze`) and carry no shape attr;
+`reduce` with `keepdim`, `cast`, `squeeze`, `unsqueeze`) and carry no shape attr (`iota`, which has no operand, states its shape in its own `extents` attribute, §6.19-0047);
 the only *irreducible* free cases are a **broadcast target** (another operand's
 whole shape) and a **slice/iota offset** (arithmetic on an operand's extent), so
 the shared surface is two constructors.
@@ -2806,7 +2941,8 @@ the shared surface is two constructors.
   stated as the operand's strides (a stride of `0` broadcasts, §6.11-0001) and the Classify role hints
   (KISS-CLASSIFY-6.6-0016), and a kernel that must materialize one does so with `element_map` over the
   strided read. A rank change of an interior node's **result**, which has no operand strides to carry
-  a view, is the `squeeze` / `unsqueeze` pair. An implementation MUST NOT mint a `transpose` or
+  a view, is the `squeeze` / `unsqueeze` pair. An `iota` output shape MUST be its `extents`
+  attribute (§6.19-0047), a semantic rule of the op that reads no operand. A `bitcast` output shape MUST be `SameAs(operand 0)` (§6.21-0005). An implementation MUST NOT mint a `transpose` or
   `permute` op token. *Test:*
   `test_shape_rule_cast_concat_no_view_ops`.
 
@@ -2837,17 +2973,47 @@ written over the other atoms without a double rounding.
   value's sign, an infinity source included, and an integer destination takes the nearest bound of its
   range. With `saturation = 1` (**none**): a float destination takes the result its rounding direction
   gives (infinity, or the largest finite value where the direction points away from the overflow) and an
-  integer destination takes the value modulo 2^width, two's complement. A destination whose own clause
+  integer destination takes, from an **integer** source, the value modulo 2^width, two's complement
+  (a **float** source never takes `saturation = 1` into an integer: §6.21-0004). A destination whose own clause
   pins saturation (`f8e4m3fn` and `f8e5m2`, §6.16-0004 and §6.16-0005, and the three MX element types)
   MUST be requested with `saturation = 2`, and `none` for one is a typed decline. A NaN source
   into a float destination that has a NaN stays a NaN, with its sign kept. *Test:*
   `test_ops_cast_saturation`.
-- **KISS-OPS-6.21-0004** — This version pins **no** result for the cases of Appendix D item 12 (a NaN
-  into a destination with no NaN, a NaN into an integer, an out-of-range float into an integer under
-  `saturation = 1`, and a reinterpreting `bitcast`, which has no op here). A producer MUST NOT emit a
-  `cast` that depends on one of them as if it were pinned, and a consumer MUST NOT assume a value for
-  one; the recommended values recorded there are not normative. *Test:*
-  `test_ops_cast_unpinned_cases_not_relied_on`.
+- **KISS-OPS-6.21-0004** — `cast` MUST give these results for the cases Appendix D item 12 left open
+  (CireSnave 2026-11-12, board 426 "8: A": adopt what Unpopped does, per case): (a) a **NaN into a
+  destination with no NaN** (the three MX element types, §6.16) is **`+0`**; (b) a **NaN into an
+  integer** is **`0`**, whatever the width, signedness or `rounding`; (c) a **float into an integer** always
+  saturates: with `saturation = 2` an out-of-range value takes the nearest bound (§6.21-0003), and
+  `saturation = 1` (none) is a **typed decline**, so a float source never wraps; (d) an **overflow into an
+  IEEE-style float** follows the rounding direction under `saturation = 1` and clamps to the largest finite
+  value under `saturation = 2`, exactly as §6.21-0003 states, unchanged; (e) a `cast` into `bf16` or
+  `f16` with a non-nearest `rounding` is **allowed** (§6.21-0002); only the fp8 and MX destinations accept
+  nearest-even alone. A reinterpreting `bitcast` has **no op here** and nothing is pinned for it. *Draft
+  change (same ruling): before it, (a) to (c) were unpinned and neither a producer nor a consumer could
+  rely on them; it adds result rules only, no byte of any blob or key moves.* The hardware behaviour of
+  a NaN into an MX type is **unverified** (it is an IR rule, Unpopped's). *Test:*
+  `test_ops_cast_odd_cases_pinned`.
+
+- **KISS-OPS-6.21-0005** — `bitcast` MUST take exactly one input operand and one OpAttrs
+  `target_dtype` (§6.19-0048) and produce an output of the same shape, element for element, whose
+  dtype is `target_dtype`: it **reinterprets each element's bits** as the destination and computes
+  nothing. Source and destination MUST have the **same bit width**, and both MUST be an integer dtype
+  (`i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`) or one of `f16`, `bf16`, `f32`, `f64`,
+  `f8e4m3fn`, `f8e5m2`; the **sub-byte** dtypes (`i4`, `u4`, `b1`), the **MX** element types,
+  `f8e8m0` and the reserved float dtypes, the **complex** dtypes and **`bool`** (whose value set is
+  `0` and `1`, so an arbitrary bit pattern is not a `bool`) are a typed decline, as is a destination
+  of a different width. A destination equal to the source dtype is the identity. Every bit is
+  **preserved exactly**: a NaN keeps its payload, its quiet or signalling bit and its sign, a signed
+  zero keeps its sign, a subnormal is not flushed, and nothing is canonicalised, so `bitcast` there and
+  back is the identity on every pattern. The value is the destination dtype's reading of the same
+  bits (a float pattern read as `i32` is its two's-complement integer). `bitcast` is therefore
+  **exact-byte** (§6.0-0002), a **primitive** on the floor (§6.3-0001, a mandatory-core addition,
+  §7.3-0002): the raw-bit atoms `select`, `copysign`, `neg` and `abs` move or edit bits within one
+  dtype, and nothing else on the floor reads a float's bits as an integer (a `cmp` over a bitcast
+  integer gives a float's total order; `isnan` and the sign are compositions of `bitcast` with
+  `bit_and`, `cmp_*`). *Draft change (CireSnave 2026-11-12, board 427 "B": add `bitcast` to the
+  primitive floor now): an additive op token and a floor member; no existing field, clause or
+  `structure_key` byte moves.* *Test:* `test_ops_bitcast_semantics`.
 
 ---
 
@@ -3049,7 +3215,12 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.11-0021 | `test_ops_argmax_tie_rule` |
 | KISS-OPS-6.11-0022 | `test_ops_squeeze_semantics` |
 | KISS-OPS-6.11-0023 | `test_ops_unsqueeze_semantics` |
+| KISS-OPS-6.11-0025 | `test_ops_iota_semantics` |
 | KISS-OPS-6.11-0024 | `test_ops_scatter_atomic_add_band` |
+| KISS-OPS-6.11-0026 | `test_ops_packed_reduction_shape` |
+| KISS-OPS-6.11-0027 | `test_ops_welford_reduction` |
+| KISS-OPS-6.11-0028 | `test_ops_online_softmax_reduction` |
+| KISS-OPS-6.11-0029 | `test_ops_argmax_reduction` |
 | KISS-OPS-6.12-0001 | `test_ops_scalar_source_leaves` |
 | KISS-OPS-6.12-0002 | `test_ops_const_leaf_bits` |
 | KISS-OPS-6.12-0003 | `test_ops_named_constant_bits` |
@@ -3094,6 +3265,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.17-0007 | `test_ops_math_precision_reproducibility_class` |
 | KISS-OPS-6.17-0008 | `test_ops_accumulator_tolerance_cell_class` |
 | KISS-OPS-6.17-0009 | `test_ops_accumulator_reference_value` |
+| KISS-OPS-6.17-0010 | `test_ops_matmul_integer_accumulator` |
+| KISS-OPS-6.17-0011 | `test_ops_precision_tag` |
 | KISS-OPS-6.18-0001 | `test_ops_complex_op_set` |
 | KISS-OPS-6.18-0002 | `test_ops_complex_no_new_primitive` |
 | KISS-OPS-6.18-0003 | `test_ops_complex_component_bridge` |
@@ -3142,7 +3315,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0029 | `e2_sort_network_ascending_stable` |
 | KISS-OPS-6.19-0030 | `e2_reduce_var_population` |
 | KISS-OPS-6.19-0031 | `e2_softmax_norm_axis` |
-| KISS-OPS-6.19-0032 | `e2_avg_pool_square_37_bytes` |
+| KISS-OPS-6.19-0032 | `e2_avg_pool_square_46_bytes` |
 | KISS-OPS-6.19-0033 | `e2_im2col_channel_major` |
 | KISS-OPS-6.19-0034 | `e2_index_select_u32` |
 | KISS-OPS-6.19-0035 | `test_ops_opattrs_reduce_axes_classify_reconciliation` |
@@ -3157,6 +3330,9 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.19-0044 | `test_ops_argmax_blob_order` |
 | KISS-OPS-6.19-0045 | `test_ops_tie_rule_enum_ordinals` |
 | KISS-OPS-6.19-0046 | `test_ops_opattrs_axes_mask_schema` |
+| KISS-OPS-6.19-0047 | `test_ops_opattrs_iota_schema` |
+| KISS-OPS-6.19-0048 | `test_ops_opattrs_bitcast_schema` |
+| KISS-OPS-6.19-0049 | `test_ops_opattrs_matmul_schema` |
 | KISS-OPS-6.20-0001 | `test_shape_rule_exists_and_matches` |
 | KISS-OPS-6.20-0002 | `test_shape_expr_vocabulary_eval` |
 | KISS-OPS-6.20-0003 | `test_shape_expr_axis_and_floordiv` |
@@ -3172,7 +3348,8 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.21-0001 | `test_ops_cast_atom_shape_and_dtype` |
 | KISS-OPS-6.21-0002 | `test_ops_cast_rounding_modes` |
 | KISS-OPS-6.21-0003 | `test_ops_cast_saturation` |
-| KISS-OPS-6.21-0004 | `test_ops_cast_unpinned_cases_not_relied_on` |
+| KISS-OPS-6.21-0004 | `test_ops_cast_odd_cases_pinned` |
+| KISS-OPS-6.21-0005 | `test_ops_bitcast_semantics` |
 | KISS-OPS-7.1-0001 | `test_ops_mandatory_core_is_floor` |
 | KISS-OPS-7.1-0002 | `test_ops_unknown_op_typed_decline` |
 | KISS-OPS-7.2-0001 | `test_ops_profile_integer` |
@@ -3389,14 +3566,15 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
    (no new axiom, §6.18-0002); `c64`/`c128` remain interleaved (re,im) storage containers.
 5. **Transcendental atoms as declared-ULP with a normative ceiling.** The §6.8 ceilings
    (4 ULP for the elementary transcendentals, 8 ULP for `lgamma`, correctly-rounded-or-2-ULP
-   for `sqrt`) are reference values pending confirmation against real per-target math
-   libraries; they make §6.8-0001 testable at the KISS-Ops layer without mandating a
-   reference polynomial.
+   for `sqrt`) were reference values pending confirmation against real per-target math
+   libraries. **Resolved 2026-11-12 (CireSnave, board 426 "7: A"):** closed. The **declared tier is the
+   sole conformance gate** (§6.8-0001, CireSnave decision 311); the §6.8 table is an informative
+   reasonableness guide, not a threshold, and nothing is rejected against it.
 6. **Float reduction determinism.** This version classes float `sum`/`prod` reductions,
    scans, and contractions as order-invariant/nondeterministic (§6.0-0004) rather than
    pinning a canonical reduction order and accumulator width. Whether a future profile
    should offer an opt-in byte-exact reduction (pinned low-to-high order + accumulator
-   dtype) is open.
+   dtype) is open. **Stays open (CireSnave 2026-11-12, board 426 "2: A").**
 7. **`extent(axis)` and `reduced_count` leaves.** `extent(axis)` (single-axis length) and
    `reduced_count` (the product of extents over **all** reduced axes) are in the
    scalar-source leaf set (§6.12-0001); `reduced_count` is the correct divisor for a mean
@@ -3451,14 +3629,15 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     in this open-question list. (b) **`permutation` encoding** — frozen and reserved (Grammar §6.2-0006
     requires KISS-Ops to own it) but attached to NO op this version, since `sort_network`
     emits its permutation as a runtime index-vector output; confirm it is reserved for
-    future shape/transpose/permute ops. (c) **`im2col` `output_column_ordering`** — the
-    provisional `{1=channel-major, 2=tap-major}` member set is pending normative pinning.
-    (d) **padding shape** — the per-axis `padding` is modeled as a single symmetric `u32`
-    per axis; confirm no op needs asymmetric low/high pairs. (e) **`matmul`** — modeled as
-    carrying NO free OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
-    Classify role hints); confirm it needs no free contract-axis field. (f) **`monoid` as
+    future shape/transpose/permute ops. **Confirmed reserved (CireSnave 2026-11-12, board 426 "3: A"); §6.20-0011 (no `transpose` or `permute` op) stands.** (c) **`im2col` `output_column_ordering`** — the
+    set `{1=channel-major, 2=tap-major}` is **pinned** (§6.19-0021; CireSnave 2026-11-12, board 426 "4: A").
+    (d) **padding shape** — **resolved 2026-11-12 (CireSnave, board 426 5 "A", Breaking):** the
+    single symmetric `padding` became the pair `padding_lo` / `padding_hi` (§6.19-0023, -0032, -0033). (e) **`matmul`** — modeled as
+    carrying NO free contract-axis OpAttrs (M/N/K fixed by the §6.13 operand-ordering convention +
+    Classify role hints). **Resolved 2026-11-12 (CireSnave, board 426 6 "A", Breaking):** it now carries
+    `accumulator`, `math_fidelity` and `precision_tag` (§6.19-0049); M/N/K stay out of the blob. (f) **`monoid` as
     OpAttrs vs op identity** — treated as an identity-bearing mandatory OpAttrs field;
-    confirm KISS-Ops does not instead fold it into distinct op tokens. (g)
+    confirm KISS-Ops does not instead fold it into distinct op tokens. **Confirmed as a field (CireSnave 2026-11-12, board 426 "9: A")**; tuple-state reductions (the closed monoid set) are a separate open item, board 427. (g)
     **`norm_axis` for `rms_norm`/`layer_norm` (covered 2026-07-13).** §6.13-0008 now
     normatively requires an explicit `norm_axis` (same role, width, and range as the
     §6.13-0004 `softmax`/`log_softmax` normalization axis) for `rms_norm` and `layer_norm`,
@@ -3474,20 +3653,10 @@ These are recorded for the KISS-Ops / data-vocabulary RFC and do not bind confor
     IR can express that then KISS must have the ability to decribe it at the seams where it
     applies." and, choosing the encoding (option B of `docs/options-r5-7-multi-axis-norm.md`):
     "391: B". `softmax`/`log_softmax`/`rms_norm`/`layer_norm` take a `u16` axis mask in the
-    `reduce_axes` encoding (§6.19-0031, §6.13-0008).
+    `reduce_axes` encoding (§6.19-0031, §6.13-0008). **Confirmed as written, no longer pending (CireSnave 2026-11-12, board 426 "1: A").**
 12. **`cast`: the values this version leaves open (added 2026-10-29, F1, options note
     `docs/options-cast-op-f1.md`).** §6.21 adds the conversion atom and pins the attributes, the
-    enum encodings, single rounding and the cases a destination clause already fixes. It pins **no**
-    result for: (a) **NaN into a destination with no NaN** (the MX element types) — Unpopped's draft
-    gives +0, the alternatives are a typed decline or a canonical value; (b) **NaN into an integer** —
-    Unpopped's cast gives 0; (c) **an out-of-range float into an integer** — Unpopped's cast always
-    clamps, which here is `saturation = 2`, leaving `saturation = 1` (wrap) undefined for a float
-    source; (d) **overflow into an IEEE-style float** — Unpopped's cast follows the rounding direction
-    unless clamp is asked for, which is what `saturation = 1` says in §6.21-0003; (e) **`bitcast`**
-    (reinterpret the bits as a dtype of the same width), which Unpopped carries as a scalar expression
-    and KISS has no op for; (f) whether `cast` into `bf16` with a non-nearest mode, which §6.21-0002
-    allows by amending §6.16-0003, is wanted. The values in (a) to (d) are **recommended, not
-    normative**. Decision: CireSnave, via the sk7 batch.
+    enum encodings, single rounding and the cases a destination clause already fixes. It pinned **no** result for the cases below. **Resolved 2026-11-12 (CireSnave, board 426 "8: A": adopt what Unpopped does, per case)**, as §6.21-0004: (a) **NaN into a destination with no NaN** (the MX element types) is `+0`; (b) **NaN into an integer** is `0`; (c) an **out-of-range float into an integer** always clamps, and `saturation = 1` (wrap) for a float source is a typed decline; (d) **overflow into an IEEE-style float** follows the rounding direction under `saturation = 1` and clamps under `saturation = 2` (unchanged); (e) a **`bitcast`** (reinterpret the bits as a dtype of the same width) has **no op here**, Unpopped carries it as a scalar expression, and adopting it would be a primitive-floor addition (§6.3-0001), which this ruling does not apply; (f) **`cast` into `bf16` with a non-nearest mode** is wanted and allowed (§6.21-0002). Decision: CireSnave.
 
 ---
 
@@ -3563,28 +3732,44 @@ point shown for completeness but is **unreachable** in any carrier OpAttrs blob
 - **`rms_norm(norm_axes={0,2})` over a rank-4 operand** (§6.19-0031; non-contiguous): mask `0b0101` → **`05 00`** (2 bytes).
 - **`index_select(axis=0, index_operand=1, index_dtype=u32)`** (§6.19-0034): `axis` `00`,
   `index_operand` `01`, `index_dtype`=u32 `01` → **`00 01 01`** (3 bytes).
-- **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding=`[0,0]`,
-  count_include_pad=true** (§6.19-0032): `window_size` `02·02 00 00 00·02 00 00 00`;
+- **`avg_pool` window=`[2,2]`, stride=`[2,2]`, dilation=`[1,1]`, padding_lo=`[0,0]`,
+  padding_hi=`[0,0]`, count_include_pad=true** (§6.19-0032): `window_size` `02·02 00 00 00·02 00 00 00`;
   `stride` `02·02 00 00 00·02 00 00 00`; `dilation` `02·01 00 00 00·01 00 00 00`;
-  `padding` `02·00 00 00 00·00 00 00 00`; `count_include_pad` `01` →
-  **`02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
-  (37 bytes).
-- **`avg_pool` window=`[3,5]`, stride=`[1,2]`, dilation=`[1,1]`, padding=`[0,0]`,
-  count_include_pad=true** (§6.19-0032; **non-square**, exercising the §6.19-0023
+  `padding_lo` `02·00 00 00 00·00 00 00 00`; `padding_hi` `02·00 00 00 00·00 00 00 00`;
+  `count_include_pad` `01` →
+  **`02 02 00 00 00 02 00 00 00 02 02 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (46 bytes).
+- **`avg_pool` window=`[3,5]`, stride=`[1,2]`, dilation=`[1,1]`, padding_lo=`[0,0]`,
+  padding_hi=`[0,0]`, count_include_pad=true** (§6.19-0032; **non-square**, exercising the §6.19-0023
   ascending-spatial-axis order — element 0 = axis 0 = `3`/`1`, element 1 = axis 1 = `5`/`2`
   — so a reversed encoder that emitted `[5,3]`/`[2,1]` would diverge here): `window_size`
   `02·03 00 00 00·05 00 00 00`; `stride` `02·01 00 00 00·02 00 00 00`; `dilation`
-  `02·01 00 00 00·01 00 00 00`; `padding` `02·00 00 00 00·00 00 00 00`;
-  `count_include_pad` `01` →
-  **`02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 01`**
-  (37 bytes).
-- **`im2col` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding=`[1,1]`,
-  output_column_ordering=channel-major** (§6.19-0033): `window_size`
+  `02·01 00 00 00·01 00 00 00`; `padding_lo` `02·00 00 00 00·00 00 00 00`; `padding_hi`
+  `02·00 00 00 00·00 00 00 00`; `count_include_pad` `01` →
+  **`02 03 00 00 00 05 00 00 00 02 01 00 00 00 02 00 00 00 02 01 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 01`**
+  (46 bytes).
+- **`avg_pool` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding_lo=`[2,0]`,
+  padding_hi=`[0,1]`, count_include_pad=true** (§6.19-0032; **asymmetric**, so a decoder that
+  merged or swapped the two sides would diverge): `padding_lo` `02·02 00 00 00·00 00 00 00`;
+  `padding_hi` `02·00 00 00 00·01 00 00 00` →
+  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 02 00 00 00 00 00 00 00 02 00 00 00 00 01 00 00 00 01`**
+  (46 bytes).
+- **`im2col` window=`[3,3]`, stride=`[1,1]`, dilation=`[1,1]`, padding_lo=`[1,1]`,
+  padding_hi=`[1,1]`, output_column_ordering=channel-major** (§6.19-0033): `window_size`
   `02·03 00 00 00·03 00 00 00`; `stride` `02·01 00 00 00·01 00 00 00`; `dilation`
-  `02·01 00 00 00·01 00 00 00`; `padding` `02·01 00 00 00·01 00 00 00`;
-  `output_column_ordering`=channel-major `01` →
-  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
-  (37 bytes).
+  `02·01 00 00 00·01 00 00 00`; `padding_lo` `02·01 00 00 00·01 00 00 00`; `padding_hi`
+  `02·01 00 00 00·01 00 00 00`; `output_column_ordering`=channel-major `01` →
+  **`02 03 00 00 00 03 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 02 01 00 00 00 01 00 00 00 01`**
+  (46 bytes).
+
+- **`matmul` defaults** (§6.19-0049): `accumulator` `00`, `math_fidelity`=bit-stable `01`, `precision_tag`=none `01` →
+  **`00 01 01`** (3 bytes).
+- **`matmul` over `i8` with an `i32` accumulator** (§6.17-0010; `i32` is dtype ordinal 9): **`09 01 01`**.
+- **`matmul` over `f32`, `3xtf32`, reduced mantissa** (§6.17-0011): `accumulator` `00`, `math_fidelity`
+  `02`, `precision_tag`=3xtf32 `02` → **`00 02 02`**.
+- **`reduce(welford)` over axis 1 of a rank-2 operand, keepdim** (§6.19-0025, §6.11-0027): `monoid`=welford `05`,
+  `reduce_axes`=rlast `FE FF`, `keepdim` `01`, `accumulator` `00`, `math_fidelity`=bit-stable `01` →
+  **`05 FE FF 01 00 01`** (6 bytes; `online_softmax` is `06 …`, `argmax` `07 …`).
 
 **E.3 Default-resolution equality.** A `gather` written with the default `oob_policy`
 (skip) and one written explicitly `oob_policy=skip`, all other fields equal (`axis=0`,

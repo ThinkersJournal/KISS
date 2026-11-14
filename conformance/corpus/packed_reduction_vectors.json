@@ -1,0 +1,37 @@
+{
+  "schema": "kiss-packed-reduction-vectors-v1.json",
+  "generated_from": "conformance/src/packed_reduce.rs::emit_json (the reference)",
+  "clauses": "KISS-OPS-6.11-0026 (packed output, state dtype, MAX_RANK decline), -0027 (welford), -0028 (online_softmax), -0029 (argmax)",
+  "encoding": "f32 state: the lanes are 8-hex-digit words in trailing-axis order; a welford count lane and an argmax index lane are u32 values written as hex words (read through bitcast), every other lane is an f32 bit pattern. Folds are ascending: state = merge(state, element), index = position along the reduced axis.",
+  "cases": [
+    {"name": "welford_empty_is_identity", "kind": "welford", "input": [], "lanes": "00000000 00000000 00000000", "class": "exact-byte", "note": "an empty reduction yields the identity (0, +0, +0)"},
+    {"name": "welford_one_element", "kind": "welford", "input": ["40600000"], "lanes": "00000001 40600000 00000000", "class": "exact-byte", "note": "(1, x, +0)"},
+    {"name": "welford_constant", "kind": "welford", "input": ["40A00000", "40A00000", "40A00000"], "lanes": "00000003 40A00000 00000000", "class": "exact-byte", "note": "M2 stays +0"},
+    {"name": "welford_one_to_four", "kind": "welford", "input": ["3F800000", "40000000", "40400000", "40800000"], "lanes": "00000004 40200000 40A00000", "class": "tolerance", "note": "mean 2.5, M2 5; population variance 1.25, Bessel 5/3"},
+    {"name": "welford_nan_input", "kind": "welford", "input": ["3F800000", "7FC00000", "40400000"], "lanes": "00000003 7FC00000 7FC00000", "class": "exact-byte", "note": "n counts the NaN; mean and M2 are NaN"},
+    {"name": "softmax_empty_is_identity", "kind": "online_softmax", "input": [], "lanes": "FF800000 00000000", "class": "exact-byte", "note": "(-inf, +0)"},
+    {"name": "softmax_all_neg_inf_is_identity", "kind": "online_softmax", "input": ["FF800000", "FF800000"], "lanes": "FF800000 00000000", "class": "exact-byte", "note": "both sides -inf stay the identity, never NaN"},
+    {"name": "softmax_single", "kind": "online_softmax", "input": ["40400000"], "lanes": "40400000 3F800000", "class": "exact-byte", "note": "(x, 1)"},
+    {"name": "softmax_equal_pair", "kind": "online_softmax", "input": ["00000000", "00000000"], "lanes": "00000000 40000000", "class": "exact-byte", "note": "exp(0) = 1 exactly: (0, 2)"},
+    {"name": "softmax_one_two", "kind": "online_softmax", "input": ["3F800000", "40000000"], "lanes": "40000000 3FAF16AC", "class": "tolerance", "note": "m = 2, l = 1 + exp(-1)"},
+    {"name": "softmax_with_neg_inf", "kind": "online_softmax", "input": ["FF800000", "40000000"], "lanes": "40000000 3F800000", "class": "exact-byte", "note": "a -inf element adds weight 0: (2, 1)"},
+    {"name": "softmax_nan_input", "kind": "online_softmax", "input": ["3F800000", "7FC00000"], "lanes": "7FC00000 7FC00000", "class": "exact-byte", "note": "the NaN state"},
+    {"name": "softmax_pos_inf_input", "kind": "online_softmax", "input": ["3F800000", "7F800000"], "lanes": "7FC00000 7FC00000", "class": "exact-byte", "note": "the NaN state"},
+    {"name": "argmax_empty_is_identity", "kind": "argmax", "input": [], "lanes": "FF800000 FFFFFFFF", "class": "exact-byte", "note": "(-inf, 0xFFFFFFFF)"},
+    {"name": "argmax_ordinary", "kind": "argmax", "input": ["3F800000", "40400000", "40000000"], "lanes": "40400000 00000001", "class": "exact-byte", "note": "(3, 1)"},
+    {"name": "argmax_tie_lowest_index", "kind": "argmax", "input": ["40000000", "40000000"], "lanes": "40000000 00000000", "class": "exact-byte", "note": "equal values: the lower index"},
+    {"name": "argmax_lowest_index_nan", "kind": "argmax", "input": ["7FC00000", "3F800000", "7FC00000"], "lanes": "7FC00000 00000000", "class": "exact-byte", "note": "NaN is the greatest value; the lowest-index NaN wins (§6.11-0007)"},
+    {"name": "argmax_signed_zeros_equal", "kind": "argmax", "input": ["80000000", "00000000"], "lanes": "80000000 00000000", "class": "exact-byte", "note": "-0 and +0 are equal; the lower index (and its bits) win"},
+    {"name": "argmax_all_neg_inf", "kind": "argmax", "input": ["FF800000", "FF800000"], "lanes": "FF800000 00000000", "class": "exact-byte", "note": "equal to the identity's value: index 0 beats 0xFFFFFFFF"}
+  ],
+  "shape_cases": [
+    {"name": "welford_keepdim", "kind": "welford", "in_shape": [4, 8], "reduced_axes": [1], "keepdim": true, "out": "[4, 1, 3]"},
+    {"name": "welford_no_keepdim", "kind": "welford", "in_shape": [4, 8], "reduced_axes": [1], "keepdim": false, "out": "[4, 3]"},
+    {"name": "softmax_all_axes_no_keepdim", "kind": "online_softmax", "in_shape": [4, 8], "reduced_axes": [0, 1], "keepdim": false, "out": "[2]"},
+    {"name": "argmax_keepdim", "kind": "argmax", "in_shape": [4, 8], "reduced_axes": [1], "keepdim": true, "out": "[4, 1, 2]"},
+    {"name": "argmax_two_axes_declines", "kind": "argmax", "in_shape": [4, 8], "reduced_axes": [0, 1], "keepdim": true, "out": "decline:ArgmaxAxisCount { got: 2 }"},
+    {"name": "rank8_keepdim_needs_rank9", "kind": "welford", "in_shape": [2, 2, 2, 2, 2, 2, 2, 2], "reduced_axes": [7], "keepdim": true, "out": "decline:RankExceedsMax { rank: 9 }"},
+    {"name": "rank8_no_keepdim_fits", "kind": "welford", "in_shape": [2, 2, 2, 2, 2, 2, 2, 2], "reduced_axes": [7], "keepdim": false, "out": "[2, 2, 2, 2, 2, 2, 2, 3]"},
+    {"name": "rank7_keepdim_fits", "kind": "online_softmax", "in_shape": [2, 2, 2, 2, 2, 2, 2], "reduced_axes": [6], "keepdim": true, "out": "[2, 2, 2, 2, 2, 2, 1, 2]"}
+  ]
+}
