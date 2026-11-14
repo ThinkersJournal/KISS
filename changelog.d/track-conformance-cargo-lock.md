@@ -1,3 +1,0 @@
-kind: tools: track conformance/Cargo.lock so the stamp tool's `cargo metadata --locked` works
----
-Tooling only. `conformance/Cargo.lock` was listed in `conformance/.gitignore`, so the PM stamp tool (`tools/stamp-at-merge.sh`, which runs `cargo metadata --locked` on `conformance/Cargo.toml`) failed with exit 101 and could not stamp any KISS PR. The lockfile is now committed and the ignore entry removed; the crate is `publish = false` with no dependencies, so there is nothing to drift, and `tools/stamp-version.py` updates the tracked lock's version entry. Verified: `cargo metadata --locked --format-version 1 --manifest-path conformance/Cargo.toml` exits 0 on the branch.
