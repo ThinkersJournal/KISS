@@ -85,9 +85,12 @@ What is missing, each only as far as I checked:
 
 ## 4. Consumers, breaking-ness, and the sk8 batch
 
-- **Consumer use (asked, no answer yet).** I asked Unpopped on Synapse whether anything emits, reads or keys on a
-  tag other than `none`. In this repo the only non-`none` values are in tests and corpus vectors; I found no kernel
-  declaring a tagged cell. Unpopped's answer will be added to this note or sent to the PM.
+- **Consumer use (Unpopped, 2026-11-14, Unpopped@9be7e15e, `git grep` over `crates` excluding the vendored `kiss/`).** 
+  No Unpopped code, emitter, registry or artifact emits or reads a `precision_tag` other than `none`: 0 hits for 
+  `precision_tag`, `fp8-fast-accumulate` and `FastAccum`; the `3xTF32` hits are Unpopped's own `AccumPolicy::{Tf32,Tf32x3,Bf16x3}`,
+  a kernel-internal recipe that is never read from or written to a KISS tag and is not in the key (control: the same
+  grep for `math_fidelity` finds 71 hits in vendored vectors). Replacing the tag breaks nothing there. In this repo the
+  only non-`none` values are in tests and corpus vectors. Other consumers (Fuel, FireLine, Baracuda) were not asked.
 - **Breaking.** Removing `precision_tag` shrinks the `matmul` blob from three bytes to two (`00 01 01` becomes
   `00 01`) and changes the corpus vectors and the golden for any document carrying a `matmul` node, so it is
   **Breaking** by the 0.17.0 precedent. The blob was empty before 0.17.0, so only blobs written at 0.17.x are
