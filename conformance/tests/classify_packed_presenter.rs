@@ -16,7 +16,7 @@ fn strides(extents: &[i64]) -> Vec<i64> {
 }
 
 fn operand(usage: OperandUse, extents: &[i64]) -> CellOperand {
-    CellOperand { usage, dtype: "f32", extents: extents.to_vec(), strides: strides(extents), alignment: 256, dequant: None }
+    CellOperand { usage, dtype: "f32", extents: extents.to_vec(), strides: strides(extents), alignment: 256, dequant: None, block_shape: vec![] }
 }
 
 fn reduction(in_shape: &[i64], out_shape: &[i64], reduced: &[usize]) -> DerivationCell {

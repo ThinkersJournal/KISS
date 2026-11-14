@@ -4,14 +4,14 @@
 
 use kiss_conformance::structure_key::*;
 
-fn sub() -> OperandSubKey {
+fn sub(dtype: &'static str) -> OperandSubKey {
     OperandSubKey {
         contig: Contig::Contiguous,
         bcast_mask: 0x00,
         vec: VecWidth::V1,
         div: DivBucket::D8,
         flipped: false,
-        dequant: None,
+        dtype, dequant: None,
     }
 }
 
@@ -23,7 +23,8 @@ fn red_key(dtype: &str, reduce: Reduce, acc_mp: Option<AccMp>) -> StructureKey {
         index_width: "ix32".to_string(),
         work_class: WorkClass::Warp,
         rank: 2,
-        operands: vec![sub(), sub()],
+        // sk8: each sub-key carries the cell's dtype (a uniform cell).
+        operands: vec![sub(DTYPES.iter().copied().find(|d| *d == dtype).unwrap()); 2],
         reduce,
         contraction: None,
         acc_mp,

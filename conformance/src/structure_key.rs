@@ -13,14 +13,14 @@
 //! **or** the non-contraction precision field `<acc>/<mp>` (non-`ctr` cells,
 //! §6.7-0013): the two occupy the same optional-trailing slot and never coexist, so
 //! the nine-or-ten-field parse is dispatched by the cell-class code. Each `<opI>` is
-//! `<contig>/<bcasthex>/<vec>/<div>/<flip>[/<dq>]` (`<dq>` — `dl`/`dc` — iff the operand
-//! carries a `quant` record, §6.3-0009a). `to_token`
+//! `<contig>/<bcasthex>/<vec>/<div>/<flip>/<dtype>[/<dq>]` (`<dtype>` — that operand's own dtype, mandatory
+//! from `sk8`, §6.6-0007; `<dq>` — `dl`/`dc` — iff the operand carries a `quant` record, §6.3-0009a). `to_token`
 //! and `from_token` round-trip byte-identically (§6.7-0008); every hex mask is
 //! lowercase, zero-padded to two digits (§6.7-0010); a producer emits `rall` /
 //! `rlast` for the all-axes / trailing cases, never the equivalent `x<hh>`
 //! (§6.7-0005). A malformed token is rejected with a typed decline (§6.7-0009).
 
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 
 /// The closed cell-class set at this schema version — exactly the seven codes of
 /// Classify §6.5-0006. A token whose class field is outside this set is rejected (a
@@ -78,6 +78,27 @@ code_enum!(SizeClass { Tiny = "t", Small = "s", Medium = "m", Large = "l" });
 code_enum!(MathFidelity { Stable = "st", ReducedMantissa = "rm" });
 // sk5: the operand's `dequant_form` (§6.3-0009a), the optional last sub-key component.
 code_enum!(DequantForm { Linear = "dl", Codebook = "dc" });
+// sk8: the block length of a block-scaled contraction (§6.6-0022, §6.7-0006), a closed set. The group axis is
+// implied (the contraction axis, else the innermost) and is not keyed.
+code_enum!(BlockLen { L16 = "g16", L32 = "g32" });
+
+impl BlockLen {
+    /// The number of elements that share one scale.
+    pub fn elems(self) -> u32 {
+        match self {
+            BlockLen::L16 => 16,
+            BlockLen::L32 => 32,
+        }
+    }
+    /// The closed-set member for `elems`, or `None` outside `{16, 32}`.
+    pub fn from_elems(elems: u64) -> Option<Self> {
+        match elems {
+            16 => Some(BlockLen::L16),
+            32 => Some(BlockLen::L32),
+            _ => None,
+        }
+    }
+}
 
 /// Derive an operand's vector-access width from its innermost-active-axis facts
 /// per KISS-Classify §6.5-0009(c) and the §6.5-0013 forward-unit-stride
@@ -172,6 +193,9 @@ pub struct OperandSubKey {
     pub vec: VecWidth,
     pub div: DivBucket,
     pub flipped: bool,
+    /// sk8 (§6.6-0007): this operand's own dtype token, mandatory in every sub-key; spelled as the sixth
+    /// component, before the optional `<dq>`.
+    pub dtype: &'static str,
     /// sk5 (§6.3-0009a, §6.6-0007): the operand's `dequant_form`, present iff the
     /// operand carries a `quant` record; spelled as the optional sixth component.
     pub dequant: Option<DequantForm>,
@@ -217,6 +241,9 @@ pub struct Contraction {
     /// as the optional trailing component `q<dtype>`. An `f8e8m0` and an `f16` scale are
     /// different cells.
     pub sdt: Option<String>,
+    /// sk8 (§6.6-0022, §6.7-0006): the block length of the weight's `quant` record, a closed set `{16, 32}`,
+    /// spelled `g16` / `g32` directly after `q<sdt>`. `Some` **iff** `sdt` is `Some`.
+    pub block: Option<BlockLen>,
 }
 
 /// The **default** math-precision of a non-contraction cell (§6.7-0013): the value
@@ -278,8 +305,8 @@ pub enum KeyDecline {
     /// "re-derive" signpost: distinct from `BadVersionPrefix` on the §6.1-0001
     /// reserved-vs-unknown model, so a consumer can tell "real token, wrong schema —
     /// re-derive it" from "this isn't a token". A build MAY ship a bounded decoder
-    /// arm for the previous version through the `sk7` series (§6.7-0014); this reference
-    /// build ships none and so declines every non-`sk7` version here.
+    /// arm for the previous version through the `sk8` series (§6.7-0014); this reference
+    /// build ships none and so declines every non-`sk8` version here.
     UnsupportedSchemaVersion { got: u32 },
     BadRank,
     BadWorkClass,
@@ -316,8 +343,16 @@ pub enum KeyDecline {
     /// The cell class is `rdc` but the reduce field is `-`: the empty reduced set is the
     /// not-a-reduction case (§6.6-0009), so no `rdc` cell can carry it (§6.6-0017).
     RdcWithoutReduce,
-    /// An operand sub-key's sixth component is not `dl` / `dc` (§6.7-0004).
+    /// An operand sub-key's seventh component is not `dl` / `dc` (§6.7-0004).
     BadDequantForm,
+    /// The first sub-key's dtype differs from field 2, the primary dtype (§6.6-0005, §6.6-0007; `sk8`).
+    PrimaryDtypeMismatch,
+    /// A contraction coordinate `<wdt>`, `<out>` or `q<sdt>` names a dtype that no operand sub-key carries
+    /// (§6.6-0015, §6.7-0006; `sk8`).
+    OperandDtypeDisagrees,
+    /// The block-length coordinate is missing beside `q<sdt>`, present without it, or outside the closed set
+    /// `{g16, g32}` (§6.6-0022, §6.7-0006; `sk8`).
+    BadBlockLength,
     /// The non-contraction `(acc+mp)` field (§6.7-0013) is malformed — not exactly
     /// two `/`-parts, or an unrecognized math-precision code.
     BadAccMpField,
@@ -364,6 +399,7 @@ impl OperandSubKey {
             self.div.code(),
             if self.flipped { "r" } else { "f" }
         );
+        let base = format!("{base}/{}", self.dtype);
         match self.dequant {
             Some(dq) => format!("{base}/{}", dq.code()),
             None => base,
@@ -420,6 +456,9 @@ impl StructureKey {
             if let Some(sdt) = &c.sdt {
                 parts.push(format!("q{sdt}"));
             }
+            if let Some(block) = c.block {
+                parts.push(block.code().to_string());
+            }
             token.push('|');
             token.push_str(&parts.join("/"));
         } else if let Some(am) = &self.acc_mp {
@@ -449,7 +488,8 @@ fn parse_hex2(s: &str) -> Result<u8, KeyDecline> {
 
 fn parse_operand(s: &str) -> Result<OperandSubKey, KeyDecline> {
     let p: Vec<&str> = s.split('/').collect();
-    if p.len() != 5 && p.len() != 6 {
+    // sk8: six parts (the mandatory dtype is the sixth), seven when the operand carries a `quant` record.
+    if p.len() != 6 && p.len() != 7 {
         return Err(KeyDecline::BadOperandSubKey);
     }
     let contig = Contig::parse(p[0]).ok_or(KeyDecline::BadOperandSubKey)?;
@@ -461,12 +501,17 @@ fn parse_operand(s: &str) -> Result<OperandSubKey, KeyDecline> {
         "r" => true,
         _ => return Err(KeyDecline::BadOperandSubKey),
     };
-    // sk5: the optional sixth component, the operand's dequant_form (§6.3-0009a).
-    let dequant = match p.get(5) {
+    // sk8: the operand's own dtype, mandatory. Reserved before unknown (§6.1-0001), at every operand position.
+    if RESERVED_DTYPES.contains(&p[5]) {
+        return Err(KeyDecline::ReservedDtype);
+    }
+    let dtype = DTYPES.iter().copied().find(|d| *d == p[5]).ok_or(KeyDecline::UnknownDtype)?;
+    // sk5: the optional last component, the operand's dequant_form (§6.3-0009a).
+    let dequant = match p.get(6) {
         None => None,
         Some(&c) => Some(DequantForm::parse(c).ok_or(KeyDecline::BadDequantForm)?),
     };
-    Ok(OperandSubKey { contig, bcast_mask, vec, div, flipped, dequant })
+    Ok(OperandSubKey { contig, bcast_mask, vec, div, flipped, dtype, dequant })
 }
 
 fn parse_reduce(s: &str) -> Result<Reduce, KeyDecline> {
@@ -522,6 +567,15 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
     // unambiguous: no dtype token, `<mp>` code or size class begins with it.
     let body = s.strip_prefix('c').ok_or(KeyDecline::BadContractionField)?;
     let mut parts: Vec<&str> = body.split('/').collect();
+    // sk8: the block length `g16`/`g32` is the last coordinate and exists only beside `q<sdt>`.
+    let block = match parts.last().filter(|l| l.starts_with('g')) {
+        Some(&g) => {
+            let b = BlockLen::parse(g).ok_or(KeyDecline::BadBlockLength)?;
+            parts.pop();
+            Some(b)
+        }
+        None => None,
+    };
     let sdt = match parts.last().and_then(|l| l.strip_prefix('q')) {
         Some(dt) => {
             if RESERVED_DTYPES.contains(&dt) {
@@ -535,6 +589,9 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
         }
         None => None,
     };
+    if sdt.is_some() != block.is_some() {
+        return Err(KeyDecline::BadBlockLength);
+    }
     if parts.len() != 6 && parts.len() != 7 {
         return Err(KeyDecline::BadContractionField);
     }
@@ -586,6 +643,7 @@ fn parse_contraction(s: &str) -> Result<Contraction, KeyDecline> {
         out: out.to_string(),
         mp,
         sdt,
+        block,
     })
 }
 
@@ -723,6 +781,10 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     if operands.len() > MAX_OPERANDS {
         return Err(KeyDecline::TooManyOperands { got: operands.len() });
     }
+    // sk8 (§6.6-0005, §6.6-0007): field 2 is operand 0's dtype, so the first sub-key's dtype MUST equal it.
+    if operands.first().map(|o| o.dtype) != Some(f[2]) {
+        return Err(KeyDecline::PrimaryDtypeMismatch);
+    }
     let reduce = parse_reduce(f[8])?;
     // §6.6-0017: a non-`-` reduce field is valid IFF the cell is a reduction cell
     // (`cell_class == rdc`); reject any other class carrying one, and an `rdc` cell
@@ -779,6 +841,14 @@ pub fn from_token(token: &str) -> Result<StructureKey, KeyDecline> {
     // dispatch above left `contraction == None`); a non-`ctr` cell never sets it.
     if (f[1] == "ctr") != contraction.is_some() {
         return Err(KeyDecline::ContractionPresenceMismatch);
+    }
+    // sk8 (§6.6-0015): the contraction coordinates restate dtypes the sub-keys carry, so each of `<wdt>`,
+    // `<out>` and `<sdt>` MUST be the dtype of some operand sub-key. (`<acc>` is not an operand dtype.)
+    if let Some(c) = &contraction {
+        let carried = |d: &str| operands.iter().any(|o| o.dtype == d);
+        if !carried(&c.wdt) || !carried(&c.out) || c.sdt.as_deref().is_some_and(|d| !carried(d)) {
+            return Err(KeyDecline::OperandDtypeDisagrees);
+        }
     }
     Ok(StructureKey {
         cell_class: f[1].to_string(),

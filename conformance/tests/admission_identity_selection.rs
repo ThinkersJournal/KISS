@@ -35,7 +35,7 @@ fn all_ops() -> Vec<String> {
 fn co() -> OperandSubKey {
     OperandSubKey {
         contig: Contig::Contiguous, bcast_mask: 0x00,
-        vec: VecWidth::V4, div: DivBucket::D16, flipped: false, dequant: None,
+        vec: VecWidth::V4, div: DivBucket::D16, flipped: false, dtype: "f32", dequant: None,
     }
 }
 

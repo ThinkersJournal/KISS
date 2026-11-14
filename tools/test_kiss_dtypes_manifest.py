@@ -75,7 +75,7 @@ class DtypeManifestTest(unittest.TestCase):
         # KISS-CLASSIFY-6.4-0003). c64 changes meaning at sk4 (pair-of-f32, was pair-of-f64),
         # so a version-less list would be silently ambiguous once vendored.
         self.assertEqual(m["structure_key_schema_version"], 7)
-        self.assertEqual(m["token_prefix"], "sk7")
+        self.assertEqual(m["token_prefix"], "sk8")
         toks = set(m["all_dtypes"])
         # exactly the twenty-seven §6.1-0001 tokens: the twenty-four sk4 tokens (renamed integers/FP8,
         # the total-width complex flip, the two additive MX scales) plus the three MX element rows
