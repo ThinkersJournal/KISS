@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.17.3 — docs: HANDOFF rewritten for the 0.17.2 state
+
+Docs only. `HANDOFF.md` is rewritten (a rewrite, not an append) for the state after the 0.15.9 to 0.17.2 batch: what landed, the stamp procedure, the unruled items (board 440, the sk8 and backward RFCs, kernel-body scope), FireLine's five contract-vector requests as the first task, and the three WAIT timers. Verified: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_readme_coverage.py` clean.
+
 ## 0.17.2 — docs: options note for KISS#771 (contraction precision policy, accumulate-into-C)
 
 Informative, no normative text. `docs/options-771-contraction-precision-and-accumulate-into-c.md` answers the 2026-11-04 triage promise: the precision tag is already decided (board 427 "1: A", implemented in the 0.17.0 batch as `precision_tag` in the `matmul` OpAttrs); it recommends keeping the tag out of the `structure_key` for sk7 and carrying a key field as an open item for the sk8 RFC, adding `tf32`, `bf16x3` and `f16-accum` to the maintainer-owned vocabulary only when an emitter ships a bounded cell, and admitting a dense `[M,N]` extra input for accumulate-into-C. Verified: `python tools/kiss_trace.py --ratchet --base-ref origin/main` and `python tools/kiss_readme_coverage.py` clean.
