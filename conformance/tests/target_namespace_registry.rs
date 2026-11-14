@@ -59,6 +59,10 @@ const FIXTURE_NAMESPACES: &[(&str, &str)] = &[
         "a helper in opattrs_golden.rs builds a key solely to read its reduce \
          field back through to_token(); the target is incidental to that probe.",
     ),
+    (
+        "input",
+        "the `in_place = input:<k>` spelling of KISS-CONTRACT-6.5-0009 in contract_section_schemas.rs          (an operand-index value, not a target namespace); no kernel is announced under it.",
+    ),
 ];
 
 /// Sweep `roots` for namespace-shaped literals, surfacing incompleteness.

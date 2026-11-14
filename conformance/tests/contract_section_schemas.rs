@@ -133,7 +133,7 @@ fn test_contract_interface_block_bytes() {
         ("positional_signature", "[]"),
         ("launch_scalars", "[]"),
         ("count_unit", "elements"),
-        ("in_place", "false"),
+        ("in_place", "none"),
         ("alignment_bytes", "1"),
     ];
     assert_schema_arms(parse_interface_block, 3, "interface", &fields, ("target", "cuda:sm89"));
@@ -141,7 +141,7 @@ fn test_contract_interface_block_bytes() {
     assert_eq!(
         block(3, "interface", &fields),
         b"[section:3:interface]\nentry_point = k\nrank = 2\npositional_signature = []\n\
-          launch_scalars = []\ncount_unit = elements\nin_place = false\nalignment_bytes = 1\n"
+          launch_scalars = []\ncount_unit = elements\nin_place = none\nalignment_bytes = 1\n"
             .to_vec(),
         "KISS-CONTRACT-6.5-0001: Interface block bytes"
     );
@@ -200,4 +200,43 @@ fn test_contract_provenance_block_bytes() {
             .to_vec(),
         "KISS-CONTRACT-6.9-0001: Provenance block bytes"
     );
+}
+
+// Backs[enforced]: KISS-CONTRACT-6.5-0009 — in_place is spelled exactly `none` or `input:<k>` (k decimal, no leading zeros, a 0-based input index): `false`, `true`, an empty value, `input:`, `input:01`, `input:-1` and a k that names no input are typed declines, and the Interface block reader declines a wrong spelling; the golden document says `in_place = none`
+#[test]
+fn test_contract_in_place_declared() {
+    use kiss_conformance::contract::{in_place_names_an_input, parse_in_place, InPlace};
+    assert_eq!(parse_in_place("none"), Ok(InPlace::None));
+    assert_eq!(parse_in_place("input:0"), Ok(InPlace::Input(0)));
+    assert_eq!(parse_in_place("input:12"), Ok(InPlace::Input(12)));
+    for bad in ["false", "true", "", "input:", "input:01", "input:-1", "input:+1", "input: 1", "Input:0", "none ", "input:0x1", "input:1.0", "alias0"] {
+        assert_eq!(parse_in_place(bad), Err(SectionDecline::BadFieldValue { field: "in_place", got: bad.to_string() }), "{bad:?}");
+    }
+    // a k beyond usize is a decline, not a panic.
+    assert!(parse_in_place("input:99999999999999999999999999").is_err());
+    // the operand must exist.
+    assert!(in_place_names_an_input(InPlace::None, 0));
+    assert!(in_place_names_an_input(InPlace::Input(1), 2));
+    assert!(!in_place_names_an_input(InPlace::Input(2), 2), "input:2 of 2 inputs names no input");
+    assert!(!in_place_names_an_input(InPlace::Input(0), 0));
+    // the Interface block reader enforces the spelling.
+    let mk = |v: &str| {
+        block(3, "interface", &[
+            ("entry_point", "k"), ("rank", "2"), ("positional_signature", "[]"), ("launch_scalars", "[]"),
+            ("count_unit", "elements"), ("in_place", v), ("alignment_bytes", "1"),
+        ])
+    };
+    assert!(kiss_conformance::contract::parse_interface_block(&mk("none")).is_ok());
+    assert!(kiss_conformance::contract::parse_interface_block(&mk("input:1")).is_ok());
+    assert_eq!(
+        kiss_conformance::contract::parse_interface_block(&mk("false")),
+        Err(SectionDecline::BadFieldValue { field: "in_place", got: "false".into() })
+    );
+    // the spec states the spelling and the golden follows.
+    let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/contract.md")).unwrap().split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(spec.contains("spelled exactly `none` or `input:<k>`"));
+    assert!(spec.contains("count_unit = elements in_place = none alignment_bytes = 1"));
+    let vectors = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/corpus/contract_vectors.json")).unwrap();
+    let doc = vectors.split("\"golden_document\"").nth(1).unwrap();
+    assert!(doc.contains("69 6E 5F 70 6C 61 63 65 20 3D 20 6E 6F 6E 65"), "the golden says in_place = none");
 }
