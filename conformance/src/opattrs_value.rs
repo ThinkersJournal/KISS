@@ -206,26 +206,35 @@ pub fn scan_axes_word(axes: &[usize], rank: usize) -> Result<u16, String> {
     }
 }
 
-fn encode_field(op: &str, f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, String)>>) -> Result<Vec<u8>, String> {
+/// The three fields whose spelling is not decided by width alone (`accumulator`, `target_dtype`, `axes`);
+/// `None` for every other field.
+fn encode_named_field(op: &str, f: &SchemaField, v: &Value) -> Option<Result<Vec<u8>, String>> {
     if f.name == "accumulator" {
-        return match v {
-            Value::Token(t) => Ok(vec![accumulator_ordinal(t, op)?]),
+        return Some(match v {
+            Value::Token(t) => accumulator_ordinal(t, op).map(|o| vec![o]),
             other => Err(format!("accumulator takes a dtype token, got {other:?}")),
-        };
+        });
     }
     if f.name == "target_dtype" {
-        return match v {
-            Value::Token(t) => Ok(vec![target_dtype_ordinal(t)?]),
+        return Some(match v {
+            Value::Token(t) => target_dtype_ordinal(t).map(|o| vec![o]),
             other => Err(format!("target_dtype takes a dtype token, got {other:?}")),
-        };
+        });
     }
     if f.name == "axes" {
         // `squeeze` / `unsqueeze` (§6.19-0046): a plain u8 subset mask, never the u16 reduce_axes word.
-        return match v {
+        return Some(match v {
             Value::Byte(0) => Err("`axes` = 0x00 is reserved (§6.19-0046)".to_string()),
             Value::Byte(n) => Ok(vec![*n]),
             other => Err(format!("axes takes a u8 mask, got {other:?}")),
-        };
+        });
+    }
+    None
+}
+
+fn encode_field(op: &str, f: &SchemaField, v: &Value, vocab: &BTreeMap<String, Vec<(u8, String)>>) -> Result<Vec<u8>, String> {
+    if let Some(r) = encode_named_field(op, f, v) {
+        return r;
     }
     match (f.width, v) {
         (FieldWidth::U16Le, Value::Axes { axes, rank }) => {

@@ -255,11 +255,8 @@ fn input_json(xs: &[f32]) -> String {
     xs.iter().map(|x| format!("\"{:08X}\"", x.to_bits())).collect::<Vec<_>>().join(", ")
 }
 
-/// `corpus/packed_reduction_vectors.json`: the packed lanes (as `u32` hex, count and index lanes as plain
-/// integers, float lanes as `f32` bit patterns) of every reduction below, folded in ascending order, plus the
-/// shape cases. `class` says how a foreign reader compares: `exact-byte`, or `tolerance` for a float fold whose
-/// reassociation is bounded by the declared tier (§6.17-0008), never against a wide truth across widths.
-pub fn emit_json() -> String {
+/// The value cases of `emit_json`: one folded packed state per input.
+fn value_cases() -> Vec<String> {
     let nan = f32::NAN;
     let inf = f32::INFINITY;
     let mut cases: Vec<String> = Vec::new();
@@ -292,6 +289,11 @@ pub fn emit_json() -> String {
     add("argmax_lowest_index_nan", "argmax", &[nan, 1.0, nan], &ag(&[nan, 1.0, nan]), "exact-byte", "NaN is the greatest value; the lowest-index NaN wins (§6.11-0007)");
     add("argmax_signed_zeros_equal", "argmax", &[-0.0, 0.0], &ag(&[-0.0, 0.0]), "exact-byte", "-0 and +0 are equal; the lower index (and its bits) win");
     add("argmax_all_neg_inf", "argmax", &[-inf, -inf], &ag(&[-inf, -inf]), "exact-byte", "equal to the identity's value: index 0 beats 0xFFFFFFFF");
+    cases
+}
+
+/// The shape cases of `emit_json`: the packed output shape or its typed decline.
+fn shape_cases() -> Vec<String> {
     let shape = |s: &[usize], r: &[usize], k: bool, kind: Kind| match packed_output_shape(s, r, k, kind) {
         Ok(v) => format!("{v:?}"),
         Err(e) => format!("decline:{e:?}"),
@@ -311,6 +313,16 @@ pub fn emit_json() -> String {
     add_shape("rank8_keepdim_needs_rank9", "welford", &r8, &[7], true, shape(&r8, &[7], true, Kind::Welford));
     add_shape("rank8_no_keepdim_fits", "welford", &r8, &[7], false, shape(&r8, &[7], false, Kind::Welford));
     add_shape("rank7_keepdim_fits", "online_softmax", &r8[..7], &[6], true, shape(&r8[..7], &[6], true, Kind::OnlineSoftmax));
+    shapes
+}
+
+/// `corpus/packed_reduction_vectors.json`: the packed lanes (as `u32` hex, count and index lanes as plain
+/// integers, float lanes as `f32` bit patterns) of every reduction below, folded in ascending order, plus the
+/// shape cases. `class` says how a foreign reader compares: `exact-byte`, or `tolerance` for a float fold whose
+/// reassociation is bounded by the declared tier (§6.17-0008), never against a wide truth across widths.
+pub fn emit_json() -> String {
+    let cases = value_cases();
+    let shapes = shape_cases();
     let mut s = String::new();
     s.push_str("{\n  \"schema\": \"kiss-packed-reduction-vectors-v1.json\",\n");
     s.push_str("  \"generated_from\": \"conformance/src/packed_reduce.rs::emit_json (the reference)\",\n");
