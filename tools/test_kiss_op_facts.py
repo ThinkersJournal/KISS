@@ -1,13 +1,22 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-import json, pathlib, subprocess, sys, tempfile, unittest, shutil
+import json, pathlib, sys, tempfile, unittest, shutil
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-TOOL = str(ROOT / "tools" / "kiss_op_facts.py")
+sys.path.insert(0, str(ROOT / "tools"))
+import kiss_op_facts  # noqa: E402
+
+
+class Result:
+    def __init__(self, returncode, stdout=b"", stderr=""):
+        self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
 
 
 def emit(spec_dir=None):
-    cmd = [sys.executable, TOOL, "--stdout"] + (["--spec-dir", str(spec_dir)] if spec_dir else [])
-    return subprocess.run(cmd, capture_output=True)
+    """In-process (no subprocess): a SystemExit from the generator is its non-zero exit."""
+    try:
+        return Result(0, kiss_op_facts.render(spec_dir or ROOT / "spec"))
+    except SystemExit as e:
+        return Result(1, stderr=str(e))
 
 
 class OpFactsTest(unittest.TestCase):
