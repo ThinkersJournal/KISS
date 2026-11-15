@@ -20,6 +20,7 @@ use crate::contract::{
 };
 use crate::dispatch::{parse_dispatch_block, DispatchDecline, DispatchModel};
 use crate::dispatch_expr::{eval, Decline, EvalMode, LaunchScalars};
+use crate::op_dag::{check_identity_consistency, check_op_dag, parse_op_dag, DagNode};
 
 // ---------------------------------------------------------------------------
 // The positional_signature descriptor layout (§6.11-0006) and its typed decline.
@@ -219,6 +220,35 @@ fn check_dispatch(block: &[u8], rank: u32, sig: &[SignatureArg]) -> Result<(), F
     Ok(())
 }
 
+/// The Semantics value rules beyond the field schema (§6.4-0001, §6.4-0007, §6.11-0007, §6.4-0002):
+/// `semantics_kind` is one of its two values and the `op_dag` reads and passes [`check_op_dag`]. A
+/// `declared-op-tag` Semantics with no node (a region the DAG cannot name) is the one accepted empty DAG.
+fn check_semantics(block: &[u8]) -> Result<Vec<DagNode>, FullDecline> {
+    let fields = parse_semantics_block(block).map_err(|d| fd("semantics", d.wire_tag()))?;
+    let get = |k: &str| fields.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str()).unwrap_or("");
+    let kind = get("semantics_kind");
+    if kind != "machine-checkable-IR" && kind != "declared-op-tag" {
+        return Err(fd("semantics", "bad-semantics-kind"));
+    }
+    let nodes = parse_op_dag(get("op_dag")).map_err(|d| fd("semantics", d.wire_tag()))?;
+    if nodes.is_empty() && kind == "declared-op-tag" {
+        return Ok(nodes);
+    }
+    check_op_dag(&nodes).map_err(|d| fd("semantics", d.wire_tag()))?;
+    Ok(nodes)
+}
+
+/// §6.3-0006 / §6.4-0002 over the Identity and the Semantics DAG the document carries.
+fn check_identity(body: &[u8], nodes: &[DagNode]) -> Result<(), FullDecline> {
+    if nodes.is_empty() {
+        return Ok(()); // `declared-op-tag` with no node for the region: not rejected on this assertion
+    }
+    let block = section_block(body, 1, "identity").ok_or(fd("identity", "missing-section"))?;
+    let fields = parse_identity_block(block).map_err(|d| fd("identity", d.wire_tag()))?;
+    let get = |k: &str| fields.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str()).unwrap_or("");
+    check_identity_consistency(nodes, get("op_identity"), get("accept_predicate")).map_err(|d| fd("record", d.wire_tag()))
+}
+
 /// Read a whole contract document: transport framing, then each of the seven sections in document
 /// order (schema, then the section's own value rules), then the cross-section equalities.
 /// The first fault is returned as `(section, tag)`.
@@ -226,13 +256,16 @@ pub fn read_full_document(doc: &[u8]) -> Result<(), FullDecline> {
     read_document(doc).map_err(|d| fd("framing", d.wire_tag()))?;
     let lf = doc.iter().position(|&b| b == b'\n').unwrap_or(0);
     let body = &doc[lf + 1..];
-    let (mut rank, mut sig) = (0, Vec::new());
+    let (mut rank, mut sig, mut dag) = (0, Vec::new(), Vec::new());
     for (id, name) in SECTIONS {
         let sname: &'static str = name_static(name);
         let block = section_block(body, id, name).ok_or(fd(sname, "missing-section"))?;
         let r = match id {
             1 => parse_identity_block(block).map(|_| ()),
-            2 => parse_semantics_block(block).map(|_| ()),
+            2 => {
+                dag = check_semantics(block)?;
+                Ok(())
+            }
             5 => parse_capabilities_block(block).map(|_| ()),
             6 => parse_guarantees_block(block).map(|_| ()),
             7 => parse_provenance_block(block).map(|_| ()),
@@ -252,7 +285,8 @@ pub fn read_full_document(doc: &[u8]) -> Result<(), FullDecline> {
         RecordDecline::AcceptPredicateMismatch { .. } => fd("record", "accept-predicate-mismatch"),
         RecordDecline::RevisionHashMismatch { .. } => fd("record", "revision-hash-mismatch"),
         RecordDecline::CostProvenanceMismatch { .. } => fd("record", "cost-provenance-mismatch"),
-    })
+    })?;
+    check_identity(body, &dag)
 }
 
 fn name_static(name: &str) -> &'static str {
@@ -277,9 +311,9 @@ pub struct SectionDeclineVector {
     pub expect: &'static str,
 }
 
-type Fields = Vec<(String, String)>;
+pub(crate) type Fields = Vec<(String, String)>;
 
-fn base_blocks() -> Vec<Vec<u8>> {
+pub(crate) fn base_blocks() -> Vec<Vec<u8>> {
     vec![
         appendix_c_identity_block(),
         appendix_c_semantics_block(),
@@ -291,7 +325,7 @@ fn base_blocks() -> Vec<Vec<u8>> {
     ]
 }
 
-fn fields_of(block: &[u8]) -> Fields {
+pub(crate) fn fields_of(block: &[u8]) -> Fields {
     let text = String::from_utf8(block.to_vec()).expect("builder blocks are UTF-8");
     text.lines()
         .skip(1)
@@ -299,18 +333,18 @@ fn fields_of(block: &[u8]) -> Fields {
         .collect()
 }
 
-fn render(index: usize, fields: &Fields) -> Vec<u8> {
+pub(crate) fn render(index: usize, fields: &Fields) -> Vec<u8> {
     let (id, name) = SECTIONS[index];
     let f: Vec<(&str, Value)> = fields.iter().map(|(k, v)| (k.as_str(), Value::Str(v.clone()))).collect();
     render_block(id, name, &f)
 }
 
-fn assemble(blocks: &[Vec<u8>]) -> Vec<u8> {
+pub(crate) fn assemble(blocks: &[Vec<u8>]) -> Vec<u8> {
     let body: Vec<u8> = blocks.iter().flatten().copied().collect();
     Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body }.encode()
 }
 
-fn set(fields: &mut Fields, key: &str, value: &str) {
+pub(crate) fn set(fields: &mut Fields, key: &str, value: &str) {
     let slot = fields.iter_mut().find(|(k, _)| k == key).expect("field present in the base block");
     slot.1 = value.to_string();
 }
