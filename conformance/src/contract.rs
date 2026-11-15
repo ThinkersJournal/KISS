@@ -1445,6 +1445,7 @@ pub fn emit_contract_vectors_json() -> String {
     s.push_str("    ]\n");
     s.push_str("  },\n");
     s.push_str(&crate::section_vectors::emit_section_vectors_json());
+    s.push_str(&crate::op_dag_vectors::emit_op_dag_vectors_json());
     s.push_str("  \"decline_vectors\": [\n");
     for (i, nv) in negatives.iter().enumerate() {
         let comma = if i + 1 < negatives.len() { "," } else { "" };
