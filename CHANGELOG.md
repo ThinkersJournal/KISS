@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.3 — per-op structural facts file (additive, draft-tracking)
+
+Adds `conformance/corpus/op_facts.json` (schema `kiss-op-facts-v1`), generated from `spec/ops.md` by `tools/kiss_op_facts.py`, so a consumer building the cell class (KISS-Classify §6.3-0006) or the op DAG (§6.4-0002) reads per-op structure instead of hand-copying prose. One entry per op (128 at this version): `family`, `carrier` (§6.19-0003), `opattrs` (field names in canonical wire order, §6.19.3), `reduce_axes` (`reduce_axes`, `norm_axes` or null; §6.11-0011), `is_contraction` and `structured_op` (§6.13-0009), `index_operand_role` (§6.11-0012), plus a `fact_clauses` map naming the clause each fact comes from. It sits beside `conformance/corpus/op_manifest.json`, not under `spec/sidecar/`, because `tools/kiss_sidecar.py --check` treats every file there as a clause sidecar. Nothing is authored: the generator cross-checks the carrier set against the schema table and the clause-listed op sets against the manifest, and exits non-zero when ops.md moves. CI regenerates and diffs it; `tools/test_kiss_op_facts.py` pins the byte match and two mutation controls (a dropped carrier row, a mis-spelled structured op). `argmax`/`argmin`/`avg_pool`/`max_pool`/`matmul` carry no axis-set OpAttrs field, so their `reduce_axes` is null: the axis lives in the decomposition, not the record.
+
 ## 0.18.2 — docs: RFC per-operand-dtype-sk8 marked adopted, ROADMAP R1.26 updated
 
 Docs only. `rfcs/per-operand-dtype-sk8.md` status now says adopted and shipped as sk8 (0.18.0, #822); `ROADMAP.md` R1.26 records that the block length is keyed and what remains open.
