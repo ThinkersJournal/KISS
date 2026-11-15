@@ -124,6 +124,7 @@ impl OpDagDecline {
 const OPENERS: &[u8] = b"{[(";
 const CLOSERS: &[u8] = b"}])";
 const COMMA: u8 = 0x2C;
+const ZERO: u8 = 0x30;
 const SPACE: u8 = 0x20;
 
 /// Split `s` at every `", "` that sits outside `{}`, `[]` and `()`.
@@ -146,9 +147,9 @@ fn split_top(s: &str) -> Vec<&str> {
 
 /// A canonical decimal: ASCII digits only, no sign, no leading zero (except `0` itself).
 fn canonical_uint(s: &str) -> Option<u64> {
-    let ok =
-        !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) && (s == "0" || !s.starts_with('0'));
-    if ok {
+    let digits = s.as_bytes();
+    let no_lead_zero = s == "0" || digits.first() != Some(&ZERO);
+    if !digits.is_empty() && digits.iter().all(u8::is_ascii_digit) && no_lead_zero {
         s.parse().ok()
     } else {
         None
@@ -203,7 +204,7 @@ fn const_source_ok(attrs: &str) -> bool {
     hex.len() == digits
         && hex
             .bytes()
-            .all(|b| b.is_ascii_digit() || (b'A'..=b'F').contains(&b))
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_lowercase())
 }
 
 fn source_attrs_ok(tag: &str, attrs: &str) -> bool {
