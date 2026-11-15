@@ -114,6 +114,8 @@ pub mod json;
 pub mod layout;
 pub mod key_match;
 pub mod namespace_vocabulary;
+pub mod op_dag;
+pub mod op_dag_vectors;
 pub mod opattrs;
 pub mod opattrs_axes;
 pub mod opattrs_value;
