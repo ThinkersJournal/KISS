@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft, informative. Nothing is frozen.** The direction is ruled; the grammar, the ride-along set and the dates are not. |
+| **Status** | **Adopted and shipped as `sk8` in conformance 0.18.0 (#822).** Historical and informative: the authoritative text is `spec/classify.md` §6.6/§6.7 and the corpus; where this RFC's schematics differ, they lose. The `sk7` mentions below describe the pre-cut state. |
 | **Ruling** | CireSnave, 2026-11-13, board 430 Part 1 question 2, choice 2a, relayed verbatim by the PM: *"Yes.  Of course operations should be able to accept a different type per input."* |
 | **Affects** | KISS-Classify (§6.1, §6.5, §6.6-0005/-0007/-0015/-0022, §6.7-0004/-0014), consumers of the key (Fuel, kiss-ref, Unpopped `unpopped-vocab`, Baracuda emit corpus) |
 | **Follows** | `sk4-schema-event.md` §3.5 (the deferral this RFC takes up; same format) |
