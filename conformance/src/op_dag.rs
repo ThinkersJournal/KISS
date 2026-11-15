@@ -121,19 +121,23 @@ impl OpDagDecline {
     }
 }
 
+const OPENERS: &[u8] = b"{[(";
+const CLOSERS: &[u8] = b"}])";
+const COMMA: u8 = 0x2C;
+const SPACE: u8 = 0x20;
+
 /// Split `s` at every `", "` that sits outside `{}`, `[]` and `()`.
 fn split_top(s: &str) -> Vec<&str> {
     let (mut depth, mut start, mut out) = (0i32, 0usize, Vec::new());
     let b = s.as_bytes();
-    for (i, &c) in b.iter().enumerate() {
-        match c {
-            b'{' | b'[' | b'(' => depth += 1,
-            b'}' | b']' | b')' => depth -= 1,
-            b',' if depth == 0 && b.get(i + 1) == Some(&b' ') => {
-                out.push(&s[start..i]);
-                start = i + 2;
-            }
-            _ => {}
+    for (i, c) in b.iter().enumerate() {
+        if OPENERS.contains(c) {
+            depth += 1;
+        } else if CLOSERS.contains(c) {
+            depth -= 1;
+        } else if *c == COMMA && depth == 0 && b.get(i + 1) == Some(&SPACE) {
+            out.push(&s[start..i]);
+            start = i + 2;
         }
     }
     out.push(&s[start..]);

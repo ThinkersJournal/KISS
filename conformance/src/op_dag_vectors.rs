@@ -52,29 +52,32 @@ fn dag(nodes: &[&str]) -> String {
     format!("[{}]", nodes.join(", "))
 }
 
-/// The documents a reader accepts.
-pub fn accept_vectors() -> Vec<AcceptVector> {
-    let one = |op: &str| dag(&[&format!("Op{{{op}; ; []}}")]);
-    let sources = dag(&[
-        "Source{const; dtype=f32, bits=0x3F800000}",
-        P0,
-        "Source{coord; axis=1}",
-        "Source{extent; axis=0}",
-        "Source{reduced; stage=0}",
-        "Source{reduced_count; }",
-        "Bind(0)",
-        "Op{add; ; [0, 1]}",
-        "Op{add; ; [2, 3]}",
-        "Op{add; ; [4, 5]}",
-        "Op{add; ; [7, 8]}",
-        "Op{add; ; [9, 6]}",
-        "Op{add; ; [10, 11]}",
-    ]);
-    let fusion = dag(&["Op{matmul; ; []}", P0, "Op{add; ; [0, 1]}"]);
-    let v = |name: &str, d: Vec<u8>| AcceptVector {
+/// A one-node DAG whose root is `op` with no attributes and no children.
+fn one(op: &str) -> String {
+    dag(&[&format!("Op{{{op}; ; []}}")])
+}
+
+/// An `Op{neg; ; [edges]}` node.
+fn neg(edges: &str) -> String {
+    format!("Op{{neg; ; [{edges}]}}")
+}
+
+fn v(name: &str, d: Vec<u8>) -> AcceptVector {
+    AcceptVector {
         name: name.to_string(),
         doc: d,
-    };
+    }
+}
+
+/// The documents a reader accepts.
+pub fn accept_vectors() -> Vec<AcceptVector> {
+    let mut out = accept_class_vectors();
+    out.extend(accept_shape_vectors());
+    out
+}
+
+/// One accepted cell class per vector: the op's fact is what lets the class stand.
+fn accept_class_vectors() -> Vec<AcceptVector> {
     vec![
         v(
             "ctr-class-on-a-contraction",
@@ -100,6 +103,28 @@ pub fn accept_vectors() -> Vec<AcceptVector> {
             "rdc-class-on-a-pool-via-reduce",
             doc(IR, &one("avg_pool"), "avg_pool", RDC),
         ),
+    ]
+}
+
+/// DAG shapes a reader accepts: no fact needed, a fused graph, every Source tag, an exempt tag.
+fn accept_shape_vectors() -> Vec<AcceptVector> {
+    let sources = dag(&[
+        "Source{const; dtype=f32, bits=0x3F800000}",
+        P0,
+        "Source{coord; axis=1}",
+        "Source{extent; axis=0}",
+        "Source{reduced; stage=0}",
+        "Source{reduced_count; }",
+        "Bind(0)",
+        "Op{add; ; [0, 1]}",
+        "Op{add; ; [2, 3]}",
+        "Op{add; ; [4, 5]}",
+        "Op{add; ; [7, 8]}",
+        "Op{add; ; [9, 6]}",
+        "Op{add; ; [10, 11]}",
+    ]);
+    let fusion = dag(&["Op{matmul; ; []}", P0, "Op{add; ; [0, 1]}"]);
+    vec![
         v(
             "shape-decided-class-asks-nothing-of-the-op",
             doc(IR, &one("add"), "add", EW2),
@@ -121,59 +146,75 @@ pub fn accept_vectors() -> Vec<AcceptVector> {
 
 /// One fault each. `section` is where the reader declines; `expect` is its stable tag.
 pub fn decline_vectors() -> Vec<SectionDeclineVector> {
-    let mut out = Vec::new();
-    let mut add = |name: &str, d: Vec<u8>, section: &'static str, expect: &'static str| {
-        out.push(SectionDeclineVector {
+    let mut out = Declines(Vec::new());
+    decline_edges(&mut out);
+    decline_sources(&mut out);
+    decline_names(&mut out);
+    decline_identity(&mut out);
+    decline_class(&mut out);
+    out.0
+}
+
+struct Declines(Vec<SectionDeclineVector>);
+
+impl Declines {
+    fn add(&mut self, name: &str, d: Vec<u8>, section: &'static str, expect: &'static str) {
+        self.0.push(SectionDeclineVector {
             name: name.to_string(),
             doc: d,
             section,
             expect,
         });
-    };
-    let neg = |edges: &str| format!("Op{{neg; ; [{edges}]}}");
+    }
+}
+
+fn decline_edges(out: &mut Declines) {
     // §6.11-0007: children strictly earlier, root last.
-    add(
+    out.add(
         "root first: the root's child edges point forward",
         doc(IR, &dag(&["Op{add; ; [1, 2]}", P0, P1]), "add", EW2),
         "semantics",
         "op-dag-child-not-earlier",
     );
-    add(
+    out.add(
         "a node is its own child",
         doc(IR, &dag(&[&neg("0")]), "neg", EW2),
         "semantics",
         "op-dag-child-not-earlier",
     );
-    add(
+    out.add(
         "a child index past the end of the array",
         doc(IR, &dag(&[&neg("5")]), "neg", EW2),
         "semantics",
         "op-dag-child-not-earlier",
     );
-    add(
+    out.add(
         "root not last: an earlier node nothing uses",
         doc(IR, &dag(&[P0, P1, &neg("0")]), "neg", EW2),
         "semantics",
         "op-dag-multiple-roots",
     );
-    add(
+    out.add(
         "not an array",
         doc(IR, "Op{add; ; []}", "add", EW2),
         "semantics",
         "op-dag-malformed",
     );
-    add(
+    out.add(
         "a node of no kind",
         doc(IR, &dag(&["Tap{add; ; []}"]), "add", EW2),
         "semantics",
         "op-dag-malformed",
     );
-    add(
+    out.add(
         "child edges not in canonical spelling",
         doc(IR, &dag(&[P0, "Op{neg; ; [00]}"]), "neg", EW2),
         "semantics",
         "op-dag-malformed",
     );
+}
+
+fn decline_sources(out: &mut Declines) {
     // §6.11-0007 Source nodes.
     for (what, node) in [
         ("an unknown Source tag", "Source{iota; index=0}"),
@@ -198,97 +239,104 @@ pub fn decline_vectors() -> Vec<SectionDeclineVector> {
             "Source{reduced_count; stage=0}",
         ),
     ] {
-        add(
+        out.add(
             &format!("malformed Source: {what}"),
             doc(IR, &dag(&[node, &neg("0")]), "neg", EW2),
             "semantics",
             "op-dag-bad-source",
         );
     }
+}
+
+fn decline_names(out: &mut Declines) {
     // §6.4-0002: only KISS-Ops op names.
-    add(
+    out.add(
         "an op name outside KISS-Ops",
         doc(IR, &dag(&["Op{frobnicate; ; []}"]), "frobnicate", EW2),
         "semantics",
         "op-dag-unknown-op",
     );
-    add(
+    out.add(
         "a Grammar tag spelled inside op_name",
         doc(IR, &dag(&["Op{add{axis=0}; ; []}"]), "add", EW2),
         "semantics",
         "op-dag-unknown-op",
     );
     // §6.4-0001/-0007: the kind and the empty DAG.
-    add(
+    out.add(
         "a machine-checkable-IR Semantics with no node",
         doc(IR, "[]", "add", EW2),
         "semantics",
         "op-dag-empty",
     );
-    add(
+    out.add(
         "a semantics_kind outside the two values",
         doc("lifted-IR", &dag(&["Op{add; ; []}"]), "add", EW2),
         "semantics",
         "bad-semantics-kind",
     );
+}
+
+fn decline_identity(out: &mut Declines) {
     // §6.4-0002: root vs op_identity.
-    add(
+    out.add(
         "DAG root is mul, op_identity names add",
         doc(IR, &dag(&["Op{mul; ; []}"]), "add", EW2),
         "record",
         "op-identity-root-mismatch",
     );
-    add(
+    out.add(
         "op_identity names another op than the root",
         doc(IR, &dag(&[P0, &neg("0")]), "abs", EW2),
         "record",
         "op-identity-root-mismatch",
     );
-    add(
+    out.add(
         "the DAG root is a Source node",
         doc(IR, &dag(&[P0]), "add", EW2),
         "record",
         "op-identity-root-mismatch",
     );
+}
+
+fn decline_class(out: &mut Declines) {
     // §6.3-0006: cell class vs the op's facts.
-    let one = |op: &str| dag(&[&format!("Op{{{op}; ; []}}")]);
-    add(
+    out.add(
         "ctr class on an op that is not a contraction",
         doc(IR, &one("add"), "add", CTR),
         "record",
         "cell-class-unsupported-by-op",
     );
-    add(
+    out.add(
         "ndx class on an op without the index role",
         doc(IR, &one("add"), "add", NDX),
         "record",
         "cell-class-unsupported-by-op",
     );
-    add(
+    out.add(
         "rdc class on an op that declares no reduce axis",
         doc(IR, &one("add"), "add", RDC),
         "record",
         "cell-class-unsupported-by-op",
     );
-    add(
+    out.add(
         "ndx class on a contraction (the facts are per class, not shared)",
         doc(IR, &one("matmul"), "matmul", NDX),
         "record",
         "cell-class-unsupported-by-op",
     );
-    add(
+    out.add(
         "a fusion in which no op has the fact",
         doc(IR, &dag(&[P0, P1, "Op{add; ; [0, 1]}"]), "add", CTR),
         "record",
         "cell-class-unsupported-by-op",
     );
-    add(
+    out.add(
         "declared-op-tag exempt only when empty: a node without the fact declines",
         doc(TAG, &one("add"), "add", CTR),
         "record",
         "cell-class-unsupported-by-op",
     );
-    out
 }
 
 /// The `op_dag_vectors` key of `contract_vectors.json`, rendered here so the generator is one function.
