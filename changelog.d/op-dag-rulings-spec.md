@@ -1,3 +1,0 @@
-kind: spec: op_dag and Identity-consistency rulings recorded (draft change, no new field)
----
-Records the PM's 2026-11-15 rulings as *Draft change* notes beside KISS-CONTRACT-6.4-0007 (empty `op_dag`: declined under `machine-checkable-IR`, allowed and exempt under `declared-op-tag`), 6.4-0002 (root compared to `op_identity` by bare op name) and 6.3-0006 ("any op" is any `Op` node; the per-op facts are `conformance/corpus/op_facts.json`), with the table in `rfcs/op-dag-contract-rulings-2026-11-15.md`. They match the behaviour pinned by the `op_dag_vectors` of KISS#828 and built by FireLine, so no vector or reader changes.
