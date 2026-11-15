@@ -11,6 +11,10 @@ classify a cell (KISS-CLASSIFY §6.3) or build an op DAG (§6.4) without hand-co
   opattrs              the carrier's OpAttrs field names in canonical (wire) order (§6.19.3)
   reduce_axes          the OpAttrs axis-set field the op folds over: `reduce_axes`, `norm_axes`,
                        or null (§6.11-0011, §6.19-0020, §6.19-0031)
+  declares_reduce_axis the op fixes a reduce/scan/sort axis: it holds its own axis-set field, or (§6.19-0036)
+                       resolves one from the inner carrier of its decomposition; `reduce_axis_source` is
+                       `opattrs` | `inner_carrier` | null and `reduce_axis_inner_carriers` names the
+                       `reduce`/`prefix_scan`/`sort_network` reached
   is_contraction       family `contraction` (the §6.13 table; §6.13-0009's `matmul` contraction)
   structured_op        a §6.13-0009 structured op (decomposes onto a named §6.11 structural op)
   index_operand_role   carries the explicit index-operand role (§6.11-0012)
@@ -43,6 +47,9 @@ FACT_CLAUSES = {
     "carrier": ["KISS-OPS-6.19-0003"],
     "opattrs": ["KISS-OPS-6.19-0004"],
     "reduce_axes": ["KISS-OPS-6.11-0011", "KISS-OPS-6.19-0020", "KISS-OPS-6.19-0031"],
+    "declares_reduce_axis": ["KISS-OPS-6.19-0036", "KISS-OPS-6.13-0001", "KISS-OPS-6.19-0003"],
+    "reduce_axis_source": ["KISS-OPS-6.19-0036"],
+    "reduce_axis_inner_carriers": ["KISS-OPS-6.19-0036"],
     "is_contraction": ["KISS-OPS-6.13-0009"],
     "structured_op": ["KISS-OPS-6.13-0009"],
     "index_operand_role": ["KISS-OPS-6.11-0012"],
@@ -78,6 +85,46 @@ def _opattrs(ops):
     return out
 
 
+# The inner carrier nodes §6.19-0036 names: a non-carrier op's axis is the axis of the `reduce`, `prefix_scan`
+# or `sort_network` its reference decomposition is defined over.
+INNER_CARRIERS = ("reduce", "prefix_scan", "sort_network")
+BARE_OP = re.compile(r"\s*`([a-z][a-z0-9_]{2,})`")
+
+
+def _decomp_graph(ops):
+    """{op -> ops its §6.13 decomposition calls}. kiss_ops reads call syntax `f(...)`; a row whose body
+    is one bare op (`avg_pool` = `reduce_mean` over ...) has no call, so its leading op token is its ref."""
+    graph = K.decomposition_graph(ops)
+    region = K.between(ops, "### 6.13 Reference decompositions", "\n- **KISS-OPS-6.13-0001**", where="§6.13")
+    for cells in K.table_cells(region):
+        if len(cells) >= 4 and (o := K._op(cells[0])) and not graph.get(o):
+            m = BARE_OP.match(cells[3])
+            graph[o] = [m.group(1)] if m else []
+    return graph
+
+
+def _inner_carriers(graph, op):
+    """The §6.19-0036 inner carrier ops `op`'s decomposition reaches, directly or transitively."""
+    seen, stack, found = set(), [op], set()
+    while stack:
+        for r in graph.get(stack.pop(), []):
+            if r in INNER_CARRIERS:
+                found.add(r)
+            if r not in seen:
+                seen.add(r)
+                stack.append(r)
+    return sorted(found)
+
+
+def _axis_declaration(op, fields, graph):
+    """(declares_reduce_axis, source, inner carriers): the op holds its own `reduce_axes`/`norm_axes` field
+    (source `opattrs`), or resolves the axis from an inner carrier of its decomposition (§6.19-0036)."""
+    if any(f in AXIS_FIELDS for f in fields):
+        return True, "opattrs", []
+    inner = _inner_carriers(graph, op)
+    return bool(inner), ("inner_carrier" if inner else None), inner
+
+
 def _clause_ops(ops, short, start, end):
     """Op tokens in the backticked list a clause body states between two literal anchors."""
     body = K.clause_body(ops, short)
@@ -100,6 +147,7 @@ def build_op_facts(spec_dir):
     structured = set(_clause_ops(ops, "6.13-0009", "structured op** —", "— MUST"))
     index_role = set(_clause_ops(ops, "6.11-0012", "", "MUST carry the index-operand role"))
     carriers = _carrier_set(ops)
+    graph = _decomp_graph(ops)
 
     problems = []
     K._diff("carrier set (§6.19-0003) vs §6.19.3 schema table", attrs, carriers, problems)
@@ -118,11 +166,15 @@ def build_op_facts(spec_dir):
     for o in manifest["all_ops"]:
         fields = attrs.get(o, [])
         axis = [f for f in fields if f in AXIS_FIELDS]
+        declares, source, inner = _axis_declaration(o, fields, graph)
         facts[o] = {
             "family": fam[o],
             "carrier": o in carriers,
             "opattrs": fields,
             "reduce_axes": axis[0] if axis else None,
+            "declares_reduce_axis": declares,
+            "reduce_axis_source": source,
+            "reduce_axis_inner_carriers": inner,
             "is_contraction": fam[o] == "contraction",
             "structured_op": o in structured,
             "index_operand_role": o in index_role,
