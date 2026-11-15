@@ -44,6 +44,20 @@ class OpFactsTest(unittest.TestCase):
         self.assertIsNone(facts["add"]["reduce_axes"])
         self.assertEqual(facts["matmul"]["opattrs"][0], "accumulator")  # encodings never leak in as names
 
+    def test_declares_reduce_axis(self):
+        """Fireline's 6.3-0006 rdc check: scans, argmax/argmin and pools declare an axis (6.19-0036)."""
+        facts = json.loads(emit().stdout)["ops"]
+        for o in ("cumsum", "cumprod", "cummax"):
+            self.assertEqual((facts[o]["declares_reduce_axis"], facts[o]["reduce_axis_inner_carriers"]), (True, ["prefix_scan"]), o)
+        for o in ("argmax", "argmin"):
+            self.assertEqual(facts[o]["reduce_axis_inner_carriers"], ["sort_network"], o)
+        for o in ("avg_pool", "max_pool"):
+            self.assertEqual(facts[o]["reduce_axis_inner_carriers"], ["reduce"], o)
+        self.assertEqual(facts["softmax"]["reduce_axis_source"], "opattrs")
+        for o in ("add", "gather", "index_select", "sort_network", "cast", "cadd"):
+            self.assertFalse(facts[o]["declares_reduce_axis"], o)
+            self.assertIsNone(facts[o]["reduce_axis_source"], o)
+
     def test_reworded_anchor_or_dropped_row_fails_loudly(self):
         """A control that never applied reads like one that was not caught: assert the edit landed."""
         src = (ROOT / "spec" / "ops.md").read_text("utf-8")
