@@ -1,0 +1,1301 @@
+{
+  "schema": "kiss-op-facts-v1",
+  "generated_from": "tools/kiss_op_facts.py (python tools/kiss_op_facts.py; reads spec/ops.md)",
+  "fact_clauses": {
+    "family": [
+      "KISS-OPS-6.1-0001",
+      "KISS-OPS-6.13-0001"
+    ],
+    "carrier": [
+      "KISS-OPS-6.19-0003"
+    ],
+    "opattrs": [
+      "KISS-OPS-6.19-0004"
+    ],
+    "reduce_axes": [
+      "KISS-OPS-6.11-0011",
+      "KISS-OPS-6.19-0020",
+      "KISS-OPS-6.19-0031"
+    ],
+    "is_contraction": [
+      "KISS-OPS-6.13-0009"
+    ],
+    "structured_op": [
+      "KISS-OPS-6.13-0009"
+    ],
+    "index_operand_role": [
+      "KISS-OPS-6.11-0012"
+    ]
+  },
+  "ops": {
+    "abs": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "acos": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "acosh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "add": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "all": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "any": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "argmax": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "keepdim",
+        "tie_rule"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "argmin": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "keepdim",
+        "tie_rule"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "asin": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "asinh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "atan": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "atan2": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "atanh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "avg_pool": {
+      "family": "window",
+      "carrier": true,
+      "opattrs": [
+        "window_size",
+        "stride",
+        "dilation",
+        "padding_lo",
+        "padding_hi",
+        "count_include_pad"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "bit_and": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "bit_not": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "bit_or": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "bit_xor": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "bitcast": {
+      "family": "conversion",
+      "carrier": true,
+      "opattrs": [
+        "target_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cabs": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cadd": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "carg": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cast": {
+      "family": "conversion",
+      "carrier": true,
+      "opattrs": [
+        "target_dtype",
+        "rounding",
+        "saturation"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cbrt": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cconj": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cdiv": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "ceil": {
+      "family": "rounding",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cexp": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cim": {
+      "family": "complex-bridge",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "clog": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "clz": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmake": {
+      "family": "complex-bridge",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_eq": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_ge": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_gt": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_le": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_lt": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmp_ne": {
+      "family": "comparison",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cmul": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cneg": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "concat": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axis"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "copysign": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cos": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cosh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cpow": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cre": {
+      "family": "complex-bridge",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "csqrt": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "csub": {
+      "family": "complex",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "ctz": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cummax": {
+      "family": "scan",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cumprod": {
+      "family": "scan",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "cumsum": {
+      "family": "scan",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "div": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "element_map": {
+      "family": "access-primitive",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "embedding": {
+      "family": "gather_scatter",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "index_operand",
+        "index_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": true
+    },
+    "erf": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "erfc": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "exp": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "exp2": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "expm1": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "floor": {
+      "family": "rounding",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "fmax_ieee": {
+      "family": "minmax",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "fmin_ieee": {
+      "family": "minmax",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "frac": {
+      "family": "rounding",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "gather": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "oob_policy",
+        "index_operand",
+        "index_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": true
+    },
+    "gelu": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "gelu_tanh": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "hypot": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "im2col": {
+      "family": "shape",
+      "carrier": true,
+      "opattrs": [
+        "window_size",
+        "stride",
+        "dilation",
+        "padding_lo",
+        "padding_hi",
+        "output_column_ordering"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "index_select": {
+      "family": "gather_scatter",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "index_operand",
+        "index_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": true
+    },
+    "iota": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "target_dtype",
+        "extents",
+        "axis"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "layer_norm": {
+      "family": "normalization",
+      "carrier": true,
+      "opattrs": [
+        "norm_axes"
+      ],
+      "reduce_axes": "norm_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "ldexp": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "lgamma": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "log": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "log10": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "log1p": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "log2": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "log_softmax": {
+      "family": "normalization",
+      "carrier": true,
+      "opattrs": [
+        "norm_axes"
+      ],
+      "reduce_axes": "norm_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "logical_and": {
+      "family": "logical",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "logical_not": {
+      "family": "logical",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "logical_or": {
+      "family": "logical",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "logsumexp": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "matmul": {
+      "family": "contraction",
+      "carrier": true,
+      "opattrs": [
+        "accumulator",
+        "math_fidelity",
+        "accuracy_kind",
+        "accuracy_value"
+      ],
+      "reduce_axes": null,
+      "is_contraction": true,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "max_pool": {
+      "family": "window",
+      "carrier": true,
+      "opattrs": [
+        "window_size",
+        "stride",
+        "dilation",
+        "padding_lo",
+        "padding_hi"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": false
+    },
+    "max_prop": {
+      "family": "minmax",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "min_prop": {
+      "family": "minmax",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "mish": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "mul": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "neg": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "nextafter": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "popcount": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "pow": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "prefix_scan": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "monoid",
+        "reduce_axes",
+        "exclusivity",
+        "accumulator",
+        "math_fidelity"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "recip": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "reduce": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "monoid",
+        "reduce_axes",
+        "keepdim",
+        "accumulator",
+        "math_fidelity"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "reduce_mean": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "reduce_norm2": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "reduce_std": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim",
+        "bessel_correction"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "reduce_var": {
+      "family": "reduction",
+      "carrier": true,
+      "opattrs": [
+        "reduce_axes",
+        "keepdim",
+        "bessel_correction"
+      ],
+      "reduce_axes": "reduce_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "relu": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "rem_floor": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "rem_trunc": {
+      "family": "binary_math",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "rms_norm": {
+      "family": "normalization",
+      "carrier": true,
+      "opattrs": [
+        "norm_axes"
+      ],
+      "reduce_axes": "norm_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "round_even": {
+      "family": "rounding",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "rsqrt": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "scatter": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "combine",
+        "oob_policy",
+        "index_operand",
+        "index_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": true
+    },
+    "scatter_add": {
+      "family": "gather_scatter",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "index_operand",
+        "index_dtype"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": true,
+      "index_operand_role": true
+    },
+    "select": {
+      "family": "select",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "shl": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "shr": {
+      "family": "bitwise",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sigmoid": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sign": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "silu": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sin": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sinh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "softmax": {
+      "family": "normalization",
+      "carrier": true,
+      "opattrs": [
+        "norm_axes"
+      ],
+      "reduce_axes": "norm_axes",
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "softplus": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sort_network": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axis",
+        "direction",
+        "stability"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sqr": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sqrt": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "squeeze": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axes"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "step": {
+      "family": "activation",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "sub": {
+      "family": "arithmetic",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "tan": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "tanh": {
+      "family": "transcendental",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "trunc": {
+      "family": "rounding",
+      "carrier": false,
+      "opattrs": [],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    },
+    "unsqueeze": {
+      "family": "access-primitive",
+      "carrier": true,
+      "opattrs": [
+        "axes"
+      ],
+      "reduce_axes": null,
+      "is_contraction": false,
+      "structured_op": false,
+      "index_operand_role": false
+    }
+  }
+}
