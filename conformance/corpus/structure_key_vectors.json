@@ -398,10 +398,10 @@
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
       "name": "cell_class_ndx_index_role_declared",
-      "note": "table + index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule)",
+      "note": "table + u32 index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule; the index operand is an integer dtype, 6.11-0009)",
       "target": "cuda:sm89",
       "target_namespace": "cuda",
-      "token": "sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-"
+      "token": "sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/u32;co/00/v4/d16/f/f32|-"
     },
     {
       "clause": "KISS-CLASSIFY-6.5-0015",
