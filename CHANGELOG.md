@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.6 — spec: op_dag and Identity-consistency rulings recorded (draft change, no new field)
+
+Records the PM's 2026-11-15 rulings as *Draft change* notes beside KISS-CONTRACT-6.4-0007 (empty `op_dag`: declined under `machine-checkable-IR`, allowed and exempt under `declared-op-tag`), 6.4-0002 (root compared to `op_identity` by bare op name) and 6.3-0006 ("any op" is any `Op` node; the per-op facts are `conformance/corpus/op_facts.json`), with the table in `rfcs/op-dag-contract-rulings-2026-11-15.md`. They match the behaviour pinned by the `op_dag_vectors` of KISS#828 and built by FireLine, so no vector or reader changes.
+
 ## 0.18.5 — contract vectors for the op_dag and Identity consistency (additive, draft-tracking)
 
 Adds the `op_dag_vectors` key to `conformance/corpus/contract_vectors.json`: 10 whole-document accept vectors and 29 single-fault decline vectors for KISS-CONTRACT-6.11-0007, 6.4-0002, 6.4-0007 and 6.3-0006, requested by Fireline (fireline#60, before it wires its op_dag reader into `read_contract`). Declines carry a `(section, tag)` pair: `semantics` with `op-dag-malformed`, `op-dag-bad-source`, `op-dag-child-not-earlier`, `op-dag-multiple-roots` (root not last), `op-dag-unknown-op`, `op-dag-empty`, `bad-semantics-kind`; `record` with `op-identity-root-mismatch` and `cell-class-unsupported-by-op`. The accept set covers `ctr`, `ndx` and `rdc` on ops that declare the fact (a carrier, a scan through its inner carrier, `argmax`, a pool), a fusion whose only contraction is a non-root op, every `Source` tag with a `Bind` node, a shape-decided class that asks nothing of the op, and an empty `declared-op-tag` DAG. The class check reads `conformance/corpus/op_facts.json`, generated from `spec/ops.md`; there is no per-op table in the reader.
