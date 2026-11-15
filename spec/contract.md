@@ -700,7 +700,7 @@ outer length-prefix (§6.1-0005).
   does not require an op that has such a fact to be keyed with the matching class — a
   matmul keyed `oth` is a producer defect this assertion does not see, and it fails
   instead at the (cell, op identity) lookup (§6.3-0005).
-  *Test:* `test_contract_identity_consistency`.
+  *Draft change (PM ruling 2026-11-15, same request): "any op of the region's Semantics DAG" means any `Op` node; a `Source` or `Bind` node never has a fact. For a DAG of one `Op` node that op is the root. The facts a reader reads are the machine-readable per-op file `conformance/corpus/op_facts.json`, generated from this standard's KISS-Ops text by `tools/kiss_op_facts.py`; a reader MUST NOT keep its own table. Pinned by `op_dag_vectors`.* *Test:* `test_contract_identity_consistency`.
 - **KISS-CONTRACT-6.3-0007** — The `target_capability` MUST be a KISS-Classify namespaced
   `<namespace>:<capability-set>` descriptor, matched **byte-exact** on the full string; an
   implementation MUST NOT apply ordering, subset, or feature-implication logic to it, and
@@ -762,7 +762,7 @@ cell class, or changing which structural fact a class requires, is a contract-sc
   bare KISS-Ops op DAG, §6.3-0003 form (b)) MUST be permitted — KISS-Grammar is not required.
   An implementation MUST NOT introduce an op vocabulary other than KISS-Ops op names (an
   advertisable op is reconstructed as a tag over those names, never a separate vocabulary).
-  *Test:* `test_contract_op_dag_over_ops_and_grammar`.
+  *Draft change (PM ruling 2026-11-15, same request): the comparison of the DAG root to the `op_identity` is by the **bare KISS-Ops op name** (§6.11-0009 `<op_name>`); the `op_dag_vectors` of `contract_vectors.json` pin that comparison only and do not check the identity-bearing attributes or the operand-role tuple, which stay obligations on the producer.* *Test:* `test_contract_op_dag_over_ops_and_grammar`.
 - **KISS-CONTRACT-6.4-0003** — Each op node MUST carry the KISS-Ops **OpAttrs** channel
   applicable to its op — the axis (for `reduce` / `gather` / `scan`), the out-of-bounds policy
   (the KISS-Ops-owned OOB-policy set, KISS-OPS §6.11-0004, canonically encoded per KISS-OPS
@@ -798,7 +798,7 @@ cell class, or changing which structural fact a class requires, is a contract-sc
   §6.3-0003) plus a `lift_residue` recording the un-liftable remainder per the
   KISS-Consume refusal taxonomy (`not-a-kernel` / `wrong-op-class` /
   `unrecognized-but-expressible` / `inexpressible-residue`); an implementation MUST NOT
-  declare `machine-checkable-IR` for a kernel with un-lifted residue. *Test:*
+  declare `machine-checkable-IR` for a kernel with un-lifted residue. *Draft change (PM ruling 2026-11-15, on FireLine's request for op_dag vectors; no new field): a `machine-checkable-IR` Semantics MUST carry at least one `op_dag` node, because a complete IR has a root for §6.4-0002 to equal and an empty array has none, and a reader MUST decline it. A `declared-op-tag` Semantics MAY carry an empty `op_dag` (`[]`) when the IR names no node for the region; it is then not rejected on the §6.3-0006 assertion, and with any node it is checked like any other DAG. Pinned by the `op_dag_vectors` of `contract_vectors.json`.* *Test:*
   `test_contract_semantics_kind_matches_lift`.
 - **KISS-CONTRACT-6.4-0008** — A KISS-Grammar advertisable **region** MUST map onto the
   Semantics `op_dag` structure-for-structure: a one-node region maps to a one-node DAG, a
