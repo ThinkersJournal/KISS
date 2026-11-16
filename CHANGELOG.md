@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.8 — docs: options note for the text spelling of op_identity (Contract 6.11-0009)
+
+Added `docs/options-op-identity-spelling.md`: four open points in the `op_identity` text spelling (attribute order, defaulted attributes, value and key spellings, form (a) versus (b)), each with options A/B/C, what it does to bytes, and a recommendation, for CireSnave's decision through the PM. It also records that the two Appendix C golden lines (`gather{axis=k, oob=clamp}`, `scan{op=add}`) name a variable, a field and an op that KISS-Ops does not have. No spec byte changes; the vectors for 6.3-0003/-0004 wait on the answers.
+
 ## 0.18.7 — CI: CodeRipper portfolio workflow pinned to 0.47.5
 
 `.github/workflows/conformance.yml` calls the shared `portfolio.yml` at coderipper `c72a6e03479d914de8ea8a73609ba73e93a0de92` (0.47.5, was `d14a22b6` 0.9.14). The repo carries no `.coderipper.toml` and no `check <rule>` or `--skip-rule` text, so `migrate-rule-ids.py` has nothing to rewrite here. The job stays advisory, not a required check.
