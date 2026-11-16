@@ -118,6 +118,7 @@ pub mod op_dag;
 pub mod op_dag_vectors;
 pub mod op_identity;
 pub mod op_identity_vectors;
+pub mod op_resolve;
 pub mod opattrs;
 pub mod opattrs_axes;
 pub mod opattrs_value;
