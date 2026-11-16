@@ -236,7 +236,7 @@ clamp } }`; its `op_identity` is the advertisable-op tag `gather` distinguished 
 those attribute values (per KISS-Grammar, more than one advertisable op may re-base
 onto the same op name when distinguished by attribute values, so `op_identity` carries
 the distinguishing attributes, not the bare name; it renders on the contract document's
-`op_identity` line as `gather{axis=k, oob=clamp}` per §6.11-0009). Its Interface signature carries the
+`op_identity` line as `gather{axis=0, oob_policy=clamp, index_operand=1, index_dtype=i32}` per §6.11-0009). Its Interface signature carries the
 index operand's own dtype pointer plus the gather/index extents launch scalars; the
 axis and OOB policy are matched with an explicit guard. This is exactly the case the
 old flat grammar could not express (no attrs channel, no per-operand dtype tuple), so
@@ -670,7 +670,11 @@ outer length-prefix (§6.1-0005).
   name distinguished only by identity-bearing attribute values (the pattern-channel OpAttrs
   values and the operand-role tuple, per KISS-GRAMMAR §6.1-0007), the `op_identity` MUST carry
   the **full** advertisable-op tag (the op name **plus** the distinguishing attribute values)
-  and MUST NOT be reduced to the bare op name. *Test:*
+  and MUST NOT be reduced to the bare op name. This is a **producer** obligation: a reader
+  cannot decide from the document alone whether a line was reduced, because the document does
+  not carry the list of advertisable ops; a reader decides only what the line itself shows,
+  and rejects a line that omits a field of the op's OpAttrs record as incomplete (§6.11-0009,
+  CireSnave 2026-11-16, board 451, Point 4 A). *Test:*
   `test_contract_op_identity_carries_distinguishing_attrs`.
 - **KISS-CONTRACT-6.3-0005** — The `accept_predicate` and the `op_identity` MUST be carried
   as **two distinct fields**, and a consumer MUST match **both** to identify the kernel: the
@@ -1593,9 +1597,21 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
 - **KISS-CONTRACT-6.11-0009** — The `op_identity` value MUST be encoded as a single string
   value (§6.11-0001, LF-free) in the pinned canonical spelling
   `<op_name>[{<op_attrs>}][[<operand_role_tuple>]]`, where `<op_name>` is the bare KISS-Ops op
-  name of the Semantics DAG root's op; `{<op_attrs>}` is present **iff** the root carries a
-  non-empty identity-bearing OpAttrs set and is then the `key=value` list separated by `, `
-  spelled exactly as KISS-Ops spells them (the same spelling as §6.11-0007); and
+  name of the Semantics DAG root's op; `{<op_attrs>}` is present **iff** the root op carries an
+  OpAttrs record (KISS-OPS §6.19.3) and is then the `key=value` list separated by `, ` that
+  spells **every** field of that record, defaulted fields included, in the **KISS-Ops canonical
+  field order** of the op's §6.19.3 row (never alphabetical, never a set), each key being the
+  §6.19.3 field name exactly and each value spelled by its field's type: an enum field by its
+  §6.19.2 sub-vocabulary name (`clamp`, `skip`, `atomic-add`), a count, index or extent by a
+  canonical decimal integer (no sign, no leading zero, no space), a dtype field by its
+  KISS-Classify dtype token (an `accumulator` at the op's compute dtype by `compute-dtype`), a
+  bool field by `true` or `false`, and an axis set or window vector by a bracketed
+  comma-separated list of canonical decimal integers without spaces (`[0,1]`; an axis set is
+  written as that explicit ascending list of distinct axis indices, never as `rall` or `rlast`);
+  a line that omits a field of the record, repeats one, names one the record does not have, or
+  orders them otherwise is **incomplete or malformed** and a reader MUST reject it with a
+  typed decline (the same `, ` separated `key=value` shape as §6.11-0007, with the field
+  list and value spellings fixed here); and
   `[<operand_role_tuple>]` is a `[role:dtype, …]` list of the root op's operand roles in
   KISS-Classify canonical operand order, present **iff** the KISS-Grammar advertisable-op tag
   carries an identity-bearing operand-role tuple (KISS-GRAMMAR §6.1-0007) — form (a) only. For
@@ -1612,12 +1628,17 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   defined by the KISS-Grammar binary tag canonical serialization (KISS-GRAMMAR §6.8-0012),
   under which every identity-bearing attribute is resolved to its explicit default so that a
   defaulted attribute and an explicitly-equal one produce identical bytes (KISS-OPS §6.19-0005);
-  this text `op_identity` line is a **non-authoritative render** of that canonical form. A
+  this text `op_identity` line is a **non-authoritative render** of that canonical form, and
+  because it writes every field at its resolved value (defaults are never elided, the same rule
+  as KISS-GRAMMAR §6.1-0007 (b)) a defaulted and an explicitly-equal attribute render
+  identically. A
   reader comparing two op identities MUST compare via the KISS-Grammar canonical binary tag
   serialization (§6.8-0012), and MUST NOT decide op-identity equality by byte-comparing this
-  text line, so that a defaulted-vs-explicit attribute difference surfacing in the text render
-  (this clause's default-eliding `{<op_attrs>}` presence rule) can never split, or falsely
-  merge, a single op identity. *Test:* `test_contract_text_op_identity`.
+  text line, so that a text-render difference can never split, or falsely merge, a single op
+  identity. *Draft change (CireSnave 2026-11-16, board 451, verbatim: "451: 1: A.  2: A.  3: A.
+  4: A."; relayed by the PM): the field order, the every-field rule, the value spellings, and
+  the rejection of an incomplete line are as above; the former "default-eliding" presence rule
+  is struck.* *Test:* `test_contract_text_op_identity`.
 - **KISS-CONTRACT-6.11-0010** — A **real** (floating-point) field value MUST be encoded as
   `<dtype>:<hex>` where `<dtype>` is the KISS-Classify float dtype token (`f32` or `f64`) and
   `<hex>` is the value's IEEE 754-2019 bit pattern in that dtype written **most-significant
@@ -1985,7 +2006,7 @@ of §2.6 is the golden vector for `test_contract_node_carries_opattrs`,
 `test_contract_op_identity_carries_distinguishing_attrs`, `test_contract_index_operand_typed`, and
 `test_contract_no_op_class_withhold` — carrying `axis = k` and OOB policy `clamp` on the Semantics
 OpAttrs channel, the index operand's own dtype pointer, and the gather/index-extent launch scalars;
-its `op_identity` renders as `gather{axis=k, oob=clamp}` (§6.11-0009), shown with a form-(b)
+its `op_identity` renders as `gather{axis=0, oob_policy=clamp, index_operand=1, index_dtype=i32}` (§6.11-0009), shown with a form-(b)
 bare-KISS-Ops `op_identity` vector in Appendix C for `test_contract_text_op_identity` and
 `test_contract_op_identity_full_tag_or_bare_ops_dag`.
 Additional negative vectors — a headingless block (silently-droppable under the old markdown
@@ -2164,14 +2185,14 @@ bare `op_identity = add` (form (a) special case; the golden vector shown in the 
 above). Two further golden `op_identity` vectors seed a foreign reader:
 
 ```
-op_identity = gather{axis=k, oob=clamp}
-op_identity = scan{op=add}
+op_identity = gather{axis=0, oob_policy=clamp, index_operand=1, index_dtype=i32}
+op_identity = prefix_scan{monoid=sum, reduce_axes=[0], exclusivity=inclusive, accumulator=compute-dtype, math_fidelity=bit-stable}
 ```
 
-The first is the §2.6 `gather` (form (a) with distinguishing attribute values), the golden vector
+The first is the §2.6 `gather` with the clamp out-of-bounds policy (form (a) with distinguishing attribute values; the fields and values are those of the `gather` worked example of KISS-Ops §6.19, `00 02 01 02`), the golden vector
 for `test_contract_op_identity_carries_distinguishing_attrs` and `test_contract_text_op_identity`.
 The second is a hand-written bare-KISS-Ops kernel with **no** KISS-Grammar advertisable-op entry
-whose Semantics DAG root is a `scan` with `op=add` (form (b) — bare op name plus identity-bearing
+whose Semantics DAG root is a `prefix_scan` over the `sum` monoid (form (b) — bare op name plus identity-bearing
 OpAttrs, **no** `[<operand_role_tuple>]` suffix), the golden vector for
 `test_contract_op_identity_full_tag_or_bare_ops_dag` (form (b) case).
 
