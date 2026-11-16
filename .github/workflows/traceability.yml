@@ -300,6 +300,11 @@ jobs:
         run: |
           python tools/kiss_op_facts.py
           git diff --exit-code conformance/corpus/op_facts.json
+      # Per-op resolution to the primitive floor (Contract 6.4-0005/-0010) for resolvers (Fireline).
+      - name: op decomposition table (generated from ops.md) is not stale
+        run: |
+          python tools/kiss_op_decomp.py
+          git diff --exit-code conformance/corpus/op_decomposition.json
       # #459: the corpus op-coverage SHORTFALL (declared/derived-total) must be a visible,
       # non-decreasing number, not an invisible 1-of-106 that a stalled rollout hides. Ratchets
       # `declared` against CORPUS_COVERAGE_FLOOR.tsv; a deviation in either direction fails, with a
