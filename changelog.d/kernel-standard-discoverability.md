@@ -1,3 +1,0 @@
-kind: docs: design note for board 450 (how a reader of KISS-Ops finds the kernel-body standard)
----
-Added `docs/kernel-standard-discoverability.md`: for CireSnave's ruling on board 450 (option A, on the condition that the references stay in place), the four references named exactly: umbrella and Ops "Downstream edges" registration (edge label STRUCTURAL recommended), a binding `Kernel-governed:` pointer at every governed op, a `kernel_rules` field in `conformance/corpus/op_facts.json` with its byte and digest effects stated (no digest, manifest, golden or wire byte moves), and the `tools/kiss_kernel_refs.py` check with mutation tests that keeps the condition from rotting. Docs only; no spec byte changes.
