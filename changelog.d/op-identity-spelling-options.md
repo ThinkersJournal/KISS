@@ -1,0 +1,3 @@
+kind: docs: options note for the text spelling of op_identity (Contract 6.11-0009)
+---
+Added `docs/options-op-identity-spelling.md`: four open points in the `op_identity` text spelling (attribute order, defaulted attributes, value and key spellings, form (a) versus (b)), each with options A/B/C, what it does to bytes, and a recommendation, for CireSnave's decision through the PM. It also records that the two Appendix C golden lines (`gather{axis=k, oob=clamp}`, `scan{op=add}`) name a variable, a field and an op that KISS-Ops does not have. No spec byte changes; the vectors for 6.3-0003/-0004 wait on the answers.
