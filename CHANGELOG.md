@@ -3,6 +3,14 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.8 — docs: options note for the text spelling of op_identity (Contract 6.11-0009)
+
+Added `docs/options-op-identity-spelling.md`: four open points in the `op_identity` text spelling (attribute order, defaulted attributes, value and key spellings, form (a) versus (b)), each with options A/B/C, what it does to bytes, and a recommendation, for CireSnave's decision through the PM. It also records that the two Appendix C golden lines (`gather{axis=k, oob=clamp}`, `scan{op=add}`) name a variable, a field and an op that KISS-Ops does not have. No spec byte changes; the vectors for 6.3-0003/-0004 wait on the answers.
+
+## 0.18.7 — CI: CodeRipper portfolio workflow pinned to 0.47.5
+
+`.github/workflows/conformance.yml` calls the shared `portfolio.yml` at coderipper `c72a6e03479d914de8ea8a73609ba73e93a0de92` (0.47.5, was `d14a22b6` 0.9.14). The repo carries no `.coderipper.toml` and no `check <rule>` or `--skip-rule` text, so `migrate-rule-ids.py` has nothing to rewrite here. The job stays advisory, not a required check.
+
 ## 0.18.6 — spec: op_dag and Identity-consistency rulings recorded (draft change, no new field)
 
 Records the PM's 2026-11-15 rulings as *Draft change* notes beside KISS-CONTRACT-6.4-0007 (empty `op_dag`: declined under `machine-checkable-IR`, allowed and exempt under `declared-op-tag`), 6.4-0002 (root compared to `op_identity` by bare op name) and 6.3-0006 ("any op" is any `Op` node; the per-op facts are `conformance/corpus/op_facts.json`), with the table in `rfcs/op-dag-contract-rulings-2026-11-15.md`. They match the behaviour pinned by the `op_dag_vectors` of KISS#828 and built by FireLine, so no vector or reader changes.
