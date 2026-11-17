@@ -13,10 +13,10 @@ fn test_classify_unnamed_type_has_no_escape() {
     assert!(!vk.contains("or `x<n>` for a `VkComponentTypeKHR`"), "the x<n> alternative is removed from the component-type list");
     assert!(vk.contains("**There is no `x<n>` escape (removed at vocabulary version 6;"), "V-7 states the removal");
     assert!(vk.contains("is **omitted whole**"), "an unnamed type's tuple is omitted whole");
-    assert!(vk.contains("**Vocabulary version:** 6"), "the Vulkan vocabulary version moved to 6");
+    assert!(vk.contains("**Vocabulary version:** 7"), "the Vulkan vocabulary version is 7 (the escape was removed at 6, atomics named at 7)");
     assert!(vk.contains("KISS-ANNOUNCE-6.6-0011"), "the omission is reported in the Announce device record");
-    // the vocabulary version the vectors record is the same 6.
-    assert!(kiss_conformance::reference_vectors::NAMESPACE_VOCAB_VERSIONS.contains(&("vulkan", 6, 5)));
+    // the vocabulary version the vectors record is the same 7.
+    assert!(kiss_conformance::reference_vectors::NAMESPACE_VOCAB_VERSIONS.contains(&("vulkan", 7, 5)));
     // no published key (positive or derived) spells an `x<digits>` component.
     for file in ["structure_key_vectors.json", "structure_key_derivation_vectors.json"] {
         let text = std::fs::read_to_string(format!("{}/corpus/{file}", env!("CARGO_MANIFEST_DIR"))).unwrap();

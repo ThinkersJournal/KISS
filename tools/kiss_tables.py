@@ -325,6 +325,10 @@ def check_mathfidelity_enum(spec_dir):
         for m in re.finditer(r"\{[^{}]*bit-stable[^{}]*\}", text):
             members = {t.strip() for t in re.split(r"[,\s]*,[,\s]*",
                        " ".join(m.group(0)[1:-1].split())) if t.strip()}
+            # An op_identity attribute record (`{monoid=sum, ..., math_fidelity=bit-stable}`, Contract
+            # 6.11-0009) names the value of one field, not the enum: every member is `key=value`.
+            if members and all("=" in t for t in members):
+                continue
             if stem == "ops":
                 owner_seen = True
             if members != MATHFIDELITY_MEMBERS:
