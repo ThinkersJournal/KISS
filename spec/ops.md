@@ -46,7 +46,7 @@ normatively in §6.16.
 | Reference seed crate(s) | `baracuda-kernel-vocab`, `baracuda-kernelgen` (project/crate names given in Appendix C as non-normative provenance) |
 | DAG position | **Foundational tier (computation vocabulary).** Sits at the bottom of the suite DAG beside the data vocabulary. Depends on **NOTHING**. Not consumed opaquely — every downstream edge is STRUCTURAL. |
 | Upstream edges | **None** (foundational root; KISS-Ops depends on no other sub-standard). |
-| Downstream edges | KISS-Grammar (**STRUCTURAL** — advertisable ops re-base on KISS-Ops op names); KISS-Contract (**STRUCTURAL** — the contract semantics field carries the KISS-Ops op DAG); KISS-Synth/Provision (**STRUCTURAL** — the resolved decomposition is the oracle); KISS-Consume (**STRUCTURAL** — lift targets are KISS-Ops op names); KISS-Emit (**STRUCTURAL** — lowering sources are KISS-Ops op definitions). KISS-Conform depends on and tests this sub-standard. |
+| Downstream edges | KISS-Grammar (**STRUCTURAL** — advertisable ops re-base on KISS-Ops op names); KISS-Contract (**STRUCTURAL** — the contract semantics field carries the KISS-Ops op DAG); KISS-Synth/Provision (**STRUCTURAL** — the resolved decomposition is the oracle); KISS-Consume (**STRUCTURAL** — lift targets are KISS-Ops op names); KISS-Emit (**STRUCTURAL** — lowering sources are KISS-Ops op definitions); KISS-Kernel (**STRUCTURAL** — the kernel-body rules fix the thread-level order, scope and race behaviour of the atomic combines of §6.11-0006, -0010 and -0024 and take the monoid set; listed in §6.22). KISS-Conform depends on and tests this sub-standard. |
 | Spec license | CC0 1.0 Universal (public-domain dedication) |
 | Reference-crate license | MIT-OR-Apache-2.0 |
 | Maturity | Draft proposal |
@@ -1073,7 +1073,7 @@ section-intro paragraph is an informative pointer to it):
 - **KISS-OPS-6.11-0006** — The `scatter` `atomic-add` combine on a floating-point dtype
   MUST be declared nondeterministic (class order-invariant/nondeterministic, §6.0-0004).
   The `atomic-max`, `atomic-min`, and integer `atomic-add` combines MUST be
-  deterministic. The `assign` combine MUST be deterministic: when two or more source
+  deterministic. *Kernel-governed:* KISS-KERNEL-6.4, KISS-KERNEL-6.5 (the order, reach and race behaviour of the concurrent combine; §6.22). The `assign` combine MUST be deterministic: when two or more source
   elements scatter to the **same** destination index, the write from the **highest
   source (row-major iteration) index** MUST win (a pinned last-writer-in-iteration-order
   tie-break), so `assign` never depends on hardware race order. The floating-point `atomic-add`
@@ -1128,7 +1128,7 @@ section-intro paragraph is an informative pointer to it):
   `i32` and `i64`; `u32` carries no negative value and the rule is vacuous for it. *Test:*
   `test_ops_index_dtype_set`.
 - **KISS-OPS-6.11-0010** — The `scatter` floating-point `atomic-max` and `atomic-min`
-  combines MUST be **NaN-propagating**, consistent with the `max` / `min` `reduce`
+  combines MUST be **NaN-propagating** (*Kernel-governed:* KISS-KERNEL-6.4, KISS-KERNEL-6.5; §6.22), consistent with the `max` / `min` `reduce`
   monoids (§6.11-0002): if a NaN is scattered to a destination, or a destination already
   holds a NaN, the combined result MUST be NaN. *Test:*
   `scatter_atomic_max_min_nan_propagating`.
@@ -1307,7 +1307,7 @@ section-intro paragraph is an informative pointer to it):
   `cmp_eq(iota, index)`. *Draft change (CireSnave 2026-11-12, board 422 "A"): an additive op
   token; no existing field, clause or `structure_key` byte moves.* *Test:* `test_ops_iota_semantics`.
 - **KISS-OPS-6.11-0024** — The `scatter` `atomic-add` combine on a floating-point dtype (and the
-  `scatter_add` wrapper) MUST declare its tolerance as the **ULP-of-A band of KISS-CONTRACT-6.8-0012**,
+  `scatter_add` wrapper) MUST declare its tolerance (*Kernel-governed:* KISS-KERNEL-6.4, KISS-KERNEL-6.5; §6.22) as the **ULP-of-A band of KISS-CONTRACT-6.8-0012**,
   `k(S,A) · N · eps_A · |max partial sum|`, evaluated **per destination position `j`** with
   `S = A =` the destination dtype (an atomic does not widen). For that position, the reference
   sequence is `dest[j]` (§6.11-0016) followed by every non-skipped `updates` element that scatters to
@@ -3035,6 +3035,20 @@ written over the other atoms without a double rounding.
   `bit_and`, `cmp_*`). *Draft change (CireSnave 2026-11-12, board 427 "B": add `bitcast` to the
   primitive floor now): an additive op token and a floor member; no existing field, clause or
   `structure_key` byte moves.* *Test:* `test_ops_bitcast_semantics`.
+
+### 6.22 Kernel-governed ops (the pointer table to KISS-Kernel)
+
+*Informative table; the binding rule is KISS-KERNEL-6.1-0001 (board 450, option A, CireSnave 2026-11-16: "...but only as long
+as the necessary references are kept in place so readers know when recommendations are available.").* An op listed here has
+concurrent behaviour (order, reach or race) that a KISS-Kernel section fixes, and each Ops clause named in the last column
+carries a `Kernel-governed:` pointer to the same sections. KISS-Kernel's sections are reserved until the board 459 rulings
+are made (`spec/kernel.md` §2.2), so the pointer names a section, not yet a clause. KISS-Ops has no barrier, fence,
+collective or subgroup op today; an op added later takes the same pointer when it lands.
+
+| Op | KISS-Kernel sections | Ops clauses carrying the pointer |
+|---|---|---|
+| `scatter` | 6.4, 6.5 | KISS-OPS-6.11-0006, KISS-OPS-6.11-0010, KISS-OPS-6.11-0024 |
+| `scatter_add` | 6.4, 6.5 | KISS-OPS-6.11-0006, KISS-OPS-6.11-0024 |
 
 ---
 

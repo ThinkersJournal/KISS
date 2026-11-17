@@ -308,7 +308,7 @@ RE_RUNTIME_GATE = re.compile(r"runtime_gate(?:_some)?!\(\s*\"([a-z0-9_-]+)\"")
 
 # spec order: umbrella first (must define no clauses), then the nine sub-standards.
 SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
-         "synth", "consume", "emit", "conform"]
+         "synth", "consume", "emit", "conform", "kernel"]
 
 # DECLARED same-standard test shares (#286). Injective forward names are the default: a §9
 # `*Test:*` names one clause. The cross-standard `test_conform_*` deferral is one sanctioned

@@ -618,7 +618,8 @@
 # op_dag / Identity-consistency contract vectors (#828): harness 556 -> 559, untested 389 -> 386, proven 20 -> 24; KISS-CONTRACT-6.11-0007, 6.4-0002, 6.4-0007, 6.3-0006. TOOL-DERIVED: `--ratchet` reported these.
 # op_identity text spelling + vectors (CireSnave 2026-11-16, board 451): harness 559 -> 562, untested 386 -> 383, proven 24 -> 25; KISS-CONTRACT-6.11-0009 (Proven: a spec-line mutation is caught), 6.3-0003, 6.3-0004 (tests in conformance/tests/contract_op_identity.rs). TOOL-DERIVED.
 # op decomposition table + resolver (this PR): harness 559 -> 561, untested 386 -> 384; KISS-CONTRACT-6.4-0005 and 6.4-0010 (tests in conformance/tests/contract_op_resolve.rs). TOOL-DERIVED: `--ratchet` reported these.
-harness	564
+# KISS-Kernel skeleton (board 450): harness 564 -> 565, proven 25 -> 26; KISS-KERNEL-6.1-0001 (tests/kernel_refs.rs, Proven by three mutations); KISS-KERNEL-8-0001 is `attested` (a checklist gate, like KISS-ANNOUNCE-8-0004). TOOL-DERIVED.
+harness	565
 lint	44
 untested	381
-proven	25
+proven	26

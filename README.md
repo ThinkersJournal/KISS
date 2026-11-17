@@ -60,7 +60,7 @@ the key is deliberately silent on the computation, so a byte-match is **necessar
 admission (KISS-CLASSIFY-6.6-0001), and two kernels in one cell are not interchangeable
 (KISS-CLASSIFY-6.6-0020); the op identity travels beside the key.
 
-## The nine sub-standards
+## The ten sub-standards
 
 | Sub-standard | Tier | Owns | Status |
 |---|---|---|---|
@@ -72,6 +72,7 @@ admission (KISS-CLASSIFY-6.6-0001), and two kernels in one cell are not intercha
 | **KISS-Synth / Provision** | protocol | The kernel-provision protocol: a consumer asks for a kernel by identity and receives `{artifact, contract}`, the provider building it on a cache miss. Just-in-time synthesis is the build-on-miss branch of the same request. | **draft — [`spec/synth.md`](spec/synth.md)** |
 | **KISS-Consume** *(Recognition / Lift)* | protocol | **Despite the name, this is not "the consumer's sub-standard" — a provider's kernel-decomposer is a lifter too.** The recognition direction: lifting a kernel or source region into the op DAG as far as it goes, with a normative refusal taxonomy for the un-liftable remainder. | **draft — [`spec/consume.md`](spec/consume.md)** |
 | **KISS-Emit** | protocol | The generation direction: a complete partition of every lowering decision into "the neutral driver may spell it" versus "the emitter must supply it," plus the emit/consume round-trip tiers. | **draft — [`spec/emit.md`](spec/emit.md)** |
+| **KISS-Kernel** | behavioural | What one thread does in a launch of many: barriers, the order and reach of atomics, the race rule (board 450). **A skeleton:** its rule sections are reserved until the board 459 rulings; the references to it (umbrella rows, the KISS-Ops "Kernel-governed ops" table, `kernel_rules` in the operation facts) exist now. | **draft skeleton — [`spec/kernel.md`](spec/kernel.md)** |
 | **KISS-Conform** | cross-cutting | Conformance: the bidirectional clause-to-test traceability matrix, the five test modalities, determinism-class-aware comparators, and the adversarial-outsider checklist that gates every freeze. | **draft — [`spec/conform.md`](spec/conform.md)** |
 
 The two **foundational vocabularies** (Classify = data, Ops = computation) sit at the
@@ -111,6 +112,7 @@ keeps the wire protocols stable while the vocabularies grow.
 | [`spec/synth.md`](spec/synth.md) | **KISS-Synth / Provision**, the kernel-provision protocol: ask by identity → `{artifact, contract}` (built on a cache miss); the PRSP provision-success frame; the never-panic typed-decline taxonomy. |
 | [`spec/consume.md`](spec/consume.md) | **KISS-Consume** *(Recognition / Lift)*, the recognition direction — **not the consumer's sub-standard; the role is orthogonal to provider/consumer**: structure-based lifting into the KISS-Ops op DAG, the MECE refusal taxonomy, and the residue / lift-fraction. |
 | [`spec/emit.md`](spec/emit.md) | **KISS-Emit**, the generation direction: the complete driver-may-spell vs emitter-must-supply lowering partition, and the two-tier emit/consume round-trip. |
+| [`spec/kernel.md`](spec/kernel.md) | **KISS-Kernel**, the kernel-body sub-standard (skeleton): the reserved section map and the one reference clause KISS-KERNEL-6.1-0001; no barrier, atomic or race rule is stated yet. |
 | [`spec/conform.md`](spec/conform.md) | **KISS-Conform**, the cross-cutting conformance sub-standard: the bidirectional clause↔test traceability matrix, the five test modalities, determinism-class comparators, and the adversarial-outsider freeze gate. Tests all eight others. **What CI actually enforces of this is stated in [How coverage is enforced](#how-coverage-is-enforced); it is a ratchet, not "the build fails on any untested MUST".** |
 | `LICENSE`, `LICENSE-MIT`, `LICENSE-APACHE`, `REUSE.toml` | The licence texts and the machine-readable map of which applies where (see [License](#license)). |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to comment and contribute; governance and RFC process; contributor licensing terms. |
