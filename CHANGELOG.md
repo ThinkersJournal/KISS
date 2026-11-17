@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.12 — docs: options note for board 449 (the outside-view metrics a kernel passes across the seam)
+
+Added `docs/options-outside-view-metrics.md`: after CireSnave's board 449 ruling (outside-view metrics, not kernel internals; the flops/bytes class-and-terms form is withdrawn), what the Contract already carries for accuracy, precision, reproducibility, speed and memory with the clause that defines each, what is missing (only speed has a provenance tag; no unit on cost; no declared workspace size; the tier field layout is unpinned), and per metric one candidate form with options A/B/C, the byte effect and a recommendation, merging Fuel's and FireLine's consumer answers. Docs only; nothing is built and the golden `cost = 1` is unchanged.
+
 ## 0.18.11 — spec+conformance: op_identity text spelling pinned (Contract 6.11-0009, board 451), with op_identity vectors
 
 CireSnave ruled board 451 on 2026-11-16, verbatim: "451: 1: A.  2: A.  3: A.  4: A." Contract 6.11-0009 now pins the `{...}` list of an `op_identity` line: every field of the op's OpAttrs record is written, defaults included, in the KISS-Ops canonical field order of its `spec/ops.md` 6.19.3 row; a key is the field name, an enum value its 6.19.2 name, a number a canonical decimal, a dtype its KISS-Classify token (`compute-dtype` for an accumulator at the compute dtype), a flag `true` or `false`, and an axis set or window vector a bracketed list such as `[0,1]` (never `rall`/`rlast`). The former "default-eliding" presence rule is struck, and a line that omits, repeats, mis-orders or invents a field is declined. Contract 6.3-0004 now says that "reduced to the bare name" is a producer obligation (the document does not carry the advertisable-op list), so a reader decides only what the line shows.
