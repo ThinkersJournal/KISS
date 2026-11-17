@@ -114,7 +114,7 @@ fn byte_value(f: &SchemaField, v: &str, op: &str) -> Result<Value, IdentityDecli
     }
 }
 
-fn field_value(op: &str, f: &SchemaField, v: &str) -> Result<(), IdentityDecline> {
+pub(crate) fn field_value(op: &str, f: &SchemaField, v: &str) -> Result<(), IdentityDecline> {
     let bad = IdentityDecline::BadValue;
     let value = match f.width {
         FieldWidth::U16Le => return axis_set(op, v).map(|_| ()),
