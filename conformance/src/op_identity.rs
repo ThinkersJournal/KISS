@@ -90,42 +90,47 @@ fn axis_set(op: &str, v: &str) -> Result<Vec<usize>, IdentityDecline> {
     Ok(xs.iter().map(|&a| a as usize).collect())
 }
 
+/// A one-byte field: the accumulator and target-dtype spellings, a flag, a vocabulary token or a plain byte.
+fn byte_value(f: &SchemaField, v: &str, op: &str) -> Result<Value, IdentityDecline> {
+    let bad = IdentityDecline::BadValue;
+    match f.name.as_str() {
+        "axes" => Ok(Value::Byte(axis_set(op, v)?.iter().fold(0u8, |m, &a| m | (1 << a)))),
+        "accumulator" if v == COMPUTE_DTYPE_TOKEN || accumulator_ordinal(v, op).is_ok() => Ok(Value::Token(v.to_string())),
+        "accumulator" => Err(bad),
+        "target_dtype" => target_dtype_ordinal(v).map(|_| Value::Token(v.to_string())).map_err(|_| bad),
+        _ if is_flag(f) => match v {
+            "true" => Ok(Value::Flag(true)),
+            "false" => Ok(Value::Flag(false)),
+            _ => Err(bad),
+        },
+        name if vocab_of(name).is_some() => {
+            let known = vocab_of(name).and_then(|n| vocab().get(n).map(|es| es.iter().any(|(_, t)| t == v)));
+            if known == Some(true) { Ok(Value::Token(v.to_string())) } else { Err(bad) }
+        }
+        _ => {
+            let n = canonical_u64(v).filter(|&n| n <= u64::from(u8::MAX)).ok_or(bad)?;
+            Ok(Value::Byte(n as u8))
+        }
+    }
+}
+
 fn field_value(op: &str, f: &SchemaField, v: &str) -> Result<(), IdentityDecline> {
     let bad = IdentityDecline::BadValue;
-    let value = match (f.width, f.name.as_str()) {
-        (FieldWidth::U16Le, _) => return axis_set(op, v).map(|_| ()),
-        (FieldWidth::U8, "axes") => {
-            let mask = axis_set(op, v)?.iter().fold(0u8, |m, &a| m | (1 << a));
-            Value::Byte(mask)
-        }
-        (FieldWidth::Variable, _) => {
+    let value = match f.width {
+        FieldWidth::U16Le => return axis_set(op, v).map(|_| ()),
+        FieldWidth::Variable => {
             let xs = int_list(v).ok_or(bad)?;
             if xs.is_empty() || xs.len() > MAX_RANK as usize || xs.iter().any(|&x| x > u64::from(u32::MAX)) {
                 return Err(bad);
             }
             Value::Vector(xs.iter().map(|&x| x as u32).collect())
         }
-        (FieldWidth::U64Le, _) => Value::U64(canonical_u64(v).ok_or(bad)?),
-        (FieldWidth::U8, "accumulator") => {
-            return if v == COMPUTE_DTYPE_TOKEN || accumulator_ordinal(v, op).is_ok() { Ok(()) } else { Err(bad) };
-        }
-        (FieldWidth::U8, "target_dtype") => return target_dtype_ordinal(v).map(|_| ()).map_err(|_| bad),
-        (FieldWidth::U8, _) if is_flag(f) => match v {
-            "true" => Value::Flag(true),
-            "false" => Value::Flag(false),
-            _ => return Err(bad),
+        FieldWidth::U64Le => Value::U64(canonical_u64(v).ok_or(bad)?),
+        FieldWidth::U8 => match f.name.as_str() {
+            // These two are checked against their own ordinal tables and need no one-field encode.
+            "accumulator" | "target_dtype" => return byte_value(f, v, op).map(|_| ()),
+            _ => byte_value(f, v, op)?,
         },
-        (FieldWidth::U8, name) if vocab_of(name).is_some() => {
-            let known = vocab_of(name).and_then(|n| vocab().get(n).map(|es| es.iter().any(|(_, t)| t == v)));
-            if known != Some(true) {
-                return Err(bad);
-            }
-            Value::Token(v.to_string())
-        }
-        (FieldWidth::U8, _) => {
-            let n = canonical_u64(v).filter(|&n| n <= u64::from(u8::MAX)).ok_or(bad)?;
-            Value::Byte(n as u8)
-        }
     };
     // The one-field schema reuses the OpAttrs encoder's range and fixed-value rules for this field.
     let one = OpSchema { op: op.to_string(), fields: vec![f.clone()] };
