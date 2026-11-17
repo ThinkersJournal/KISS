@@ -1,3 +1,0 @@
-kind: docs: options note for board 449 (the outside-view metrics a kernel passes across the seam)
----
-Added `docs/options-outside-view-metrics.md`: after CireSnave's board 449 ruling (outside-view metrics, not kernel internals; the flops/bytes class-and-terms form is withdrawn), what the Contract already carries for accuracy, precision, reproducibility, speed and memory with the clause that defines each, what is missing (only speed has a provenance tag; no unit on cost; no declared workspace size; the tier field layout is unpinned), and per metric one candidate form with options A/B/C, the byte effect and a recommendation, merging Fuel's and FireLine's consumer answers. Docs only; nothing is built and the golden `cost = 1` is unchanged.
