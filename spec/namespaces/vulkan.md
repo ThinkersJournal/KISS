@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 6 · **Status:** draft
+· **Vocabulary version:** 7 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -105,6 +105,9 @@ lexicographic order, each at most once:
 
 | Name | Meaning |
 |---|---|
+| `a64` | `shaderBufferInt64Atomics` AND `shaderSharedInt64Atomics` (`VkPhysicalDeviceShaderAtomicInt64Features`, core 1.2): 64-bit integer *atomics* on both buffer and shared memory |
+| `af32` | `shaderBufferFloat32AtomicAdd` (`VK_EXT_shader_atomic_float`): atomic `f32` add on buffer memory |
+| `af64` | `shaderBufferFloat64AtomicAdd` (`VK_EXT_shader_atomic_float`): atomic `f64` add on buffer memory |
 | `dot8` | any accelerated 8-bit integer dot product (`VK_KHR_shader_integer_dot_product`) |
 | `f16` | `shaderFloat16` — half-precision *arithmetic* |
 | `f64` | `shaderFloat64` — double-precision *arithmetic* |
@@ -137,6 +140,9 @@ lexicographic order, each at most once:
   > was **silence, not denial**. The three names land together because all
   > three feature bits predate the registry baseline (§4), so each would
   > otherwise force a version of its own.
+
+- **V-16.** `a64`, `af32` and `af64` are **vocabulary version 7**. They name atomic-operation capabilities, a different axis from the arithmetic names beside them: a consumer MUST NOT infer `a64` from `i64` (a device may do 64-bit integer arithmetic and have no 64-bit atomics), nor `af64` from `f64`, nor `af32` from any other name. `a64` is a **conjunction**: it is present only when BOTH the buffer and the shared bit are set, because a kernel that uses 64-bit atomics does not know which memory its caller binds. `af32` and `af64` name the *add* bit only (`shaderBufferFloat32AtomicAdd`, `shaderBufferFloat64AtomicAdd`), the operation a reduction lowers to, not the exchange/load/store bits. A device that does not advertise `VK_EXT_shader_atomic_float` reports neither float name.
+  > *Informative.* Requested by FishStringer (E19) for kernels that need 64-bit and float atomics. All three feature bits predate the registry baseline (§4: `VK_HEADER_VERSION` 348), so by the baseline test each forces a bump.
 
 ### 2.4 `<coop>` — cooperative-matrix shapes used
 
@@ -381,6 +387,11 @@ against, so the test above has a fixed thing to compare with rather than
 | 4 | 348 |
 | 5 | 348 |
 | 6 | 348 |
+| 7 | 348 |
+
+**Version 7 is an addition, and a partial invalidation.** Three `<arith>` names land at once (`a64`, `af32`, `af64`). They change the bytes of every token derived from a device that reports the corresponding feature bits, which is most current devices for `a64`: a device that spelled `arith-dot8-f16-i8` at version 6 spells `arith-a64-dot8-f16-i8` at version 7 if it has 64-bit atomics. A consumer that cached a version 6 token for such a device will see non-matching it cannot attribute unless it asserts the version (KISS-CLASSIFY-6.8-0009). This is the baseline test applied as written (§4: the feature predates the baseline, so a bump).
+
+## 6. Sample tokens / vectors: not yet checked. I will regenerate the manifest after the doc lands and report any vector that moves; the sample at ~line 294 only changes if its device is declared to have the atomics.
 
 **Version 6 removes the `x<n>` escape (a partial invalidation).** CireSnave 2026-11-13, board 430 Q5 "b": an
 unnamed component type is no longer spelled; the tuples containing one are omitted whole and the device reports
