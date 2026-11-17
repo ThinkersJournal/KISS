@@ -3,6 +3,18 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.18.12 — docs: options note for board 449 (the outside-view metrics a kernel passes across the seam)
+
+Added `docs/options-outside-view-metrics.md`: after CireSnave's board 449 ruling (outside-view metrics, not kernel internals; the flops/bytes class-and-terms form is withdrawn), what the Contract already carries for accuracy, precision, reproducibility, speed and memory with the clause that defines each, what is missing (only speed has a provenance tag; no unit on cost; no declared workspace size; the tier field layout is unpinned), and per metric one candidate form with options A/B/C, the byte effect and a recommendation, merging Fuel's and FireLine's consumer answers. Docs only; nothing is built and the golden `cost = 1` is unchanged.
+
+## 0.18.11 — spec+conformance: op_identity text spelling pinned (Contract 6.11-0009, board 451), with op_identity vectors
+
+CireSnave ruled board 451 on 2026-11-16, verbatim: "451: 1: A.  2: A.  3: A.  4: A." Contract 6.11-0009 now pins the `{...}` list of an `op_identity` line: every field of the op's OpAttrs record is written, defaults included, in the KISS-Ops canonical field order of its `spec/ops.md` 6.19.3 row; a key is the field name, an enum value its 6.19.2 name, a number a canonical decimal, a dtype its KISS-Classify token (`compute-dtype` for an accumulator at the compute dtype), a flag `true` or `false`, and an axis set or window vector a bracketed list such as `[0,1]` (never `rall`/`rlast`). The former "default-eliding" presence rule is struck, and a line that omits, repeats, mis-orders or invents a field is declined. Contract 6.3-0004 now says that "reduced to the bare name" is a producer obligation (the document does not carry the advertisable-op list), so a reader decides only what the line shows.
+
+The two Appendix C golden lines named a variable, a field and an op KISS-Ops does not have (`gather{axis=k, oob=clamp}`, `scan{op=add}`); they are now `gather{axis=0, oob_policy=clamp, index_operand=1, index_dtype=i32}` and `prefix_scan{monoid=sum, reduce_axes=[0], exclusivity=inclusive, accumulator=compute-dtype, math_fidelity=bit-stable}`. The golden document (`op_identity = add`) and its crc are unchanged.
+
+Added `conformance/src/op_identity.rs` (the reader, schema parsed from `spec/ops.md`, no per-op table), `conformance/corpus/op_identity_vectors.json` (13 accept and 30 decline lines over eight typed declines; regenerate with `cargo run -q --bin emit_op_identity_vectors`) and `conformance/tests/contract_op_identity.rs`, which backs `test_contract_text_op_identity`, `test_contract_op_identity_full_tag_or_bare_ops_dag` and `test_contract_op_identity_carries_distinguishing_attrs` and also reads every `op_identity` line the Contract spec shows. Not changed: the `op_dag` node example `Op{gather; axis=k, oob=clamp; []}` (Contract 6.11-0007, `conformance/tests/contract_golden.rs`) has the same defect and is a separate item.
+
 ## 0.18.10 — docs: design note for board 450 (how a reader of KISS-Ops finds the kernel-body standard)
 
 Added `docs/kernel-standard-discoverability.md`: for CireSnave's ruling on board 450 (option A, on the condition that the references stay in place), the four references named exactly: umbrella and Ops "Downstream edges" registration (edge label STRUCTURAL recommended), a binding `Kernel-governed:` pointer at every governed op, a `kernel_rules` field in `conformance/corpus/op_facts.json` with its byte and digest effects stated (no digest, manifest, golden or wire byte moves), and the `tools/kiss_kernel_refs.py` check with mutation tests that keeps the condition from rotting. Docs only; no spec byte changes.
