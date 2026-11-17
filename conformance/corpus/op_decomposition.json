@@ -1,0 +1,1575 @@
+{
+  "schema": "kiss-op-decomposition-v1",
+  "generated_from": "tools/kiss_op_decomp.py (reads spec/ops.md)",
+  "clauses": [
+    "KISS-CONTRACT-6.4-0005",
+    "KISS-CONTRACT-6.4-0010",
+    "KISS-OPS-6.3-0001",
+    "KISS-OPS-6.13-0001",
+    "KISS-OPS-6.14-0002",
+    "KISS-OPS-6.18-0002"
+  ],
+  "ops": {
+    "abs": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "abs"
+      ]
+    },
+    "acos": {
+      "kind": "non_primitive",
+      "level": 3,
+      "direct": [
+        "asin",
+        "sub"
+      ],
+      "floor": [
+        "atan",
+        "div",
+        "mul",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "acosh": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "log",
+        "sqr",
+        "sqrt",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "log",
+        "mul",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "add": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "add"
+      ]
+    },
+    "all": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_ne",
+        "reduce"
+      ],
+      "floor": [
+        "cmp_ne",
+        "reduce"
+      ]
+    },
+    "any": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_ne",
+        "reduce"
+      ],
+      "floor": [
+        "cmp_ne",
+        "reduce"
+      ]
+    },
+    "argmax": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "sort_network"
+      ],
+      "floor": [
+        "sort_network"
+      ]
+    },
+    "argmin": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "sort_network"
+      ],
+      "floor": [
+        "sort_network"
+      ]
+    },
+    "asin": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "atan",
+        "div",
+        "sqr",
+        "sqrt",
+        "sub"
+      ],
+      "floor": [
+        "atan",
+        "div",
+        "mul",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "asinh": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "log",
+        "sqr",
+        "sqrt"
+      ],
+      "floor": [
+        "add",
+        "log",
+        "mul",
+        "sqrt"
+      ]
+    },
+    "atan": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "atan"
+      ]
+    },
+    "atan2": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "atan2"
+      ]
+    },
+    "atanh": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "div",
+        "log",
+        "mul",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "log",
+        "mul",
+        "sub"
+      ]
+    },
+    "avg_pool": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "reduce_mean"
+      ],
+      "floor": [
+        "div",
+        "reduce"
+      ]
+    },
+    "bit_and": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "bit_and"
+      ]
+    },
+    "bit_not": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "bit_not"
+      ]
+    },
+    "bit_or": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "bit_or"
+      ]
+    },
+    "bit_xor": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "bit_xor"
+      ]
+    },
+    "bitcast": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "bitcast"
+      ]
+    },
+    "cabs": {
+      "kind": "non_primitive",
+      "level": 3,
+      "direct": [
+        "hypot"
+      ],
+      "floor": [
+        "add",
+        "mul",
+        "sqrt"
+      ]
+    },
+    "cadd": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "cmake"
+      ],
+      "floor": [
+        "add",
+        "element_map"
+      ]
+    },
+    "carg": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "atan2"
+      ],
+      "floor": [
+        "atan2"
+      ]
+    },
+    "cast": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cast"
+      ]
+    },
+    "cbrt": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "abs",
+        "div",
+        "exp",
+        "log",
+        "mul",
+        "sign"
+      ],
+      "floor": [
+        "abs",
+        "cmp_gt",
+        "cmp_lt",
+        "div",
+        "exp",
+        "log",
+        "mul",
+        "select"
+      ]
+    },
+    "cconj": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "cmake",
+        "neg"
+      ],
+      "floor": [
+        "element_map",
+        "neg"
+      ]
+    },
+    "cdiv": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "cmake",
+        "div",
+        "mul",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "element_map",
+        "mul",
+        "sub"
+      ]
+    },
+    "ceil": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "ceil"
+      ]
+    },
+    "cexp": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "cmake",
+        "cos",
+        "exp",
+        "mul",
+        "sin"
+      ],
+      "floor": [
+        "cos",
+        "element_map",
+        "exp",
+        "mul",
+        "sin"
+      ]
+    },
+    "cim": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "element_map"
+      ],
+      "floor": [
+        "element_map"
+      ]
+    },
+    "clog": {
+      "kind": "non_primitive",
+      "level": 4,
+      "direct": [
+        "cabs",
+        "carg",
+        "cmake",
+        "log"
+      ],
+      "floor": [
+        "add",
+        "atan2",
+        "element_map",
+        "log",
+        "mul",
+        "sqrt"
+      ]
+    },
+    "clz": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "clz"
+      ]
+    },
+    "cmake": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "element_map"
+      ],
+      "floor": [
+        "element_map"
+      ]
+    },
+    "cmp_eq": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_eq"
+      ]
+    },
+    "cmp_ge": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_ge"
+      ]
+    },
+    "cmp_gt": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_gt"
+      ]
+    },
+    "cmp_le": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_le"
+      ]
+    },
+    "cmp_lt": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_lt"
+      ]
+    },
+    "cmp_ne": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cmp_ne"
+      ]
+    },
+    "cmul": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "cmake",
+        "mul",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "element_map",
+        "mul",
+        "sub"
+      ]
+    },
+    "cneg": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "cmake",
+        "neg"
+      ],
+      "floor": [
+        "element_map",
+        "neg"
+      ]
+    },
+    "concat": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "concat"
+      ]
+    },
+    "copysign": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "copysign"
+      ]
+    },
+    "cos": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "cos"
+      ]
+    },
+    "cosh": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "div",
+        "exp",
+        "neg"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "neg"
+      ]
+    },
+    "cpow": {
+      "kind": "non_primitive",
+      "level": 5,
+      "direct": [
+        "cexp",
+        "clog",
+        "cmul"
+      ],
+      "floor": [
+        "add",
+        "atan2",
+        "cos",
+        "element_map",
+        "exp",
+        "log",
+        "mul",
+        "sin",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "cre": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "element_map"
+      ],
+      "floor": [
+        "element_map"
+      ]
+    },
+    "csqrt": {
+      "kind": "non_primitive",
+      "level": 4,
+      "direct": [
+        "add",
+        "cabs",
+        "cmake",
+        "copysign",
+        "div",
+        "mul",
+        "sqrt",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "copysign",
+        "div",
+        "element_map",
+        "mul",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "csub": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "cmake",
+        "sub"
+      ],
+      "floor": [
+        "element_map",
+        "sub"
+      ]
+    },
+    "ctz": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "ctz"
+      ]
+    },
+    "cummax": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "prefix_scan"
+      ],
+      "floor": [
+        "prefix_scan"
+      ]
+    },
+    "cumprod": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "prefix_scan"
+      ],
+      "floor": [
+        "prefix_scan"
+      ]
+    },
+    "cumsum": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "prefix_scan"
+      ],
+      "floor": [
+        "prefix_scan"
+      ]
+    },
+    "div": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "div"
+      ]
+    },
+    "element_map": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "element_map"
+      ]
+    },
+    "embedding": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "gather"
+      ],
+      "floor": [
+        "gather"
+      ]
+    },
+    "erf": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "erf"
+      ]
+    },
+    "erfc": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "erf",
+        "sub"
+      ],
+      "floor": [
+        "erf",
+        "sub"
+      ]
+    },
+    "exp": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "exp"
+      ]
+    },
+    "exp2": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "exp",
+        "mul"
+      ],
+      "floor": [
+        "exp",
+        "mul"
+      ]
+    },
+    "expm1": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "exp",
+        "sub"
+      ],
+      "floor": [
+        "exp",
+        "sub"
+      ]
+    },
+    "floor": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "floor"
+      ]
+    },
+    "fmax_ieee": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_ge",
+        "cmp_ne",
+        "select"
+      ],
+      "floor": [
+        "cmp_ge",
+        "cmp_ne",
+        "select"
+      ]
+    },
+    "fmin_ieee": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_le",
+        "cmp_ne",
+        "select"
+      ],
+      "floor": [
+        "cmp_le",
+        "cmp_ne",
+        "select"
+      ]
+    },
+    "frac": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "sub",
+        "trunc"
+      ],
+      "floor": [
+        "sub",
+        "trunc"
+      ]
+    },
+    "gather": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "gather"
+      ]
+    },
+    "gelu": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "div",
+        "erf",
+        "mul"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "erf",
+        "mul"
+      ]
+    },
+    "gelu_tanh": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "mul",
+        "sqr",
+        "sqrt",
+        "tanh"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "mul",
+        "neg",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "hypot": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "sqr",
+        "sqrt"
+      ],
+      "floor": [
+        "add",
+        "mul",
+        "sqrt"
+      ]
+    },
+    "im2col": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "gather"
+      ],
+      "floor": [
+        "gather"
+      ]
+    },
+    "index_select": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "gather"
+      ],
+      "floor": [
+        "gather"
+      ]
+    },
+    "iota": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "iota"
+      ]
+    },
+    "layer_norm": {
+      "kind": "non_primitive",
+      "level": 3,
+      "direct": [
+        "add",
+        "mul",
+        "reduce_mean",
+        "reduce_var",
+        "rsqrt",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "mul",
+        "reduce",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "ldexp": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "exp2",
+        "mul"
+      ],
+      "floor": [
+        "exp",
+        "mul"
+      ]
+    },
+    "lgamma": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "lgamma"
+      ]
+    },
+    "log": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "log"
+      ]
+    },
+    "log10": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "log"
+      ],
+      "floor": [
+        "div",
+        "log"
+      ]
+    },
+    "log1p": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "log"
+      ],
+      "floor": [
+        "add",
+        "log"
+      ]
+    },
+    "log2": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "log"
+      ],
+      "floor": [
+        "div",
+        "log"
+      ]
+    },
+    "log_softmax": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "logsumexp",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "exp",
+        "log",
+        "reduce",
+        "sub"
+      ]
+    },
+    "logical_and": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_ne",
+        "mul"
+      ],
+      "floor": [
+        "cmp_ne",
+        "mul"
+      ]
+    },
+    "logical_not": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_eq"
+      ],
+      "floor": [
+        "cmp_eq"
+      ]
+    },
+    "logical_or": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "cmp_ne",
+        "min_prop"
+      ],
+      "floor": [
+        "add",
+        "cmp_le",
+        "cmp_ne",
+        "select"
+      ]
+    },
+    "logsumexp": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "exp",
+        "log",
+        "reduce",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "exp",
+        "log",
+        "reduce",
+        "sub"
+      ]
+    },
+    "matmul": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "element_map",
+        "mul",
+        "reduce"
+      ],
+      "floor": [
+        "element_map",
+        "mul",
+        "reduce"
+      ]
+    },
+    "max_pool": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "reduce"
+      ],
+      "floor": [
+        "reduce"
+      ]
+    },
+    "max_prop": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_ge",
+        "cmp_ne",
+        "select"
+      ],
+      "floor": [
+        "cmp_ge",
+        "cmp_ne",
+        "select"
+      ]
+    },
+    "min_prop": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_le",
+        "cmp_ne",
+        "select"
+      ],
+      "floor": [
+        "cmp_le",
+        "cmp_ne",
+        "select"
+      ]
+    },
+    "mish": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "mul",
+        "softplus",
+        "tanh"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "log",
+        "mul",
+        "neg",
+        "sub"
+      ]
+    },
+    "mul": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "mul"
+      ]
+    },
+    "neg": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "neg"
+      ]
+    },
+    "nextafter": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "nextafter"
+      ]
+    },
+    "popcount": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "popcount"
+      ]
+    },
+    "pow": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "exp",
+        "log",
+        "mul"
+      ],
+      "floor": [
+        "exp",
+        "log",
+        "mul"
+      ]
+    },
+    "prefix_scan": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "prefix_scan"
+      ]
+    },
+    "recip": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div"
+      ],
+      "floor": [
+        "div"
+      ]
+    },
+    "reduce": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "reduce"
+      ]
+    },
+    "reduce_mean": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "reduce"
+      ],
+      "floor": [
+        "div",
+        "reduce"
+      ]
+    },
+    "reduce_norm2": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "reduce",
+        "sqr",
+        "sqrt"
+      ],
+      "floor": [
+        "mul",
+        "reduce",
+        "sqrt"
+      ]
+    },
+    "reduce_std": {
+      "kind": "non_primitive",
+      "level": 3,
+      "direct": [
+        "reduce_var",
+        "sqrt"
+      ],
+      "floor": [
+        "div",
+        "mul",
+        "reduce",
+        "sqrt",
+        "sub"
+      ]
+    },
+    "reduce_var": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "reduce_mean",
+        "sqr",
+        "sub"
+      ],
+      "floor": [
+        "div",
+        "mul",
+        "reduce",
+        "sub"
+      ]
+    },
+    "relu": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_lt",
+        "select"
+      ],
+      "floor": [
+        "cmp_lt",
+        "select"
+      ]
+    },
+    "rem_floor": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "floor",
+        "mul",
+        "sub"
+      ],
+      "floor": [
+        "div",
+        "floor",
+        "mul",
+        "sub"
+      ]
+    },
+    "rem_trunc": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "mul",
+        "sub",
+        "trunc"
+      ],
+      "floor": [
+        "div",
+        "mul",
+        "sub",
+        "trunc"
+      ]
+    },
+    "rms_norm": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "mul",
+        "reduce_mean",
+        "rsqrt",
+        "sqr"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "mul",
+        "reduce",
+        "sqrt"
+      ]
+    },
+    "round_even": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "round_even"
+      ]
+    },
+    "rsqrt": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "sqrt"
+      ],
+      "floor": [
+        "div",
+        "sqrt"
+      ]
+    },
+    "scatter": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "scatter"
+      ]
+    },
+    "scatter_add": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "scatter"
+      ],
+      "floor": [
+        "scatter"
+      ]
+    },
+    "select": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "select"
+      ]
+    },
+    "shl": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "shl"
+      ]
+    },
+    "shr": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "shr"
+      ]
+    },
+    "sigmoid": {
+      "kind": "non_primitive",
+      "level": 2,
+      "direct": [
+        "add",
+        "exp",
+        "neg",
+        "recip"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "neg"
+      ]
+    },
+    "sign": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_gt",
+        "cmp_lt",
+        "select"
+      ],
+      "floor": [
+        "cmp_gt",
+        "cmp_lt",
+        "select"
+      ]
+    },
+    "silu": {
+      "kind": "non_primitive",
+      "level": 3,
+      "direct": [
+        "mul",
+        "sigmoid"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "mul",
+        "neg"
+      ]
+    },
+    "sin": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "sin"
+      ]
+    },
+    "sinh": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "exp",
+        "neg",
+        "sub"
+      ],
+      "floor": [
+        "div",
+        "exp",
+        "neg",
+        "sub"
+      ]
+    },
+    "softmax": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "div",
+        "exp",
+        "reduce",
+        "sub"
+      ],
+      "floor": [
+        "div",
+        "exp",
+        "reduce",
+        "sub"
+      ]
+    },
+    "softplus": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "exp",
+        "log"
+      ],
+      "floor": [
+        "add",
+        "exp",
+        "log"
+      ]
+    },
+    "sort_network": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "sort_network"
+      ]
+    },
+    "sqr": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "mul"
+      ],
+      "floor": [
+        "mul"
+      ]
+    },
+    "sqrt": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "sqrt"
+      ]
+    },
+    "squeeze": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "squeeze"
+      ]
+    },
+    "step": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cmp_gt",
+        "select"
+      ],
+      "floor": [
+        "cmp_gt",
+        "select"
+      ]
+    },
+    "sub": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "sub"
+      ]
+    },
+    "tan": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "cos",
+        "div",
+        "sin"
+      ],
+      "floor": [
+        "cos",
+        "div",
+        "sin"
+      ]
+    },
+    "tanh": {
+      "kind": "non_primitive",
+      "level": 1,
+      "direct": [
+        "add",
+        "div",
+        "exp",
+        "neg",
+        "sub"
+      ],
+      "floor": [
+        "add",
+        "div",
+        "exp",
+        "neg",
+        "sub"
+      ]
+    },
+    "trunc": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "trunc"
+      ]
+    },
+    "unsqueeze": {
+      "kind": "primitive",
+      "level": 0,
+      "direct": [],
+      "floor": [
+        "unsqueeze"
+      ]
+    }
+  },
+  "outcomes": [
+    {
+      "op": "frobnicate",
+      "unavailable": [],
+      "outcome": "decline"
+    },
+    {
+      "op": "all",
+      "unavailable": [],
+      "outcome": "resolved"
+    },
+    {
+      "op": "all",
+      "unavailable": [
+        "all"
+      ],
+      "outcome": "deferred",
+      "missing": "all"
+    },
+    {
+      "op": "cpow",
+      "unavailable": [],
+      "outcome": "resolved"
+    },
+    {
+      "op": "cpow",
+      "unavailable": [
+        "cabs"
+      ],
+      "outcome": "deferred",
+      "missing": "cabs"
+    },
+    {
+      "op": "cpow",
+      "unavailable": [
+        "sqr"
+      ],
+      "outcome": "deferred",
+      "missing": "sqr"
+    },
+    {
+      "op": "matmul",
+      "unavailable": [],
+      "outcome": "resolved"
+    },
+    {
+      "op": "matmul",
+      "unavailable": [
+        "matmul"
+      ],
+      "outcome": "deferred",
+      "missing": "matmul"
+    },
+    {
+      "op": "softmax",
+      "unavailable": [],
+      "outcome": "resolved"
+    },
+    {
+      "op": "softmax",
+      "unavailable": [
+        "softmax"
+      ],
+      "outcome": "deferred",
+      "missing": "softmax"
+    },
+    {
+      "op": "abs",
+      "unavailable": [
+        "abs"
+      ],
+      "outcome": "resolved"
+    }
+  ]
+}

@@ -616,7 +616,9 @@
 # Breaking batch 0.17.0 (CireSnave 2026-11-12, board 426 6 / 427): harness 543 -> 551, KISS-OPS-6.11-0026..0029, 6.17-0010, 6.17-0011, 6.19-0049, KISS-CLASSIFY-6.6-0025.
 # Contract in_place spelling (PM 2026-11-13): harness 551 -> 552, untested 390 -> 389, KISS-CONTRACT-6.5-0009.
 # op_dag / Identity-consistency contract vectors (#828): harness 556 -> 559, untested 389 -> 386, proven 20 -> 24; KISS-CONTRACT-6.11-0007, 6.4-0002, 6.4-0007, 6.3-0006. TOOL-DERIVED: `--ratchet` reported these.
-harness	559
+# op_identity text spelling + vectors (CireSnave 2026-11-16, board 451): harness 559 -> 562, untested 386 -> 383, proven 24 -> 25; KISS-CONTRACT-6.11-0009 (Proven: a spec-line mutation is caught), 6.3-0003, 6.3-0004 (tests in conformance/tests/contract_op_identity.rs). TOOL-DERIVED.
+# op decomposition table + resolver (this PR): harness 559 -> 561, untested 386 -> 384; KISS-CONTRACT-6.4-0005 and 6.4-0010 (tests in conformance/tests/contract_op_resolve.rs). TOOL-DERIVED: `--ratchet` reported these.
+harness	564
 lint	44
-untested	386
-proven	24
+untested	381
+proven	25
