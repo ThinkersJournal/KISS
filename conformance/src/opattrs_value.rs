@@ -57,7 +57,7 @@ pub fn not_emitted() -> [(&'static str, &'static str); 0] {
 /// dtype token whose 1-based position in [`crate::structure_key::DTYPES`] is the wire ordinal.
 pub const COMPUTE_DTYPE_TOKEN: &str = "compute-dtype";
 
-fn accumulator_ordinal(token: &str, op: &str) -> Result<u8, String> {
+pub(crate) fn accumulator_ordinal(token: &str, op: &str) -> Result<u8, String> {
     use crate::structure_key::{DTYPES, RESERVED_DTYPES};
     if token == COMPUTE_DTYPE_TOKEN {
         return Ok(0);
@@ -79,7 +79,7 @@ fn accumulator_ordinal(token: &str, op: &str) -> Result<u8, String> {
 
 /// `target_dtype` of a `cast` (§6.19-0042): the 1-based §6.1 ordinal of any non-reserved dtype; there is no
 /// compute-dtype diagonal, so `0x00` is never produced.
-fn target_dtype_ordinal(token: &str) -> Result<u8, String> {
+pub(crate) fn target_dtype_ordinal(token: &str) -> Result<u8, String> {
     use crate::structure_key::{DTYPES, RESERVED_DTYPES};
     let i = DTYPES.iter().position(|d| *d == token).ok_or_else(|| format!("`{token}` is not a §6.1 dtype"))?;
     if RESERVED_DTYPES.contains(&token) {
@@ -123,7 +123,7 @@ pub fn vocab() -> BTreeMap<String, Vec<(u8, String)>> {
 /// Which sub-vocabulary a schema field draws from. ⚠️ The ONE transcribed fact here: the §6.19.3 table
 /// names the vocabulary only for some fields (`exclusivity`:`scan_exclusivity`), so the rest are mapped by
 /// hand. A wrong entry fails the cross-check against the hand encoders.
-fn vocab_of(field: &str) -> Option<&'static str> {
+pub(crate) fn vocab_of(field: &str) -> Option<&'static str> {
     Some(match field {
         "monoid" => "monoid",
         "oob_policy" => "oob_policy",
@@ -142,7 +142,7 @@ fn vocab_of(field: &str) -> Option<&'static str> {
 }
 
 /// A field is a flag when the table says `bool`.
-fn is_flag(f: &SchemaField) -> bool {
+pub(crate) fn is_flag(f: &SchemaField) -> bool {
     f.encoding.starts_with("bool")
 }
 
