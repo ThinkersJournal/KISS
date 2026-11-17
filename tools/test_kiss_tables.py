@@ -149,6 +149,12 @@ class CountWordIsNotSkippedSilently(unittest.TestCase):
         self.assertEqual(kt.check_mathfidelity_enum(SPEC_DIR), [])
         self.assertEqual(kt.check_refusal_taxonomy(SPEC_DIR), [])
 
+    def test_op_identity_attr_record_is_not_an_enum_fork(self):
+        # Contract 6.11-0009's golden line carries `math_fidelity=bit-stable` inside braces: a record, not the enum.
+        self.assertEqual(kt.check_mathfidelity_enum(SPEC_DIR), [])
+        v = kt.check_mathfidelity_enum(self._spec_dir("contract", "{monoid=sum, reduce_axes=[0], exclusivity=inclusive, accumulator=compute-dtype, math_fidelity=bit-stable}", "{bit-stable, sloppy}"))
+        self.assertTrue(any("re-forked" in x for x in v), v)  # a real fork is still caught
+
     def test_mathfidelity_wrong_word_still_caught(self):
         v = kt.check_mathfidelity_enum(self._spec_dir("ops", "the two-member enum", "the three-member enum"))
         self.assertTrue(any("three-member" in x for x in v), v)
