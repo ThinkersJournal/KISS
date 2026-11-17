@@ -1,3 +1,0 @@
-kind: **Docs**: decision draft for the eleven kernel-body choices (board 450)
----
-`docs/kernel-body-eleven-choices.md` is an informative decision draft for the PM: each of the eleven choices Unpopped made in its kernel-body model (concept map section 12), in plain language, with options, consequences, a recommendation and whether any existing byte moves (none does). It records that board 417 and board 450 already close choices 9 and 11 (and the exclusion half of 1), and that KISS-OPS-6.4-0002 and 6.10-0004 already pin integer division and out-of-range shifts as target-defined, which is why choice 3 is recommended as no new rule. No normative text, no corpus or tool change.

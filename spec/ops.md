@@ -1077,7 +1077,7 @@ section-intro paragraph is an informative pointer to it):
   elements scatter to the **same** destination index, the write from the **highest
   source (row-major iteration) index** MUST win (a pinned last-writer-in-iteration-order
   tie-break), so `assign` never depends on hardware race order. The floating-point `atomic-add`
-  combine's declared tolerance is the band of §6.11-0024. *Test:*
+  combine's declared tolerance is the band of §6.11-0024. *Draft change (CireSnave 2026-11-16, board 450 "A": "...but only as long as the necessary references are kept in place so readers know when recommendations are available."): a `Kernel-governed:` pointer to KISS-Kernel was added to this clause; no obligation added, no byte of any golden moves.* *Test:*
   `scatter_fp_atomic_add_is_order_invariant_class`.
 - **KISS-OPS-6.11-0007** — `sort_network` MUST carry a `direction` attribute in
   `{ascending, descending}` (default `ascending`) and a boolean `stability` flag (default
@@ -1130,7 +1130,7 @@ section-intro paragraph is an informative pointer to it):
 - **KISS-OPS-6.11-0010** — The `scatter` floating-point `atomic-max` and `atomic-min`
   combines MUST be **NaN-propagating** (*Kernel-governed:* KISS-KERNEL-6.4, KISS-KERNEL-6.5; §6.22), consistent with the `max` / `min` `reduce`
   monoids (§6.11-0002): if a NaN is scattered to a destination, or a destination already
-  holds a NaN, the combined result MUST be NaN. *Test:*
+  holds a NaN, the combined result MUST be NaN. *Draft change (CireSnave 2026-11-16, board 450 "A": "...but only as long as the necessary references are kept in place so readers know when recommendations are available."): a `Kernel-governed:` pointer to KISS-Kernel was added to this clause; no obligation added, no byte of any golden moves.* *Test:*
   `scatter_atomic_max_min_nan_propagating`.
 - **KISS-OPS-6.11-0011** — `reduce` and `prefix_scan` MUST carry a `reduce_axes` descriptor
   that distinguishes **exactly four** non-overloaded categories of value — **all-axes**,
@@ -1320,7 +1320,7 @@ section-intro paragraph is an informative pointer to it):
   MUST equal the reference exactly. The calibration record and the "no fixed constant, no wide-truth
   bound" rules of §6.8-0012 apply to this cell unchanged. Integer `atomic-add` stays exact
   (§6.11-0006). *Draft change (CireSnave 2026-11-12, board 417 "A"): before it, a floating-point
-  `atomic-add` was declared nondeterministic with no stated bound.* *Test:*
+  `atomic-add` was declared nondeterministic with no stated bound.* *Draft change (CireSnave 2026-11-16, board 450 "A": "...but only as long as the necessary references are kept in place so readers know when recommendations are available."): a `Kernel-governed:` pointer to KISS-Kernel was added to this clause; no obligation added, no byte of any golden moves.* *Test:*
   `test_ops_scatter_atomic_add_band` (vectors: `conformance/corpus/atomic_add_band_vectors.json`).
 
 - **KISS-OPS-6.11-0026** — `reduce` MUST additionally accept three **tuple-state monoids**, `welford`
