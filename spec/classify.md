@@ -2751,10 +2751,10 @@ the cell's declared role hints (from which its `cell_class` is derived, §6.5-00
   cell is pointwise by shape, and §6.5-0015 rule (4) takes the arity from the three inputs.
   `sk8|ew3|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-`
 - **Indexed access, derived `ndx`** — `cell_class = ndx`; a table, an index operand and an
-  output, each shown as the contiguous 256-wide `f32` sub-key; the caller declares the
+  output, each shown as the contiguous 256-wide sub-key (`f32` table and output, `u32` index, a legal index dtype, KISS-OPS-6.11-0009); the caller declares the
   index-operand slot (§6.6-0012). Rule (2) of §6.5-0015 decides ahead of the shape rule, so
   the class does not depend on the three extents:
-  `sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-`
+  `sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/u32;co/00/v4/d16/f/f32|-`
 - **A cell no rule claims, derived `oth`** — `cell_class = oth`; `in = ([128,256]; [256,1];
   f32; 256)`, `out = ([128,128]; [128,1]; f32; 256)`, no role hints and no declared reduced
   set. The output does not have the frame extents (`128` against `256`), so the cell is not

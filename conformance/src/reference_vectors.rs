@@ -434,9 +434,9 @@ pub fn positive_vectors() -> Vec<PositiveVector> {
         PositiveVector {
             name: "cell_class_ndx_index_role_declared",
             clause: "KISS-CLASSIFY-6.5-0015",
-            note: "table + index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule)",
-            key: key("ndx", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), co4(), co4()], Reduce::None, None),
-            token: "sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-",
+            note: "table + u32 index + output with the index-operand role declared: ndx (rule 2, ahead of the pointwise rule; the index operand is an integer dtype, 6.11-0009)",
+            key: key("ndx", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co4(), with_dt(co4(), "u32"), co4()], Reduce::None, None),
+            token: "sk8|ndx|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;co/00/v4/d16/f/u32;co/00/v4/d16/f/f32|-",
         },
         PositiveVector {
             name: "cell_class_oth_not_pointwise",
