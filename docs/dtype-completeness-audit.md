@@ -86,10 +86,10 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 
 | Type | KISS | Conf. | Note |
 |---|---|---|---|
-| `char uchar short ushort int uint long ulong half float double` | named | H | `half`/`double` by extension |
-| `bfloat16` (vendor/Khronos extensions) | `bf16` named | M | extension status to verify |
-| Packed 4x8 integer dot (`cl_khr_integer_dot_product`) | carried in a 32-bit integer; the Vulkan `i8packed` analogue has no Classify token | M | |
-| `bool` | not a kernel-argument type | H | |
+| `char uchar short ushort int uint long ulong half float double` | named | H | `half`/`double` by extension; openclownfish: confirmed (fp16 on 2 of 3 devices; a `half` argument still builds on all 3) |
+| `bfloat16` (vendor/Khronos extensions) | `bf16` named | M | openclownfish (opencl-sys 0.6.5 headers, which may predate newer Khronos headers, and 3 devices): **corrected**: no OpenCL `bfloat16` type in those headers, no bf extension on any device, and `bfloat16` is an unknown type name on all 3 |
+| Packed 4x8 integer dot (`cl_khr_integer_dot_product`) | carried in a 32-bit integer; the Vulkan `i8packed` analogue has no Classify token | M | openclownfish: confirmed, but only on the CPU runtime (not on the other 2 devices) |
+| `bool` | not a kernel-argument type | H | openclownfish: confirmed, refused as a kernel parameter on all 3 devices |
 
 ### 2.6 Metal (no namespace file yet)
 
