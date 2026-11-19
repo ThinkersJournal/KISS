@@ -35,11 +35,13 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | BFLOAT16_KHR (`VK_KHR_shader_bfloat16`) | `bf16` named | H | `bf16` is in the V-tuple list |
 | SINT8_PACKED_NV, UINT8_PACKED_NV (`VK_NV_cooperative_vector`) | `i8packed`, `u8packed` named **in the namespace only** | H | not Classify dtypes: a packed-int8 operand has no Classify token (§2.5) |
 | FLOAT8_E4M3_EXT / FLOAT_E4M3_NV (alias), FLOAT8_E5M2_EXT / FLOAT_E5M2_NV | `f8e4m3fn`, `f8e5m2` named (V-10/V-11, vocabulary v3) | H | |
+| FLOAT8_UNSIGNED_E8M0_EXT, FLOAT6_E2M3_EXT, FLOAT6_E3M2_EXT, FLOAT4_E2M1_EXT (`VK_EXT_shader_ocp_microscaling_types`, ext 673, header 368) | `f8e8m0`, `f6e2m3`, `f6e3m2`, `f4e2m1` named (V-17, vocabulary v8) | H | pm-kernels ruling 2026-11-19; the four Vulkan feature bits name no `arith` capability |
+| MXINT8_EXT (same extension) | **GAP**: no MXINT8 dtype; omitted whole by V-7 and reported in `unnamed_types` | M | DECLINED at v8 until a KISS dtype exists (pm-kernels ruling 2026-11-19); needs a dtype ruling via pm-kernels |
 | Any enumerant assigned **after** `VK_HEADER_VERSION` 348 (the v5 baseline) | unknown to me | **L** | the registry must be re-read at the cut; this is exactly what the marker (rfc §5.1) is for |
 | Shader capability bits (`shaderInt8/16/64`, `shaderFloat16/64`, storage 8/16-bit) | capabilities, `arith`/`st` fields (V-6, V-15) | H | not types |
 | `VkFormat` (image/buffer-view texel formats, including packed and block-compressed) | **scope question** | H | storage formats of images, not compute element types; I assume out of scope, **ruling needed** (§4 Q1) |
 
-**Vulkan remainder at baseline 348: none known.** Every enumerant I know of is named.
+**Vulkan remainder at header 368: `MXINT8_EXT` only (GAP above).** Every other enumerant I know of is named.
 
 ### 2.2 CUDA / PTX (`cuda:`; registered namespace; tokens carry no type names)
 

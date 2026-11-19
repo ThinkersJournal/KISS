@@ -54,7 +54,7 @@ pub const VECTORS_SCHEMA: &str = "kiss-structure-key-vectors-v1";
 /// field, so the version advances while the arity does not. It is pinned here so the GENERATOR can reject a
 /// malformed token, and tied to the owning document by
 /// `reference_vectors_match_the_namespace_documents`.
-pub const NAMESPACE_VOCAB_VERSIONS: &[(&str, u32, usize)] = &[("cuda", 1, 1), ("vulkan", 7, 5)];
+pub const NAMESPACE_VOCAB_VERSIONS: &[(&str, u32, usize)] = &[("cuda", 1, 1), ("vulkan", 8, 5)];
 
 /// Validate an embedded `<namespace>:<capability-set>` target against the owning
 /// document's grammar, at GENERATION time. Panics on any violation.
