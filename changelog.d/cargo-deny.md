@@ -1,3 +1,3 @@
-kind: cargo-deny in CI
+kind: cargo-deny in CI; ROADMAP R3.17 retargeted to sk8
 ---
-Added `conformance/deny.toml` (copied from fishstringer; `all-features = true`) and a `cargo-deny` job in `.github/workflows/conformance.yml` (pm-kernels TASK). `cargo deny --manifest-path conformance/Cargo.toml check` run locally at origin/main 4ac8803: advisories ok, bans ok, licenses ok, sources ok (license-not-encountered warnings only). No spec, corpus or wire byte moves.
+Added `conformance/deny.toml` (copied from fishstringer; `all-features = true`) and a `cargo-deny` job in `.github/workflows/conformance.yml` (pm-kernels TASK). `cargo deny --manifest-path conformance/Cargo.toml check` run locally at origin/main 4ac8803: advisories ok, bans ok, licenses ok, sources ok (license-not-encountered warnings only). `ROADMAP.md` R3.17: the `[wait: sk7 batch close]` marker became `[go]` and the target `sk8` (the batch closed; sk8 shipped in 0.18.0, #822), noting the sizing predates sk8. No spec, corpus or wire byte moves.
