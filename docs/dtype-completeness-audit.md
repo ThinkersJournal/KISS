@@ -65,12 +65,12 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 
 | Type | KISS | Conf. | Note |
 |---|---|---|---|
-| `_Float16`, `__hip_bfloat16`, `float`, `double`, ints 8–64, `bool` | named | H | |
-| FP8 **FNUZ** (E4M3FNUZ, E5M2FNUZ: MI300 / gfx94x) | **reserved** (`f8e4m3fnuz`, `f8e5m2fnuz`) | **H** | **conflicts with the ruling**: a device computes on them, so "reserved, no computation semantics" cannot stand; naming-list item 1 |
-| FP8 OCP E4M3/E5M2 (newer gfx) | `f8e4m3fn`, `f8e5m2` named | M | |
-| FP6, FP4 (gfx950 scaled MFMA) | `f6e2m3 f6e3m2 f4e2m1` named | M | |
-| `iu4` (WMMA int4) | `i4 u4` named | M | |
-| `hipFloatComplex`/`hipDoubleComplex` | `c64 c128` named | H | |
+| `_Float16`, `__hip_bfloat16`, `float`, `double`, ints 8–64, `bool` | named | H | rockfish (vendored ROCm 7.2.4 `hip/library_types.h`, `hipDataType` enum): **corrected**: `hipDataType` has no `bool` (a C++ type only), so it is not a HIP data type here; `_Float16` is the spelling in rocblas/hipblasLt; `__hip_bfloat16` is not in the vendored headers (no `hip_bf16.h`), so that spelling is unconfirmed (`HIP_R_16BF` is the enum value) |
+| FP8 **FNUZ** (E4M3FNUZ, E5M2FNUZ: MI300 / gfx94x) | **reserved** (`f8e4m3fnuz`, `f8e5m2fnuz`) | **H** (rockfish: `HIP_R_8F_E4M3_FNUZ`=1000, `E5M2_FNUZ`=1001 in the enum) | **conflicts with the ruling**: a device computes on them, so "reserved, no computation semantics" cannot stand; naming-list item 1 |
+| FP8 OCP E4M3/E5M2 (newer gfx) | `f8e4m3fn`, `f8e5m2` named | M | rockfish: `HIP_R_8F_E4M3`/`E5M2` exist (type confirmed); which gfx has them is not header-checkable |
+| FP6, FP4 (gfx950 scaled MFMA) | `f6e2m3 f6e3m2 f4e2m1` named | M | rockfish: `HIP_R_6F_E2M3`/`E3M2`, `HIP_R_4F_E2M1` exist (type confirmed); the gfx950 claim is not header-checkable. Also `HIP_R_8F_UE8M0` (= `f8e8m0`, named), previously missing from this table |
+| `iu4` (WMMA int4) | `i4 u4` named | M | rockfish: `HIP_R_4I`, `HIP_R_4U` exist (type confirmed); the WMMA claim is not header-checkable |
+| `hipFloatComplex`/`hipDoubleComplex` | `c64 c128` named | H | rockfish: `HIP_C_32F`, `HIP_C_64F` confirmed. The enum is wider: `HIP_C_16F`, `C_16BF` and complex over 4/8/16/32/64-bit signed and unsigned ints exist and KISS names `c64`/`c128` only: a **GAP candidate, ruling needed** (the `c32` question of 2.2 and 2.4, and more). Nothing checked on hardware (no ROCm box) |
 
 ### 2.4 SYCL (`sycl:`; registered namespace)
 
