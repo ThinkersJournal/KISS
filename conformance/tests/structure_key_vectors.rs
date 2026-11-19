@@ -321,7 +321,7 @@ fn coverage_note_boundary_dtype_position_is_a_strict_subset() {
     // direction-NEUTRAL pinned guard (see `check_pinned_coverage`): it states what it OBSERVED
     // before prescribing, so an equality miss on a DECREASE isn't reported as an improvement.
     check_pinned_coverage("dtypes in the dtype position", in_dtype_pos.len(), 8, format!("{in_dtype_pos:?}"));
-    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 12, format!("{anywhere:?}"));
+    check_pinned_coverage("usable dtypes appearing anywhere", anywhere.len(), 13, format!("{anywhere:?}"));
     // the boundary the note states: strictly fewer than the 24 usable tokens are exercised.
     assert!(
         in_dtype_pos.len() < usable.len(),

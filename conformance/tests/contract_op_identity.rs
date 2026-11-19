@@ -72,3 +72,19 @@ fn test_contract_op_identity_carries_distinguishing_attrs() {
     assert_eq!(check_op_identity("gather"), Err(IdentityDecline::Incomplete));
     assert_eq!(check_op_identity("gather{axis=0, index_operand=1, index_dtype=i32}"), Err(IdentityDecline::Incomplete));
 }
+
+// harness-internal: the generated per-field type table (`opattrs_field_types.json`) that lets a second reader decide `op-identity-bad-value` without its own table; fresh, and complete over every OpAttrs field in spec/ops.md 6.19.3.
+#[test]
+fn test_opattrs_field_types_table_is_fresh_and_complete() {
+    use kiss_conformance::opattrs_field_types::emit_opattrs_field_types_json;
+    const TABLE: &str = include_str!("../corpus/opattrs_field_types.json");
+    let now = emit_opattrs_field_types_json();
+    assert_eq!(TABLE, now, "opattrs_field_types.json is stale: regenerate with the emit bin");
+    for s in kiss_conformance::opattrs_schema::parse_table() {
+        for f in &s.fields {
+            assert!(TABLE.contains(&format!("{{\"name\": \"{}\", \"kind\"", f.name)), "{}.{} has no row", s.op, f.name);
+        }
+    }
+    // The table states `prefix_scan` takes one axis and `gather.axis` stops at MAX_RANK - 1: facts a reader needs.
+    assert!(TABLE.contains("exactly one axis for prefix_scan") && TABLE.contains("0 to 7"));
+}
