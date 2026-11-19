@@ -78,9 +78,9 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 |---|---|---|---|
 | `sycl::half`, `ext::oneapi::bfloat16`, `float`, `double`, ints, `bool` | named | H | |
 | `precision::tf32` (joint matrix) | **by design** | H | as CUDA |
-| Intel FP8 (`hf8`, `bf8` conversions / XMX) | likely `f8e4m3fn` / `f8e5m2`, but **which variant** each denotes is unverified | **L** | same layout-to-variant ratification the sk4 RFC §10 needed for Vulkan |
-| `std::complex<float/double>` | `c64 c128` named | H | |
-| 4-bit ints (joint matrix `int4`) | `i4 u4` named | M | |
+| Intel FP8 (`hf8`, `bf8` conversions / XMX) | likely `f8e4m3fn` / `f8e5m2`, but **which variant** each denotes is unverified | **L** | same layout-to-variant ratification the sk4 RFC §10 needed for Vulkan; bonefish (grep of oneAPI 2026.1 `sycl` headers): **not found** (0 hits for `hf8 bf8 e4m3 e5m2 fp8`), so not exposed there |
+| `std::complex<float/double>` | `c64 c128` named | H | bonefish: also `ext::oneapi::experimental::complex<T>`, T in `{double float sycl::half}`; `complex<half>` is a 32-bit complex, so the `c32` **GAP** of 2.2 recurs here |
+| 4-bit ints (joint matrix `int4`) | `i4 u4` named | M | bonefish: **not found** in the 2026.1 headers (0 hits in `ext/oneapi/matrix`, positive control `tf32`; `sycl::int4` is a 4-lane vector, not a 4-bit int) |
 
 ### 2.5 OpenCL (no namespace file yet)
 
