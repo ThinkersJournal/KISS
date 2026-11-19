@@ -19,10 +19,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// The ten spec stems the gate requires; a missing file is itself a violation.
+/// The eleven spec stems the gate requires; a missing file is itself a violation.
 const STEMS: &[&str] = &[
     "umbrella", "announce", "classify", "ops", "grammar", "contract", "synth",
-    "consume", "emit", "conform",
+    "consume", "emit", "conform", "kernel",
 ];
 
 /// Fixture clause IDs, assembled at run time.

@@ -26,7 +26,7 @@ DOC_OPEN = re.compile(r'^<document path="spec/([a-z]+)\.md".*mode="(full|outline
 # The suite's topological order, pinned. Derived from umbrella §2.2 at run time;
 # this test fails loudly if the derivation stops reproducing the intended order.
 EXPECTED_ORDER = ["classify", "ops", "grammar", "contract",
-                  "announce", "synth", "consume", "emit", "conform"]
+                  "announce", "synth", "consume", "emit", "kernel", "conform"]
 
 
 def doc_sequence(bundle):
@@ -65,7 +65,7 @@ class SuiteDerivation(unittest.TestCase):
 
     def test_edge_table_summarizes_conform_not_enumerates(self):
         et = self.suite.edge_table_text()
-        self.assertIn("each of the other eight -> KISS-Conform  [TEST]", et)
+        self.assertIn("each of the other nine -> KISS-Conform  [TEST]", et)
         self.assertNotIn("KISS-Classify -> KISS-Conform", et)   # summarized, not listed
         self.assertIn("KISS-Classify -> KISS-Grammar  [STRUCTURAL]", et)
 

@@ -46,7 +46,7 @@ ROOT = os.path.dirname(HERE)
 SPEC_DIR = os.path.join(ROOT, "spec")
 
 # the nine sub-standards, by file stem -> the name `--freeze-ready` takes
-SUBS = ["announce", "classify", "conform", "consume", "contract", "emit", "grammar", "ops", "synth"]
+SUBS = ["announce", "classify", "conform", "consume", "contract", "emit", "grammar", "kernel", "ops", "synth"]
 
 STAGE_ROW = re.compile(r"^\|\s*Maturity stage\s*\|\s*(.+?)\s*\|\s*$", re.M)
 STAGE_TOKEN = re.compile(r"\*\*\s*([A-Za-z]+)")

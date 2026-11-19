@@ -30,7 +30,7 @@ TOOL = str(HERE / "kiss_trace.py")
 
 CID, TESTNAME = "KISS-OPS-6.0-0042", "test_ops_fixture_backed"
 STEMS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
-         "synth", "consume", "emit", "conform"]
+         "synth", "consume", "emit", "conform", "kernel"]
 
 
 def run(*args):

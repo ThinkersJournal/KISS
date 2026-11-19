@@ -54,7 +54,7 @@ NUMBER_WORDS = {
 # The umbrella + the nine sub-standards (umbrella defines no clauses, but the
 # shared enums it narrates may appear in any of the ten files).
 SPECS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
-         "synth", "consume", "emit", "conform"]
+         "synth", "consume", "emit", "conform", "kernel"]
 
 
 def _is_dtype_token(w):

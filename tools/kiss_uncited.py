@@ -89,7 +89,7 @@ RE_SHORT = re.compile(r"§\s*([0-9]+(?:\.[0-9]+)?)-([0-9]{4}[a-z]?)")
 # exercise. Inference produced a clause on the wrong SUBJECT, and nothing in the
 # row would have shown it.
 SUB_WORDS = ("classify", "ops", "conform", "contract", "grammar",
-             "emit", "consume", "announce", "synth", "dispatch")
+             "emit", "consume", "announce", "synth", "dispatch", "kernel")
 RE_QUALIFIED = re.compile(
     r"\b(" + "|".join(SUB_WORDS) + r")\b[\s\-]*§\s*([0-9]+(?:\.[0-9]+)?)-([0-9]{4}[a-z]?)",
     re.I,
