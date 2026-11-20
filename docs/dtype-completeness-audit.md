@@ -35,7 +35,9 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | BFLOAT16_KHR (`VK_KHR_shader_bfloat16`) | `bf16` named | H | `bf16` is in the V-tuple list |
 | SINT8_PACKED_NV, UINT8_PACKED_NV (`VK_NV_cooperative_vector`) | `i8packed`, `u8packed` named **in the namespace only** | H | not Classify dtypes: a packed-int8 operand has no Classify token (§2.5) |
 | FLOAT8_E4M3_EXT / FLOAT_E4M3_NV (alias), FLOAT8_E5M2_EXT / FLOAT_E5M2_NV | `f8e4m3fn`, `f8e5m2` named (V-10/V-11, vocabulary v3) | H | |
-| Any enumerant assigned **after** `VK_HEADER_VERSION` 348 (the v5 baseline) | unknown to me | **L** | the registry must be re-read at the cut; this is exactly what the marker (rfc §5.1) is for |
+| `VK_EXT_shader_ocp_microscaling_types` (ext 673) extends `VkComponentTypeKHR`: FLOAT6_E2M3_EXT, FLOAT6_E3M2_EXT, FLOAT4_E2M1_EXT, FLOAT8_UNSIGNED_E8M0_EXT | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named in Classify; **not named in `spec/namespaces/vulkan.md` or `kiss-vulkan-vocab`** | H (vulkane, vk.xml parse at header 368) | the earlier row "none known after 348" was wrong; the namespace needs the four spellings (a vocabulary-version bump: KISS/PM decision) |
+| MXINT8_EXT (same extension) | **GAP**: no Classify token | H (vulkane) | a naming-list candidate (item 8 in 2.8) |
+| Any other enumerant after `VK_HEADER_VERSION` 348 | none: vulkane parsed `VkComponentTypeKHR` and every `extends=` at 348 and at 368; all other rows above match | H (vulkane) | re-read at each cut |
 | Shader capability bits (`shaderInt8/16/64`, `shaderFloat16/64`, storage 8/16-bit) | capabilities, `arith`/`st` fields (V-6, V-15) | H | not types |
 | `VkFormat` (image/buffer-view texel formats, including packed and block-compressed) | **scope question** | H | storage formats of images, not compute element types; I assume out of scope, **ruling needed** (§4 Q1) |
 
@@ -50,9 +52,9 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | `.pred` | `bool` named | H | |
 | `.s4`, `.u4` (wmma sub-byte), `.b1` (wmma) | `i4 u4 b1` named | H | |
 | `.e4m3`, `.e5m2` (fp8, sm89+) | `f8e4m3fn`, `f8e5m2` named | H | |
-| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; spelling of the variant to re-check |
+| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; unpopped recalls the spellings as matching (not read from the PTX ISA); it adds `.ue4m3` (nvfp4 block scale), not named in KISS: check it in the PTX ISA |
 | `.tf32` | **by design** (§6.1-0005; math mode in `(acc+mp)`) | H | storage is `f32`; confirm the by-design call (§4 Q2) |
-| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | |
+| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | unpopped recalls `.b128` as an untyped 128-bit type (recalled, not read from the PTX ISA); `.u128`/`.s128` unconfirmed |
 | `.u128`, `.s128` (recent PTX, wide integer ops and atomics) | **GAP**: no `i128`/`u128` | **M** | candidate |
 | Packed pairs: `.f16x2`, `.bf16x2`, `.e4m3x2`, `.e5m2x2`, `.e2m1x2`, `.ue8m0x2`, `.s16x2`, `.u16x2` | modelled by vector-access width (§6.5-0009), not a dtype | M | |
 | `.u8x4`/`.s8x4` (`dp4a` operands) | carried as `u32`/`i32` bits | M | `bitcast`-reachable (staged, §6.21-0005) |
@@ -63,12 +65,12 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 
 | Type | KISS | Conf. | Note |
 |---|---|---|---|
-| `_Float16`, `__hip_bfloat16`, `float`, `double`, ints 8–64, `bool` | named | H | |
-| FP8 **FNUZ** (E4M3FNUZ, E5M2FNUZ: MI300 / gfx94x) | **reserved** (`f8e4m3fnuz`, `f8e5m2fnuz`) | **H** | **conflicts with the ruling**: a device computes on them, so "reserved, no computation semantics" cannot stand; naming-list item 1 |
-| FP8 OCP E4M3/E5M2 (newer gfx) | `f8e4m3fn`, `f8e5m2` named | M | |
-| FP6, FP4 (gfx950 scaled MFMA) | `f6e2m3 f6e3m2 f4e2m1` named | M | |
-| `iu4` (WMMA int4) | `i4 u4` named | M | |
-| `hipFloatComplex`/`hipDoubleComplex` | `c64 c128` named | H | |
+| `_Float16`, `__hip_bfloat16`, `float`, `double`, ints 8–64, `bool` | named | H | rockfish (vendored ROCm 7.2.4 `hip/library_types.h`, `hipDataType` enum): **corrected**: `hipDataType` has no `bool` (a C++ type only), so it is not a HIP data type here; `_Float16` is the spelling in rocblas/hipblasLt; `__hip_bfloat16` is not in the vendored headers (no `hip_bf16.h`), so that spelling is unconfirmed (`HIP_R_16BF` is the enum value) |
+| FP8 **FNUZ** (E4M3FNUZ, E5M2FNUZ: MI300 / gfx94x) | **reserved** (`f8e4m3fnuz`, `f8e5m2fnuz`) | **H** (rockfish: `HIP_R_8F_E4M3_FNUZ`=1000, `E5M2_FNUZ`=1001 in the enum) | **conflicts with the ruling**: a device computes on them, so "reserved, no computation semantics" cannot stand; naming-list item 1 |
+| FP8 OCP E4M3/E5M2 (newer gfx) | `f8e4m3fn`, `f8e5m2` named | M | rockfish: `HIP_R_8F_E4M3`/`E5M2` exist (type confirmed); which gfx has them is not header-checkable |
+| FP6, FP4 (gfx950 scaled MFMA) | `f6e2m3 f6e3m2 f4e2m1` named | M | rockfish: `HIP_R_6F_E2M3`/`E3M2`, `HIP_R_4F_E2M1` exist (type confirmed); the gfx950 claim is not header-checkable. Also `HIP_R_8F_UE8M0` (= `f8e8m0`, named), previously missing from this table |
+| `iu4` (WMMA int4) | `i4 u4` named | M | rockfish: `HIP_R_4I`, `HIP_R_4U` exist (type confirmed); the WMMA claim is not header-checkable |
+| `hipFloatComplex`/`hipDoubleComplex` | `c64 c128` named | H | rockfish: `HIP_C_32F`, `HIP_C_64F` confirmed. The enum is wider: `HIP_C_16F`, `C_16BF` and complex over 4/8/16/32/64-bit signed and unsigned ints exist and KISS names `c64`/`c128` only: a **GAP candidate, ruling needed** (the `c32` question of 2.2 and 2.4, and more). Nothing checked on hardware (no ROCm box) |
 
 ### 2.4 SYCL (`sycl:`; registered namespace)
 
@@ -76,18 +78,18 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 |---|---|---|---|
 | `sycl::half`, `ext::oneapi::bfloat16`, `float`, `double`, ints, `bool` | named | H | |
 | `precision::tf32` (joint matrix) | **by design** | H | as CUDA |
-| Intel FP8 (`hf8`, `bf8` conversions / XMX) | likely `f8e4m3fn` / `f8e5m2`, but **which variant** each denotes is unverified | **L** | same layout-to-variant ratification the sk4 RFC §10 needed for Vulkan |
-| `std::complex<float/double>` | `c64 c128` named | H | |
-| 4-bit ints (joint matrix `int4`) | `i4 u4` named | M | |
+| Intel FP8 (`hf8`, `bf8` conversions / XMX) | likely `f8e4m3fn` / `f8e5m2`, but **which variant** each denotes is unverified | **L** | same layout-to-variant ratification the sk4 RFC §10 needed for Vulkan; bonefish (grep of oneAPI 2026.1 `sycl` headers): **not found** (0 hits for `hf8 bf8 e4m3 e5m2 fp8`), so not exposed there |
+| `std::complex<float/double>` | `c64 c128` named | H | bonefish: also `ext::oneapi::experimental::complex<T>`, T in `{double float sycl::half}`; `complex<half>` is a 32-bit complex, so the `c32` **GAP** of 2.2 recurs here |
+| 4-bit ints (joint matrix `int4`) | `i4 u4` named | M | bonefish: **not found** in the 2026.1 headers (0 hits in `ext/oneapi/matrix`, positive control `tf32`; `sycl::int4` is a 4-lane vector, not a 4-bit int) |
 
 ### 2.5 OpenCL (no namespace file yet)
 
 | Type | KISS | Conf. | Note |
 |---|---|---|---|
-| `char uchar short ushort int uint long ulong half float double` | named | H | `half`/`double` by extension |
-| `bfloat16` (vendor/Khronos extensions) | `bf16` named | M | extension status to verify |
-| Packed 4x8 integer dot (`cl_khr_integer_dot_product`) | carried in a 32-bit integer; the Vulkan `i8packed` analogue has no Classify token | M | |
-| `bool` | not a kernel-argument type | H | |
+| `char uchar short ushort int uint long ulong half float double` | named | H | `half`/`double` by extension; openclownfish: confirmed (fp16 on 2 of 3 devices; a `half` argument still builds on all 3) |
+| `bfloat16` (vendor/Khronos extensions) | `bf16` named | M | openclownfish (opencl-sys 0.6.5 headers, which may predate newer Khronos headers, and 3 devices): **corrected**: no OpenCL `bfloat16` type in those headers, no bf extension on any device, and `bfloat16` is an unknown type name on all 3 |
+| Packed 4x8 integer dot (`cl_khr_integer_dot_product`) | carried in a 32-bit integer; the Vulkan `i8packed` analogue has no Classify token | M | openclownfish: confirmed, but only on the CPU runtime (not on the other 2 devices) |
+| `bool` | not a kernel-argument type | H | openclownfish: confirmed, refused as a kernel parameter on all 3 devices |
 
 ### 2.6 Metal (no namespace file yet)
 
@@ -119,9 +121,10 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | 5 | Intel hf8/bf8 | variant unknown (L) | ratify layout to variant (as sk4 did for Vulkan FP8) |
 | 6 | Block-float formats (Tenstorrent `bfp*`) | shared-exponent block formats (L) | decide encoding+scale (sk4 §3.2) vs new dtype; needs the vendor's definition |
 | 7 | `tf32` | exposed as a type by CUDA and SYCL | **confirm by design**: not a dtype (`(acc+mp)` carries it), so a device reporting it is not "unnamed" |
+| 8 | `mxint8` (Vulkan `MXINT8_EXT`) | `VK_EXT_shader_ocp_microscaling_types`, found by vulkane at header 368 (H) | name, or decide it is block-scaled `i8` (an encoding plus scale, sk4 §3.2) |
 
-Everything not in this table, among the rows I could populate, is already named. **The remainder is seven
-items, of which one (item 1) is certain.**
+Everything not in this table, among the rows I could populate, is already named. **The remainder is eight
+items, of which two (item 1, and item 8 found by vulkane) are certain.**
 
 ## 3. The urgent-update process (proposed; each line is a proposal for CireSnave and the PM to rule on)
 

@@ -263,6 +263,15 @@ jobs:
             --leg ubuntu=runlist-ubuntu.txt \
             --leg windows=runlist-windows.txt
 
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # advisories, bans, licenses, sources for conformance/ (the only Rust workspace; config conformance/deny.toml).
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
+        with:
+          manifest-path: conformance/Cargo.toml
+
   # Advisory, NOT a required check (CireSnave 2026-10-23: "Roll out advisory-only, non-blocking
   # CodeRipper checks everywhere."). Pinned by SHA; findings go to the ROADMAP, never to a silenced rule.
   portfolio:
