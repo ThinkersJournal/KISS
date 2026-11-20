@@ -1172,7 +1172,7 @@ form (§6.7-0011).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `version` | u16 (`= 5`) | schema version; extra fields append so old tokens stay byte-identical |
+| `version` | u16 (`= 8`) | schema version; extra fields append so old tokens stay byte-identical |
 | `cell_class` | cell class (§6.5-0006) | the derived structural class (§6.5-0015) — **NOT** an op family and **NOT** the semantic op name |
 | `dtype` | dtype token | operand-0 / primary element dtype |
 | `target` | target_capability (§6.8) | the namespaced compilation-target descriptor |
@@ -1233,7 +1233,7 @@ form (§6.7-0011).
   `test_classify_structure_key_extent_free`.
 - **KISS-CLASSIFY-6.6-0004** — The `structure_key` fields MUST appear in exactly
   the order and with exactly the types of the table above; `version` MUST be the
-  first field and MUST equal `5` (§6.4-0003, §6.7-0002). *Test:*
+  first field and MUST equal `8` (§6.4-0003, §6.7-0002). *Test:*
   `test_classify_structure_key_field_layout`.
 - **KISS-CLASSIFY-6.6-0005** — `structure_key.dtype` MUST be operand-0's (the
   primary operand's) dtype, where operand-0 is fixed by the canonical operand
@@ -2395,7 +2395,7 @@ a party may do one without the other (umbrella §3.6).
 ## 8. Versioning & Lifecycle
 
 KISS-Classify tracks the umbrella's **two version axes**: the wire/ABI *structure-key
-schema version* (`STRUCTURE_KEY_VERSION`, currently `5`) and the published
+schema version* (`STRUCTURE_KEY_VERSION`, currently `8`) and the published
 reference-crate *semver*. They move independently. A third, Classify-local handle —
 `DTYPE_LAYOUT_VERSION` (§8-0007) — separately tracks the pinned dtype bit **layouts** of
 §6.1, on its own axis independent of both.
