@@ -162,10 +162,15 @@ fn test_contract_text_op_dag() {
     // A node's op_attrs render as a `, `-separated key=value list (empty elided).
     let gather = OpTree {
         op_name: "gather".into(),
-        op_attrs: vec![("axis".into(), "k".into()), ("oob".into(), "clamp".into())],
+        op_attrs: vec![
+            ("axis".into(), "0".into()),
+            ("oob_policy".into(), "clamp".into()),
+            ("index_operand".into(), "1".into()),
+            ("index_dtype".into(), "i32".into()),
+        ],
         children: vec![],
     };
-    assert_eq!(serialize_op_dag(&gather), "[Op{gather; axis=k, oob=clamp; []}]");
+    assert_eq!(serialize_op_dag(&gather), "[Op{gather; axis=0, oob_policy=clamp, index_operand=1, index_dtype=i32; []}]");
 
     // A `Source` node (KISS-GRAMMAR-6.4-0013) renders as `Source{<tag>; <source_attrs>}`; a
     // `const` carries its exact bits (a NaN payload included), most significant byte first.
