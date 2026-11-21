@@ -12,8 +12,8 @@ use crate::structural::compare_order_invariant;
 use crate::ulp_distance_f32;
 
 /// The `k(S,A) · N · eps_A · |max partial sum|` band of KISS-CONTRACT §6.8-0012, minus the two
-/// per-invocation inputs (`N` and the maximum partial sum): the per-cell calibrated constant and
-/// the accumulator dtype's unit roundoff.
+/// per-invocation inputs (`N` and the maximum partial sum): the per-cell constant the kernel declares
+/// and the accumulator dtype's unit roundoff.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AccumulatorBand {
     pub k: f64,

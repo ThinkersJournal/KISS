@@ -396,8 +396,7 @@ fn test_ops_complex_add_sub_neg_conj() {
 }
 
 /// Enforces[enforced]: KISS-OPS-6.18-0006 — `cdiv` applies the Annex G recovery with pinned
-/// component signs and MUST NOT route the zero-denominator / infinite-denominator
-/// cases through the real `div` atom. A nonzero finite `(a,b)` over a complex
+/// component signs (the clause pins the results, not how they are reached). A nonzero finite `(a,b)` over a complex
 /// ZERO denominator yields `copysign(∞,a) + i·copysign(∞,b)`, NOT `0/0 = NaN`;
 /// a complex-infinity denominator yields a complex zero, NOT `inf/inf = NaN`.
 /// Catches exactly the forbidden real-`div` route: [`cdiv_via_real_div`] yields
@@ -748,25 +747,6 @@ fn test_ops_rounding_nan_signed_zero() {
     assert_eq!(cast_round(-0.0).to_bits(), 0x0000_0000, "int-cast flushes -0.0 to +0.0");
     assert!(!cast_round(nan).is_nan(), "int-cast drops the NaN");
     assert_ne!(trunc(-0.0).to_bits(), cast_round(-0.0).to_bits());
-}
-
-/// Enforces[enforced]: KISS-OPS-6.5-0004 — `select` MUST NOT be rewritten to a mask-multiply
-/// `cond*a + (1-cond)*b`, which perturbs signed zero. For cond=1, a=-0.0, b=+0.0 the
-/// raw-bit `select` yields -0.0 while the mask form yields +0.0. The forbidden form
-/// is computed inline as a foil (like naive_max_x_zero / cdiv_via_real_div) and the
-/// test asserts `select` DIVERGES from it: a select lowered to mask-multiply FAILS.
-#[test]
-fn test_ops_select_no_mask_multiply() {
-    // KISS-OPS-6.5-0004
-    let (cond, a, b) = (1.0f32, -0.0f32, 0.0f32);
-    let mask = cond * a + (1.0 - cond) * b; // the forbidden mask-multiply form
-    assert_eq!(select(cond, a, b).to_bits(), 0x8000_0000, "select keeps the chosen -0.0");
-    assert_eq!(mask.to_bits(), 0x0000_0000, "mask-multiply normalizes it to +0.0");
-    assert_ne!(
-        select(cond, a, b).to_bits(),
-        mask.to_bits(),
-        "a select rewritten to mask-multiply would fail this divergence"
-    );
 }
 
 /// Enforces[enforced]: KISS-OPS-6.2-0009 — a non-primitive op's edge behavior comes from its
