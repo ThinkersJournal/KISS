@@ -1,7 +1,7 @@
 # The `vulkan:` capability-set vocabulary
 
 **Namespace:** `vulkan` · **Maintainer:** [vulkane](https://github.com/ciresnave/vulkane)
-· **Vocabulary version:** 7 · **Status:** draft
+· **Vocabulary version:** 8 · **Status:** draft
 
 **This is a maintainer-owned annex, not a KISS clause.** KISS-CLASSIFY-6.8-0004
 assigns each namespace's capability-set vocabulary to that namespace's
@@ -144,6 +144,9 @@ lexicographic order, each at most once:
 - **V-16.** `a64`, `af32` and `af64` are **vocabulary version 7**. They name atomic-operation capabilities, a different axis from the arithmetic names beside them: a consumer MUST NOT infer `a64` from `i64` (a device may do 64-bit integer arithmetic and have no 64-bit atomics), nor `af64` from `f64`, nor `af32` from any other name. `a64` is a **conjunction**: it is present only when BOTH the buffer and the shared bit are set, because a kernel that uses 64-bit atomics does not know which memory its caller binds. `af32` and `af64` name the *add* bit only (`shaderBufferFloat32AtomicAdd`, `shaderBufferFloat64AtomicAdd`), the operation a reduction lowers to, not the exchange/load/store bits. A device that does not advertise `VK_EXT_shader_atomic_float` reports neither float name.
   > *Informative.* Requested by FishStringer (E19) for kernels that need 64-bit and float atomics. All three feature bits predate the registry baseline (§4: `VK_HEADER_VERSION` 348), so by the baseline test each forces a bump.
 
+- **V-17.** The four OCP Microscaling component types of `VK_EXT_shader_ocp_microscaling_types` (registry extension 673, `VK_HEADER_VERSION` 368) are **vocabulary version 8**, and spell as the Classify dtypes of the same layout (KISS-CLASSIFY-6.1-0013, -0014 and the `f6` rows): `VK_COMPONENT_TYPE_FLOAT8_UNSIGNED_E8M0_EXT` is `f8e8m0`, `VK_COMPONENT_TYPE_FLOAT6_E2M3_EXT` is `f6e2m3`, `VK_COMPONENT_TYPE_FLOAT6_E3M2_EXT` is `f6e3m2`, `VK_COMPONENT_TYPE_FLOAT4_E2M1_EXT` is `f4e2m1`. They are valid in a `cm-` tuple only (the extension adds them to `VkComponentTypeKHR` under `VK_KHR_cooperative_matrix`). `f8e8m0` is a *scale* type (Classify §6.1-0013), not an element value type; in a tuple it spells the component type the device reports and means nothing more. **`VK_COMPONENT_TYPE_MXINT8_EXT` is NOT named**: KISS has no MXINT8 dtype, so by V-7 a tuple containing it is omitted whole and the device reports it in `unnamed_types`; it is a GAP row in `docs/dtype-completeness-audit.md` until a dtype exists. The feature bits of the extension (`shaderFloat4`, `shaderFloat6`, `shaderFloat8UnsignedE8M0`, `shaderMXInt8`) name no `<arith>` capability at this version.
+  > *Informative.* Reported by Vulkane (`vulkane-kernel-emit-8b-2`, routed by pm-kernels 2026-11-19, ruled SCHEDULE). The extension postdates the version 7 baseline (348), but a device may already expose these component types, and from version 6 naming a type any device has reported bumps (§4), so this is a bump, not an additive change.
+
 ### 2.4 `<coop>` — cooperative-matrix shapes used
 
 One of:
@@ -157,8 +160,8 @@ One of:
 A tuple is `<M>-<N>-<K>-<A>-<B>-<C>-<R>` optionally suffixed `-sat` for
 saturating accumulation, where `M`/`N`/`K` are decimal with no leading zeros
 and each component type is one of `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`,
-`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, `i8packed`,
-`u8packed`. A `VkComponentTypeKHR` this vocabulary version does not name has **no
+`i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f8e4m3fn`, `f8e5m2`, `f8e8m0`, `f6e2m3`,
+`f6e3m2`, `f4e2m1`, `i8packed`, `u8packed`. A `VkComponentTypeKHR` this vocabulary version does not name has **no
 spelling** (V-7): a tuple containing one is omitted whole. **`i8packed` and `u8packed` are the shared component-type vocabulary's
 cooperative-VECTOR members and MUST NOT appear in a `cm-` tuple** — V-14 makes them
 reachable only through the cooperative-vector query, so a cooperative-matrix tuple
@@ -388,8 +391,11 @@ against, so the test above has a fixed thing to compare with rather than
 | 5 | 348 |
 | 6 | 348 |
 | 7 | 348 |
+| 8 | 368 |
 
 **Version 7 is an addition, and a partial invalidation.** Three `<arith>` names land at once (`a64`, `af32`, `af64`). They change the bytes of every token derived from a device that reports the corresponding feature bits, which is most current devices for `a64`: a device that spelled `arith-dot8-f16-i8` at version 6 spells `arith-a64-dot8-f16-i8` at version 7 if it has 64-bit atomics. A consumer that cached a version 6 token for such a device will see non-matching it cannot attribute unless it asserts the version (KISS-CLASSIFY-6.8-0009). This is the baseline test applied as written (§4: the feature predates the baseline, so a bump).
+
+**Version 8 names four component types (a partial invalidation).** `f8e8m0`, `f6e2m3`, `f6e3m2` and `f4e2m1` (V-17) change the bytes of every `cm-` token whose device reports a cooperative-matrix tuple using one of them: at version 7 that tuple was omitted whole (V-7) and the device's token under-claimed; at version 8 the tuple is spelled, so the token gains it. A device that reports none of the four, and every device before the extension, derives the same token at version 8 as at version 7 apart from the asserted version. A consumer that cached a version 7 token for an affected device sees non-matching it cannot attribute unless it asserts the version (KISS-CLASSIFY-6.8-0009). The `<arith>` field is unchanged.
 
 ## 6. Sample tokens / vectors: not yet checked. I will regenerate the manifest after the doc lands and report any vector that moves; the sample at ~line 294 only changes if its device is declared to have the atomics.
 
