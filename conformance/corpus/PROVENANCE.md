@@ -1,7 +1,8 @@
 # Corpus provenance — generated vectors
 
 Some files in this directory are **generated**, not hand-written. Hand-editing one is a defect: the
-next regeneration silently undoes it, and the corpus JSON is sha256-pinned.
+next regeneration silently undoes it, and the corpus JSON is sha256-pinned in `PINS.sha256`
+(`python tools/kiss_corpus_pins.py` recomputes and compares; `--write` re-pins after a deliberate regeneration).
 
 | File | Generator | Version | Regenerate with | Verified |
 |---|---|---|---|---|
