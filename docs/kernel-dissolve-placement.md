@@ -105,8 +105,8 @@ exactly `{invocation_domain, workgroup_sizing, count_to_grid, thread_mapping, ad
 6.6-0008 requires a v1 contract to be geometry-agnostic or grid-stride with thread-index-free coefficients.
 **Who relies:** the caller needs `invocation_domain`, `workgroup_sizing` and `count_to_grid` to launch; it passes the
 strides and offsets itself (6.5-0005/-0006). **`thread_mapping` and `addressing_rule` describe how the kernel indexes
-internally**, and 6.6-0008 forbids a tiled or warp-lane schedule. Call: **keep the three launch fields, make the two
-internal ones optional or remove them, drop the grid-stride-only restriction.** This is the one place a kernel builder is
+internally**, and 6.6-0008 forbids a tiled or warp-lane schedule. Call: **keep the three launch fields, REMOVE the two
+internal ones, drop the grid-stride-only restriction.** **RULED (CireSnave 2026-11-21, verbatim via pm): "Rather than making the two internal fields optional, remove them.  KISS should provide no way to enforce anything on the internals of a kernel."** Call B is REMOVE `thread_mapping`, `addressing_rule` and the grid-stride-only rule (6.6-0001/-0004/-0008); KEEP `invocation_domain`, `workgroup_sizing`, `count_to_grid`. Still BREAKING (contract_version bump). Readers at origin/main: FireLine only (`crates/contract/src/fields.rs:147-148` plus its tests; control: `invocation_domain` found in the same files); Baracuda mentions them in prose only. No clause text is written here. This is the one place a kernel builder is
 bound today, and it changes Contract bytes (BREAKING for the 6.6 field set). Also KISS-CONTRACT-6.8-0012: the
 "calibration record" an implementation must be able to produce is "not a contract field and adds no bytes"; only an
 auditor could ask for it. Call: remove the sentence, keep the declared band.
