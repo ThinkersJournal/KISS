@@ -44,7 +44,7 @@ Scope creep by silence is a named trap. Silence is not an implicit inclusion; an
 
 KISS is a **set of interrelated sub-standards with a strict dependency DAG**, not one monolithic standard. An implementor conforms to the subset it needs: a provider that only announces pre-built kernels implements far less than a just-in-time generator, and neither is forced to adopt contracts it does not use. There are **nine** sub-standards.
 
-### 2.1 The ten sub-standards
+### 2.1 The nine sub-standards
 
 **KISS-Classify (foundational — data vocabulary).** Owns the vocabulary that describes *data*: the dtype set, operand descriptors (rank, extents, signed strides, alignment), the layout tag, the derived cell class, the specialization-cell identity (`structure_key`), and the namespaced, all-hardware target-capability descriptor. The dtype set is **pure storage** — a dtype pins byte layout only; compute precision (bit-stable versus reduced-mantissa) is deliberately *not* a dtype but a KISS-Ops fidelity attribute, and index/address use is an operand role rather than a dtype class. It is the shared noun set every other sub-standard uses to talk about operands and specialization cells.
 
@@ -257,7 +257,7 @@ A bump-versus-no-bump rule table in each sub-standard's §8 states, per kind of 
 
 Each sub-standard is in exactly one maturity stage, recorded in §0 front-matter:
 
-- **Draft** — under active design; the wire shape may change; no interop guarantee. This umbrella and all ten sub-standards are Draft.
+- **Draft** — under active design; the wire shape may change; no interop guarantee. This umbrella and all nine sub-standards are Draft.
 - **Frozen(date)** — the wire/ABI schema version at the freeze date is stable; subsequent changes are additive under the capability model or require a new schema version. Entry requires passing the freeze gate (§5.3).
 - **Deprecated** — superseded; still supported for a stated window (retire-by-floor: a minimum version implementors may still rely on).
 - **Retired** — no longer supported; clause IDs remain burned and are never reused.

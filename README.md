@@ -60,7 +60,7 @@ the key is deliberately silent on the computation, so a byte-match is **necessar
 admission (KISS-CLASSIFY-6.6-0001), and two kernels in one cell are not interchangeable
 (KISS-CLASSIFY-6.6-0020); the op identity travels beside the key.
 
-## The ten sub-standards
+## The nine sub-standards
 
 | Sub-standard | Tier | Owns | Status |
 |---|---|---|---|

@@ -79,7 +79,7 @@ python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
 
 - **umbrella §5.3 condition 3** — a sub-standard advances Draft → Frozen only with
   "complete bidirectional clause-to-test traceability". One unbacked clause blocks
-  the freeze. **Today: 0 of 10 sub-standards pass.**
+  the freeze. **Today: 0 of 9 sub-standards pass.**
 - **umbrella §8.1** — an implementation conforms "if and only if it passes the
   unmodified KISS-Conform suite for that sub-standard". Where there is no test there
   is no suite, so a conformance claim to KISS-Synth — 44<!-- bound:synth_backed --> of its 136<!-- bound:synth_clauses -->
@@ -185,7 +185,7 @@ default build and CI stay GPU-free.
 - **Phase 6 — burn down `UNBACKED.tsv`.** 496<!-- bound:unbacked_total --> clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
-  0<!-- bound:zero_coverage_subs --> of 10 sub-standards are at 0.0% — the lowest is
+  0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
   Synth at 44<!-- bound:synth_backed -->/136<!-- bound:synth_clauses --> and the highest Classify at 101<!-- bound:classify_backed -->/131<!-- bound:classify_clauses -->; Announce is 62<!-- bound:announce_backed -->/99<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
