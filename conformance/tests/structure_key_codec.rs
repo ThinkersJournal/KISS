@@ -243,12 +243,12 @@ co/00/v4/d16/f/f32;co/00/v4/d16/f/f32;co/00/v4/d16/f/f32|-|ctll/d16/f32/f32/f32/
 // ============================================================================
 
 /// KISS-CLASSIFY-6.6-0004: fields appear in exactly the pinned order; `version` is
-/// field 0 and MUST equal 4. Position — not content-sniffing — decides each field's
+/// field 0 and MUST equal 8. Position — not content-sniffing — decides each field's
 /// role.
 #[test]
 fn test_classify_structure_key_field_layout() {
     assert!(from_token(BASE).is_ok(), "KISS-CLASSIFY-6.6-0004: base token invalid");
-    // version is field 0 and is `sk4`, on both the wire and a freshly serialized key.
+    // version is field 0 and is `sk8`, on both the wire and a freshly serialized key.
     assert_eq!(BASE.split('|').next(), Some("sk8"), "KISS-CLASSIFY-6.6-0004");
     let built = key("ew2", "f32", "cuda:sm89", WorkClass::Grid, 2, vec![co(), co(), co()], Reduce::None, None);
     assert!(
