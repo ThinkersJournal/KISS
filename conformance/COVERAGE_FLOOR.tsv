@@ -624,5 +624,5 @@
 # board 476 stage 2 (Contract v5, Announce cooperative_launch): harness 563 -> 565; KISS-CONTRACT-6.6-0004 and 6.6-0008 retired with their tests (-2); KISS-CONTRACT-6.5-0020, 6.7-0007, 6.8-0014 (tests/contract_boundary_fields.rs) and KISS-ANNOUNCE-6.6-0012 (tests/announce_device_query.rs) added (+4). lint 44, untested 381, proven 25 unchanged. TOOL-DERIVED: `--ratchet` reported 565.
 harness	565
 lint	44
-untested	380
+untested	381
 proven	25
