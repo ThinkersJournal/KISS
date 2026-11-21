@@ -25,3 +25,8 @@ Status: **decided 2026-10-31 by the PM: K1, D1 and the defect-2 fix; the clause 
 ## Recommendation
 
 Fix defect 2 now (no choice). **D1** for defect 3 (nothing to add). **K1** for defect 1. Hold **K3** as the alternative only if kiss-ref's data show the `|max partial sum|` band cannot be calibrated stably. All three together change comparator semantics but no wire bytes; the clause is `[go]` once the PM or CireSnave picks K1 vs K3 and D1 vs D2. Test would extend `test_contract_accumulator_tolerance_band` with a zero-partials case and a named-schedule case.
+
+
+## Addendum 2026-11-21 (board 481 B1 and K3)
+
+CireSnave ruled, verbatim: "I agree with you.  Keep the range.  Drop the calibration record." KISS-CONTRACT-6.8-0012 no longer requires a calibration record (method, corpus, margin of at least 1); the declared ULP-of-A band, `k` per kernel, the absolute band and the exact-equality zero band stand. K3 is not adopted. For the record, K3 measured at kiss-ref e302d1e (the shipped calibration's own value sets and schedules, 18 `(S,A)` cells, 49 to 60 sets each, one author, so one measurement and not two): worst `k` is 0.5416 on the `|max partial sum|` scale and 0.4211 on the `Σ|x_i|` scale, so K3 calibrates stably; the `Σ|x_i| / |max partial sum|` ratio, which is how much looser K3's band is at equal `k`, has a median of 1.0 to 4.4 per cell and a worst of 1024 (e4m3 and e5m2 into themselves), 670 (e4m3 into f32), 425 (e5m2 into f32), 246 (e4m3 into bf16) and 156 (bf16 into bf16, e5m2 into bf16).

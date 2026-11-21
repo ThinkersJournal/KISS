@@ -566,8 +566,8 @@ correct comparator. See umbrella §3 for the full statement.
   `[1, 4096]` (a request with no `op_identity` is one), or whose declared length exceeds the
   remaining input. *Test:*
   `test_synth_request_malformed_declines`.
-- **KISS-SYNTH-6.1-0004a** — A provider MUST NOT allocate on an unchecked declared
-  length before validating it against the remaining input. *Test:*
+- **KISS-SYNTH-6.1-0004a** — A request whose declared length exceeds the remaining input MUST
+  draw a typed decline (§6.6) and no other effect. *Test:*
   `test_synth_request_no_alloc_on_unchecked_length`.
 - **KISS-SYNTH-6.1-0005** — The triple `(structure_key, op_identity, revision_hash)` MUST be the full
   availability identity: when `revision_present == 1` the request pins one specific build,
@@ -661,9 +661,9 @@ correct comparator. See umbrella §3 for the full statement.
 - **KISS-SYNTH-6.3-0001a** — A provider MUST NOT define a separate protocol, request tag,
   or response tag for just-in-time synthesis. *Test:* `test_synth_no_separate_jit_tag`.
 - **KISS-SYNTH-6.3-0002** — On a cache **miss** for a cell it can provision, a provider
-  that advertises `PROVISION_ON_REQUEST` (KISS-Announce FEAT bit 32) MUST **build** the
-  artifact and return `{artifact, contract}`, or return a typed decline (§6.6); building
-  on miss IS just-in-time synthesis, the build-on-miss branch of the one request/response.
+  that advertises `PROVISION_ON_REQUEST` (KISS-Announce FEAT bit 32) MUST return
+  `{artifact, contract}` for the cell, or a typed decline (§6.6); returning one on a miss
+  IS just-in-time synthesis, the build-on-miss branch of the one request/response.
   *Test:* `test_synth_build_on_miss_is_jit`.
 - **KISS-SYNTH-6.3-0003** — For a cell it does not already hold, a provider that does
   **not** advertise `PROVISION_ON_REQUEST` MUST return a typed decline
@@ -875,9 +875,9 @@ correct comparator. See umbrella §3 for the full statement.
 - **KISS-SYNTH-6.6-0001a** — A provider handling any provision request MUST NOT panic,
   abort, or crash. This obligation is fuzz-testable and is owned by this sub-standard.
   *Test:* `test_synth_never_panics`.
-- **KISS-SYNTH-6.6-0001b** — A provider handling a provision request MUST NOT read beyond
-  the bytes declared by the request framing (the fixed `CYRQ` fields, plus the declared
-  `structure_key` length, plus the declared `op_identity` length, plus the length-prefixed `revision_hash` (its length byte, then the length that byte declares) when `revision_present == 1`).
+- **KISS-SYNTH-6.6-0001b** — A provider's response to a provision request MUST depend only on
+  the bytes the request framing declares (the fixed `CYRQ` fields, plus the declared
+  `structure_key` length, plus the declared `op_identity` length, plus the length-prefixed `revision_hash` (its length byte, then the length that byte declares) when `revision_present == 1`); bytes beyond them have no effect.
   *Test:* `test_synth_no_oob_read`.
 - **KISS-SYNTH-6.6-0001c** — A provider MUST return a response (a provision success or a
   typed decline) within its implementation-declared maximum latency bound; exceeding that

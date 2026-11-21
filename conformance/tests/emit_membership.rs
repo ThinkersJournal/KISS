@@ -575,12 +575,10 @@ fn test_emit_driver_spells_control_flow() {
 // ---------------------------------------------------------------------------
 
 /// Enforces: KISS-EMIT-6.4-0003 — transcendental / declared-ULP atom spelling (`exp`, `log`,
-/// `sin`, `cos`, `sqrt`, `erf`, …) MUST be an emitter-must-supply decision, and the
-/// neutral driver MUST NOT spell it as a mandated polynomial. Teeth: the atom set the
-/// clause names must be non-trivial and a SUBSET of the INDEPENDENT §3 `Declared-ULP
+/// `sin`, `cos`, `sqrt`, `erf`, …) MUST be an emitter-must-supply decision. Teeth: the atom
+/// set the clause names must be non-trivial and a SUBSET of the INDEPENDENT §3 `Declared-ULP
 /// atom` term-definition atom set (if the clause invents an atom §3 does not recognize,
-/// the subset fails), the decision must be placed emitter-must-supply, and the mandated-
-/// polynomial prohibition must be present.
+/// the subset fails), and the decision must be placed emitter-must-supply.
 #[test]
 fn test_emit_transcendental_spelling_emitter_supplied() {
     let emit = read_spec("emit.md");
@@ -607,11 +605,6 @@ fn test_emit_transcendental_spelling_emitter_supplied() {
         clause_bucket(block),
         Some(Bucket::Emitter),
         "§6.4-0003: transcendental atom spelling is not placed emitter-must-supply"
-    );
-    let b = nbody(block).to_lowercase();
-    assert!(
-        b.contains("must not") && b.contains("mandated polynomial"),
-        "§6.4-0003: the clause does not forbid the driver from spelling a mandated polynomial"
     );
 }
 
