@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-11-21 (board 475 and 476, CireSnave): KISS-Kernel is dissolved (`spec/kernel.md` deleted, its clause IDs retired and burned). Kept as history; see `docs/kernel-dissolve-placement.md`.**
+
 # Design note: how a reader of KISS-Ops finds the kernel-body standard (board 450, option A)
 
 **Informative. No normative text. For the PM, then the build PRs.** Measured at `origin/main` `8c14914`, 2026-11-16, by

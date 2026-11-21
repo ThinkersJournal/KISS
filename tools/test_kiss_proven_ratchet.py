@@ -77,6 +77,16 @@ def test_a_multi_test_proof_reds_if_ANY_proving_test_survives():
     assert _verdict(1, {}, harness={"other_prover"}, base=base) == "proven_regression"  # one survives
 
 
+def test_base_proven_map_from_ref_reads_by_ref_and_fails_closed():
+    """The first real proof retirement needs the PROVEN map AT a ref (#278)."""
+    conf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "conformance")
+    got = kt.base_proven_map_from_ref(conf, "HEAD")
+    assert got is not None
+    # control: a clause the floor records as Proven (op_identity, board 451) is in the map
+    assert "KISS-CONTRACT-6.11-0009" in got
+    assert kt.base_proven_map_from_ref(conf, "no-such-ref-xyz") is None
+
+
 def main():
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]

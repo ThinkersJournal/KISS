@@ -1277,6 +1277,40 @@ def classify_ratchet(floor, live, live_lint, live_harness, prev_lint, disk_lint=
                          f"untested {live['untested']}; lint set matches the base."])
 
 
+def base_proven_map_from_ref(conf_dir, base_ref):
+    """The PROVEN map {clause_id: [proving_test, ...]} AT `base_ref`, read by REF (`git archive` of
+    `conformance/tests` and `conformance/src` into a scratch directory, then the same `discover_tests`
+    and `collect_proven` the live run uses), never from the working tree. The drop gate of
+    `classify_proven` (#278) needs it the first time a proof is RETIRED (the dissolution of
+    KISS-Kernel removed KISS-KERNEL-6.1-0001 and its proving test). Returns None when the base
+    cannot be read; the caller then keeps `proven_uncharacterized`, which fails closed."""
+    import io
+    import shutil
+    import tarfile
+    import tempfile
+    conf_dir = os.path.abspath(conf_dir)
+    tmp = tempfile.mkdtemp(prefix="kiss-base-proven-")
+    try:
+        top = subprocess.run(["git", "-C", conf_dir, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
+        if top.returncode != 0:
+            return None
+        rel = os.path.relpath(conf_dir, top.stdout.strip()).replace(os.sep, "/")
+        arc = subprocess.run(["git", "-C", top.stdout.strip(), "archive", "--format=tar", base_ref,
+                              f"{rel}/tests", f"{rel}/src"], capture_output=True, timeout=120)
+        if arc.returncode != 0 or not arc.stdout:
+            return None
+        with tarfile.open(fileobj=io.BytesIO(arc.stdout)) as tf:
+            tf.extractall(tmp)
+        base_harness = discover_tests(os.path.join(tmp, *rel.split("/")))
+        base_map, _violations = collect_proven(base_harness)
+        return base_map
+    except Exception:
+        return None
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def classify_proven(floor_proven, live_proven_map, live_harness, base_proven_map=None):
     """The 4th ratchet dimension (#278). Classify the PROVEN count against its floor. Returns
     (verdict, lines); verdict is one of:
@@ -2735,8 +2769,11 @@ def main():
         # the guard here is only to avoid indexing a floor we have just declared malformed,
         # and the run is failing either way.
         if verdict != "incomplete" and "proven" in floor:
+            base_pm = None
+            if args.base_ref and len(proven_map) < floor["proven"]:
+                base_pm = base_proven_map_from_ref(conf_dir, args.base_ref)
             pverdict, plines = classify_proven(floor["proven"], proven_map, set(harness),
-                                               base_proven_map=None)
+                                               base_proven_map=base_pm)
             pheaders = {
                 "proven_improved": "RATCHET: the PROVEN floor is STALE — proofs earned past it (#278).",
                 "proven_retired": "RATCHET: a PROVEN retirement is recorded but the floor sits above "

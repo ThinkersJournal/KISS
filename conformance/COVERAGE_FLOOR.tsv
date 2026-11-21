@@ -620,7 +620,8 @@
 # op decomposition table + resolver (this PR): harness 559 -> 561, untested 386 -> 384; KISS-CONTRACT-6.4-0005 and 6.4-0010 (tests in conformance/tests/contract_op_resolve.rs). TOOL-DERIVED: `--ratchet` reported these.
 # KISS-Kernel skeleton (board 450): harness 564 -> 565, proven 25 -> 26; KISS-KERNEL-6.1-0001 (tests/kernel_refs.rs, Proven by three mutations); KISS-KERNEL-8-0001 is `attested` (a checklist gate, like KISS-ANNOUNCE-8-0004). TOOL-DERIVED.
 # board 481 (clause-edits): harness 565 -> 564 -- KISS-OPS-6.5-0004 and its test_ops_select_no_mask_multiply are removed (CireSnave A1, 2026-11-21); proven 26, lint 44, untested 381 unchanged.
-harness	564
+# board 476 (KISS-Kernel dissolved): harness 564 -> 563, proven 26 -> 25; KISS-KERNEL-6.1-0001 and its proving test test_kernel_governed_ops_have_pointers are gone (tests/kernel_refs.rs deleted), KISS-KERNEL-8-0001 (attested) removed from UNBACKED.tsv. Retired IDs stay burned. lint 44, untested 381 unchanged. The PROVEN drop is characterized by tools/kiss_trace.py base_proven_map_from_ref (first real retirement, #278).
+harness	563
 lint	44
 untested	381
-proven	26
+proven	25

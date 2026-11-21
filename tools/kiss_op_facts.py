@@ -39,9 +39,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import kiss_ops as K  # noqa: E402
-import kiss_kernel_refs as KR  # noqa: E402
 
-SCHEMA = "kiss-op-facts-v1"
+SCHEMA = "kiss-op-facts-v2"
 # The clause each fact is read from, so a consumer can cite it (never re-derive it).
 FACT_CLAUSES = {
     "family": ["KISS-OPS-6.1-0001", "KISS-OPS-6.13-0001"],
@@ -54,7 +53,6 @@ FACT_CLAUSES = {
     "is_contraction": ["KISS-OPS-6.13-0009"],
     "structured_op": ["KISS-OPS-6.13-0009"],
     "index_operand_role": ["KISS-OPS-6.11-0012"],
-    "kernel_rules": ["KISS-KERNEL-6.1-0001"],
 }
 AXIS_FIELDS = ("reduce_axes", "norm_axes")
 FIELD_NAME = re.compile(r"(?:^|— )`([a-z_0-9]+)`:")  # a field starts the cell or follows " — "; `u8`: is an encoding
@@ -150,7 +148,6 @@ def build_op_facts(spec_dir):
     index_role = set(_clause_ops(ops, "6.11-0012", "", "MUST carry the index-operand role"))
     carriers = _carrier_set(ops)
     graph = _decomp_graph(ops)
-    governed = KR.kernel_governed(spec_dir)
 
     problems = []
     K._diff("carrier set (§6.19-0003) vs §6.19.3 schema table", attrs, carriers, problems)
@@ -159,8 +156,6 @@ def build_op_facts(spec_dir):
             problems.append(f"{name}: empty — its clause anchor moved")
         for o in sorted(want - set(manifest["all_ops"])):
             problems.append(f"{name}: {o!r} is not an op in the manifest")
-    for o in sorted(set(governed) - set(manifest["all_ops"])):
-        problems.append(f"kernel_rules: {o!r} (ops.md §6.22) is not an op in the manifest")
     for o in manifest["all_ops"]:
         if o not in fam:
             problems.append(f"family: no family for op {o!r}")
@@ -183,8 +178,6 @@ def build_op_facts(spec_dir):
             "is_contraction": fam[o] == "contraction",
             "structured_op": o in structured,
             "index_operand_role": o in index_role,
-            # The KISS-Kernel sections that govern this op's concurrent behaviour (ops.md §6.22; [] = none).
-            "kernel_rules": governed.get(o, []),
         }
     return {
         "schema": SCHEMA,

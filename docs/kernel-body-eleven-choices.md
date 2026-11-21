@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-11-21 (board 475 and 476, CireSnave): KISS-Kernel is dissolved (`spec/kernel.md` deleted, its clause IDs retired and burned). Kept as history; see `docs/kernel-dissolve-placement.md`.**
+
 # The eleven choices for the kernel-body standard (decision draft for the board)
 
 **Informative. No normative text. Nothing here is built.** Written 2026-11-17 for the PM, who files one board item per

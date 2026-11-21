@@ -62,8 +62,6 @@ KISS is a **set of interrelated sub-standards with a strict dependency DAG**, no
 
 **KISS-Emit (structural on Ops, Classify, Contract).** Owns the generation direction: a complete partition of every lowering decision into "the neutral driver may spell it" versus "the emitter must supply it," with non-finite and constant spelling emitter-supplied. Its normative input is an op definition plus a specialization-cell identity, not any implementation's schedule-resolved plan. It defines the emit/consume round-trip in two tiers: structural op-DAG equality over a declared subset, and numeric bit-identity only same-language on-device (cross-language numeric identity is never claimed).
 
-**KISS-Kernel (structural on Ops, Classify).** Owns the kernel-body rules: what one thread does in a launch of many (barriers and the rule that every thread of the group must arrive, memory order and reach of atomics and fences, the race rule as a classification of programs, group collectives). Created by board 450 (option A, CireSnave 2026-11-16, on the condition that the references to it are kept in place so readers know when recommendations are available). **A skeleton in this release: its rule sections are reserved and carry no text** until the board 459 rulings are made; the references (this paragraph, the edge rows below, the KISS-Ops "Kernel-governed ops" table and the `kernel_rules` field of the operation facts) exist now.
-
 **KISS-Conform (cross-cutting — depends on all).** Owns conformance: the bidirectional clause-to-test traceability matrix (the suite build fails on any untested normative MUST *(enforcement correction, 2026-11-13: in this Draft repository CI enforces a coverage ratchet instead, see `README.md`)*), the five test modalities (golden byte-vectors; an independent CPU-oracle differential harness that shares no lowering code with any reference impl; an IR-DAG fuzzer emitting to every backend; and negative/decline vectors), determinism-class-aware comparators, per-sub-standard-per-version keying, and the adversarial-outsider checklist that gates any freeze. The reference implementation runs the same public suite with no exemption.
 
 ### 2.2 Dependency DAG
@@ -90,8 +88,6 @@ Edges point from a dependency to its dependent (an edge `A → B` means "B depen
 | KISS-Classify → KISS-Emit | STRUCTURAL |
 | KISS-Ops → KISS-Emit | STRUCTURAL |
 | KISS-Contract → KISS-Emit | STRUCTURAL |
-| KISS-Classify → KISS-Kernel | STRUCTURAL |
-| KISS-Ops → KISS-Kernel | STRUCTURAL |
 | each of the other eight → KISS-Conform | test dependency (Conform tests every sub-standard) |
 
 Reading aid (nearest structural parents only; consult the table for the full set):
