@@ -1,44 +1,29 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! §6.6 Dispatch — the geometry-agnostic (optional-Dispatch) model and the thread-index-free
-//! structural declaration of `thread_mapping`/`addressing_rule` (D3 / #43).
+//! §6.6 Dispatch — the geometry-agnostic (optional-Dispatch) model and the three launch fields.
 //!
-//! Retires the requirement that every kernel declare launch GEOMETRY. The Dispatch section is
-//! **always present** (§6.11-0004 requires all seven blocks); a **geometry-agnostic** kernel
-//! (grid-stride, host-computed `Dim3`) carries the sentinel line `dispatch_model = geometry-agnostic`
-//! in place of the five geometry fields (§6.6-0007, as resolved by #456/#480) — launch geometry is
-//! then the executor's, not the contract's. A kernel that DOES declare geometry carries
-//! the five fields (§6.6-0001), of which `thread_mapping`/`addressing_rule` are **thread-index-free
-//! structural declarations** (§6.6-0004): the per-thread element index is a grid-stride *semantic*,
-//! not a declared expression, and the §6.6-0006 grammar carries no per-thread index symbol. A
-//! richer thread-mapping form (tile-mapping / bound `gid`) is **reserved post-v1** (§6.6-0008).
+//! The Dispatch section is **always present** (§6.11-0004 requires all seven blocks); a
+//! **geometry-agnostic** kernel (host-computed `Dim3`) carries the sentinel line
+//! `dispatch_model = geometry-agnostic` in place of the three geometry fields (§6.6-0007) — launch
+//! geometry is then the executor's, not the contract's. A kernel that DOES declare geometry carries
+//! `{invocation_domain, workgroup_sizing, count_to_grid}` (§6.6-0001), each a §6.6-0006 expression.
+//! The contract declares nothing about how a kernel indexes its own threads or addresses its
+//! operands (board 476, CireSnave 2026-11-21: "KISS should provide no way to enforce anything on
+//! the internals of a kernel"): the former `thread_mapping`/`addressing_rule` fields are retired.
 //!
 //! This module owns the geometry/optionality model; the §6.6-0006 *expression grammar* itself is
-//! validated elsewhere (KISS-CONTRACT-6.6-0006). The two are complementary: the grammar is
-//! deliberately thread-index-free, which is exactly the property this module checks here.
+//! validated elsewhere (KISS-CONTRACT-6.6-0006).
 
-/// Per-thread index symbols reserved to the post-v1 richer thread-mapping form (§6.6-0008); a v1
-/// `thread_mapping`/`addressing_rule` that references one is rejected — the v1 §6.6-0006 grammar is
-/// thread-index-free by design.
-pub const RESERVED_THREAD_INDEX_SYMBOLS: &[&str] =
-    &["gid", "tid", "lane", "gtid", "threadidx", "blockidx", "warp", "subgroup"];
-
-/// Named richer-mapping forms reserved to §6.6-0008 (post-v1); likewise not a valid v1 declaration.
-pub const RESERVED_MAPPING_FORMS: &[&str] = &["tile_mapping", "warp_tile", "lane_tile"];
-
-/// The five Dispatch derivation fields (§6.6-0001), each a §6.6-0006 grammar expression.
+/// The three Dispatch derivation fields (§6.6-0001), each a §6.6-0006 grammar expression.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DispatchFields {
     pub invocation_domain: String,
     pub workgroup_sizing: String,
     pub count_to_grid: String,
-    pub thread_mapping: String,
-    pub addressing_rule: String,
 }
 
-/// The five geometry field names of §6.6-0001 in wire order. `validate` and the tests iterate THIS list,
+/// The three geometry field names of §6.6-0001 in wire order. `validate` and the tests iterate THIS list,
 /// so a field added to [`DispatchFields`] and to this list is covered by both (KISS#380).
-pub const GEOMETRY_FIELDS: [&str; 5] =
-    ["invocation_domain", "workgroup_sizing", "count_to_grid", "thread_mapping", "addressing_rule"];
+pub const GEOMETRY_FIELDS: [&str; 3] = ["invocation_domain", "workgroup_sizing", "count_to_grid"];
 
 impl DispatchFields {
     /// The value of the field named `name` (one of [`GEOMETRY_FIELDS`]).
@@ -47,8 +32,6 @@ impl DispatchFields {
             "invocation_domain" => &self.invocation_domain,
             "workgroup_sizing" => &self.workgroup_sizing,
             "count_to_grid" => &self.count_to_grid,
-            "thread_mapping" => &self.thread_mapping,
-            "addressing_rule" => &self.addressing_rule,
             other => panic!("not a Dispatch geometry field: {other}"),
         }
     }
@@ -59,8 +42,6 @@ impl DispatchFields {
             "invocation_domain" => &mut self.invocation_domain,
             "workgroup_sizing" => &mut self.workgroup_sizing,
             "count_to_grid" => &mut self.count_to_grid,
-            "thread_mapping" => &mut self.thread_mapping,
-            "addressing_rule" => &mut self.addressing_rule,
             other => panic!("not a Dispatch geometry field: {other}"),
         };
         *slot = value.to_string();
@@ -70,7 +51,7 @@ impl DispatchFields {
 /// A kernel's Dispatch section (§6.6). The section is **always present** (§6.11-0004 requires all
 /// seven blocks); what varies is its content: `GeometryAgnostic` carries the sentinel line
 /// `dispatch_model = geometry-agnostic` (§6.6-0007, as resolved by #456/#480), `Declared` carries
-/// all five geometry fields (§6.6-0001).
+/// all three geometry fields (§6.6-0001).
 #[derive(Clone, Debug, PartialEq)]
 pub enum DispatchModel {
     /// §6.6-0007: geometry-agnostic kernel — no launch GEOMETRY declared.
@@ -81,7 +62,7 @@ pub enum DispatchModel {
     /// is the section's *content* that is the sentinel, never the section that is absent."
     /// A reader following the old comment renders SIX blocks and silently omits Dispatch.
     GeometryAgnostic,
-    /// §6.6-0001: a declared launch geometry (all five fields).
+    /// §6.6-0001: a declared launch geometry (all three fields).
     Declared(DispatchFields),
 }
 
@@ -90,25 +71,19 @@ pub const DISPATCH_SECTION_ID: u8 = 4;
 pub const DISPATCH_SECTION_NAME: &str = "dispatch";
 /// The carried geometry-agnostic sentinel value (§6.6-0007), keyed under `dispatch_model`.
 pub const GEOMETRY_AGNOSTIC_SENTINEL: &str = "geometry-agnostic";
-/// The five geometry field keys, in the pinned §6.6-0001 / §6.11-0005 order.
-pub const GEOMETRY_FIELD_KEYS: [&str; 5] = [
-    "invocation_domain",
-    "workgroup_sizing",
-    "count_to_grid",
-    "thread_mapping",
-    "addressing_rule",
-];
+/// The three geometry field keys, in the pinned §6.6-0001 / §6.11-0005 order.
+pub const GEOMETRY_FIELD_KEYS: [&str; 3] = ["invocation_domain", "workgroup_sizing", "count_to_grid"];
 
 /// A typed decline from parsing a Dispatch section block (§6.6-0001/§6.6-0007). Never a panic.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DispatchDecline {
     /// The block does not begin with `[section:4:dispatch]`.
     BadHeading,
-    /// The block carried no field lines (neither the five fields nor the sentinel).
+    /// The block carried no field lines (neither the three fields nor the sentinel).
     Empty,
-    /// A field key not in the schema (not one of the five, and not `dispatch_model`).
+    /// A field key not in the schema (not one of the three, and not `dispatch_model`).
     UnknownField(String),
-    /// The five-geometry-field arm is incomplete or out of order (a proper subset, §6.6-0001).
+    /// The three-geometry-field arm is incomplete or out of order (a proper subset, §6.6-0001).
     PartialGeometry,
     /// `dispatch_model` alongside one or more geometry fields — the two arms are exclusive.
     SentinelWithGeometry,
@@ -124,7 +99,7 @@ pub enum DispatchDecline {
 
 impl DispatchModel {
     /// Render the Dispatch section block (§6.11-0004, block id 4): the pinned heading line, then
-    /// either the five geometry fields in §6.6-0001 order (`Declared`) or the single carried
+    /// either the three geometry fields in §6.6-0001 order (`Declared`) or the single carried
     /// sentinel line `dispatch_model = geometry-agnostic` (`GeometryAgnostic`). The section is
     /// always present — this is the carried resolution (#456/#480), never an absent block.
     pub fn render_block(&self) -> Vec<u8> {
@@ -137,8 +112,6 @@ impl DispatchModel {
                 ("invocation_domain", Value::Str(f.invocation_domain.clone())),
                 ("workgroup_sizing", Value::Str(f.workgroup_sizing.clone())),
                 ("count_to_grid", Value::Str(f.count_to_grid.clone())),
-                ("thread_mapping", Value::Str(f.thread_mapping.clone())),
-                ("addressing_rule", Value::Str(f.addressing_rule.clone())),
             ],
         };
         render_block(DISPATCH_SECTION_ID, DISPATCH_SECTION_NAME, &fields)
@@ -146,7 +119,7 @@ impl DispatchModel {
 }
 
 /// Parse a Dispatch section block into a `DispatchModel`, enforcing the §6.6-0001 either/or schema:
-/// EXACTLY the five geometry fields in order, OR EXACTLY the one `dispatch_model = geometry-agnostic`
+/// EXACTLY the three geometry fields in order, OR EXACTLY the one `dispatch_model = geometry-agnostic`
 /// sentinel line. A proper subset, a wrong order, an unknown field, `dispatch_model` beside a
 /// geometry field, or a bad sentinel value each declines — never a panic (§6.6-0007's no-partial).
 pub fn parse_dispatch_block(block: &[u8]) -> Result<DispatchModel, DispatchDecline> {
@@ -201,7 +174,7 @@ fn parse_sentinel_arm(fields: &[(String, String)]) -> Result<DispatchModel, Disp
     Ok(DispatchModel::GeometryAgnostic)
 }
 
-/// The five-geometry-field arm (§6.6-0001): exactly the five keys, in the pinned order.
+/// The three-geometry-field arm (§6.6-0001): exactly the three keys, in the pinned order.
 fn parse_geometry_arm(fields: &[(String, String)]) -> Result<DispatchModel, DispatchDecline> {
     for (k, _) in fields {
         if !GEOMETRY_FIELD_KEYS.contains(&k.as_str()) {
@@ -217,8 +190,6 @@ fn parse_geometry_arm(fields: &[(String, String)]) -> Result<DispatchModel, Disp
         invocation_domain: g(0),
         workgroup_sizing: g(1),
         count_to_grid: g(2),
-        thread_mapping: g(3),
-        addressing_rule: g(4),
     }))
 }
 
@@ -245,39 +216,10 @@ pub fn parse_dispatch_from_document(body: &[u8]) -> Result<DispatchModel, Dispat
     parse_dispatch_block(text[start..end].as_bytes())
 }
 
-/// Extract identifier tokens (`[A-Za-z_][A-Za-z0-9_]*`, lowercased) from an expression, dropping
-/// pure-numeric tokens. Word-boundaried so a launch scalar like `idx_extents` is not mistaken for
-/// an `idx`/`tid` thread index.
-fn ident_tokens(expr: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut cur = String::new();
-    for c in expr.chars() {
-        if c.is_ascii_alphanumeric() || c == '_' {
-            cur.push(c.to_ascii_lowercase());
-        } else if !cur.is_empty() {
-            out.push(std::mem::take(&mut cur));
-        }
-    }
-    if !cur.is_empty() {
-        out.push(cur);
-    }
-    out.into_iter().filter(|t| !t.chars().all(|c| c.is_ascii_digit())).collect()
-}
-
-/// True iff `expr` references no reserved per-thread index symbol or reserved mapping form — i.e.
-/// it is a v1 thread-index-free declaration (§6.6-0004 / §6.6-0008).
-pub fn is_thread_index_free(expr: &str) -> bool {
-    !ident_tokens(expr).iter().any(|t| {
-        RESERVED_THREAD_INDEX_SYMBOLS.contains(&t.as_str())
-            || RESERVED_MAPPING_FORMS.contains(&t.as_str())
-    })
-}
-
 impl DispatchModel {
-    /// Validate the Dispatch model (§6.6-0001/-0004/-0007/-0008):
+    /// Validate the Dispatch model (§6.6-0001/-0007):
     /// - `GeometryAgnostic` is always accepted (§6.6-0007) — no geometry required.
-    /// - `Declared` requires every field non-empty (no **partial** section, §6.6-0007), and
-    ///   `thread_mapping`/`addressing_rule` MUST be **thread-index-free** (§6.6-0004 / §6.6-0008).
+    /// - `Declared` requires every field non-empty (no **partial** section, §6.6-0007).
     pub fn validate(&self) -> Result<(), String> {
         let f = match self {
             DispatchModel::GeometryAgnostic => return Ok(()),
@@ -286,19 +228,7 @@ impl DispatchModel {
         for name in GEOMETRY_FIELDS {
             if f.field(name).trim().is_empty() {
                 return Err(format!(
-                    "§6.6-0007: partial Dispatch section — `{name}` is empty; declare all five \
-                     fields or carry the `dispatch_model = geometry-agnostic` sentinel line"
-                ));
-            }
-        }
-        for (name, val) in
-            [("thread_mapping", &f.thread_mapping), ("addressing_rule", &f.addressing_rule)]
-        {
-            if !is_thread_index_free(val) {
-                return Err(format!(
-                    "§6.6-0004/-0008: `{name}` references a per-thread index / reserved mapping \
-                     symbol — the v1 grammar is thread-index-free; the per-thread index is the \
-                     grid-stride semantic, and the richer form is reserved post-v1"
+                    "§6.6-0007: partial Dispatch section — `{name}` is empty; declare all three                      fields or carry the `dispatch_model = geometry-agnostic` sentinel line"
                 ));
             }
         }
