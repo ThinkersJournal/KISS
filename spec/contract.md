@@ -1286,8 +1286,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   position's contribution count; *Draft change, CireSnave 2026-11-12, board 417 "A"*), MUST be declared in the
   Guarantees (§6.8-0002 / §6.8-0004) as a **ULP-of-A band** of the form
   `k(S,A) · N · eps_A · |max partial sum|` — where `eps_A` is the accumulator dtype's unit
-  roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell calibrated
-  constant, and `|max partial sum|` is the maximum absolute **running partial of the
+  roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell constant
+  the kernel declares, and `|max partial sum|` is the maximum absolute **running partial of the
   KISS-OPS §6.17-0009 per-cell reference evaluation itself** (ascending index, each input
   rounded to `S`, each accumulate rounded to `A`) over the invocation's inputs — not of the
   candidate's own schedule, and not a supremum over legal schedules — and MUST bound reassociation error against the per-cell reference of KISS-OPS
@@ -1297,13 +1297,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   only the `(compute, accumulator)` class via the accumulator coordinate (the contraction
   `<acc>` of KISS-CLASSIFY §6.7-0006, or the non-contraction accumulator-and-mode field of
   §6.7-0013 (realizing §6.7-0012)), while the numeric FORMULA lives here in the Contract Guarantees and is
-  evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
-  constant declared here, and an implementation MUST be able to produce, for each declared
-  `k(S,A)`, its **calibration record**: the method by which it was calibrated, the corpus
-  it was measured over, and the margin applied (a margin of at least 1 over the worst
-  measured ratio of deviation to `N · eps_A · |max partial sum|`). This clause pins that the
-  record exists, never a value of `k`; the record is not a contract field and adds no
-  bytes. An implementation MUST NOT key `N`, and MUST NOT declare this
+  evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell constant
+  the kernel declares here; this clause pins the form of the band, never a value of `k`, and
+  states no requirement on how `k` was arrived at (*Draft change, CireSnave 2026-11-21, board 481 B1:
+  "Keep the range. Drop the calibration record." The former requirement that an implementation produce a
+  calibration record, the method, the corpus and a margin of at least 1, is removed; a kernel may now
+  declare `k` without one*). An implementation MUST NOT key `N`, and MUST NOT declare this
   tolerance as a fixed constant or as a bound against cross-accumulator wide truth. A
   comparator applying this tolerance MUST use it as an **absolute** band — it scales with
   `|max partial sum|`, NOT with `|result|` — and MUST NOT convert it to a metric taken in

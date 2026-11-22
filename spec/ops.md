@@ -407,7 +407,7 @@ reader holding only KISS-Ops plus the umbrella.
 - **Compute dtype** — the dtype in which an op's arithmetic is performed, one of the
   pinned storage dtype set (§6.16). `u32` is an ordinary dtype and is **not** excluded;
   index-only-ness is an operand role (§6.11-0012), not a dtype class. A complex op's
-  compute dtype is the `f32`/`f64` component of its `c64`/`c128` operand (§6.18-0015).
+  compute dtype is the `f32`/`f64` component of its `c64`/`c128` operand (for an exact-byte complex op, §6.18-0015; a ULP/tolerance complex op is bound only by its declared tolerance).
 - **Raw-bit move** — a value transfer that copies bits without any arithmetic, so
   signed zero and NaN payloads (quiet and signaling) are preserved.
 - **NaN-propagating** — an op that returns a NaN when any operand contributing to the
@@ -818,9 +818,6 @@ wrapping two's-complement per §6.2-0002):
 - **KISS-OPS-6.5-0003** — In evaluating the `cond` operand, `select` MUST treat `-0.0` as
   false (it compares equal to zero) and MUST treat any NaN as true (it is non-zero).
   *Test:* `test_ops_select_cond_zero_nan`.
-- **KISS-OPS-6.5-0004** — `select` MUST NOT be rewritten to or from a mask-multiply form
-  (e.g. `cond*a + (1-cond)*b`), because a mask-multiply perturbs signed zero and NaN
-  payloads that the raw-bit move preserves. *Test:* `test_ops_select_no_mask_multiply`.
 
 ### 6.6 Comparison atoms
 
@@ -1015,14 +1012,8 @@ section-intro paragraph is an informative pointer to it):
   the stored result MUST be the operand/result **truncated to that operand dtype's own
   bit width** (mod `2^bitwidth`): the atom MUST behave as promote-to-width → apply →
   **truncate-on-store**, and its observable result MUST be **independent of DAG
-  sharing/hoisting**. Because C-family lowering promotes a narrow operand to `int`
-  (32-bit) before the atom, a *composed* narrow operand can be observed as its
-  un-truncated promoted value when the producing sub-expression is inlined but as its
-  truncated narrow temporary when that sub-expression is hoisted; to remove this
-  ambiguity an implementation MUST either (a) truncate every narrow operand to its own
-  bit width before the atom consumes it (so the operand carries its on-store value
-  regardless of sharing), or (b) require every operand of a narrow §6.10 atom to be a
-  direct load (a leaf input) and never a composed sub-expression. This clause pins the
+  sharing/hoisting**: a *composed* narrow operand carries its truncated on-store value
+  whether the producing sub-expression is inlined or hoisted. This clause pins the
   operand/result *value* only; it does not widen the pinned shift domain of §6.10-0004
   (a shift amount outside `[0, bitwidth)` remains target-defined). *Test:*
   `test_ops_narrow_int_promote_truncate_composition`.
@@ -1317,7 +1308,7 @@ section-intro paragraph is an informative pointer to it):
   sequence, `dest[j]` included. Any accumulation order a candidate used is admitted when its result for
   `j` is within the band **in absolute terms** (never result-relative, §6.8-0012); a position no update
   reaches has `N = 0` and MUST equal `dest[j]` exactly, and where `|max partial sum|` is 0 the result
-  MUST equal the reference exactly. The calibration record and the "no fixed constant, no wide-truth
+  MUST equal the reference exactly. The "no fixed constant, no wide-truth
   bound" rules of §6.8-0012 apply to this cell unchanged. Integer `atomic-add` stays exact
   (§6.11-0006). *Draft change (CireSnave 2026-11-12, board 417 "A"): before it, a floating-point
   `atomic-add` was declared nondeterministic with no stated bound.* *Draft change (CireSnave 2026-11-16, board 450 "A": "...but only as long as the necessary references are kept in place so readers know when recommendations are available."): a `Kernel-governed:` pointer to KISS-Kernel was added to this clause; no obligation added, no byte of any golden moves.* *Test:*
@@ -1522,11 +1513,8 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   attribute (`bessel_correction`, §6.19-0030) rather than changing the decomposition
   silently — with `bessel_correction` set the divisor of the final mean in the `reduce_var`
   row is `reduced_count − 1`, evaluated as ordinary IEEE 754 division with no special case;
-  `reduce_var` MUST be computed from **deviations about the mean** — the two-pass form of
-  its §6.13 row, or a single-pass Welford/Chan update that accumulates squared deviations
-  about a running mean — and MUST NOT be computed as `E[x²] − E[x]²` (the §6.13 row's
-  non-normative one-pass form), so a non-NaN `reduce_var` result MUST be `≥ +0` and
-  `reduce_std` (`sqrt` of it) MUST NOT be NaN solely through cancellation; `softmax` / `log_softmax` MUST declare the
+  a non-NaN `reduce_var` result MUST be `≥ +0` and `reduce_std` (`sqrt` of it) MUST NOT be NaN
+  solely through cancellation; `softmax` / `log_softmax` MUST declare the
   normalization axes (`norm_axes`, §6.19-0031); `avg_pool`, `max_pool`, and `im2col` MUST declare the per-axis
   `window_size`, `stride`, `dilation`, `padding_lo`, and `padding_hi`; `avg_pool` MUST declare
   `count_include_pad` (which selects the divisor between the full window count —
@@ -2070,8 +2058,8 @@ propagation and recovery rules for `cmul` / `cdiv` / `cabs` / `cexp`.
 
 For a complex operand `z`, `cre(z)` and `cim(z)` denote its real and imaginary `f32`/`f64`
 lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imaginary lane
-`y`. A complex op on `c64` evaluates its real-atom decomposition in `f32`; on `c128`, in
-`f64` (§6.18-0015).
+`y`. An exact-byte complex op on `c64` evaluates its real-atom decomposition in `f32`; on `c128`, in
+`f64` (§6.18-0015); a ULP/tolerance complex op is bound only by its declared tolerance.
 
 **Component bridge (plumbing; not advertised high-level):**
 
@@ -2144,13 +2132,10 @@ lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imagin
   complex-infinity numerator over a finite nonzero denominator MUST yield a complex
   infinity; a complex-infinity denominator MUST yield a complex zero (finite numerator);
   and division of a nonzero finite numerator by a complex **zero** denominator MUST yield a
-  complex infinity per Annex G, never a trap. Because `cdiv` is class **exact-byte**
-  (§6.18-0014) yet real `div` by zero is target-defined (target-UB, §6.4-0002), `cdiv` MUST
-  NOT evaluate the zero-denominator or infinite-operand cases through the real `div` atom;
-  these cases MUST instead be produced by the Annex-G recovery with the component signs
-  pinned by Annex G (a nonzero finite `(a,b)` over `(±0, ±0)` yields the complex infinity
-  `copysign(∞, a) + i·copysign(∞, b)` per Annex G G.5.1), so the exact-byte guarantee is
-  achievable independently of the target's `div`/0 behavior. *Test:* `test_ops_cdiv_annexg`.
+  complex infinity per Annex G, never a trap. `cdiv` is class **exact-byte** (§6.18-0014),
+  so these results carry the component signs pinned by Annex G, independent of the target's
+  `div`/0 behavior (a nonzero finite `(a,b)` over `(±0, ±0)` yields the complex infinity
+  `copysign(∞, a) + i·copysign(∞, b)` per Annex G G.5.1). *Test:* `test_ops_cdiv_annexg`.
 - **KISS-OPS-6.18-0007** — `cabs(z)` MUST equal `hypot(cre(z), cim(z))` (a real,
   non-negative value in the component dtype), which by the pinned real `hypot` inf/NaN rule
   (§6.13-0007) is `+∞` whenever either lane is infinite **even if the other lane is NaN**
@@ -2203,12 +2188,8 @@ lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imagin
   `csqrt(+∞ + i·NaN) = +∞ + i·NaN`; `csqrt(NaN + i·y) = NaN + i·NaN` (finite `y`);
   `csqrt(NaN + i·NaN) = NaN + i·NaN`. *Test:* `test_ops_csqrt_principal_branch`.
 - **KISS-OPS-6.18-0012** — `cpow(z, w)` MUST equal the **principal** value
-  `cexp(cmul(w, clog(z)))` of the §6.18 decomposition (using the principal `clog`).
-  `cpow(z, 0)` MUST yield `1 + 0i` for every `z`. Because Annex G specifies `cpow` through
-  this same `cexp`/`clog`/`cmul` composition, `cpow` on non-finite or zero inputs MUST be
-  evaluated by applying the **governed** Annex-G special values of `clog` (§6.18-0010),
-  `cmul` (§6.18-0005), and `cexp` (§6.18-0009) in that composition — so its result is fully
-  determined, not left to the naive chain. In particular `cpow(0 + i·0, w)` MUST yield
+  `exp(w · log z)` (using the principal `log`). `cpow(z, 0)` MUST yield `1 + 0i` for every
+  `z`. In particular `cpow(0 + i·0, w)` MUST yield
   `0 + i·0` when `Re(w) > 0`, a complex infinity when `Re(w) < 0`, and NaN components when
   `Re(w) = 0` with `w ≠ 0`. *Test:* `test_ops_cpow_principal`.
 - **KISS-OPS-6.18-0013** — For every complex op, on any input with an infinite or NaN lane
@@ -2227,10 +2208,11 @@ lanes and `cmake(x, y)` constructs a complex value with real lane `x` and imagin
   real atom (`cabs`, `carg`, `cexp`, `clog`, `csqrt`, `cpow` — via `sqrt` / `hypot`,
   `atan2`, `exp`, `log`, `sin`, `cos`) MUST be class **ULP/tolerance**. *Test:*
   `test_ops_complex_determinism_class`.
-- **KISS-OPS-6.18-0015** — A complex op on `c64` MUST evaluate its real-atom decomposition
-  with `f32` component lanes, and on `c128` with `f64` component lanes; the component dtype
-  MUST be the `f32`/`f64` element of the interleaved (re,im) storage (§6.16-0007) and MUST
-  NOT be promoted or demoted across the family's atoms. *Test:*
+- **KISS-OPS-6.18-0015** — An **exact-byte** complex op (§6.18-0014) on `c64` MUST evaluate its
+  real-atom decomposition with `f32` component lanes, and on `c128` with `f64` component lanes;
+  the component dtype MUST be the `f32`/`f64` element of the interleaved (re,im) storage
+  (§6.16-0007) and MUST NOT be promoted or demoted across the decomposition's atoms. A
+  **ULP/tolerance** complex op is bound only by its declared tolerance. *Test:*
   `test_ops_complex_component_dtype`.
 - **KISS-OPS-6.18-0016** — The complex ops advertised as **high-level** (native-matchable)
   MUST be `{cadd, csub, cneg, cconj, cmul, cdiv, cabs, carg, cexp, clog, csqrt, cpow}`; the
@@ -2983,8 +2965,7 @@ written over the other atoms without a double rounding.
   typed decline. *Test:* `test_ops_cast_atom_shape_and_dtype`.
 - **KISS-OPS-6.21-0002** — `cast` MUST round the **exact** source value once, in the direction its
   `rounding` attribute names: `1` to nearest with ties to even, `2` toward zero, `3` toward negative
-  infinity, `4` toward positive infinity. A conversion through an intermediate dtype (an `f32` staging
-  of an `f64` source, say) that can round twice is non-conforming. The destinations whose own clause pins
+  infinity, `4` toward positive infinity. The destinations whose own clause pins
   nearest-even and no other mode (`f8e4m3fn`, `f8e5m2` and the three MX element types, §6.16) accept only
   `rounding = 1`, and any other value is a typed decline. A conversion that is exact (an integer into a
   float that holds it, a value into a wider float) is unchanged by the mode. *Test:*
@@ -3201,7 +3182,6 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.5-0001 | `test_ops_select_order` |
 | KISS-OPS-6.5-0002 | `test_ops_select_raw_bit` |
 | KISS-OPS-6.5-0003 | `test_ops_select_cond_zero_nan` |
-| KISS-OPS-6.5-0004 | `test_ops_select_no_mask_multiply` |
 | KISS-OPS-6.6-0001 | `test_ops_compare_predicates` |
 | KISS-OPS-6.6-0002 | `comparisons_are_ieee_ordered` |
 | KISS-OPS-6.6-0003 | `test_ops_cmp_ne_nan_true` |

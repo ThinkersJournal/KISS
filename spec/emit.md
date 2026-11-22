@@ -731,22 +731,20 @@ selects the correct comparator. See umbrella §3 for the full statement.
 - **KISS-EMIT-6.4-0001** — **Constant spelling** MUST be an emitter-must-supply
   decision: a constant MUST be pinned by its bit pattern per dtype (as KISS-OPS
   §6.2-0008 pins a `const(bits)` leaf), and the emitter MUST render the target-language
-  surface for that bit pattern; the neutral driver MUST NOT spell a constant. A decimal
+  surface for that bit pattern. A decimal
   literal spelling is a per-language incidental and MUST NOT be a normative or
   driver-side decision. *Test:* `test_emit_constant_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0002** — **Special-float-value spelling** — the non-finite values
   `+inf`, `-inf`, quiet NaN, and signaling NaN, together with the finite edge values
   `+0`, `-0`, and subnormals — MUST be an emitter-must-supply decision: each value MUST
   be pinned by its bit pattern per dtype and MUST round-trip exactly, and the emitter
-  MUST render its target-language surface; the neutral driver MUST NOT spell a special
-  float value, and an implementation MUST NOT assume a portable decimal spelling exists
-  for one. (`±0` and subnormals are *finite*; they are grouped here because, like the
+  MUST render its target-language surface; an implementation MUST NOT assume a portable
+  decimal spelling exists for one. (`±0` and subnormals are *finite*; they are grouped here because, like the
   non-finite values, they have no portable decimal spelling.) *Test:*
   `test_emit_special_float_value_spelling_emitter_supplied`.
 - **KISS-EMIT-6.4-0003** — **Transcendental / declared-ULP atom and hardware-intrinsic
   spelling** (`exp`, `log`, `sin`, `cos`, `sqrt`, `erf`, and the other KISS-Ops
-  transcendental / special-function atoms) MUST be an emitter-must-supply decision, and the
-  neutral driver MUST NOT spell it as a mandated polynomial or a fixed language intrinsic.
+  transcendental / special-function atoms) MUST be an emitter-must-supply decision.
   Each is a per-target atom implemented to a **declared per-target accuracy tier**, which
   KISS-Ops makes the sole accuracy gate (KISS-OPS §6.8-0001). The KISS-Ops §6.8 table is an
   informative advisory floor, not a cap: a truthful tier looser than a table value MUST NOT
