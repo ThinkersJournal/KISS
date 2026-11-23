@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Fail on unresolved merge-conflict markers in any tracked file (board 476 follow-up).
 
 origin/main carried a committed `<<<<<<< HEAD` / `=======` / `>>>>>>> origin/main` block in

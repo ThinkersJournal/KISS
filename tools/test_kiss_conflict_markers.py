@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT OR Apache-2.0
 """Controls for kiss_conflict_markers.py: it must go RED on the exact block that shipped on main
 (4ac8803, conformance/README.md:55/57/59), stay green on a setext underline, and enumerate via
 git ls-files (a marker in an untracked file is NOT seen)."""
