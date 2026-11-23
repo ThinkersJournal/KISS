@@ -3,8 +3,8 @@
 """Controls for kiss_conflict_markers.py: it must go RED on the exact block that shipped on main
 (4ac8803, conformance/README.md:55/57/59), stay green on a setext underline, and enumerate via
 git ls-files (a marker in an untracked file is NOT seen)."""
-import os
-import subprocess
+import shutil
+import subprocess  # nosec B404 - runs git and this tool with fixed arguments in a temp repo
 import sys
 import tempfile
 import unittest
@@ -13,6 +13,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import kiss_conflict_markers as cm  # noqa: E402
+
+GIT = shutil.which("git") or "git"
+
+
+def _tool(cwd):
+    return subprocess.run([sys.executable, str(HERE / "kiss_conflict_markers.py")],
+                          cwd=cwd, capture_output=True, text=True)  # nosec B603 - fixed arguments
+
 
 LT, EQ, GT = "<" * 7, "=" * 7, ">" * 7  # built, so this file itself carries no column-0 marker
 
@@ -34,19 +42,17 @@ class Markers(unittest.TestCase):
 
     def test_git_enumeration_sees_tracked_not_untracked(self):
         with tempfile.TemporaryDirectory() as d:
-            run = lambda *a: subprocess.run(["git", *a], cwd=d, check=True, capture_output=True)
+            run = lambda *a: subprocess.run([GIT, *a], cwd=d, check=True, capture_output=True)  # nosec B603 - fixed arguments
             run("init", "-q")
             (Path(d) / "tracked.md").write_text(f"{LT} HEAD\nx\n{EQ}\ny\n{GT} o\n")
             (Path(d) / "untracked.md").write_text(f"{LT} HEAD\n")
             run("add", "tracked.md")
-            r = subprocess.run([sys.executable, str(HERE / "kiss_conflict_markers.py")],
-                               cwd=d, capture_output=True, text=True)
+            r = _tool(d)
             self.assertEqual(r.returncode, 1, r.stdout)
             self.assertIn("tracked.md:1", r.stdout)
             self.assertNotIn("untracked.md", r.stdout)
             (Path(d) / "tracked.md").write_text("clean\n")
-            r = subprocess.run([sys.executable, str(HERE / "kiss_conflict_markers.py")],
-                               cwd=d, capture_output=True, text=True)
+            r = _tool(d)
             self.assertEqual(r.returncode, 0, r.stdout)
 
 

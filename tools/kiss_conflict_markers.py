@@ -19,7 +19,8 @@ Run: python tools/kiss_conflict_markers.py        exit 0 clean, 1 markers found.
 """
 from __future__ import annotations
 
-import subprocess
+import shutil
+import subprocess  # nosec B404 - runs `git ls-files` with fixed arguments in a developer or CI checkout
 import sys
 
 OPEN, CLOSE, MID = b"<<<<<<<", b">>>>>>>", b"======="
@@ -44,7 +45,10 @@ def find_markers(data: bytes) -> list[tuple[int, bytes]]:
 
 
 def tracked_files() -> list[str]:
-    out = subprocess.run(["git", "ls-files", "-z"], capture_output=True, check=True).stdout
+    git = shutil.which("git")
+    if not git:
+        raise SystemExit("kiss_conflict_markers: git is not on PATH")
+    out = subprocess.run([git, "ls-files", "-z"], capture_output=True, check=True).stdout  # nosec B603 - fixed arguments
     return [p for p in out.decode("utf-8", "surrogateescape").split("\0") if p]
 
 
