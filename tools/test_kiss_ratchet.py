@@ -65,7 +65,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kiss_trace  # noqa: E402 — on sys.path above; classify_ratchet + base_ledger_lint
 
 STEMS = ["umbrella", "announce", "classify", "ops", "grammar", "contract",
-         "synth", "consume", "emit", "conform", "kernel"]
+         "synth", "consume", "emit", "conform"]
 TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiss_trace.py")
 
 

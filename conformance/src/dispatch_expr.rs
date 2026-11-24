@@ -20,9 +20,8 @@
 //!     `param{i}` (an appended operand/param index, but no `[k]` subscript).
 //!
 //! A Domain-mode field (`invocation_domain` / `workgroup_sizing` / `count_to_grid`)
-//! MUST evaluate to a non-negative integer; a Structural-mode field
-//! (`thread_mapping` / `addressing_rule`) is exempt (class-2 strides may be
-//! negative). Any malformed or out-of-vocabulary expression is a typed
+//! MUST evaluate to a non-negative integer; Structural mode (used by the
+//! bind and layout evaluators, where class-2 strides may be negative) is exempt. Any malformed or out-of-vocabulary expression is a typed
 //! [`Decline`], never a panic (KISS-Conform §6.7).
 
 // ---- launch scalars (Contract §6.5-0004a) -------------------------------------
@@ -53,7 +52,7 @@ pub struct LaunchScalars {
 
 /// Whether the §6.6-0006 non-negative post-condition applies: Domain fields
 /// (`invocation_domain` / `workgroup_sizing` / `count_to_grid`) enforce it;
-/// Structural fields (`thread_mapping` / `addressing_rule`) do not.
+/// Structural evaluations (bind and layout, where strides may be negative) do not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EvalMode {
     Domain,

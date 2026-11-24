@@ -92,7 +92,6 @@ ROLE = {
     "consume":  "structural",
     "emit":     "structural",
     "conform":  "cross-cutting (tests every other sub-standard)",
-    "kernel":   "behavioural (kernel-body semantics; skeleton)",
 }
 
 _NUMWORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",

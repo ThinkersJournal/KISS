@@ -127,8 +127,9 @@ fn test_announce_device_accuracy_record() {
     assert_eq!(decode_response(&r), Err(AnnounceDecline::AccuracyNotCanonical));
     // with no accuracy records the count is the 4 bytes before the 1-byte correlation field
     let mut huge = with(|d| d.accuracy.clear());
-    // sk8: the `unnamed_count` (4 bytes) now sits between the accuracy records and the correlation field
-    let at = huge.len() - 9;
+    // sk8: the `unnamed_count` (4 bytes) and the 1-byte `cooperative_launch` (§6.6-0012) now sit between the
+    // accuracy records and the correlation field
+    let at = huge.len() - 10;
     huge[at..at + 4].copy_from_slice(&(MAX_ACCURACY_RECORDS + 1).to_le_bytes());
     assert_eq!(decode_response(&huge), Err(AnnounceDecline::AccuracyCountOverflow { got: MAX_ACCURACY_RECORDS + 1 }));
     // max_ulp u32::MAX means "no bound", and a ulp of 0 is a real (exact) bound, not "none"
@@ -155,7 +156,7 @@ fn test_announce_device_unnamed_types() {
     let many = |n: usize| with(|d| d.unnamed_types = (0..n).map(|i| vec![b'a' + (i % 26) as u8]).collect());
     assert!(decode_response(&many(MAX_UNNAMED_TYPES as usize)).is_ok());
     let mut huge = with(|d| d.unnamed_types.clear());
-    let at = huge.len() - 5; // the 4-byte `unnamed_count` before the 1-byte correlation field
+    let at = huge.len() - 6; // the 4-byte `unnamed_count`, then the 1-byte `cooperative_launch`, then the 1-byte correlation field
     huge[at..at + 4].copy_from_slice(&(MAX_UNNAMED_TYPES + 1).to_le_bytes());
     assert_eq!(decode_response(&huge), Err(AnnounceDecline::UnnamedCountOverflow { got: MAX_UNNAMED_TYPES + 1 }));
     let zero_len = with(|d| d.unnamed_types = vec![vec![]]);
@@ -167,6 +168,30 @@ fn test_announce_device_unnamed_types() {
     let mut cut = with(|d| d.unnamed_types = vec![id("vulkan:component_type:1")]);
     cut.truncate(cut.len() - 3);
     assert!(matches!(decode_response(&cut), Err(AnnounceDecline::Truncated { .. })));
+}
+
+// Backs[enforced]: KISS-ANNOUNCE-6.6-0012 — a device record ends with a u8 `cooperative_launch`, 1 (offered) or 0 (not offered); any other byte is a typed decline and a record that ends before the byte is a typed truncation.
+#[test]
+fn test_announce_device_cooperative_launch() {
+    let off = with(|d| d.cooperative_launch = false);
+    let on = with(|d| d.cooperative_launch = true);
+    assert!(!decode_response(&off).unwrap().devices[0].cooperative_launch);
+    assert!(decode_response(&on).unwrap().devices[0].cooperative_launch);
+    // the flag is the only byte that differs, and it is the last byte of the record, before the correlation field
+    assert_eq!(off.len(), on.len());
+    assert_ne!(off, on);
+    let at = off.iter().zip(&on).position(|(a, b)| a != b).unwrap();
+    assert_eq!((off[at], on[at]), (0, 1));
+    // a byte other than 0 or 1 is declined, never read as true
+    for bad in [2u8, 0x80, 0xFF] {
+        let mut b = off.clone();
+        b[at] = bad;
+        assert_eq!(decode_response(&b), Err(AnnounceDecline::BadCooperativeLaunch { got: bad }));
+    }
+    // a record cut off before the byte is a typed truncation
+    let mut cut = off.clone();
+    cut.remove(at);
+    assert!(decode_response(&cut).is_err());
 }
 
 // Backs[enforced]: KISS-ANNOUNCE-6.6-0009
