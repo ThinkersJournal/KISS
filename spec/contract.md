@@ -218,8 +218,8 @@ strided cell. Its contract carries:
   extents0[rank], i64 extents1[rank], i64 extentsOut[rank], i64 strides0[rank], i64
   strides1[rank], i64 stridesOut[rank], i64 n)`; `count_unit = elements`; `in_place =
   none`; `alignment_bytes` per the cell.
-- **Dispatch:** grid-stride mapping; `n` elements → grid; per-thread addressing via the
-  signed strides.
+- **Dispatch:** `n` elements → grid (`count_to_grid`); the kernel's own thread mapping and
+  addressing are not declared.
 - **Capabilities:** `accept_predicate = structure_key`; determinism class `exact-byte`;
   precision class `strict` (derived: ULP tier 0 with `bit_stability` `portable`, KISS-OPS-6.8-0008); cost class `elementwise`, cost `1 * n`.
 - **Guarantees:** reference function `add` (IEEE-754); ULP tier 0 (correctly rounded);
@@ -577,7 +577,7 @@ outer length-prefix (§6.1-0005).
   typed decline, any contract whose `contract_kind` is not exactly that token. *Test:*
   `test_contract_kind_recognized_token`.
 - **KISS-CONTRACT-6.1-0008** — The `contract_version` of **this** schema is the exact decimal
-  token `4`, and a contract conforming to this schema version MUST carry exactly that token
+  token `5`, and a contract conforming to this schema version MUST carry exactly that token
   (UTF-8, byte-exact). This clause states the **schema's own identity**; it does **not** confine
   a reader to a single version. **Which versions a reader accepts is governed by §6.1-0003** — a
   reader rejects, with a typed decline, a `contract_version` **it does not support** — and by
@@ -1069,21 +1069,37 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   operands, each with its own element; a kernel that hands back one packed buffer uses a
   bundle. *Test:* `test_contract_output_layout_bundle`. The overlap decline is also backed by `test_contract_bind_slot_overlap`.
 
+- **KISS-CONTRACT-6.5-0020** — A contract MUST state memory visibility only at the launch
+  boundary, for the operand buffers its Interface names (the table below), through the Guarantees
+  `entry_exit_visibility` field (§6.8-0014); a contract MUST NOT carry any field that states the
+  visibility, ordering or scheduling of memory only the kernel itself sees. *Informative table:*
+
+  | Memory | Visible to | What the contract states |
+  |---|---|---|
+  | An operand buffer in the `positional_signature` | the caller and the launched kernel, once the caller has ordered the launch after the buffer's producers | pointer, dtype, extents, strides (§6.5-0002); the output's visibility at completion is `entry_exit_visibility` (§6.8-0014) |
+  | A kernel's own scratch, shared, register or local memory, and any workspace the signature does not name | the kernel alone | nothing: it is the kernel's own business |
+  | A device's memory as seen by a launch that needs another launch to be resident | the device | `requires_co_resident_launch` (§6.7-0007), met only on a device that offers `cooperative_launch` |
+
+  *Test:* `test_contract_visibility_boundary_only`.
+
 ### 6.6 Dispatch section
 
 - **KISS-CONTRACT-6.6-0001** — The Dispatch section is **always present** (§6.11-0004 requires all
   seven section blocks); what is optional is its launch **geometry** (§6.6-0007). A kernel that
   **declares** launch geometry MUST carry the launch model as exactly the fields
-  `{invocation_domain, workgroup_sizing, count_to_grid, thread_mapping, addressing_rule}`,
-  serialized in that order (§6.11-0005), and MUST NOT declare that geometry "provider-internal"
-  or omit any of these fields, since a consumer launches the kernel from this section; but a
-  **geometry-agnostic** kernel (§6.6-0007) MAY instead carry, as the section's sole field line, the
-  carried sentinel `dispatch_model = geometry-agnostic` in place of the five fields, and a consumer
-  MUST NOT require the geometry fields for it. The Dispatch section thus carries **exactly one of
-  two** alternatives — the five geometry fields in the order above, or the single
+  `{invocation_domain, workgroup_sizing, count_to_grid}`, serialized in that order (§6.11-0005),
+  and MUST NOT declare that geometry "provider-internal" or omit any of these fields, since a
+  consumer launches the kernel from this section; but a **geometry-agnostic** kernel (§6.6-0007)
+  MAY instead carry, as the section's sole field line, the carried sentinel
+  `dispatch_model = geometry-agnostic` in place of the three fields, and a consumer MUST NOT
+  require the geometry fields for it. The Dispatch section thus carries **exactly one of two**
+  alternatives — the three geometry fields in the order above, or the single
   `dispatch_model = geometry-agnostic` line — and a reader MUST reject anything else, including a
-  proper subset of the five fields and `dispatch_model` alongside any geometry field. *Test:*
-  `test_contract_dispatch_field_schema`.
+  proper subset of the three fields and `dispatch_model` alongside any geometry field. The
+  Dispatch section carries **no field about how a kernel indexes its own threads or addresses its
+  operands**: that is the kernel's own business, and KISS-Contract provides no way to constrain it
+  (the former `thread_mapping` and `addressing_rule` fields, and their clause `KISS-CONTRACT-6.6-0004`,
+  are retired and their IDs are never reused). *Test:* `test_contract_dispatch_field_schema`.
 - **KISS-CONTRACT-6.6-0002** — The `invocation_domain` MUST declare the iteration/index frame
   derived from the operand extents (the widest-rank iteration frame) as a machine-evaluable
   expression (§6.6-0006) over the launch-scalar symbols; an implementation MUST NOT declare an
@@ -1094,26 +1110,13 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   (§6.5-0008), maps to grid size; the expression MUST divide the element count by `w` for a
   `vectors_xw` count before deriving the grid, and an implementation MUST NOT state a grid
   derivation that ignores the `count_unit`. *Test:* `test_contract_count_to_grid`.
-- **KISS-CONTRACT-6.6-0004** — The `thread_mapping` and `addressing_rule` are **thread-index-free
-  structural model declarations** (§6.6-0006): the §6.6-0006 grammar carries no thread/lane index
-  symbol (by design — §6.6-0008), so these fields declare only the parameters expressible without
-  one. `thread_mapping` MUST declare the **grid-stride constant** — the stride, in elements,
-  between successive elements one thread handles (for a standard grid-stride launch, the total
-  thread count) — and `addressing_rule` MUST declare the per-operand class-2 **signed-stride** and
-  class-4 **base-offset** coefficients (§6.5-0004a, subscripted per axis via the §6.6-0006 `sym[k]`
-  operator) that scale a thread's element index into an address; an implementation MUST NOT omit
-  the signed-stride / base-offset coefficients for a non-packed or offset cell. The **per-thread
-  element index itself** is the normative **grid-stride semantic** — the element handled by thread
-  `t` on iteration `k` is `t + k · thread_mapping`, applied by the executor/driver — and is **not**
-  a declared expression (there is no per-thread index symbol to spell it; that surface is reserved
-  to §6.6-0008, post-v1). *Test:* `test_contract_thread_and_addressing`.
 - **KISS-CONTRACT-6.6-0005** — The Dispatch section MUST be consistent with the Interface
   section: the launch scalars the addressing and grid derivations reference MUST be exactly
   those declared in the Interface `positional_signature` (§6.5), and an implementation MUST
   NOT reference in Dispatch a launch scalar absent from the Interface. *Test:*
   `test_contract_dispatch_interface_consistent`.
 - **KISS-CONTRACT-6.6-0006** — Each Dispatch derivation field (`invocation_domain`,
-  `workgroup_sizing`, `count_to_grid`, `thread_mapping`, `addressing_rule`) MUST be a
+  `workgroup_sizing`, `count_to_grid`) MUST be a
   machine-evaluable expression, not free prose, in the pinned expression grammar: an
   expression is an ASCII string over the launch-scalar symbol vocabulary of this contract (§6.5-0004a /
   §6.7-0006), non-negative decimal integer literals, the binary operators `+ - * /`, the
@@ -1127,36 +1130,22 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   left-associative. Evaluating an `invocation_domain`,
   `workgroup_sizing`, or `count_to_grid` expression against concrete launch-scalar values MUST
   yield a non-negative integer (or a fixed-length tuple of such, for a multi-dimensional
-  workgroup/grid); `thread_mapping` and `addressing_rule` are structural model declarations
-  (per KISS-Emit §6.3-0003 the concrete signed-stride index arithmetic renders no target
-  surface and is driver-owned) and are NOT subject to the non-negative-integer post-condition,
-  since class-2 strides may be negative. An implementation MUST NOT carry a Dispatch derivation
+  workgroup/grid). An implementation MUST NOT carry a Dispatch derivation
   field the grammar does not accept, MUST NOT reference a symbol absent from the launch-scalar
   symbol vocabulary of this contract, MUST NOT subscript a scalar symbol or use a rank-length array symbol without a
   subscript, and MUST NOT use an out-of-bounds subscript; each such case is a typed decline.
   *Test:* `test_contract_dispatch_expressions_machine_evaluable`.
-- **KISS-CONTRACT-6.6-0007** — A **geometry-agnostic** kernel — one launched grid-stride from a
+- **KISS-CONTRACT-6.6-0007** — A **geometry-agnostic** kernel — one launched from a
   host-computed launch dimension (`Dim3`) whose element→thread mapping is not consumer-visible —
   carries a Dispatch section whose sole field line is the **carried sentinel**
-  `dispatch_model = geometry-agnostic` in place of the five geometry fields. The Dispatch section is
+  `dispatch_model = geometry-agnostic` in place of the three geometry fields. The Dispatch section is
   still **present** — §6.11-0004 requires all seven section blocks — so it is the section's
   *content* that is the sentinel, never the section that is absent. KISS-Conform MUST accept this
-  sentinel Dispatch section and MUST NOT require any of the five geometry fields for it. Launch geometry is then the **executor's**, not the
-  contract's — the consumer launches the kernel with its own `Dim3` under the grid-stride semantic
-  (§6.6-0004), needing no declared geometry (this is KISS's answer to the "a kernel contract should
+  sentinel Dispatch section and MUST NOT require any of the three geometry fields for it. Launch geometry is then the **executor's**, not the
+  contract's — the consumer launches the kernel with its own `Dim3` needing no declared geometry (this is KISS's answer to the "a kernel contract should
   not declare launch geometry" objection, PRIOR-ART §5.1). A contract MUST NOT carry a **partial**
-  Dispatch section: it declares either all five fields (§6.6-0001) or the carried sentinel line,
+  Dispatch section: it declares either all three fields (§6.6-0001) or the carried sentinel line,
   never a subset and never both. *Test:* `test_contract_dispatch_optional`.
-- **KISS-CONTRACT-6.6-0008** — KISS-Contract **reserves** — as a **named post-v1 extension**, NOT
-  required for v1 conformance — a **richer thread-mapping form** for launches whose element→thread
-  mapping is neither grid-stride nor thread-index-free (e.g. a pinned-tile / warp-lane→output-tile
-  schedule, as in a tiled tensor-core GEMM): either a named **tile-mapping** rule or a bound
-  per-thread index symbol (`gid`) added to the §6.6-0006 grammar. A v1 contract MUST express its
-  launch as either a geometry-agnostic kernel (§6.6-0007) or a grid-stride Dispatch section with
-  thread-index-free coefficients (§6.6-0004); KISS-Conform MUST NOT require the reserved form in v1,
-  MUST NOT reject a v1 kernel for not carrying it, and the §6.6-0006 grammar MUST remain
-  **thread-index-free** in v1 (no per-thread index symbol). *Test:*
-  `test_contract_reserved_tile_mapping`.
 - **KISS-CONTRACT-6.6-0009** — The §6.6-0006 expression grammar's **division semantics** MUST be
   pinned, because the grammar's *bytes* are determinism-class exact-byte (§6.0-0001) while its
   *evaluated value* is what a consumer launches with: (a) the binary `/` MUST **truncate toward
@@ -1179,8 +1168,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
 - **KISS-CONTRACT-6.7-0001** — The Capabilities section MUST carry exactly the fields
   `{accept_predicate, supported_dtype_set, awkward_layout_strategy, in_place_eligible_variants,
   index_width, determinism_class, precision_class, cost}`, serialized in that order
-  (§6.11-0005); an implementation MUST NOT omit any of these fields. *Test:*
-  `test_contract_capabilities_field_schema`.
+  (§6.11-0005), plus the one optional trailing field of §6.7-0007; an implementation MUST NOT omit
+  any of the required fields. *Test:* `test_contract_capabilities_field_schema`.
 - **KISS-CONTRACT-6.7-0002** — The Capabilities `accept_predicate` MUST be the same
   KISS-Classify `structure_key` the Identity section carries (§6.3-0002) — the per-kernel
   accept-predicate — carried byte-for-byte identically; an implementation MUST NOT carry a
@@ -1218,13 +1207,24 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   of a shape-parameterized cost expression, and MUST NOT reference a symbol absent from the
   launch-scalar symbol vocabulary of this contract. *Test:* `test_contract_cost_expressions`.
 
+- **KISS-CONTRACT-6.7-0007** — The Capabilities section MAY carry one **optional** field
+  `requires_co_resident_launch`, pinned **last**, after `cost` (§6.11-0005). Its value is exactly
+  `true` or `false`; an **absent** field means `false`. `true` states that the kernel waits on the
+  progress of other launches (a barrier or flag that spans launches), so it can complete only if
+  those launches are resident on the device at the same time (a **cooperative launch**). A consumer
+  MUST NOT launch a kernel that declares `true` on a device whose Announce device record does not
+  offer `cooperative_launch` (KISS-ANNOUNCE-6.6-0012); it MUST decline instead. A kernel that does
+  not wait on another launch MUST NOT declare `true`. A reader MUST decline, with a typed decline,
+  any other value. The field states only what the kernel **requires of the device**, never how the
+  kernel synchronises. *Test:* `test_contract_requires_co_resident_launch_field`.
+
 ### 6.8 Guarantees section
 
 - **KISS-CONTRACT-6.8-0001** — The Guarantees section MUST carry exactly the fields
   `{reference_function, per_backend_ulp_tiers, determinism_class, math_fidelity,
   accumulation_type, bit_stability, audited_status, cost_provenance}`, serialized in that
-  order (§6.11-0005); an
-  implementation MUST NOT omit any of these fields, and MUST NOT scatter these facts across
+  order (§6.11-0005), plus the one optional trailing field of §6.8-0014; an
+  implementation MUST NOT omit any of the required fields, and MUST NOT scatter these facts across
   other sections. The `audited_status` field is a **derived** trust field whose single
   normative home is this Guarantees section (§6.8-0008/-0009/-0010); it MUST NOT be carried in
   the Provenance section (§6.9-0001). *Test:* `test_contract_guarantees_field_schema`.
@@ -1286,8 +1286,8 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   position's contribution count; *Draft change, CireSnave 2026-11-12, board 417 "A"*), MUST be declared in the
   Guarantees (§6.8-0002 / §6.8-0004) as a **ULP-of-A band** of the form
   `k(S,A) · N · eps_A · |max partial sum|` — where `eps_A` is the accumulator dtype's unit
-  roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell calibrated
-  constant, and `|max partial sum|` is the maximum absolute **running partial of the
+  roundoff, `N` is the runtime reduction extent, and `k(S,A)` is the per-cell constant
+  the kernel declares, and `|max partial sum|` is the maximum absolute **running partial of the
   KISS-OPS §6.17-0009 per-cell reference evaluation itself** (ascending index, each input
   rounded to `S`, each accumulate rounded to `A`) over the invocation's inputs — not of the
   candidate's own schedule, and not a supremum over legal schedules — and MUST bound reassociation error against the per-cell reference of KISS-OPS
@@ -1297,13 +1297,12 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   only the `(compute, accumulator)` class via the accumulator coordinate (the contraction
   `<acc>` of KISS-CLASSIFY §6.7-0006, or the non-contraction accumulator-and-mode field of
   §6.7-0013 (realizing §6.7-0012)), while the numeric FORMULA lives here in the Contract Guarantees and is
-  evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell calibration
-  constant declared here, and an implementation MUST be able to produce, for each declared
-  `k(S,A)`, its **calibration record**: the method by which it was calibrated, the corpus
-  it was measured over, and the margin applied (a margin of at least 1 over the worst
-  measured ratio of deviation to `N · eps_A · |max partial sum|`). This clause pins that the
-  record exists, never a value of `k`; the record is not a contract field and adds no
-  bytes. An implementation MUST NOT key `N`, and MUST NOT declare this
+  evaluated per-invocation with the real `N`; `k(S,A)` is the single per-cell constant
+  the kernel declares here; this clause pins the form of the band, never a value of `k`, and
+  states no requirement on how `k` was arrived at (*Draft change, CireSnave 2026-11-21, board 481 B1:
+  "Keep the range. Drop the calibration record." The former requirement that an implementation produce a
+  calibration record, the method, the corpus and a margin of at least 1, is removed; a kernel may now
+  declare `k` without one*). An implementation MUST NOT key `N`, and MUST NOT declare this
   tolerance as a fixed constant or as a bound against cross-accumulator wide truth. A
   comparator applying this tolerance MUST use it as an **absolute** band — it scales with
   `|max partial sum|`, NOT with `|result|` — and MUST NOT convert it to a metric taken in
@@ -1376,6 +1375,18 @@ the runtime launch scalars in the single pinned order of §6.5-0004a.
   between runs on the same hardware. An implementation MUST NOT define a parallel reproducibility
   vocabulary, and MUST NOT write the former two-value spelling (`bit-stable` /
   `bit-unstable`). *Test:* `test_contract_bit_stability_scope`.
+
+- **KISS-CONTRACT-6.8-0014** — The Guarantees section MAY carry one **optional** field
+  `entry_exit_visibility`, pinned **last**, after `cost_provenance` (§6.11-0005). Its value is
+  exactly one of the two tokens `caller-ordered` and `visible-at-exit`; an **absent** field means
+  `caller-ordered`. At **entry** every kernel assumes its input buffers are complete and visible to
+  it, which the caller ensures by ordering the launch after their producers. `caller-ordered` states
+  that the kernel's writes to its output buffers are visible to later work only when the caller
+  orders that work after the launch; `visible-at-exit` states that the kernel's output writes are
+  visible to any work the caller orders after the launch completes, with no further caller-side
+  fence. The field is a promise at the launch boundary and never a mechanism (KISS-Contract states
+  nothing about how a kernel orders its own memory, §6.5-0020). A reader MUST decline, with a typed
+  decline, any other value. *Test:* `test_contract_entry_exit_visibility_field`.
 
 ### 6.9 Provenance section
 
@@ -1548,7 +1559,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   pinned last in §6.5-0001) MAY be absent; when absent its line is
   omitted, and when present it MUST occupy its pinned position — its absence is **not** a
   field-order or missing-field decline. A field-schema clause MAY instead pin **alternative**
-  field-line sets — exactly one of which MUST be present (the Dispatch section's five-geometry-fields
+  field-line sets — exactly one of which MUST be present (the Dispatch section's three-geometry-fields
   form versus its `dispatch_model = geometry-agnostic` sentinel, §6.6-0001/§6.6-0007); a reader
   matches the block against each alternative and declines only if it matches none. *Test:*
   `test_contract_document_field_order`.
@@ -1589,7 +1600,7 @@ renders the §2.5 `add` contract to its document bytes as the first golden docum
   it, MUST NOT place the root first, and MUST NOT reference a later index in `child_edges`.
   *Test:* `test_contract_text_op_dag`.
 - **KISS-CONTRACT-6.11-0008** — Each Dispatch derivation field (`invocation_domain`,
-  `workgroup_sizing`, `count_to_grid`, `thread_mapping`, `addressing_rule`) MUST be encoded as a
+  `workgroup_sizing`, `count_to_grid`) MUST be encoded as a
   string value (§6.11-0001) carrying a machine-evaluable expression in the pinned grammar of
   §6.6-0006; a reader MUST reject, with a typed decline, a Dispatch field that is not an
   expression the §6.6-0006 grammar accepts over the launch-scalar symbol vocabulary of the contract being read. *Test:*
@@ -1885,14 +1896,13 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.5-0017 | `test_contract_output_layout_hier` |
 | KISS-CONTRACT-6.5-0018 | `test_contract_output_layout_swizzle` |
 | KISS-CONTRACT-6.5-0019 | `test_contract_output_layout_bundle` |
+| KISS-CONTRACT-6.5-0020 | `test_contract_visibility_boundary_only` |
 | KISS-CONTRACT-6.6-0001 | `test_contract_dispatch_field_schema` |
 | KISS-CONTRACT-6.6-0002 | `test_contract_invocation_domain` |
 | KISS-CONTRACT-6.6-0003 | `test_contract_count_to_grid` |
-| KISS-CONTRACT-6.6-0004 | `test_contract_thread_and_addressing` |
 | KISS-CONTRACT-6.6-0005 | `test_contract_dispatch_interface_consistent` |
 | KISS-CONTRACT-6.6-0006 | `test_contract_dispatch_expressions_machine_evaluable` |
 | KISS-CONTRACT-6.6-0007 | `test_contract_dispatch_optional` |
-| KISS-CONTRACT-6.6-0008 | `test_contract_reserved_tile_mapping` |
 | KISS-CONTRACT-6.6-0009 | `test_contract_division_semantics_are_pinned` |
 | KISS-CONTRACT-6.7-0001 | `test_contract_capabilities_field_schema` |
 | KISS-CONTRACT-6.7-0002 | `test_contract_capabilities_accept_matches_identity` |
@@ -1900,6 +1910,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.7-0004 | `test_contract_capabilities_determinism_from_ops` |
 | KISS-CONTRACT-6.7-0005 | `test_contract_precision_class_consistent` |
 | KISS-CONTRACT-6.7-0006 | `test_contract_cost_expressions` |
+| KISS-CONTRACT-6.7-0007 | `test_contract_requires_co_resident_launch_field` |
 | KISS-CONTRACT-6.8-0001 | `test_contract_guarantees_field_schema` |
 | KISS-CONTRACT-6.8-0002 | `test_contract_precision_names_reference` |
 | KISS-CONTRACT-6.8-0003 | `test_contract_determinism_class_imported` |
@@ -1914,6 +1925,7 @@ restated as a free-standing KISS-Contract clause.
 | KISS-CONTRACT-6.8-0011 | `test_contract_accumulation_type_matches_key_acc` |
 | KISS-CONTRACT-6.8-0012 | `test_contract_accumulator_tolerance_band` |
 | KISS-CONTRACT-6.8-0013 | `test_contract_bit_stability_scope` |
+| KISS-CONTRACT-6.8-0014 | `test_contract_entry_exit_visibility_field` |
 | KISS-CONTRACT-6.9-0001 | `test_contract_provenance_field_schema` |
 | KISS-CONTRACT-6.9-0002 | `test_contract_provenance_source` |
 | KISS-CONTRACT-6.9-0003 | `test_contract_provenance_revision_matches_identity` |
@@ -2085,7 +2097,7 @@ field, in field-schema order (§6.3-0001); `revision_hash` is the opaque-blob te
 ```
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 4
+contract_version = 5
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;st/00/v1/d16/f/f32;co/00/v4/d16/f/f32|-
@@ -2107,7 +2119,7 @@ one-node `add` DAG has the root as its only (last) element with empty `child_edg
 
 **Interface block (§6.5-0001; heading id 3)** — the seven Interface fields in schema order. The
 `positional_signature` and `launch_scalars` are empty for this contract, which is what forces the
-Dispatch block below to carry the geometry-agnostic sentinel rather than the five geometry fields
+Dispatch block below to carry the geometry-agnostic sentinel rather than the three geometry fields
 (§6.6-0005 requires the geometry derivations to reference exactly these scalars):
 
 ```
@@ -2123,8 +2135,8 @@ alignment_bytes = 1
 
 **Dispatch block (§6.6-0001/-0007; heading id 4)** — the **carried sentinel**. The section is
 present and its *content* is the sentinel; §6.6-0007 is explicit that it is "never the section that
-is absent". A consumer MUST NOT require the five geometry fields for it, and launch geometry is the
-executor's under the grid-stride semantic (§6.6-0004):
+is absent". A consumer MUST NOT require the three geometry fields for it, and launch geometry is the
+executor's:
 
 ```
 [section:4:dispatch]

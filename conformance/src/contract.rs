@@ -303,7 +303,7 @@ pub enum ContractDecline {
     MalformedHeader,
     /// The `contract_kind` is not the recognized token `kiss-contract` (§6.1-0007).
     UnknownKind { got: String },
-    /// The `contract_version` is not `4` (§6.1-0008).
+    /// The `contract_version` is not `5` (§6.1-0008).
     UnknownVersion { got: String },
     /// The declared body length does not equal the actual body byte count
     /// (§6.11-0003). Carries the declared length as a `u64` — it is never used to
@@ -397,7 +397,7 @@ pub fn read_document(doc: &[u8]) -> Result<ContractHeader, ContractDecline> {
     }
     // (4) Supported version (§6.1-0008).
     let version = parts[2];
-    if version != "4" {
+    if version != "5" {
         return Err(ContractDecline::UnknownVersion { got: version.to_string() });
     }
     // (5) `len=<N>` — decimal body byte count.
@@ -661,6 +661,12 @@ pub const CAPABILITIES_FIELDS: [&str; 8] = [
     "precision_class",
     "cost",
 ];
+/// The Capabilities section's optional trailing field (§6.7-0007), pinned after `cost`.
+pub const CAPABILITIES_OPTIONAL_FIELDS: [&str; 1] = ["requires_co_resident_launch"];
+/// The Guarantees section's optional trailing field (§6.8-0014), pinned after `cost_provenance`.
+pub const GUARANTEES_OPTIONAL_FIELDS: [&str; 1] = ["entry_exit_visibility"];
+/// The two values of `entry_exit_visibility` (§6.8-0014); an absent field means the first.
+pub const ENTRY_EXIT_VISIBILITY_TOKENS: [&str; 2] = ["caller-ordered", "visible-at-exit"];
 /// The Provenance section's field schema (§6.9-0001), in the pinned §6.11-0005 order.
 pub const PROVENANCE_FIELDS: [&str; 5] = [
     "kernel_source",
@@ -683,14 +689,21 @@ pub fn parse_interface_block(block: &[u8]) -> Result<Vec<(String, String)>, Sect
 /// Read + validate a Capabilities section block (§6.7-0001). Forbids the Interface-only fields
 /// `count_unit` / `in_place` / `alignment_bytes` (§6.5-0001: they MUST NOT live in Capabilities).
 pub fn parse_capabilities_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(
+    let fields = parse_section_block(
         block,
         5,
         "capabilities",
         &CAPABILITIES_FIELDS,
-        &[],
+        &CAPABILITIES_OPTIONAL_FIELDS,
         &["count_unit", "in_place", "alignment_bytes"],
-    )
+    )?;
+    // §6.7-0007: the optional `requires_co_resident_launch` is exactly `true` or `false`.
+    if let Some((_, v)) = fields.iter().find(|(k, _)| k == "requires_co_resident_launch") {
+        if v != "true" && v != "false" {
+            return Err(SectionDecline::BadFieldValue { field: "requires_co_resident_launch", got: v.clone() });
+        }
+    }
+    Ok(fields)
 }
 
 /// Read + validate a Provenance section block (§6.9-0001). Forbids `audited_status` (a derived
@@ -742,7 +755,14 @@ pub fn parse_identity_block(block: &[u8]) -> Result<Vec<(String, String)>, Secti
 
 /// Read + validate a Guarantees section block (§6.8-0001).
 pub fn parse_guarantees_block(block: &[u8]) -> Result<Vec<(String, String)>, SectionDecline> {
-    parse_section_block(block, 6, "guarantees", &GUARANTEES_FIELDS, &[], &[])
+    let fields = parse_section_block(block, 6, "guarantees", &GUARANTEES_FIELDS, &GUARANTEES_OPTIONAL_FIELDS, &[])?;
+    // §6.8-0014: the optional `entry_exit_visibility` is one of the two pinned tokens.
+    if let Some((_, v)) = fields.iter().find(|(k, _)| k == "entry_exit_visibility") {
+        if !ENTRY_EXIT_VISIBILITY_TOKENS.contains(&v.as_str()) {
+            return Err(SectionDecline::BadFieldValue { field: "entry_exit_visibility", got: v.clone() });
+        }
+    }
+    Ok(fields)
 }
 
 /// A typed decline from [`check_record_consistency`]. Never a panic.
@@ -1065,7 +1085,7 @@ fn well_formed_body() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("4".into())),
+            ("contract_version", Value::Str("5".into())),
         ],
     )
 }
@@ -1077,7 +1097,7 @@ pub fn well_formed_document() -> Vec<u8> {
     let body = well_formed_body();
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "4".into(),
+        contract_version: "5".into(),
         body,
     }
     .encode()
@@ -1095,7 +1115,7 @@ pub fn well_formed_document() -> Vec<u8> {
 pub const APPENDIX_C_IDENTITY_GOLDEN: &str = "\
 [section:1:identity]
 contract_kind = kiss-contract
-contract_version = 4
+contract_version = 5
 kernel_name = add_f32_strided_sm89
 revision_hash = 4:deadbeef
 accept_predicate = sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;st/00/v1/d16/f/f32;co/00/v4/d16/f/f32|-
@@ -1110,7 +1130,7 @@ pub fn appendix_c_identity_block() -> Vec<u8> {
         "identity",
         &[
             ("contract_kind", Value::Str("kiss-contract".into())),
-            ("contract_version", Value::Str("4".into())),
+            ("contract_version", Value::Str("5".into())),
             ("kernel_name", Value::Str("add_f32_strided_sm89".into())),
             ("revision_hash", Value::Blob(vec![0xde, 0xad, 0xbe, 0xef])),
             ("accept_predicate", Value::Str("sk8|ew2|f32|cuda:sm89|ix32|grid|r2|co/00/v4/d16/f/f32;st/00/v1/d16/f/f32;co/00/v4/d16/f/f32|-".into())),
@@ -1329,7 +1349,7 @@ pub fn appendix_c_body() -> Vec<u8> {
 pub fn appendix_c_golden_document() -> Vec<u8> {
     Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "4".into(),
+        contract_version: "5".into(),
         body: appendix_c_body(),
     }
     .encode()
@@ -1476,7 +1496,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
     let owned_body = well_formed_body();
     let body = &owned_body[..];
     let kind = "kiss-contract";
-    let version = "4";
+    let version = "5";
     let len_owned = format!("len={}", body.len());
     let crc_owned = format!("crc32={:08x}", crc32_ieee(body));
     let (len_f, crc_f) = (len_owned.as_str(), crc_owned.as_str());
@@ -1583,7 +1603,7 @@ pub fn malformed_contract_vectors() -> Vec<NegativeVector> {
         name: "headingless body (framing valid, no first section heading)",
         doc: Document {
             contract_kind: "kiss-contract".into(),
-            contract_version: "4".into(),
+            contract_version: "5".into(),
             body: headless_body,
         }
         .encode(),

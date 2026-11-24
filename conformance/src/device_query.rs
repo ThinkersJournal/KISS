@@ -69,6 +69,8 @@ pub struct DeviceRecord {
     /// `<namespace>:<kind>:<value>` bytes, in the order the provider reports them. A non-empty list means the
     /// record's `target` token and dtype sets under-claim.
     pub unnamed_types: Vec<Vec<u8>>,
+    /// `true` when the device offers cooperative launch (§6.6-0012): a trailing u8 on the wire, `1` or `0`.
+    pub cooperative_launch: bool,
 }
 
 /// A device-query request (§6.6-0003).
@@ -149,6 +151,7 @@ impl DeviceRecord {
             b.extend_from_slice(&(u.len() as u32).to_le_bytes());
             b.extend_from_slice(u);
         }
+        b.push(u8::from(self.cooperative_launch));
     }
 }
 
@@ -301,7 +304,12 @@ fn read_device(c: &mut Cursor, semantic: bool) -> Result<DeviceRecord, AnnounceD
         }
         unnamed_types.push(c.take(len as usize, "unnamed_type")?.to_vec());
     }
-    let rec = DeviceRecord { device_id, target, store_dtypes, compute_dtypes, accuracy, unnamed_types };
+    let cooperative_launch = match c.u8("cooperative_launch")? {
+        0 => false,
+        1 => true,
+        got => return Err(AnnounceDecline::BadCooperativeLaunch { got }),
+    };
+    let rec = DeviceRecord { device_id, target, store_dtypes, compute_dtypes, accuracy, unnamed_types, cooperative_launch };
     if semantic {
         check_record(&rec)?;
     }
@@ -431,6 +439,8 @@ pub fn reference_device() -> DeviceRecord {
         ],
         // the reference device exposes no type KISS cannot name; a device that does lists it here (§6.6-0011)
         unnamed_types: vec![],
+        // the reference device does not offer cooperative launch (§6.6-0012)
+        cooperative_launch: false,
     }
 }
 

@@ -14,6 +14,9 @@ follows is only what survived.
 **The headline: the blockers are not missing code. They are missing decisions and missing
 bytes.** Every item below is answerable from the desk. None needs hardware.
 
+> **Board 476 (2026-11-21):** `thread_mapping`, `addressing_rule` and `KISS-CONTRACT-6.6-0004` no longer exist (Dispatch
+> declares three fields); the passages below that name them are history.
+>
 > **Dated snapshot — read this as of 2026-07-15; several items below are now closed
 > (update 2026-07-23).** (1) **§1.4 Dispatch is resolved.** The §6.6-0006 grammar gained `/`,
 > `ceil_div`, tuple-valued results and an element subscript, so `ceil(n/block)` and

@@ -98,6 +98,8 @@ each now tracked:
   per-thread arithmetic, KISS-Emit §6.3-0003) exempt from the non-negative-integer
   post-condition. The grammar now expresses exactly its own fields, thread-index-free;
   `KISS-CONTRACT-6.6-0006` moves `untestable` → `untested` in `UNBACKED.tsv`.
+  **Superseded (board 476, CireSnave 2026-11-21):** `thread_mapping`, `addressing_rule` and `KISS-CONTRACT-6.6-0004` are
+  retired (IDs burned); the Dispatch section declares only `invocation_domain`, `workgroup_sizing` and `count_to_grid`.
 - **#44** — `KISS-CONTRACT-6.7-0006` / `-6.8-0002`: §6.11 pins no byte layout for the
   compound `cost` and `per_backend_ulp_tiers` fields, and **no float encoding exists
   anywhere in KISS-Contract** — so no fractional value (rel/abs error) can be byte-compared.

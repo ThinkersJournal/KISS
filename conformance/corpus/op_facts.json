@@ -1,5 +1,5 @@
 {
-  "schema": "kiss-op-facts-v1",
+  "schema": "kiss-op-facts-v2",
   "generated_from": "tools/kiss_op_facts.py (python tools/kiss_op_facts.py; reads spec/ops.md)",
   "fact_clauses": {
     "family": [
@@ -36,9 +36,6 @@
     ],
     "index_operand_role": [
       "KISS-OPS-6.11-0012"
-    ],
-    "kernel_rules": [
-      "KISS-KERNEL-6.1-0001"
     ]
   },
   "ops": {
@@ -52,8 +49,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "acos": {
       "family": "transcendental",
@@ -65,8 +61,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "acosh": {
       "family": "transcendental",
@@ -78,8 +73,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "add": {
       "family": "arithmetic",
@@ -91,8 +85,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "all": {
       "family": "reduction",
@@ -107,8 +100,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "any": {
       "family": "reduction",
@@ -123,8 +115,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "argmax": {
       "family": "reduction",
@@ -141,8 +132,7 @@
       ],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "argmin": {
       "family": "reduction",
@@ -159,8 +149,7 @@
       ],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "asin": {
       "family": "transcendental",
@@ -172,8 +161,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "asinh": {
       "family": "transcendental",
@@ -185,8 +173,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "atan": {
       "family": "transcendental",
@@ -198,8 +185,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "atan2": {
       "family": "binary_math",
@@ -211,8 +197,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "atanh": {
       "family": "transcendental",
@@ -224,8 +209,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "avg_pool": {
       "family": "window",
@@ -246,8 +230,7 @@
       ],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "bit_and": {
       "family": "bitwise",
@@ -259,8 +242,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "bit_not": {
       "family": "bitwise",
@@ -272,8 +254,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "bit_or": {
       "family": "bitwise",
@@ -285,8 +266,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "bit_xor": {
       "family": "bitwise",
@@ -298,8 +278,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "bitcast": {
       "family": "conversion",
@@ -313,8 +292,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cabs": {
       "family": "complex",
@@ -326,8 +304,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cadd": {
       "family": "complex",
@@ -339,8 +316,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "carg": {
       "family": "complex",
@@ -352,8 +328,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cast": {
       "family": "conversion",
@@ -369,8 +344,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cbrt": {
       "family": "transcendental",
@@ -382,8 +356,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cconj": {
       "family": "complex",
@@ -395,8 +368,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cdiv": {
       "family": "complex",
@@ -408,8 +380,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "ceil": {
       "family": "rounding",
@@ -421,8 +392,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cexp": {
       "family": "complex",
@@ -434,8 +404,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cim": {
       "family": "complex-bridge",
@@ -447,8 +416,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "clog": {
       "family": "complex",
@@ -460,8 +428,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "clz": {
       "family": "bitwise",
@@ -473,8 +440,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmake": {
       "family": "complex-bridge",
@@ -486,8 +452,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_eq": {
       "family": "comparison",
@@ -499,8 +464,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_ge": {
       "family": "comparison",
@@ -512,8 +476,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_gt": {
       "family": "comparison",
@@ -525,8 +488,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_le": {
       "family": "comparison",
@@ -538,8 +500,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_lt": {
       "family": "comparison",
@@ -551,8 +512,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmp_ne": {
       "family": "comparison",
@@ -564,8 +524,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cmul": {
       "family": "complex",
@@ -577,8 +536,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cneg": {
       "family": "complex",
@@ -590,8 +548,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "concat": {
       "family": "access-primitive",
@@ -605,8 +562,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "copysign": {
       "family": "binary_math",
@@ -618,8 +574,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cos": {
       "family": "transcendental",
@@ -631,8 +586,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cosh": {
       "family": "transcendental",
@@ -644,8 +598,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cpow": {
       "family": "complex",
@@ -657,8 +610,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cre": {
       "family": "complex-bridge",
@@ -670,8 +622,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "csqrt": {
       "family": "complex",
@@ -683,8 +634,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "csub": {
       "family": "complex",
@@ -696,8 +646,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "ctz": {
       "family": "bitwise",
@@ -709,8 +658,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cummax": {
       "family": "scan",
@@ -724,8 +672,7 @@
       ],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cumprod": {
       "family": "scan",
@@ -739,8 +686,7 @@
       ],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "cumsum": {
       "family": "scan",
@@ -754,8 +700,7 @@
       ],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "div": {
       "family": "arithmetic",
@@ -767,8 +712,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "element_map": {
       "family": "access-primitive",
@@ -780,8 +724,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "embedding": {
       "family": "gather_scatter",
@@ -797,8 +740,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": true,
-      "kernel_rules": []
+      "index_operand_role": true
     },
     "erf": {
       "family": "transcendental",
@@ -810,8 +752,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "erfc": {
       "family": "transcendental",
@@ -823,8 +764,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "exp": {
       "family": "transcendental",
@@ -836,8 +776,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "exp2": {
       "family": "transcendental",
@@ -849,8 +788,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "expm1": {
       "family": "transcendental",
@@ -862,8 +800,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "floor": {
       "family": "rounding",
@@ -875,8 +812,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "fmax_ieee": {
       "family": "minmax",
@@ -888,8 +824,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "fmin_ieee": {
       "family": "minmax",
@@ -901,8 +836,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "frac": {
       "family": "rounding",
@@ -914,8 +848,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "gather": {
       "family": "access-primitive",
@@ -932,8 +865,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": true,
-      "kernel_rules": []
+      "index_operand_role": true
     },
     "gelu": {
       "family": "activation",
@@ -945,8 +877,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "gelu_tanh": {
       "family": "activation",
@@ -958,8 +889,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "hypot": {
       "family": "binary_math",
@@ -971,8 +901,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "im2col": {
       "family": "shape",
@@ -991,8 +920,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "index_select": {
       "family": "gather_scatter",
@@ -1008,8 +936,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": true,
-      "kernel_rules": []
+      "index_operand_role": true
     },
     "iota": {
       "family": "access-primitive",
@@ -1025,8 +952,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "layer_norm": {
       "family": "normalization",
@@ -1040,8 +966,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "ldexp": {
       "family": "binary_math",
@@ -1053,8 +978,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "lgamma": {
       "family": "transcendental",
@@ -1066,8 +990,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "log": {
       "family": "transcendental",
@@ -1079,8 +1002,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "log10": {
       "family": "transcendental",
@@ -1092,8 +1014,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "log1p": {
       "family": "transcendental",
@@ -1105,8 +1026,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "log2": {
       "family": "transcendental",
@@ -1118,8 +1038,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "log_softmax": {
       "family": "normalization",
@@ -1133,8 +1052,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "logical_and": {
       "family": "logical",
@@ -1146,8 +1064,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "logical_not": {
       "family": "logical",
@@ -1159,8 +1076,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "logical_or": {
       "family": "logical",
@@ -1172,8 +1088,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "logsumexp": {
       "family": "reduction",
@@ -1188,8 +1103,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "matmul": {
       "family": "contraction",
@@ -1208,8 +1122,7 @@
       ],
       "is_contraction": true,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "max_pool": {
       "family": "window",
@@ -1229,8 +1142,7 @@
       ],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "max_prop": {
       "family": "minmax",
@@ -1242,8 +1154,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "min_prop": {
       "family": "minmax",
@@ -1255,8 +1166,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "mish": {
       "family": "activation",
@@ -1268,8 +1178,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "mul": {
       "family": "arithmetic",
@@ -1281,8 +1190,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "neg": {
       "family": "arithmetic",
@@ -1294,8 +1202,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "nextafter": {
       "family": "binary_math",
@@ -1307,8 +1214,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "popcount": {
       "family": "bitwise",
@@ -1320,8 +1226,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "pow": {
       "family": "binary_math",
@@ -1333,8 +1238,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "prefix_scan": {
       "family": "access-primitive",
@@ -1352,8 +1256,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "recip": {
       "family": "arithmetic",
@@ -1365,8 +1268,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "reduce": {
       "family": "access-primitive",
@@ -1384,8 +1286,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "reduce_mean": {
       "family": "reduction",
@@ -1400,8 +1301,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "reduce_norm2": {
       "family": "reduction",
@@ -1416,8 +1316,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "reduce_std": {
       "family": "reduction",
@@ -1433,8 +1332,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "reduce_var": {
       "family": "reduction",
@@ -1450,8 +1348,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "relu": {
       "family": "activation",
@@ -1463,8 +1360,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "rem_floor": {
       "family": "binary_math",
@@ -1476,8 +1372,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "rem_trunc": {
       "family": "binary_math",
@@ -1489,8 +1384,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "rms_norm": {
       "family": "normalization",
@@ -1504,8 +1398,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "round_even": {
       "family": "rounding",
@@ -1517,8 +1410,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "rsqrt": {
       "family": "transcendental",
@@ -1530,8 +1422,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "scatter": {
       "family": "access-primitive",
@@ -1549,11 +1440,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": true,
-      "kernel_rules": [
-        "KISS-KERNEL-6.4",
-        "KISS-KERNEL-6.5"
-      ]
+      "index_operand_role": true
     },
     "scatter_add": {
       "family": "gather_scatter",
@@ -1569,11 +1456,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": true,
-      "index_operand_role": true,
-      "kernel_rules": [
-        "KISS-KERNEL-6.4",
-        "KISS-KERNEL-6.5"
-      ]
+      "index_operand_role": true
     },
     "select": {
       "family": "select",
@@ -1585,8 +1468,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "shl": {
       "family": "bitwise",
@@ -1598,8 +1480,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "shr": {
       "family": "bitwise",
@@ -1611,8 +1492,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sigmoid": {
       "family": "activation",
@@ -1624,8 +1504,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sign": {
       "family": "arithmetic",
@@ -1637,8 +1516,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "silu": {
       "family": "activation",
@@ -1650,8 +1528,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sin": {
       "family": "transcendental",
@@ -1663,8 +1540,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sinh": {
       "family": "transcendental",
@@ -1676,8 +1552,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "softmax": {
       "family": "normalization",
@@ -1691,8 +1566,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "softplus": {
       "family": "activation",
@@ -1704,8 +1578,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sort_network": {
       "family": "access-primitive",
@@ -1721,8 +1594,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sqr": {
       "family": "arithmetic",
@@ -1734,8 +1606,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sqrt": {
       "family": "transcendental",
@@ -1747,8 +1618,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "squeeze": {
       "family": "access-primitive",
@@ -1762,8 +1632,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "step": {
       "family": "activation",
@@ -1775,8 +1644,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "sub": {
       "family": "arithmetic",
@@ -1788,8 +1656,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "tan": {
       "family": "transcendental",
@@ -1801,8 +1668,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "tanh": {
       "family": "transcendental",
@@ -1814,8 +1680,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "trunc": {
       "family": "rounding",
@@ -1827,8 +1692,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     },
     "unsqueeze": {
       "family": "access-primitive",
@@ -1842,8 +1706,7 @@
       "reduce_axis_inner_carriers": [],
       "is_contraction": false,
       "structured_op": false,
-      "index_operand_role": false,
-      "kernel_rules": []
+      "index_operand_role": false
     }
   }
 }

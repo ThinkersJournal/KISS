@@ -253,7 +253,7 @@ class ReportTest(unittest.TestCase):
         harness = kt.discover_tests(str(HERE.parent / "conformance"))
         terms = {}
         for stem in ("umbrella", "announce", "classify", "ops", "grammar", "contract",
-                     "synth", "consume", "emit", "conform", "kernel"):
+                     "synth", "consume", "emit", "conform"):
             path = HERE.parent / "spec" / (stem + ".md")
             if path.exists():
                 r = kt.DocResult(stem)

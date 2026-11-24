@@ -197,7 +197,7 @@ fn test_contract_document_inner_length_and_crc() {
     let body = appendix_c_body();
     let good = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "4".into(),
+        contract_version: "5".into(),
         body: body.clone(),
     }
     .encode();
@@ -278,7 +278,7 @@ fn test_contract_kind_recognized_token() {
     );
 
     // The reader accepts EXACTLY the token the spec names.
-    let good = document(accepted, "4");
+    let good = document(accepted, "5");
     let hdr = read_document(&good).expect("KISS-CONTRACT-6.1-0007: the spec-declared kind must be accepted");
     assert_eq!(
         hdr.contract_kind, accepted,
@@ -288,7 +288,7 @@ fn test_contract_kind_recognized_token() {
     // Byte-mutated near-misses are each declined with the offending token echoed.
     for near in ["KISS-CONTRACT", "kiss_contract", "kiss-contracts", "kisscontract"] {
         assert_eq!(
-            read_document(&document(near, "4")),
+            read_document(&document(near, "5")),
             Err(ContractDecline::UnknownKind { got: near.to_string() }),
             "KISS-CONTRACT-6.1-0007: near-miss kind `{near}` must decline UnknownKind (no case-fold / prefix accept)"
         );
@@ -312,12 +312,12 @@ fn test_contract_version_value_pinned() {
     let contract = read_spec("contract.md");
     let block = norm(clause_block(&contract, "KISS-CONTRACT-6.1-0008"));
     let pinned = backtick_after(&block, "the exact decimal token ");
-    assert_eq!(pinned, "4", "KISS-CONTRACT-6.1-0008: the §6.1-0008 pinned version drifted from `4`");
+    assert_eq!(pinned, "5", "KISS-CONTRACT-6.1-0008: the §6.1-0008 pinned version drifted from `5`");
 
     // Exactly the pinned token is accepted.
     let hdr = read_document(&document("kiss-contract", pinned))
         .expect("KISS-CONTRACT-6.1-0008: version `4` must be accepted");
-    assert_eq!(hdr.contract_version, "4", "KISS-CONTRACT-6.1-0008: reader accepted a non-`4` version");
+    assert_eq!(hdr.contract_version, "5", "KISS-CONTRACT-6.1-0008: reader accepted a non-`5` version");
 
     // Numeric-equal-but-byte-different spellings are declined UnknownVersion — a
     // numeric parser would wrongly accept `04` / `4.0` / `+4`.
@@ -361,7 +361,7 @@ fn test_contract_self_delimiting_document() {
     let body = appendix_c_body();
     let doc = Document {
         contract_kind: "kiss-contract".into(),
-        contract_version: "4".into(),
+        contract_version: "5".into(),
         body: body.clone(),
     }
     .encode();

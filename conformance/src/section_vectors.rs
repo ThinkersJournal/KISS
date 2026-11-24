@@ -211,8 +211,6 @@ fn check_dispatch(block: &[u8], rank: u32, sig: &[SignatureArg]) -> Result<(), F
             ("invocation_domain", EvalMode::Domain),
             ("workgroup_sizing", EvalMode::Domain),
             ("count_to_grid", EvalMode::Domain),
-            ("thread_mapping", EvalMode::Structural),
-            ("addressing_rule", EvalMode::Structural),
         ] {
             eval(f.field(name), &env, mode).map_err(|d| fd("dispatch", expr_tag(&d)))?;
         }
@@ -341,7 +339,7 @@ pub(crate) fn render(index: usize, fields: &Fields) -> Vec<u8> {
 
 pub(crate) fn assemble(blocks: &[Vec<u8>]) -> Vec<u8> {
     let body: Vec<u8> = blocks.iter().flatten().copied().collect();
-    Document { contract_kind: "kiss-contract".into(), contract_version: "4".into(), body }.encode()
+    Document { contract_kind: "kiss-contract".into(), contract_version: "5".into(), body }.encode()
 }
 
 pub(crate) fn set(fields: &mut Fields, key: &str, value: &str) {
@@ -376,28 +374,26 @@ fn with(index: usize, block: Vec<u8>) -> Vec<Vec<u8>> {
     b
 }
 
-const FIVE_FIELDS: [(&str, &str); 5] = [
+const THREE_FIELDS: [(&str, &str); 3] = [
     ("invocation_domain", "extents0[0]*extents0[1]"),
     ("workgroup_sizing", "256"),
     ("count_to_grid", "ceil_div(n, 256)"),
-    ("thread_mapping", "256*ceil_div(n, 256)"),
-    ("addressing_rule", "strides0[0]+strides0[1]"),
 ];
 
 fn dispatch_fields(edit: impl Fn(&mut Fields)) -> Fields {
-    let mut f: Fields = FIVE_FIELDS.iter().map(|&(k, v)| (k.to_string(), v.to_string())).collect();
+    let mut f: Fields = THREE_FIELDS.iter().map(|&(k, v)| (k.to_string(), v.to_string())).collect();
     edit(&mut f);
     f
 }
 
-/// The documents a reader accepts (requests 1-4): the strided signature, the five-field Dispatch,
+/// The documents a reader accepts (requests 1-4): the strided signature, the three-field Dispatch,
 /// the optional trailing `output_layouts` and `human_annotation`, and the aliased `in_place` forms.
 pub fn accept_vectors() -> Vec<AcceptVector> {
     let strided = |f: Fields| with(2, render(2, &f));
     let mut v = vec![("strided-signature", strided(strided_interface()))];
     let mut five = strided(strided_interface());
     five[3] = render(3, &dispatch_fields(|_| {}));
-    v.push(("five-field-dispatch", five));
+    v.push(("three-field-dispatch", five));
     let mut layouts = fields_of(&appendix_c_interface_block());
     layouts.push(("output_layouts".into(), "[dense]".into()));
     v.push(("output-layouts-present", with(2, render(2, &layouts))));

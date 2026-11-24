@@ -35,9 +35,9 @@ modalities and labelled the on-device run "§6.6"; §6.6 is the fuzzer.
 
 ### How much of the spec is actually executable
 
-**565<!-- bound:harness --> of 1062<!-- bound:clauses --> normative clauses are
+**565<!-- bound:harness --> of 1061<!-- bound:clauses --> normative clauses are
 backed by executable code** — the figure the ratchet in
-[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 227<!-- bound:named --> are
+[`COVERAGE_FLOOR.tsv`](COVERAGE_FLOOR.tsv) defends on every merge. **Of those, 225<!-- bound:named --> are
 backed by NAME** (the §9 row resolves to a real test fn) and the
 rest **by CITATION** (some test carries a backing-form comment for the clause).
 
@@ -48,15 +48,11 @@ heading asks how much of the spec is executable, which is the BACKED one.** A nu
 sentence describing two different measurements, agreeing with each other only because
 neither was checked.
 
-The remaining 497<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
+The remaining 496<!-- bound:unbacked_total --> are listed in [`UNBACKED.tsv`](UNBACKED.tsv), and they are not one
 population: **378<!-- bound:untested_rows --> genuinely untested**, 44 enforced by a
 document lint, 33 `blocked`, 14 `definitional`, 20 `attested`, 4 `untestable`, 2 `decredited`. The ledger is enforced as a
 ratchet by `tools/kiss_trace.py`, whose floor tracks the untested figure separately from
-<<<<<<< HEAD
 the harness one for exactly this reason. Of this crate's 948<!-- bound:test_fns --> test fns, **241<!-- bound:uncited_tests --> cite
-=======
-the harness one for exactly this reason. Of this crate's 948<!-- bound:test_fns --> test fns, **241<!-- bound:uncited_tests --> cite
->>>>>>> origin/main
 no backing clause**: each is either named by a §9 row or tagged `// harness-internal: <reason>`
 (KISS-CONFORM-6.1-0003), and the 185 that were neither were cited or tagged one by one (KISS#136). The +111 in this PR are the Plan B
 numeric-core internals (hp.rs BigFloat/round-ziv/reduction, the exp/log/sin atom vectors)
@@ -79,7 +75,7 @@ python tools/kiss_trace.py --freeze-ready SYNTH  # one sub-standard
 
 - **umbrella §5.3 condition 3** — a sub-standard advances Draft → Frozen only with
   "complete bidirectional clause-to-test traceability". One unbacked clause blocks
-  the freeze. **Today: 0 of 10 sub-standards pass.**
+  the freeze. **Today: 0 of 9 sub-standards pass.**
 - **umbrella §8.1** — an implementation conforms "if and only if it passes the
   unmodified KISS-Conform suite for that sub-standard". Where there is no test there
   is no suite, so a conformance claim to KISS-Synth — 44<!-- bound:synth_backed --> of its 136<!-- bound:synth_clauses -->
@@ -182,11 +178,11 @@ default build and CI stay GPU-free.
   or name it in the comment above the test. `kiss_trace.py` reads both and will
   strike the clause from `UNBACKED.tsv`. This is annotation, not new testing, and
   it is the cheapest coverage in the repo.
-- **Phase 6 — burn down `UNBACKED.tsv`.** 497<!-- bound:unbacked_total --> clauses, no executable test. Order
+- **Phase 6 — burn down `UNBACKED.tsv`.** 496<!-- bound:unbacked_total --> clauses, no executable test. Order
   by seam, not by document: the clauses two real implementations must agree on to
   exchange one kernel come first (see the wire-first list in the repo issues).
-  0<!-- bound:zero_coverage_subs --> of 10 sub-standards are at 0.0% — the lowest is
-  Synth at 44<!-- bound:synth_backed -->/136<!-- bound:synth_clauses --> and the highest Classify at 101<!-- bound:classify_backed -->/131<!-- bound:classify_clauses -->; Announce is 61<!-- bound:announce_backed -->/98<!-- bound:announce_clauses -->. Every one has a
+  0<!-- bound:zero_coverage_subs --> of 9 sub-standards are at 0.0% — the lowest is
+  Synth at 44<!-- bound:synth_backed -->/136<!-- bound:synth_clauses --> and the highest Classify at 101<!-- bound:classify_backed -->/131<!-- bound:classify_clauses -->; Announce is 62<!-- bound:announce_backed -->/99<!-- bound:announce_clauses -->. Every one has a
   byte cross a process boundary.
 
 ## Keeping the vectors in sync

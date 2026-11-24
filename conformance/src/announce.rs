@@ -86,6 +86,8 @@ pub enum AnnounceDecline {
     UnnamedLenOutOfRange { got: u32 },
     /// A `math_fidelity` byte was neither 1 nor 2 (§6.6-0008).
     BadMathFidelity { got: u8 },
+    /// A `cooperative_launch` byte was neither 0 nor 1 (§6.6-0012).
+    BadCooperativeLaunch { got: u8 },
     /// A token held a byte that is not printable ASCII, or a target was not `<ns>:<cap>` (§6.6-0006).
     TokenMalformed { region: &'static str },
     /// A dtype token is not in the Classify closed table (§6.6-0007).

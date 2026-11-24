@@ -15,7 +15,7 @@
 //!
 //!   (B) ONE BEHAVIORAL back via the in-tree §6.6-0006 acceptor
 //!       `dispatch_expr::eval` (the real crate codec, not a re-implementation):
-//!       each of the five Dispatch field values is a §6.6-0006 expression string —
+//!       each of the three Dispatch field values is a §6.6-0006 expression string —
 //!       a grammatical one is accepted, free prose declines.
 //!
 //! Clauses bound: KISS-CONTRACT-6.6-0001, -6.4-0001, -6.5-0001, -6.7-0001,
@@ -43,17 +43,11 @@ semantics_kind = machine-checkable-IR
 op_dag = [Op{add; ; []}]
 ";
 
-/// The five Dispatch derivation fields, in the §6.11-0005 field-schema order. This
+/// The three Dispatch derivation fields, in the §6.11-0005 field-schema order. This
 /// is only the frozen ANCHOR (exactly as the accepted §6.8-0001 lint hardcodes its
 /// `expected`); the load-bearing teeth are the agreement of THREE independent spec
 /// surfaces below.
-const DISPATCH_FIELDS: [&str; 5] = [
-    "invocation_domain",
-    "workgroup_sizing",
-    "count_to_grid",
-    "thread_mapping",
-    "addressing_rule",
-];
+const DISPATCH_FIELDS: [&str; 3] = ["invocation_domain", "workgroup_sizing", "count_to_grid"];
 
 // ---------------------------------------------------------------------------
 // Spec-reading helpers — parse structure, never grep a phrase. (Re-declared per
@@ -190,8 +184,8 @@ fn ops_math_precision_enum() -> BTreeSet<String> {
 // ===========================================================================
 
 /// KISS-CONTRACT-6.6-0001 — a kernel that declares launch geometry MUST carry the
-/// five Dispatch fields `{invocation_domain, workgroup_sizing, count_to_grid,
-/// thread_mapping, addressing_rule}` in that order. THREE independent within-CONTRACT
+/// three Dispatch fields `{invocation_domain, workgroup_sizing, count_to_grid}` in
+/// that order. THREE independent within-CONTRACT
 /// surfaces are ordered-compared: the §6.6-0001 `{…}` brace list, the §6.6-0006
 /// `(…)` field list, and the §6.11-0008 `(…)` field list. The hardcoded
 /// `DISPATCH_FIELDS` is only the anchor.
@@ -206,10 +200,10 @@ fn test_contract_dispatch_field_schema() {
     let s_6606 = dispatch_fields_in_parens(clause_block(&contract, "KISS-CONTRACT-6.6-0006"));
     let s_1108 = dispatch_fields_in_parens(clause_block(&contract, "KISS-CONTRACT-6.11-0008"));
 
-    // Each surface carries exactly the five fields (cardinality anchor).
-    assert_eq!(s_6601.len(), 5, "KISS-CONTRACT-6.6-0001: §6.6-0001 must list exactly 5 Dispatch fields, got {s_6601:?}");
-    assert_eq!(s_6606.len(), 5, "KISS-CONTRACT-6.6-0001: §6.6-0006 must list exactly 5 Dispatch fields, got {s_6606:?}");
-    assert_eq!(s_1108.len(), 5, "KISS-CONTRACT-6.6-0001: §6.11-0008 must list exactly 5 Dispatch fields, got {s_1108:?}");
+    // Each surface carries exactly the three fields (cardinality anchor).
+    assert_eq!(s_6601.len(), 3, "KISS-CONTRACT-6.6-0001: §6.6-0001 must list exactly 3 Dispatch fields, got {s_6601:?}");
+    assert_eq!(s_6606.len(), 3, "KISS-CONTRACT-6.6-0001: §6.6-0006 must list exactly 3 Dispatch fields, got {s_6606:?}");
+    assert_eq!(s_1108.len(), 3, "KISS-CONTRACT-6.6-0001: §6.11-0008 must list exactly 3 Dispatch fields, got {s_1108:?}");
 
     // The load-bearing teeth: all three spec surfaces agree, in order.
     assert_eq!(s_6601, s_6606, "KISS-CONTRACT-6.6-0001: the §6.6-0001 and §6.6-0006 Dispatch field lists drifted (rename/reorder/drop)");
@@ -490,7 +484,7 @@ fn launch_scalars() -> LaunchScalars {
 /// string carrying a machine-evaluable §6.6-0006 expression; a reader MUST reject,
 /// with a typed decline, a field value the grammar does not accept. Driven through
 /// the real in-tree acceptor `dispatch_expr::eval` (not a re-implementation): for
-/// each of the five named fields a grammatical expression is ACCEPTED and evaluates
+/// each of the three named fields a grammatical expression is ACCEPTED and evaluates
 /// to the pinned integer, while free prose / malformed input DECLINES.
 ///
 /// TEETH: a reader that stored a Dispatch field as opaque free text would (wrongly)
@@ -506,8 +500,6 @@ fn test_contract_text_dispatch() {
         ("invocation_domain", "extents0[0] * extents0[1]", 24, EvalMode::Domain),
         ("workgroup_sizing", "ceil_div(n, 256)", 1, EvalMode::Domain),
         ("count_to_grid", "ceil_div(n, 128)", 1, EvalMode::Domain),
-        ("thread_mapping", "n", 24, EvalMode::Structural),
-        ("addressing_rule", "off0 + strides0[0]", 4, EvalMode::Structural),
     ];
     for (field, expr, want, mode) in cases {
         // Accepted, and eval actually RAN the grammar (value pinned, not a stub Ok).

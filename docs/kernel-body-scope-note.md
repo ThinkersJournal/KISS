@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-11-21 (board 475 and 476, CireSnave): KISS-Kernel is dissolved (`spec/kernel.md` deleted, its clause IDs retired and burned). Kept as history; see `docs/kernel-dissolve-placement.md`.**
+
 # Kernel body: scope-and-process note (draft for CireSnave, via the PM)
 
 Status: **a proposal, informative, no clause.** Nothing here binds a reader; every ruling below waits on CireSnave
