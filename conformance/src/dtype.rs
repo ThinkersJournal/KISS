@@ -241,3 +241,94 @@ pub fn e8m0_decode(byte: u8) -> E8M0 {
         E8M0::Pow2(i32::from(byte) - E8M0_BIAS)
     }
 }
+
+// ---------------------------------------------------------------------------
+// §6.1-0014 / §6.1-0015 — MX element storage (f4e2m1, f6e2m3, f6e3m2)
+// ---------------------------------------------------------------------------
+//
+// Library codec for the three MX element dtypes, so an implementation under test can be
+// differenced against it (before this, the packing existed only as helpers inside one test
+// file). `f4e2m1` packs exactly like `u4` (low nibble = EVEN logical index); the two FP6
+// dtypes pack four elements per three bytes, LSB-first (element `i` at stream bits `6i..6i+5`).
+//
+// SOURCES for the packing (read 2026-11-25; the packing is a CONVENTION, OCP MX v1.0 fixes none):
+//   * NVIDIA/cutlass `include/cutlass/subbyte_reference.h` `SubbyteReference::get()`:
+//     `(*byte_ptr >> (byte_offset * sizeof_bits<Element>)) & kMask` with
+//     `byte_offset = offset_ % elements_per_byte`: element 0 is the LOW nibble. AGREES.
+//   * the same file's non-divisible specialization (8 % 6 != 0): `start_bit_idx_ =
+//     (offset_ * 6) % 8`, `low_storage_unit_idx_ = (offset_ * 6) / 8`, element read as
+//     `full_item >> start_bit_idx_`: contiguous LSB-first, four per three bytes. AGREES.
+//   * Triton `python/triton/language/core.py` dot_scaled docstring: "Fp4 elements are packed
+//     into uint8 inputs with the first element in lower bits" — read through a summarising
+//     fetch, NOT verbatim, so weaker evidence. AGREES.
+// NOT read: CUTLASS's shared-memory / TMA forms (`float_e2m1_unpacksmem_t` etc. are selector
+// tags in `float_subbyte.h` with no layout code there), the Mojo layout, and the text of the OCP
+// MX v1.0 PDF (the fetch returned compressed bytes). So this is a second source for the
+// global-memory reference layout only.
+
+/// Pack `codes` (each `< 1 << bits`) LSB-first into a byte stream: element `i` occupies stream
+/// bits `bits*i ..`, stream bit `k` being bit `k % 8` of byte `k / 8`. `ceil(bits*n/8)` bytes;
+/// unused trailing bits are zero.
+pub fn lsb_pack(codes: &[u8], bits: u32) -> Vec<u8> {
+    let mut out = vec![0u8; (codes.len() * bits as usize).div_ceil(8)];
+    for (i, &v) in codes.iter().enumerate() {
+        assert!(u32::from(v) < (1u32 << bits), "code {v} does not fit {bits} bits");
+        for b in 0..bits as usize {
+            if (v >> b) & 1 == 1 {
+                let k = i * bits as usize + b;
+                out[k / 8] |= 1 << (k % 8);
+            }
+        }
+    }
+    out
+}
+
+/// Inverse of [`lsb_pack`]: read `count` `bits`-wide codes from `bytes`.
+pub fn lsb_unpack(bytes: &[u8], bits: u32, count: usize) -> Vec<u8> {
+    (0..count)
+        .map(|i| {
+            (0..bits as usize).fold(0u8, |acc, b| {
+                let k = i * bits as usize + b;
+                acc | (((bytes[k / 8] >> (k % 8)) & 1) << b)
+            })
+        })
+        .collect()
+}
+
+/// Pack `f4e2m1` codes (`0..=15`) two per byte, low nibble = even index (§6.1-0014).
+pub fn f4e2m1_pack(codes: &[u8]) -> Vec<u8> {
+    lsb_pack(codes, 4)
+}
+
+/// Pack `f6e2m3` / `f6e3m2` codes (`0..=63`) four per three bytes, LSB-first (§6.1-0015).
+pub fn f6_pack(codes: &[u8]) -> Vec<u8> {
+    lsb_pack(codes, 6)
+}
+
+/// Decode an MX element code with `ebits` exponent bits, `mbits` mantissa bits and exponent bias
+/// `bias` (sign in the next bit up). No code is infinite or NaN (§6.1-0014, §6.1-0015); the value
+/// is `(-1)^s * 2^(e-bias) * (1 + m/2^mbits)` for `e != 0`, `(-1)^s * 2^(1-bias) * (m/2^mbits)`
+/// for `e == 0`. Exact in `f64` for these widths.
+pub fn mx_element_decode(code: u8, ebits: u32, mbits: u32, bias: i32) -> f64 {
+    let m = f64::from(code & ((1u8 << mbits) - 1));
+    let e = i32::from((code >> mbits) & ((1u8 << ebits) - 1));
+    let s = (code >> (mbits + ebits)) & 1;
+    let frac = m / f64::from(1u32 << mbits);
+    let mag = if e == 0 { 2f64.powi(1 - bias) * frac } else { 2f64.powi(e - bias) * (1.0 + frac) };
+    if s == 1 { -mag } else { mag }
+}
+
+/// `f4e2m1` code (`0..=15`) to value (§6.1-0014).
+pub fn f4e2m1_decode(code: u8) -> f64 {
+    mx_element_decode(code, 2, 1, 1)
+}
+
+/// `f6e2m3` code (`0..=63`) to value (§6.1-0015).
+pub fn f6e2m3_decode(code: u8) -> f64 {
+    mx_element_decode(code, 2, 3, 1)
+}
+
+/// `f6e3m2` code (`0..=63`) to value (§6.1-0015).
+pub fn f6e3m2_decode(code: u8) -> f64 {
+    mx_element_decode(code, 3, 2, 3)
+}
