@@ -52,10 +52,10 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | `.pred` | `bool` named | H | |
 | `.s4`, `.u4` (wmma sub-byte), `.b1` (wmma) | `i4 u4 b1` named | H | |
 | `.e4m3`, `.e5m2` (fp8, sm89+) | `f8e4m3fn`, `f8e5m2` named | H | |
-| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; unpopped recalls the spellings as matching (not read from the PTX ISA); it adds `.ue4m3` (nvfp4 block scale), not named in KISS: check it in the PTX ISA |
+| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; unpopped recalls the spellings as matching (not read from the PTX ISA); READ in PTX ISA 9.5 §5.2.3 (2026-11-25): `ue4m3` is a 7-bit unsigned float, 4 exponent + 3 mantissa bits, no infinity, NaN only `0x7f`, held in `.b8` with the MSB zero; `ue5m3` (8-bit) and `ue8m0` are its neighbours. KISS names `f8e8m0` only: `ue4m3` (the nvfp4 block scale) and `ue5m3` are **GAP**, and a byte-moving token needs CireSnave's word (board 501) |
 | `.tf32` | **by design** (§6.1-0005; math mode in `(acc+mp)`) | H | storage is `f32`; confirm the by-design call (§4 Q2) |
-| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | unpopped recalls `.b128` as an untyped 128-bit type (recalled, not read from the PTX ISA); `.u128`/`.s128` unconfirmed |
-| `.u128`, `.s128` (recent PTX, wide integer ops and atomics) | **GAP**: no `i128`/`u128` | **M** | candidate |
+| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | READ in PTX ISA 9.5 §5.2.1 Table 8 (2026-11-25): `.b128` IS listed as an untyped bit type (introduced PTX 8.3; the sm minimum differs between archived pages, unresolved). It is a bit pattern, not a numeric type, which is why `bitcast` reaches it |
+| `.u128`, `.s128` (recent PTX, wide integer ops and atomics) | **NOT A PTX TYPE**: absent from Table 8 (signed `.s8-.s64`, unsigned `.u8-.u64`, bits `.b8-.b128`); `mul.wide`/`mad.wide` stop at 32-bit inputs; 128-bit values are built from chained `.cc` ops | **H** (read PTX ISA 9.5; instruction sections after 9.7.9.6 `lop3`, incl. `mov`/`ld`/`st`/`atom`, were NOT readable, so `.b128` loads and atomics are unchecked) | no GAP; withdrawn as a candidate |
 | Packed pairs: `.f16x2`, `.bf16x2`, `.e4m3x2`, `.e5m2x2`, `.e2m1x2`, `.ue8m0x2`, `.s16x2`, `.u16x2` | modelled by vector-access width (§6.5-0009), not a dtype | M | |
 | `.u8x4`/`.s8x4` (`dp4a` operands) | carried as `u32`/`i32` bits | M | `bitcast`-reachable (staged, §6.21-0005) |
 | CUDA C `cuComplex`/`cuDoubleComplex` | `c64`, `c128` named | H | |
@@ -115,7 +115,7 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | # | Candidate | Why | Action proposed |
 |---|---|---|---|
 | 1 | `f8e4m3fnuz`, `f8e5m2fnuz` | AMD MI300 computes on them (H) | **un-reserve** (usable, with computation semantics and a conversion rule); the one item the ruling forces |
-| 2 | `i128`, `u128` | PTX wide-integer ops (M) | verify the PTX instructions that take them, then name or decide they are never an element dtype |
+| 2 | `i128`, `u128` | PTX wide-integer ops (was M) | **resolved 2026-11-25: PTX 9.5 has no `.s128`/`.u128` type**; only `.b128` bits. Nothing to name |
 | 3 | `c32` (complex `f16`) | half complex in cuFFT/CUTLASS (M) | name with the `c32` migration note the sk4 RFC §4 reserved |
 | 4 | `f8e6m2` (reserved) | no device found that computes on it (L) | keep reserved or **retire**; the ruling covers only types a device uses |
 | 5 | Intel hf8/bf8 | variant unknown (L) | ratify layout to variant (as sk4 did for Vulkan FP8) |
