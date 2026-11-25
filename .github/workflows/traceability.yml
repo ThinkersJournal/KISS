@@ -280,6 +280,12 @@ jobs:
         run: python tools/test_kiss_sidecar.py
       - name: Sidecar <-> prose clause reconciliation (6.2-0004)
         run: python tools/kiss_sidecar.py --check
+      # The corpus JSON is sha256-pinned in one file (R5.21): a hand edit, an unpinned new file and a missing one
+      # each fail, and the controls prove it.
+      - name: Corpus pin controls (a changed, unpinned or missing file must be caught)
+        run: python tools/test_kiss_corpus_pins.py
+      - name: Corpus sha256 pins
+        run: python tools/kiss_corpus_pins.py
       - name: Spec<->binding enumeration consistency (cell-class set)
         run: python tools/kiss_vocab.py
       - name: KISS-Ops within-document op-set consistency

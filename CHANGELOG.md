@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.23.2 — tools: the corpus sha256 pins are recorded and checked (ROADMAP R5.21)
+
+`conformance/corpus/PROVENANCE.md`, `REUSE.toml` and `tools/kiss_spdx.py` said the corpus JSON is sha256-pinned, but no tool or CI step computed or compared a hash. `conformance/corpus/PINS.sha256` now holds one pin per corpus file (31), and `tools/kiss_corpus_pins.py` fails on a changed, an unpinned or a missing file (`--write` re-pins after a deliberate regeneration; a hash folds CRLF to LF so a CRLF checkout is not a difference). `tools/test_kiss_corpus_pins.py` seeds each of the three differences and a malformed pin line, and runs the live corpus; both run in the `traceability` workflow beside the sidecar check. A regeneration PR now moves its pins in the same diff, so a silent corpus change shows in review. No spec or wire text changes.
+
 ## 0.23.1 — CI pins: portfolio.yml and cargo-deny-action
 
 `.github/workflows/conformance.yml`: the CodeRipper `portfolio.yml` pin moves from `c72a6e03` to `dc45e3632ab9f471292458e5ccba5f375084a70a` (installs CodeRipper 0.47.15; coderipper main is 0.47.21), and `EmbarkStudios/cargo-deny-action` moves from 2.1.1 to 2.1.3 (`17aeb3c839e42274e2b8adf721c8c65edfdc74dd`, folded from dependabot #844). No spec, corpus or wire change; no #843 follow-ups owed.
