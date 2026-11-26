@@ -14,7 +14,7 @@
 - **Recommendation:** list it, but ship it only if (a) the bias is found in a primary source (PTX PDF or a header) and (b) a consumer row needs it. If neither, drop it from batch 2; a declined candidate costs nothing.
 - **What changes per consumer** (facts about KISS's own surface; consumers' own code is UNVERIFIED): unpopped `ElementKind` gains a variant (not `non_exhaustive`, so exhaustive matches break); fuel `element_kind_to_dtype` maps or declines by name; kiss-ref gains the token to keep byte-match; every emitter declines it by name until it lowers it (the 0.24.0 note).
 
-**Candidate 2, NOT ready to list: a `c` role hint on the contraction (RU.2 Group 4 A).** CireSnave's 6.35 says "as KISS's open question 771 Q3 is ruled". I found no recorded ruling of 771 Q3 in `docs/options-771-contraction-precision-and-accumulate-into-c.md` or ROADMAP at `origin/main` e628c96 (only the 2026-11-12 board 427 ruling on the tag question). It is byte-altering (a presence coordinate). **Needs from pm-kernels: the Q3 ruling, or confirmation there is none.** Until then it is not in this batch.
+**Candidate 2, NOT listed: a `c` role hint on the contraction (RU.2 Group 4 A).** CireSnave's 6.35 says "as KISS's open question 771 Q3 is ruled". "771 Q3" is KISS's own phrase for open question 3 of `docs/options-771-contraction-precision-and-accumulate-into-c.md` (RU.2 note lines 48 and 68; EXPECTATIONS 6.35). **READ 2026-11-26:** KISS issue #771 is CLOSED (2026-11-15, "DECIDED and shipped in 0.18.0 (sk8, #822). Board 440 Q1 A and board 443 ... accumulate-into-C stays ordinary ops, no new spelling, no recipe list"), and Unpopped's lane confirmed "settled, no accumulate-into-C input held". That reads as Group 4 option B (nothing in the key), so there is **no byte-altering item** here; this lane has not confirmed that the 11-15 closure is the ruling 6.35 means. The compute-dtype half stays "no new coordinate" (KISS-CLASSIFY-6.1-0005). **Pending pm-kernels' confirmation; until then it is not in this batch.**
 
 ## Not in this batch, and why
 
@@ -25,8 +25,9 @@
 
 ## Consumer asks since batch 1: what was and was not read
 
-- **READ:** Unpopped `docs/ir-union-asks.md` and its 2026-11-25 update (origin/main): the open KISS items are UE5M3, the 128-bit rows (now shipped), Slang (ruled, no bytes) and the RU.2 groups above. Unpopped's 2026-11-26 STATUS (via Synapse) asks nothing new of KISS.
-- **NOT READ in full:** fishstringer and vulkane. A regex for "KISS ... token/dtype/coordinate ask" over their `ROADMAP.md` at origin/main matched only vulkane's own vocabulary rows (`vulkan:` namespace, not KISS tokens) and nothing in fishstringer. That regex found no Unpopped ask either, so it is a weak control: absence here means "not found by this search", not "none". Those two lanes should say if they have an ask.
+- **Unpopped (their message 2026-11-26, from `docs/ir-union-asks.md` 1a/1b):** open asks are (1) CUTLASS 3 more than one batch role and nested modes: batch axes are already a caller-declared set whose product gives the class (KISS-CLASSIFY-6.6-0023); nested shape is not keyed (RU.2 measured 2x3, 3x2 and 1x6 batches derive the same token), so nothing is needed; (2) CUTLASS 31 source C and compute dtype: see Candidate 2 (no byte item); (3) CUTLASS 23 scale-factor output: later (6.35), option B first; (4) UE5M3: Candidate 1; (5) CUTLASS 5 major-ness: nothing until a collision is named; (6) CUTLASS 15: op vocabulary, asks nothing. One UNVERIFIED flag from them: `f8e4m3fnuz` and `f8e5m2fnuz` are RESERVED in 6.1 (no computation semantics); a HIP emitter for CDNA3 would need them usable; **no emitter has asked, so nothing is listed**.
+- **fishstringer (their message 2026-11-26):** no new token, coordinate or key for batch 2; Slang closed as ruled.
+- **vulkane: no reply yet.** A regex over its `ROADMAP.md` found only its own `vulkan:` vocabulary rows; that regex also missed Unpopped's asks, so it is a weak control: "not found", not "none".
 
 ## Veto window
 
