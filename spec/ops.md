@@ -348,7 +348,7 @@ golden vectors are in Appendix E.
 ### 2.8 Terms are joined, not restated
 
 KISS-Ops references the **dtype** tokens (`f16 bf16 f32 f64 i8 i16 u8 u16 i32 i64
-u32 u64 bool f8e4m3fn f8e4m3fnuz f8e5m2 f8e5m2fnuz f8e8m0 f8e6m2 i4 u4 b1 c64 c128 f4e2m1 f6e2m3 f6e3m2`), the **operand descriptor** field names (`rank`,
+u32 u64 bool f8e4m3fn f8e4m3fnuz f8e5m2 f8e5m2fnuz f8e8m0 f8e6m2 i4 u4 b1 c64 c128 f4e2m1 f6e2m3 f6e3m2 f128 i128 u128 i256 u256 f8e3m4 f8ue4m3`), the **operand descriptor** field names (`rank`,
 `extents`, `strides`, `dtype`, `alignment`, `layout_tag`, `quant`,
 `symbolic_extent`), `structure_key`, the
 `target_capability` descriptor, and the pinned constants `MAX_RANK` / `MAX_OPERANDS`
@@ -1730,6 +1730,13 @@ shared naming convention spelled identically in both foundational vocabularies.
 | `f4e2m1` | 4 | float | OCP Microscaling (MX) **element** FP4 (1 sign, 2 exp, 1 mantissa), bias 1; **no infinity, no NaN**; max finite ±6; packed pair per byte, low nibble = even logical index (**format and packing owned normatively by KISS-Classify §6.1-0014**, restated here informatively); conversion into it rounds half to even and saturates to max-finite (OCP MX v1.0 section 5.3.3); a storage/operand dtype, never an accumulator (KISS-Classify §6.1-0016) |
 | `f6e2m3` | 6 | float | OCP MX **element** FP6 (1 sign, 2 exp, 3 mantissa), bias 1; **no infinity, no NaN**; max finite ±7.5; four elements per three bytes, LSB-first (**owned normatively by KISS-Classify §6.1-0015**); conversion into it rounds half to even and saturates to max-finite (OCP MX v1.0 section 5.3.2); a storage/operand dtype, never an accumulator |
 | `f6e3m2` | 6 | float | OCP MX **element** FP6 (1 sign, 3 exp, 2 mantissa), bias 3; **no infinity, no NaN**; max finite ±28; four elements per three bytes, LSB-first (**owned normatively by KISS-Classify §6.1-0015**); conversion into it rounds half to even and saturates to max-finite (OCP MX v1.0 section 5.3.2); a storage/operand dtype, never an accumulator |
+| `f128` | 128 | float | IEEE-754 binary128 (1 sign, 15 exp, 112 fraction), bias 16383, with the standard inf/NaN encodings (**owned normatively by KISS-Classify §6.1-0018**); a storage dtype |
+| `i128` | 128 | int | signed 128-bit two's-complement (**owned normatively by KISS-Classify §6.1-0017**) |
+| `u128` | 128 | uint | unsigned 128-bit (**owned normatively by KISS-Classify §6.1-0017**) |
+| `i256` | 256 | int | signed 256-bit two's-complement (**owned normatively by KISS-Classify §6.1-0017**) |
+| `u256` | 256 | uint | unsigned 256-bit (**owned normatively by KISS-Classify §6.1-0017**) |
+| `f8e3m4` | 8 | float | IEEE-style FP8 E3M4 (1 sign, 3 exp, 4 mantissa), bias 3, with infinity and NaN, max finite ±15.5 (**owned normatively by KISS-Classify §6.1-0019**) |
+| `f8ue4m3` | 8 | float | **unsigned** FP8 E4M3 scale (no sign bit, 4 exp, 3 mantissa), bias 7, no infinity, single NaN `0x7F`, finite range [0, 448] (**owned normatively by KISS-Classify §6.1-0020**); a scale type like `f8e8m0` |
 
 - **KISS-OPS-6.16-0001** — The dtype set to which KISS-Ops assigns numeric or structural
   meaning MUST be exactly the tokens in the table above, each with the bit width and

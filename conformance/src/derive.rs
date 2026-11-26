@@ -65,6 +65,11 @@ pub struct ContractionRoles {
     pub m: AxisRef,
     pub n: AxisRef,
     pub k: AxisRef,
+    /// Further K axes (§6.6-0023a, union batch 1): a K **role set** whose first member is `k`. The K size class and
+    /// divisibility bucket are those of the **product** of every declared K extent, as the batch class is of the
+    /// batch product (§6.6-0023). Empty = a single K axis, whose key bytes are exactly those of a cell that never
+    /// declared this field.
+    pub k_more: Vec<AxisRef>,
     /// Batch axes (§6.6-0023): possibly empty; batched iff non-empty.
     pub batch: Vec<usize>,
     /// The weight operand (§6.6-0019): the dtype source of `<wdt>`.
@@ -144,8 +149,9 @@ pub fn dtype_storage_bytes(dtype: &str) -> Option<Option<u32>> {
         "f16" | "bf16" | "i16" | "u16" => Some(2),
         "f32" | "i32" | "u32" => Some(4),
         "f64" | "i64" | "u64" | "c64" => Some(8),
-        "c128" => Some(16),
-        "i8" | "u8" | "bool" | "f8e4m3fn" | "f8e4m3fnuz" | "f8e5m2" | "f8e5m2fnuz" | "f8e8m0" | "f8e6m2" => Some(1),
+        "c128" | "f128" | "i128" | "u128" => Some(16),
+        "i256" | "u256" => Some(32),
+        "i8" | "u8" | "bool" | "f8e4m3fn" | "f8e4m3fnuz" | "f8e5m2" | "f8e5m2fnuz" | "f8e8m0" | "f8e6m2" | "f8e3m4" | "f8ue4m3" => Some(1),
         "i4" | "u4" | "b1" | "f4e2m1" | "f6e2m3" | "f6e3m2" => None,
         _ => return Option::None,
     })
@@ -344,7 +350,20 @@ fn contraction_field(
         let extent = *o.extents.get(r.axis).ok_or(DeriveDecline::ContractionAxisInvalid)?;
         Ok((extent, rank - o.extents.len() + r.axis))
     };
-    let ((me, ma), (ne, na), (ke, ka)) = (role(m)?, role(n)?, role(k)?);
+    let ((me, ma), (ne, na), (mut ke, ka)) = (role(m)?, role(n)?, role(k)?);
+    // §6.6-0023a: each further K axis is a distinct operand axis of extent >= 1, not M, N or K; K is their product.
+    let mut k_frame_axes = vec![ka];
+    for (i, &x) in roles.k_more.iter().enumerate() {
+        if x == m || x == n || x == k || roles.k_more[..i].contains(&x) {
+            return Err(DeriveDecline::ContractionAxisInvalid);
+        }
+        let (extent, frame_axis) = role(x)?;
+        if extent < 1 {
+            return Err(DeriveDecline::ContractionAxisInvalid);
+        }
+        ke = ke.saturating_mul(extent);
+        k_frame_axes.push(frame_axis);
+    }
     let slot = |s: usize| cell.operands.get(s).ok_or(DeriveDecline::RoleSlotOutOfRange);
     let weight = slot(roles.weight)?;
     let scale = roles.scale.map(slot).transpose()?;
@@ -354,7 +373,7 @@ fn contraction_field(
         .ok_or(DeriveDecline::ContractionNoOutput)?;
     // frame axes the output covers (right-aligned, §6.5-0010)
     let out_axes: Vec<usize> = (rank - out.extents.len()..rank).collect();
-    let batch = derive_batch_class(frame, &roles.batch, &[ma, na, ka], &out_axes).map_err(DeriveDecline::Batch)?;
+    let batch = derive_batch_class(frame, &roles.batch, &[&[ma, na][..], &k_frame_axes[..]].concat(), &out_axes).map_err(DeriveDecline::Batch)?;
     check_contraction_dtypes(&[weight, out], scale, cell.accumulator.unwrap_or(primary))?;
     let block = block_length(weight, scale)?;
     Ok(Contraction {

@@ -188,8 +188,8 @@ fn test_ops_opattrs_cast_concat_schema() {
     assert_eq!(opattrs::decode_cast(&[2, 1, 1]), Ok((2, R::NearestEven, S::None)));
     assert_eq!(opattrs::decode_concat(&[7]), Ok(7));
     // declines: a reserved or unknown dtype ordinal, a short blob, an out-of-range axis
-    assert_eq!(opattrs::decode_cast(&[15, 1, 1]), Err(Decline::FieldOutOfRange { field: "target_dtype", value: 15, max: 27 }), "f8e4m3fnuz is reserved");
-    assert_eq!(opattrs::decode_cast(&[28, 1, 1]), Err(Decline::FieldOutOfRange { field: "target_dtype", value: 28, max: 27 }));
+    assert_eq!(opattrs::decode_cast(&[15, 1, 1]), Err(Decline::FieldOutOfRange { field: "target_dtype", value: 15, max: 34 }), "f8e4m3fnuz is reserved");
+    assert_eq!(opattrs::decode_cast(&[35, 1, 1]), Err(Decline::FieldOutOfRange { field: "target_dtype", value: 35, max: 34 }));
     assert_eq!(opattrs::decode_cast(&[2, 1]), Err(Decline::TruncatedBlob { need: 3, got: 2 }));
     assert_eq!(opattrs::decode_concat(&[8]), Err(Decline::FieldOutOfRange { field: "axis", value: 8, max: 8 }));
     assert_eq!(opattrs::decode_concat(&[]), Err(Decline::TruncatedBlob { need: 1, got: 0 }));

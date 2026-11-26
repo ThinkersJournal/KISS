@@ -364,6 +364,7 @@ fn gemm(dtype: &'static str, batch: &[i64], m: i64, n: i64, k: i64) -> Derivatio
         m: axis(0, rank - 2),
         n: axis(1, rank - 1),
         k: axis(0, rank - 1),
+        k_more: vec![],
         batch: vec![],
         weight: 1,
         scale: None,
@@ -397,6 +398,7 @@ fn quant(scale_dtype: &'static str, weight: usize, scale: Option<usize>, order: 
         m: axis(at(0), 0),
         n: axis(at(1), 1),
         k: axis(at(0), 1),
+        k_more: vec![],
         batch: vec![],
         weight,
         scale,
@@ -760,7 +762,138 @@ pub fn vectors() -> Vec<DerivationVector> {
     vec_cap_cases(&mut out);
 
     mx_element_cases(&mut out);
+    union_batch1_cases(&mut out);
     out
+}
+
+/// A contraction `lhs [M, K1, .., Kn] . rhs [K1, .., Kn, N] -> out [M, N]` whose K axes are the role set
+/// K = (lhs, 1) plus `k_more` = (lhs, 2..) (§6.6-0023a).
+fn gemm_multi_k(dtype: &'static str, m: i64, n: i64, ks: &[i64]) -> DerivationCell {
+    let mut l = vec![m];
+    l.extend_from_slice(ks);
+    let mut r = ks.to_vec();
+    r.push(n);
+    let mut c = cell(CUDA, vec![dense(Input, dtype, &l), dense(Input, dtype, &r), dense(Output, dtype, &[m, n])]);
+    c.contraction = Some(ContractionRoles {
+        m: axis(0, 0),
+        n: axis(1, ks.len()),
+        k: axis(0, 1),
+        k_more: (2..=ks.len()).map(|a| axis(0, a)).collect(),
+        batch: vec![],
+        weight: 1,
+        scale: None,
+    });
+    c
+}
+
+/// Union batch 1 (CireSnave board 501 "A", board 515): the seven new dtype tokens and the K role set
+/// (§6.1-0017..-0020, §6.6-0023a).
+fn union_batch1_cases(out: &mut Vec<DerivationVector>) {
+    union_dtype_cases(out);
+    union_nvfp4_case(out);
+    union_k_role_cases(out);
+}
+
+/// The six element tokens in an elementwise add, and `f8ue4m3` (a scale type) declining at operand 0.
+fn union_dtype_cases(out: &mut Vec<DerivationVector>) {
+    for (name, dt) in [
+        ("union_f128_elementwise_add", "f128"),
+        ("union_i128_elementwise_add", "i128"),
+        ("union_u128_elementwise_add", "u128"),
+        ("union_i256_elementwise_add", "i256"),
+        ("union_u256_elementwise_add", "u256"),
+        ("union_f8e3m4_elementwise_add", "f8e3m4"),
+    ] {
+        out.push(v(
+            name,
+            "KISS-CLASSIFY-6.1-0001",
+            "an elementwise add on a union-batch-1 dtype: a usable storage dtype, no accumulator coordinate spelled; the byte cap decides the vector width (16- and 32-byte elements exceed any default cap and stay v1)",
+            cell(
+                CUDA,
+                vec![
+                    op(Input, dt, &[64, 128], &[128, 1], 256),
+                    op(Input, dt, &[64, 128], &[128, 1], 256),
+                    op(Output, dt, &[64, 128], &[128, 1], 256),
+                ],
+            ),
+        ));
+    }
+    out.push(v(
+        "union_ue4m3_at_operand0_declines",
+        "KISS-CLASSIFY-6.6-0021",
+        "f8ue4m3 is a scale type (6.1-0020): at operand 0 the primary dtype is undefined, so the deriver declines exactly as for f8e8m0",
+        cell(CUDA, vec![op(Input, "f8ue4m3", &[8], &[1], 256), op(Input, "f16", &[8], &[1], 256), op(Output, "f16", &[8], &[1], 256)]),
+    ));
+}
+
+/// The NVFP4 shape: an f4e2m1 weight with one f8ue4m3 scale per 16 elements along K (6.1-0020).
+fn union_nvfp4_case(out: &mut Vec<DerivationVector>) {
+    {
+        // the NVFP4 shape: an f4e2m1 weight with one f8ue4m3 scale per 16 elements along K
+        let mut w = dense(Input, "f4e2m1", &[4096, 4096]);
+        w.dequant = Some(DequantForm::Linear);
+        w.block_shape = vec![1, 16];
+        let ops = vec![dense(Input, "bf16", &[8, 4096]), w, dense(Input, "f8ue4m3", &[4096, 256]), dense(Output, "bf16", &[8, 4096])];
+        let mut c = cell(CUDA, ops);
+        c.accumulator = Some("f32");
+        c.contraction = Some(ContractionRoles {
+            m: axis(0, 0),
+            n: axis(1, 1),
+            k: axis(0, 1),
+            k_more: vec![],
+            batch: vec![],
+            weight: 1,
+            scale: Some(2),
+        });
+        out.push(v(
+            "union_ctr_nvfp4_scale_ue4m3",
+            "KISS-CLASSIFY-6.1-0020",
+            "[activation bf16, weight f4e2m1, scale f8ue4m3, out bf16], block 16 along K: the NVFP4 shape; `<sdt>` spells f8ue4m3 and the block g16",
+            c,
+        ));
+    }
+}
+
+/// The K role set (6.6-0023a): product keying and the malformed-axis declines.
+fn union_k_role_cases(out: &mut Vec<DerivationVector>) {
+    out.push(v(
+        "ctr_two_k_axes_product_8x16",
+        "KISS-CLASSIFY-6.6-0023a",
+        "K declared as two axes 8 and 16: K class and divisibility come from the product 128, so the contraction field equals that of the single-K cell with K = 128",
+        gemm_multi_k("f16", 64, 256, &[8, 16]),
+    ));
+    out.push(v(
+        "ctr_single_k_128_same_contraction_as_two_k_8x16",
+        "KISS-CLASSIFY-6.6-0023a",
+        "the single-K cell with K = 128: the control for ctr_two_k_axes_product_8x16 (same contraction field)",
+        gemm("f16", &[], 64, 256, 128),
+    ));
+    out.push(v(
+        "ctr_three_k_axes_product_large",
+        "KISS-CLASSIFY-6.6-0023a",
+        "three K axes 16 x 16 x 16 = 4096: class Large, divisibility d16",
+        gemm_multi_k("f16", 64, 256, &[16, 16, 16]),
+    ));
+    {
+        let mut c = gemm_multi_k("f16", 64, 256, &[8, 16]);
+        c.contraction.as_mut().expect("roles").k_more = vec![axis(0, 1)];
+        out.push(v(
+            "ctr_extra_k_axis_repeats_k_declines",
+            "KISS-CLASSIFY-6.6-0023a",
+            "a further K axis that repeats K is a malformed role hint: ContractionAxisInvalid, never silently dropped",
+            c,
+        ));
+    }
+    {
+        let mut c = gemm_multi_k("f16", 64, 256, &[8, 16]);
+        c.contraction.as_mut().expect("roles").k_more = vec![axis(0, 0)];
+        out.push(v(
+            "ctr_extra_k_axis_is_m_declines",
+            "KISS-CLASSIFY-6.6-0023a",
+            "a further K axis that is the M axis: ContractionAxisInvalid",
+            c,
+        ));
+    }
 }
 
 /// Evaluate a vector with the reference deriver.
@@ -817,10 +950,11 @@ fn contraction_json(r: Option<&ContractionRoles>) -> String {
     let Some(r) = r else { return "null".to_string() };
     let a = |x: AxisRef| format!("{{\"operand\":{},\"axis\":{}}}", x.operand, x.axis);
     format!(
-        "{{\"m\":{},\"n\":{},\"k\":{},\"batch_axes\":{},\"weight\":{},\"scale\":{}}}",
+        "{{\"m\":{},\"n\":{},\"k\":{},\"k_more\":[{}],\"batch_axes\":{},\"weight\":{},\"scale\":{}}}",
         a(r.m),
         a(r.n),
         a(r.k),
+        r.k_more.iter().map(|&x| a(x)).collect::<Vec<_>>().join(","),
         ints(&r.batch.iter().map(|&x| x as i64).collect::<Vec<_>>()),
         r.weight,
         r.scale.map_or("null".to_string(), |x| x.to_string())
