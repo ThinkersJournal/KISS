@@ -82,8 +82,10 @@ fn test_classify_f128_format() {
 // Backs[enforced]: KISS-CLASSIFY-6.1-0019 — `f8e3m4` is the IEEE-style FP8 E3M4: sign 1, exponent 3,
 // mantissa 4, bias 3; exponent field 7 with mantissa 0 is infinity and with mantissa non-zero is NaN;
 // max finite 15.5 (0x6F), min normal 0.25 (0x10), max subnormal 0.234375 (0x0F), min subnormal 0.015625 (0x01).
-// Literals: ml_dtypes README (float8_e3m4: exponent 3, mantissa 4, bias 3, IEEE 754 with NaN and inf);
-// Microfloats.jl E3M4 table (max normal 15.5, min normal 0.25, max subnormal 0.234375, min subnormal 0.015625).
+// Literals: llvm/llvm-project 7c710c60 APFloat.cpp 300-313 (semFloat8E3M4: max exp 3, min exp -2, precision 5, IEEE754
+// non-finite, IEEE NaN) and jax-ml/ml_dtypes 035edbc4 float8.h 666-728 (max 0b0'110'1111 = 15.5, min normal 1/4,
+// infinity 0b0'111'0000, denorm_min 0b0'000'0001 = 1/64, isnan = abs(rep) > infinity rep at line 1256). Mojo's docstring
+// (modular/modular bead9c4f dtype.mojo 225-238) says finite-only and DISAGREES; see KISS-CLASSIFY-6.1-0019.
 #[test]
 fn test_classify_f8e3m4_format() {
     assert_eq!(f8e3m4_decode(0x00), F8Value::Finite(0.0));

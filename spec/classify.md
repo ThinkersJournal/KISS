@@ -690,31 +690,47 @@ where it fixes storage bytes.
   width and encoding only: it pins no byte order beyond that of the narrower integer tokens, and the
   semantics of arithmetic on them (wrap, widening, conversion) are owned by KISS-Ops, not by Classify.
   A wide integer is a usable storage dtype in every position an integer dtype is; it is not an accumulator
-  `float`. *Provenance:* the tokens are named for the Unpopped union rows CUDA 65 (`__int128`) and Mojo 48
-  (`Int128`/`UInt128`/`Int256`/`UInt256`); the encodings are the standard two's-complement and unsigned
-  definitions and cite no further source. *Test:* `test_classify_wide_integer_bounds`.
+  `float`. *Provenance:* the tokens are named for the Unpopped union rows CUDA 65 (`__int128`) and Mojo 48; Mojo
+  declares `uint128`, `int128`, `uint256` and `int256` dtypes in `Mojo/stdlib/std/builtin/dtype.mojo`
+  (modular/modular `bead9c4f`, lines 146 to 161). The encodings are the definitional two's-complement and unsigned
+  encodings of that width; **byte order is not pinned**, exactly as for `i64` (§6.1-0002), and no source is cited
+  for an order. *Test:* `test_classify_wide_integer_bounds`.
 - **KISS-CLASSIFY-6.1-0018** — `f128` (additive; union batch 1) MUST be the IEEE-754 **binary128** interchange
   format: sign 1, exponent 15, fraction 112, exponent bias 16383, 128 bits. Exponent field 0 with fraction 0 is
   `±0`; exponent field 0 with fraction non-zero is subnormal; exponent field `0x7FFF` with fraction 0 is `±∞`;
   exponent field `0x7FFF` with fraction non-zero is NaN, **quiet** iff the most-significant fraction bit is set
-  and signaling otherwise; every other exponent field is a normal number. *Provenance:* IEEE 754-2019 Table 3.5
-  (interchange format parameters: binary128 has `k = 128`, `p = 113`, `emax = 16383`) and section 6.2.1 (the quiet
-  bit); named for the Unpopped union row CUDA 64. `f128` is a storage dtype; compute precision for it is a
+  and signaling otherwise; every other exponent field is a normal number. *Provenance:* llvm/llvm-project at `7c710c60`, `llvm/lib/Support/APFloat.cpp`
+  lines 160 to 171 (`semIEEEquad`: maxExponent 16383, minExponent −16382, precision 113, sizeInBits 128, IEEE754
+  non-finite behaviour, IEEE NaN encoding), which agree with this clause (precision 113 = 1 + 112 fraction bits,
+  `emax` 16383 = bias); the quiet-bit rule is IEEE 754-2019 section 6.2.1, quoted verbatim in `ml_dtypes`
+  `float8.h` (jax-ml/ml_dtypes `035edbc4`, lines 713 to 722: "A quiet NaN bit string should be encoded with the
+  first bit (d1) of the trailing significand field T being 1"). The IEEE 754-2019 standard text itself was not
+  read (it is not freely available); it is cited through those two primary sources. Named for the Unpopped union
+  row CUDA 64. `f128` is a storage dtype; compute precision for it is a
   KISS-Ops fidelity attribute (§6.1-0005). *Test:* `test_classify_f128_format`.
 - **KISS-CLASSIFY-6.1-0019** — `f8e3m4` (additive; union batch 1) MUST be the **IEEE-style** FP8 E3M4 format:
   sign 1, exponent 3, mantissa 4, exponent bias 3. For exponent field `e` and mantissa field `m`: `e = 7` and
   `m = 0` is `±∞`; `e = 7` and `m ≠ 0` is NaN (thirty NaN encodings); otherwise the value is
   `(−1)^s · 2^(e−3) · (1 + m/16)` when `e ≠ 0` and `(−1)^s · 2^(−2) · (m/16)` when `e = 0` (subnormal).
   Maximum finite magnitude 15.5 (`0x6F`), minimum normal 0.25 (`0x10`), maximum subnormal 0.234375 (`0x0F`),
-  minimum subnormal 0.015625 (`0x01`); `0x80` is `−0`. *Variants not adopted (byte-incompatible, so each would
-  be its own token and none is minted here):* a **finite-only** E3M4 with no infinity (reported for Mojo in
-  ROADMAP RU.1; the Mojo source was **not read** for this clause), and the E3M4 of the MLSys 2024 paper whose
-  table lists maximum value 30.0 with a single NaN and no infinity. *Provenance:* the `ml_dtypes` README
-  (`float8_e3m4`: exponent 3, mantissa 4, bias 3, "IEEE 754, with NaN and inf"); the `ml_dtypes` pull request
-  that added the type, which records that LLVM `APFloat` and MLIR `f8E3M4` follow the IEEE 754 convention; the
-  Microfloats.jl E3M4 table for the maximum, minimum and subnormal magnitudes above (read through a search
-  summary on 2026-11-26, **not** against the `APFloat` or `float8.h` source, which remains unchecked). Named for
-  the Unpopped union row Mojo 44. *Test:* `test_classify_f8e3m4_format`.
+  minimum subnormal 0.015625 (`0x01`); `0x80` is `−0`. *Provenance (primary sources, all three read 2026-11-26):* (1) llvm/llvm-project `7c710c60`,
+  `llvm/lib/Support/APFloat.cpp` lines 300 to 313, `semFloat8E3M4`: maxExponent 3, minExponent −2, precision 5,
+  sizeInBits 8, `fltNonfiniteBehavior::IEEE754`, `fltNanEncoding::IEEE` (field order per
+  `llvm/include/llvm/ADT/APFloat.h` lines 1049 to 1062); these give maximum `2^3 · (2 − 2^−4) = 15.5` and minimum
+  normal `2^−2`, matching this clause. (2) jax-ml/ml_dtypes `035edbc4`, `ml_dtypes/include/float8.h` lines 257 to
+  259 ("Exponent: 3, Mantissa: 4, bias: 3. IEEE 754.") and 666 to 728 (`numeric_limits_float8_e3m4`: max
+  `0b0'110'1111` = 15.5, min normal `0b0'001'0000` = 1/4, `infinity()` `0b0'111'0000`, `quiet_NaN()` `0b0'111'1000`,
+  `signaling_NaN()` `0b0'111'0100`, `denorm_min()` `0b0'000'0001` = 1/64), and line 1256 (`isnan` is `abs(a).rep() >
+  infinity().rep()`, i.e. every exponent-7 encoding with a non-zero mantissa). (3) Mojo, modular/modular `bead9c4f`,
+  `Mojo/stdlib/std/builtin/dtype.mojo` lines 225 to 238 (`float8_e3m4`, constant `#kgen.dtype.constant<f8e3m4>`):
+  **the Mojo docstring DISAGREES with (1) and (2)**: it states "nan: {0,1}.111.1111" and "fn: finite (no inf or
+  -inf encodings)", i.e. a finite-only reading with a single NaN per sign, while the `f8e3m4` MLIR type it
+  lowers to is the LLVM IEEE-style type of (1). This clause takes the IEEE-style format, as two independent
+  implementations agree on it (LLVM and ml_dtypes) and Mojo's own lowering target is the same LLVM type; a Mojo
+  reader that follows its docstring would read the exponent-7 mantissa-0 encoding as a NaN where this clause
+  says infinity. The finite-only reading is **not adopted** (byte-incompatible: it would be its own token and none
+  is minted here), nor is the E3M4 of the MLSys 2024 paper (maximum value 30.0, a single NaN, no infinity; read
+  through a search summary only). Named for the Unpopped union row Mojo 44. *Test:* `test_classify_f8e3m4_format`.
 - **KISS-CLASSIFY-6.1-0020** — `f8ue4m3` (additive; union batch 1) MUST be the **unsigned** FP8 E4M3 scale
   encoding used for the NVFP4 per-16-element scale: **no sign bit**, exponent 4, mantissa 3, exponent bias 7,
   carried in one byte whose bit 7 is not part of the value. For the seven value bits `v` (exponent field
@@ -729,8 +745,10 @@ where it fixes storage bytes.
   bias (exp_bias): 7") and 1138 to 1141 (`isnan` is `storage == uint8_t(0x7f)`); `include/cutlass/exmy_base.h`
   lines 870 to 872 and 917 to 919 (`uint8_t` storage, 8 bits, 4 exponent bits, 3 mantissa bits,
   `CANONICAL_ONLY` NaN, the signed flag false). CUTLASS pairs `float_e2m1_t` data with `float_ue4m3_t` scales per
-  16 elements (`nv_float4_t`, example 72b `InputSFVectorSize = 16`). That is one source (CUTLASS); no NVIDIA
-  PTX or CUDA text was read for this clause. The unsigned UE5M3 (PTX Table 53, absent from CUTLASS) is **not** in
+  16 elements (`nv_float4_t`, example 72b `InputSFVectorSize = 16`). `float8.h` and `exmy_base.h` are one source (CUTLASS) and the
+  CUTLASS commit above is the one read on 2026-11-26. PTX: pm-kernels reported on 2026-11-26 that the PTX ISA
+  scale-type table (Table 53) lists UE4M3; that table was **not** re-read for this clause (this session) and no
+  bit layout is taken from it. The unsigned UE5M3 (PTX Table 53, absent from CUTLASS) is **not** in
   this batch. *Test:* `test_classify_ue4m3_format`.
 
 ### 6.2 Numeric-kind and special-value pinning
