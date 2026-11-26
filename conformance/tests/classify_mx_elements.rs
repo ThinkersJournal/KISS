@@ -124,8 +124,8 @@ const CTR: &str = "sk8|ctr|f16|cuda:sm90|ix32|grid|r2|co/00/v4/d16/f/f16;co/00/v
 // closed set, usable (not reserved), and appended after c128.
 #[test]
 fn test_classify_mx_element_not_accumulator() {
-    assert_eq!(DTYPES.len(), 27);
-    assert_eq!(&DTYPES[24..], &MX_ELEMENT_DTYPES[..], "appended after c128, in table order");
+    assert_eq!(DTYPES.len(), 34);
+    assert_eq!(&DTYPES[24..27], &MX_ELEMENT_DTYPES[..], "appended after c128, in table order");
     for dt in MX_ELEMENT_DTYPES {
         assert!(!RESERVED_DTYPES.contains(&dt), "{dt} is usable, not reserved");
         // usable in the dtype field

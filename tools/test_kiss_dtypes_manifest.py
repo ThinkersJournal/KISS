@@ -20,7 +20,7 @@ def _emit():
     ).stdout
 
 
-# Hand-transcribed from the KISS-Classify §6.1-0001 table (spec/classify.md, the 27 rows), NOT
+# Hand-transcribed from the KISS-Classify §6.1-0001 table (spec/classify.md, the 34 rows), NOT
 # derived from the manifest: a table copied from the artifact under test could not disagree with
 # it. (token, kind, storage_bits, reserved). KISS#239: width is necessary but nowhere near
 # sufficient to identify a type, so every arm is pinned by identity, not spot-checked.
@@ -38,15 +38,18 @@ SPEC_ARMS = (
     ("i4", "int", 4, False), ("u4", "uint", 4, False), ("b1", "uint", 1, False),
     ("c64", "complex", 64, False), ("c128", "complex", 128, False),
     ("f4e2m1", "float", 4, False), ("f6e2m3", "float", 6, False), ("f6e3m2", "float", 6, False),
+    ("f128", "float", 128, False), ("i128", "int", 128, False), ("u128", "uint", 128, False),
+    ("i256", "int", 256, False), ("u256", "uint", 256, False),
+    ("f8e3m4", "float", 8, False), ("f8ue4m3", "float", 8, False),
 )
 
 # Tokens per storage width, from the same table: the 8-bit cluster alone is nine tokens.
-SPEC_WIDTH_CARDINALITY = {1: 1, 4: 3, 6: 2, 8: 9, 16: 4, 32: 3, 64: 4, 128: 1}
+SPEC_WIDTH_CARDINALITY = {1: 1, 4: 3, 6: 2, 8: 11, 16: 4, 32: 3, 64: 4, 128: 4, 256: 2}
 
 
 def _arm_failures(dtypes):
     """Every disagreement between a manifest's `dtypes` rows and SPEC_ARMS, as strings.
-    Empty means each of the 27 arms matches on (kind, storage_bits, reserved) and the
+    Empty means each of the 34 arms matches on (kind, storage_bits, reserved) and the
     per-width token counts match."""
     out = []
     by = {d["token"]: d for d in dtypes}
@@ -67,7 +70,7 @@ def _arm_failures(dtypes):
 
 
 class DtypeManifestTest(unittest.TestCase):
-    def test_emit_manifest_has_all_27_dtypes_with_metadata(self):
+    def test_emit_manifest_has_all_34_dtypes_with_metadata(self):
         m = json.loads(_emit())
         self.assertEqual(m["schema"], "kiss-dtype-manifest-v1")
         # clause D (§3.4): the manifest is a persisted, indexed list of dtype sub-tokens,
@@ -79,7 +82,7 @@ class DtypeManifestTest(unittest.TestCase):
         toks = set(m["all_dtypes"])
         # exactly the twenty-seven §6.1-0001 tokens: the twenty-four sk4 tokens (renamed integers/FP8,
         # the total-width complex flip, the two additive MX scales) plus the three MX element rows
-        self.assertEqual(len(toks), 27)
+        self.assertEqual(len(toks), 34)
         for t in ("i8", "i16", "i4", "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz",
                   "f8e8m0", "f8e6m2", "c64", "c128", "f4e2m1", "f6e2m3", "f6e3m2"):
             self.assertIn(t, toks)
@@ -103,11 +106,11 @@ class DtypeManifestTest(unittest.TestCase):
         self.assertEqual(set(m["kinds"]), {"float", "int", "uint", "bool", "complex"})
 
     def test_every_arm_is_pinned_by_identity_and_width_cardinality(self):
-        """KISS#239 items 1 and 2: all 27 arms, not a spot-check. `(kind, storage_bits,
+        """KISS#239 items 1 and 2: all 34 arms, not a spot-check. `(kind, storage_bits,
         reserved)` for each token, and exactly N tokens per width, against a table
         transcribed from spec/classify.md §6.1-0001."""
-        self.assertEqual(len(SPEC_ARMS), 27)
-        self.assertEqual(sum(SPEC_WIDTH_CARDINALITY.values()), 27)
+        self.assertEqual(len(SPEC_ARMS), 34)
+        self.assertEqual(sum(SPEC_WIDTH_CARDINALITY.values()), 34)
         self.assertEqual(_arm_failures(json.loads(_emit())["dtypes"]), [])
 
     def test_arm_pin_detects_a_same_width_swap(self):

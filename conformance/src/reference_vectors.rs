@@ -1066,7 +1066,7 @@ pub fn emit_reference_vectors_json() -> String {
     }
     s.push_str(&format!("  \"structure_key_schema_version\": {},\n", SCHEMA_VERSION));
     s.push_str("  \"token_prefix\": \"sk8\",\n");
-    s.push_str("  \"dtype_axis_note\": \"recognition_set is all 27 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 24 a byte-match runs over. The three MX element rows (f4e2m1, f6e2m3, f6e3m2) are appended after c128 and are usable, but typed-decline (ElementDtypeAsAccumulator) in an accumulator position. The two are different obligations (KISS-CLASSIFY-6.1-0001).\",\n");
+    s.push_str("  \"dtype_axis_note\": \"recognition_set is all 34 tokens a reader MUST recognize on parse (reserved ones typed-decline, distinct from unknown); usable_set is the 31 a byte-match runs over. The three MX element rows (f4e2m1, f6e2m3, f6e3m2) are appended after c128 and are usable, but typed-decline (ElementDtypeAsAccumulator) in an accumulator position. The seven union-batch-1 rows (f128, i128, u128, i256, u256, f8e3m4, f8ue4m3) are appended after f6e3m2 and are usable (KISS-CLASSIFY-6.1-0017..-0020). The two are different obligations (KISS-CLASSIFY-6.1-0001).\",\n");
     s.push_str(&format!("  \"recognition_count\": {},\n", DTYPES.len()));
     s.push_str(&format!("  \"usable_count\": {},\n", usable.len()));
 

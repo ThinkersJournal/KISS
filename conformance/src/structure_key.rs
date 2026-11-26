@@ -37,11 +37,16 @@ pub const CELL_CLASSES: [&str; 7] = ["ctr", "ndx", "rdc", "ew1", "ew2", "ew3", "
 /// shared-exponent scale `f8e8m0` is additive and `f8e6m2` is additive but reserved (§6.1-0013); complex is named by
 /// TOTAL width (`c64` = pair-of-`f32`, `c128` = pair-of-`f64` — the sk3→sk4 meaning-flip,
 /// §6.1-0012, made loud by the version prefix).
-pub const DTYPES: [&str; 27] = [
+pub const DTYPES: [&str; 34] = [
     "f16", "bf16", "f32", "f64", "i8", "i16", "u8", "u16", "i32", "i64", "u32", "u64", "bool",
     "f8e4m3fn", "f8e4m3fnuz", "f8e5m2", "f8e5m2fnuz", "f8e8m0", "f8e6m2", "i4", "u4", "b1", "c64", "c128",
     "f4e2m1", "f6e2m3", "f6e3m2",
+    "f128", "i128", "u128", "i256", "u256", "f8e3m4", "f8ue4m3",
 ];
+
+/// The seven dtype tokens added by union batch 1 (§6.1-0017..-0020; CireSnave board 501 "A"), appended after
+/// the earlier twenty-seven so no §6.19-0025 ordinal moves. None is reserved; `f8ue4m3` is a scale type.
+pub const UNION_BATCH1_DTYPES: [&str; 7] = ["f128", "i128", "u128", "i256", "u256", "f8e3m4", "f8ue4m3"];
 
 /// The three **reserved** members of [`DTYPES`] (Classify §6.1-0001): part of the
 /// closed vocabulary so the spellings are pinned now, but with **no computation
@@ -1189,9 +1194,9 @@ pub fn derive_bcast_mask(extents: &[i64], strides: &[i64]) -> u8 {
     mask
 }
 
-/// The two MX **scale** dtypes (§6.1-0013). Neither is an element value dtype, so
+/// The three **scale** dtypes (§6.1-0013 the two MX scales, §6.1-0020 the unsigned NVFP4 scale). Neither is an element value dtype, so
 /// neither is a valid operand-0 / primary dtype (§6.6-0022).
-pub const SCALE_DTYPES: [&str; 2] = ["f8e8m0", "f8e6m2"];
+pub const SCALE_DTYPES: [&str; 3] = ["f8e8m0", "f8e6m2", "f8ue4m3"];
 
 /// §6.6-0005 + §6.6-0022: `structure_key.dtype` is operand-0's dtype, where operand-0
 /// is fixed by the canonical operand order (§6.6-0014) — and a derivation whose
