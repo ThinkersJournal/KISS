@@ -50,7 +50,7 @@ Each consumer's binding today:
 
 ### RU — Unpopped's IR-union asks (CireSnave 2026-11-25: "Unpopped is our highest priority project.  If it needs work in other projects, those projects need to be directed those directions.")
 
-Ranked AFTER the PM's in-flight PR (R5.21, #846) and AHEAD of every row not union-related. Source of both rows: Unpopped `docs/ir-union-asks.md` (1a, 1b; `git show origin/lane/union-rulings-1125:docs/ir-union-asks.md` in the Unpopped repo), read 2026-11-25. Its "ROADMAP C10 / I3 / C2" and "U1b" are Unpopped's own row names, not rows of this file (`git grep -n -E "C10|I3|C2" ROADMAP.md` finds no such row; control: the same tree finds R1.26). Lane-day figures are sizing estimates by this lane, not measurements.
+Ranked AFTER the PM's in-flight PR (R5.21, #846) and AHEAD of every row not union-related. Source of both rows: Unpopped `docs/ir-union-asks.md` (1a, 1b; `git show origin/lane/union-rulings-1125:docs/ir-union-asks.md` in the Unpopped repo), read 2026-11-25. Its "ROADMAP C10 / I3 / C2" and "U1b" are Unpopped's own row names, not rows of this file (`git grep -n -E "C10|I3|C2" ROADMAP.md` matches only this paragraph itself (the sentence names them), no row of its own; control: the same tree finds R1.26). Lane-day figures are sizing estimates by this lane, not measurements.
 
 | # | Item | Needed by | State |
 |---|---|---|---|

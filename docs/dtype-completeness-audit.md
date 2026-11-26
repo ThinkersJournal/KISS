@@ -14,7 +14,7 @@ might provide compute described via KISS standards.  The list is finite and desc
 
 ## 1. What KISS names today (the left-hand side)
 
-The Classify scalar dtype set is closed at twenty-seven tokens (§6.1-0001): twenty-four **usable**
+**Updated 2026-11-26 for kiss-conformance 0.24.0 (union batch 1, KISS#848, origin/main a9ad8cf5): the set is now closed at thirty-four tokens (31 usable, 3 reserved); the seven added are `f128 i128 u128 i256 u256 f8e3m4 f8ue4m3` (§6.1-0017..-0020). Every GAP below that names one of them is RESOLVED in 0.24.0 and is marked so; the text below it describes the 27-token set that existed when the audit was read.** The Classify scalar dtype set was closed at twenty-seven tokens (§6.1-0001): twenty-four **usable**
 (`f16 bf16 f32 f64 i8 i16 i32 i64 u8 u16 u32 u64 bool f8e4m3fn f8e5m2 f8e8m0 i4 u4 b1 c64 c128 f4e2m1 f6e2m3
 f6e3m2`) and three **reserved**, recognized but with no computation semantics (`f8e4m3fnuz f8e5m2fnuz
 f8e6m2`). The set is **pure storage** (§6.1-0005): a math mode such as TF32 is a precision coordinate
@@ -52,10 +52,10 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | `.pred` | `bool` named | H | |
 | `.s4`, `.u4` (wmma sub-byte), `.b1` (wmma) | `i4 u4 b1` named | H | |
 | `.e4m3`, `.e5m2` (fp8, sm89+) | `f8e4m3fn`, `f8e5m2` named | H | |
-| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; unpopped recalls the spellings as matching (not read from the PTX ISA); it adds `.ue4m3` (nvfp4 block scale), not named in KISS: check it in the PTX ISA |
+| `.e2m3`, `.e3m2` (fp6), `.e2m1` (fp4), `.ue8m0` (scale) | `f6e2m3 f6e3m2 f4e2m1 f8e8m0` named | M | sm100 family; unpopped recalls the spellings as matching (not read from the PTX ISA); READ in PTX ISA 9.5 §5.2.3 (2026-11-25): `ue4m3` is a 7-bit unsigned float, 4 exponent + 3 mantissa bits, no infinity, NaN only `0x7f`, held in `.b8` with the MSB zero; `ue5m3` (8-bit) and `ue8m0` are its neighbours. KISS names `f8e8m0` only: `ue4m3` (the nvfp4 block scale) and `ue5m3` are **GAP**, and a byte-moving token needs CireSnave's word (board 501) |
 | `.tf32` | **by design** (§6.1-0005; math mode in `(acc+mp)`) | H | storage is `f32`; confirm the by-design call (§4 Q2) |
-| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | unpopped recalls `.b128` as an untyped 128-bit type (recalled, not read from the PTX ISA); `.u128`/`.s128` unconfirmed |
-| `.u128`, `.s128` (recent PTX, wide integer ops and atomics) | **GAP**: no `i128`/`u128` | **M** | candidate |
+| `.b8 .b16 .b32 .b64 .b128` (untyped bit-widths) | `b128` **GAP** if used as a data type; `.b8…b64` are bit patterns, reached by `bitcast` | M | READ in PTX ISA 9.5 §5.2.1 Table 8 (2026-11-25): `.b128` IS listed as an untyped bit type (introduced PTX 8.3; the sm minimum differs between archived pages, unresolved). It is a bit pattern, not a numeric type, which is why `bitcast` reaches it |
+| `.u128`, `.s128` (recent PTX, wide integer ops and atomics) | **PER LAYER. PTX: NOT A PTX TYPE** (a language-level `__int128` lowers to 64-bit pairs; see section 5): absent from Table 8 (signed `.s8-.s64`, unsigned `.u8-.u64`, bits `.b8-.b128`); `mul.wide`/`mad.wide` stop at 32-bit inputs; 128-bit values are built from chained `.cc` ops | **H** (read PTX ISA 9.5; instruction sections after 9.7.9.6 `lop3`, incl. `mov`/`ld`/`st`/`atom`, were NOT readable, so `.b128` loads and atomics are unchecked) | PTX layer: no GAP. **Language layer: RESOLVED in 0.24.0** (board 501 "A" and board 515: `i128`, `u128`, `i256`, `u256` are tokens, §6.1-0017; the PTX lowering stays a legal lowering) |
 | Packed pairs: `.f16x2`, `.bf16x2`, `.e4m3x2`, `.e5m2x2`, `.e2m1x2`, `.ue8m0x2`, `.s16x2`, `.u16x2` | modelled by vector-access width (§6.5-0009), not a dtype | M | |
 | `.u8x4`/`.s8x4` (`dp4a` operands) | carried as `u32`/`i32` bits | M | `bitcast`-reachable (staged, §6.21-0005) |
 | CUDA C `cuComplex`/`cuDoubleComplex` | `c64`, `c128` named | H | |
@@ -115,7 +115,7 @@ deliberately not a dtype (with the clause); **GAP** = nothing names it. Source c
 | # | Candidate | Why | Action proposed |
 |---|---|---|---|
 | 1 | `f8e4m3fnuz`, `f8e5m2fnuz` | AMD MI300 computes on them (H) | **un-reserve** (usable, with computation semantics and a conversion rule); the one item the ruling forces |
-| 2 | `i128`, `u128` | PTX wide-integer ops (M) | verify the PTX instructions that take them, then name or decide they are never an element dtype |
+| 2 | `i128`, `u128` | PTX wide-integer ops (was M) | **PTX layer resolved 2026-11-25: PTX 9.5 has no `.s128`/`.u128` type**; only `.b128` bits. The LANGUAGE-level question (CUDA `__int128`, Mojo `int128`) is **RESOLVED in 0.24.0**: `i128 u128 i256 u256` are tokens (§6.1-0017) |
 | 3 | `c32` (complex `f16`) | half complex in cuFFT/CUTLASS (M) | name with the `c32` migration note the sk4 RFC §4 reserved |
 | 4 | `f8e6m2` (reserved) | no device found that computes on it (L) | keep reserved or **retire**; the ruling covers only types a device uses |
 | 5 | Intel hf8/bf8 | variant unknown (L) | ratify layout to variant (as sk4 did for Vulkan FP8) |
@@ -182,3 +182,51 @@ reach zero.
    split in §3, or name different ones.
 
 *— lane: kiss*
+
+## 5. Board-501 brief (read 2026-11-25; doc-only, nothing minted)
+
+Sources are web pages read through a fetch tool that paraphrases and truncates; a row marked *paraphrased* was not seen verbatim. Nothing here moves a byte.
+
+**5.1 Language-level 128-bit integers** (the union standard is about the LANGUAGES, not only PTX; the PTX layer above stays true).
+
+| Layer | What the source says | Source |
+|---|---|---|
+| CUDA C++ `__int128` | CUDA 11.5 release notes: "Preview release of a new data type, __int128, usable with compatible host compilers", "no broad support for math operations"; CUDA 11.6: "Full release of 128-bit integer (__int128) data type including compiler and developer tools support", host compiler must support the type; libcu++ math functions take it. Operations list, atomics and the lowering to 64-bit pairs: **not found** in what was read; nvcc driver docs read only to 100,000 of 181,477 characters. | docs.nvidia.com/cuda/archive/11.6.1/cuda-toolkit-release-notes/index.html |
+| CUDA tile code | "128-bit integer or floating point types" are listed as unsupported in tile code. | CUDA Programming Guide, 05-appendices/cpp-language-support.html, 5.3.10.8 |
+| Mojo | `DType` lists `int128`, `uint128`, `int256`, `uint256` (and platform-width `int`/`uint`). Not checked: scalar structs named `Int128`/`UInt256`, `SIMD[DType.int128, N]` in practice, GPU-backend support. | mojolang.org/docs/stdlib/builtin/dtype/DType |
+
+**Language-level: yes (leaning), for board 501.** Two languages (CUDA C++ `__int128`, Mojo `DType.int128/int256`) name a wide integer an IR must carry to be complete by the union standard; PTX lowers it, which is a legal lowering, not an absence. What KISS would name (`i128`/`u128`, `i256`/`u256`) and the legal lowering are CireSnave's word.
+
+**5.2 Scale and alternate float formats, PTX ISA 9.5 s5.2.3 "Alternate Floating-Point Data Formats"** (packed forms: Table 9, s5.2.5.1; fundamental types: Table 8, s5.2.1). *Paraphrased* unless stated; sign convention for the signed rows is NOT stated in the text read.
+
+| Format | Bits | Exp/Mant | Infinity | NaN | Held in |
+|---|---|---|---|---|---|
+| `e4m3` | 8 | 4/3 | none | `0x7f`, `0xff` (verbatim) | bit-size type |
+| `e5m2` | 8 | 5/2 | not read | not read | bit-size type |
+| `e2m3`, `e3m2` | 6 | 2/3, 3/2 | none | none | packed `x2` in `.b16` |
+| `e2m1` | 4 | 2/1 | none (verbatim) | none (verbatim) | packed `e2m1x2` in `.b8` |
+| `ue8m0` | 8 | 8/0, unsigned | none (verbatim) | `0xff` (verbatim) | packed `ue8m0x2` in `.b16` |
+| `ue4m3` | 7 | 4/3, unsigned | none (verbatim) | `0x7f` (verbatim) | `.b8`, MSB zero |
+| `ue5m3` | 8 | 5/3, unsigned | none | `0xff` | `.b8`; packed `.ue5m3x2` |
+
+At the 27-token set KISS named `f8e8m0` (= `ue8m0`) only. **0.24.0: `ue4m3` is now the token `f8ue4m3` (§6.1-0020, RESOLVED)**; `ue5m3` is still a **GAP** (single-source, PTX Table 53; a later batch). `ue4m3` has no packed type in Table 9.
+
+**5.3 `.b128` in instructions** (PTX ISA 8.4 page, archive 12.4; section numbers shift in 9.5). `ld` and `st`: `.b128` in the type list, PTX 8.3, `sm_70` or higher, `.sys` scope with `.b128` from PTX 8.4. `mov`: scalar `mov` has no `.b128`; the vector pack/unpack form takes `.b128`, PTX 8.3, `sm_70`. `atom`: **not read in any official page**; secondary sources show `atom...cas.b128` and `exch.b128` and one unverified report of `sm_90`. `red`: no `.b128` seen. The 9.5 page text cuts off before these sections.
+
+
+## 6. tcgen05 instruction-descriptor type codes (read 2026-11-26 at PTX ISA 9.5 Tables 52/53 and CUTLASS main `cute/arch/mma_sm100_desc.hpp`; doc-only, nothing minted)
+
+Both sources were read verbatim (the PTX page as text, the header as a file), not paraphrased.
+
+| Field | `.kind::mxf8f6f4` (Table 52, bits 7-9 atype / 10-12 btype) | `.kind::mxf4`, `.kind::mxf4nvf4` (Table 53, bits 7-9 atype / 10-11 btype) | CUTLASS (`MXF8F6F4Format`, `MXF4Format`) |
+|---|---|---|---|
+| E4M3 / E5M2 | 0 / 1 | n/a | 0 / 1 (agrees) |
+| E2M3 / E3M2 | 3 / 4 | n/a | 3 / 4 (agrees) |
+| E2M1 | 5 | 1 | 5 in `MXF8F6F4Format`, 1 in `MXF4Format` (agrees with both tables) |
+| Scale type (bit 23 / bits 23-24) | `UE8M0 = 1` only | `.kind::mxf4`: `UE8M0 = 1`; `.kind::mxf4nvf4`: `UE4M3 = 0`, `UE8M0 = 1`, `UE5M3 = 2` | `ScaleFormat`: `UE4M3 = 0`, `UE8M0 = 1`; **no `UE5M3`** in the header read |
+
+Findings, all facts about those two sources:
+
+- The code for E2M1 is **instruction-kind dependent** (5 under `mxf8f6f4`, 1 under `mxf4`/`mxf4nvf4`); a descriptor code is therefore not a dtype token, and KISS's `f4e2m1` names the storage type, not the code.
+- The mx scale `UE8M0` is `1` in every kind that carries it, and is KISS's `f8e8m0`. `UE4M3` and `UE5M3` appear only as `.kind::mxf4nvf4` scale types: the same two GAPs as section 5.2, now with the instruction that consumes them (0.24.0 closes `UE4M3` as `f8ue4m3`; `UE5M3` stays a GAP). The PTX Table 53 value `UE4M3 = 0` is this audit's own s6 read (PTX ISA 9.5, Tables 52/53, 2026-11-25); §6.1-0020 cites CUTLASS only and does not yet cite it. CUTLASS lacks `UE5M3` at `main` while PTX ISA 9.5 has it.
+- These codes are bits of a hardware instruction descriptor, i.e. kernel internals; under the KISS scope rule (outward inputs and outputs only) nothing here needs a KISS token, and the board-501 question stays only whether the block-scale storage formats are named.
