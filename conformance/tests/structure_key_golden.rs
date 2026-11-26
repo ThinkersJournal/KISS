@@ -1281,12 +1281,13 @@ fn test_classify_scale_dtype_at_operand0_declines() {
     assert_eq!(derive_primary_dtype(&["f32", "f32"]), Some("f32"));
     assert_eq!(derive_primary_dtype(&["f8e8m0", "i4", "bf16"]), None);
     assert_eq!(derive_primary_dtype(&["f8e6m2", "f32"]), None);
+    assert_eq!(derive_primary_dtype(&["f8ue4m3", "f32"]), None);
     // a scale at a non-zero position leaves the primary dtype = operand 0's dtype.
     assert_eq!(derive_primary_dtype(&["i4", "f8e8m0", "bf16"]), Some("i4"));
     // no operand 0 -> nothing to read -> decline.
     assert_eq!(derive_primary_dtype(&[]), None);
     // the scale set is exactly the two §6.1-0013 scale dtypes.
-    assert_eq!(SCALE_DTYPES, ["f8e8m0", "f8e6m2"]);
+    assert_eq!(SCALE_DTYPES, ["f8e8m0", "f8e6m2", "f8ue4m3"]);
 }
 
 /// KISS-CLASSIFY-6.5-0002 (`test_classify_layout_tag_derivation`): the 4-step

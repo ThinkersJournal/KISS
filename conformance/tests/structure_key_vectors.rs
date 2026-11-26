@@ -95,9 +95,9 @@ fn str_array(doc: &kiss_conformance::json::Json, key: &str) -> Vec<String> {
 /// the membership/length assertions — verified by scratch deletion in the PR #161 review.
 #[test]
 fn test_dual_axis_is_present_and_discriminates() {
-    assert_eq!(DTYPES.len(), 27, "recognition set must be 27 tokens");
+    assert_eq!(DTYPES.len(), 34, "recognition set must be 34 tokens");
     assert_eq!(RESERVED_DTYPES.len(), 3, "three reserved tokens");
-    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 24, "usable const = 24");
+    assert_eq!(DTYPES.iter().filter(|d| !RESERVED_DTYPES.contains(d)).count(), 31, "usable const = 31");
 
     let doc = kiss_conformance::json::parse(&emit_reference_vectors_json())
         .expect("the emitted artifact must be valid JSON");
@@ -107,11 +107,11 @@ fn test_dual_axis_is_present_and_discriminates() {
     let reserved = str_array(&doc, "reserved_dtypes");
 
     // counts equal the ACTUAL array lengths — a declared count that lies about its
-    // array is caught here, not assumed equal to 27/24.
+    // array is caught here, not assumed equal to 34/31.
     assert_eq!(doc.get("recognition_count").and_then(|j| j.as_u64()), Some(recognition.len() as u64), "recognition_count must equal its array length");
     assert_eq!(doc.get("usable_count").and_then(|j| j.as_u64()), Some(usable.len() as u64), "usable_count must equal its array length");
-    assert_eq!(recognition.len(), 27);
-    assert_eq!(usable.len(), 24);
+    assert_eq!(recognition.len(), 34);
+    assert_eq!(usable.len(), 31);
     assert_eq!(reserved.len(), 3);
     assert_eq!(doc.get("structure_key_schema_version").and_then(|j| j.as_u64()), Some(8));
     assert_eq!(doc.get("token_prefix").and_then(|j| j.as_str()), Some("sk8"));

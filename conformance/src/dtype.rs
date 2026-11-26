@@ -332,3 +332,100 @@ pub fn f6e2m3_decode(code: u8) -> f64 {
 pub fn f6e3m2_decode(code: u8) -> f64 {
     mx_element_decode(code, 3, 2, 3)
 }
+
+// ---------------------------------------------------------------------------
+// §6.1-0017 .. -0020 — union batch 1 (CireSnave board 501 "A"): wide integers, f128, f8e3m4, f8ue4m3
+// ---------------------------------------------------------------------------
+
+/// `(min, max, bits, signed)` of the four wide integer tokens (§6.1-0017), each bound as its literal bit
+/// pattern in big-endian 64-bit limbs, most-significant limb first, occupying the first `bits / 64` limbs
+/// (the rest are zero). `None` for every other token.
+pub fn wide_int_bounds(token: &str) -> Option<([u64; 4], [u64; 4], u32, bool)> {
+    let m = u64::MAX;
+    let s = 0x8000_0000_0000_0000u64;
+    let h = 0x7FFF_FFFF_FFFF_FFFFu64;
+    Some(match token {
+        "i128" => ([s, 0, 0, 0], [h, m, 0, 0], 128, true),
+        "u128" => ([0; 4], [m, m, 0, 0], 128, false),
+        "i256" => ([s, 0, 0, 0], [h, m, m, m], 256, true),
+        "u256" => ([0; 4], [m, m, m, m], 256, false),
+        _ => return None,
+    })
+}
+
+/// The class of an `f128` bit pattern (§6.1-0018): IEEE-754 binary128, sign 1 / exponent 15 / fraction 112.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum F128Class {
+    /// `±0`.
+    Zero { negative: bool },
+    /// Exponent field 0, fraction non-zero.
+    Subnormal { negative: bool },
+    /// Exponent field `1..=0x7FFE`.
+    Normal { negative: bool },
+    /// Exponent field `0x7FFF`, fraction 0.
+    Infinity { negative: bool },
+    /// Exponent field `0x7FFF`, fraction non-zero; quiet iff the top fraction bit is set (IEEE 754-2019 6.2.1).
+    Nan { signaling: bool },
+}
+
+/// Classify one `f128` bit pattern from scratch (§6.1-0018).
+pub fn f128_class(bits: u128) -> F128Class {
+    let negative = bits >> 127 == 1;
+    let exp = ((bits >> 112) & 0x7FFF) as u32;
+    let frac = bits & ((1u128 << 112) - 1);
+    match (exp, frac) {
+        (0, 0) => F128Class::Zero { negative },
+        (0, _) => F128Class::Subnormal { negative },
+        (0x7FFF, 0) => F128Class::Infinity { negative },
+        (0x7FFF, f) => F128Class::Nan { signaling: f >> 111 == 0 },
+        _ => F128Class::Normal { negative },
+    }
+}
+
+/// The decoded value of an `f8e3m4` byte (§6.1-0019).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum F8Value {
+    /// A finite value, `-0.0` included (exact in `f64`).
+    Finite(f64),
+    /// `±infinity`: exponent field 7, mantissa 0.
+    Infinity { negative: bool },
+    /// Exponent field 7, mantissa non-zero (30 NaN encodings: 15 non-zero mantissas times 2 signs).
+    Nan,
+}
+
+/// Decode one `f8e3m4` byte from scratch (§6.1-0019): sign 1, exponent 3, mantissa 4, bias 3, IEEE-style
+/// infinity and NaN.
+pub fn f8e3m4_decode(byte: u8) -> F8Value {
+    let negative = byte >> 7 == 1;
+    let exp = i32::from((byte >> 4) & 7);
+    let man = f64::from(byte & 15);
+    if exp == 7 {
+        return if byte & 15 == 0 { F8Value::Infinity { negative } } else { F8Value::Nan };
+    }
+    let mag = if exp == 0 { 2f64.powi(1 - 3) * (man / 16.0) } else { 2f64.powi(exp - 3) * (1.0 + man / 16.0) };
+    F8Value::Finite(if negative { -mag } else { mag })
+}
+
+/// The decoded value of an `f8ue4m3` byte (§6.1-0020).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Ue4m3 {
+    /// A finite non-negative value in `[0, 448]`.
+    Value(f64),
+    /// The single NaN encoding `0x7F`.
+    Nan,
+    /// Bit 7 set: the format has no sign bit, so no value is defined for the byte.
+    OutsideFormat,
+}
+
+/// Decode one `f8ue4m3` byte from scratch (§6.1-0020): exponent 4, mantissa 3, bias 7, no sign, no infinity.
+pub fn ue4m3_decode(byte: u8) -> Ue4m3 {
+    if byte & 0x80 != 0 {
+        return Ue4m3::OutsideFormat;
+    }
+    if byte == 0x7F {
+        return Ue4m3::Nan;
+    }
+    let exp = i32::from(byte >> 3);
+    let man = f64::from(byte & 7);
+    Ue4m3::Value(if exp == 0 { 2f64.powi(1 - 7) * (man / 8.0) } else { 2f64.powi(exp - 7) * (1.0 + man / 8.0) })
+}

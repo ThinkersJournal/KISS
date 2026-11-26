@@ -115,12 +115,13 @@ pub enum SourceLeaf {
 /// The storage width in bits of a KISS-Classify dtype token (§6.1 table; the vendored
 /// `dtype_manifest.json` is the machine copy and a test compares the two).
 pub fn dtype_storage_bits(token: &str) -> Option<u32> {
-    const TABLE: [(&str, u32); 27] = [
+    const TABLE: [(&str, u32); 34] = [
         ("f16", 16), ("bf16", 16), ("f32", 32), ("f64", 64), ("i8", 8), ("i16", 16), ("u8", 8),
         ("u16", 16), ("i32", 32), ("i64", 64), ("u32", 32), ("u64", 64), ("bool", 8),
         ("f8e4m3fn", 8), ("f8e4m3fnuz", 8), ("f8e5m2", 8), ("f8e5m2fnuz", 8), ("f8e8m0", 8),
         ("f8e6m2", 8), ("i4", 4), ("u4", 4), ("b1", 1), ("c64", 64), ("c128", 128),
         ("f4e2m1", 4), ("f6e2m3", 6), ("f6e3m2", 6),
+        ("f128", 128), ("i128", 128), ("u128", 128), ("i256", 256), ("u256", 256), ("f8e3m4", 8), ("f8ue4m3", 8),
     ];
     TABLE.iter().find(|(t, _)| *t == token).map(|(_, b)| *b)
 }
