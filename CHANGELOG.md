@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.24.2 — dtype audit s5/s6, #847 advisory fixes, CodeRipper 0.48.1 pin (no byte moves)
+
+`docs/dtype-completeness-audit.md` reads PTX ISA 9.5 (no `.s128`/`.u128`; `.b128` is bits only), PTX Tables 52 and 53 and CUTLASS `mma_sm100_desc` type codes (the `f4e2m1` descriptor code is 5 under `.kind::mxf8f6f4` and 1 under `.kind::mxf4`, so a descriptor code is not a dtype token), and is updated for kiss-conformance 0.24.0: the seven tokens `f128`, `i128`, `u128`, `i256`, `u256`, `f8e3m4` and `f8ue4m3` close the audit's wide-integer and `ue4m3` gaps; `ue5m3` stays a gap. `conformance/src/dtype.rs` and `conformance/tests/dtype_layout.rs` carry the #847 advisory fixes L2 to L5, N2 and N3 (decode range assert, `lsb_unpack` panic doc, f6 sign tests, ROADMAP grep). `.github/workflows/conformance.yml` pins CodeRipper's `portfolio.yml` to `467fd259` (CodeRipper 0.48.1) in its own commit. Verified: `cargo test` in `conformance/`, `tools/kiss_trace.py --ratchet`, `tools/kiss_readme_coverage.py`.
+
 ## 0.24.1 — docs: options note for Slang precision and NaN-mode (union batch 2, RULED by the PM; no byte moves)
 
 `docs/options-slang-precision-nan-mode.md` is an informative options note for Unpopped's Slang rows 50 and 52, moved out of union batch 1. It reads shader-slang/slang at `0e393b37` (`docs/command-line-slangc-reference.md` lines 513 to 543 and 1260 to 1276, `include/slang.h` lines 833 to 848 and 4540 to 4547): Slang's modes are per target, NaN/Inf/denormal behaviour sits inside `precise`, and no rounding or NaN switch was found. The PM ruled on 2026-11-26: modes are a contract guarantee with `<mp>` unchanged (A now), per-op `{round, ftz, approx}` later only if a consumer asks (D), options B and C not taken, and no NaN-mode coordinate. No normative text and no stored byte changes. Open fact, not needed for the ruling: whether any Slang target honours `-fp-mode` or `-denorm-mode-*` per entry point.
