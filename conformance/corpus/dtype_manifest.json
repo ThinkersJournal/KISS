@@ -166,6 +166,48 @@
       "kind": "float",
       "storage_bits": 6,
       "reserved": false
+    },
+    {
+      "token": "f128",
+      "kind": "float",
+      "storage_bits": 128,
+      "reserved": false
+    },
+    {
+      "token": "i128",
+      "kind": "int",
+      "storage_bits": 128,
+      "reserved": false
+    },
+    {
+      "token": "u128",
+      "kind": "uint",
+      "storage_bits": 128,
+      "reserved": false
+    },
+    {
+      "token": "i256",
+      "kind": "int",
+      "storage_bits": 256,
+      "reserved": false
+    },
+    {
+      "token": "u256",
+      "kind": "uint",
+      "storage_bits": 256,
+      "reserved": false
+    },
+    {
+      "token": "f8e3m4",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
+    },
+    {
+      "token": "f8ue4m3",
+      "kind": "float",
+      "storage_bits": 8,
+      "reserved": false
     }
   ],
   "all_dtypes": [
@@ -174,24 +216,31 @@
     "bool",
     "c128",
     "c64",
+    "f128",
     "f16",
     "f32",
     "f4e2m1",
     "f64",
     "f6e2m3",
     "f6e3m2",
+    "f8e3m4",
     "f8e4m3fn",
     "f8e4m3fnuz",
     "f8e5m2",
     "f8e5m2fnuz",
     "f8e6m2",
     "f8e8m0",
+    "f8ue4m3",
+    "i128",
     "i16",
+    "i256",
     "i32",
     "i4",
     "i64",
     "i8",
+    "u128",
     "u16",
+    "u256",
     "u32",
     "u4",
     "u64",
