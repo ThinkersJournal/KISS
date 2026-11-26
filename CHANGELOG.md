@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.23.3 — conformance: f4e2m1/f6 library codec, RU.1 and RU.2 roadmap rows (Unpopped's IR-union asks)
+
+`conformance/src/dtype.rs` gains the MX element codec (`lsb_pack`, `lsb_unpack`, `f4e2m1_pack`, `f6_pack`, `mx_element_decode`, `f4e2m1_decode`, `f6e2m3_decode`, `f6e3m2_decode`) so an implementation can be differenced against the packing that KISS-CLASSIFY-6.1-0014/-0015 pin; `conformance/tests/dtype_layout.rs` carries `test_dtype_codec_mx_elements_round_trip` (mutation-checked). The packing is checked against a second source, NVIDIA/cutlass `include/cutlass/subbyte_reference.h`, and agrees. `ROADMAP.md` gains section RU (RU.1 element and numerics tokens, RU.2 Contraction schema and `StructureKey`) from Unpopped's `docs/ir-union-asks.md`, each row marking what is byte-altering and waits on a ruling; finding recorded: the NVFP4 scale (unsigned UE4M3, per 16 elements) has no token. `docs/options-ru2-contraction-generalisation.md` is the RU.2 options note, measured with the reference deriver (a 2x3, a 3x2 and a 1x6 batch derive the same token; a column-major operand is already distinct in the key). No spec text and no wire byte changes; no token minted.
+
 ## 0.23.2 — tools: the corpus sha256 pins are recorded and checked (ROADMAP R5.21)
 
 `conformance/corpus/PROVENANCE.md`, `REUSE.toml` and `tools/kiss_spdx.py` said the corpus JSON is sha256-pinned, but no tool or CI step computed or compared a hash. `conformance/corpus/PINS.sha256` now holds one pin per corpus file (31), and `tools/kiss_corpus_pins.py` fails on a changed, an unpinned or a missing file (`--write` re-pins after a deliberate regeneration; a hash folds CRLF to LF so a CRLF checkout is not a difference). `tools/test_kiss_corpus_pins.py` seeds each of the three differences and a malformed pin line, and runs the live corpus; both run in the `traceability` workflow beside the sidecar check. A regeneration PR now moves its pins in the same diff, so a silent corpus change shows in review. No spec or wire text changes.
