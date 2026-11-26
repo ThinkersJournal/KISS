@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.24.1 — docs: options note for Slang precision and NaN-mode (union batch 2, RULED by the PM; no byte moves)
+
+`docs/options-slang-precision-nan-mode.md` is an informative options note for Unpopped's Slang rows 50 and 52, moved out of union batch 1. It reads shader-slang/slang at `0e393b37` (`docs/command-line-slangc-reference.md` lines 513 to 543 and 1260 to 1276, `include/slang.h` lines 833 to 848 and 4540 to 4547): Slang's modes are per target, NaN/Inf/denormal behaviour sits inside `precise`, and no rounding or NaN switch was found. The PM ruled on 2026-11-26: modes are a contract guarantee with `<mp>` unchanged (A now), per-op `{round, ftz, approx}` later only if a consumer asks (D), options B and C not taken, and no NaN-mode coordinate. No normative text and no stored byte changes. Open fact, not needed for the ruling: whether any Slang target honours `-fp-mode` or `-denorm-mode-*` per entry point.
+
 ## 0.24.0 — **BREAKING**: union batch 1, seven new dtype tokens and the K role set (CireSnave board 501 "A", board 515)
 
 CireSnave, board 501 (2026-11-26, verbatim): *"501: A"* (a standing OK for UNION changes only: one batch at a time, listed beforehand, reported afterwards; `CIRESNAVE-EXPECTATIONS.md` 6.35). Board 515 (the list of this batch with its veto window), verbatim: *"515: Batch 1 is fine.  I will not be vetoing it.  It can be removed from my decisions file."* The schema label does not change: `sk8` stays (the precedent is 68dc233, which added three tokens additively with no `sk` bump), no existing token's bytes move, and the three earlier accumulator ordinals are untouched because the new tokens are appended after `f6e3m2`.
