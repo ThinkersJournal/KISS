@@ -213,3 +213,20 @@ KISS names `f8e8m0` (= `ue8m0`) only. `ue4m3` (the NVFP4 block scale) and `ue5m3
 
 **5.3 `.b128` in instructions** (PTX ISA 8.4 page, archive 12.4; section numbers shift in 9.5). `ld` and `st`: `.b128` in the type list, PTX 8.3, `sm_70` or higher, `.sys` scope with `.b128` from PTX 8.4. `mov`: scalar `mov` has no `.b128`; the vector pack/unpack form takes `.b128`, PTX 8.3, `sm_70`. `atom`: **not read in any official page**; secondary sources show `atom...cas.b128` and `exch.b128` and one unverified report of `sm_90`. `red`: no `.b128` seen. The 9.5 page text cuts off before these sections.
 
+
+## 6. tcgen05 instruction-descriptor type codes (read 2026-11-26 at PTX ISA 9.5 Tables 52/53 and CUTLASS main `cute/arch/mma_sm100_desc.hpp`; doc-only, nothing minted)
+
+Both sources were read verbatim (the PTX page as text, the header as a file), not paraphrased.
+
+| Field | `.kind::mxf8f6f4` (Table 52, bits 7-9 atype / 10-12 btype) | `.kind::mxf4`, `.kind::mxf4nvf4` (Table 53, bits 7-9 atype / 10-11 btype) | CUTLASS (`MXF8F6F4Format`, `MXF4Format`) |
+|---|---|---|---|
+| E4M3 / E5M2 | 0 / 1 | n/a | 0 / 1 (agrees) |
+| E2M3 / E3M2 | 3 / 4 | n/a | 3 / 4 (agrees) |
+| E2M1 | 5 | 1 | 5 in `MXF8F6F4Format`, 1 in `MXF4Format` (agrees with both tables) |
+| Scale type (bit 23 / bits 23-24) | `UE8M0 = 1` only | `.kind::mxf4`: `UE8M0 = 1`; `.kind::mxf4nvf4`: `UE4M3 = 0`, `UE8M0 = 1`, `UE5M3 = 2` | `ScaleFormat`: `UE4M3 = 0`, `UE8M0 = 1`; **no `UE5M3`** in the header read |
+
+Findings, all facts about those two sources:
+
+- The code for E2M1 is **instruction-kind dependent** (5 under `mxf8f6f4`, 1 under `mxf4`/`mxf4nvf4`); a descriptor code is therefore not a dtype token, and KISS's `f4e2m1` names the storage type, not the code.
+- The mx scale `UE8M0` is `1` in every kind that carries it, and is KISS's `f8e8m0`. `UE4M3` and `UE5M3` appear only as `.kind::mxf4nvf4` scale types: the same two GAPs as section 5.2, now with the instruction that consumes them. CUTLASS lacks `UE5M3` at `main` while PTX ISA 9.5 has it.
+- These codes are bits of a hardware instruction descriptor, i.e. kernel internals; under the KISS scope rule (outward inputs and outputs only) nothing here needs a KISS token, and the board-501 question stays only whether the block-scale storage formats are named.
