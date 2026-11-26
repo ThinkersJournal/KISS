@@ -175,3 +175,46 @@ fn test_classify_mx_scale_format() {
         Err(KeyDecline::UnknownDtype)
     );
 }
+
+
+// harness-internal: round trip and byte anchors for the library MX element codec (dtype.rs), with the CUTLASS reference layout as second source; the clauses are backed by the classify_mx_elements tests, none is cited here
+#[test]
+fn test_dtype_codec_mx_elements_round_trip() {
+    // f4e2m1: low nibble = even index; the CUTLASS SubbyteReference read puts element 0 in bits [3:0].
+    assert_eq!(f4e2m1_pack(&[0x1, 0x2]), vec![0x21]);
+    assert_eq!(f4e2m1_pack(&[0x7, 0x9, 0xF]), vec![0x97, 0x0F]);
+    // identical bytes to u4 for the same codes (the clause says "exactly as i4/u4")
+    for a in 0..16u8 {
+        for b in 0..16u8 {
+            assert_eq!(f4e2m1_pack(&[a, b]), u4_pack(&[a, b]));
+        }
+    }
+    // f6: [1,2,3,4] -> 0x81 0x30 0x10 (stream bits 6i, LSB-first); element 1 straddles bytes 0 and 1
+    assert_eq!(f6_pack(&[1, 2, 3, 4]), vec![0x81, 0x30, 0x10]);
+    assert_eq!(f6_pack(&[63]), vec![0x3F]);
+    assert_eq!(f6_pack(&[63, 63]), vec![0xFF, 0x0F]);
+    assert_eq!(f6_pack(&[0; 5]).len(), 4);
+    // negative control: an MSB-first packer gives a different first byte
+    assert_ne!(f6_pack(&[1, 2, 3, 4])[0], 0x04);
+    // round trip: every code at every position of a group, both widths, plus a ragged tail
+    for pos in 0..4usize {
+        for code in 0..64u8 {
+            let mut g = [0u8; 4];
+            g[pos] = code;
+            assert_eq!(lsb_unpack(&f6_pack(&g), 6, 4), g.to_vec());
+        }
+    }
+    for code in 0..16u8 {
+        assert_eq!(lsb_unpack(&f4e2m1_pack(&[code, 3, code]), 4, 3), vec![code, 3, code]);
+    }
+    // decode anchors: the clause's literal lists and maxima
+    let nonneg: Vec<f64> = (0..8).map(f4e2m1_decode).collect();
+    assert_eq!(nonneg, vec![0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0]);
+    assert_eq!(f6e2m3_decode(31), 7.5);
+    assert_eq!(f6e3m2_decode(31), 28.0);
+    assert_eq!(f6e2m3_decode(1), 0.125);
+    assert_eq!(f6e3m2_decode(1), 0.0625);
+    assert!((0..16).all(|c| f4e2m1_decode(c).is_finite()));
+    assert!((0..64).all(|c| f6e2m3_decode(c).is_finite() && f6e3m2_decode(c).is_finite()));
+    assert_eq!(f4e2m1_decode(8 + 5), -f4e2m1_decode(5));
+}
