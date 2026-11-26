@@ -267,7 +267,7 @@ pub fn e8m0_decode(byte: u8) -> E8M0 {
 // global-memory reference layout only.
 
 /// Pack `codes` (each `< 1 << bits`) LSB-first into a byte stream: element `i` occupies stream
-/// bits `bits*i ..`, stream bit `k` being bit `k % 8` of byte `k / 8`. `ceil(bits*n/8)` bytes;
+/// bits `bits*i .. bits*(i+1)`, stream bit `k` being bit `k % 8` of byte `k / 8`. `ceil(bits*n/8)` bytes;
 /// unused trailing bits are zero.
 pub fn lsb_pack(codes: &[u8], bits: u32) -> Vec<u8> {
     let mut out = vec![0u8; (codes.len() * bits as usize).div_ceil(8)];
@@ -284,6 +284,9 @@ pub fn lsb_pack(codes: &[u8], bits: u32) -> Vec<u8> {
 }
 
 /// Inverse of [`lsb_pack`]: read `count` `bits`-wide codes from `bytes`.
+///
+/// Panics if `bytes` is too short for `count` codes of `bits` bits (the same convention as
+/// [`s4_unpack`]).
 pub fn lsb_unpack(bytes: &[u8], bits: u32, count: usize) -> Vec<u8> {
     (0..count)
         .map(|i| {
@@ -306,10 +309,13 @@ pub fn f6_pack(codes: &[u8]) -> Vec<u8> {
 }
 
 /// Decode an MX element code with `ebits` exponent bits, `mbits` mantissa bits and exponent bias
-/// `bias` (sign in the next bit up). No code is infinite or NaN (§6.1-0014, §6.1-0015); the value
+/// `bias` (sign in the next bit up). `code` must fit `1 + ebits + mbits` bits (checked by
+/// `debug_assert!`; in release builds higher bits are ignored). For the three MX element formats
+/// called below no code is infinite or NaN (§6.1-0014, §6.1-0015); the value
 /// is `(-1)^s * 2^(e-bias) * (1 + m/2^mbits)` for `e != 0`, `(-1)^s * 2^(1-bias) * (m/2^mbits)`
 /// for `e == 0`. Exact in `f64` for these widths.
 pub fn mx_element_decode(code: u8, ebits: u32, mbits: u32, bias: i32) -> f64 {
+    debug_assert!(u32::from(code) < (1u32 << (1 + ebits + mbits)), "code {code} does not fit {} bits", 1 + ebits + mbits);
     let m = f64::from(code & ((1u8 << mbits) - 1));
     let e = i32::from((code >> mbits) & ((1u8 << ebits) - 1));
     let s = (code >> (mbits + ebits)) & 1;

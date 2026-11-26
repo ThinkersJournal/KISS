@@ -176,7 +176,6 @@ fn test_classify_mx_scale_format() {
     );
 }
 
-
 // harness-internal: round trip and byte anchors for the library MX element codec (dtype.rs), with the CUTLASS reference layout as second source; the clauses are backed by the classify_mx_elements tests, none is cited here
 #[test]
 fn test_dtype_codec_mx_elements_round_trip() {
@@ -217,4 +216,23 @@ fn test_dtype_codec_mx_elements_round_trip() {
     assert!((0..16).all(|c| f4e2m1_decode(c).is_finite()));
     assert!((0..64).all(|c| f6e2m3_decode(c).is_finite() && f6e3m2_decode(c).is_finite()));
     assert_eq!(f4e2m1_decode(8 + 5), -f4e2m1_decode(5));
+    // f6 sign symmetry and negative zero (sign bit is bit 5), so a per-format parameter slip shows
+    for c in 0..32u8 {
+        assert_eq!(f6e2m3_decode(32 + c), -f6e2m3_decode(c));
+        assert_eq!(f6e3m2_decode(32 + c), -f6e3m2_decode(c));
+    }
+    assert!(f6e2m3_decode(32).is_sign_negative() && f6e3m2_decode(32).is_sign_negative());
+    assert!(f4e2m1_decode(8).is_sign_negative());
+}
+
+// harness-internal: the codec's own contract on bad input; pack asserts, unpack panics on a short buffer, decode rejects an over-wide code in debug builds
+#[test]
+fn test_dtype_codec_mx_elements_bad_input() {
+    assert!(std::panic::catch_unwind(|| lsb_unpack(&[0xFF], 6, 4)).is_err());
+    assert!(std::panic::catch_unwind(|| f6_pack(&[64])).is_err());
+    #[cfg(debug_assertions)]
+    {
+        assert!(std::panic::catch_unwind(|| f4e2m1_decode(0xFF)).is_err());
+        assert!(std::panic::catch_unwind(|| f6e2m3_decode(0xFF)).is_err());
+    }
 }
