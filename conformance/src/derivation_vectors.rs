@@ -789,6 +789,13 @@ fn gemm_multi_k(dtype: &'static str, m: i64, n: i64, ks: &[i64]) -> DerivationCe
 /// Union batch 1 (CireSnave board 501 "A", board 515): the seven new dtype tokens and the K role set
 /// (§6.1-0017..-0020, §6.6-0023a).
 fn union_batch1_cases(out: &mut Vec<DerivationVector>) {
+    union_dtype_cases(out);
+    union_nvfp4_case(out);
+    union_k_role_cases(out);
+}
+
+/// The six element tokens in an elementwise add, and `f8ue4m3` (a scale type) declining at operand 0.
+fn union_dtype_cases(out: &mut Vec<DerivationVector>) {
     for (name, dt) in [
         ("union_f128_elementwise_add", "f128"),
         ("union_i128_elementwise_add", "i128"),
@@ -817,6 +824,10 @@ fn union_batch1_cases(out: &mut Vec<DerivationVector>) {
         "f8ue4m3 is a scale type (6.1-0020): at operand 0 the primary dtype is undefined, so the deriver declines exactly as for f8e8m0",
         cell(CUDA, vec![op(Input, "f8ue4m3", &[8], &[1], 256), op(Input, "f16", &[8], &[1], 256), op(Output, "f16", &[8], &[1], 256)]),
     ));
+}
+
+/// The NVFP4 shape: an f4e2m1 weight with one f8ue4m3 scale per 16 elements along K (6.1-0020).
+fn union_nvfp4_case(out: &mut Vec<DerivationVector>) {
     {
         // the NVFP4 shape: an f4e2m1 weight with one f8ue4m3 scale per 16 elements along K
         let mut w = dense(Input, "f4e2m1", &[4096, 4096]);
@@ -841,6 +852,10 @@ fn union_batch1_cases(out: &mut Vec<DerivationVector>) {
             c,
         ));
     }
+}
+
+/// The K role set (6.6-0023a): product keying and the malformed-axis declines.
+fn union_k_role_cases(out: &mut Vec<DerivationVector>) {
     out.push(v(
         "ctr_two_k_axes_product_8x16",
         "KISS-CLASSIFY-6.6-0023a",
