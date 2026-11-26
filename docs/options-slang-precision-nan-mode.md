@@ -39,7 +39,13 @@ Compute precision is a KISS-Ops fidelity attribute, not a dtype (KISS-CLASSIFY-6
 | other emitters | read the contract | exhaustive matches on `<mp>` break | key bytes change | OpAttrs decode extends |
 (Consumer facts are from Unpopped's report and the Slang files above; the emitters' own models were not read.)
 
-## Questions for CireSnave (via pm-kernels and the PM)
+## RULED by the PM 2026-11-26 (relayed by pm-kernels; no stored byte moves, so the board 501 listing is not triggered)
+
+- **Q1 = A now:** the modes are a contract guarantee and `<mp>` is unchanged (Slang `precise` maps to `st` and `fast` to `rm` only where the kernel already means that). **D** (per-op `{round, ftz, approx}` as OpAttrs, siblings R1.33 and R1.34) **later, only if a consumer asks.** **B and C are not taken.**
+- **Q2 = no NaN-mode coordinate** (neither Slang nor Unpopped has a separate switch; KISS-Ops 6.11 pins `Max`/`Min` per op).
+- **Open fact, no rush (only B or C would need it):** whether any Slang target honours `-fp-mode` or `-denorm-mode-*` per entry point rather than per target.
+
+## Questions that were put to CireSnave's side (answered above)
 
 1. A (recommended), B, C or D, or A now and D later if a consumer asks. Only B and C move stored bytes; A and D move none in the key.
 2. Whether a NaN-mode coordinate is wanted at all (recommendation: no).
