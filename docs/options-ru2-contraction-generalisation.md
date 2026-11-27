@@ -45,7 +45,7 @@ any other irregular stride, and the key does not say **which of the role axes is
 ## Group 4. Source C and a compute dtype (CUTLASS 31, CUDA 44)
 
 Measured: an extra `[M,N]` `f32` input derives, with its dtype in its own sub-key; **nothing names it as the source C** (any fourth input looks the same), and the compute dtype is operand 0's (6.6-0005, 6.17-0005).
-This is the open question 3 of `docs/options-771-contraction-precision-and-accumulate-into-c.md` (accumulate into C: B the `[M,N]` extra input, or A nothing): **decide it there, once**.
+**DECIDED: B, nothing in the key ("521 B", CireSnave 2026-11-27, via the PM; board 521 = KISS 771 Q3).** The addend is an ordinary `[M,N]` extra input; no `c` role hint and no key coordinate; no stored bytes move; **A stays recorded as the later path, triggered if a real wrong match appears.** Clause text and ids: `docs/options-771-contraction-precision-and-accumulate-into-c.md`, "Question 3, DECIDED". (Was: open question 3 of that note; decide it there, once.)
 - **A. A `c` role hint (a slot, like `weight`) plus the existing operand sub-key** carries C and its dtype; the key gains a presence coordinate. Byte-altering.
 - **B. Nothing in the key**: C is an operand like any other and the op identity (`matmul` OpAttrs) says it is the addend. No bytes; weaker for admissibility.
 - **Compute dtype:** KISS-CLASSIFY-6.1-0005 says compute precision is a KISS-Ops fidelity attribute, not a dtype, and `<acc>` plus `<mp>` already exist. **Recommendation: no new coordinate**; ask Unpopped what a distinct compute dtype adds beyond `<acc>` and `<mp>`.
@@ -65,7 +65,7 @@ Triangular, symmetric and Hermitian are different **ops** in BLAS (`trmm`, `symm
 
 1. Group 2: A (collapse K and batch to products, additive) or B (key the structure) or C. **Recommend A.**
 2. Group 3: A (nothing) or B (derived major-ness pair). **Recommend A until a collision is named.**
-3. Group 4: with 771 Q3, a `c` role hint (A) or nothing (B). **Recommend whatever 771 Q3 is ruled; do not decide it twice.**
+3. Group 4: **ruled B ("521 B", 2026-11-27): nothing in the key**; A recorded as the later path (trigger: a real wrong match).
 4. Group 5: B first.
 5. One `sk` event for everything chosen above, listed to him beforehand and reported afterwards (the shape board 501 asks for the tokens).
 

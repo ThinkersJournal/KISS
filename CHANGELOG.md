@@ -3,6 +3,10 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.24.4 — spec: sign-of-zero exception (6.0-0002), out-of-range index delivery and skip rule (6.11-0004/-0005); no bytes
+
+Two PM-ruled semantics edits to `spec/ops.md`, no stored byte moves. KISS-OPS-6.0-0002 gains an exception: a float `max`/`min` reduce or scan returning a zero from folded +0.0 and -0.0 yields a zero, value-equal (byte-equality not promised), matching `canon_signed_zero` in `conformance/src/structural.rs`. KISS-OPS-6.11-0004 pins the outcome of a read decline (delivered before the result can be consumed; flag, pre-validation or op-not-offered all conformant; the declined lane's value unspecified, never a fault) and 6.11-0005 states that every `scatter`-decomposed write op (`scatter_add`, a later `index_add`) skips an out-of-range write. Decision notes: `docs/options-reduce-max-min-signed-zero.md`, `docs/options-oob-index-gaps.md`. No new clause id, codec field, token or corpus vector. Records board 521 "B" (KISS 771 Q3: the contraction addend is an ordinary [M,N] input, nothing added to the key, no bytes) in `docs/options-771-contraction-precision-and-accumulate-into-c.md` and `docs/options-ru2-contraction-generalisation.md`, with proposed (not yet spec) clause text.
+
 ## 0.24.3 — docs: union batch 2 is empty (no byte moves)
 
 `docs/union-batch-2-list.md` records that batch 2 has no candidate: `f8ue5m3` has no primary-source bias and no consumer row, the `c` role hint waits on board 521, batch roles are already covered by KISS-CLASSIFY-6.6-0023, the scale-factor output is later, Slang is ruled with no bytes. `i2`/`u2` and `mxint8` are considered and not proposed (decline rows only). Informative; nothing is minted and no stored byte moves.
