@@ -579,7 +579,13 @@ verbatim, everywhere).
   `nextafter`, the algebraic complex ops (`cadd`, `csub`, `cneg`, `cconj`, `cmul`, `cdiv`,
   `cmake`, `cre`, `cim`), `element_map`, `gather`, `scatter` with a deterministic combine, and the
   `max` / `min` `reduce` and `prefix_scan` monoids (which are order-invariant in value).
-  KISS-Conform MUST evaluate an exact-byte op with a byte-exact comparator. *Test:*
+  KISS-Conform MUST evaluate an exact-byte op with a byte-exact comparator, **except for the sign of a zero**: when a
+  floating-point `max` / `min` `reduce` or `prefix_scan` (or a `scatter` `atomic-max` / `atomic-min`, §6.11-0010) folds cells
+  holding both `+0.0` and `-0.0` and the folded result is a zero, the result is **a zero, value-equal** — either `+0.0` or
+  `-0.0` — and byte-equality of that zero is **not promised** across implementations or fold orders (a result that is not a
+  zero, and NaN propagation, §6.11-0002, stay exact-byte). KISS-Conform MUST compare such a result with the sign of a zero
+  canonicalised on both sides before the byte compare and MUST NOT canonicalise any other bit. This pins no stored byte: no
+  corpus vector, token or schema version changes. *Test:*
   `test_ops_exact_byte_ops`.
 - **KISS-OPS-6.0-0003** — Every transcendental atom (§6.8) and every op whose
   decomposition transitively contains a transcendental atom, and which does not also
