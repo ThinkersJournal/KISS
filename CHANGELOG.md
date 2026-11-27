@@ -3,6 +3,12 @@
 `kiss-conformance` (the reference crate and the spec it binds). Pre-1.0, a breaking change moves the
 second number.
 
+## 0.24.3 — docs: union batch 2 is empty (no byte moves)
+
+`docs/union-batch-2-list.md` records that batch 2 has no candidate: `f8ue5m3` has no primary-source bias and no consumer row, the `c` role hint waits on board 521, batch roles are already covered by KISS-CLASSIFY-6.6-0023, the scale-factor output is later, Slang is ruled with no bytes. `i2`/`u2` and `mxint8` are considered and not proposed (decline rows only). Informative; nothing is minted and no stored byte moves.
+
+No batch 2: asks read, nothing byte-altering listable; c role hint = board 521.
+
 ## 0.24.2 — dtype audit s5/s6, #847 advisory fixes, CodeRipper 0.48.1 pin (no byte moves)
 
 `docs/dtype-completeness-audit.md` reads PTX ISA 9.5 (no `.s128`/`.u128`; `.b128` is bits only), PTX Tables 52 and 53 and CUTLASS `mma_sm100_desc` type codes (the `f4e2m1` descriptor code is 5 under `.kind::mxf8f6f4` and 1 under `.kind::mxf4`, so a descriptor code is not a dtype token), and is updated for kiss-conformance 0.24.0: the seven tokens `f128`, `i128`, `u128`, `i256`, `u256`, `f8e3m4` and `f8ue4m3` close the audit's wide-integer and `ue4m3` gaps; `ue5m3` stays a gap. `conformance/src/dtype.rs` and `conformance/tests/dtype_layout.rs` carry the #847 advisory fixes L2 to L5, N2 and N3 (decode range assert, `lsb_unpack` panic doc, f6 sign tests, ROADMAP grep). `.github/workflows/conformance.yml` pins CodeRipper's `portfolio.yml` to `467fd259` (CodeRipper 0.48.1) in its own commit. Verified: `cargo test` in `conformance/`, `tools/kiss_trace.py --ratchet`, `tools/kiss_readme_coverage.py`.
