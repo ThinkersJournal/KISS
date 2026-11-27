@@ -80,6 +80,16 @@ exactly summed).
 matches the one implementation. It is a Draft change to KISS-Ops's contraction extra-input clause (not
 Breaking: an existing `matmul` without C is unchanged).
 
+## Question 3, DECIDED: B, with nothing added to the key ("521 B", CireSnave 2026-11-27)
+
+CireSnave, verbatim, 2026-11-27 (board 521, relayed by pm-kernels): *"521 B"* (KISS 771 Q3). As relayed: **no `c` role hint and nothing added to the key; the addend is an ordinary `[M,N]` extra input (it already keys by shape and type; the operation's own identity says it is the addend); no stored bytes move; it can become A later if a real wrong match appears.**
+
+- **What is decided:** accumulate-into-C is an `[M,N]` extra input of the contraction, read at the output element after the K-sum in the accumulator's type. `alpha` and `beta` stay ordinary scalar ops. No `c` role hint, no key coordinate, no OpAttrs field. An existing `matmul` without C is unchanged. A **Draft** change, **not Breaking**; no stored byte moves.
+- **Option A of the RU.2 Group 4 (a `c` role hint plus a presence coordinate) stays recorded as the later path.** **Trigger: a real wrong match appears** (two kernels, one with and one without a source C, or with different C dtypes, selected for the same key to a wrong result). Until then nothing is minted.
+- **Clause text (proposed, Draft).** Measured at `origin/main` 8828b194: `spec/ops.md` has **no** contraction extra-input clause today (0 hits for "extra input", "bias" as an operand, or an addend; the `matmul` row of the 6.13 table, line 1476, reads two inputs only), so this is a **new clause**, not an edit; "pins only the bias today" in Question 3 above describes consumers, not the spec. Proposed id **KISS-OPS-6.13-0012** (next free in section 6.13; a new id needs a sidecar entry and its own test name, so it is **not in the day's PR until pm-kernels confirms placement**). Exact text:
+
+> **KISS-OPS-6.13-0012** — A `matmul` MAY carry one **addend** as its third input, `input(2)`: a dense row-major `[M,N]` tensor read at the output element `(m,n)` after the K-sum, added in the accumulator's type (§6.17-0005) before the result is rounded to the output dtype. The `matmul` reference decomposition (§6.13-0009) then ends `add(reduce(sum, axis=K) of element_map(mul(input(0), input(1))), input(2))`. KISS defines **no** `alpha` or `beta` field: a scaling of the product or of the addend is an ordinary scalar `mul` op around the `matmul`. The addend is an ordinary input: it takes no role hint and no coordinate of its own beyond the operand sub-key it already has (shape, dtype), and the contraction field of the structure key is unchanged by it (§6.6-0019 and §6.6-0022 are not extended); the op's own identity (a `matmul` with a third input) is what says it is the addend. A `matmul` of two inputs derives and evaluates exactly as before. *Draft change (CireSnave 2026-11-27, board 521 "B"); not Breaking.* *Test:* `test_ops_matmul_addend_input` (to be written).
+
 ## What I need from CireSnave
 
 1. Question 1: A for sk7, B on the sk8 list, or B now (which would delay the sk7 close and ride sk8)?
