@@ -622,7 +622,7 @@
 # board 481 (clause-edits): harness 565 -> 564 -- KISS-OPS-6.5-0004 and its test_ops_select_no_mask_multiply are removed (CireSnave A1, 2026-11-21); proven 26, lint 44, untested 381 unchanged.
 # board 476 (KISS-Kernel dissolved): harness 564 -> 563, proven 26 -> 25; KISS-KERNEL-6.1-0001 and its proving test test_kernel_governed_ops_have_pointers are gone (tests/kernel_refs.rs deleted), KISS-KERNEL-8-0001 (attested) removed from UNBACKED.tsv. Retired IDs stay burned. lint 44, untested 381 unchanged. The PROVEN drop is characterized by tools/kiss_trace.py base_proven_map_from_ref (first real retirement, #278).
 # board 476 stage 2 (Contract v5, Announce cooperative_launch): harness 563 -> 565; KISS-CONTRACT-6.6-0004 and 6.6-0008 retired with their tests (-2); KISS-CONTRACT-6.5-0020, 6.7-0007, 6.8-0014 (tests/contract_boundary_fields.rs) and KISS-ANNOUNCE-6.6-0012 (tests/announce_device_query.rs) added (+4). lint 44, untested 381, proven 25 unchanged. TOOL-DERIVED: `--ratchet` reported 565.
-harness	570
+harness	571
 lint	44
 untested	381
 proven	25

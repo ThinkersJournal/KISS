@@ -1487,7 +1487,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `argmin` | reduction | — | `original-index at rank 0 of sort_network(asc, keys=x)` (the §6.11-0007 index-vector output) |
 | `any` | reduction | — | `reduce(max, cmp_ne(x, const(0)))` |
 | `all` | reduction | — | `reduce(min, cmp_ne(x, const(0)))` |
-| `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001 |
+| `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001 The optional third input is the addend of §6.13-0012 (`add(…, input(2))`, `[M,N]`) |
 | `softmax` | normalization | — | `m=reduce(max,x); e=exp(sub(x,m)); s=reduce(sum,e); out=div(e,s)` |
 | `log_softmax` | normalization | — | `sub(x, logsumexp(x))` |
 | `rms_norm` | normalization | — | `ms=reduce_mean(sqr(input(0))); out=mul(mul(input(0), rsqrt(add(ms, param(0)))), input(1))` |
@@ -1619,6 +1619,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
   `count_include_pad` false and a zero valid-tap count) is never reached. The rule
   constrains values and not encodings: no OpAttrs byte moves. *Test:*
   `test_ops_window_overlap_declined`.
+- **KISS-OPS-6.13-0012** — A `matmul` MAY carry one **addend** as its third input, `input(2)`: a dense row-major `[M,N]` tensor read at the output element `(m,n)` after the K-sum, added in the accumulator's type (§6.17-0005) before the result is rounded to the output dtype. The `matmul` reference decomposition (§6.13-0009) then ends `add(reduce(sum, axis=K) of element_map(mul(input(0), input(1))), input(2))`. KISS defines no `alpha` or `beta` field: a scaling of the product or of the addend is an ordinary scalar `mul` op around the `matmul`. The addend is an ordinary input: it takes no role hint and no coordinate of its own beyond the operand sub-key it already has (shape, dtype), and the contraction field of the structure key is unchanged by it (§6.6-0019 and §6.6-0022 are not extended); the op's own identity (a `matmul` with a third input) is what says it is the addend. A `matmul` of two inputs derives and evaluates exactly as before. No stored byte moves. *Draft change (CireSnave 2026-11-27, board 521 "B"); not Breaking.* *Test:* `test_ops_matmul_addend_input`.
 - **KISS-OPS-6.13-0007** — `hypot(a, b)` MUST yield `+∞` whenever either operand is
   infinite, **even if the other operand is NaN** (the IEEE 754 `hypot` infinity rule),
   overriding the naive `sqrt(add(sqr(a), sqr(b)))` — which would yield NaN for `(±∞, NaN)` —
@@ -3257,6 +3258,7 @@ eligibility and is not restated as a free-standing KISS-Ops clause.
 | KISS-OPS-6.13-0009 | `test_ops_structured_decomposition_reference` |
 | KISS-OPS-6.13-0010 | `test_ops_window_output_extent` |
 | KISS-OPS-6.13-0011 | `test_ops_window_overlap_declined` |
+| KISS-OPS-6.13-0012 | `test_ops_matmul_addend_input` |
 | KISS-OPS-6.14-0001 | `test_ops_level_assignment` |
 | KISS-OPS-6.14-0002 | `test_ops_decomposition_acyclic` |
 | KISS-OPS-6.14-0003 | `test_ops_resolution_terminates` |
