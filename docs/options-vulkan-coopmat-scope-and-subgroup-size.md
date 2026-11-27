@@ -1,6 +1,6 @@
 # Options: cooperative-matrix scope and subgroup-size range in the Vulkan vocabulary
 
-Status: **options note, nothing decided, no spec text changed.** Task: pm-kernels `vocab-v8-cooperative-matrix-and-subgroup-size` (asked by vulkane and fishstringer E15). Read at `origin/main` e2d7ef95. Public Vulkan facts below are from memory of the public specification; section numbers are **UNVERIFIED** (not re-read this session), struct and field names are the ones the registry defines.
+Status: **options note; no spec text changed. PM ruled 2026-11-27 (not CireSnave; he can overrule), because neither moves a stored byte: Q1 = C, Q2 = B, conditional on a red-first golden showing every existing `cm-` token byte-identical; a changed byte stops it and it returns as a board item (Breaking, vocabulary 9). No UNKNOWN-vs-NOT-SUPPORTED change.** Task: pm-kernels `vocab-v8-cooperative-matrix-and-subgroup-size` (asked by vulkane and fishstringer E15). Read at `origin/main` e2d7ef95. Public Vulkan facts below are from memory of the public specification; section numbers are **UNVERIFIED** (not re-read this session), struct and field names are the ones the registry defines.
 
 ## 1. What KISS already carries (measured: `spec/namespaces/vulkan.md`)
 

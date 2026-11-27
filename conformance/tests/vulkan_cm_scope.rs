@@ -44,6 +44,7 @@ const GOLDEN: &[&str] = &[
     "vulkan:sgdyn.ops-none.arith-none.cm-none",
 ];
 
+// harness-internal: golden of the existing vulkan tokens and grammar lines, a namespace-document rule (V-18) with no KISS clause id, no clause asserted
 #[test]
 fn test_vulkan_cm_tokens_bytes_unchanged() {
     let mut all = tokens(&read("conformance/corpus/structure_key_vectors.json"));
@@ -59,6 +60,7 @@ fn test_vulkan_cm_tokens_bytes_unchanged() {
     assert!(!v.contains("sgmin") && !v.contains("sgrange"), "Q2-B: the subgroup range adds nothing to the key");
 }
 
+// harness-internal: asserts the V-18 rule of spec/namespaces/vulkan.md, a namespace-document rule with no KISS clause id
 #[test]
 fn test_vulkan_cm_subgroup_scope() {
     let v = read("spec/namespaces/vulkan.md");
