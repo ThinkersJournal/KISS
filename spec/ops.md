@@ -1062,10 +1062,18 @@ section-intro paragraph is an informative pointer to it):
   KISS-Ops states **no** exemption value for `reject`: a consumer whose index operand
   carries an in-band marker for an unmapped slot (for example a paged block table's
   unmapped sentinel) MUST pick `skip`, `clamp` or `zero-fill`, or validate the marker out
-  of the index operand before the `gather`. *Test:* `gather_oob_policies`.
+  of the index operand before the `gather`. **Delivery of a read decline:** the decline of this clause and of §6.11-0015
+  is pinned by its **outcome**, not its means — it MUST be delivered, naming the first out-of-bounds index position, before the
+  result can be consumed. A device that cannot return a decline at launch MAY satisfy this by a deferred out-of-range flag
+  surfaced as the typed decline when the launch completes, by a pre-validation pass over the index operand, or by not offering
+  the op; none is required. Once a decline is delivered the output buffer is not a result: its value at a lane whose index
+  declined is **unspecified**, and the evaluation MUST NOT fault (no undefined behaviour, trap or host crash, KISS-CONFORM
+  §6.7-0004). *Test:* `gather_oob_policies`.
 - **KISS-OPS-6.11-0005** — `scatter` MUST substitute a runtime integer index for one
   output-axis coordinate (a data-dependent write) with a combine operator in `{assign,
-  atomic-add, atomic-max, atomic-min}`, and MUST skip an out-of-bounds write. *Test:*
+  atomic-add, atomic-max, atomic-min}`, and MUST skip an out-of-bounds write. Every write op whose reference decomposition is
+  a `scatter` — `scatter_add` (§6.13-0009) and any accumulating index-write op KISS defines later, an `index_add` among them —
+  inherits this rule: its out-of-bounds write is **skipped, never declined**. *Test:*
   `scatter_oob_writes_are_skipped`.
 - **KISS-OPS-6.11-0006** — The `scatter` `atomic-add` combine on a floating-point dtype
   MUST be declared nondeterministic (class order-invariant/nondeterministic, §6.0-0004).

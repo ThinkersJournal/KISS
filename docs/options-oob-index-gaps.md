@@ -1,39 +1,41 @@
-# Options: three gaps in out-of-range index behaviour (pm-kernels TASK oob-options-note; fuel GAP-413, baracuda E4b)
+# Decided: three gaps in out-of-range index behaviour (pm-kernels TASK oob-gaps-ruled; fuel GAP-413, baracuda E4b)
 
-Status: **options with a recommendation; nothing here is a clause.** 2026-11-27, against `origin/main` 8828b194 (conformance 0.24.3). Semantics only: **no stored byte moves** under any option (no codec field, token, corpus vector or schema version).
+Status: **DECIDED as recommended** (PM ruling 2026-11-27, relayed by pm-kernels; CireSnave can overrule). 2026-11-27, against `origin/main` 8828b194 (conformance 0.24.3). Semantics only: **no stored byte moves** (section 5). Normative: yes (two existing clauses in `spec/ops.md` gain sentences). Byte-altering: no.
 
-## 1. What KISS already states (not a gap)
+## 1. What KISS already stated (not a gap)
 
-Per op, `spec/ops.md`: `gather` takes an `oob_policy` in `{skip, clamp, zero-fill, reject}`, a negative index is always out of bounds, and `reject` ends in a typed decline naming the first OOB index in row-major order with no partial output as its result (6.11-0004, `:1049-1059`). A `skip` gather with no `base` operand hits a typed decline on an actual OOB read (6.11-0015, `:1178-1192`); `index_select` is `gather(oob=skip)` with no base (`:1486`, 6.13-0009 `:1569`), so its OOB is a typed decline. `embedding` is `gather(oob=zero-fill)` (`:1487`). `scatter` MUST skip an OOB write (6.11-0005, `:1060-1063`) and a skipped write retains `dest` (6.11-0016, `:1194-1200`); `scatter_add` is `scatter(atomic-add, oob=skip)` (`:1488`). A typed decline is "never a panic, abort, crash, hang, or out-of-bounds read" (`:466-471`; KISS-CONFORM-6.7-0004). Rule of thumb: **reads decline, writes skip.** Today clamping in `index_select` (Vulkan, Metal per fuel's measurement) and an unchecked `gather`/`scatter` (Vulkan) violate these clauses; CUDA `scatter_add` skip-and-Ok conforms.
+`gather` takes an `oob_policy` in `{skip, clamp, zero-fill, reject}`, a negative index is always out of bounds, and `reject` ends in a typed decline naming the first OOB index with no partial output as its result (KISS-OPS-6.11-0004). A `skip` gather with no `base` operand declines on an actual OOB read (6.11-0015); `index_select` is `gather(oob=skip)` with no base (6.13-0009), so its OOB declines. `scatter` MUST skip an OOB write (6.11-0005) and a skipped write retains `dest` (6.11-0016); `scatter_add` is `scatter(atomic-add, oob=skip)`. Rule of thumb: reads decline, writes skip. Clamping in `index_select` and unchecked `gather`/`scatter` violate these clauses today; a CUDA `scatter_add` that skips and returns Ok conforms.
 
-## 2. Gap (a): `index_add` is absent
+## 2. The three rulings
 
-0 hits in `spec/`. A consumer that needs it today has no pinned OOB rule.
-- **A. `index_add` := the `scatter_add` wrapper family** (`scatter(atomic-add, oob=skip)`, a 6.13-0009 structured op): an OOB position is skipped, `dest` retained. One rule for every write.
-- **B. `index_add` rejects**: an OOB index is a typed decline. Would make it the only write op that declines, and needs gap (b)'s mechanism on a write kernel.
-- **C. Stay absent**; express it as `scatter_add` with a broadcast index. Needs checking that `scatter`'s index operand shape (6.11-0005) admits the broadcast; not verified here.
-- Torch's `index_add_` behaviour on an OOB index: **UNVERIFIED, not read** (no claim made).
+- **(a) `index_add` and the `scatter_add` family skip an OOB write**, as `scatter` does (6.11-0005). KISS has no `index_add` op today (0 hits in `spec/`); the clause therefore binds every write op whose reference decomposition is a `scatter`, so it covers `index_add` the day it is defined, without defining it here (defining an op moves op-identity bytes and is not part of this ruling). **The clause makes no claim about torch `index_add_`** (its OOB behaviour is unverified and nothing relies on it).
+- **(b) A read decline is pinned by its outcome:** delivered, naming the first OOB position, before the result can be consumed. A deferred out-of-range flag surfaced at completion (B1), a pre-validation pass over the index operand (B2), or not offering the op (B3) are each conformant; none is required.
+- **(c) The value at a lane whose index declined is unspecified, and the evaluation never faults** (no undefined behaviour, trap or host crash).
 
-## 3. Gap (b): a device that cannot decline at launch
+## 3. Clause text (exact), `spec/ops.md`
 
-A read-decline (6.11-0004 `reject`, 6.11-0015) is "a structured refusal returned in lieu of a result"; a GPU launch cannot return one synchronously, and no clause says how a decline reaches the caller.
-- **B1. Sticky flag, surfaced at completion.** The kernel records an out-of-range flag (an atomic-min of the flat row-major index position also yields the "first OOB position" 6.11-0004 requires); the runtime turns it into the typed decline when the launch's stream or event completes, before any consumer may treat the buffer as a result.
-- **B2. Pre-validation pass.** A bounds check (a reduction over the index operand) runs before the gather and declines at launch. One extra pass; no flag.
-- **B3. Not offered.** A device that can do neither does not advertise the op (plan-time decline / reference decomposition, 6.14-0004).
-- Clamp or unchecked access is not an option: it is a violation today, not a design.
+Two existing clauses gain a sentence each; **no new clause id, so no sidecar entry** and no test row moves.
 
-## 4. Gap (c): the value at a declined lane
+**KISS-OPS-6.11-0004** (`spec/ops.md` line 1049; after "...before the `gather`." and before its *Test:*), appended:
 
-Once a decline is reported the buffer is not a result (6.11-0004: no partial output *as its result*). Options: **C1** the buffer content is unspecified and MUST NOT be read as a result, but the lane MUST NOT fault (no out-of-bounds read or write, 6.7-0004); **C2** pin a fill value (e.g. zero). C2 costs every device a pass for a value no conforming consumer may read.
+> **Delivery of a read decline:** the decline of this clause and of §6.11-0015 is pinned by its **outcome**, not its means — it MUST be delivered, naming the first out-of-bounds index position, before the result can be consumed. A device that cannot return a decline at launch MAY satisfy this by a deferred out-of-range flag surfaced as the typed decline when the launch completes, by a pre-validation pass over the index operand, or by not offering the op; none is required. Once a decline is delivered the output buffer is not a result: its value at a lane whose index declined is **unspecified**, and the evaluation MUST NOT fault (no undefined behaviour, trap or host crash, KISS-CONFORM §6.7-0004).
 
-## 5. Recommendation
+**KISS-OPS-6.11-0005** (`spec/ops.md` line ~1062; after "...and MUST skip an out-of-bounds write."), appended:
 
-(a) **A** (skip): it keeps the one rule reads-decline/writes-skip that the baracuda CUDA and Metal write paths already follow; B puts the only declining write on the least capable path. If torch's `index_add_` is later read and errors, that argues for B only if CireSnave wants torch parity over internal consistency. (b) **B1, with B2 and B3 both conformant**: the clause states the *outcome* (a typed decline is delivered before the result can be consumed, naming the first OOB position) and not the means, matching KISS's stated scope (outward I/O only). (c) **C1**: unspecified, never a fault.
+> Every write op whose reference decomposition is a `scatter` — `scatter_add` (§6.13-0009) and any accumulating index-write op KISS defines later, an `index_add` among them — inherits this rule: its out-of-bounds write is **skipped, never declined**.
+
+## 4. Is it a spec change, and is it byte-altering?
+
+Normative, yes: it edits `spec/ops.md`. Byte-altering, **no**: no codec field, structure-key token, corpus vector, contract or schema version moves, and no op is added; it fills gaps and states the outcome the existing clauses already require. The PR body cites the PM ruling. It changes no existing MUST: fuel's earlier "OOB = error everywhere" idea (which would have changed 6.11-0005) is not adopted.
+
+## 5. Stored bytes
+
+None. No committed vector exercises an OOB index on a device path, and no sentence above touches an encoding.
 
 ## 6. Who it affects
 
-fuel GAP-413 (the contract row and its measured four-way split) and baracuda E4b (CUDA `scatter_add` conforms; its gather path needs B1 or B2); vulkane, Metal and Vulkan `index_select` clamp (a violation of 6.11-0015 today) and Vulkan unchecked `gather`/`scatter` (violates 6.11-0004/-0005 and the no-OOB-access rule). Adopting this changes **no existing clause**: gap-filling only, and fuel's earlier "OOB = error everywhere" idea would instead have changed 6.11-0005 (not proposed here).
+fuel GAP-413 (the contract row), baracuda E4b (CUDA `scatter_add` skip conforms; a gather path needs B1 or B2), vulkane/Metal/Vulkan (the `index_select` clamp violates 6.11-0015 today; Vulkan's unchecked `gather`/`scatter` violates 6.11-0004/-0005 and the no-OOB-access rule).
 
-## 7. Open
+## 7. Options considered (record)
 
-Which options are a CireSnave decision via the PM. Torch `index_add_` and `index_select` OOB behaviour are unread; nothing here relies on them.
+(a) skip (ruled) vs reject (would make `index_add` the only declining write) vs stay absent (needs a broadcast-index check on `scatter`, not done). (b) B1/B2/B3 all allowed vs mandating one. (c) unspecified (ruled) vs a pinned fill value (costs every device a pass for a value no consumer may read).
