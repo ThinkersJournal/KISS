@@ -1487,7 +1487,7 @@ Operand-ordering conventions for parameterized ops (pinned as attributes per §6
 | `argmin` | reduction | — | `original-index at rank 0 of sort_network(asc, keys=x)` (the §6.11-0007 index-vector output) |
 | `any` | reduction | — | `reduce(max, cmp_ne(x, const(0)))` |
 | `all` | reduction | — | `reduce(min, cmp_ne(x, const(0)))` |
-| `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001 The optional third input is the addend of §6.13-0012 (`add(…, input(2))`, `[M,N]`) |
+| `matmul` | contraction | — | `reduce(sum, axis=K) of element_map(mul(input(0), input(1)))`, where over iteration space `(m,n,k)` `input(0)` is read at `[m,k]` broadcast over N (stride 0 on N) and `input(1)` at `[k,n]` broadcast over M (stride 0 on M) per §6.11-0001. The optional third input is the addend of §6.13-0012 (`add(…, input(2))`, `[M,N]`) |
 | `softmax` | normalization | — | `m=reduce(max,x); e=exp(sub(x,m)); s=reduce(sum,e); out=div(e,s)` |
 | `log_softmax` | normalization | — | `sub(x, logsumexp(x))` |
 | `rms_norm` | normalization | — | `ms=reduce_mean(sqr(input(0))); out=mul(mul(input(0), rsqrt(add(ms, param(0)))), input(1))` |
