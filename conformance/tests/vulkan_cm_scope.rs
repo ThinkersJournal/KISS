@@ -76,6 +76,7 @@ fn test_vulkan_cm_subgroup_scope() {
         "vulkan:scope:",
         "no stored byte moves",
         "no vocabulary version bump",
+        "no stored kernel key changes",
         "subgroup range",
         "kernel internal",
         "Draft",
